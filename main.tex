@@ -1,6 +1,6 @@
 %%
 %% This is file `main.tex',
-%% Multikernel Paper
+%% Checkpoint/Restore Meets Tool-Using LLM Agents Paper
 %%
 
 \documentclass[sigconf,review,anonymous]{acmart}
@@ -24,11 +24,11 @@
 \email{anonymous@example.com}
 
 \begin{abstract}
-Checkpoint and restore mechanisms are critical primitives used broadly for fault tolerance, incremental exploration, and debugging of software systems. Their integration into the rapidly emerging landscape of large-language-model (LLM)-driven agents---autonomous systems dynamically synthesizing execution plans and security-critical decisions from natural-language prompts---has become increasingly important, yet inadequately studied. We show that na\"ively applying traditional snapshot and restore primitives to LLM-based agents introduces a novel and severe class of security vulnerabilities we term \textbf{semantic rollback attacks}. Unlike traditional workflows with deterministic replay semantics, LLM agents inherently produce non-deterministic yet semantically equivalent actions upon restoration, causing mismatches between internal agent state and external irreversible system states.
+Checkpoint and restore mechanisms are critical primitives used broadly for fault tolerance, incremental exploration, and debugging of software systems. Their integration into the rapidly emerging landscape of large-language-model (LLM)-driven agents---autonomous systems dynamically synthesizing execution plans and security-critical decisions from natural-language prompts---has become increasingly important, yet inadequately studied. Recent systems work argues that agentic exploration fundamentally needs fast branching, backtracking, and snapshot/restore support~\cite{agenticexploration}, while production agent frameworks already expose persistent checkpoints and time travel to resume or fork past executions~\cite{langgraph}. We show that na\"ively applying traditional snapshot and restore primitives to LLM-based agents introduces a novel and severe class of security vulnerabilities we term \textbf{semantic rollback attacks}. Unlike traditional workflows with deterministic replay semantics, LLM agents inherently produce non-deterministic yet semantically equivalent actions upon restoration, causing mismatches between internal agent state and external irreversible system states.
 
 In this paper, we systematically define, characterize, and experimentally demonstrate three key semantic rollback vulnerabilities: (1) \textbf{Authority Resurrection}, wherein revoked or expired credentials are unintentionally revived upon restoration; (2) \textbf{Action Duplication due to Identity Instability}, where semantically identical but structurally divergent restored requests bypass idempotency protections, causing repeated external side-effects such as payments or resource provisioning; and (3) \textbf{Security-Context Rollback}, in which previously committed security decisions and approvals are silently reverted.
 
-To rigorously demonstrate and measure these vulnerabilities, we present \textbf{AgentRollback}, a reproducible evaluation toolkit designed to concretely simulate semantic rollback scenarios. Our experiments using realistic agent tasks confirm the practical severity of these vulnerabilities, showing frequent duplication of external irreversible actions and authorization violations even under benign restoration scenarios. These findings reveal a critical semantic gap in current snapshot/restore integrations for LLM agents, and we advocate for fundamentally revisiting their secure integration within dynamic agent architectures.
+To rigorously demonstrate and measure these vulnerabilities, we present \textbf{AgentRollback}, a reproducible evaluation toolkit designed to concretely simulate semantic rollback scenarios using CRIU checkpoint/restore~\cite{criu} plus external tool services with append-only logs. Our experiments using realistic agent tasks confirm the practical severity of these vulnerabilities, showing frequent duplication of external irreversible actions and authorization violations even under benign restoration scenarios. These findings reveal a critical semantic gap in current snapshot/restore integrations for LLM agents, and we advocate for fundamentally revisiting their secure integration within dynamic agent architectures.
 \end{abstract}
 
 \begin{CCSXML}
@@ -55,9 +55,15 @@ To rigorously demonstrate and measure these vulnerabilities, we present \textbf{
 
 \section{Introduction}
 
-Large-language-model (LLM)-driven agents have rapidly emerged as a significant trend in software systems, enabling autonomous execution of complex tasks through dynamic synthesis of plans, security-critical decisions, and tool invocations from natural-language interactions. Today, these agents are routinely deployed in critical production settings---managing cloud resources, processing payments, automating customer interactions, and more---amplifying the need for reliable fault tolerance, debugging, incremental exploration, and crash recovery capabilities. Consequently, checkpoint and restore primitives, such as container checkpointing (CRIU) and VM snapshots, have become increasingly indispensable in supporting LLM agent reliability and debuggability.
+Large-language-model (LLM)-driven agents have rapidly emerged as a significant trend in software systems, enabling autonomous execution of complex tasks through dynamic synthesis of plans, security-critical decisions, and tool invocations from natural-language interactions. Today, these agents are routinely deployed in critical production settings---managing cloud resources, processing payments, automating customer interactions, and more---amplifying the need for reliable fault tolerance, debugging, incremental exploration, and crash recovery capabilities. Consequently, checkpoint and restore primitives, such as container checkpointing (CRIU~\cite{criu}) and VM snapshots, have become increasingly indispensable in supporting LLM agent reliability and debuggability.
 
-However, traditional snapshot and restore mechanisms rely on deterministic replay semantics, where restarting from a checkpoint results in predictable and identical outcomes. This assumption is fundamentally violated by LLM agents, whose dynamic runtime synthesis from mutable natural-language prompts and untrusted external inputs inherently leads to non-deterministic yet semantically equivalent behaviors. When conventional snapshot/restore primitives are applied directly to these non-deterministic agents without considering their unique semantic properties, critical mismatches arise: an agent's internal restored state no longer aligns with irreversible external states (e.g., external payments already committed, credentials revoked, security decisions logged).
+Checkpoint/restore becomes operationally attractive for three reasons: (i) fault tolerance (restart after crashes/timeouts), (ii) debugging/time-travel (reproduce and inspect executions), and (iii) exploration (fork, backtrack, and search over alternative trajectories). Agentic exploration papers already treat snapshot/restore as a systems foundation and explicitly call out branching/backtracking as first-class needs~\cite{agenticexploration}. Practical frameworks now provide persistent checkpoints and explicit time-travel/forking interfaces for agent graphs~\cite{langgraph}.
+
+However, traditional snapshot and restore mechanisms rely on deterministic replay semantics, where restarting from a checkpoint results in predictable and identical outcomes. Durable execution engines emphasize these assumptions explicitly: workflow code must be deterministic and external activities should be idempotent to tolerate retries without unexpected side effects~\cite{temporal}. This assumption is fundamentally violated by LLM agents, whose dynamic runtime synthesis from mutable natural-language prompts and untrusted external inputs inherently leads to non-deterministic yet semantically equivalent behaviors. When conventional snapshot/restore primitives are applied directly to these non-deterministic agents without considering their unique semantic properties, critical mismatches arise: an agent's internal restored state no longer aligns with irreversible external states (e.g., external payments already committed, credentials revoked, security decisions logged).
+
+The root cause is a semantic mismatch: the external world does not roll back, while the agent's internal state (including credentials, approvals, and safety decisions expressed in prompts/memory) can be rewound and cloned; additionally, tool requests may be re-synthesized non-deterministically after restore, undermining standard idempotency assumptions. Payment and cloud APIs widely recommend idempotency keys so that retries do not create duplicate effects~\cite{stripeidempotency, awsidempotency}. These mechanisms assume the caller can reliably reuse a stable idempotency key across retries---an assumption that can fail if the key is produced implicitly by non-deterministic action synthesis.
+
+The security community has studied rollback and forking in other settings---e.g., trusted execution environments---under a similar high-level principle: an attacker can violate ``state continuity'' by replaying old state or cloning instances, without breaking cryptography~\cite{memoir}. Our observation is that checkpoint/restore brings analogous risks to the application layer for tool-using agents, but with an important twist: LLM agents often reconstruct actions and policy decisions from natural language at runtime, making it harder to rely on stable step identities or deterministic replay.
 
 This paper introduces the concept of \textbf{semantic rollback attacks} to precisely characterize these mismatches and vulnerabilities unique to LLM-driven agents. We identify three primary categories of semantic rollback vulnerabilities:
 
@@ -83,270 +89,325 @@ In summary, we contribute:
 
 By explicitly bridging the security implications of snapshot mechanisms with rapidly evolving LLM agent deployments, this paper defines an urgent and impactful research agenda for the systems and security communities.
 
-\section{Resource Management}
+\section{Background and Security Goals}
 
-\subsection{Static Resource Management}
+\subsection{Checkpoint/Restore Mechanisms}
 
-A key issue plaguing multikernel systems is probably not the architectural concept itself, but the inability to dynamically manage resources. This is one of the reasons preventing their widespread adoption.
+CRIU (Checkpoint/Restore In Userspace) can freeze a Linux process or container, dump its state to disk, and later restore it to run ``as it was during the time of the freeze,'' enabling snapshots and debugging~\cite{criu}. This capability is powerful---and dangerous---when the process interacts with external systems that are not snapshotted.
 
-\textbf{Barrelfish}~\cite{barrelfish} was primarily designed for research exploring distributed operating system concepts. While it demonstrated interesting CPU scalability characteristics and potential performance improvements, its main design uses replica to maintain state consistency. This runs counter to the goal of isolation.
+Process-level checkpointing captures the complete execution state: memory contents, register values, file descriptors, and network connections. Upon restoration, the process resumes execution from the exact point where it was frozen, unaware that any time has passed or that external state may have changed.
 
-\textbf{Popcorn Linux}~\cite{popcorn} made progress in flexibility by supporting process and thread migration between kernel instances. However, its key use case was achieving transparent heterogeneous CPU computing, rather than isolation and elastic resource management. The system still requires pre-configured resource partitioning, with dynamic resource adjustment limited to migrating computational tasks rather than reallocating hardware resources like CPUs, memory, or I/O devices.
+\subsection{Time-Travel in Agent Frameworks}
 
-\textbf{Jailhouse}~\cite{jailhouse}, developed by Siemens and released in 2013, is the quintessential example of static partitioning. As its documentation states, Jailhouse is ``a static partitioning hypervisor'' that ``does not support resource overcommitment of CPU, RAM, or devices. It performs no scheduling and only virtualizes in software those resources essential to the platform that cannot be partitioned in hardware.''
+Modern agent frameworks have embraced checkpoint/restore as a first-class feature. LangGraph persists checkpoints of a graph's state and exposes ``time travel'' to resume execution from a prior checkpoint and create a new fork in history~\cite{langgraph}. This makes restore/fork an explicit user-facing operation, not just a crash-recovery mechanism.
 
-Jailhouse creates isolated cells with fixed resource allocations. While excellent for real-time and safety-critical applications, this approach has fundamental limitations for general-purpose cloud computing:
+Time-travel debugging allows developers to:
+\begin{itemize}
+    \item Reproduce failed executions by restoring from checkpoints
+    \item Explore alternative execution paths by forking from past states
+    \item Iteratively refine agent behavior through trial-and-error exploration
+\end{itemize}
+
+While these capabilities significantly enhance developer productivity and agent reliability, they introduce the security concerns we analyze in this paper.
+
+\subsection{Idempotency for External Side Effects}
+
+Payment and cloud APIs widely recommend idempotency keys/client tokens so that retries do not create duplicate effects. Stripe documents idempotent requests and explains that the same idempotency key returns the same result for subsequent retries~\cite{stripeidempotency}. AWS EC2 documents that a RunInstances request with the same client token ``can complete only once'' within a scope, precisely to make retries safe~\cite{awsidempotency}.
+
+These mechanisms assume the caller can reliably reuse a stable idempotency key across retries---an assumption that can fail if the key is produced implicitly by non-deterministic action synthesis in LLM agents.
+
+\subsection{Security Goals and Invariants}
+
+We focus on invariants that are standard in durable, side-effecting systems:
+
+\begin{itemize}
+    \item \textbf{No replay of irreversible effects}: Restoring/retrying should not commit a payment, ticket, or resource creation more than once for the same logical operation.
+
+    \item \textbf{Revocation monotonicity}: Once credentials/approval are revoked or consumed, restore/fork must not make them usable again.
+
+    \item \textbf{No authority amplification by forking}: Branching from a checkpoint should not allow multiple concurrent copies to exceed quotas or bypass single-instance constraints.
+
+    \item \textbf{Instruction/data separation at the tool boundary}: Untrusted content should not become executable tool commands. OWASP lists prompt injection and insecure output handling among top risks for LLM applications~\cite{owaspllm}.
+\end{itemize}
+
+\section{Threat Model}
+
+We consider two operationally realistic settings that capture how checkpoint/restore vulnerabilities can manifest in practice:
+
+\subsection{TM1: Fault-Triggered Restore}
+
+The agent is checkpointed for recovery; crashes, timeouts, or OOM kills cause the system or operator to restore from a prior checkpoint. In this threat model:
+
+\begin{itemize}
+    \item The attacker need not have ``restore privileges''
+    \item The attacker may only influence inputs (emails, documents, web content)
+    \item The attacker benefits from externally visible outcomes (duplicate payments, unauthorized actions)
+    \item Restoration is triggered by legitimate system failures, not malicious action
+\end{itemize}
+
+This threat model is particularly concerning because it requires no special access---normal operational failures combined with attacker-controlled inputs can trigger security violations.
+
+\subsection{TM2: User-Visible Time Travel and Branch Exploration}
+
+The platform or framework exposes time travel or forking as a feature (e.g., to resume from a checkpoint and explore alternatives)~\cite{langgraph}. In this setting:
+
+\begin{itemize}
+    \item An adversary may be an authenticated user abusing the time-travel feature
+    \item A compromised orchestrator may start multiple instances from the same checkpoint
+    \item Legitimate exploration workflows may inadvertently trigger security violations
+\end{itemize}
+
+This is analogous to restart/cloning capabilities modeled in rollback/forking literature for trusted execution environments~\cite{rote}.
+
+\subsection{Out of Scope}
+
+We do \textbf{not} assume:
+\begin{itemize}
+    \item Compromise of cryptographic primitives
+    \item Compromise of the checkpoint mechanism itself
+    \item Physical access to the execution environment
+    \item Modification of the agent's code or model weights
+\end{itemize}
+
+\section{Vulnerability Scenarios}
+
+We now detail three concrete vulnerability scenarios that arise from checkpoint/restore in LLM agents. Each scenario includes the attack mechanism, impact, and measurable success conditions.
+
+\subsection{Replay of Irreversible Tool Actions}
+
+If a checkpoint is taken before an external commit is durably recorded (or before the agent records that it has committed), restoring the checkpoint can re-execute the same logical operation.
+
+\subsubsection{Attack Mechanism}
 
 \begin{enumerate}
-    \item \textbf{Resource underutilization}: Kernels with idle CPUs cannot transfer them to other busy kernels
-    \item \textbf{Lack of flexibility}: Workload changes require dynamic and flexible resource allocation
-    \item \textbf{Mismatch with cloud computing}: Modern cloud infrastructure requires elastic resource allocation based on real-time demand, and in fact, traditional virtualization is also improving in this direction (e.g., virtio-balloon)
+    \item Agent receives a task requiring an external action (e.g., ``process payment for order \#12345'')
+    \item Checkpoint is taken at time $t_0$
+    \item Agent synthesizes a tool call with parameters including an idempotency key $k_1$
+    \item External service commits the action
+    \item System crash occurs before agent records completion
+    \item Agent is restored from checkpoint at $t_0$
+    \item Agent re-synthesizes the tool call, but due to LLM non-determinism, generates a different idempotency key $k_2$
+    \item External service treats this as a new request and commits again
 \end{enumerate}
 
-\subsection{Key Insight}
+In classic durable execution, idempotency keys prevent duplicate effects~\cite{temporal, stripeidempotency}. In LLM agents, the failure mode is that the request identity may not be stable across restores: the agent may regenerate tool parameters or idempotency keys differently after restore, causing the external service to treat it as a new request.
 
-From our perspective, \textbf{static partitioning is merely the default state of dynamic resource allocation, but the reverse is not true.} A design capable of dynamic allocation can easily achieve static partitioning by choosing never to reallocate, which is also its default state. Conversely, systems built only for static partitioning cannot add dynamic capabilities without fundamental architectural changes.
-
-This key insight fundamentally transformed our multikernel design: for any multikernel system targeting modern cloud infrastructure, \textbf{dynamic resource management is not optional, but essential}. The key challenge here is how to achieve this dynamism while maintaining isolation and stability.
-
-\section{Device Tree-Based Resource Management}
-
-\subsection{Device Tree to Rescue}
-
-Our solution leverages the existing device tree mechanism in the Linux kernel to solve the resource management problem. Device trees provide a platform-independent way to describe system hardware resources and are already widely used in embedded devices. Each spawn kernel receives a device tree describing its allocated resources through KHO (Kexec HandOver), including CPU cores, memory regions, and PCI devices. The advantage of this approach is that the Linux kernel already has solid device tree support, we're simply reusing this mature technology in a novel way.
-
-The following device tree configuration example demonstrates the multikernel resource allocation mechanism:
-
-\begin{verbatim}
-/multikernel-v1/;
-
-/ {
-    compatible = "linux,multikernel";
-
-    instances {
-        web-server {
-            id = <1>;
-            resources {
-                cpus = <1>;
-                memory-bytes = <0x20000000>;   // 512MB size
-                devices = <&enp9s0_dev>;
-            };
-        };
-    };
-
-    enp9s0_dev: ethernet@0 {
-        pci-id = "0000:09:00.0";
-        vendor-id = <0x1af4>;
-        device-id = <0x1041>;
-    };
-};
-\end{verbatim}
-
-\subsection{Device Tree Overlays}
-
-For dynamic resource adjustment after kernel startup, we use \textbf{device tree overlays}. This mechanism was originally designed for embedded systems to describe hardware changes at runtime and is perfectly applicable to multikernel scenarios. Device tree overlays represent \textbf{changes} to the running system configuration.
-
-When the host kernel decides to allocate additional resources to a spawn kernel, it leverages a generated device tree overlay describing the resource changes, ultimately translates it into the corresponding resource update messages and sends to the target kernel through IPI inter-kernel communication. The spawn kernel applies the changes via hotplug operations for the corresponding hardware resources.
-
-The following overlay example shows how to allocate CPUs 2 and 3 from the host kernel to a spawn kernel:
-
-\begin{verbatim}
-/multikernel-v1/;
-/plugin/;
-
-/ {
-    fragment@0 {
-        target-path = "/";
-        __overlay__ {
-            multikernel-resources {
-                #address-cells = <2>;
-                #size-cells = <2>;
-
-                cpu-remove {
-                    mk,instance = "/";
-                    #address-cells = <1>;
-                    #size-cells = <0>;
-                    cpu@2 { reg = <2>; };
-                    cpu@3 { reg = <3>; };
-                };
-
-                cpu-add {
-                    mk,instance = "web-server";
-                    #address-cells = <1>;
-                    #size-cells = <0>;
-                    cpu@2 { reg = <2>; numa-node = <0>; };
-                    cpu@3 { reg = <3>; numa-node = <0>; };
-                };
-            };
-        };
-    };
-};
-\end{verbatim}
-
-This differs from the initial device tree file passed through KHO at kernel startup. The device tree passed by KHO provides \textbf{static initial configuration}, while overlays handle \textbf{dynamic updates} to that configuration. This separation provides a \textbf{standardized, upstream-acceptable mechanism} for both initial configuration and runtime resource changes, avoiding the invention of new protocols or interfaces.
-
-\section{Leveraging Existing Linux Infrastructure}
-
-As shown above, a key principle in designing our multikernel architecture is to \textbf{reuse existing Linux kernel infrastructure as much as possible} rather than reinventing the wheel. This approach reduces development complexity, improves reliability, and significantly increases upstream community acceptance. Beyond the previously mentioned device trees, we also reuse the following Linux kernel features.
-
-\subsection{kexec\_file\_load()}
-
-For loading spawn kernels, we reuse \texttt{kexec\_file\_load()}, the Linux system call used for kexec fast reboot. It also provides Linux kernel signature verification support and has been thoroughly battle-tested in production systems. We achieve the isolation by loading kernel images into different memory regions, requiring only minor modifications for the multikernel scenario. By leveraging kexec, we avoid implementing new kernel loading and booting from scratch, while automatically inheriting security features like kernel signature verification.
-
-\subsection{Kexec HandOver}
-
-The introduction of KHO laid a good foundation for implementing LUO. The existing KHO is built on three core components: \textbf{FDT (Flattened Device Tree) data}, \textbf{boot mechanism}, and \textbf{scratch memory management}. We reuse the KHO protocol to pass resource configuration information between the host kernel and spawn kernels.
-
-\textbf{KHO FDT Structure}: At the core of KHO is the FDT passed from the boot kernel to the new kernel. This FDT contains semi-structured driver data describing system configuration, as well as memory regions that must be preserved during kernel transitions. Importantly, only non-movable memory regions are marked as reserved; other memory need not be preserved during the switch.
-
-\textbf{Boot Integration}: KHO adapts to different CPU architectures through specific boot mechanisms. On ARM64, the KHO FDT is attached as a ``chosen'' node in the device tree, following ARM's standard device tree conventions. On x86, the KHO FDT location is added to the \texttt{setup\_data} linked list, integrating with x86's boot protocol. This architecture-specific approach ensures KHO seamlessly integrates with each platform's existing kernel boot infrastructure.
-
-\textbf{Scratch Memory Management}: A key aspect of KHO is how it preserves memory during kernel switches. The first kernel reserves a CMA (Contiguous Memory Allocator) range early in boot, designated as scratch memory. This scratch memory is specially configured to accept only movable allocations, ensuring it doesn't conflict with persistent memory regions that need to be preserved during kernel transitions. When a new kernel is launched via kexec, it initially has only this scratch memory available. After the new kernel reserves the persistent memory regions described in the KHO FDT, the scratch memory transitions to a standard CMA region for normal use.
-
-We fully leverage the existing KHO design, essentially preserving the FDT and its boot process completely, except that the scratch memory is not needed. On this foundation, we add our own innovation: \textbf{initial configuration through KHO}. When launching a spawn kernel, the host kernel passes a complete device tree describing the spawn kernel's initial resource allocation through KHO. This static device tree defines the CPUs, memory regions, and I/O devices available to the spawn kernel at boot time. The spawn kernel's early boot code parses this FDT and uses it to control its hardware configuration instead of traditional kernel parameters. Compared to passing kernel parameters, this approach is more flexible, universal, and better suited for programmatic interfaces.
-
-Maximum reuse of existing Linux code means spawn kernels require minimal modifications to standard Linux to achieve the resource configuration and management we want. By reusing the KHO framework, we provide an elegant, upstream-acceptable abstraction layer between the host kernel's resource management decisions and the spawn kernel's hardware configuration.
-
-\subsection{CPU and Memory Hotplug}
-
-When resources need to be added or removed, we rely entirely on Linux's existing built-in hotplug subsystems:
-
-\textbf{CPU Hotplug}: Already supports dynamically onlining and offlining CPUs. When a spawn kernel adds or removes CPU cores through device tree overlays, it directly uses standard CPU hotplug operations.
-
-\textbf{Memory Hotplug}: Linux supports hot-adding memory regions on many architectures. Our design also reuses this existing capability to expand or shrink kernel memory without requiring substantial additional development.
-
-\textbf{PCI Hotplug}: For I/O devices, we leverage PCI hotplug to dynamically allocate devices to kernels. Modern PCIe systems support hot-adding and removing devices, and Linux has mature infrastructure to handle these operations.
-
-Based on these well-validated Linux subsystems, we achieve dynamic resource management with minimal code modifications for maximum reliability and community acceptance.
-
-\section{Limited Hardware Resources}
-
-\subsection{The Single NIC Problem}
-
-Another major challenge the multikernel architecture faces is: how to allocate limited hardware resources. Modern servers typically have far more CPU cores and memory than I/O devices. For example, a system with 64 CPU cores but only one network interface, so how do we provide physical network access to multiple isolated spawn kernels? Traditional approaches require SR-IOV virtual functions, which need hardware support and corresponding OS virtualization, meaning virtualization overhead (like IOMMU).
-
-\subsection{Using Hardware Queue Isolation}
-
-We solve this problem by leveraging modern network interfaces' support for \textbf{multiple hardware queues}. Our approach is to allocate dedicated hardware queues to each spawn kernel, using XDP programs to route packets to appropriate queues, maintaining hardware-level isolation between kernels while sharing a single physical NIC. This approach provides \textbf{near-native network performance} for each kernel without requiring expensive SR-IOV hardware or introducing virtualization overhead.
-
-\subsection{Shared Memory Communication}
-
-To achieve efficient packet passing between the host kernel (which owns the NIC driver) and spawn kernels, we reuse the ring buffers from the existing AF\_XDP~\cite{afxdp} for shared memory and fully leverage its zero-copy characteristics to improve performance. The host kernel's XDP program places incoming packets into shared memory regions designated for specific spawn kernels, and spawn kernels process packets consumed from their designated regions through software NICs using the standard network stack. This design fully leverages the existing AF\_XDP framework and provides an efficient fast path for network packets to reach isolated kernels.
-
-\subsection{Storage Sharing via ublk}
-
-For storage devices, we face the same challenge: how to share a single physical storage device among multiple kernels. Our solution is to use \textbf{ublk (userspace block device)} in a completely new way, to connect different kernels rather than userspace processes.
-
-The host kernel runs a ublk server that manages physical storage devices, while spawn kernels run ublk clients and provide software-implemented block devices for their applications. I/O requests are passed through \texttt{io\_uring}'s~\cite{iouring} shared memory regions, the host kernel executes actual storage operations on behalf of spawn kernels, and provides each kernel with its own isolated storage view through LVM while effectively sharing physical devices. This maximally reuses the io\_uring framework.
-
-This design brings two additional benefits: 1) Whether AF\_XDP or io\_uring, their ring buffer layouts are guaranteed through UAPI, which provides stronger compatibility than we need for multikernel use case; 2) Spawn kernels would run completely without hardware drivers, requiring only hardware-independent software implementations, which greatly reduces the difficulty of deploying spawn kernels.
-
-\section{Cross-Kernel Communication}
-
-\subsection{IPI-Based Message Passing}
-
-While shared memory is well-suited for high-throughput data transfer, kernels also need mechanisms for control messages and coordination, for which we reuse Inter-Processor Interrupts (IPI). Each spawn kernel reserves specific IPI vectors for receiving messages from the host kernel, and the host kernel can send control messages by triggering these interrupts. This provides a \textbf{low-latency, hardware-supported messaging primitive}, primarily used for:
+\subsubsection{Impact}
 
 \begin{itemize}
-    \item Notifying of new data in shared memory (doorbell)
-    \item Coordinating resource allocation and updates
-    \item Emergency notifications and error handling
-    \item Zero-downtime kernel update synchronization
+    \item Duplicate payments charged to users
+    \item Duplicate tickets/issues created in tracking systems
+    \item Duplicate resource provisioning (VMs, containers, storage)
+    \item Duplicate emails or notifications sent
 \end{itemize}
 
-On top of IPI and shared memory, we can establish more advanced cross-kernel communication channels and implement complex communication protocols.
+\subsubsection{Success Condition}
 
-\section{Zero-Downtime Kernel Update}
+Two committed ledger entries exist for the same logical identifier (e.g., order\_id, ticket\_key, resource\_name) at the tool service.
 
-\subsection{Live Kernel Update}
+\subsection{Revocation/Consumption Bypass via State Rewind}
 
-Kernel updates in production environments typically require system reboots, causing service interruptions ranging from seconds to minutes. Google's recently proposed Live Update Orchestrator (LUO)~\cite{luo} represents an advanced approach using kexec for fast reboots to minimize downtime. However, LUO still creates a \textbf{downtime window} during kernel transitions when all processes must stop executing while state is transferred to the new kernel.
+Agents often hold credentials or ``one-time approvals'' in memory or local state. Restoring a checkpoint can reintroduce authorization material that was deleted or consumed after the checkpoint.
 
-\subsection{Parallel Kernel Execution}
+\subsubsection{Attack Mechanism}
 
-The multikernel architecture provides a new paradigm for kernel updates: \textbf{old and new kernel versions execute in parallel, with applications gradually migrated}. This model completely eliminates the service downtime window by allowing two kernels to run simultaneously on independent CPU cores, with applications gradually transitioning between them.
+\begin{enumerate}
+    \item Agent receives a single-use authorization token $T$ at time $t_0$
+    \item Checkpoint is taken
+    \item Agent uses token $T$ for an authorized action
+    \item Token $T$ is marked as consumed in the external authorization service
+    \item Later, agent is restored from checkpoint (containing unexpired copy of $T$)
+    \item Agent attempts to use $T$ again
+\end{enumerate}
 
-\textbf{Parallel Kernel Launch}: The original kernel launches a new kernel instance running the updated version on a dedicated set of CPU cores. The original kernel continues normal operations on its allocated cores. Both kernels maintain independent execution contexts with separate hardware resources, without interfering with each other.
+This is not merely theoretical: real systems using snapshots can exhibit ``reappearing'' authorization objects after restore. A reported Vault issue demonstrates that a single-use token can reappear after raft snapshot restore, albeit in a stuck state~\cite{vaultissue}.
 
-\textbf{Process-Level Migration}: Instead of migrating all system state in one atomic step, the multikernel gradually migrates individual processes. Each process migration involves checkpoint/restore operations, leveraging context switch opportunities to capture process state from the old kernel, including memory contents, open file descriptors, and CPU registers, and rebuild it in the new kernel. This fine-grained migration means most applications continue executing without interruption.
+The vulnerability's exploitability depends on the external validation model:
+\begin{itemize}
+    \item \textbf{Stateless validation}: Token is accepted if cryptographically valid and not expired by timestamp
+    \item \textbf{Stateful validation}: Token is checked against a revocation list or consumption database
+    \item \textbf{Timing windows}: Even stateful systems may have propagation delays where revocation hasn't reached all validators
+\end{itemize}
 
-\textbf{Network Connection Preservation}: TCP connection state requires special handling during migration. The system uses TCP repair mode (TCP\_REPAIR) to extract complete connection state from the old kernel, including sequence numbers, window sizes, congestion control parameters, and pending data, and rebuilds the same socket state in the new kernel. This approach achieves zero packet loss and maintains connection continuity while remote endpoints remain unaware of the migration.
-
-\textbf{Device Resource Switching}: Hardware devices transition between kernels through the kernel update protocol. The old kernel quiesces device activity by completing ongoing I/O operations and preventing new request submissions. Device state, including hardware registers, queue positions, and configuration parameters, is serialized and transferred to the new kernel. The new kernel remaps and updates device DMA access to target the new kernel's memory space, and restores device state before resuming I/O operations.
-
-\textbf{Rollback Capability}: The parallel execution model also provides potential rollback capability. If the new kernel encounters serious errors or health check failures during migration, the system aborts the entire migration process. The old kernel remains running throughout, resuming full operations. The new kernel performs an orderly shutdown and releases its resources. This rollback mechanism requires no complex recovery procedures---the old kernel simply continues running as if the update had never been attempted.
-
-\subsection{Comparison with LUO}
-
-The multikernel's kernel update approach differs fundamentally from LUO in several key ways:
-
-\textbf{Elimination of Downtime Window}: LUO requires all applications to pause during the kexec transition while state switches to the new kernel. The multikernel approach keeps applications continuously running, maintaining uninterrupted system-wide service availability.
-
-\textbf{Incremental Risk}: LUO performs all-or-nothing state transfer before executing kexec, meaning any failure during the critical transition phase affects the entire system. The multikernel approach migrates one process at a time, limiting failure impact to individual process migrations while the majority of the system continues operating normally.
-
-\textbf{Simplified Rollback}: LUO's rollback mechanism must handle scenarios where the new kernel fails in the FINISH phase after kexec has already executed, requiring complex recovery procedures to restore previous kernel state. The multikernel keeps the old kernel running throughout the migration process, achieving straightforward rollback by simply aborting migration and allowing the old kernel to continue.
-
-\textbf{Architecture Independence}: LUO requires extensive subsystem modifications, with each kernel subsystem needing to implement callback functions for state saving and restoration. The multikernel approach operates at the process level using established checkpoint/restore mechanisms, independent of specific kernel subsystem implementations.
-
-This fundamental capability of the multikernel architecture transforms the kernel update process from an atomic system-wide transition into a gradual, controlled migration process. This architecture addresses the kernel update problem through parallel execution rather than trying to minimize the duration of an inevitable transition period.
-
-\section{Auto-Healing from Kernel Crash}
-
-Kernel crashes in production environments can have catastrophic consequences. Traditional Linux uses the kexec crash kernel mechanism, but this approach has fundamental limitations: the system still needs to reboot into a crash kernel, which is minimally configured solely for saving vmcore files and cannot run real services in practice. The entire recovery process takes even longer, during which service is completely interrupted. For critical systems like financial trading platforms, telecommunications infrastructure, and medical devices, even a few seconds of interruption can cause significant losses or safety risks.
-
-\subsection{Kernel Auto-Healing}
-
-The parallel execution model of multikernel architecture provides a fundamentally new approach to kernel crash recovery: \textbf{running a backup kernel instance that achieves sub-second automatic switchover when the primary kernel crashes}.
-
-\textbf{Active-Backup Mode}: The system runs two identical kernel instances simultaneously: the primary kernel handles all workloads, while the backup kernel is configured with minimal resources, standing by as a backup. Both kernels are exactly the same version, eliminating version compatibility issues. The primary kernel continuously replicates critical state via the shared memory between them, while the backup kernel maintains shadow copies of this state and monitors primary kernel health through heartbeat mechanisms.
-
-\textbf{Automatic Failover}: When the backup kernel detects the primary kernel crash, it immediately initiates autonomous takeover procedures. Since the primary kernel is no longer responsive, the backup kernel uses the pre-replicated state information without needing to coordinate with the crashed primary kernel. The backup kernel forcibly takes over hardware devices, restores process execution using the latest state snapshot in shared memory, rebuilds TCP connection state to maintain network connections, and restores service in sub-second time.
-
-\textbf{Identical Kernel Versions}: The primary and backup kernels run exactly the same version. This eliminates the compatibility puzzles that exist in update scenarios. Data structure layouts are identical, requiring no conversion or translation. Memory can be directly copied, process state can be directly restored, and network connection state formats are fully compatible. This makes failure recovery actually simpler in many ways than kernel updates, despite needing to handle the challenge of sudden primary kernel failure.
-
-The multikernel architecture can transform kernel crashes from catastrophic events into controlled failures that can be automatically recovered in sub-second time through parallel execution and continuous state replica.
-
-\section{Security Model and Technical Challenges}
-
-\subsection{Kernel-Enforced Security}
-
-Our multikernel security model is based on \textbf{kernel-enforced isolation}. Each kernel is trusted to respect its resource boundaries and not illegally access physical memory or devices allocated to other kernels. This is fundamentally different from hardware-enforced isolation (as in virtual machines) or application-level isolation (as in containers).
-
-The implications of this model include:
+\subsubsection{Impact}
 
 \begin{itemize}
-    \item \textbf{Trusted Kernel Assumption}: Untrusted kernels could violate our isolation principles
-    \item \textbf{Reduced Attack Surface}: Through trimming and customization, each kernel can run only the minimal code necessary for its workload
-    \item \textbf{High-Performance Fast Path}: No virtualization overhead for memory or I/O access
+    \item Bypassing intended revocation of credentials
+    \item Reusing single-use authorization tokens
+    \item Circumventing rate limits tied to credential consumption
+    \item Violating audit trails that assume monotonic credential lifecycle
 \end{itemize}
 
-This security model is suitable for scenarios where kernel trust is acceptable, such as multi-tenant systems from the same organization, or dedicated devices where kernel configuration is strictly controlled.
+\subsubsection{Success Condition}
 
-\subsection{Hardware Security Enhancements}
+An authorization token that should be invalid (revoked/consumed) is accepted by the tool service after restore.
 
-At the same time, we recognize the limitations of the kernel-enforced security model. To address this issue, we suggest that hardware vendors provide the following enhanced CPU security features:
+\subsection{Fork-Based Authority Amplification}
 
-\textbf{Hardware Memory Protection}: CHERI (Capability Hardware Enhanced RISC Instructions)~\cite{cheri} provides \textbf{fine-grained memory protection} through hardware capabilities. CHERI allows bounded pointers with enforced ranges, permission bits for fine-grained access control, and revocable capabilities for temporal safety, rather than flat address spaces with all-or-nothing access. With CHERI, even kernel vulnerabilities would not allow unrestricted memory access, as hardware would enforce capability bounds.
+Time-travel/forking can create multiple concurrent agent copies from the same checkpoint. Even if each copy is ``correct,'' concurrency can violate quotas, rate limits, and single-instance assumptions.
 
-Using CHERI, we can transform our kernel-enforced model into a \textbf{hardware-assisted security model} without requiring traditional virtualization technologies like EPT. This capability has been implemented on ARM, but still faces challenges on x86.
+\subsubsection{Attack Mechanism}
 
-\textbf{Hardware-Filtered IPI}: Currently, any CPU can send IPIs to any other CPU. In our multikernel system, we need more restrictions on IPI delivery. Spawn kernels should only receive certain specific IPIs they want, and kernels should not be able to send IPIs to arbitrary other kernels.
+\begin{enumerate}
+    \item Agent with budget/quota $Q$ is checkpointed at time $t_0$
+    \item $N$ concurrent instances are restored from the same checkpoint
+    \item Each instance believes it has access to budget $Q$
+    \item Instances collectively consume $N \times Q$ resources before any coordination occurs
+\end{enumerate}
 
-Hardware-level IPI filtering can enforce these policies without software overhead. We call on CPU vendors to consider adding configurable IPI access control. We are optimistic about this, as historically, virtualization technology has also followed a pattern where hardware follows software.
+This mirrors the well-studied ``forking'' dimension of rollback attacks in TEEs, where multiple instances are run concurrently from related states~\cite{rote}.
+
+\subsubsection{Impact}
+
+\begin{itemize}
+    \item Denial-of-wallet attacks (cost amplification beyond intended budgets)
+    \item Quota bypass (exceeding rate limits per principal)
+    \item Confusing audit logs (multiple instances acting ``as the same agent'')
+    \item Resource exhaustion in shared systems
+\end{itemize}
+
+\subsubsection{Success Condition}
+
+The number of committed external actions exceeds the allowed bound for a principal in a time window (e.g., ``only one resource creation per user per minute'').
+
+\section{A Reproducible Testbed and Evaluation Plan}
+
+We propose a minimal testbed that isolates the semantic mismatch between checkpoint/restore and external state, enabling reproducible measurement of the vulnerabilities described above.
+
+\subsection{Architecture}
+
+\subsubsection{Agent Under Test (Inside Checkpoint Domain)}
+
+Run the agent in a Linux container/namespace subject to CRIU checkpoint/restore~\cite{criu}. The agent:
+\begin{itemize}
+    \item Executes LLM-based planning and tool synthesis
+    \item Maintains internal state (conversation history, credentials, task progress)
+    \item Makes HTTP requests to external tool services
+\end{itemize}
+
+\subsubsection{Tool Services (Outside Checkpoint Domain)}
+
+Run external ``tool'' services as separate processes/containers that are \textit{not} checkpointed. Each service maintains:
+\begin{itemize}
+    \item Append-only log of all received requests
+    \item Durable state (committed transactions, consumed tokens)
+    \item Idempotency enforcement based on client-provided keys
+\end{itemize}
+
+\subsubsection{Orchestrator}
+
+A driver that:
+\begin{itemize}
+    \item Triggers checkpoints at controlled program points
+    \item Kills/restores the agent at specified fault injection points
+    \item Optionally forks $N$ copies from one checkpoint (for TM2 scenarios)
+    \item Collects metrics from tool services
+\end{itemize}
+
+\subsection{Representative Workloads}
+
+We define three workloads that represent common agent tasks with external side effects:
+
+\begin{enumerate}
+    \item \textbf{Payment-like tool}: \texttt{CreateCharge(order\_id, amount, idempotency\_key)}
+    \begin{itemize}
+        \item Service enforces idempotency by key
+        \item Logs all requests with timestamps
+        \item Returns success/duplicate/error status
+    \end{itemize}
+
+    \item \textbf{Ticket/email-like tool}: \texttt{CreateTicket(ticket\_key, fields...)}
+    \begin{itemize}
+        \item Service commits a ticket record
+        \item Deduplication based on ticket\_key if provided
+        \item Simulates notification side effects
+    \end{itemize}
+
+    \item \textbf{Provisioning-like tool}: \texttt{CreateVM(resource\_name, client\_token)}
+    \begin{itemize}
+        \item Service enforces client-token idempotency~\cite{awsidempotency}
+        \item Tracks resource lifecycle
+        \item Enforces per-principal quotas
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Fault Injection Points}
+
+We inject faults (triggering checkpoint restore) at three critical points:
+
+\begin{enumerate}
+    \item \textbf{Before sending}: Checkpoint taken before HTTP request is sent
+    \item \textbf{In-flight}: Checkpoint taken after sending but before receiving response
+    \item \textbf{After response}: Checkpoint taken after receiving response but before agent persists ``done'' status
+\end{enumerate}
+
+Each injection point exercises different aspects of the state mismatch.
+
+\subsection{Metrics}
+
+\begin{itemize}
+    \item \textbf{Duplicate commit rate}: Fraction of logical operations that produce multiple committed tool-side entries
+
+    \item \textbf{Token reuse rate}: Fraction of ``single-use'' approvals/tokens accepted more than once after restore/fork
+
+    \item \textbf{Fork amplification factor}: Ratio of committed actions under forked restores to the allowed bound
+
+    \item \textbf{Mitigation overhead}: Added latency per tool call for any external logging/authorization checks (when evaluating defenses)
+\end{itemize}
+
+\subsection{Baselines}
+
+We compare against:
+
+\begin{enumerate}
+    \item \textbf{No checkpoint/restore}: Baseline without any snapshotting
+
+    \item \textbf{Deterministic replay/durable workflow style}: Record tool-call decisions and replay them rather than re-synthesizing after restore (reflecting durable execution assumptions)~\cite{temporal}
+
+    \item \textbf{Framework time-travel}: Use LangGraph time-travel to resume from checkpoints and compare OS-level checkpointing~\cite{langgraph}
+\end{enumerate}
+
+\section{Related Work}
+
+\subsection{Rollback and Forking Attacks in TEEs}
+
+Rollback and forking attacks, and the notion of ``state continuity,'' are well studied in trusted execution settings. Memoir introduced practical state continuity for protected modules, establishing the theoretical foundation for understanding rollback vulnerabilities~\cite{memoir}. ROTE provided rollback protection for trusted execution environments, addressing both rollback and forking attack dimensions~\cite{rote}.
+
+Our setting differs from TEE research in a crucial way: the target is an application-layer agent whose control flow and requests may be synthesized from natural language. This introduces non-determinism that is absent in the deterministic programs typically protected by TEEs.
+
+\subsection{Agentic Systems and Exploration}
+
+Recent systems work on agentic exploration motivates snapshot/restore and identifies external side effects as a key unresolved challenge~\cite{agenticexploration}. This work provides the systems foundation for agent exploration but does not frame external side effects as a concrete security vulnerability with measurable invariants.
+
+\subsection{Agent Frameworks with Checkpointing}
+
+Agent frameworks expose checkpointing/time travel as features. LangGraph provides persistent checkpoints and time-travel interfaces for agent graphs~\cite{langgraph}. These capabilities make restore/fork operations common in practice, increasing the attack surface for the vulnerabilities we describe.
+
+\subsection{Agent Security Mechanisms}
+
+Agent security mechanisms such as privilege-control and runtime enforcement focus on constraining tool use. Progent provides programmable privilege control for LLM agents~\cite{progent}, while AgentSpec offers customizable runtime enforcement~\cite{agentspec}. These approaches are largely orthogonal to checkpoint-induced rewind/fork semantics---they constrain what actions an agent can take, but do not address the state continuity problems that arise from checkpoint/restore.
+
+\subsection{Prompt Injection and LLM Security}
+
+OWASP documents prompt injection and insecure output handling among top risks for LLM applications~\cite{owaspllm}. While our work focuses on checkpoint/restore vulnerabilities rather than prompt injection, the two threat categories can interact: an attacker might use prompt injection to influence agent state in ways that are preserved across checkpoints.
 
 \section{Conclusion}
 
-Our multikernel design represents a fundamental rethinking of modern cloud computing systems. We abandon the replica-based design of early multikernel systems and instead use multikernels to achieve \textbf{isolation, high customization, and elastic resource management}. Our key innovations include:
+Checkpoint/restore and time-travel execution are becoming standard building blocks for tool-using LLM agents, driven by operational needs (recovery, debugging) and algorithmic needs (branching exploration). Existing systems practice assumes deterministic replay or stable idempotency identities to keep external side effects safe under retry~\cite{temporal, stripeidempotency}. LLM agents weaken these assumptions: restore can rewind internal authorization and safety state while the external world does not rewind, and post-restore action synthesis can vary enough to defeat idempotency mechanisms.
 
-\begin{enumerate}
-    \item \textbf{Device Tree-Based Resource Management}: Solving the dynamic resource allocation problem that has plagued multikernel architectures
-    \item \textbf{Reusing Existing Infrastructure}: Leveraging kexec, KHO, and hotplug subsystems rather than inventing new wheels
-    \item \textbf{Hardware Queue Isolation}: Providing efficient I/O device access without SR-IOV or virtualization
-    \item \textbf{Zero-Downtime Updates}: Enabling zero-downtime kernel updates through parallel running kernels
-    \item \textbf{Kernel Auto-Healing}: A backup kernel automatically and rapidly replaces the crashed kernel
-\end{enumerate}
+We argue this creates a concrete, measurable security problem---replay of irreversible actions, revocation/consumption bypass, and fork-based authority amplification---and we provide a practical testbed design to reproduce and quantify these failures using CRIU~\cite{criu} and external tool services with append-only logs.
 
-This architecture is particularly well-suited for modern cloud computing. By providing isolation with near-bare-metal performance, our multikernel design offers a compelling third option between containers and traditional virtualization, while maintaining 100\% compatibility with the full Linux kernel and applications running on it. We believe this isolation-based multikernel design has the potential to reshape how we think about operating system design in the multi-core era, providing the flexibility and efficiency required by modern cloud infrastructure. We welcome industry and academia to jointly explore, develop, and advance the multikernel field.
+Our analysis reveals a fundamental tension: the features that make checkpoint/restore valuable for agent development (state preservation, branch exploration, failure recovery) are precisely the features that create security vulnerabilities when agents interact with external systems that maintain their own state.
+
+Future work should explore:
+\begin{itemize}
+    \item External authorization services issuing short-lived, single-use capabilities verified at tool execution time
+    \item Tool-side commit logs that can detect and reject replayed requests even with varying idempotency keys
+    \item Semantic-aware checkpointing that captures the logical operation identity rather than just process state
+    \item Coordination protocols between forked agent instances to prevent authority amplification
+\end{itemize}
+
+By explicitly bridging the security implications of checkpoint mechanisms with the non-deterministic nature of LLM-driven agents, this paper defines an urgent research agenda for the systems and security communities.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
