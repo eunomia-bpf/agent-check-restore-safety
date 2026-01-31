@@ -13,7 +13,7 @@
 
 \begin{document}
 
-\title{Rethinking Multikernel Architecture: From Replica to Isolation}
+\title{Semantic Rollback Attacks on Checkpoint/Restore in LLM-Driven Agents}
 
 \author{Anonymous Author(s)}
 \affiliation{%
@@ -24,36 +24,64 @@
 \email{anonymous@example.com}
 
 \begin{abstract}
-Unlike traditional multikernel operating systems (Barrelfish, Popcorn Linux) that use replica to create a single system image, we use multikernels to achieve \textbf{isolation, high customization, and dynamic resource management}. This architectural shift transforms multikernels from academic experimental projects into practical infrastructure suitable for cloud computing. We address a critical design issue in traditional multikernel systems: dynamic resource management. By leveraging device trees, existing Linux hotplug implementations, and novel approaches to I/O sharing, we have designed a multikernel system that supports elastic resource allocation---essential for modern cloud computing. Furthermore, our parallel kernel execution model enables a completely new approach to zero-downtime kernel updates that promises to surpass Google's Live Update Orchestrator (LUO) framework by eliminating downtime entirely.
+Checkpoint and restore mechanisms are critical primitives used broadly for fault tolerance, incremental exploration, and debugging of software systems. Their integration into the rapidly emerging landscape of large-language-model (LLM)-driven agents---autonomous systems dynamically synthesizing execution plans and security-critical decisions from natural-language prompts---has become increasingly important, yet inadequately studied. We show that na\"ively applying traditional snapshot and restore primitives to LLM-based agents introduces a novel and severe class of security vulnerabilities we term \textbf{semantic rollback attacks}. Unlike traditional workflows with deterministic replay semantics, LLM agents inherently produce non-deterministic yet semantically equivalent actions upon restoration, causing mismatches between internal agent state and external irreversible system states.
+
+In this paper, we systematically define, characterize, and experimentally demonstrate three key semantic rollback vulnerabilities: (1) \textbf{Authority Resurrection}, wherein revoked or expired credentials are unintentionally revived upon restoration; (2) \textbf{Action Duplication due to Identity Instability}, where semantically identical but structurally divergent restored requests bypass idempotency protections, causing repeated external side-effects such as payments or resource provisioning; and (3) \textbf{Security-Context Rollback}, in which previously committed security decisions and approvals are silently reverted.
+
+To rigorously demonstrate and measure these vulnerabilities, we present \textbf{AgentRollback}, a reproducible evaluation toolkit designed to concretely simulate semantic rollback scenarios. Our experiments using realistic agent tasks confirm the practical severity of these vulnerabilities, showing frequent duplication of external irreversible actions and authorization violations even under benign restoration scenarios. These findings reveal a critical semantic gap in current snapshot/restore integrations for LLM agents, and we advocate for fundamentally revisiting their secure integration within dynamic agent architectures.
 \end{abstract}
 
 \begin{CCSXML}
 <ccs2012>
    <concept>
-       <concept_id>10010520.10010521.10010537</concept_id>
-       <concept_desc>Computer systems organization~Multicore architectures</concept_desc>
+       <concept_id>10002978.10002991.10002992</concept_id>
+       <concept_desc>Security and privacy~Software security engineering</concept_desc>
        <concept_significance>500</concept_significance>
    </concept>
    <concept>
-       <concept_id>10011007.10011006.10011008.10011009.10011015</concept_id>
-       <concept_desc>Software and its engineering~Operating systems</concept_desc>
-       <concept_significance>500</concept_significance>
+       <concept_id>10010147.10010257</concept_id>
+       <concept_desc>Computing methodologies~Machine learning</concept_desc>
+       <concept_significance>300</concept_significance>
    </concept>
 </ccs2012>
 \end{CCSXML}
 
-\ccsdesc[500]{Computer systems organization~Multicore architectures}
-\ccsdesc[500]{Software and its engineering~Operating systems}
+\ccsdesc[500]{Security and privacy~Software security engineering}
+\ccsdesc[300]{Computing methodologies~Machine learning}
 
-\keywords{multikernel, operating systems, resource management, kernel update, cloud computing}
+\keywords{LLM agents, checkpoint/restore, security vulnerabilities, semantic rollback, fault tolerance}
 
 \maketitle
 
 \section{Introduction}
 
-Unlike the traditional multikernel operating systems (Barrelfish, Popcorn Linux) that use replica to create a single system image, we use multikernels to achieve \textbf{isolation, high customization, and dynamic resource management}. This architectural shift transforms multikernels from academic experimental projects into practical infrastructure suitable for cloud computing.
+Large-language-model (LLM)-driven agents have rapidly emerged as a significant trend in software systems, enabling autonomous execution of complex tasks through dynamic synthesis of plans, security-critical decisions, and tool invocations from natural-language interactions. Today, these agents are routinely deployed in critical production settings---managing cloud resources, processing payments, automating customer interactions, and more---amplifying the need for reliable fault tolerance, debugging, incremental exploration, and crash recovery capabilities. Consequently, checkpoint and restore primitives, such as container checkpointing (CRIU) and VM snapshots, have become increasingly indispensable in supporting LLM agent reliability and debuggability.
 
-We address a critical design issue in traditional multikernel systems: \textbf{dynamic resource management}. By leveraging device trees, existing Linux hotplug implementations, and novel approaches to I/O sharing, we have designed a multikernel system that supports elastic resource allocation---essential for modern cloud computing. Furthermore, our parallel kernel execution model enables a completely new approach to zero-downtime kernel updates that promises to surpass Google's Live Update Orchestrator (LUO) framework by eliminating downtime entirely.
+However, traditional snapshot and restore mechanisms rely on deterministic replay semantics, where restarting from a checkpoint results in predictable and identical outcomes. This assumption is fundamentally violated by LLM agents, whose dynamic runtime synthesis from mutable natural-language prompts and untrusted external inputs inherently leads to non-deterministic yet semantically equivalent behaviors. When conventional snapshot/restore primitives are applied directly to these non-deterministic agents without considering their unique semantic properties, critical mismatches arise: an agent's internal restored state no longer aligns with irreversible external states (e.g., external payments already committed, credentials revoked, security decisions logged).
+
+This paper introduces the concept of \textbf{semantic rollback attacks} to precisely characterize these mismatches and vulnerabilities unique to LLM-driven agents. We identify three primary categories of semantic rollback vulnerabilities:
+
+\begin{itemize}
+    \item \textbf{Authority Resurrection}: Restored snapshots inadvertently revive previously revoked or expired credentials, thereby subverting authorization mechanisms.
+    \item \textbf{Action Duplication due to Identity Instability}: Non-deterministic tool invocation parameters cause structurally distinct but semantically identical requests upon restoration, bypassing traditional idempotency checks and leading to repeated execution of external irreversible actions.
+    \item \textbf{Security-Context Rollback}: Restoring conversational or internal agent states unintentionally reverts previously enforced security decisions, breaking critical compliance, integrity, and auditability constraints.
+\end{itemize}
+
+Although snapshot and restore have long been studied within the systems community, their integration into the rapidly emerging domain of LLM-driven agents---and the resulting security implications---remains unexplored. Given the growing prevalence and real-world deployment of these agents, the urgency of clearly understanding and mitigating these vulnerabilities is paramount.
+
+To systematically evaluate and quantify semantic rollback vulnerabilities, we present \textbf{AgentRollback}, a reproducible experimental framework designed explicitly to measure and demonstrate these attacks. Using realistic agent scenarios involving email notifications, payment processing, and resource provisioning, our experiments confirm the feasibility, realism, and severity of semantic rollback attacks, showing that standard snapshot-based techniques produce frequent duplicated external actions and unintended authorization reinstatements.
+
+Our findings emphasize the fundamental semantic gap between conventional checkpoint/restore mechanisms and the intrinsic non-deterministic synthesis of LLM agents. Rather than simply reusing traditional mechanisms, we advocate explicitly designing snapshot/restore primitives with semantic awareness and robust security boundaries. In this paper, we outline critical design principles toward achieving secure semantic compilation boundaries, separating dynamic agent synthesis from externally committed states, and thus lay a solid foundation for future secure checkpoint integration.
+
+In summary, we contribute:
+
+\begin{enumerate}
+    \item Formal identification and characterization of a novel category of security vulnerabilities---semantic rollback attacks---in snapshot-based LLM-driven agents.
+    \item AgentRollback, a reproducible evaluation toolkit concretely demonstrating and quantifying these vulnerabilities through rigorous experimentation.
+    \item A clear roadmap of critical design considerations and future research directions for securely integrating checkpoint/restore primitives into dynamic LLM agent architectures.
+\end{enumerate}
+
+By explicitly bridging the security implications of snapshot mechanisms with rapidly evolving LLM agent deployments, this paper defines an urgent and impactful research agenda for the systems and security communities.
 
 \section{Resource Management}
 
