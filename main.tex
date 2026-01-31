@@ -26,7 +26,7 @@
 \begin{abstract}
 Checkpoint-restore mechanisms are critical primitives used broadly for fault tolerance, incremental exploration, and debugging of software systems. Their integration into large-language-model (LLM) agents, which dynamically synthesize execution plans and security-critical decisions from natural-language prompts, has received limited attention despite growing deployment. Recent systems work argues that agentic exploration fundamentally needs fast branching, backtracking, and checkpoint-restore support~\cite{agenticexploration}, while production agent frameworks already expose persistent checkpoints and time travel to resume or fork past executions~\cite{langgraph}. We show that na\"ively applying traditional checkpoint-restore primitives to LLM-based agents introduces a class of security vulnerabilities we term \textbf{semantic rollback attacks}. Unlike traditional workflows with deterministic replay semantics, LLM agents inherently produce non-deterministic yet semantically equivalent actions upon restoration, causing mismatches between internal agent state and external irreversible system states.
 
-In this paper, we systematically define, characterize, and experimentally demonstrate three key semantic rollback vulnerabilities: (1) \textbf{Authority Resurrection}, wherein revoked or expired credentials are unintentionally revived upon restoration; (2) \textbf{Action Duplication due to Identity Instability}, where semantically identical but structurally divergent restored requests bypass idempotency protections, causing repeated external side-effects such as payments or resource provisioning; and (3) \textbf{Security-Context Rollback}, in which previously committed security decisions and approvals are silently reverted.
+We systematically define, characterize, and experimentally demonstrate three key semantic rollback vulnerabilities: (1) \textbf{Authority Resurrection}, wherein revoked or expired credentials are unintentionally revived upon restoration; (2) \textbf{Action Duplication due to Identity Instability}, where semantically identical but structurally divergent restored requests bypass idempotency protections, causing repeated external side-effects such as payments or resource provisioning; and (3) \textbf{Security-Context Rollback}, in which previously committed security decisions and approvals are silently reverted.
 
 To demonstrate and measure these vulnerabilities, we present \textbf{AgentRollback}, an evaluation toolkit that simulates semantic rollback scenarios using CRIU~\cite{criu} and external tool services with append-only logs. Our experiments show frequent duplication of external irreversible actions and authorization violations even under benign restoration scenarios. These findings reveal a semantic gap in current checkpoint-restore integrations for LLM agents.
 \end{abstract}
@@ -73,9 +73,9 @@ This paper introduces the concept of \textbf{semantic rollback attacks} to preci
     \item \textbf{Security-Context Rollback}: Restoring conversational or internal agent states unintentionally reverts previously enforced security decisions, breaking critical compliance, integrity, and auditability constraints.
 \end{itemize}
 
-Although snapshot and restore have long been studied within the systems community, their integration into LLM-driven agents and the resulting security implications remain unexplored.
+Although checkpoint-restore has long been studied within the systems community, their integration into LLM-driven agents and the resulting security implications remain unexplored.
 
-To systematically evaluate and quantify semantic rollback vulnerabilities, we present \textbf{AgentRollback}, a reproducible experimental framework designed explicitly to measure and demonstrate these attacks. Using agent scenarios involving payment processing and resource provisioning, our experiments show that standard snapshot-based techniques produce duplicated external actions and unintended authorization reinstatements.
+To systematically evaluate and quantify semantic rollback vulnerabilities, we present \textbf{AgentRollback}, a reproducible experimental framework to measure and demonstrate these attacks. Using agent scenarios involving payment processing and resource provisioning, our experiments show that standard snapshot-based techniques produce duplicated external actions and unintended authorization reinstatements.
 
 Our findings emphasize the semantic gap between conventional checkpoint-restore mechanisms and the non-deterministic synthesis of LLM agents. Rather than simply reusing traditional mechanisms, we advocate designing checkpoint-restore primitives with semantic awareness and robust security boundaries. We outline design principles toward achieving secure semantic compilation boundaries, separating dynamic agent synthesis from externally committed states.
 
@@ -107,11 +107,11 @@ Time-travel debugging allows developers to:
     \item Iteratively refine agent behavior through trial-and-error exploration
 \end{itemize}
 
-These capabilities improve developer workflows but introduce the security concerns we analyze in this paper.
+These capabilities improve developer workflows but introduce the security concerns we analyze here.
 
 \subsection{Idempotency for External Side Effects}
 
-Payment and cloud APIs widely recommend idempotency keys/client tokens so that retries do not create duplicate effects. Stripe documents idempotent requests and explains that the same idempotency key returns the same result for subsequent retries~\cite{stripeidempotency}. AWS EC2 documents that a RunInstances request with the same client token ``can complete only once'' within a scope, precisely to make retries safe~\cite{awsidempotency}.
+Payment and cloud APIs widely recommend idempotency keys or client tokens so that retries do not create duplicate effects. Stripe documents idempotent requests and explains that the same idempotency key returns the same result for subsequent retries~\cite{stripeidempotency}. AWS EC2 documents that a RunInstances request with the same client token ``can complete only once'' within a scope, precisely to make retries safe~\cite{awsidempotency}.
 
 These mechanisms assume the caller can reliably reuse a stable idempotency key across retries. This assumption can fail if the key is produced implicitly by non-deterministic action synthesis in LLM agents.
 
@@ -120,13 +120,13 @@ These mechanisms assume the caller can reliably reuse a stable idempotency key a
 We focus on invariants that are standard in durable, side-effecting systems:
 
 \begin{itemize}
-    \item \textbf{No replay of irreversible effects}: Restoring/retrying should not commit a payment, ticket, or resource creation more than once for the same logical operation.
+    \item \textbf{No replay of irreversible effects}: Restoring or retrying should not commit a payment, ticket, or resource creation more than once for the same logical operation.
 
-    \item \textbf{Revocation monotonicity}: Once credentials/approval are revoked or consumed, restore/fork must not make them usable again.
+    \item \textbf{Revocation monotonicity}: Once credentials or approvals are revoked or consumed, restore or fork must not make them usable again.
 
     \item \textbf{No authority amplification by forking}: Branching from a checkpoint should not allow multiple concurrent copies to exceed quotas or bypass single-instance constraints.
 
-    \item \textbf{Instruction/data separation at the tool boundary}: Untrusted content should not become executable tool commands. OWASP lists prompt injection and insecure output handling among top risks for LLM applications~\cite{owaspllm}.
+    \item \textbf{Instruction and data separation at the tool boundary}: Untrusted content should not become executable tool commands. OWASP lists prompt injection and insecure output handling among top risks for LLM applications~\cite{owaspllm}.
 \end{itemize}
 
 \section{Threat Model}
@@ -156,7 +156,7 @@ The platform or framework exposes time travel or forking as a feature to resume 
     \item Legitimate exploration workflows may inadvertently trigger security violations
 \end{itemize}
 
-This is analogous to restart/cloning capabilities modeled in rollback/forking literature for trusted execution environments~\cite{rote}.
+This is analogous to restart and cloning capabilities modeled in rollback and forking literature for trusted execution environments~\cite{rote}.
 
 \subsection{Out of Scope}
 
@@ -195,7 +195,7 @@ In classic durable execution, idempotency keys prevent duplicate effects~\cite{t
 
 \begin{itemize}
     \item Duplicate payments charged to users
-    \item Duplicate tickets/issues created in tracking systems
+    \item Duplicate tickets or issues created in tracking systems
     \item Duplicate resource provisioning (VMs, containers, storage)
     \item Duplicate emails or notifications sent
 \end{itemize}
@@ -204,7 +204,7 @@ In classic durable execution, idempotency keys prevent duplicate effects~\cite{t
 
 Two committed ledger entries exist for the same logical identifier (e.g., order\_id, ticket\_key, resource\_name) at the tool service.
 
-\subsection{Revocation/Consumption Bypass via State Rewind}
+\subsection{Revocation and Consumption Bypass via State Rewind}
 
 Agents often hold credentials or ``one-time approvals'' in memory or local state. Restoring a checkpoint can reintroduce authorization material that was deleted or consumed after the checkpoint.
 
@@ -239,7 +239,7 @@ The vulnerability's exploitability depends on the external validation model:
 
 \subsubsection{Success Condition}
 
-An authorization token that should be invalid (revoked/consumed) is accepted by the tool service after restore.
+An authorization token that should be invalid, either revoked or consumed, is accepted by the tool service after restore.
 
 \subsection{Fork-Based Authority Amplification}
 
@@ -248,7 +248,7 @@ Time-travel and forking can create multiple concurrent agent copies from the sam
 \subsubsection{Attack Mechanism}
 
 \begin{enumerate}
-    \item Agent with budget/quota $Q$ is checkpointed at time $t_0$
+    \item Agent with budget or quota $Q$ is checkpointed at time $t_0$
     \item $N$ concurrent instances are restored from the same checkpoint
     \item Each instance believes it has access to budget $Q$
     \item Instances collectively consume $N \times Q$ resources before any coordination occurs
@@ -261,7 +261,7 @@ This mirrors the well-studied ``forking'' dimension of rollback attacks in TEEs,
 \begin{itemize}
     \item Denial-of-wallet attacks (cost amplification beyond intended budgets)
     \item Quota bypass (exceeding rate limits per principal)
-    \item Confusing audit logs (multiple instances acting ``as the same agent'')
+    \item Confusing audit logs (multiple instances acting as the same agent)
     \item Resource exhaustion in shared systems
 \end{itemize}
 
@@ -286,7 +286,7 @@ Run the agent in a Linux container or namespace subject to CRIU checkpoint-resto
 
 \subsubsection{Tool Services (Outside Checkpoint Domain)}
 
-Run external ``tool'' services as separate processes/containers that are \textit{not} checkpointed. Each service maintains:
+Run external tool services as separate processes or containers that are \textit{not} checkpointed. Each service maintains:
 \begin{itemize}
     \item Append-only log of all received requests
     \item Durable state (committed transactions, consumed tokens)
@@ -298,7 +298,7 @@ Run external ``tool'' services as separate processes/containers that are \textit
 A driver that:
 \begin{itemize}
     \item Triggers checkpoints at controlled program points
-    \item Kills/restores the agent at specified fault injection points
+    \item Kills and restores the agent at specified fault injection points
     \item Optionally forks $N$ copies from one checkpoint (for TM2 scenarios)
     \item Collects metrics from tool services
 \end{itemize}
@@ -312,10 +312,10 @@ We define three workloads that represent common agent tasks with external side e
     \begin{itemize}
         \item Service enforces idempotency by key
         \item Logs all requests with timestamps
-        \item Returns success/duplicate/error status
+        \item Returns success, duplicate, or error status
     \end{itemize}
 
-    \item \textbf{Ticket/email-like tool}: \texttt{CreateTicket(ticket\_key, fields...)}
+    \item \textbf{Ticket and email tool}: \texttt{CreateTicket(ticket\_key, fields...)}
     \begin{itemize}
         \item Service commits a ticket record
         \item Deduplication based on ticket\_key if provided
@@ -347,11 +347,11 @@ Each injection point exercises different aspects of the state mismatch.
 \begin{itemize}
     \item \textbf{Duplicate commit rate}: Fraction of logical operations that produce multiple committed tool-side entries
 
-    \item \textbf{Token reuse rate}: Fraction of ``single-use'' approvals/tokens accepted more than once after restore/fork
+    \item \textbf{Token reuse rate}: Fraction of single-use approvals or tokens accepted more than once after restore or fork
 
     \item \textbf{Fork amplification factor}: Ratio of committed actions under forked restores to the allowed bound
 
-    \item \textbf{Mitigation overhead}: Added latency per tool call for any external logging/authorization checks (when evaluating defenses)
+    \item \textbf{Mitigation overhead}: Added latency per tool call for any external logging or authorization checks (when evaluating defenses)
 \end{itemize}
 
 \subsection{Baselines}
@@ -376,7 +376,7 @@ Our setting differs from TEE research: the target is an application-layer agent 
 
 \subsection{Agentic Systems and Exploration}
 
-Recent systems work on agentic exploration motivates snapshot/restore and identifies external side effects as a key unresolved challenge~\cite{agenticexploration}. This work provides the systems foundation for agent exploration but does not frame external side effects as a concrete security vulnerability with measurable invariants.
+Recent systems work on agentic exploration motivates checkpoint-restore and identifies external side effects as a key unresolved challenge~\cite{agenticexploration}. This work provides the systems foundation for agent exploration but does not frame external side effects as a concrete security vulnerability with measurable invariants.
 
 \subsection{Agent Frameworks with Checkpointing}
 
@@ -394,7 +394,7 @@ OWASP documents prompt injection and insecure output handling among top risks fo
 
 Checkpoint-restore and time-travel execution are becoming standard building blocks for tool-using LLM agents, driven by operational needs such as recovery and debugging, and algorithmic needs such as branching exploration. Existing systems practice assumes deterministic replay or stable idempotency identities to keep external side effects safe under retry~\cite{temporal, stripeidempotency}. LLM agents weaken these assumptions: restore can rewind internal authorization and safety state while the external world does not rewind, and post-restore action synthesis can vary enough to defeat idempotency mechanisms.
 
-This creates a measurable security problem: replay of irreversible actions, revocation/consumption bypass, and fork-based authority amplification. We provide a testbed design to reproduce and quantify these failures using CRIU~\cite{criu} and external tool services with append-only logs.
+This creates a measurable security problem: replay of irreversible actions, revocation and consumption bypass, and fork-based authority amplification. We provide a testbed design to reproduce and quantify these failures using CRIU~\cite{criu} and external tool services with append-only logs.
 
 Our analysis reveals a tension: the features that make checkpoint-restore valuable for agent development, including state preservation, branch exploration, and failure recovery, are precisely the features that create security vulnerabilities when agents interact with external systems that maintain their own state.
 
