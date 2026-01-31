@@ -24,7 +24,7 @@
 \email{anonymous@example.com}
 
 \begin{abstract}
-Checkpoint and restore mechanisms are critical primitives used broadly for fault tolerance, incremental exploration, and debugging of software systems. Their integration into the rapidly emerging landscape of large-language-model (LLM)-driven agents---autonomous systems dynamically synthesizing execution plans and security-critical decisions from natural-language prompts---has become increasingly important, yet inadequately studied. Recent systems work argues that agentic exploration fundamentally needs fast branching, backtracking, and snapshot/restore support~\cite{agenticexploration}, while production agent frameworks already expose persistent checkpoints and time travel to resume or fork past executions~\cite{langgraph}. We show that na\"ively applying traditional snapshot and restore primitives to LLM-based agents introduces a novel and severe class of security vulnerabilities we term \textbf{semantic rollback attacks}. Unlike traditional workflows with deterministic replay semantics, LLM agents inherently produce non-deterministic yet semantically equivalent actions upon restoration, causing mismatches between internal agent state and external irreversible system states.
+Checkpoint and restore mechanisms are critical primitives used broadly for fault tolerance, incremental exploration, and debugging of software systems. Their integration into large-language-model (LLM)-driven agents---autonomous systems dynamically synthesizing execution plans and security-critical decisions from natural-language prompts---has received limited attention despite growing deployment. Recent systems work argues that agentic exploration fundamentally needs fast branching, backtracking, and snapshot/restore support~\cite{agenticexploration}, while production agent frameworks already expose persistent checkpoints and time travel to resume or fork past executions~\cite{langgraph}. We show that na\"ively applying traditional snapshot and restore primitives to LLM-based agents introduces a novel and severe class of security vulnerabilities we term \textbf{semantic rollback attacks}. Unlike traditional workflows with deterministic replay semantics, LLM agents inherently produce non-deterministic yet semantically equivalent actions upon restoration, causing mismatches between internal agent state and external irreversible system states.
 
 In this paper, we systematically define, characterize, and experimentally demonstrate three key semantic rollback vulnerabilities: (1) \textbf{Authority Resurrection}, wherein revoked or expired credentials are unintentionally revived upon restoration; (2) \textbf{Action Duplication due to Identity Instability}, where semantically identical but structurally divergent restored requests bypass idempotency protections, causing repeated external side-effects such as payments or resource provisioning; and (3) \textbf{Security-Context Rollback}, in which previously committed security decisions and approvals are silently reverted.
 
@@ -55,7 +55,7 @@ To rigorously demonstrate and measure these vulnerabilities, we present \textbf{
 
 \section{Introduction}
 
-Large-language-model (LLM)-driven agents have rapidly emerged as a significant trend in software systems, enabling autonomous execution of complex tasks through dynamic synthesis of plans, security-critical decisions, and tool invocations from natural-language interactions. Today, these agents are routinely deployed in critical production settings---managing cloud resources, processing payments, automating customer interactions, and more---amplifying the need for reliable fault tolerance, debugging, incremental exploration, and crash recovery capabilities. Consequently, checkpoint and restore primitives, such as container checkpointing (CRIU~\cite{criu}) and VM snapshots, have become increasingly indispensable in supporting LLM agent reliability and debuggability.
+Large-language-model (LLM)-driven agents are increasingly deployed in software systems, enabling autonomous execution of complex tasks through dynamic synthesis of plans, security-critical decisions, and tool invocations from natural-language interactions. These agents now operate in production settings---managing cloud resources, processing payments, and automating customer interactions---which requires reliable fault tolerance, debugging, and crash recovery capabilities. Consequently, checkpoint and restore primitives, such as container checkpointing (CRIU~\cite{criu}) and VM snapshots, have become increasingly indispensable in supporting LLM agent reliability and debuggability.
 
 Checkpoint/restore becomes operationally attractive for three reasons: (i) fault tolerance (restart after crashes/timeouts), (ii) debugging/time-travel (reproduce and inspect executions), and (iii) exploration (fork, backtrack, and search over alternative trajectories). Agentic exploration papers already treat snapshot/restore as a systems foundation and explicitly call out branching/backtracking as first-class needs~\cite{agenticexploration}. Practical frameworks now provide persistent checkpoints and explicit time-travel/forking interfaces for agent graphs~\cite{langgraph}.
 
@@ -73,11 +73,11 @@ This paper introduces the concept of \textbf{semantic rollback attacks} to preci
     \item \textbf{Security-Context Rollback}: Restoring conversational or internal agent states unintentionally reverts previously enforced security decisions, breaking critical compliance, integrity, and auditability constraints.
 \end{itemize}
 
-Although snapshot and restore have long been studied within the systems community, their integration into the rapidly emerging domain of LLM-driven agents---and the resulting security implications---remains unexplored. Given the growing prevalence and real-world deployment of these agents, the urgency of clearly understanding and mitigating these vulnerabilities is paramount.
+Although snapshot and restore have long been studied within the systems community, their integration into LLM-driven agents---and the resulting security implications---remains unexplored.
 
 To systematically evaluate and quantify semantic rollback vulnerabilities, we present \textbf{AgentRollback}, a reproducible experimental framework designed explicitly to measure and demonstrate these attacks. Using realistic agent scenarios involving email notifications, payment processing, and resource provisioning, our experiments confirm the feasibility, realism, and severity of semantic rollback attacks, showing that standard snapshot-based techniques produce frequent duplicated external actions and unintended authorization reinstatements.
 
-Our findings emphasize the fundamental semantic gap between conventional checkpoint/restore mechanisms and the intrinsic non-deterministic synthesis of LLM agents. Rather than simply reusing traditional mechanisms, we advocate explicitly designing snapshot/restore primitives with semantic awareness and robust security boundaries. In this paper, we outline critical design principles toward achieving secure semantic compilation boundaries, separating dynamic agent synthesis from externally committed states, and thus lay a solid foundation for future secure checkpoint integration.
+Our findings emphasize the fundamental semantic gap between conventional checkpoint/restore mechanisms and the intrinsic non-deterministic synthesis of LLM agents. Rather than simply reusing traditional mechanisms, we advocate designing snapshot/restore primitives with semantic awareness and robust security boundaries. We outline design principles toward achieving secure semantic compilation boundaries, separating dynamic agent synthesis from externally committed states.
 
 In summary, we contribute:
 
@@ -87,13 +87,13 @@ In summary, we contribute:
     \item A clear roadmap of critical design considerations and future research directions for securely integrating checkpoint/restore primitives into dynamic LLM agent architectures.
 \end{enumerate}
 
-By explicitly bridging the security implications of snapshot mechanisms with rapidly evolving LLM agent deployments, this paper defines an urgent and impactful research agenda for the systems and security communities.
+This paper identifies the security implications of snapshot mechanisms for LLM agent deployments and outlines a research agenda for the systems and security communities.
 
 \section{Background and Security Goals}
 
 \subsection{Checkpoint/Restore Mechanisms}
 
-CRIU (Checkpoint/Restore In Userspace) can freeze a Linux process or container, dump its state to disk, and later restore it to run ``as it was during the time of the freeze,'' enabling snapshots and debugging~\cite{criu}. This capability is powerful---and dangerous---when the process interacts with external systems that are not snapshotted.
+CRIU (Checkpoint/Restore In Userspace) can freeze a Linux process or container, dump its state to disk, and later restore it to run ``as it was during the time of the freeze,'' enabling snapshots and debugging~\cite{criu}. However, this capability introduces risks when the process interacts with external systems that are not snapshotted.
 
 Process-level checkpointing captures the complete execution state: memory contents, register values, file descriptors, and network connections. Upon restoration, the process resumes execution from the exact point where it was frozen, unaware that any time has passed or that external state may have changed.
 
@@ -108,7 +108,7 @@ Time-travel debugging allows developers to:
     \item Iteratively refine agent behavior through trial-and-error exploration
 \end{itemize}
 
-While these capabilities significantly enhance developer productivity and agent reliability, they introduce the security concerns we analyze in this paper.
+These capabilities improve developer workflows but introduce the security concerns we analyze in this paper.
 
 \subsection{Idempotency for External Side Effects}
 
@@ -145,7 +145,7 @@ The agent is checkpointed for recovery; crashes, timeouts, or OOM kills cause th
     \item Restoration is triggered by legitimate system failures, not malicious action
 \end{itemize}
 
-This threat model is particularly concerning because it requires no special access---normal operational failures combined with attacker-controlled inputs can trigger security violations.
+This threat model requires no special access: normal operational failures combined with attacker-controlled inputs can trigger security violations.
 
 \subsection{TM2: User-Visible Time Travel and Branch Exploration}
 
@@ -220,7 +220,7 @@ Agents often hold credentials or ``one-time approvals'' in memory or local state
     \item Agent attempts to use $T$ again
 \end{enumerate}
 
-This is not merely theoretical: real systems using snapshots can exhibit ``reappearing'' authorization objects after restore. A reported Vault issue demonstrates that a single-use token can reappear after raft snapshot restore, albeit in a stuck state~\cite{vaultissue}.
+Real systems using snapshots can exhibit ``reappearing'' authorization objects after restore. A reported Vault issue demonstrates that a single-use token can reappear after raft snapshot restore, albeit in a stuck state~\cite{vaultissue}.
 
 The vulnerability's exploitability depends on the external validation model:
 \begin{itemize}
@@ -270,7 +270,7 @@ This mirrors the well-studied ``forking'' dimension of rollback attacks in TEEs,
 
 The number of committed external actions exceeds the allowed bound for a principal in a time window (e.g., ``only one resource creation per user per minute'').
 
-\section{A Reproducible Testbed and Evaluation Plan}
+\section{Testbed Design and Evaluation Plan}
 
 We propose a minimal testbed that isolates the semantic mismatch between checkpoint/restore and external state, enabling reproducible measurement of the vulnerabilities described above.
 
@@ -407,7 +407,7 @@ Future work should explore:
     \item Coordination protocols between forked agent instances to prevent authority amplification
 \end{itemize}
 
-By explicitly bridging the security implications of checkpoint mechanisms with the non-deterministic nature of LLM-driven agents, this paper defines an urgent research agenda for the systems and security communities.
+This paper identifies the security implications of checkpoint mechanisms for non-deterministic LLM-driven agents and outlines directions for future research.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
