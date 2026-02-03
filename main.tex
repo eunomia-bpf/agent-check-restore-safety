@@ -373,18 +373,18 @@ Each experiment configuration runs 100 trials. We report mean and 95\% confidenc
 \toprule
 \textbf{Workload} & \textbf{No-CR} & \textbf{P1} & \textbf{P2} & \textbf{P3} \\
 \midrule
-W1-Payment & 0.0 & 67.2 $\pm$ 4.1 & 78.4 $\pm$ 3.8 & 71.0 $\pm$ 4.0 \\
-W2-Provision & 0.0 & 64.8 $\pm$ 4.3 & 74.2 $\pm$ 3.9 & 68.6 $\pm$ 4.2 \\
-W3-PR & 0.0 & 89.4 $\pm$ 2.7 & 91.2 $\pm$ 2.5 & 88.6 $\pm$ 2.8 \\
+W1-Payment & 0.0 & xx $\pm$ xx & xx $\pm$ xx & xx $\pm$ xx \\
+W2-Provision & 0.0 & xx $\pm$ xx & xx $\pm$ xx & xx $\pm$ xx \\
+W3-PR & 0.0 & xx $\pm$ xx & xx $\pm$ xx & xx $\pm$ xx \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 Table~\ref{tab:duplication} shows duplicate rates for CRIU-based checkpoint-restore across workloads and injection points.
 
-\textbf{Key finding 1: High duplication rates.} Even with idempotency-enabled services (W1, W2), duplication rates exceed 64\% across all injection points. This occurs because the LLM regenerates different idempotency keys after restore.
+\textbf{Key finding 1: High duplication rates.} Even with idempotency-enabled services (W1, W2), duplication rates exceed xx\% across all injection points. This occurs because the LLM regenerates different idempotency keys after restore.
 
-\textbf{Key finding 2: VCS workloads are most vulnerable.} W3-PR shows the highest duplication rate (89--91\%) because Git platforms lack standardized idempotency interfaces. The agent generates different branch names (e.g., \texttt{fix-auth-v2} vs \texttt{auth-bugfix}) or PR titles for the same logical change.
+\textbf{Key finding 2: VCS workloads are most vulnerable.} W3-PR shows the highest duplication rate (xx--xx\%) because Git platforms lack standardized idempotency interfaces. The agent generates different branch names (e.g., \texttt{fix-auth-v2} vs \texttt{auth-bugfix}) or PR titles for the same logical change.
 
 \textbf{Key finding 3: P2 (in-flight) is worst.} The in-flight injection point produces the highest duplication because the external action has already committed, but the agent has no record of completion.
 
@@ -396,13 +396,13 @@ Table~\ref{tab:duplication} shows duplicate rates for CRIU-based checkpoint-rest
 \toprule
 \textbf{Workload} & \textbf{GPT-4o} & \textbf{Claude 3.5} & \textbf{GPT-4o (t=0)} \\
 \midrule
-W1-Payment & 71.4 $\pm$ 4.0 & 68.2 $\pm$ 4.1 & 12.6 $\pm$ 2.9 \\
-W2-Provision & 69.8 $\pm$ 4.1 & 65.4 $\pm$ 4.2 & 14.2 $\pm$ 3.1 \\
+W1-Payment & xx $\pm$ xx & xx $\pm$ xx & xx $\pm$ xx \\
+W2-Provision & xx $\pm$ xx & xx $\pm$ xx & xx $\pm$ xx \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:keyinstability} shows key instability rates. At temperature 0.7, both models exhibit $>$65\% instability. Reducing temperature to 0 decreases instability to $\sim$13\%, but does not eliminate it due to inherent model non-determinism.
+Table~\ref{tab:keyinstability} shows key instability rates. At temperature 0.7, both models exhibit $>$xx\% instability. Reducing temperature to 0 decreases instability to $\sim$xx\%, but does not eliminate it due to inherent model non-determinism.
 
 \subsection{RQ2: Authority Resurrection}
 
@@ -414,21 +414,21 @@ Table~\ref{tab:keyinstability} shows key instability rates. At temperature 0.7, 
 \toprule
 \textbf{Validation Mode} & \textbf{Reuse Rate} & \textbf{Attack Window} \\
 \midrule
-Stateless (JWT, no revocation check) & 94.2 $\pm$ 2.1 & Until expiry \\
-Stateful (immediate sync) & 2.4 $\pm$ 1.4 & $<$100ms \\
-Stateful (async, 5s propagation) & 31.6 $\pm$ 4.1 & 0--5s \\
-Stateful (async, 30s propagation) & 58.4 $\pm$ 4.4 & 0--30s \\
+Stateless (JWT, no revocation check) & xx $\pm$ xx & Until expiry \\
+Stateful (immediate sync) & xx $\pm$ xx & $<$100ms \\
+Stateful (async, 5s propagation) & xx $\pm$ xx & 0--5s \\
+Stateful (async, 30s propagation) & xx $\pm$ xx & 0--30s \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 Table~\ref{tab:tokenreuse} evaluates authority resurrection under different external validation models.
 
-\textbf{Key finding 4: Stateless validation is highly vulnerable.} With stateless JWT validation (no revocation list), 94.2\% of consumed tokens are accepted after restore. The restored agent simply replays the token from its checkpointed memory.
+\textbf{Key finding 4: Stateless validation is highly vulnerable.} With stateless JWT validation (no revocation list), xx\% of consumed tokens are accepted after restore. The restored agent simply replays the token from its checkpointed memory.
 
-\textbf{Key finding 5: Propagation delays create attack windows.} Even stateful systems with asynchronous revocation propagation show significant vulnerability. A 30-second propagation delay yields 58.4\% reuse success, representing a realistic attack window in distributed systems.
+\textbf{Key finding 5: Propagation delays create attack windows.} Even stateful systems with asynchronous revocation propagation show significant vulnerability. A 30-second propagation delay yields xx\% reuse success, representing a realistic attack window in distributed systems.
 
-\textbf{Key finding 6: Immediate synchronous validation is effective.} Only synchronous, immediate revocation checking reduces reuse to 2.4\% (residual cases due to race conditions at checkpoint boundaries).
+\textbf{Key finding 6: Immediate synchronous validation is effective.} Only synchronous, immediate revocation checking reduces reuse to xx\% (residual cases due to race conditions at checkpoint boundaries).
 
 \subsection{RQ3: Fork-Based Amplification}
 
@@ -440,19 +440,19 @@ Table~\ref{tab:tokenreuse} evaluates authority resurrection under different exte
 \toprule
 \textbf{Fork Count} & \textbf{VMs Created} & \textbf{Amplification} & \textbf{Quota Exceeded} \\
 \midrule
-1 & 2.8 $\pm$ 0.4 & 0.93$\times$ & 0\% \\
-2 & 5.2 $\pm$ 0.6 & 1.73$\times$ & 72\% \\
-4 & 9.4 $\pm$ 0.8 & 3.13$\times$ & 98\% \\
-8 & 16.8 $\pm$ 1.2 & 5.60$\times$ & 100\% \\
+1 & xx $\pm$ xx & xx$\times$ & xx\% \\
+2 & xx $\pm$ xx & xx$\times$ & xx\% \\
+4 & xx $\pm$ xx & xx$\times$ & xx\% \\
+8 & xx $\pm$ xx & xx$\times$ & xx\% \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 Table~\ref{tab:forking} shows resource consumption when multiple agent instances are forked from the same checkpoint.
 
-\textbf{Key finding 7: Linear amplification.} Resource consumption scales approximately linearly with fork count. With 8 forks, the amplification factor reaches 5.6$\times$, exceeding the quota of 3 VMs/minute by 460\%.
+\textbf{Key finding 7: Linear amplification.} Resource consumption scales approximately linearly with fork count. With 8 forks, the amplification factor reaches xx$\times$, exceeding the quota of 3 VMs/minute by xx\%.
 
-\textbf{Key finding 8: Quota bypass is reliable.} At 4 forks, 98\% of trials exceed the quota. This represents a practical denial-of-wallet attack where an adversary with time-travel access can amplify costs beyond intended budgets.
+\textbf{Key finding 8: Quota bypass is reliable.} At 4 forks, xx\% of trials exceed the quota. This represents a practical denial-of-wallet attack where an adversary with time-travel access can amplify costs beyond intended budgets.
 
 \subsection{RQ4: Impact of Injection Points}
 
@@ -462,9 +462,9 @@ Table~\ref{tab:forking} shows resource consumption when multiple agent instances
 \toprule
 \textbf{Injection Point} & \textbf{Dup.} & \textbf{Reuse} & \textbf{Amp.} \\
 \midrule
-P1 (Pre-send) & 67.2\% & 89.6\% & 5.4$\times$ \\
-P2 (In-flight) & 78.4\% & 91.2\% & 5.6$\times$ \\
-P3 (Post-response) & 71.0\% & 42.8\% & 5.5$\times$ \\
+P1 (Pre-send) & xx\% & xx\% & xx$\times$ \\
+P2 (In-flight) & xx\% & xx\% & xx$\times$ \\
+P3 (Post-response) & xx\% & xx\% & xx$\times$ \\
 \bottomrule
 \end{tabular}
 \caption{Vulnerability severity by injection point (W1-Payment, stateless auth, 8 forks).}
@@ -475,9 +475,9 @@ Figure~\ref{fig:injection} compares vulnerability severity across injection poin
 
 \textbf{Key finding 9: P2 maximizes duplication.} In-flight checkpoints (P2) produce the highest duplication because the external action commits but the agent state does not reflect completion.
 
-\textbf{Key finding 10: P3 reduces token reuse.} Post-response checkpoints (P3) show lower token reuse (42.8\% vs $>$89\%) because the agent may have already processed the ``token consumed'' response before checkpoint, depending on exact timing.
+\textbf{Key finding 10: P3 reduces token reuse.} Post-response checkpoints (P3) show lower token reuse (xx\% vs $>$xx\%) because the agent may have already processed the ``token consumed'' response before checkpoint, depending on exact timing.
 
-\textbf{Key finding 11: Amplification is injection-independent.} Fork amplification remains consistent ($\sim$5.5$\times$) across injection points because it depends on concurrent execution rather than checkpoint timing.
+\textbf{Key finding 11: Amplification is injection-independent.} Fork amplification remains consistent ($\sim$xx$\times$) across injection points because it depends on concurrent execution rather than checkpoint timing.
 
 \subsection{Comparison with Baselines}
 
@@ -490,28 +490,28 @@ Figure~\ref{fig:injection} compares vulnerability severity across injection poin
 \textbf{Mechanism} & \textbf{Duplicate Rate} & \textbf{Key Instability} \\
 \midrule
 No-CR & 0.0 & N/A \\
-Det-Replay & 3.2 $\pm$ 1.6 & 0.0 \\
-LG-TimeTravel & 72.6 $\pm$ 3.9 & 69.4 $\pm$ 4.1 \\
-CRIU & 78.4 $\pm$ 3.8 & 71.4 $\pm$ 4.0 \\
-Podman & 76.8 $\pm$ 3.7 & 70.2 $\pm$ 4.1 \\
+Det-Replay & xx $\pm$ xx & 0.0 \\
+LG-TimeTravel & xx $\pm$ xx & xx $\pm$ xx \\
+CRIU & xx $\pm$ xx & xx $\pm$ xx \\
+Podman & xx $\pm$ xx & xx $\pm$ xx \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 Table~\ref{tab:baselines} compares checkpoint-restore mechanisms.
 
-\textbf{Key finding 12: Deterministic replay is effective.} Det-Replay achieves near-zero duplication (3.2\%, residual due to network errors) by replaying recorded tool calls instead of re-synthesizing. This validates the durable execution assumption~\cite{temporal} but requires infrastructure changes to record and replay LLM decisions.
+\textbf{Key finding 12: Deterministic replay is effective.} Det-Replay achieves near-zero duplication (xx\%, residual due to network errors) by replaying recorded tool calls instead of re-synthesizing. This validates the durable execution assumption~\cite{temporal} but requires infrastructure changes to record and replay LLM decisions.
 
-\textbf{Key finding 13: Framework and OS-level checkpoints are equally vulnerable.} LangGraph time-travel (72.6\%) shows similar vulnerability to CRIU (78.4\%) and Podman (76.8\%). The vulnerability stems from LLM non-determinism, not the checkpoint mechanism itself.
+\textbf{Key finding 13: Framework and OS-level checkpoints are equally vulnerable.} LangGraph time-travel (xx\%) shows similar vulnerability to CRIU (xx\%) and Podman (xx\%). The vulnerability stems from LLM non-determinism, not the checkpoint mechanism itself.
 
 \subsection{Summary of Findings}
 
 Our evaluation demonstrates that semantic rollback vulnerabilities are:
 \begin{enumerate}
-    \item \textbf{Frequent}: Duplication rates exceed 64\% for idempotency-enabled services and 89\% for services without idempotency
+    \item \textbf{Frequent}: Duplication rates exceed xx\% for idempotency-enabled services and xx\% for services without idempotency
     \item \textbf{Cross-cutting}: Both OS-level (CRIU, Podman) and application-level (LangGraph) checkpoints exhibit similar vulnerability
-    \item \textbf{Exploitable}: Authority resurrection succeeds in 94\% of cases with stateless validation; fork amplification reliably exceeds quotas
-    \item \textbf{Mitigatable}: Deterministic replay reduces duplication to 3\%; synchronous stateful validation reduces token reuse to 2\%
+    \item \textbf{Exploitable}: Authority resurrection succeeds in xx\% of cases with stateless validation; fork amplification reliably exceeds quotas
+    \item \textbf{Mitigatable}: Deterministic replay reduces duplication to xx\%; synchronous stateful validation reduces token reuse to xx\%
 \end{enumerate}
 
 These findings confirm a fundamental semantic gap: checkpoint-restore mechanisms designed for deterministic programs produce security violations when applied to non-deterministic LLM agents interacting with stateful external services.
