@@ -79,10 +79,12 @@ echo ""
 cd "$LLAMA_DIR"
 
 # Start in background
+# --jinja is required for tool calling support (Claude Code compatibility)
 nohup build/bin/llama-server \
     -hf "$MODEL" \
     -c "$CONTEXT_SIZE" \
     --port "$PORT" \
+    --jinja \
     > "$LOG_FILE" 2>&1 &
 
 SERVER_PID=$!

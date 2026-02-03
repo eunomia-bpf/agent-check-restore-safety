@@ -16,9 +16,12 @@ Usage:
 
 import json
 import requests
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, asdict
+from typing import Optional, List
+from datetime import datetime
+from pathlib import Path
 import copy
+import os
 
 # ============================================================================
 # Configuration
@@ -26,6 +29,24 @@ import copy
 
 LLAMA_SERVER_URL = "http://localhost:8080/v1/chat/completions"
 MODEL_NAME = "qwen3"  # llama.cpp uses this as model name
+
+# Prompts (stored as constants for logging)
+SYSTEM_PROMPT = """You are a payment processing agent. When asked to process a payment,
+you must generate a JSON tool call with the following format:
+
+{
+    "tool": "create_charge",
+    "order_id": "<order_id from the request>",
+    "amount": <amount in cents>,
+    "idempotency_key": "<generate a unique key for this transaction>"
+}
+
+IMPORTANT: Generate a unique idempotency_key for each transaction. The key should be
+a string that uniquely identifies this specific payment request.
+
+Respond ONLY with the JSON, no other text. Do not use markdown or code block. Enable no_think mode."""
+
+USER_PROMPT_TEMPLATE = "Process this payment request: {task}"
 
 # ============================================================================
 # Simple Payment Service (in-memory)
@@ -41,8 +62,11 @@ class PaymentService:
     def create_charge(self, order_id: str, amount: int, idempotency_key: str) -> dict:
         """Create a charge with idempotency protection"""
 
+        timestamp = datetime.now().isoformat()
+
         # Log the request (append-only)
         self.request_log.append({
+            "timestamp": timestamp,
             "order_id": order_id,
             "amount": amount,
             "idempotency_key": idempotency_key,
@@ -62,6 +86,7 @@ class PaymentService:
             "charge_id": charge_id,
             "order_id": order_id,
             "amount": amount,
+            "created_at": timestamp,
         }
 
         return {
@@ -77,6 +102,14 @@ class PaymentService:
             "unique_charges": len(self.charges),
             "duplicate_requests": len(self.request_log) - len(self.charges),
         }
+
+    def get_full_log(self) -> List[dict]:
+        """Get full request log"""
+        return self.request_log.copy()
+
+    def get_all_charges(self) -> dict:
+        """Get all charges"""
+        return self.charges.copy()
 
 
 # ============================================================================
@@ -94,9 +127,11 @@ class AgentState:
 class SimpleAgent:
     """Simple agent that calls LLM to generate tool calls"""
 
-    def __init__(self, llm_url: str = LLAMA_SERVER_URL):
+    def __init__(self, llm_url: str = LLAMA_SERVER_URL, temperature: float = 0.7):
         self.llm_url = llm_url
+        self.temperature = temperature
         self.state = None
+        self.last_raw_response = None  # Store for logging
 
     def init_task(self, task: str):
         """Initialize agent with a task"""
@@ -117,25 +152,10 @@ class SimpleAgent:
     def generate_tool_call(self) -> dict:
         """Call LLM to generate a payment tool call"""
 
-        system_prompt = """You are a payment processing agent. When asked to process a payment,
-you must generate a JSON tool call with the following format:
-
-{
-    "tool": "create_charge",
-    "order_id": "<order_id from the request>",
-    "amount": <amount in cents>,
-    "idempotency_key": "<generate a unique key for this transaction>"
-}
-
-IMPORTANT: Generate a unique idempotency_key for each transaction. The key should be
-a string that uniquely identifies this specific payment request.
-
-Respond ONLY with the JSON, no other text. Do not use markdown or code block. Enable no_think mode."""
-
-        user_prompt = f"Process this payment request: {self.state.task}"
+        user_prompt = USER_PROMPT_TEMPLATE.format(task=self.state.task)
 
         messages = [
-            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt}
         ]
 
@@ -146,7 +166,7 @@ Respond ONLY with the JSON, no other text. Do not use markdown or code block. En
                 json={
                     "model": MODEL_NAME,
                     "messages": messages,
-                    "temperature": 0.7,  # Non-zero for demonstration
+                    "temperature": self.temperature,
                     "max_tokens": 256,
                 },
                 timeout=60
@@ -154,6 +174,7 @@ Respond ONLY with the JSON, no other text. Do not use markdown or code block. En
             response.raise_for_status()
 
             result = response.json()
+            self.last_raw_response = result  # Store for logging
             content = result["choices"][0]["message"]["content"]
 
             # Parse JSON from response
@@ -176,10 +197,102 @@ Respond ONLY with the JSON, no other text. Do not use markdown or code block. En
 
 
 # ============================================================================
+# Experiment Result Storage
+# ============================================================================
+
+@dataclass
+class TrialResult:
+    """Result of a single trial"""
+    trial_id: int
+    order_id: str
+    task: str
+
+    # Before restore
+    key_before: str
+    tool_call_before: dict
+    raw_response_before: dict
+    service_result_before: dict
+
+    # After restore
+    key_after: str
+    tool_call_after: dict
+    raw_response_after: dict
+    service_result_after: dict
+
+    # Analysis
+    key_changed: bool
+    duplicate_created: bool
+
+    timestamp: str = ""
+
+    def __post_init__(self):
+        if not self.timestamp:
+            self.timestamp = datetime.now().isoformat()
+
+
+@dataclass
+class ExperimentConfig:
+    """Experiment configuration"""
+    llm_url: str
+    model_name: str
+    temperature: float
+    max_tokens: int
+    num_trials: int
+    system_prompt: str
+    user_prompt_template: str
+
+
+@dataclass
+class ExperimentResult:
+    """Full experiment result"""
+    experiment_id: str
+    start_time: str
+    end_time: str
+    config: ExperimentConfig
+    trials: List[TrialResult]
+    summary: dict
+    payment_service_log: List[dict]
+    payment_service_charges: dict
+
+
+def save_experiment_result(result: ExperimentResult, output_dir: str = "results"):
+    """Save experiment result to JSON file"""
+
+    # Create output directory
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    # Generate filename
+    filename = f"experiment_{result.experiment_id}.json"
+    filepath = output_path / filename
+
+    # Convert to dict (handle dataclasses)
+    def to_dict(obj):
+        if hasattr(obj, '__dataclass_fields__'):
+            return {k: to_dict(v) for k, v in asdict(obj).items()}
+        elif isinstance(obj, list):
+            return [to_dict(item) for item in obj]
+        elif isinstance(obj, dict):
+            return {k: to_dict(v) for k, v in obj.items()}
+        else:
+            return obj
+
+    result_dict = to_dict(result)
+
+    # Save to file
+    with open(filepath, 'w') as f:
+        json.dump(result_dict, f, indent=2, ensure_ascii=False)
+
+    print(f"Results saved to: {filepath}")
+    return filepath
+
+
+# ============================================================================
 # Experiment
 # ============================================================================
 
-def run_experiment(num_trials: int = 10):
+def run_experiment(num_trials: int = 10, temperature: float = 0.7,
+                   llm_url: str = LLAMA_SERVER_URL, output_dir: str = "results"):
     """
     Run the experiment:
     1. For each trial, give agent a task
@@ -195,10 +308,30 @@ def run_experiment(num_trials: int = 10):
     print("=" * 60)
     print()
 
-    payment_service = PaymentService()
-    agent = SimpleAgent()
+    # Experiment setup
+    experiment_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+    start_time = datetime.now().isoformat()
 
-    results = []
+    config = ExperimentConfig(
+        llm_url=llm_url,
+        model_name=MODEL_NAME,
+        temperature=temperature,
+        max_tokens=256,
+        num_trials=num_trials,
+        system_prompt=SYSTEM_PROMPT,
+        user_prompt_template=USER_PROMPT_TEMPLATE,
+    )
+
+    print(f"Experiment ID: {experiment_id}")
+    print(f"LLM URL: {llm_url}")
+    print(f"Temperature: {temperature}")
+    print(f"Trials: {num_trials}")
+    print()
+
+    payment_service = PaymentService()
+    agent = SimpleAgent(llm_url=llm_url, temperature=temperature)
+
+    trial_results = []
 
     for trial in range(num_trials):
         order_id = f"order_{trial + 1:04d}"
@@ -217,6 +350,7 @@ def run_experiment(num_trials: int = 10):
         # Generate first tool call
         try:
             tool_call_1 = agent.generate_tool_call()
+            raw_response_1 = copy.deepcopy(agent.last_raw_response)
             key_1 = tool_call_1.get("idempotency_key", "MISSING")
             print(f"  [Before restore] idempotency_key = {key_1}")
 
@@ -239,6 +373,7 @@ def run_experiment(num_trials: int = 10):
         # Generate second tool call (after restore)
         try:
             tool_call_2 = agent.generate_tool_call()
+            raw_response_2 = copy.deepcopy(agent.last_raw_response)
             key_2 = tool_call_2.get("idempotency_key", "MISSING")
             print(f"  [After restore] idempotency_key = {key_2}")
 
@@ -258,31 +393,50 @@ def run_experiment(num_trials: int = 10):
         key_changed = (key_1 != key_2)
         duplicate_created = (result_2["status"] == "succeeded")  # New charge created
 
-        results.append({
-            "trial": trial + 1,
-            "order_id": order_id,
-            "key_1": key_1,
-            "key_2": key_2,
-            "key_changed": key_changed,
-            "duplicate_created": duplicate_created,
-        })
+        trial_result = TrialResult(
+            trial_id=trial + 1,
+            order_id=order_id,
+            task=task,
+            key_before=key_1,
+            tool_call_before=tool_call_1,
+            raw_response_before=raw_response_1,
+            service_result_before=result_1,
+            key_after=key_2,
+            tool_call_after=tool_call_2,
+            raw_response_after=raw_response_2,
+            service_result_after=result_2,
+            key_changed=key_changed,
+            duplicate_created=duplicate_created,
+        )
+        trial_results.append(trial_result)
 
         status = "VULNERABLE" if duplicate_created else "PROTECTED"
         print(f"  [Result] Key changed: {key_changed}, Duplicate: {duplicate_created} -> {status}")
         print()
 
     # Summary
+    end_time = datetime.now().isoformat()
+
+    total = len(trial_results)
+    key_changes = sum(1 for r in trial_results if r.key_changed)
+    duplicates = sum(1 for r in trial_results if r.duplicate_created)
+
+    summary = {
+        "total_trials": total,
+        "key_changes": key_changes,
+        "key_instability_rate": key_changes / total if total > 0 else 0,
+        "duplicates": duplicates,
+        "duplicate_rate": duplicates / total if total > 0 else 0,
+        "payment_service_stats": payment_service.get_stats(),
+    }
+
     print("=" * 60)
     print("SUMMARY")
     print("=" * 60)
 
-    total = len(results)
-    key_changes = sum(1 for r in results if r["key_changed"])
-    duplicates = sum(1 for r in results if r["duplicate_created"])
-
     print(f"Total trials: {total}")
-    print(f"Key instability rate: {key_changes}/{total} ({100*key_changes/total:.1f}%)")
-    print(f"Duplicate rate: {duplicates}/{total} ({100*duplicates/total:.1f}%)")
+    print(f"Key instability rate: {key_changes}/{total} ({100*summary['key_instability_rate']:.1f}%)")
+    print(f"Duplicate rate: {duplicates}/{total} ({100*summary['duplicate_rate']:.1f}%)")
     print()
     print("Payment Service Stats:")
     stats = payment_service.get_stats()
@@ -299,7 +453,25 @@ def run_experiment(num_trials: int = 10):
         print("CONCLUSION: No duplicates observed in this run.")
         print("Try increasing trials or temperature for more variation.")
 
-    return results
+    # Save results
+    experiment_result = ExperimentResult(
+        experiment_id=experiment_id,
+        start_time=start_time,
+        end_time=end_time,
+        config=config,
+        trials=trial_results,
+        summary=summary,
+        payment_service_log=payment_service.get_full_log(),
+        payment_service_charges=payment_service.get_all_charges(),
+    )
+
+    # Determine output directory (relative to script location)
+    script_dir = Path(__file__).parent.parent
+    results_dir = script_dir / output_dir
+
+    saved_path = save_experiment_result(experiment_result, str(results_dir))
+
+    return experiment_result
 
 
 # ============================================================================
@@ -311,7 +483,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Semantic Rollback PoC")
     parser.add_argument("--trials", type=int, default=10, help="Number of trials")
+    parser.add_argument("--temperature", type=float, default=0.7, help="LLM temperature")
     parser.add_argument("--llm-url", type=str, default=LLAMA_SERVER_URL, help="LLM server URL")
+    parser.add_argument("--output-dir", type=str, default="results", help="Output directory for results")
     args = parser.parse_args()
 
     # Check if LLM server is running
@@ -328,4 +502,9 @@ if __name__ == "__main__":
         input("Press Enter to continue anyway, or Ctrl+C to exit...")
 
     print()
-    run_experiment(num_trials=args.trials)
+    run_experiment(
+        num_trials=args.trials,
+        temperature=args.temperature,
+        llm_url=args.llm_url,
+        output_dir=args.output_dir,
+    )

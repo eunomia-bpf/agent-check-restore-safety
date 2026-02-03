@@ -1,0 +1,636 @@
+{
+  "experiment_id": "20260202_161630",
+  "start_time": "2026-02-02T16:16:30.043379",
+  "end_time": "2026-02-02T16:16:47.716650",
+  "config": {
+    "llm_url": "http://localhost:8080/v1/chat/completions",
+    "model_name": "qwen3",
+    "temperature": 0.7,
+    "max_tokens": 256,
+    "num_trials": 5,
+    "system_prompt": "You are a payment processing agent. When asked to process a payment,\nyou must generate a JSON tool call with the following format:\n\n{\n    \"tool\": \"create_charge\",\n    \"order_id\": \"<order_id from the request>\",\n    \"amount\": <amount in cents>,\n    \"idempotency_key\": \"<generate a unique key for this transaction>\"\n}\n\nIMPORTANT: Generate a unique idempotency_key for each transaction. The key should be\na string that uniquely identifies this specific payment request.\n\nRespond ONLY with the JSON, no other text. Do not use markdown or code block. Enable no_think mode.",
+    "user_prompt_template": "Process this payment request: {task}"
+  },
+  "trials": [
+    {
+      "trial_id": 1,
+      "order_id": "order_0001",
+      "task": "Process a payment of $49.99 for order #order_0001",
+      "key_before": "uuid_7a3b8c2d-9e4f-5a6b-7c8d-9e0f1a2b3c4d",
+      "tool_call_before": {
+        "tool": "create_charge",
+        "order_id": "order_0001",
+        "amount": 4999,
+        "idempotency_key": "uuid_7a3b8c2d-9e4f-5a6b-7c8d-9e0f1a2b3c4d"
+      },
+      "raw_response_before": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\n    \"tool\": \"create_charge\",\n    \"order_id\": \"order_0001\",\n    \"amount\": 4999,\n    \"idempotency_key\": \"uuid_7a3b8c2d-9e4f-5a6b-7c8d-9e0f1a2b3c4d\"\n}"
+            }
+          }
+        ],
+        "created": 1770077791,
+        "model": "unsloth/Qwen3-Next-80B-A3B-Instruct-GGUF:Q4_K_M",
+        "system_fingerprint": "b1-557515b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 82,
+          "prompt_tokens": 164,
+          "total_tokens": 246
+        },
+        "id": "chatcmpl-QIF4zXGAkVWdH8YvDWCNHPXuvAHRTPw2",
+        "timings": {
+          "cache_n": 100,
+          "prompt_n": 64,
+          "prompt_ms": 180.47,
+          "prompt_per_token_ms": 2.81984375,
+          "prompt_per_second": 354.629578323267,
+          "predicted_n": 82,
+          "predicted_ms": 1735.321,
+          "predicted_per_token_ms": 21.162451219512192,
+          "predicted_per_second": 47.25350525925751
+        }
+      },
+      "service_result_before": {
+        "status": "succeeded",
+        "charge_id": "ch_0001",
+        "message": "Charge created"
+      },
+      "key_after": "uuid_7a3b9c2d-e4f5-6a7b-8c9d-0e1f2a3b4c5d",
+      "tool_call_after": {
+        "tool": "create_charge",
+        "order_id": "order_0001",
+        "amount": 4999,
+        "idempotency_key": "uuid_7a3b9c2d-e4f5-6a7b-8c9d-0e1f2a3b4c5d"
+      },
+      "raw_response_after": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\n    \"tool\": \"create_charge\",\n    \"order_id\": \"order_0001\",\n    \"amount\": 4999,\n    \"idempotency_key\": \"uuid_7a3b9c2d-e4f5-6a7b-8c9d-0e1f2a3b4c5d\"\n}"
+            }
+          }
+        ],
+        "created": 1770077793,
+        "model": "unsloth/Qwen3-Next-80B-A3B-Instruct-GGUF:Q4_K_M",
+        "system_fingerprint": "b1-557515b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 81,
+          "prompt_tokens": 164,
+          "total_tokens": 245
+        },
+        "id": "chatcmpl-xV81ZozuIEKFu1dsfeZZKxSqWshgczag",
+        "timings": {
+          "cache_n": 100,
+          "prompt_n": 64,
+          "prompt_ms": 170.922,
+          "prompt_per_token_ms": 2.67065625,
+          "prompt_per_second": 374.4398029510537,
+          "predicted_n": 81,
+          "predicted_ms": 1730.51,
+          "predicted_per_token_ms": 21.36432098765432,
+          "predicted_per_second": 46.80701065003958
+        }
+      },
+      "service_result_after": {
+        "status": "succeeded",
+        "charge_id": "ch_0002",
+        "message": "Charge created"
+      },
+      "key_changed": true,
+      "duplicate_created": true,
+      "timestamp": "2026-02-02T16:16:33.866896"
+    },
+    {
+      "trial_id": 2,
+      "order_id": "order_0002",
+      "task": "Process a payment of $49.99 for order #order_0002",
+      "key_before": "idempotency_key_9a3b8c2d1e4f6a7b8c9d0e1f2a3b4c5d",
+      "tool_call_before": {
+        "tool": "create_charge",
+        "order_id": "order_0002",
+        "amount": 4999,
+        "idempotency_key": "idempotency_key_9a3b8c2d1e4f6a7b8c9d0e1f2a3b4c5d"
+      },
+      "raw_response_before": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\n    \"tool\": \"create_charge\",\n    \"order_id\": \"order_0002\",\n    \"amount\": 4999,\n    \"idempotency_key\": \"idempotency_key_9a3b8c2d1e4f6a7b8c9d0e1f2a3b4c5d\"\n}"
+            }
+          }
+        ],
+        "created": 1770077795,
+        "model": "unsloth/Qwen3-Next-80B-A3B-Instruct-GGUF:Q4_K_M",
+        "system_fingerprint": "b1-557515b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 82,
+          "prompt_tokens": 164,
+          "total_tokens": 246
+        },
+        "id": "chatcmpl-55413HUGaI1VdONU7QrC6OONcqkx1DY7",
+        "timings": {
+          "cache_n": 100,
+          "prompt_n": 64,
+          "prompt_ms": 171.873,
+          "prompt_per_token_ms": 2.685515625,
+          "prompt_per_second": 372.36796937273454,
+          "predicted_n": 82,
+          "predicted_ms": 1752.418,
+          "predicted_per_token_ms": 21.370951219512193,
+          "predicted_per_second": 46.79248900661828
+        }
+      },
+      "service_result_before": {
+        "status": "succeeded",
+        "charge_id": "ch_0003",
+        "message": "Charge created"
+      },
+      "key_after": "ipk_0002_4999_20231010_123456",
+      "tool_call_after": {
+        "tool": "create_charge",
+        "order_id": "order_0002",
+        "amount": 4999,
+        "idempotency_key": "ipk_0002_4999_20231010_123456"
+      },
+      "raw_response_after": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\n    \"tool\": \"create_charge\",\n    \"order_id\": \"order_0002\",\n    \"amount\": 4999,\n    \"idempotency_key\": \"ipk_0002_4999_20231010_123456\"\n}"
+            }
+          }
+        ],
+        "created": 1770077797,
+        "model": "unsloth/Qwen3-Next-80B-A3B-Instruct-GGUF:Q4_K_M",
+        "system_fingerprint": "b1-557515b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 72,
+          "prompt_tokens": 164,
+          "total_tokens": 236
+        },
+        "id": "chatcmpl-VlPJe1RlYDbgRvsdFWcvUszMdz8JkuEx",
+        "timings": {
+          "cache_n": 100,
+          "prompt_n": 64,
+          "prompt_ms": 169.4,
+          "prompt_per_token_ms": 2.646875,
+          "prompt_per_second": 377.8040141676505,
+          "predicted_n": 72,
+          "predicted_ms": 1579.147,
+          "predicted_per_token_ms": 21.93259722222222,
+          "predicted_per_second": 45.59423536884154
+        }
+      },
+      "service_result_after": {
+        "status": "succeeded",
+        "charge_id": "ch_0004",
+        "message": "Charge created"
+      },
+      "key_changed": true,
+      "duplicate_created": true,
+      "timestamp": "2026-02-02T16:16:37.546077"
+    },
+    {
+      "trial_id": 3,
+      "order_id": "order_0003",
+      "task": "Process a payment of $49.99 for order #order_0003",
+      "key_before": "idempotency_key_1234567890abcdef",
+      "tool_call_before": {
+        "tool": "create_charge",
+        "order_id": "order_0003",
+        "amount": 4999,
+        "idempotency_key": "idempotency_key_1234567890abcdef"
+      },
+      "raw_response_before": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\n    \"tool\": \"create_charge\",\n    \"order_id\": \"order_0003\",\n    \"amount\": 4999,\n    \"idempotency_key\": \"idempotency_key_1234567890abcdef\"\n}"
+            }
+          }
+        ],
+        "created": 1770077799,
+        "model": "unsloth/Qwen3-Next-80B-A3B-Instruct-GGUF:Q4_K_M",
+        "system_fingerprint": "b1-557515b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 61,
+          "prompt_tokens": 164,
+          "total_tokens": 225
+        },
+        "id": "chatcmpl-DJS1Z6WoAyVja1RT0YulHZLowLG1QLCl",
+        "timings": {
+          "cache_n": 100,
+          "prompt_n": 64,
+          "prompt_ms": 169.757,
+          "prompt_per_token_ms": 2.652453125,
+          "prompt_per_second": 377.009490035757,
+          "predicted_n": 61,
+          "predicted_ms": 1364.098,
+          "predicted_per_token_ms": 22.362262295081965,
+          "predicted_per_second": 44.71819473380945
+        }
+      },
+      "service_result_before": {
+        "status": "succeeded",
+        "charge_id": "ch_0005",
+        "message": "Charge created"
+      },
+      "key_after": "uuid_7a3b9c1d-2e4f-5g6h-7i8j-9k0l1m2n3o4p",
+      "tool_call_after": {
+        "tool": "create_charge",
+        "order_id": "order_0003",
+        "amount": 4999,
+        "idempotency_key": "uuid_7a3b9c1d-2e4f-5g6h-7i8j-9k0l1m2n3o4p"
+      },
+      "raw_response_after": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\n    \"tool\": \"create_charge\",\n    \"order_id\": \"order_0003\",\n    \"amount\": 4999,\n    \"idempotency_key\": \"uuid_7a3b9c1d-2e4f-5g6h-7i8j-9k0l1m2n3o4p\"\n}"
+            }
+          }
+        ],
+        "created": 1770077801,
+        "model": "unsloth/Qwen3-Next-80B-A3B-Instruct-GGUF:Q4_K_M",
+        "system_fingerprint": "b1-557515b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 82,
+          "prompt_tokens": 164,
+          "total_tokens": 246
+        },
+        "id": "chatcmpl-xP7NAJGSwYhStiszlwWkMZYn3z2vdHJd",
+        "timings": {
+          "cache_n": 100,
+          "prompt_n": 64,
+          "prompt_ms": 168.791,
+          "prompt_per_token_ms": 2.637359375,
+          "prompt_per_second": 379.1671356885142,
+          "predicted_n": 82,
+          "predicted_ms": 1789.13,
+          "predicted_per_token_ms": 21.818658536585367,
+          "predicted_per_second": 45.83233191551201
+        }
+      },
+      "service_result_after": {
+        "status": "succeeded",
+        "charge_id": "ch_0006",
+        "message": "Charge created"
+      },
+      "key_changed": true,
+      "duplicate_created": true,
+      "timestamp": "2026-02-02T16:16:41.045776"
+    },
+    {
+      "trial_id": 4,
+      "order_id": "order_0004",
+      "task": "Process a payment of $49.99 for order #order_0004",
+      "key_before": "inv_0004_7a2b9c1d",
+      "tool_call_before": {
+        "tool": "create_charge",
+        "order_id": "order_0004",
+        "amount": 4999,
+        "idempotency_key": "inv_0004_7a2b9c1d"
+      },
+      "raw_response_before": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\n    \"tool\": \"create_charge\",\n    \"order_id\": \"order_0004\",\n    \"amount\": 4999,\n    \"idempotency_key\": \"inv_0004_7a2b9c1d\"\n}"
+            }
+          }
+        ],
+        "created": 1770077802,
+        "model": "unsloth/Qwen3-Next-80B-A3B-Instruct-GGUF:Q4_K_M",
+        "system_fingerprint": "b1-557515b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 59,
+          "prompt_tokens": 164,
+          "total_tokens": 223
+        },
+        "id": "chatcmpl-uzEc3tCuwk9HsegUwjyXhHvViraWkyt3",
+        "timings": {
+          "cache_n": 100,
+          "prompt_n": 64,
+          "prompt_ms": 168.602,
+          "prompt_per_token_ms": 2.63440625,
+          "prompt_per_second": 379.59217565627927,
+          "predicted_n": 59,
+          "predicted_ms": 1299.507,
+          "predicted_per_token_ms": 22.025542372881358,
+          "predicted_per_second": 45.401833156727896
+        }
+      },
+      "service_result_before": {
+        "status": "succeeded",
+        "charge_id": "ch_0007",
+        "message": "Charge created"
+      },
+      "key_after": "idempotency_key_1234567890abcdef",
+      "tool_call_after": {
+        "tool": "create_charge",
+        "order_id": "order_0004",
+        "amount": 4999,
+        "idempotency_key": "idempotency_key_1234567890abcdef"
+      },
+      "raw_response_after": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\n    \"tool\": \"create_charge\",\n    \"order_id\": \"order_0004\",\n    \"amount\": 4999,\n    \"idempotency_key\": \"idempotency_key_1234567890abcdef\"\n}"
+            }
+          }
+        ],
+        "created": 1770077804,
+        "model": "unsloth/Qwen3-Next-80B-A3B-Instruct-GGUF:Q4_K_M",
+        "system_fingerprint": "b1-557515b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 61,
+          "prompt_tokens": 164,
+          "total_tokens": 225
+        },
+        "id": "chatcmpl-7ljRdA0Csa3WIClYt4vHv5zyyYQNx90i",
+        "timings": {
+          "cache_n": 100,
+          "prompt_n": 64,
+          "prompt_ms": 168.894,
+          "prompt_per_token_ms": 2.63896875,
+          "prompt_per_second": 378.93590062406,
+          "predicted_n": 61,
+          "predicted_ms": 1344.582,
+          "predicted_per_token_ms": 22.04232786885246,
+          "predicted_per_second": 45.367259118447215
+        }
+      },
+      "service_result_after": {
+        "status": "duplicate",
+        "charge_id": "ch_0005",
+        "message": "Idempotency key already used"
+      },
+      "key_changed": true,
+      "duplicate_created": false,
+      "timestamp": "2026-02-02T16:16:44.033278"
+    },
+    {
+      "trial_id": 5,
+      "order_id": "order_0005",
+      "task": "Process a payment of $49.99 for order #order_0005",
+      "key_before": "ipc_0005_4999_20231010_123456",
+      "tool_call_before": {
+        "tool": "create_charge",
+        "order_id": "order_0005",
+        "amount": 4999,
+        "idempotency_key": "ipc_0005_4999_20231010_123456"
+      },
+      "raw_response_before": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\n    \"tool\": \"create_charge\",\n    \"order_id\": \"order_0005\",\n    \"amount\": 4999,\n    \"idempotency_key\": \"ipc_0005_4999_20231010_123456\"\n}"
+            }
+          }
+        ],
+        "created": 1770077805,
+        "model": "unsloth/Qwen3-Next-80B-A3B-Instruct-GGUF:Q4_K_M",
+        "system_fingerprint": "b1-557515b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 71,
+          "prompt_tokens": 164,
+          "total_tokens": 235
+        },
+        "id": "chatcmpl-AClyFLgVt4BcFdBfCqKP3sXohQpzMzQt",
+        "timings": {
+          "cache_n": 100,
+          "prompt_n": 64,
+          "prompt_ms": 169.624,
+          "prompt_per_token_ms": 2.650375,
+          "prompt_per_second": 377.3050983351413,
+          "predicted_n": 71,
+          "predicted_ms": 1556.119,
+          "predicted_per_token_ms": 21.917169014084507,
+          "predicted_per_second": 45.62633063409675
+        }
+      },
+      "service_result_before": {
+        "status": "succeeded",
+        "charge_id": "ch_0008",
+        "message": "Charge created"
+      },
+      "key_after": "idempotency_key_7a3b9c2d4e5f6a7b8c9d0e1f2a3b4c5d",
+      "tool_call_after": {
+        "tool": "create_charge",
+        "order_id": "order_0005",
+        "amount": 4999,
+        "idempotency_key": "idempotency_key_7a3b9c2d4e5f6a7b8c9d0e1f2a3b4c5d"
+      },
+      "raw_response_after": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\n    \"tool\": \"create_charge\",\n    \"order_id\": \"order_0005\",\n    \"amount\": 4999,\n    \"idempotency_key\": \"idempotency_key_7a3b9c2d4e5f6a7b8c9d0e1f2a3b4c5d\"\n}"
+            }
+          }
+        ],
+        "created": 1770077807,
+        "model": "unsloth/Qwen3-Next-80B-A3B-Instruct-GGUF:Q4_K_M",
+        "system_fingerprint": "b1-557515b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 82,
+          "prompt_tokens": 164,
+          "total_tokens": 246
+        },
+        "id": "chatcmpl-aT4RFQFKIGBUa5uKBmmwVTEdSMyE4rZ7",
+        "timings": {
+          "cache_n": 100,
+          "prompt_n": 64,
+          "prompt_ms": 168.582,
+          "prompt_per_token_ms": 2.63409375,
+          "prompt_per_second": 379.63720919196595,
+          "predicted_n": 82,
+          "predicted_ms": 1783.229,
+          "predicted_per_token_ms": 21.74669512195122,
+          "predicted_per_second": 45.98399869001681
+        }
+      },
+      "service_result_after": {
+        "status": "succeeded",
+        "charge_id": "ch_0009",
+        "message": "Charge created"
+      },
+      "key_changed": true,
+      "duplicate_created": true,
+      "timestamp": "2026-02-02T16:16:47.716646"
+    }
+  ],
+  "summary": {
+    "total_trials": 5,
+    "key_changes": 5,
+    "key_instability_rate": 1.0,
+    "duplicates": 4,
+    "duplicate_rate": 0.8,
+    "payment_service_stats": {
+      "total_requests": 10,
+      "unique_charges": 9,
+      "duplicate_requests": 1
+    }
+  },
+  "payment_service_log": [
+    {
+      "timestamp": "2026-02-02T16:16:31.962319",
+      "order_id": "order_0001",
+      "amount": 4999,
+      "idempotency_key": "uuid_7a3b8c2d-9e4f-5a6b-7c8d-9e0f1a2b3c4d"
+    },
+    {
+      "timestamp": "2026-02-02T16:16:33.866877",
+      "order_id": "order_0001",
+      "amount": 4999,
+      "idempotency_key": "uuid_7a3b9c2d-e4f5-6a7b-8c9d-0e1f2a3b4c5d"
+    },
+    {
+      "timestamp": "2026-02-02T16:16:35.794443",
+      "order_id": "order_0002",
+      "amount": 4999,
+      "idempotency_key": "idempotency_key_9a3b8c2d1e4f6a7b8c9d0e1f2a3b4c5d"
+    },
+    {
+      "timestamp": "2026-02-02T16:16:37.546060",
+      "order_id": "order_0002",
+      "amount": 4999,
+      "idempotency_key": "ipk_0002_4999_20231010_123456"
+    },
+    {
+      "timestamp": "2026-02-02T16:16:39.084587",
+      "order_id": "order_0003",
+      "amount": 4999,
+      "idempotency_key": "idempotency_key_1234567890abcdef"
+    },
+    {
+      "timestamp": "2026-02-02T16:16:41.045760",
+      "order_id": "order_0003",
+      "amount": 4999,
+      "idempotency_key": "uuid_7a3b9c1d-2e4f-5g6h-7i8j-9k0l1m2n3o4p"
+    },
+    {
+      "timestamp": "2026-02-02T16:16:42.516891",
+      "order_id": "order_0004",
+      "amount": 4999,
+      "idempotency_key": "inv_0004_7a2b9c1d"
+    },
+    {
+      "timestamp": "2026-02-02T16:16:44.033265",
+      "order_id": "order_0004",
+      "amount": 4999,
+      "idempotency_key": "idempotency_key_1234567890abcdef"
+    },
+    {
+      "timestamp": "2026-02-02T16:16:45.761879",
+      "order_id": "order_0005",
+      "amount": 4999,
+      "idempotency_key": "ipc_0005_4999_20231010_123456"
+    },
+    {
+      "timestamp": "2026-02-02T16:16:47.716631",
+      "order_id": "order_0005",
+      "amount": 4999,
+      "idempotency_key": "idempotency_key_7a3b9c2d4e5f6a7b8c9d0e1f2a3b4c5d"
+    }
+  ],
+  "payment_service_charges": {
+    "uuid_7a3b8c2d-9e4f-5a6b-7c8d-9e0f1a2b3c4d": {
+      "charge_id": "ch_0001",
+      "order_id": "order_0001",
+      "amount": 4999,
+      "created_at": "2026-02-02T16:16:31.962319"
+    },
+    "uuid_7a3b9c2d-e4f5-6a7b-8c9d-0e1f2a3b4c5d": {
+      "charge_id": "ch_0002",
+      "order_id": "order_0001",
+      "amount": 4999,
+      "created_at": "2026-02-02T16:16:33.866877"
+    },
+    "idempotency_key_9a3b8c2d1e4f6a7b8c9d0e1f2a3b4c5d": {
+      "charge_id": "ch_0003",
+      "order_id": "order_0002",
+      "amount": 4999,
+      "created_at": "2026-02-02T16:16:35.794443"
+    },
+    "ipk_0002_4999_20231010_123456": {
+      "charge_id": "ch_0004",
+      "order_id": "order_0002",
+      "amount": 4999,
+      "created_at": "2026-02-02T16:16:37.546060"
+    },
+    "idempotency_key_1234567890abcdef": {
+      "charge_id": "ch_0005",
+      "order_id": "order_0003",
+      "amount": 4999,
+      "created_at": "2026-02-02T16:16:39.084587"
+    },
+    "uuid_7a3b9c1d-2e4f-5g6h-7i8j-9k0l1m2n3o4p": {
+      "charge_id": "ch_0006",
+      "order_id": "order_0003",
+      "amount": 4999,
+      "created_at": "2026-02-02T16:16:41.045760"
+    },
+    "inv_0004_7a2b9c1d": {
+      "charge_id": "ch_0007",
+      "order_id": "order_0004",
+      "amount": 4999,
+      "created_at": "2026-02-02T16:16:42.516891"
+    },
+    "ipc_0005_4999_20231010_123456": {
+      "charge_id": "ch_0008",
+      "order_id": "order_0005",
+      "amount": 4999,
+      "created_at": "2026-02-02T16:16:45.761879"
+    },
+    "idempotency_key_7a3b9c2d4e5f6a7b8c9d0e1f2a3b4c5d": {
+      "charge_id": "ch_0009",
+      "order_id": "order_0005",
+      "amount": 4999,
+      "created_at": "2026-02-02T16:16:47.716631"
+    }
+  }
+}
