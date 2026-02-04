@@ -287,6 +287,8 @@ async def call_tool(name: str, arguments: dict):
             "tool": name,
             "operation": operation,
             "expires_in": expires_in,
+            "token": token,  # Record the issued token for experiment verification
+            "result": "success",
         }
         append_to_log(entry)
 

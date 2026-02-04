@@ -82,6 +82,7 @@ class ClaudeAgentRunner:
         resume: bool = False,
         timeout: Optional[int] = None,
         extra_args: Optional[List[str]] = None,
+        max_turns: Optional[int] = None,
     ) -> AgentResponse:
         """
         Run a task with Claude Code.
@@ -92,6 +93,7 @@ class ClaudeAgentRunner:
             resume: If True, resume from session_id (simulates restore)
             timeout: Command timeout in seconds
             extra_args: Additional CLI arguments
+            max_turns: Maximum number of agentic turns (tool calls)
 
         Returns:
             AgentResponse with output and metadata
@@ -100,7 +102,7 @@ class ClaudeAgentRunner:
         - session_id alone = Create checkpoint
         - resume=True with session_id = Restore from checkpoint
         """
-        cmd = self._build_command(prompt, session_id, resume, extra_args)
+        cmd = self._build_command(prompt, session_id, resume, extra_args, max_turns)
 
         if self.verbose:
             print(f"  [CMD] {' '.join(cmd[:6])}...")
@@ -155,6 +157,7 @@ class ClaudeAgentRunner:
         session_id: Optional[str],
         resume: bool,
         extra_args: Optional[List[str]],
+        max_turns: Optional[int] = None,
     ) -> List[str]:
         """Build the claude CLI command."""
         cmd = [
@@ -171,6 +174,10 @@ class ClaudeAgentRunner:
         elif session_id:
             # CHECKPOINT: Create new session with ID
             cmd.extend(['--session-id', session_id])
+
+        # Max turns (for controlling checkpoint timing)
+        if max_turns is not None:
+            cmd.extend(['--max-turns', str(max_turns)])
 
         # MCP tools (if empty, Claude Code will use all available MCP tools)
         if self.allowed_tools:

@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-02-03T17:50:12.169464",
+  "vulnerabilities_confirmed": [],
+  "exp1_summary": {
+    "s1_duplicate_rate": 1.0,
+    "s1_key_instability": 1.0,
+    "s2_free_service_rate": 0.0,
+    "baseline_duplicate_rate": 1.0,
+    "v1_confirmed": false
+  },
+  "exp2_summary": {}
+}
