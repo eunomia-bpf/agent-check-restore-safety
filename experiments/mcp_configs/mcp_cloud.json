@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "cloud-server": {
+      "command": "python",
+      "args": ["-m", "experiments.mcp_servers.cloud_server"],
+      "cwd": "${workspaceFolder}"
+    }
+  }
+}

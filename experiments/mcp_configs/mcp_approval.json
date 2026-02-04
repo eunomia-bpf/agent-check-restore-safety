@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "approval-server": {
+      "command": "python",
+      "args": ["-m", "experiments.mcp_servers.approval_server"],
+      "cwd": "${workspaceFolder}"
+    }
+  }
+}

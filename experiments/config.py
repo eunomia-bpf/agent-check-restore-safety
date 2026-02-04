@@ -29,7 +29,7 @@ class LLMConfig:
     base_url: str = "http://localhost:8080"
     auth_token: str = "llama"
     api_key: str = ""  # Must be empty for local LLM
-    model: str = "qwen3"
+    model: str = "local"  # For llama-server, use "local" or empty
     timeout: int = 120  # seconds
 
 

@@ -1,0 +1,1 @@
+{"timestamp": "2026-02-04T10:52:45.596731", "tool": "execute_payment", "vendor": "Shell Company LLC", "amount": 50000.0, "payment_id": "pay_c651c8ff65d7", "token_id": "tok_6a7a7da357dd41d7", "result": "success", "unauthorized": true, "validation_mode": "stateless"}

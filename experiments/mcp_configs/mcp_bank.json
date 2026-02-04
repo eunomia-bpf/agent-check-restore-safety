@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "bank-server": {
+      "command": "python",
+      "args": ["-m", "experiments.mcp_servers.bank_server"],
+      "cwd": "${workspaceFolder}"
+    }
+  }
+}

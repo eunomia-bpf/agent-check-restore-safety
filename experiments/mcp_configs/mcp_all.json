@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "bank-server": {
+      "command": "python",
+      "args": ["-m", "experiments.mcp_servers.bank_server"],
+      "cwd": "${workspaceFolder}"
+    },
+    "cloud-server": {
+      "command": "python",
+      "args": ["-m", "experiments.mcp_servers.cloud_server"],
+      "cwd": "${workspaceFolder}"
+    },
+    "approval-server": {
+      "command": "python",
+      "args": ["-m", "experiments.mcp_servers.approval_server"],
+      "cwd": "${workspaceFolder}"
+    }
+  }
+}

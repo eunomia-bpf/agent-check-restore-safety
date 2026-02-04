@@ -163,9 +163,12 @@ class ClaudeAgentRunner:
         cmd = [
             'claude',
             '-p', prompt,
-            '--model', self.llm_config.model,
             '--dangerously-skip-permissions',
         ]
+
+        # Only add --model if not using local LLM (local LLM doesn't need model param)
+        if self.llm_config.model and self.llm_config.model != "local":
+            cmd.extend(['--model', self.llm_config.model])
 
         # Session management
         if resume and session_id:
