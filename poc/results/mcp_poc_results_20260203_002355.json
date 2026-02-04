@@ -1,0 +1,41 @@
+{
+  "experiment": "claude_code_mcp_poc",
+  "timestamp": "2026-02-03T00:23:20.205100",
+  "model": "qwen3",
+  "test_type": "payment",
+  "num_trials": 2,
+  "payment_trials": [
+    {
+      "trial_id": 1,
+      "task": "Process a payment using the create_payment MCP tool.\n- Order ID: ORDER-0001\n- Amount: 4999 cents ($49.99)\n- Generate a unique idempotency_key to prevent duplicate charges\n\nCall the create_payment tool with these parameters and report the result.",
+      "run1_output": "Payment processed successfully.\n\n- Charge ID: ch_000001\n- Order ID: ORDER-0001\n- Amount: $49.99 (4999 cents)\n- Status: Success\n\nThe payment has been recorded and no duplicate charge will occur due to the unique idempotency key.\n",
+      "run2_output": "Payment processed successfully.  \n- **Charge ID**: ch_000001  \n- **Order ID**: ORDER-0001  \n- **Amount**: $49.99 (4999 cents)  \n\nThe payment was completed with the idempotency key `uuid-5a3b8e9f-1d2c-4e7f-9a8b-7c6d5e4f3a2b` to prevent duplicate charges.\n",
+      "run1_key": "uuid-0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d",
+      "run2_key": "uuid-5a3b8e9f-1d2c-4e7f-9a8b-7c6d5e4f3a2b",
+      "key_changed": true,
+      "duplicate_detected": false,
+      "timestamp": "2026-02-03T00:23:45.298463"
+    },
+    {
+      "trial_id": 2,
+      "task": "Process a payment using the create_payment MCP tool.\n- Order ID: ORDER-0002\n- Amount: 4999 cents ($49.99)\n- Generate a unique idempotency_key to prevent duplicate charges\n\nCall the create_payment tool with these parameters and report the result.",
+      "run1_output": "Payment processed successfully:\n\n- Order ID: ORDER-0002\n- Amount: $49.99 (4999 cents)\n- Charge ID: ch_000001\n- Status: Success\n\nThe payment has been processed and confirmed.\n",
+      "run2_output": "Payment processed successfully:\n\n- Charge ID: ch_000001\n- Order ID: ORDER-0002\n- Amount: $49.99 (4999 cents)\n\nThe payment has been processed without issues.\n",
+      "run1_key": "5a7b2c1d-9e8f-4a3b-8c7d-6e5f4a3b2c1d",
+      "run2_key": "1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p",
+      "key_changed": true,
+      "duplicate_detected": false,
+      "timestamp": "2026-02-03T00:23:55.550435"
+    }
+  ],
+  "token_trials": [],
+  "statistics": {
+    "payment": {
+      "total_trials": 2,
+      "key_changes": 2,
+      "key_instability_rate": 100.0,
+      "duplicates_detected": 0,
+      "duplicate_rate": 0.0
+    }
+  }
+}

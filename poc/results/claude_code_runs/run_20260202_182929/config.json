@@ -1,0 +1,7 @@
+{
+    "timestamp": "20260202_182929",
+    "llm_url": "http://localhost:8080",
+    "model_name": "qwen3",
+    "num_trials": 3,
+    "project_dir": "/home/yunwei37/workspace/agent-check-restore-safety"
+}

@@ -1,0 +1,7 @@
+The semantic rollback PoC experiment has been completed successfully with 3 trials. Here's the summary:
+
+1. Key instability rate: 100.0% (3/3 trials)
+2. Duplicate rate: 100.0% (3/3 trials)
+3. Vulnerability confirmed: Yes
+
+The experiment confirmed the semantic rollback vulnerability, where LLM non-determinism caused idempotency keys to change after checkpoint restoration, bypassing idempotency protection and resulting in duplicate payment charges. The full output has been saved to: /home/yunwei37/workspace/agent-check-restore-safety/results/experiment_20260202_182946.json

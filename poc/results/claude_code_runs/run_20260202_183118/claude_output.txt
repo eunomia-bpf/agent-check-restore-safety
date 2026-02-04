@@ -1,0 +1,5 @@
+1. Key instability rate: 100.0% (3/3 trials)
+2. Duplicate rate: 100.0% (3/3 trials)
+3. The vulnerability was confirmed: Yes
+
+The semantic rollback vulnerability has been confirmed. In all 3 trials, the LLM agent generated different idempotency keys after state restoration, which bypassed idempotency protection and resulted in duplicate payments. A total of 6 unique charges were created despite only 3 payments being intended.

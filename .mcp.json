@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "experiment-tools": {
+      "command": "/home/yunwei37/workspace/.venv/bin/python",
+      "args": ["/home/yunwei37/workspace/agent-check-restore-safety/experiments/mcp_server/server.py"]
+    }
+  }
+}

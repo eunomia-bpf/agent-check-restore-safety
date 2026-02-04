@@ -86,7 +86,7 @@ In summary, we contribute:
 
 \begin{enumerate}
     \item Identification and characterization of semantic rollback attacks in snapshot-based LLM-driven agents.
-    \item AgentRollback, an evaluation toolkit demonstrating and quantifying these vulnerabilities.
+    \item \sys{}, an evaluation toolkit demonstrating and quantifying these vulnerabilities.
     \item Design considerations for securely integrating checkpoint-restore primitives into LLM agent architectures.
 \end{enumerate}
 
