@@ -233,3 +233,268 @@
   howpublished = {\url{https://docs.langchain.com/oss/python/langgraph/durable-execution}},
   year = {2024},
 }
+
+% Additional references for comprehensive coverage
+
+@article{elnozahy2002survey,
+  author  = {Elnozahy, Elmootazbell Y. and Alvisi, Lorenzo and Wang, Yi-Min and Johnson, David B.},
+  title   = {A Survey of Rollback-Recovery Protocols in Message-Passing Systems},
+  journal = {ACM Computing Surveys},
+  volume  = {34},
+  number  = {3},
+  pages   = {375--408},
+  year    = {2002},
+  doi     = {10.1145/568522.568525},
+  url     = {https://doi.org/10.1145/568522.568525}
+}
+
+@article{strom1985optimistic,
+  author  = {Strom, Robert E. and Yemini, Shaula A.},
+  title   = {Optimistic Recovery in Distributed Systems},
+  journal = {ACM Transactions on Computer Systems},
+  volume  = {3},
+  number  = {3},
+  pages   = {204--226},
+  year    = {1985},
+  doi     = {10.1145/3959.3962},
+  url     = {https://doi.org/10.1145/3959.3962}
+}
+
+@article{birrell1984rpc,
+  author  = {Birrell, Andrew D. and Nelson, Bruce Jay},
+  title   = {Implementing Remote Procedure Calls},
+  journal = {ACM Transactions on Computer Systems},
+  volume  = {2},
+  number  = {1},
+  pages   = {39--59},
+  year    = {1984},
+  doi     = {10.1145/2080.357392},
+  url     = {https://doi.org/10.1145/2080.357392}
+}
+
+@article{alvisi1998messagelogging,
+  author  = {Alvisi, Lorenzo and Marzullo, Keith},
+  title   = {Message Logging: Pessimistic, Optimistic, Causal, and Optimal},
+  journal = {IEEE Transactions on Software Engineering},
+  volume  = {24},
+  number  = {2},
+  pages   = {149--159},
+  year    = {1998},
+  doi     = {10.1109/32.666828},
+  url     = {https://doi.org/10.1109/32.666828}
+}
+
+@article{elnozahy1992manetho,
+  author  = {Elnozahy, Elmootazbell N. and Zwaenepoel, Willy},
+  title   = {Manetho: Transparent Rollback-Recovery with Low Overhead, Limited Rollback, and Fast Output Commit},
+  journal = {IEEE Transactions on Computers},
+  volume  = {41},
+  number  = {5},
+  pages   = {526--531},
+  year    = {1992},
+  doi     = {10.1109/12.142678},
+  url     = {https://doi.org/10.1109/12.142678}
+}
+
+@inproceedings{reviveio2006,
+  author    = {Nakano, Yusuke and Montesinos, Pablo and Gharachorloo, Kourosh and Torrellas, Josep},
+  title     = {ReViveI/O: Efficient Handling of I/O in Highly-Available Rollback-Recovery Servers},
+  booktitle = {Proceedings of the International Symposium on High-Performance Computer Architecture (HPCA)},
+  year      = {2006},
+  url       = {https://dblp.org/rec/conf/hpca/NakanoMGT06},
+  note      = {Accessed: 2026-02-05}
+}
+
+@misc{k8s_kep2008,
+  title        = {KEP-2008: Forensic Container Checkpointing},
+  howpublished = {\url{https://github.com/kubernetes/enhancements/blob/master/keps/sig-node/2008-forensic-container-checkpointing/README.md}},
+  year         = {2020},
+  note         = {Accessed: 2026-02-05}
+}
+
+@misc{k8s_checkpoint_api,
+  title        = {Kubelet Checkpoint API},
+  howpublished = {\url{https://kubernetes.io/docs/reference/node/kubelet-checkpoint-api/}},
+  year         = {2024},
+  note         = {Accessed: 2026-02-05}
+}
+
+@misc{k8s_checkpoint_wg,
+  title        = {Announcing the Checkpoint/Restore Working Group},
+  howpublished = {\url{https://www.kubernetes.dev/blog/2026/01/21/introducing-checkpoint-restore-wg/}},
+  year         = {2026},
+  note         = {Accessed: 2026-02-05}
+}
+
+@misc{langgraph_durable,
+  title        = {LangGraph Documentation: Durable Execution},
+  howpublished = {\url{https://docs.langchain.com/oss/python/langgraph/durable-execution}},
+  year         = {2025},
+  note         = {Accessed: 2026-02-05}
+}
+
+@misc{langgraph_persistence,
+  title        = {LangGraph Documentation: Persistence and Replay},
+  howpublished = {\url{https://docs.langchain.com/oss/python/langgraph/persistence}},
+  year         = {2025},
+  note         = {Accessed: 2026-02-05}
+}
+
+@misc{langgraph_timetravel,
+  title        = {LangGraph Documentation: Use Time-Travel},
+  howpublished = {\url{https://docs.langchain.com/oss/javascript/langgraph/use-time-travel}},
+  year         = {2025},
+  note         = {Accessed: 2026-02-05}
+}
+
+@misc{langgraph_functional_idempotency,
+  title        = {LangGraph Documentation: Functional API (Idempotency Guidance)},
+  howpublished = {\url{https://docs.langchain.com/oss/python/langgraph/functional-api}},
+  year         = {2025},
+  note         = {Accessed: 2026-02-05}
+}
+
+@misc{temporal_activity_definition,
+  title        = {Temporal Documentation: Activity Definition (Idempotency Guidance)},
+  howpublished = {\url{https://docs.temporal.io/activity-definition}},
+  year         = {2024},
+  note         = {Accessed: 2026-02-05}
+}
+
+@misc{temporal_side_effects,
+  title        = {Temporal Documentation (Go SDK): Side Effects},
+  howpublished = {\url{https://docs.temporal.io/develop/go/side-effects}},
+  year         = {2024},
+  note         = {Accessed: 2026-02-05}
+}
+
+@misc{ietf_idempotency_key,
+  title        = {The Idempotency-Key HTTP Header Field (Internet-Draft)},
+  howpublished = {\url{https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/}},
+  year         = {2025},
+  note         = {Accessed: 2026-02-05}
+}
+
+@misc{stripe_idempotent_requests,
+  title        = {Stripe API Reference: Idempotent Requests},
+  howpublished = {\url{https://docs.stripe.com/api/idempotent_requests}},
+  year         = {2024},
+  note         = {Accessed: 2026-02-05}
+}
+
+@misc{aws_ecs_idempotency,
+  title        = {AWS Documentation: Ensuring Idempotency in Amazon ECS APIs (Client Token)},
+  howpublished = {\url{https://docs.aws.amazon.com/AmazonECS/latest/APIReference/ECS_Idempotency.html}},
+  year         = {2024},
+  note         = {Accessed: 2026-02-05}
+}
+
+@misc{atil2025nondeterminism,
+  author       = {Atil, Berk and Aykent, Sarp and Chittams, Alexa and Fu, Lisheng and Passonneau, Rebecca J. and Radcliffe, Evan and Rajagopal, Guru Rajan and Sloan, Adam and Tudrej, Tomasz and Ture, Ferhan and Wu, Zhe and Xu, Lixinyu and Baldwin, Breck},
+  title        = {Non-Determinism of ``Deterministic'' {LLM} Settings},
+  howpublished = {arXiv:2408.04667},
+  year         = {2025},
+  doi          = {10.48550/arXiv.2408.04667},
+  url          = {https://arxiv.org/abs/2408.04667}
+}
+
+@misc{khatchadourian2026replayable,
+  author       = {Khatchadourian, Raffi},
+  title        = {Replayable Financial Agents: A Determinism-Faithfulness Assurance Harness for Tool-Using {LLM} Agents},
+  howpublished = {arXiv:2601.15322},
+  year         = {2026},
+  doi          = {10.48550/arXiv.2601.15322},
+  url          = {https://arxiv.org/abs/2601.15322}
+}
+
+@inproceedings{parno2011memoir,
+  author    = {Parno, Bryan and Lorch, Jacob R. and Douceur, John R. and Mickens, James W. and McCune, Jonathan M.},
+  title     = {Memoir: Practical State Continuity for Protected Modules},
+  booktitle = {Proceedings of the IEEE Symposium on Security and Privacy (S\&P)},
+  year      = {2011},
+  pages     = {379--394},
+  url       = {https://www.ieee-security.org/TC/SP2011/PAPERS/2011/paper024.pdf},
+  note      = {Accessed: 2026-02-05}
+}
+
+@inproceedings{matetic2017rote,
+  author    = {Matetic, Sinisa and Ahmed, Mansoor and Kostiainen, Kari and Dhar, Aritra and Sommer, David M. and Gervais, Arthur and Juels, Ari and Capkun, Srdjan},
+  title     = {ROTE: Rollback Protection for Trusted Execution},
+  booktitle = {Proceedings of the 26th USENIX Security Symposium (USENIX Security)},
+  year      = {2017},
+  pages     = {1289--1306},
+  url       = {https://www.usenix.org/conference/usenixsecurity17/technical-sessions/presentation/matetic},
+  note      = {Accessed: 2026-02-05}
+}
+
+@misc{brandenburger2017lcm,
+  author       = {Brandenburger, Marcus and et al.},
+  title        = {Rollback and Forking Detection for Trusted Execution Environments using Lightweight Collective Memory},
+  howpublished = {arXiv:1701.00981},
+  year         = {2017},
+  url          = {https://arxiv.org/abs/1701.00981},
+  note         = {Accessed: 2026-02-05}
+}
+
+@misc{vault_issue_28378,
+  title        = {HashiCorp Vault Issue \#28378: Single-use token reappearing after snapshot restore},
+  howpublished = {\url{https://github.com/hashicorp/vault/issues/28378}},
+  year         = {2025},
+  note         = {Accessed: 2026-02-05}
+}
+
+@misc{xu2025agenticexploration,
+  author       = {Xu, Jiakai and Zhou, Tianle and Wu, Eugene and Kaffes, Kostis},
+  title        = {Toward Systems Foundations for Agentic Exploration},
+  howpublished = {arXiv:2510.05556},
+  year         = {2025},
+  url          = {https://arxiv.org/abs/2510.05556}
+}
+
+@misc{feng2025agentrR,
+  author       = {Feng, Erhu and Zhou, Wenbo and Liu, Zibin and Chen, Le and Dong, Yunpeng and Zhang, Cheng and Zhao, Yisheng and Du, Dong and Hua, Zhichao and Xia, Yubin and Chen, Haibo},
+  title        = {Get Experience from Practice: {LLM} Agents with Record \& Replay},
+  howpublished = {arXiv:2505.17716},
+  year         = {2025},
+  doi          = {10.48550/arXiv.2505.17716},
+  url          = {https://arxiv.org/abs/2505.17716}
+}
+
+@misc{ma2025dover,
+  author       = {Ma, Ming and Zhang, Jue and Yang, Fangkai and Kang, Yu and Lin, Qingwei and Rajmohan, Saravan and Zhang, Dongmei},
+  title        = {DoVer: Intervention-Driven Auto Debugging for {LLM} Multi-Agent Systems},
+  howpublished = {arXiv:2512.06749},
+  year         = {2025},
+  doi          = {10.48550/arXiv.2512.06749},
+  url          = {https://arxiv.org/abs/2512.06749}
+}
+
+@misc{yao2022react,
+  author       = {Yao, Shunyu and Zhao, Jeffrey and Yu, Dian and Du, Nan and Shafran, Izhak and Narasimhan, Karthik and Cao, Yuan},
+  title        = {ReAct: Synergizing Reasoning and Acting in Language Models},
+  howpublished = {arXiv:2210.03629},
+  year         = {2022},
+  url          = {https://arxiv.org/abs/2210.03629}
+}
+
+@misc{schick2023toolformer,
+  author       = {Schick, Timo and Dwivedi-Yu, Jane and Dess{\`\i}, Roberto and Raileanu, Roberta and Lomeli, Maria and Zettlemoyer, Luke and Cancedda, Nicola and Scialom, Thomas},
+  title        = {Toolformer: Language Models Can Teach Themselves to Use Tools},
+  howpublished = {arXiv:2302.04761},
+  year         = {2023},
+  url          = {https://arxiv.org/abs/2302.04761}
+}
+
+@misc{mcp_spec,
+  title        = {Model Context Protocol (MCP) Specification},
+  howpublished = {\url{https://modelcontextprotocol.io/specification/2025-03-26}},
+  year         = {2025},
+  note         = {Accessed: 2026-02-05}
+}
+
+@misc{mcp_anthropic,
+  title        = {Introducing the Model Context Protocol},
+  howpublished = {\url{https://www.anthropic.com/news/model-context-protocol}},
+  year         = {2024},
+  note         = {Accessed: 2026-02-05}
+}
