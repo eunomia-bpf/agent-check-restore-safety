@@ -4,6 +4,9 @@
 %%
 
 \documentclass[sigconf,review,anonymous]{acmart}
+\settopmatter{printacmref=false}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\pagestyle{plain}
 
 %%
 %% \BibTeX command to typeset BibTeX logo in the docs
@@ -85,7 +88,7 @@ We focus on invariants that are standard in durable, side-effecting systems:
 
 \subsection{Attacker Models}
 
-We consider two attacker models. In \textbf{Fault-Triggered Restore}, the agent is checkpointed for recovery; crashes or OOM kills trigger restoration. The attacker only influences inputs (emails, documents) and benefits from outcomes (duplicate payments); no special access is required. In \textbf{Time-Travel Abuse}, the platform exposes time travel as a feature~\cite{langgraph}, and an adversary (authenticated user or legitimate workflow) may trigger security violations, analogous to restart attacks in TEE literature~\cite{rote}.
+We consider two attacker models. In \emph{Fault-Triggered Restore}, the agent is checkpointed for recovery; crashes or OOM kills trigger restoration. The attacker only influences inputs (emails, documents) and benefits from outcomes (duplicate payments); no special access is required. In \emph{Time-Travel Abuse}, the platform exposes time travel as a feature~\cite{langgraph}, and an adversary (authenticated user or legitimate workflow) may trigger security violations, analogous to restart attacks in TEE literature~\cite{rote}.
 
 \subsection{Out of Scope}
 
@@ -93,7 +96,7 @@ We do not assume compromise of cryptographic primitives, the checkpoint mechanis
 
 \section{Attacks}
 
-The root cause is \emph{state divergence}: checkpoint-restore rolls back the agent's internal state but external services retain theirs. Combined with LLM non-determinism, the agent re-synthesizes tool calls with different parameters after restore, causing external services to treat replayed requests as new operations. We identify two attack classes. \textbf{Action Replay} exploits idempotency key instability after restore, enabling duplicate commits (financial fraud, denial-of-wallet). \textbf{Authority Resurrection} exploits consumed single-use tokens that reappear in rolled-back agent state, enabling unauthorized operations under stateless validation. Action Replay applies to both attacker models, while Authority Resurrection requires Time-Travel Abuse where the attacker controls post-restore prompts.
+The root cause is \emph{state divergence}: checkpoint-restore rolls back the agent's internal state but external services retain theirs. Combined with LLM non-determinism, the agent re-synthesizes tool calls with different parameters after restore, causing external services to treat replayed requests as new operations. We identify two attack classes: \emph{Action Replay}, which exploits idempotency key instability after restore to enable duplicate commits (financial fraud, denial-of-wallet); and \emph{Authority Resurrection}, which exploits consumed single-use tokens that reappear in rolled-back agent state to enable unauthorized operations under stateless validation. Action Replay applies to both attacker models, while Authority Resurrection requires Time-Travel Abuse where the attacker controls post-restore prompts.
 
 \begin{figure}[t]
 	\centering
@@ -210,9 +213,7 @@ We evaluate semantic rollback vulnerabilities through proof-of-concept experimen
 
 \subsection{Results}
 
-\textbf{Action Replay.} All 20 checkpoint-restore trials (10 transfer, 10 cloud) exhibited key instability and action duplication: the LLM regenerated different idempotency keys after restore, causing duplicate commits in every case. All 10 baseline trials showed 0\% duplication, confirming the vulnerability stems from checkpoint timing, not agent behavior.
-
-\textbf{Authority Resurrection.} We tested token reuse under three validation modes (2 trials each): stateless (signature-only), stateful\_sync (immediate revocation check), and stateful\_async (delayed check). With stateless validation, consumed tokens were accepted for unauthorized targets in 2/2 approval trials (deleting Bob's data with Alice's token). Stateful validation (both sync and async) successfully rejected reuse in all approval trials (0/2 vulnerable). Payment scenarios showed mixed results requiring larger sample sizes.
+For Action Replay, all 20 checkpoint-restore trials (10 transfer, 10 cloud) exhibited key instability and action duplication: the LLM regenerated different idempotency keys after restore, causing duplicate commits in every case; all 10 baseline trials showed 0\% duplication, confirming the vulnerability stems from checkpoint timing, not agent behavior. For Authority Resurrection, we tested token reuse under three validation modes (2 trials each): stateless (signature-only), stateful\_sync (immediate revocation check), and stateful\_async (delayed check). With stateless validation, consumed tokens were accepted for unauthorized targets in 2/2 approval trials (deleting Bob's data with Alice's token). Stateful validation (both sync and async) rejected reuse in all trials (0/2 vulnerable). Payment scenarios showed mixed results requiring larger sample sizes.
 
 \subsection{Limitations}
 
