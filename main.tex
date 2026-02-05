@@ -15,7 +15,7 @@
 \usepackage{tikz}
 \usetikzlibrary{shapes,arrows,positioning,calc,fit,backgrounds}
 
-% No system name - this is a PoC study
+\newcommand{\sys}{OpJournal}
 
 \begin{document}
 
@@ -30,7 +30,7 @@
 % \email{anonymous@example.com}
 
 \begin{abstract}
-Checkpoint-restore mechanisms, increasingly adopted in LLM agent frameworks for fault tolerance and exploration, introduce a class of security vulnerabilities we term semantic rollback attacks. Unlike deterministic workflows, LLM agents produce non-deterministic yet semantically equivalent actions upon restoration, causing mismatches between rolled-back agent state and persistent external state. We identify two vulnerabilities: (1) Action Replay, where post-restore action synthesis generates different idempotency keys, bypassing duplicate detection and enabling financial fraud; and (2) Authority Resurrection, where consumed single-use tokens are unintentionally revived. Our proof-of-concept experiments using session-level checkpoint simulation demonstrate that action duplication and token reuse consistently occur under common configurations, revealing a fundamental semantic gap in current checkpoint-restore integrations for LLM agents.
+Checkpoint-restore mechanisms, increasingly adopted in LLM agent frameworks for fault tolerance and exploration, reintroduce a classic distributed systems challenge: the output commit problem. Unlike deterministic workflows where logged outputs enable consistent replay, LLM agents produce non-deterministic yet semantically equivalent actions upon restoration, causing state divergence between rolled-back agent state and persistent external state. This semantic drift defeats traditional idempotency mechanisms. We identify two vulnerability classes: (1) Action Replay, where post-restore action synthesis generates different idempotency keys, bypassing duplicate detection and enabling financial fraud; and (2) Authority Resurrection, where consumed single-use tokens are unintentionally revived after restore. Our proof-of-concept experiments demonstrate that action duplication and token reuse consistently occur under common configurations. We present \sys{}, a runtime mechanism that maintains stable operation identities across restores, reducing duplicate commits to zero in our evaluation.
 \end{abstract}
 
 % \begin{CCSXML}
@@ -55,17 +55,21 @@ Checkpoint-restore mechanisms, increasingly adopted in LLM agent frameworks for 
 
 \maketitle
 
-\section{Background}
+\section{Background and Motivation}
 
-\subsection{Checkpoint-Restore and the Output Commit Problem}
+\subsection{Checkpoint-Restore Mechanisms}
 
-Large-language-model (LLM) agents are increasingly deployed in production settings, managing cloud resources, processing payments, and automating software engineering tasks~\cite{sweagent, openhands}. These deployments demand reliable fault tolerance and debugging capabilities. Checkpoint-restore primitives such as CRIU~\cite{criu} and VM snapshots are consequently being adopted, with the Kubernetes community actively developing such capabilities~\cite{k8scheckpoint}. Agent frameworks like LangGraph now provide persistent checkpoints and time-travel interfaces~\cite{langgraph, langgraphdurable}, while agentic exploration research treats backtracking as a first-class need~\cite{agenticexploration}.
+Checkpoint-restore (CR) enables saving process state to disk and later resuming execution. CRIU~\cite{criu} can freeze Linux processes or containers, capturing memory, registers, file descriptors, and network connections. Upon restoration, the process resumes from the exact checkpoint, unaware that time has passed or external state may have changed. This creates a classic distributed systems challenge: the \textit{output commit problem}~\cite{elnozahy02survey, stromyemini85}. External outputs (payments, API calls) cannot be rolled back, so systems must ensure outputs are not duplicated or lost after recovery. Traditional solutions assume piecewise-deterministic execution with logged outputs for replay.
 
-This creates a classic distributed systems challenge: the \textit{output commit problem}~\cite{elnozahy02survey, stromyemini85}. External outputs (payments, API calls) cannot be rolled back, so systems must ensure outputs are not duplicated or lost after recovery. Traditional solutions assume piecewise-deterministic execution with logged outputs for replay. However, LLM agents violate this assumption: their runtime synthesis from natural-language prompts produces non-deterministic yet semantically equivalent behaviors~\cite{llmnondeterminism}, even with temperature=0 settings. Durable execution engines like Temporal require workflow code to be deterministic~\cite{temporal}; LLM agents cannot provide this guarantee, creating critical mismatches where an agent's restored state no longer aligns with irreversible external states.
+\subsection{Checkpoint-Restore in Agent Frameworks}
 
-\subsection{Idempotency and Existing Security Mechanisms}
+Large-language-model (LLM) agents are increasingly deployed in production settings, managing cloud resources, processing payments, and automating software engineering tasks~\cite{sweagent, openhands}. These deployments demand reliable fault tolerance and debugging capabilities. The Kubernetes community is actively developing container checkpoint capabilities~\cite{k8scheckpoint}. Agent frameworks like LangGraph now provide persistent checkpoints and time-travel interfaces as first-class features~\cite{langgraph, langgraphdurable}, while agentic exploration research treats backtracking as essential for agent reasoning~\cite{agenticexploration}.
 
-RPC systems traditionally provide at-most-once semantics through request identifiers~\cite{birrellnelson84}. Payment and cloud APIs implement this via idempotency keys~\cite{stripeidempotency, awsidempotency}, assuming callers reliably reuse stable keys. This assumption fails when keys are synthesized non-deterministically by LLM agents. Rollback attacks and state continuity are well studied in trusted execution environments~\cite{memoir, rote}, but these focus on deterministic programs. Agent security mechanisms including privilege control~\cite{progent} and runtime enforcement~\cite{agentspec} constrain what actions agents can take but do not address state continuity problems from checkpoint-restore. While OWASP documents prompt injection risks~\cite{owaspllm}, this paper identifies a distinct vulnerability class: \textit{semantic rollback}, where the combination of LLM non-determinism and checkpoint-restore causes the output commit problem to manifest as security violations.
+However, LLM agents violate the determinism assumption required by traditional CR. Their runtime synthesis from natural-language prompts produces non-deterministic yet semantically equivalent behaviors~\cite{llmnondeterminism}, even with temperature=0 settings. Durable execution engines like Temporal explicitly require workflow code to be deterministic~\cite{temporal}; LLM agents cannot provide this guarantee, creating critical mismatches where an agent's restored state no longer aligns with irreversible external states such as committed payments or consumed credentials.
+
+\subsection{Existing Solutions and Their Limitations}
+
+RPC systems traditionally provide at-most-once semantics through request identifiers~\cite{birrellnelson84}. Payment and cloud APIs implement this via idempotency keys~\cite{stripeidempotency, awsidempotency}, assuming callers reliably reuse stable keys. This assumption fails when keys are synthesized non-deterministically by LLM agents. Rollback attacks and state continuity are well studied in trusted execution environments~\cite{memoir, rote}, but these focus on deterministic programs. Agent security mechanisms including privilege control~\cite{progent} and runtime enforcement~\cite{agentspec} constrain what actions agents can take but do not address state continuity problems from checkpoint-restore. While OWASP documents prompt injection risks~\cite{owaspllm}, this paper identifies a distinct vulnerability class: \textit{semantic rollback}, where the combination of LLM non-determinism and checkpoint-restore causes the output commit problem to manifest as security violations. We present \sys{}, a runtime mechanism that maintains stable operation identities across restores to mitigate these vulnerabilities.
 
 \section{Threat Model}
 
