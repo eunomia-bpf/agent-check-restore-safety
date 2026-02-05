@@ -11,6 +11,10 @@
   \providecommand\BibTeX{{%
     Bib\TeX}}}
 
+%% TikZ for figures
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning,calc,fit,backgrounds}
+
 \newcommand{\sys}{AgentRollback}
 
 \begin{document}
@@ -183,6 +187,68 @@ We do \textbf{not} assume:
 \section{Vulnerability Scenarios}
 
 We now detail two concrete vulnerability scenarios that arise from checkpoint-restore in LLM agents. Each scenario includes the attack mechanism, impact, and measurable success conditions. These vulnerabilities can be exploited under both threat models: TM1 (fault-triggered restore) and TM2 (user-controlled time-travel).
+
+Figure~\ref{fig:attack-overview} illustrates the root cause: state divergence between the agent (which rolls back) and external services (which do not).
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+    node distance=0.8cm and 1.2cm,
+    box/.style={rectangle, draw, rounded corners=3pt, minimum width=1.8cm, minimum height=0.6cm, align=center, font=\footnotesize},
+    extbox/.style={box, fill=green!15},
+    cpbox/.style={box, fill=yellow!25, dashed},
+    atkbox/.style={box, fill=red!20},
+    arrow/.style={->, >=stealth, thick},
+    label/.style={font=\scriptsize}
+]
+% Timeline labels
+\node[label] at (-2.5, 0) {$t_0$};
+\node[label] at (-2.5, -1.2) {$t_1$};
+\node[label] at (-2.5, -2.4) {$t_2$};
+\node[label] at (-2.5, -3.6) {$t_3$};
+
+% Agent column
+\node[box] (a0) at (0, 0) {Agent};
+\node[box] (a1) at (0, -1.2) {check()};
+\node[box] (a2) at (0, -2.4) {action($k_1$)};
+\node[cpbox] (cp) at (0, -3.6) {CHECKPOINT};
+
+% External column
+\node[extbox] (e0) at (3, 0) {External};
+\node[extbox] (e1) at (3, -1.2) {OK};
+\node[extbox] (e2) at (3, -2.4) {Committed};
+\node[extbox] (e3) at (3, -3.6) {Persists};
+
+% Arrows
+\draw[arrow] (a1) -- (e1);
+\draw[arrow] (a2) -- (e2);
+
+% Restore section
+\node[label] at (-2.5, -5) {$t_4$};
+\node[label] at (-2.5, -6.2) {$t_5$};
+
+\node[cpbox] (r0) at (0, -5) {RESTORE};
+\node[atkbox] (r1) at (0, -6.2) {action($k_2$)};
+\node[extbox] (e4) at (3, -5) {Persists};
+\node[atkbox] (e5) at (3, -6.2) {Duplicate!};
+
+\draw[arrow] (r1) -- (e5);
+\draw[arrow, dashed] (cp) -- (r0);
+
+% Annotations
+\node[label, align=left] at (5.5, -2.4) {State\\committed};
+\node[label, align=left, red] at (5.5, -6.2) {$k_1 \neq k_2$\\Bypass!};
+
+% Background boxes
+\begin{scope}[on background layer]
+\node[draw, dashed, rounded corners, fit=(a0)(a1)(a2)(cp), inner sep=4pt, label=above:{\scriptsize Agent State}] {};
+\node[draw, dashed, rounded corners, fit=(e0)(e1)(e2)(e3), inner sep=4pt, label=above:{\scriptsize External State}] {};
+\end{scope}
+
+\end{tikzpicture}
+\caption{V1 Action Replay: Agent state rolls back at $t_4$, but external state persists. LLM generates different key $k_2 \neq k_1$, bypassing idempotency.}
+\label{fig:attack-overview}
+\end{figure}
 
 \subsection{V1: Action Replay}
 \label{sec:v1}
