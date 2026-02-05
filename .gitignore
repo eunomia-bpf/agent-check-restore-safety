@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
+main.bak*
 *.egg-info/
 .eggs/
 *.egg
