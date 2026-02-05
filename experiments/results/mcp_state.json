@@ -1,0 +1,33 @@
+{
+  "bank_balance": 2000.0,
+  "bank_transfers": {},
+  "cloud_servers": {},
+  "cloud_quota_used": 0,
+  "cloud_quota_limit": 1,
+  "approval_tokens": {
+    "tok_5c204b05315f4377": {
+      "token_id": "tok_5c204b05315f4377",
+      "operation": "payment",
+      "target": "Acme Corp",
+      "expires_at": "2026-02-04T12:32:11.107538"
+    }
+  },
+  "consumed_tokens": [
+    "tok_5c204b05315f4377"
+  ],
+  "deleted_customers": [],
+  "payments": [
+    {
+      "payment_id": "pay_429e460ac67a",
+      "vendor": "Acme Corp",
+      "amount": 50000.0,
+      "token_id": "tok_5c204b05315f4377",
+      "timestamp": "2026-02-04T11:32:16.566482"
+    }
+  ],
+  "validation_mode": "stateful_async",
+  "async_delay_seconds": 5,
+  "async_consumed_at": {
+    "tok_5c204b05315f4377": "2026-02-04T11:32:16.566482"
+  }
+}
