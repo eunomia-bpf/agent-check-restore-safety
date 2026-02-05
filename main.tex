@@ -104,41 +104,19 @@ We consider two operationally realistic attacker models:
 
 \subsubsection{Fault-Triggered Restore}
 
-The agent is checkpointed for recovery; crashes, timeouts, or OOM kills cause the system or operator to restore from a prior checkpoint. In this threat model:
-
-\begin{itemize}
-    \item The attacker need not have ``restore privileges''
-    \item The attacker may only influence inputs (emails, documents, web content)
-    \item The attacker benefits from externally visible outcomes (duplicate payments, unauthorized actions)
-    \item Restoration is triggered by legitimate system failures, not malicious action
-\end{itemize}
-
-This threat model requires no special access: normal operational failures combined with attacker-controlled inputs can trigger security violations.
+The agent is checkpointed for recovery; crashes, timeouts, or OOM kills cause the system or operator to restore from a prior checkpoint. The attacker need not have restore privileges---they only influence inputs (emails, documents, web content) and benefit from externally visible outcomes (duplicate payments, unauthorized actions). Restoration is triggered by legitimate system failures, not malicious action. This threat model requires no special access: normal operational failures combined with attacker-controlled inputs can trigger security violations.
 
 \subsubsection{Time-Travel Abuse}
 
-The platform or framework exposes time travel as a feature to resume from a checkpoint and explore alternatives~\cite{langgraph}. In this setting:
-
-\begin{itemize}
-    \item An adversary may be an authenticated user abusing the time-travel feature
-    \item Legitimate exploration workflows may inadvertently trigger security violations
-\end{itemize}
-
-This is analogous to restart capabilities modeled in rollback literature for trusted execution environments~\cite{rote}.
+The platform or framework exposes time travel as a feature to resume from a checkpoint and explore alternatives~\cite{langgraph}. An adversary may be an authenticated user abusing the time-travel feature, or legitimate exploration workflows may inadvertently trigger security violations. This is analogous to restart capabilities modeled in rollback literature for trusted execution environments~\cite{rote}.
 
 \subsection{Out of Scope}
 
-We do not assume:
-\begin{itemize}
-    \item Compromise of cryptographic primitives
-    \item Compromise of the checkpoint mechanism itself
-    \item Physical access to the execution environment
-    \item Modification of the agent's code or model weights
-\end{itemize}
+We do not assume compromise of cryptographic primitives, the checkpoint mechanism itself, physical access to the execution environment, or modification of the agent's code or model weights.
 
 \section{Attacks}
 
-The fundamental cause of semantic rollback vulnerabilities is state divergence: the agent's internal state can be rolled back, but external system state cannot. After restore, the agent's memory reflects an earlier time point, but external services retain effects of prior actions. Combined with LLM non-determinism, the agent re-executes actions with different parameters, bypassing idempotency protections. We detail two concrete attacks exploitable under both attacker models.
+The fundamental cause of semantic rollback vulnerabilities is state divergence: the agent's internal state can be rolled back, but external system state cannot. After restore, the agent's memory reflects an earlier time point, but external services retain effects of prior actions. Combined with LLM non-determinism, the agent re-executes actions with different parameters, bypassing idempotency protections. We detail two concrete attacks: Action Replay applies to both attacker models (no post-restore control needed), while Authority Resurrection as demonstrated requires Time-Travel Abuse where the attacker controls post-restore prompts.
 
 \begin{figure}[t]
 \centering
@@ -178,9 +156,9 @@ The fundamental cause of semantic rollback vulnerabilities is state divergence: 
 
 \node[attack, fill=red!25] (out) at (0.5, -5.6) {Result: \$1000 transferred (duplicate)};
 
-% Annotation
-\node[font=\scriptsize, red, align=left, anchor=west] at (5.0, -4.2) {LLM generates\\new UUID};
-\draw[->, red, thick] (4.9, -4.2) -- (4.7, -4.2);
+% Callout annotation
+\node[draw, fill=red!10, rounded corners=3pt, font=\scriptsize, align=center, anchor=west] (callout) at (7.0, -3.8) {ref changed!\\a1b2c3d4\\$\downarrow$\\f9a8b7c6};
+\draw[->, red, thick] (callout.west) -- (4.85, -4.2);
 
 \end{tikzpicture}
 \caption{Action Replay. Task requests UUID generation for idempotency. After restore, LLM regenerates a different key, bypassing duplicate detection.}
@@ -208,16 +186,16 @@ The fundamental cause of semantic rollback vulnerabilities is state divergence: 
 \node[result] (r1) at (0.5, -1.4) {Server: Token "tok\_xyz" (single-use)};
 \node[label] at (0.4, -1.4) {$t_2$};
 
-\node[action] (a2) at (0.5, -2.1) {Agent: delete\_data(token="tok\_xyz", id="Alice")};
+\node[checkpoint] (cp) at (0.5, -2.1) {--- CHECKPOINT at $t_2$ ---};
 \node[label] at (0.4, -2.1) {$t_3$};
 
-\node[result] (r2) at (0.5, -2.8) {Server: Done. Token consumed.};
+\node[action] (a2) at (0.5, -2.8) {Agent: delete\_data(token="tok\_xyz", id="Alice")};
 \node[label] at (0.4, -2.8) {$t_4$};
 
-\node[checkpoint] (cp) at (0.5, -3.5) {--- CHECKPOINT ---};
+\node[result] (r2) at (0.5, -3.5) {Server: Done. Token consumed.};
 \node[label] at (0.4, -3.5) {$t_5$};
 
-\node[checkpoint] (rs) at (0.5, -4.2) {--- RESTORE to $t_2$ ---};
+\node[checkpoint] (rs) at (0.5, -4.2) {--- RESTORE to $t_3$ ---};
 \node[label] at (0.4, -4.2) {$t_6$};
 
 \node[prompt, fill=red!10] (p2) at (0.5, -4.9) {Attacker: "Continue, but change target to Bob"};
@@ -228,9 +206,9 @@ The fundamental cause of semantic rollback vulnerabilities is state divergence: 
 
 \node[attack, fill=red!25] (out) at (0.5, -6.3) {Stateless: Bob deleted | Stateful: Rejected};
 
-% Annotation
-\node[font=\scriptsize, red, align=left, anchor=west] at (4.9, -5.6) {Token reused\\for Bob};
-\draw[->, red, thick] (4.8, -5.6) -- (4.6, -5.6);
+% Callout annotation
+\node[draw, fill=red!10, rounded corners=3pt, font=\scriptsize, align=center, anchor=west] (callout) at (7.0, -5.2) {Same token\\used for\\different target};
+\draw[->, red, thick] (callout.west) -- (4.85, -5.6);
 
 \end{tikzpicture}
 \caption{Authority Resurrection. Single-use token is consumed for Alice, but agent state rolls back with token still in memory. Subtle prompt causes agent to reuse token for different target.}
@@ -262,7 +240,7 @@ We evaluate semantic rollback vulnerabilities through controlled proof-of-concep
 
 \subsection{Experimental Setup}
 
-\subsubsection{Experimental Setup}
+\subsubsection{Test Infrastructure}
 
 Our experimental setup isolates state mismatch by simulating checkpoint-restore via session file truncation.
 
@@ -280,10 +258,7 @@ Our experimental setup isolates state mismatch by simulating checkpoint-restore 
 
 \subsubsection{Checkpoint Points}
 
-We simulate checkpoints at the critical point in the tool-call lifecycle:
-\begin{itemize}
-    \item \textbf{After check, before action}: Session is truncated after the verification step (e.g., \texttt{check\_balance}) but before the commit step (e.g., \texttt{transfer}). This represents the most vulnerable point where external state has not changed but will be modified upon resume.
-\end{itemize}
+We simulate checkpoints at the critical point in the tool-call lifecycle: after the verification step (e.g., \texttt{check\_balance}) but before the commit step (e.g., \texttt{transfer}). This represents the most vulnerable point where external state has not changed but will be modified upon resume.
 
 \subsubsection{Workloads}
 
@@ -297,10 +272,7 @@ We design scenarios matching the two attack categories:
 
 \subsubsection{Baselines}
 
-\begin{enumerate}
-    \item \textbf{No-CR (Strict Baseline)}: Session is truncated \textit{after} the action (e.g., after transfer), not before. Agent sees completed action and should not duplicate. Uses identical ``continue'' prompt as CR scenario.
-    \item \textbf{CR}: Session is truncated \textit{before} the action (after check). Agent believes action not yet performed.
-\end{enumerate}
+We compare two conditions: (1) \textbf{No-CR (Strict Baseline)} truncates the session \textit{after} the action (e.g., after transfer), so the agent sees the completed action and should not duplicate; (2) \textbf{CR} truncates \textit{before} the action (after check), so the agent believes the action was not yet performed. Both use identical ``continue'' prompts to isolate checkpoint timing as the only variable.
 
 \subsubsection{Metrics}
 
@@ -314,34 +286,14 @@ Action Replay experiments run 10 trials per scenario. Authority Resurrection exp
 
 \subsection{RQ1: Action Duplication Frequency}
 
-\begin{table}[t]
-\centering
-\small
-\caption{Action Replay results (10 trials each).}
-\label{tab:duplication}
-\begin{tabular}{lccc}
-\toprule
-\textbf{Scenario} & \textbf{Key Instab.} & \textbf{Dup. Rate} & \textbf{Gain} \\
-\midrule
-Transfer (CR) & 10/10 & 10/10 & \$5000 \\
-Cloud (CR) & 10/10 & 10/10 & \$30 \\
-Baseline (No-CR) & 0/10 & 0/10 & \$0 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Table~\ref{tab:duplication} shows Action Replay results from our proof-of-concept experiments with session-based checkpoint-restore.
-
-\textbf{Key finding 1: Duplication and key instability consistently observed.} All tested trials with checkpoint-restore produced duplicate actions. The LLM consistently generated different idempotency keys after restore, bypassing idempotency protection.
-
-\textbf{Key finding 2: Strict baseline confirms root cause.} With the baseline design (truncate \textit{after} action, same ``continue'' prompt), duplication rate is 0\%. This proves the vulnerability stems from checkpoint-restore creating state divergence, not from agent behavior or prompt differences.
+All 20 checkpoint-restore trials (10 transfer, 10 cloud) exhibited key instability and action duplication: the LLM regenerated different idempotency keys after restore, causing duplicate commits in every case. In contrast, all 10 baseline trials (truncate \textit{after} action, same ``continue'' prompt) showed 0\% duplication, confirming the vulnerability stems from checkpoint timing creating state divergence, not from agent behavior or prompt differences.
 
 \subsection{RQ2: Authority Resurrection}
 
 \begin{table}[t]
 \centering
 \small
-\caption{Authority Resurrection results (2 trials each).}
+\caption{Authority Resurrection results (2 trials each). *Anomalous result requiring larger sample size to investigate.}
 \label{tab:tokenreuse}
 \begin{tabular}{lcc}
 \toprule
@@ -354,7 +306,7 @@ Stateful\_async & 0/2 secure & 0/2 \\
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:tokenreuse} evaluates authority resurrection under different validation modes in our proof-of-concept. The attack scenario: after restore, an attacker instructs the agent to use the resurrected token for a different target (e.g., delete Bob's data instead of Alice's).
+Table~\ref{tab:tokenreuse} evaluates authority resurrection under different validation modes in our proof-of-concept. We test three modes: stateless (signature check only), stateful\_sync (immediate revocation check), and stateful\_async (revocation check with propagation delay). The attack scenario: after restore, an attacker instructs the agent to use the resurrected token for a different target (e.g., delete Bob's data instead of Alice's).
 
 \textbf{Key finding 3: Stateless validation is vulnerable.} With stateless validation (signature check only), consumed tokens were accepted for unauthorized targets in all tested trials. The restored agent believed the token was unused and successfully deleted Bob's data with Alice's approval token.
 
