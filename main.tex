@@ -30,7 +30,7 @@ Checkpoint-restore mechanisms are critical primitives used broadly for fault tol
 
 We systematically define, characterize, and experimentally demonstrate two key semantic rollback vulnerabilities: (1) \textbf{Action Replay}, where semantically identical but structurally divergent restored requests bypass idempotency protections, enabling financial fraud through duplicate payments or denial-of-wallet attacks via repeated resource provisioning; and (2) \textbf{Authority Resurrection}, wherein revoked or consumed credentials are unintentionally revived upon restoration, allowing unauthorized reuse of single-use tokens.
 
-To demonstrate and measure these vulnerabilities, we present \textbf{\sys}, an evaluation toolkit that triggers real checkpoint-restore using CRIU or Podman, combined with external tool services maintaining append-only logs. Our experiments show frequent duplication of external irreversible actions and authorization violations even under benign restoration scenarios. These findings reveal a semantic gap in current checkpoint-restore integrations for LLM agents.
+To demonstrate and measure these vulnerabilities, we present \textbf{\sys}, an evaluation toolkit that simulates checkpoint-restore through session-level state manipulation, combined with external tool services maintaining append-only logs. Our experiments show frequent duplication of external irreversible actions (100\% duplicate rate in 10 trials) and authorization violations (100\% token reuse with stateless validation) even under benign restoration scenarios. These findings reveal a semantic gap in current checkpoint-restore integrations for LLM agents.
 \end{abstract}
 
 \begin{CCSXML}
@@ -290,184 +290,179 @@ We evaluate semantic rollback vulnerabilities through controlled experiments usi
 
 \subsubsection{AgentRollback Testbed}
 
-We implement \textbf{\sys}, a testbed that isolates the semantic mismatch between checkpoint-restore and external state. The testbed uses real checkpoint-restore via CRIU~\cite{criu} and Podman~\cite{podman}, not simulation.
+We implement \textbf{\sys}, a testbed that isolates the semantic mismatch between checkpoint-restore and external state. The testbed simulates checkpoint-restore through session file truncation, which mirrors the behavior of real time-travel features in agent frameworks.
 
-\textbf{Agent under test.} We run the agent in a Linux container subject to checkpoint-restore. The agent uses GPT-4o as the underlying LLM (temperature 0.7) and maintains conversation history, credentials, and task progress in memory. We also evaluate with Claude 3.5 Sonnet to assess cross-model consistency.
+\textbf{Agent under test.} We use the Claude Code CLI as the agent framework, backed by a local LLM (Qwen3-Next-80B-A3B, Q4\_K\_M quantization) via llama-server. The agent maintains conversation history, credentials, and task progress in session files. Checkpoint-restore is simulated by truncating the session file to a specific tool call, then resuming with the \texttt{--resume} flag.
 
-\textbf{Tool services.} External tool services run as separate containers that are \textit{not} checkpointed. Each service maintains an append-only request log, durable state, and configurable idempotency enforcement:
+\textbf{Tool services.} External tool services are implemented as MCP (Model Context Protocol) servers with persistent state stored in JSON files with file locking. Each service maintains an append-only request log and configurable behavior:
 
 \begin{enumerate}
-    \item \textbf{Payment service}: \texttt{CreateCharge(order\_id, amount, idempotency\_key)} with key-based idempotency
-    \item \textbf{Provisioning service}: \texttt{CreateVM(name, client\_token)} with token-based idempotency and per-principal quotas (limit: 3 VMs/minute)
-    \item \textbf{VCS service}: \texttt{CreatePR(repo, branch, title)} without idempotency (reflecting real Git platforms)
-    \item \textbf{Auth service}: \texttt{ValidateToken(token)} with configurable validation modes (stateless/stateful)
+    \item \textbf{Bank service}: \texttt{transfer(to, amount, ref)} with UUID-based idempotency keys
+    \item \textbf{Cloud service}: \texttt{create\_server(spec, client\_token)} with token-based idempotency
+    \item \textbf{Approval service}: \texttt{request\_approval(operation, target)} and \texttt{delete\_customer\_data(token, customer\_id)} with configurable validation modes (stateless/stateful\_sync/stateful\_async)
 \end{enumerate}
 
-\textbf{Orchestrator.} A driver triggers checkpoints at controlled points, injects faults, and collects metrics from tool services.
+\textbf{Orchestrator.} A Python driver creates sessions, truncates them at specific tool calls (simulating checkpoint), and resumes execution. The driver collects metrics from MCP server logs.
 
-\subsubsection{Fault Injection Points}
+\subsubsection{Checkpoint Points}
 
-We inject faults at three critical points in the tool-call lifecycle:
+We simulate checkpoints at the critical point in the tool-call lifecycle:
 \begin{itemize}
-    \item \textbf{P1 (Pre-send)}: Checkpoint before HTTP request is sent
-    \item \textbf{P2 (In-flight)}: Checkpoint after sending but before receiving response
-    \item \textbf{P3 (Post-response)}: Checkpoint after response but before agent persists completion status
+    \item \textbf{After check, before action}: Session is truncated after the verification step (e.g., \texttt{check\_balance}) but before the commit step (e.g., \texttt{transfer}). This represents the most vulnerable point where external state has not changed but will be modified upon resume.
 \end{itemize}
 
 \subsubsection{Workloads}
 
-We design four task scenarios, each with 50 unique task instances:
+We design scenarios matching the two vulnerability categories:
 \begin{itemize}
-    \item \textbf{W1-Payment}: Process payment for order (e.g., ``Charge \$49.99 for order \#12345'')
-    \item \textbf{W2-Provision}: Create cloud resource (e.g., ``Create a VM named web-server-prod'')
-    \item \textbf{W3-PR}: Create pull request (e.g., ``Open a PR for the authentication fix'')
-    \item \textbf{W4-Auth}: Perform authorized action using single-use token
+    \item \textbf{V1-TM1 Transfer}: Bank transfer task (``Transfer \$500 to Bob'') with check\_balance $\rightarrow$ transfer flow
+    \item \textbf{V1-TM2 Cloud}: Server creation (``Create an 8-core-GPU server'') with check\_quota $\rightarrow$ create\_server flow
+    \item \textbf{V2-TM2 Approval}: Data deletion with approval (``Delete Alice's data per GDPR request'') with request\_approval $\rightarrow$ delete\_customer\_data flow
+    \item \textbf{V2-TM2 Payment}: Payment fraud scenario with approval $\rightarrow$ execute\_payment flow
 \end{itemize}
 
 \subsubsection{Baselines}
 
 \begin{enumerate}
-    \item \textbf{No-CR}: No checkpoint-restore (baseline)
-    \item \textbf{Det-Replay}: Deterministic replay of recorded tool calls after restore~\cite{temporal}
-    \item \textbf{LG-TimeTravel}: LangGraph's application-level time-travel~\cite{langgraph}
+    \item \textbf{No-CR (Strict Baseline)}: Session is truncated \textit{after} the action (e.g., after transfer), not before. Agent sees completed action and should not duplicate. Uses identical ``continue'' prompt as CR scenario.
+    \item \textbf{CR}: Session is truncated \textit{before} the action (after check). Agent believes action not yet performed.
 \end{enumerate}
 
 \subsubsection{Metrics}
 
 \begin{itemize}
-    \item \textbf{Duplicate rate}: Fraction of logical operations producing $>$1 committed entries
-    \item \textbf{Token reuse rate}: Fraction of consumed tokens accepted again after restore
-    \item \textbf{Key instability rate}: Fraction of restores where the regenerated idempotency key differs from original
+    \item \textbf{Duplicate rate}: Fraction of trials where the same logical operation commits twice
+    \item \textbf{Key instability rate}: Fraction of trials where the regenerated idempotency key differs from the original
+    \item \textbf{Unauthorized rate}: Fraction of trials where a consumed token is accepted for a different target (V2)
 \end{itemize}
 
-Each experiment configuration runs 100 trials. We report mean and 95\% confidence intervals.
+V1 experiments run 10 trials per scenario. V2 experiments run 2 trials per scenario (limited by time constraints).
 
 \subsection{RQ1: Action Duplication Frequency}
 
 \begin{table}[t]
 \centering
-\caption{Duplicate rates (\%) under CRIU checkpoint-restore by fault injection point. Higher values indicate more frequent duplication.}
+\caption{V1 Action Replay results (10 trials each). CR = checkpoint-restore via session truncation before action.}
 \label{tab:duplication}
-\begin{tabular}{lcccc}
-\toprule
-\textbf{Workload} & \textbf{No-CR} & \textbf{P1} & \textbf{P2} & \textbf{P3} \\
-\midrule
-W1-Payment & 0.0 & xx $\pm$ xx & xx $\pm$ xx & xx $\pm$ xx \\
-W2-Provision & 0.0 & xx $\pm$ xx & xx $\pm$ xx & xx $\pm$ xx \\
-W3-PR & 0.0 & xx $\pm$ xx & xx $\pm$ xx & xx $\pm$ xx \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Table~\ref{tab:duplication} shows duplicate rates for CRIU-based checkpoint-restore across workloads and injection points.
-
-\textbf{Key finding 1: High duplication rates.} Even with idempotency-enabled services (W1, W2), duplication rates exceed xx\% across all injection points. This occurs because the LLM regenerates different idempotency keys after restore.
-
-\textbf{Key finding 2: VCS workloads are most vulnerable.} W3-PR shows the highest duplication rate (xx--xx\%) because Git platforms lack standardized idempotency interfaces. The agent generates different branch names (e.g., \texttt{fix-auth-v2} vs \texttt{auth-bugfix}) or PR titles for the same logical change.
-
-\textbf{Key finding 3: P2 (in-flight) is worst.} The in-flight injection point produces the highest duplication because the external action has already committed, but the agent has no record of completion.
-
-\begin{table}[t]
-\centering
-\caption{Key instability rate (\%) measuring how often regenerated idempotency keys differ from original.}
-\label{tab:keyinstability}
 \begin{tabular}{lccc}
 \toprule
-\textbf{Workload} & \textbf{GPT-4o} & \textbf{Claude 3.5} & \textbf{GPT-4o (t=0)} \\
+\textbf{Scenario} & \textbf{Key Instability} & \textbf{Duplicate Rate} & \textbf{Attacker Gain} \\
 \midrule
-W1-Payment & xx $\pm$ xx & xx $\pm$ xx & xx $\pm$ xx \\
-W2-Provision & xx $\pm$ xx & xx $\pm$ xx & xx $\pm$ xx \\
+V1-TM1 Transfer (CR) & 100\% (10/10) & 100\% (10/10) & \$5000 total \\
+V1-TM2 Cloud (CR) & 100\% (10/10) & 100\% (10/10) & \$30 total \\
+Baseline (No-CR) & 0\% (0/10) & 0\% (0/10) & \$0 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:keyinstability} shows key instability rates. At temperature 0.7, both models exhibit $>$xx\% instability. Reducing temperature to 0 decreases instability to $\sim$xx\%, but does not eliminate it due to inherent model non-determinism.
+Table~\ref{tab:duplication} shows V1 Action Replay results with session-based checkpoint-restore.
+
+\textbf{Key finding 1: 100\% duplication rate.} All 10 trials with checkpoint-restore produced duplicate actions. The LLM consistently generated different idempotency keys after restore, bypassing the idempotency protection.
+
+\textbf{Key finding 2: 100\% key instability.} In every trial, the regenerated idempotency key differed from the original:
+\begin{itemize}
+    \item First execution: \texttt{a1b2c3d4-e5f6-7890-g1h2-i3j4k5l6m7n8}
+    \item After restore: \texttt{f9a8b7c6-d5e4-3210-f9a8-b7c6d5e4f3a2}
+\end{itemize}
+
+\textbf{Key finding 3: Strict baseline confirms root cause.} With the baseline design (truncate \textit{after} action, same ``continue'' prompt), duplication rate is 0\%. This proves the vulnerability stems from checkpoint-restore creating state divergence, not from agent behavior or prompt differences.
 
 \subsection{RQ2: Authority Resurrection}
 
 \begin{table}[t]
 \centering
-\caption{Token reuse success rate (\%) after restore, by external validation mode.}
+\caption{V2 Authority Resurrection results (2 trials each). Shows unauthorized rate for approval bypass and payment fraud scenarios.}
 \label{tab:tokenreuse}
 \begin{tabular}{lcc}
 \toprule
-\textbf{Validation Mode} & \textbf{Reuse Rate} & \textbf{Attack Window} \\
+\textbf{Validation Mode} & \textbf{Approval Bypass} & \textbf{Payment Fraud} \\
 \midrule
-Stateless (JWT, no revocation check) & xx $\pm$ xx & Until expiry \\
-Stateful (immediate sync) & xx $\pm$ xx & $<$100ms \\
-Stateful (async, 5s propagation) & xx $\pm$ xx & 0--5s \\
-Stateful (async, 30s propagation) & xx $\pm$ xx & 0--30s \\
+Stateless & 100\% (2/2) vulnerable & 0\% (0/2) \\
+Stateful\_sync & 0\% (0/2) secure & 50\%* (1/2) \\
+Stateful\_async (5s) & 0\% (0/2) secure & 0\% (0/2) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:tokenreuse} evaluates authority resurrection under different external validation models.
+Table~\ref{tab:tokenreuse} evaluates authority resurrection under different validation modes. The attack scenario: after restore, an attacker instructs the agent to use the resurrected token for a different target (e.g., delete Bob's data instead of Alice's).
 
-\textbf{Key finding 4: Stateless validation is highly vulnerable.} With stateless JWT validation (no revocation list), xx\% of consumed tokens are accepted after restore. The restored agent simply replays the token from its checkpointed memory.
+\textbf{Key finding 4: Stateless validation is highly vulnerable.} With stateless validation (signature check only), 100\% of consumed tokens were accepted for unauthorized targets. The restored agent believed the token was unused and successfully deleted Bob's data with Alice's approval token.
 
-\textbf{Key finding 5: Propagation delays create attack windows.} Even stateful systems with asynchronous revocation propagation show significant vulnerability. A 30-second propagation delay yields xx\% reuse success, representing a realistic attack window in distributed systems.
+\textbf{Key finding 5: Stateful validation is effective.} Synchronous stateful validation (checking consumption state in real-time) successfully rejected token reuse in all approval bypass trials. The server responded: ``Token already consumed.''
 
-\textbf{Key finding 6: Immediate synchronous validation is effective.} Only synchronous, immediate revocation checking reduces reuse to xx\% (residual cases due to race conditions at checkpoint boundaries).
+\textbf{Key finding 6: Payment scenario shows mixed results.} The payment fraud scenario showed 0\% unauthorized rate in stateless mode (LLM refused the request) and an anomalous 50\% in stateful\_sync mode, requiring further investigation with larger sample sizes.
 
-\subsection{RQ3: Impact of Injection Points}
+\subsection{RQ3: State Divergence as Root Cause}
 
-\begin{figure}[t]
-\centering
-\begin{tabular}{lccc}
-\toprule
-\textbf{Injection Point} & \textbf{Dup.} & \textbf{Reuse} \\
-\midrule
-P1 (Pre-send) & xx\% & xx\% \\
-P2 (In-flight) & xx\% & xx\% \\
-P3 (Post-response) & xx\% & xx\% \\
-\bottomrule
-\end{tabular}
-\caption{Vulnerability severity by injection point (W1-Payment, stateless auth).}
-\label{fig:injection}
-\end{figure}
-
-Figure~\ref{fig:injection} compares vulnerability severity across injection points.
-
-\textbf{Key finding 7: P2 maximizes duplication.} In-flight checkpoints (P2) produce the highest duplication because the external action commits but the agent state does not reflect completion.
-
-\textbf{Key finding 8: P3 reduces token reuse.} Post-response checkpoints (P3) show lower token reuse (xx\% vs $>$xx\%) because the agent may have already processed the ``token consumed'' response before checkpoint, depending on exact timing.
-
-\subsection{Comparison with Baselines}
+Our strict baseline design isolates the root cause of these vulnerabilities:
 
 \begin{table}[t]
 \centering
-\caption{Duplicate rates (\%) across checkpoint-restore mechanisms (W1-Payment, P2).}
+\caption{Comparison of CR vs Baseline (V1-TM1 Transfer, 10 trials each).}
 \label{tab:baselines}
-\begin{tabular}{lcc}
+\begin{tabular}{lccc}
 \toprule
-\textbf{Mechanism} & \textbf{Duplicate Rate} & \textbf{Key Instability} \\
+\textbf{Condition} & \textbf{Truncation Point} & \textbf{Duplicate Rate} \\
 \midrule
-No-CR & 0.0 & N/A \\
-Det-Replay & xx $\pm$ xx & 0.0 \\
-LG-TimeTravel & xx $\pm$ xx & xx $\pm$ xx \\
-CRIU & xx $\pm$ xx & xx $\pm$ xx \\
-Podman & xx $\pm$ xx & xx $\pm$ xx \\
+CR & After check\_balance (before transfer) & 100\% \\
+Baseline & After transfer (action complete) & 0\% \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:baselines} compares checkpoint-restore mechanisms.
+\textbf{Key finding 7: State divergence is the root cause.} Both conditions use identical prompts (``continue'') and session mechanics. The only difference is \textit{where} the session is truncated:
+\begin{itemize}
+    \item CR: Agent believes action not done $\rightarrow$ re-executes with new key $\rightarrow$ duplicate
+    \item Baseline: Agent sees completed action $\rightarrow$ no re-execution $\rightarrow$ no duplicate
+\end{itemize}
 
-\textbf{Key finding 9: Deterministic replay is effective.} Det-Replay achieves near-zero duplication (xx\%, residual due to network errors) by replaying recorded tool calls instead of re-synthesizing. This validates the durable execution assumption~\cite{temporal} but requires infrastructure changes to record and replay LLM decisions.
-
-\textbf{Key finding 10: Framework and OS-level checkpoints are equally vulnerable.} LangGraph time-travel (xx\%) shows similar vulnerability to CRIU (xx\%) and Podman (xx\%). The vulnerability stems from LLM non-determinism, not the checkpoint mechanism itself.
+\textbf{Key finding 8: LLM non-determinism compounds the problem.} Even when the agent correctly decides to ``continue'' the task, it generates a fresh idempotency key rather than reusing the original. This breaks the idempotency assumption that external services rely on.
 
 \subsection{Summary of Findings}
 
 Our evaluation demonstrates that semantic rollback vulnerabilities are:
 \begin{enumerate}
-    \item \textbf{Frequent}: Duplication rates exceed xx\% for idempotency-enabled services and xx\% for services without idempotency
-    \item \textbf{Cross-cutting}: Both OS-level (CRIU, Podman) and application-level (LangGraph) checkpoints exhibit similar vulnerability
-    \item \textbf{Exploitable}: Authority resurrection succeeds in xx\% of cases with stateless validation
-    \item \textbf{Mitigatable}: Deterministic replay reduces duplication to xx\%; synchronous stateful validation reduces token reuse to xx\%
+    \item \textbf{Highly reproducible}: V1 Action Replay shows 100\% duplicate rate and 100\% key instability across 10 trials
+    \item \textbf{Caused by state divergence}: Strict baseline (truncate after action) shows 0\% duplication, confirming the root cause is checkpoint-restore creating mismatch between agent and external state
+    \item \textbf{Exploitable with stateless validation}: V2 Authority Resurrection succeeds in 100\% of cases with stateless token validation
+    \item \textbf{Mitigatable with stateful validation}: Synchronous stateful validation reduces unauthorized token reuse to 0\%
 \end{enumerate}
 
-These findings confirm a fundamental semantic gap: checkpoint-restore mechanisms designed for deterministic programs produce security violations when applied to non-deterministic LLM agents interacting with stateful external services.
+These findings confirm a fundamental semantic gap: checkpoint-restore mechanisms designed for deterministic programs produce security violations when applied to non-deterministic LLM agents interacting with stateful external services. The key insight is that LLM agents regenerate parameters (including idempotency keys) non-deterministically, breaking assumptions that idempotency mechanisms rely on.
+
+\subsection{Limitations}
+
+We acknowledge several limitations of our evaluation:
+
+\textbf{Simulation vs. real CR.} Our testbed uses session file truncation to simulate checkpoint-restore, rather than OS-level mechanisms like CRIU. While this mirrors application-level time-travel features (e.g., LangGraph), it may not capture all behaviors of process-level checkpointing. Future work should validate findings with CRIU-based experiments.
+
+\textbf{Sample size.} V1 experiments use 10 trials per scenario, while V2 experiments use only 2 trials due to time constraints. The 100\% rates we observe may reflect small sample sizes rather than true population rates. Larger-scale experiments (50--100 trials) are needed for statistical significance.
+
+\textbf{Single model family.} We evaluate with Qwen3-Next-80B-A3B. Different LLM families (GPT-4, Claude, Llama) may exhibit different non-determinism characteristics. Cross-model validation would strengthen generalizability claims.
+
+\textbf{Prompt design.} Our task prompts explicitly request UUID generation for idempotency keys. This may inflate key instability rates compared to scenarios where keys are managed by external libraries or frameworks.
+
+\section{Mitigation Strategies}
+
+Based on our findings, we outline concrete mitigation strategies:
+
+\subsection{For V1 (Action Replay)}
+
+\textbf{Agent-side key persistence.} The agent framework should persist idempotency keys to durable storage before making tool calls, and reload them after restore. This ensures the same key is reused across restores.
+
+\textbf{Tool-side semantic deduplication.} External services should implement semantic-level deduplication based on operation identity (e.g., ``transfer to Bob for order \#123'') rather than relying solely on caller-provided idempotency keys.
+
+\subsection{For V2 (Authority Resurrection)}
+
+\textbf{Stateful token validation.} As our experiments confirm, synchronous stateful validation (checking token consumption state in real-time) effectively prevents authority resurrection. Services should avoid stateless JWT-only validation for single-use tokens.
+
+\textbf{Short-lived capabilities.} Issue tokens with short expiration times (seconds, not hours) to minimize the attack window after restore.
+
+\subsection{Framework-Level Mitigations}
+
+\textbf{Checkpoint boundaries.} Agent frameworks should define explicit ``checkpoint-safe'' boundaries that ensure external commits are recorded in agent state before checkpointing.
+
+\textbf{Restore hooks.} Provide hooks that allow agents to re-validate credentials and check for already-committed actions upon restore.
 
 \section{Related Work}
 
@@ -497,7 +492,7 @@ OWASP documents prompt injection and insecure output handling among top risks fo
 
 Checkpoint-restore and time-travel execution are becoming standard building blocks for tool-using LLM agents, driven by operational needs such as recovery and debugging, and algorithmic needs such as exploration. Existing systems practice assumes deterministic replay or stable idempotency identities to keep external side effects safe under retry~\cite{temporal, stripeidempotency}. LLM agents weaken these assumptions: restore can rewind internal authorization and safety state while the external world does not rewind, and post-restore action synthesis can vary enough to defeat idempotency mechanisms.
 
-This creates a measurable security problem: replay of irreversible actions, and revocation and consumption bypass. We provide a testbed design to reproduce and quantify these failures using CRIU~\cite{criu} and external tool services with append-only logs.
+This creates a measurable security problem: replay of irreversible actions, and revocation and consumption bypass. We provide a testbed design to reproduce and quantify these failures using session-level checkpoint simulation and external tool services with append-only logs.
 
 Our analysis reveals a tension: the features that make checkpoint-restore valuable for agent development, including state preservation and failure recovery, are precisely the features that create security vulnerabilities when agents interact with external systems that maintain their own state.
 

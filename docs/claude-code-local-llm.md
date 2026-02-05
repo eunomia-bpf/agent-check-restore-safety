@@ -15,6 +15,9 @@ build/bin/llama-server \
     -c 65536 \
     --port 8080 \
     --jinja   # 重要：支持工具调用
+
+build/bin/llama-server     -hf unsloth/Qwen3-Coder-Next-GGUF:Q4_K_XL     -c 65536     --port 8080     --jinja -ncmoe 20
+
 ```
 
 **注意**：`--jinja` 标志是必须的，否则工具调用不会工作。
