@@ -33,58 +33,39 @@
 Checkpoint-restore mechanisms, increasingly adopted in LLM agent frameworks for fault tolerance and exploration, introduce a class of security vulnerabilities we term semantic rollback attacks. Unlike deterministic workflows, LLM agents produce non-deterministic yet semantically equivalent actions upon restoration, causing mismatches between rolled-back agent state and persistent external state. We identify two vulnerabilities: (1) Action Replay, where post-restore action synthesis generates different idempotency keys, bypassing duplicate detection and enabling financial fraud; and (2) Authority Resurrection, where consumed single-use tokens are unintentionally revived. Our proof-of-concept experiments using session-level checkpoint simulation demonstrate that action duplication and token reuse consistently occur under common configurations, revealing a fundamental semantic gap in current checkpoint-restore integrations for LLM agents.
 \end{abstract}
 
-\begin{CCSXML}
-<ccs2012>
-   <concept>
-       <concept_id>10002978.10002991.10002992</concept_id>
-       <concept_desc>Security and privacy~Software security engineering</concept_desc>
-       <concept_significance>500</concept_significance>
-   </concept>
-   <concept>
-       <concept_id>10010147.10010257</concept_id>
-       <concept_desc>Computing methodologies~Machine learning</concept_desc>
-       <concept_significance>300</concept_significance>
-   </concept>
-</ccs2012>
-\end{CCSXML}
+% \begin{CCSXML}
+% <ccs2012>
+%    <concept>
+%        <concept_id>10002978.10002991.10002992</concept_id>
+%        <concept_desc>Security and privacy~Software security engineering</concept_desc>
+%        <concept_significance>500</concept_significance>
+%    </concept>
+%    <concept>
+%        <concept_id>10010147.10010257</concept_id>
+%        <concept_desc>Computing methodologies~Machine learning</concept_desc>
+%        <concept_significance>300</concept_significance>
+%    </concept>
+% </ccs2012>
+% \end{CCSXML}
 
-\ccsdesc[500]{Security and privacy~Software security engineering}
-\ccsdesc[300]{Computing methodologies~Machine learning}
+% \ccsdesc[500]{Security and privacy~Software security engineering}
+% \ccsdesc[300]{Computing methodologies~Machine learning}
 
-\keywords{LLM agents, checkpoint-restore, security, semantic rollback, fault tolerance}
+% \keywords{LLM agents, checkpoint-restore, security, semantic rollback, fault tolerance}
 
 \maketitle
 
-\section{Introduction}
+\section{Background}
 
-Large-language-model (LLM) agents are increasingly deployed in production settings, managing cloud resources, processing payments, and automating software engineering tasks~\cite{sweagent, openhands}. These deployments demand reliable fault tolerance and debugging capabilities. Checkpoint-restore primitives such as CRIU~\cite{criu} and VM snapshots are consequently being adopted, with the Kubernetes community actively developing such capabilities~\cite{k8scheckpoint}. Agent frameworks now provide persistent checkpoints and time-travel interfaces~\cite{langgraph}, while agentic exploration research treats backtracking as a first-class need~\cite{agenticexploration}.
+\subsection{Checkpoint-Restore and the Output Commit Problem}
 
-However, traditional checkpoint-restore mechanisms assume deterministic replay: restarting from a checkpoint produces identical outcomes. Durable execution engines make this explicit---workflow code must be deterministic and external activities idempotent~\cite{temporal}. LLM agents violate this assumption. Their runtime synthesis from natural-language prompts produces non-deterministic yet semantically equivalent behaviors, creating critical mismatches: an agent's restored state no longer aligns with irreversible external states such as committed payments or consumed credentials.
+Large-language-model (LLM) agents are increasingly deployed in production settings, managing cloud resources, processing payments, and automating software engineering tasks~\cite{sweagent, openhands}. These deployments demand reliable fault tolerance and debugging capabilities. Checkpoint-restore primitives such as CRIU~\cite{criu} and VM snapshots are consequently being adopted, with the Kubernetes community actively developing such capabilities~\cite{k8scheckpoint}. Agent frameworks like LangGraph now provide persistent checkpoints and time-travel interfaces~\cite{langgraph, langgraphdurable}, while agentic exploration research treats backtracking as a first-class need~\cite{agenticexploration}.
 
-Existing solutions do not address this gap. Payment and cloud APIs recommend idempotency keys to prevent duplicate effects~\cite{stripeidempotency, awsidempotency}, but assume callers reliably reuse stable keys---an assumption that fails when keys are synthesized non-deterministically. The security community has studied rollback in trusted execution environments~\cite{memoir}, but TEE research focuses on deterministic programs; LLM agents reconstruct actions from natural language, making stable identities harder to guarantee.
+This creates a classic distributed systems challenge: the \textit{output commit problem}~\cite{elnozahy02survey, stromyemini85}. External outputs (payments, API calls) cannot be rolled back, so systems must ensure outputs are not duplicated or lost after recovery. Traditional solutions assume piecewise-deterministic execution with logged outputs for replay. However, LLM agents violate this assumption: their runtime synthesis from natural-language prompts produces non-deterministic yet semantically equivalent behaviors~\cite{llmnondeterminism}, even with temperature=0 settings. Durable execution engines like Temporal require workflow code to be deterministic~\cite{temporal}; LLM agents cannot provide this guarantee, creating critical mismatches where an agent's restored state no longer aligns with irreversible external states.
 
-The root cause is state divergence: checkpoint-restore rolls back the agent's internal state (memory, credentials, task progress), but external services (payment processors, cloud APIs, Git platforms) retain their state. Combined with LLM non-determinism, the agent re-synthesizes tool calls with different parameters---including different idempotency keys---causing external services to treat replayed requests as new operations.
+\subsection{Idempotency and Existing Security Mechanisms}
 
-This paper introduces semantic rollback attacks to characterize these vulnerabilities. We identify two attack classes: (1) Action Replay, where post-restore action synthesis generates different idempotency keys, bypassing duplicate detection and enabling financial fraud or denial-of-wallet attacks; and (2) Authority Resurrection, where consumed single-use tokens are revived after restore, enabling unauthorized operations under stateless validation. We demonstrate these attacks through proof-of-concept experiments using session-level checkpoint simulation and external tool services with append-only logs.
-
-We contribute: (1) identification and characterization of semantic rollback attacks in LLM agents; (2) proof-of-concept experiments demonstrating these vulnerabilities; and (3) design considerations for secure checkpoint-restore integration, including agent-side key persistence, stateful token validation, and semantic-aware checkpointing.
-
-
-\section{Background and Security Goals}
-
-\subsection{Checkpoint-Restore Mechanisms}
-
-CRIU can freeze a Linux process or container, dump its state to disk, and later restore it to run as it was at the time of the freeze, enabling snapshots and debugging~\cite{criu}. However, this capability introduces risks when the process interacts with external systems that are not snapshotted.
-
-Process-level checkpointing captures the complete execution state: memory contents, register values, file descriptors, and network connections. Upon restoration, the process resumes execution from the exact point where it was frozen, unaware that any time has passed or that external state may have changed.
-
-\subsection{Time-Travel in Agent Frameworks}
-
-Modern agent frameworks have embraced checkpoint-restore as a first-class feature. LangGraph persists checkpoints and exposes time travel to resume from prior states~\cite{langgraph}, making restore an explicit user-facing operation that introduces security concerns.
-
-\subsection{Idempotency for External Side Effects}
-
-Payment and cloud APIs recommend idempotency keys so retries do not create duplicates~\cite{stripeidempotency, awsidempotency}. These mechanisms assume callers reliably reuse stable keys, which LLM agents cannot guarantee.
+RPC systems traditionally provide at-most-once semantics through request identifiers~\cite{birrellnelson84}. Payment and cloud APIs implement this via idempotency keys~\cite{stripeidempotency, awsidempotency}, assuming callers reliably reuse stable keys. This assumption fails when keys are synthesized non-deterministically by LLM agents. Rollback attacks and state continuity are well studied in trusted execution environments~\cite{memoir, rote}, but these focus on deterministic programs. Agent security mechanisms including privilege control~\cite{progent} and runtime enforcement~\cite{agentspec} constrain what actions agents can take but do not address state continuity problems from checkpoint-restore. While OWASP documents prompt injection risks~\cite{owaspllm}, this paper identifies a distinct vulnerability class: \textit{semantic rollback}, where the combination of LLM non-determinism and checkpoint-restore causes the output commit problem to manifest as security violations.
 
 \section{Threat Model}
 
@@ -100,15 +81,7 @@ We focus on invariants that are standard in durable, side-effecting systems:
 
 \subsection{Attacker Models}
 
-We consider two operationally realistic attacker models:
-
-\subsubsection{Fault-Triggered Restore}
-
-The agent is checkpointed for recovery; crashes, timeouts, or OOM kills cause the system or operator to restore from a prior checkpoint. The attacker need not have restore privileges---they only influence inputs (emails, documents, web content) and benefit from externally visible outcomes (duplicate payments, unauthorized actions). Restoration is triggered by legitimate system failures, not malicious action. This threat model requires no special access: normal operational failures combined with attacker-controlled inputs can trigger security violations.
-
-\subsubsection{Time-Travel Abuse}
-
-The platform or framework exposes time travel as a feature to resume from a checkpoint and explore alternatives~\cite{langgraph}. An adversary may be an authenticated user abusing the time-travel feature, or legitimate exploration workflows may inadvertently trigger security violations. This is analogous to restart capabilities modeled in rollback literature for trusted execution environments~\cite{rote}.
+We consider two attacker models. In \textbf{Fault-Triggered Restore}, the agent is checkpointed for recovery; crashes or OOM kills trigger restoration. The attacker only influences inputs (emails, documents) and benefits from outcomes (duplicate payments); no special access is required. In \textbf{Time-Travel Abuse}, the platform exposes time travel as a feature~\cite{langgraph}, and an adversary (authenticated user or legitimate workflow) may trigger security violations, analogous to restart attacks in TEE literature~\cite{rote}.
 
 \subsection{Out of Scope}
 
@@ -116,7 +89,7 @@ We do not assume compromise of cryptographic primitives, the checkpoint mechanis
 
 \section{Attacks}
 
-The fundamental cause of semantic rollback vulnerabilities is state divergence: the agent's internal state can be rolled back, but external system state cannot. After restore, the agent's memory reflects an earlier time point, but external services retain effects of prior actions. Combined with LLM non-determinism, the agent re-executes actions with different parameters, bypassing idempotency protections. We detail two concrete attacks: Action Replay applies to both attacker models (no post-restore control needed), while Authority Resurrection as demonstrated requires Time-Travel Abuse where the attacker controls post-restore prompts.
+The root cause of semantic rollback vulnerabilities is state divergence: checkpoint-restore rolls back the agent's internal state (memory, credentials, task progress), but external services (payment processors, cloud APIs, Git platforms) retain their state. Combined with LLM non-determinism, the agent re-synthesizes tool calls with different parameters (including different idempotency keys), causing external services to treat replayed requests as new operations. We identify two attack classes: (1) Action Replay, where post-restore action synthesis generates different idempotency keys, bypassing duplicate detection and enabling financial fraud or denial-of-wallet attacks; and (2) Authority Resurrection, where consumed single-use tokens are revived after restore, enabling unauthorized operations under stateless validation. Action Replay applies to both attacker models (no post-restore control needed), while Authority Resurrection requires Time-Travel Abuse where the attacker controls post-restore prompts.
 
 \begin{figure}[t]
 \centering
@@ -142,10 +115,10 @@ The fundamental cause of semantic rollback vulnerabilities is state divergence: 
 \node[result] (r1) at (0.5, -2.1) {Bank: Success. Balance: \$9500};
 \node[label] at (0.4, -2.1) {$t_3$};
 
-\node[checkpoint] (cp) at (0.5, -2.8) {--- CRASH (or checkpoint) ---};
+\node[checkpoint] (cp) at (0.5, -2.8) {[ CRASH (or checkpoint) ]};
 \node[label] at (0.4, -2.8) {$t_4$};
 
-\node[checkpoint] (rs) at (0.5, -3.5) {--- RESTORE to $t_1$, auto-continue ---};
+\node[checkpoint] (rs) at (0.5, -3.5) {[ RESTORE to $t_1$, auto-continue ]};
 \node[label] at (0.4, -3.5) {$t_5$};
 
 \node[attack] (a3) at (0.5, -4.2) {Agent: transfer(to="Bob", amt=500, ref="f9a8b7c6")};
@@ -186,7 +159,7 @@ The fundamental cause of semantic rollback vulnerabilities is state divergence: 
 \node[result] (r1) at (0.5, -1.4) {Server: Token "tok\_xyz" (single-use)};
 \node[label] at (0.4, -1.4) {$t_2$};
 
-\node[checkpoint] (cp) at (0.5, -2.1) {--- CHECKPOINT at $t_2$ ---};
+\node[checkpoint] (cp) at (0.5, -2.1) {[ CHECKPOINT at $t_2$ ]};
 \node[label] at (0.4, -2.1) {$t_3$};
 
 \node[action] (a2) at (0.5, -2.8) {Agent: delete\_data(token="tok\_xyz", id="Alice")};
@@ -195,7 +168,7 @@ The fundamental cause of semantic rollback vulnerabilities is state divergence: 
 \node[result] (r2) at (0.5, -3.5) {Server: Done. Token consumed.};
 \node[label] at (0.4, -3.5) {$t_5$};
 
-\node[checkpoint] (rs) at (0.5, -4.2) {--- RESTORE to $t_3$ ---};
+\node[checkpoint] (rs) at (0.5, -4.2) {[ RESTORE to $t_3$ ]};
 \node[label] at (0.4, -4.2) {$t_6$};
 
 \node[prompt, fill=red!10] (p2) at (0.5, -4.9) {Attacker: "Continue, but change target to Bob"};
@@ -231,122 +204,27 @@ Exploitability depends on the validation model. With stateless validation (signa
 
 \section{Evaluation}
 
-We evaluate semantic rollback vulnerabilities through controlled proof-of-concept experiments. Our evaluation answers two research questions:
-
-\begin{itemize}
-    \item \textbf{RQ1}: How frequently do action duplications occur under checkpoint-restore?
-    \item \textbf{RQ2}: Can authority resurrection bypass external validation after restore?
-\end{itemize}
-
 \subsection{Experimental Setup}
 
-\subsubsection{Test Infrastructure}
+We evaluate semantic rollback vulnerabilities through proof-of-concept experiments. Our testbed uses Claude Code CLI backed by Qwen3-32B, with checkpoint-restore simulated via session file truncation (mirroring application-level time-travel features like LangGraph). External services are MCP servers with append-only logs: a bank (\texttt{transfer} with UUID idempotency), cloud provider (\texttt{create\_server}), and approval service (configurable stateless/stateful validation). Checkpoints are placed after verification (e.g., \texttt{check\_balance}) but before commit (e.g., \texttt{transfer}), the most vulnerable point. We test four scenarios: bank transfer, cloud provisioning, approval-based deletion, and payment. As baseline, we truncate sessions \textit{after} the action to confirm duplication requires checkpoint-restore timing.
 
-Our experimental setup isolates state mismatch by simulating checkpoint-restore via session file truncation.
+\subsection{Results}
 
-\textbf{Agent under test.} We use Claude Code CLI backed by a local LLM (Qwen3-32B) via llama-server. The agent maintains conversation history and task progress in session files. Checkpoint-restore is simulated by truncating the session to a specific tool call, then resuming.
+\textbf{Action Replay.} All 20 checkpoint-restore trials (10 transfer, 10 cloud) exhibited key instability and action duplication: the LLM regenerated different idempotency keys after restore, causing duplicate commits in every case. All 10 baseline trials showed 0\% duplication, confirming the vulnerability stems from checkpoint timing, not agent behavior.
 
-\textbf{Tool services.} External tool services are implemented as MCP (Model Context Protocol) servers with persistent state stored in JSON files with file locking. Each service maintains an append-only request log and configurable behavior:
-
-\begin{enumerate}
-    \item \textbf{Bank}: \texttt{transfer(to, amount, ref)} with UUID idempotency
-    \item \textbf{Cloud}: \texttt{create\_server(spec, token)} with token idempotency
-    \item \textbf{Approval}: \texttt{request\_approval}, \texttt{delete\_data} with configurable validation (stateless/stateful)
-\end{enumerate}
-
-\textbf{Orchestrator.} A Python driver creates sessions, truncates them at specific tool calls (simulating checkpoint), and resumes execution. The driver collects metrics from MCP server logs.
-
-\subsubsection{Checkpoint Points}
-
-We simulate checkpoints at the critical point in the tool-call lifecycle: after the verification step (e.g., \texttt{check\_balance}) but before the commit step (e.g., \texttt{transfer}). This represents the most vulnerable point where external state has not changed but will be modified upon resume.
-
-\subsubsection{Workloads}
-
-We design scenarios matching the two attack categories:
-\begin{itemize}
-    \item \textbf{Action Replay - Transfer}: Bank transfer task (``Transfer \$500 to Bob'') with check\_balance $\rightarrow$ transfer flow
-    \item \textbf{Action Replay - Cloud}: Server creation (``Create an 8-core-GPU server'') with check\_quota $\rightarrow$ create\_server flow
-    \item \textbf{Authority Resurrection - Approval}: Data deletion with approval (``Delete Alice's data per GDPR request'') with request\_approval $\rightarrow$ delete\_customer\_data flow
-    \item \textbf{Authority Resurrection - Payment}: Payment fraud scenario with approval $\rightarrow$ execute\_payment flow
-\end{itemize}
-
-\subsubsection{Baselines}
-
-We compare two conditions: (1) \textbf{No-CR (Strict Baseline)} truncates the session \textit{after} the action (e.g., after transfer), so the agent sees the completed action and should not duplicate; (2) \textbf{CR} truncates \textit{before} the action (after check), so the agent believes the action was not yet performed. Both use identical ``continue'' prompts to isolate checkpoint timing as the only variable.
-
-\subsubsection{Metrics}
-
-\begin{itemize}
-    \item \textbf{Duplicate rate}: Fraction of trials where the same logical operation commits twice
-    \item \textbf{Key instability rate}: Fraction of trials where the regenerated idempotency key differs from the original
-    \item \textbf{Unauthorized rate}: Fraction of trials where a consumed token is accepted for a different target (Authority Resurrection)
-\end{itemize}
-
-Action Replay experiments run 10 trials per scenario. Authority Resurrection experiments run 2 trials per scenario (limited by time constraints).
-
-\subsection{RQ1: Action Duplication Frequency}
-
-All 20 checkpoint-restore trials (10 transfer, 10 cloud) exhibited key instability and action duplication: the LLM regenerated different idempotency keys after restore, causing duplicate commits in every case. In contrast, all 10 baseline trials (truncate \textit{after} action, same ``continue'' prompt) showed 0\% duplication, confirming the vulnerability stems from checkpoint timing creating state divergence, not from agent behavior or prompt differences.
-
-\subsection{RQ2: Authority Resurrection}
-
-\begin{table}[t]
-\centering
-\small
-\caption{Authority Resurrection results (2 trials each). *Anomalous result requiring larger sample size to investigate.}
-\label{tab:tokenreuse}
-\begin{tabular}{lcc}
-\toprule
-\textbf{Validation} & \textbf{Approval} & \textbf{Payment} \\
-\midrule
-Stateless & 2/2 vuln. & 0/2 \\
-Stateful\_sync & 0/2 secure & 1/2* \\
-Stateful\_async & 0/2 secure & 0/2 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Table~\ref{tab:tokenreuse} evaluates authority resurrection under different validation modes in our proof-of-concept. We test three modes: stateless (signature check only), stateful\_sync (immediate revocation check), and stateful\_async (revocation check with propagation delay). In the attack scenario, after restore, an attacker instructs the agent to use the resurrected token for a different target (e.g., delete Bob's data instead of Alice's).
-
-\textbf{Key finding 3: Stateless validation is vulnerable.} With stateless validation (signature check only), consumed tokens were accepted for unauthorized targets in all tested trials. The restored agent believed the token was unused and successfully deleted Bob's data with Alice's approval token.
-
-\textbf{Key finding 4: Stateful validation is effective.} Synchronous stateful validation (checking consumption state in real-time) successfully rejected token reuse in all approval bypass trials.
-
-\subsection{Summary of Findings}
-
-Our proof-of-concept evaluation demonstrates that semantic rollback vulnerabilities are:
-\begin{enumerate}
-    \item \textbf{Reproducible}: Action Replay showed duplication and key instability in all 20 tested trials
-    \item \textbf{Caused by state divergence}: Strict baseline (truncate after action) showed no duplication, confirming the root cause is checkpoint-restore creating mismatch between agent and external state
-    \item \textbf{Exploitable with stateless validation}: Authority Resurrection succeeded in all tested trials with stateless token validation
-    \item \textbf{Mitigatable with stateful validation}: Synchronous stateful validation prevented token reuse in tested trials
-\end{enumerate}
-
-These findings suggest a fundamental semantic gap: checkpoint-restore mechanisms designed for deterministic programs can produce security violations when applied to non-deterministic LLM agents interacting with stateful external services. The key insight is that LLM agents regenerate parameters (including idempotency keys) non-deterministically, breaking assumptions that idempotency mechanisms rely on.
+\textbf{Authority Resurrection.} We tested token reuse under three validation modes (2 trials each): stateless (signature-only), stateful\_sync (immediate revocation check), and stateful\_async (delayed check). With stateless validation, consumed tokens were accepted for unauthorized targets in 2/2 approval trials (deleting Bob's data with Alice's token). Stateful validation (both sync and async) successfully rejected reuse in all approval trials (0/2 vulnerable). Payment scenarios showed mixed results requiring larger sample sizes.
 
 \subsection{Limitations}
 
-We acknowledge several limitations of our proof-of-concept evaluation:
-
-\textbf{Simulation vs. real CR.} Our testbed uses session file truncation to simulate checkpoint-restore, rather than OS-level mechanisms like CRIU. While this mirrors application-level time-travel features (e.g., LangGraph), it may not capture all behaviors of process-level checkpointing. Future work should validate findings with CRIU-based experiments.
-
-\textbf{Sample size.} Action Replay experiments use 10 trials per scenario, while Authority Resurrection experiments use only 2 trials due to time constraints. The high rates we observe may reflect small sample sizes. Larger-scale experiments (50--100 trials) are needed for statistical significance.
-
-\textbf{Single model family.} We evaluate with Qwen3-32B. Different LLM families (GPT-4, Claude, Llama) may exhibit different non-determinism characteristics. Cross-model validation would strengthen generalizability claims.
-
-\textbf{Prompt design.} Our task prompts explicitly request UUID generation for idempotency keys. This may inflate key instability rates compared to scenarios where keys are managed by external libraries or frameworks.
+Our testbed simulates checkpoint-restore via session truncation rather than OS-level mechanisms like CRIU; future work should validate with process-level checkpointing. Sample sizes are limited (10--20 trials for Action Replay, 2 for Authority Resurrection), and we evaluate only one model family (Qwen3-32B). Task prompts explicitly request UUID generation, potentially inflating key instability rates.
 
 \section{Mitigation Strategies}
 
 For Action Replay, agent frameworks should persist idempotency keys to durable storage before tool calls and reload them after restore, ensuring key stability across restores; external services should implement semantic-level deduplication based on operation identity rather than relying solely on caller-provided keys. For Authority Resurrection, services should use synchronous stateful token validation (checking consumption state in real-time) rather than stateless JWT-only validation, and issue short-lived tokens to minimize the attack window. At the framework level, agent systems should define explicit checkpoint-safe boundaries ensuring external commits are recorded in agent state before checkpointing, and provide restore hooks that re-validate credentials and check for already-committed actions upon restore.
 
-\section{Related Work}
-
-Rollback attacks and state continuity are well studied in trusted execution environments~\cite{memoir, rote}, but these focus on deterministic programs rather than LLM agents with non-deterministic action synthesis. Recent systems work on agentic exploration identifies checkpoint-restore as essential but notes external side effects as an unresolved challenge~\cite{agenticexploration}. Production frameworks like LangGraph already expose persistent checkpoints and time-travel interfaces~\cite{langgraph}, increasing the attack surface we characterize. Agent security mechanisms including privilege control~\cite{progent} and runtime enforcement~\cite{agentspec} constrain what actions agents can take but do not address state continuity problems from checkpoint-restore. While OWASP documents prompt injection risks for LLM applications~\cite{owaspllm}, our work identifies a distinct vulnerability class arising from the interaction between LLM non-determinism and checkpoint-restore semantics.
-
 \section{Conclusion}
 
-Checkpoint-restore primitives are becoming standard in LLM agent frameworks, yet their integration creates measurable security vulnerabilities. LLM non-determinism means post-restore action synthesis varies enough to defeat idempotency mechanisms, while agent state rollback does not affect external systems---enabling action replay and authority resurrection attacks. Our proof-of-concept experiments demonstrate these failures under common configurations, with duplication and token reuse consistently observed in tested scenarios. Mitigating these vulnerabilities requires rethinking the checkpoint-restore abstraction for non-deterministic agents, potentially through external capability verification at execution time, tool-side commit logs resilient to key variation, or semantic-aware checkpointing that preserves logical operation identity.
+Checkpoint-restore primitives are becoming standard in LLM agent frameworks, yet their integration creates measurable security vulnerabilities. LLM non-determinism means post-restore action synthesis varies enough to defeat idempotency mechanisms, while agent state rollback does not affect external systems, enabling action replay and authority resurrection attacks. Our proof-of-concept experiments demonstrate these failures under common configurations, with duplication and token reuse consistently observed in tested scenarios. Mitigating these vulnerabilities requires rethinking the checkpoint-restore abstraction for non-deterministic agents, potentially through external capability verification at execution time, tool-side commit logs resilient to key variation, or semantic-aware checkpointing that preserves logical operation identity.
 
 
 \bibliographystyle{ACM-Reference-Format}
