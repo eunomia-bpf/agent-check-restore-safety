@@ -84,7 +84,7 @@ Modern agent frameworks have embraced checkpoint-restore as a first-class featur
 
 \subsection{Idempotency for External Side Effects}
 
-Payment and cloud APIs recommend idempotency keys so retries do not create duplicates~\cite{stripeidempotency, awsidempotency}. These mechanisms assume callers reliably reuse stable keys---an assumption that fails under non-deterministic LLM action synthesis.
+Payment and cloud APIs recommend idempotency keys so retries do not create duplicates~\cite{stripeidempotency, awsidempotency}. These mechanisms assume callers reliably reuse stable keys, which LLM agents cannot guarantee.
 
 \section{Threat Model}
 
@@ -225,9 +225,9 @@ In classic durable execution, idempotency keys prevent duplicates~\cite{temporal
 \subsection{Authority Resurrection Attack}
 \label{sec:v2}
 
-Figure~\ref{fig:authority-resurrection} illustrates this attack. Agents hold credentials or single-use approvals in memory. Restoring a checkpoint reintroduces consumed tokens, enabling reuse attacks. Real systems exhibit this: a Vault issue shows single-use tokens reappearing after raft snapshot restore~\cite{vaultissue}.
+Figure~\ref{fig:authority-resurrection} illustrates this attack. Agents hold credentials or single-use approvals in memory. Restoring a checkpoint reintroduces consumed tokens, enabling reuse attacks. Real systems exhibit this: a Vault issue showed single-use tokens reappearing after raft snapshot restore~\cite{vaultissue}.
 
-Exploitability depends on validation model. With stateless validation (signature check only), tokens are accepted if cryptographically valid. With stateful validation (revocation list), reuse is rejected. The attack succeeds when a consumed token is accepted after restore.
+Exploitability depends on the validation model. With stateless validation (signature check only), tokens are accepted if cryptographically valid. With stateful validation (revocation list), reuse is rejected. The attack succeeds when a consumed token is accepted after restore.
 
 \section{Evaluation}
 
@@ -244,7 +244,7 @@ We evaluate semantic rollback vulnerabilities through controlled proof-of-concep
 
 Our experimental setup isolates state mismatch by simulating checkpoint-restore via session file truncation.
 
-\textbf{Agent under test.} We use Claude Code CLI backed by a local LLM (Qwen3-80B) via llama-server. The agent maintains conversation history and task progress in session files. Checkpoint-restore is simulated by truncating the session to a specific tool call, then resuming.
+\textbf{Agent under test.} We use Claude Code CLI backed by a local LLM (Qwen3-32B) via llama-server. The agent maintains conversation history and task progress in session files. Checkpoint-restore is simulated by truncating the session to a specific tool call, then resuming.
 
 \textbf{Tool services.} External tool services are implemented as MCP (Model Context Protocol) servers with persistent state stored in JSON files with file locking. Each service maintains an append-only request log and configurable behavior:
 
@@ -306,7 +306,7 @@ Stateful\_async & 0/2 secure & 0/2 \\
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:tokenreuse} evaluates authority resurrection under different validation modes in our proof-of-concept. We test three modes: stateless (signature check only), stateful\_sync (immediate revocation check), and stateful\_async (revocation check with propagation delay). The attack scenario: after restore, an attacker instructs the agent to use the resurrected token for a different target (e.g., delete Bob's data instead of Alice's).
+Table~\ref{tab:tokenreuse} evaluates authority resurrection under different validation modes in our proof-of-concept. We test three modes: stateless (signature check only), stateful\_sync (immediate revocation check), and stateful\_async (revocation check with propagation delay). In the attack scenario, after restore, an attacker instructs the agent to use the resurrected token for a different target (e.g., delete Bob's data instead of Alice's).
 
 \textbf{Key finding 3: Stateless validation is vulnerable.} With stateless validation (signature check only), consumed tokens were accepted for unauthorized targets in all tested trials. The restored agent believed the token was unused and successfully deleted Bob's data with Alice's approval token.
 
@@ -316,7 +316,7 @@ Table~\ref{tab:tokenreuse} evaluates authority resurrection under different vali
 
 Our proof-of-concept evaluation demonstrates that semantic rollback vulnerabilities are:
 \begin{enumerate}
-    \item \textbf{Reproducible}: Action Replay showed duplication and key instability in all tested trials (10 trials)
+    \item \textbf{Reproducible}: Action Replay showed duplication and key instability in all 20 tested trials
     \item \textbf{Caused by state divergence}: Strict baseline (truncate after action) showed no duplication, confirming the root cause is checkpoint-restore creating mismatch between agent and external state
     \item \textbf{Exploitable with stateless validation}: Authority Resurrection succeeded in all tested trials with stateless token validation
     \item \textbf{Mitigatable with stateful validation}: Synchronous stateful validation prevented token reuse in tested trials
@@ -332,7 +332,7 @@ We acknowledge several limitations of our proof-of-concept evaluation:
 
 \textbf{Sample size.} Action Replay experiments use 10 trials per scenario, while Authority Resurrection experiments use only 2 trials due to time constraints. The high rates we observe may reflect small sample sizes. Larger-scale experiments (50--100 trials) are needed for statistical significance.
 
-\textbf{Single model family.} We evaluate with Qwen3-Next-80B-A3B. Different LLM families (GPT-4, Claude, Llama) may exhibit different non-determinism characteristics. Cross-model validation would strengthen generalizability claims.
+\textbf{Single model family.} We evaluate with Qwen3-32B. Different LLM families (GPT-4, Claude, Llama) may exhibit different non-determinism characteristics. Cross-model validation would strengthen generalizability claims.
 
 \textbf{Prompt design.} Our task prompts explicitly request UUID generation for idempotency keys. This may inflate key instability rates compared to scenarios where keys are managed by external libraries or frameworks.
 
