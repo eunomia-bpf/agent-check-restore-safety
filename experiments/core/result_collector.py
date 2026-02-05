@@ -43,6 +43,7 @@ class TrialResult:
     token_consumed: bool = False
     token_accepted_after_consume: bool = False
     validation_mode: Optional[str] = None
+    prompt_variant: Optional[str] = None  # "explicit", "implicit", "minimal"
 
     # Common fields
     attacker_gain_usd: float = 0.0
@@ -168,8 +169,8 @@ class ResultCollector:
                 )
             return False, "Rates below threshold"
 
-        # V1 baseline
-        if scenario == "No_CR_Baseline":
+        # V1 baseline (both original and strict versions)
+        if scenario in ("No_CR_Baseline", "No_CR_Baseline_Strict"):
             if metrics.duplicate_rate < THRESHOLDS["baseline_duplicate_rate"]:
                 return True, f"Baseline clean ({metrics.duplicate_rate:.1%} < 5%)"
             return False, f"Baseline shows duplicates ({metrics.duplicate_rate:.1%})"
