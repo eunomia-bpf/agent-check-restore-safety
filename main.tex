@@ -3,10 +3,8 @@
 %% Checkpoint/Restore Meets Tool-Using LLM Agents Paper
 %%
 
-\documentclass[sigconf,review,anonymous]{acmart}
-\settopmatter{printacmref=false}
-\renewcommand\footnotetextcopyrightpermission[1]{}
-\pagestyle{plain}
+\documentclass[sigplan,nonacm,review]{acmart}
+\settopmatter{printfolios=true}
 
 %%
 %% \BibTeX command to typeset BibTeX logo in the docs
@@ -18,22 +16,22 @@
 \usepackage{tikz}
 \usetikzlibrary{shapes,arrows,positioning,calc,fit,backgrounds}
 
-\newcommand{\sys}{OpJournal}
+\newcommand{\sys}{ACRFence}
 
 \begin{document}
 
-\title{Semantic Rollback Attacks on Checkpoint-Restore in LLM-Driven Agents}
+\title{\sys{}: Preventing Semantic Rollback Attacks in Agent Checkpoint-Restore}
 
-% \author{Anonymous Author(s)}
-% \affiliation{%
-%   \institution{Anonymous Institution}
-%   \city{Anonymous City}
-%   \country{Anonymous Country}
-% }
-% \email{anonymous@example.com}
+\author{Anonymous Author(s)}
+\affiliation{%
+  \institution{Anonymous Institution}
+  \city{Anonymous City}
+  \country{Anonymous Country}
+}
+\email{anonymous@example.com}
 
 \begin{abstract}
-	Checkpoint-restore mechanisms, increasingly adopted in LLM agent frameworks for fault tolerance and exploration, reintroduce a classic distributed systems challenge: the output commit problem. Unlike deterministic workflows where logged outputs enable consistent replay, LLM agents produce non-deterministic yet semantically equivalent actions upon restoration, causing state divergence between rolled-back agent state and persistent external state. This semantic drift defeats traditional idempotency mechanisms. We identify two vulnerability classes: (1) Action Replay, where post-restore action synthesis generates different idempotency keys, bypassing duplicate detection and enabling financial fraud; and (2) Authority Resurrection, where consumed single-use tokens are unintentionally revived after restore. Our proof-of-concept experiments demonstrate that action duplication and token reuse consistently occur under common configurations. We present \sys{}, a runtime mechanism that maintains stable operation identities across restores, reducing duplicate commits to zero in our evaluation.
+	Checkpoint and time-travel features, increasingly adopted in LLM agent frameworks for recovery and exploration, reintroduce a classic systems challenge: externally visible outputs cannot be rolled back. For tool-using LLM agents, the gap is \emph{semantic}: after restore, an agent may re-synthesize a logically equivalent action with different parameters (e.g., a fresh idempotency key), silently bypassing at-most-once defenses and potentially reviving consumed credentials. We characterize two vulnerability classes---\emph{Action Replay} and \emph{Authority Resurrection}---and reproduce them in a proof-of-concept testbed with MCP tool servers and session-level restore. We then present \sys{} (Agent Checkpoint-Restore Fence), a \emph{fork-aware tool-effect journal} that persists effect receipts and enforces an explicit replay-vs-fork decision for irreversible tool calls. In our evaluation, \sys{} eliminates duplicate commits under restore while preserving the agent's ability to explore alternative plans via explicit forking.
 \end{abstract}
 
 % \begin{CCSXML}
@@ -62,37 +60,23 @@
 
 \subsection{Checkpoint-Restore Mechanisms in Classical Systems}
 
-\emph{Checkpoint-restore (CR)} enables saving process state to disk and later resuming execution. Systems like CRIU~\cite{criu} can freeze Linux processes or containers, capturing memory, registers, file descriptors, and network connections. Upon restoration, the process resumes from the exact checkpoint, unaware that time has passed or external state may have changed. This creates a classic distributed systems challenge: the \textit{output commit problem}~\cite{elnozahy02survey, stromyemini85}. Classic rollback-recovery techniques address this through checkpointing and message logging. Foundational protocols require that externally visible outputs be delayed until stable or recorded to prevent duplicate effects~\cite{elnozahy2002survey, strom1985optimistic, alvisi1998messagelogging}. Traditional solutions assume piecewise-deterministic execution: systems like Manetho and ReViveI/O log or virtualize external effects to achieve fast output commit with bounded rollback~\cite{elnozahy1992manetho, reviveio2006}. Modern platforms have extended these mechanisms to container and orchestration environments. Kubernetes has been actively productizing container checkpointing, including KEP-2008 and the Kubelet Checkpoint API, enabling container checkpoint and restore for debugging, migration, and recovery~\cite{k8scheckpoint,k8s_kep2008,k8s_checkpoint_api}. A key limitation is that these mechanisms do \emph{not} snapshot external services that the process interacts with; after restore, the application resumes as if time has rewound, while external state (payment processors, cloud control planes, Git platforms) reflects previously committed effects.
+\emph{Checkpoint-restore (CR)} saves and resumes process state~\cite{criu}, but cannot rewind external services. This creates the \textit{output commit problem}~\cite{elnozahy2002survey, strom1985optimistic}: outputs must be delayed, logged, or virtualized so that recovery does not duplicate irreversible effects. After restore, external state (payment processors, cloud APIs) reflects previously committed effects while the process believes it is ``before'' them, creating \emph{state divergence}.
 
 \subsection{LLM Agents and Their Need for Checkpoint-Restore}
 
-Large-language-model (LLM) agents are increasingly deployed in production settings, managing cloud resources, processing payments, and automating software engineering tasks~\cite{sweagent, openhands}, requiring fault tolerance and debugging capabilities. Agentic research treats backtracking as essential for agent reasoning and exploration~\cite{agenticexploration,xu2025agenticexploration}. Agent frameworks like LangGraph provide persistent checkpoints and time-travel interfaces as first-class features~\cite{langgraph, langgraph_durable,langgraph_persistence,langgraph_timetravel}, enabling durable execution and explicit time-travel APIs where resuming from a checkpoint yields a new \emph{fork}; documentation emphasizes that external API calls should be idempotent to avoid duplicate effects~\cite{langgraph_functional_idempotency}. However, LLM agents violate the determinism assumption required by traditional CR: their runtime synthesis produces non-deterministic yet semantically equivalent behaviors~\cite{llmnondeterminism} even with temperature=0~\cite{atil2025nondeterminism}, and audit replay requires explicit harnesses to enforce determinism~\cite{khatchadourian2026replayable}. Tool-use architectures (ReAct, Toolformer) interleave reasoning with structured actions~\cite{yao2022react,schick2023toolformer}, often standardized via MCP~\cite{mcp_spec,mcp_anthropic}. Modern durable execution engines like Temporal make the output-commit contract explicit: \texttt{SideEffect} mechanisms record nondeterministic values (e.g., UUIDs) so they are \emph{reused on replay} rather than recomputed~\cite{temporal,temporal_side_effects,temporal_activity_definition}, preventing ``UUID drift'' by moving identity generation into a durable log. LLM agents cannot provide the determinism guarantee these engines require, creating mismatches where restored agent state no longer aligns with irreversible external states such as committed payments or consumed credentials.
+LLM agents manage cloud resources, payments, and software engineering tasks~\cite{sweagent, openhands}, making exploration and backtracking essential~\cite{xu2025agenticexploration}. Agent frameworks expose persistent checkpoints and time-travel as first-class features~\cite{langgraph, langgraph_durable}; durable execution guidance explicitly warns that resumed execution may rerun steps with side effects and recommends making them idempotent~\cite{langgraph_functional_idempotency}. Recent work on agentic exploration highlights external side effects as a core unresolved challenge, arguing that services must become fork-aware or calls must be intercepted~\cite{xu2025agenticexploration}. However, ``idempotent'' is a \emph{caller--service contract} that presumes stable operation identity across retries. LLM agents violate this: they re-synthesize semantically equivalent tool calls with different parameters after restore, even under nominally deterministic settings~\cite{atil2025nondeterminism, khatchadourian2026replayable}. Tool invocation is standardized via protocols such as MCP~\cite{mcp_spec}. Durable engines like Temporal record nondeterministic values for replay~\cite{temporal_side_effects}, but require deterministic workflow structure that LLM agents cannot provide.
 
 \subsection{Related Work and Limitations of Existing Solutions}
 
-Building on the classical output commit and rollback-recovery foundations discussed above~\cite{elnozahy2002survey,strom1985optimistic,alvisi1998messagelogging,elnozahy1992manetho,reviveio2006}, RPC-based at-most-once semantics~\cite{birrellnelson84,birrell1984rpc} have been operationalized in modern API ecosystems via idempotency keys, with provider-specific contracts binding ``same key + same parameters'' to ``same effect''~\cite{stripe_idempotent_requests,aws_ecs_idempotency,ietf_idempotency_key}. These mechanisms assume that the caller preserves a \emph{stable operation identity} across retries; this assumption fails when keys are synthesized non-deterministically by LLM agents, silently violating the application-level idempotency contract. Durable workflow engines address this by capturing nondeterministic values into an event history for replay~\cite{temporal_side_effects,temporal_activity_definition}, but LLM agents cannot provide the required determinism guarantees. In TEEs, Memoir provides state continuity against correct-but-stale replay~\cite{parno2011memoir}, ROTE implements distributed rollback protection~\cite{matetic2017rote}, and fork-linearizability protocols detect rollback via consistent operation histories~\cite{brandenburger2017lcm}; these works assume a stronger adversary (untrusted OS/storage) but also deterministic programs and stable identifiers, whereas semantic rollback attacks arise from benign restores where the agent \emph{itself} re-synthesizes requests differently. AgentRR provides record-and-replay for LLM agents targeting reliability and cost~\cite{feng2025agentrR}; DoVer addresses intervention-driven debugging where branching traces complicate attribution~\cite{ma2025dover}; and agent-specific security mechanisms constrain permissible actions but do not address state continuity across checkpoint-restore~\cite{progent,agentspec,owaspllm,xu2025agenticexploration,mcp_spec,mcp_anthropic}. None of these characterize security failures from semantic drift across restore or propose a commit discipline for irreversible tool effects. A real-world Vault incident documents token reuse after snapshot restore~\cite{vault_issue_28378,vaultissue}, illustrating the practical need for stateful consumption tracking.
+\textbf{Durable workflows.} RPC at-most-once semantics~\cite{birrell1984rpc} are operationalized via idempotency keys: same key + same parameters $\to$ same effect; different parameters $\to$ conflict/rejection~\cite{stripe_idempotent_requests, aws_ecs_idempotency, ietf_idempotency_key}. Durable engines record non-deterministic values in event histories so replay reuses recorded results~\cite{temporal_side_effects}, but assume deterministic workflow structure.
+\textbf{Agent replay and debugging.} Record-and-replay has been applied to agent frameworks to improve reliability and cost~\cite{feng2025agentrR}, and interactive debugging tools support resetting and forking conversations~\cite{ma2025dover}. Agent security mechanisms enforce privilege control and runtime policies~\cite{progent, agentspec, owaspllm}. None address how checkpoint-restore interacts with \emph{irreversible tool effects} to create a security attack surface.
+\textbf{Snapshot-induced anomalies.} TEE rollback protection~\cite{parno2011memoir, matetic2017rote} assumes deterministic programs and a stronger adversary. In real systems, a Vault issue documents single-use tokens reappearing after snapshot restore~\cite{vault_issue_28378}, motivating stateful consumption tracking.
 
-We present \sys{}, a runtime mechanism that maintains stable operation identities across restores to mitigate these vulnerabilities.
+We propose \sys{} (Agent Checkpoint-Restore Fence), a runtime mechanism that enforces fork-aware tool-effect semantics to prevent semantic rollback attacks.
 
 \section{Threat Model}
 
-\subsection{Security Goals}
-
-We focus on invariants that are standard in durable, side-effecting systems:
-
-\begin{itemize}
-	\item \textbf{No replay of irreversible effects}: Restoring or retrying should not commit a payment, ticket, or resource creation more than once for the same logical operation.
-
-	\item \textbf{Revocation monotonicity}: Once credentials or approvals are revoked or consumed, restore must not make them usable again.
-\end{itemize}
-
-\subsection{Attacker Models}
-
-We consider two attacker models. In \emph{Fault-Triggered Restore}, the agent is checkpointed for recovery; crashes or OOM kills trigger restoration. The attacker only influences inputs (emails, documents) and benefits from outcomes (duplicate payments); no special access is required. In \emph{Time-Travel Abuse}, the platform exposes time travel as a feature~\cite{langgraph}, and an adversary (authenticated user or legitimate workflow) may trigger security violations, analogous to restart attacks in TEE literature~\cite{rote}.
-
-\subsection{Out of Scope}
-
-We do not assume compromise of cryptographic primitives, the checkpoint mechanism itself, physical access to the execution environment, or modification of the agent's code or model weights.
+We target two invariants standard in durable, side-effecting systems: (1) no replay of irreversible effects (restore must not commit a payment or resource creation more than once for the same logical operation), and (2) revocation monotonicity (consumed credentials must not become usable again after restore). We consider two attacker models. In \emph{Time-Travel Abuse}, the platform exposes checkpoint-restore for exploration and backtracking~\cite{langgraph}, and an adversary (authenticated user or legitimate workflow) may trigger security violations, analogous to restart attacks in TEE literature~\cite{matetic2017rote}. In \emph{Fault-Triggered Restore}, crashes or OOM kills trigger restoration from a checkpoint, and the attacker only influences inputs and benefits from outcomes (duplicate payments).
 
 \section{Attacks}
 
@@ -145,88 +129,112 @@ The root cause is \emph{state divergence}: checkpoint-restore rolls back the age
 	\label{fig:action-replay}
 \end{figure}
 
-\begin{figure}[t]
-	\centering
-	\small
-	\begin{tikzpicture}[
-			flowstep/.style={rectangle, draw, rounded corners=2pt, minimum width=7.2cm, minimum height=0.5cm, align=left, font=\scriptsize\ttfamily, anchor=west},
-			prompt/.style={flowstep, fill=blue!10},
-			action/.style={flowstep, fill=white},
-			result/.style={flowstep, fill=green!15},
-			checkpoint/.style={flowstep, fill=yellow!25, dashed},
-			attack/.style={flowstep, fill=red!15},
-			label/.style={font=\scriptsize\bfseries, anchor=east}
-		]
-		\node[prompt] (p1) at (0.5, 0) {Task: "Delete Alice's data (GDPR). Get approval first."};
-		\node[label] at (0.4, 0) {$t_0$};
-
-		\node[action] (a1) at (0.5, -0.7) {Agent: request\_approval("delete", "Alice")};
-		\node[label] at (0.4, -0.7) {$t_1$};
-
-		\node[result] (r1) at (0.5, -1.4) {Server: Token "tok\_xyz" (single-use)};
-		\node[label] at (0.4, -1.4) {$t_2$};
-
-		\node[checkpoint] (cp) at (0.5, -2.1) {[ CHECKPOINT at $t_2$ ]};
-		\node[label] at (0.4, -2.1) {$t_3$};
-
-		\node[action] (a2) at (0.5, -2.8) {Agent: delete\_data(token="tok\_xyz", id="Alice")};
-		\node[label] at (0.4, -2.8) {$t_4$};
-
-		\node[result] (r2) at (0.5, -3.5) {Server: Done. Token consumed.};
-		\node[label] at (0.4, -3.5) {$t_5$};
-
-		\node[checkpoint] (rs) at (0.5, -4.2) {[ RESTORE to $t_3$ ]};
-		\node[label] at (0.4, -4.2) {$t_6$};
-
-		\node[prompt, fill=red!10] (p2) at (0.5, -4.9) {Attacker: "Continue, but change target to Bob"};
-		\node[label] at (0.4, -4.9) {$t_7$};
-
-		\node[attack] (a3) at (0.5, -5.6) {Agent: delete\_data(token="tok\_xyz", id="Bob")};
-		\node[label] at (0.4, -5.6) {$t_8$};
-
-		\node[attack, fill=red!25] (out) at (0.5, -6.3) {Stateless: Bob deleted | Stateful: Rejected};
-
-		% Callout annotation
-		\node[draw, fill=red!10, rounded corners=3pt, font=\scriptsize, align=center, anchor=west] (callout) at (7.0, -5.2) {Same token\\used for\\different target};
-		\draw[->, red, thick] (callout.west) -- (4.85, -5.6);
-
-	\end{tikzpicture}
-	\caption{Authority Resurrection. Single-use token is consumed for Alice, but agent state rolls back with token still in memory. Subtle prompt causes agent to reuse token for different target.}
-	\label{fig:authority-resurrection}
-\end{figure}
+% \begin{figure}[t]
+% 	\centering
+% 	\small
+% 	\begin{tikzpicture}[
+% 			flowstep/.style={rectangle, draw, rounded corners=2pt, minimum width=7.2cm, minimum height=0.5cm, align=left, font=\scriptsize\ttfamily, anchor=west},
+% 			prompt/.style={flowstep, fill=blue!10},
+% 			action/.style={flowstep, fill=white},
+% 			result/.style={flowstep, fill=green!15},
+% 			checkpoint/.style={flowstep, fill=yellow!25, dashed},
+% 			attack/.style={flowstep, fill=red!15},
+% 			label/.style={font=\scriptsize\bfseries, anchor=east}
+% 		]
+% 		\node[prompt] (p1) at (0.5, 0) {Task: "Delete Alice's data (GDPR). Get approval first."};
+% 		\node[label] at (0.4, 0) {$t_0$};
+%
+% 		\node[action] (a1) at (0.5, -0.7) {Agent: request\_approval("delete", "Alice")};
+% 		\node[label] at (0.4, -0.7) {$t_1$};
+%
+% 		\node[result] (r1) at (0.5, -1.4) {Server: Token "tok\_xyz" (single-use)};
+% 		\node[label] at (0.4, -1.4) {$t_2$};
+%
+% 		\node[checkpoint] (cp) at (0.5, -2.1) {[ CHECKPOINT at $t_2$ ]};
+% 		\node[label] at (0.4, -2.1) {$t_3$};
+%
+% 		\node[action] (a2) at (0.5, -2.8) {Agent: delete\_data(token="tok\_xyz", id="Alice")};
+% 		\node[label] at (0.4, -2.8) {$t_4$};
+%
+% 		\node[result] (r2) at (0.5, -3.5) {Server: Done. Token consumed.};
+% 		\node[label] at (0.4, -3.5) {$t_5$};
+%
+% 		\node[checkpoint] (rs) at (0.5, -4.2) {[ RESTORE to $t_3$ ]};
+% 		\node[label] at (0.4, -4.2) {$t_6$};
+%
+% 		\node[prompt, fill=red!10] (p2) at (0.5, -4.9) {Attacker: "Continue, but change target to Bob"};
+% 		\node[label] at (0.4, -4.9) {$t_7$};
+%
+% 		\node[attack] (a3) at (0.5, -5.6) {Agent: delete\_data(token="tok\_xyz", id="Bob")};
+% 		\node[label] at (0.4, -5.6) {$t_8$};
+%
+% 		\node[attack, fill=red!25] (out) at (0.5, -6.3) {Stateless: Bob deleted | Stateful: Rejected};
+%
+% 		% Callout annotation
+% 		\node[draw, fill=red!10, rounded corners=3pt, font=\scriptsize, align=center, anchor=west] (callout) at (7.0, -5.2) {Same token\\used for\\different target};
+% 		\draw[->, red, thick] (callout.west) -- (4.85, -5.6);
+%
+% 	\end{tikzpicture}
+% 	\caption{Authority Resurrection. Single-use token is consumed for Alice, but agent state rolls back with token still in memory. Subtle prompt causes agent to reuse token for different target.}
+% 	\label{fig:authority-resurrection}
+% \end{figure}
 
 \subsection{Action Replay Attack}
 \label{sec:v1}
 
-Figure~\ref{fig:action-replay} illustrates this attack. If a checkpoint is taken before an external commit is durably recorded, restoring re-executes the same operation, enabling denial-of-wallet (crash after resource provisioning inflates victim's bill) and financial fraud (time-travel after receiving service to avoid payment). In classic durable execution, idempotency keys prevent duplicates~\cite{temporal, stripeidempotency}, but LLM agents regenerate different keys after restore, causing duplicate payments, tickets, resource provisioning, or PRs. The attack succeeds when two committed entries exist for the same logical operation.
+Figure~\ref{fig:action-replay} illustrates this attack. If a checkpoint is taken before an external commit is durably recorded, restoring re-executes the same logical operation. Idempotency keys are a caller--service contract: same key + same parameters yields the stored result; changed parameters cause a conflict or rejection~\cite{stripe_idempotent_requests, aws_ecs_idempotency}. Semantic drift after restore violates this contract---the LLM regenerates a \emph{different} key for the \emph{same} logical operation, so the service treats it as a new request. The attack succeeds when two committed entries exist for the same logical operation, enabling duplicate payments, resource provisioning, or denial-of-wallet.
 
 \subsection{Authority Resurrection Attack}
 \label{sec:v2}
 
-Figure~\ref{fig:authority-resurrection} illustrates this attack. Agents hold credentials or single-use approvals in memory; restoring a checkpoint reintroduces consumed tokens, enabling reuse attacks. Exploitability depends on the validation model: with stateless validation (signature check only), tokens are accepted if cryptographically valid; with stateful validation (revocation list), reuse is rejected. The attack succeeds when a consumed token is accepted after restore.
+Agents hold credentials or single-use approvals in memory; restoring a checkpoint reintroduces consumed tokens, enabling reuse. Exploitability depends on the validation model: with stateless validation (signature check only), tokens are accepted if cryptographically valid; with stateful validation (revocation list), reuse is rejected. The attack succeeds when a consumed token is accepted after restore.
+
+\section{Design: \sys}
+\label{sec:design}
+
+\sys{} interposes at the tool boundary (e.g., as an MCP proxy) and treats each \emph{irreversible} tool call as an \emph{effect} that must have a stable identity across restores. Rather than relying on the LLM to regenerate an identical idempotency key, \sys{} assigns each effect a stable \texttt{op\_slot} (a monotonic index within a run) and stores an \emph{effect receipt}:
+$\langle \texttt{thread\_id}, \texttt{branch\_id}, \texttt{op\_slot}, \texttt{tool}, \texttt{fp(args)}, \texttt{req}, \texttt{resp} \rangle$
+where \texttt{fp} is a deterministic normalization of tool arguments (canonical JSON).
+
+\textbf{Replay vs.\ fork semantics.} Upon restore, if the agent issues an irreversible tool call at an \texttt{op\_slot} that already has a receipt, \sys{} compares fingerprints: (i)~if they match, \sys{} returns the recorded response without reissuing the side effect (\emph{replay}); (ii)~if they differ, \sys{} surfaces a \emph{conflict} and requires an explicit fork (new \texttt{branch\_id}) before allowing a new effect. This makes exploration explicit rather than silently duplicating effects---the key design choice that distinguishes \sys{} from naive deduplication.
+
+\textbf{Credential monotonicity.} For single-use approvals, \sys{} records token consumption in effect receipts. Combined with stateful server-side validation (which rejects reused tokens~\cite{vault_issue_28378}), this prevents Authority Resurrection. We leave full branch management and automated fork policies to future work.
 
 \section{Evaluation}
 
 \subsection{Experimental Setup}
 
-We evaluate semantic rollback vulnerabilities through proof-of-concept experiments. Our testbed uses Claude Code CLI backed by Qwen3-32B, with checkpoint-restore simulated via session file truncation (mirroring application-level time-travel features like LangGraph). External services are MCP servers with append-only logs: a bank (\texttt{transfer} with UUID idempotency), cloud provider (\texttt{create\_server}), and approval service (configurable stateless/stateful validation). Checkpoints are placed after verification (e.g., \texttt{check\_balance}) but before commit (e.g., \texttt{transfer}), the most vulnerable point. We test four scenarios: bank transfer, cloud provisioning, approval-based deletion, and payment. As baseline, we truncate sessions \textit{after} the action to confirm duplication requires checkpoint-restore timing.
+Our testbed uses Claude Code CLI backed by Qwen3-32B, with checkpoint-restore simulated via session file truncation. External services are MCP servers with append-only logs: a bank (\texttt{transfer} with UUID idempotency), cloud provider (\texttt{create\_server}), and approval service (configurable stateless/stateful validation). Checkpoints are placed after verification but before commit, the most vulnerable point. As baseline, we truncate sessions \textit{after} the action to confirm duplication requires checkpoint-restore timing.
 
 \subsection{Results}
 
-For Action Replay, all 20 checkpoint-restore trials (10 transfer, 10 cloud) exhibited key instability and action duplication: the LLM regenerated different idempotency keys after restore, causing duplicate commits in every case; all 10 baseline trials showed 0\% duplication, confirming the vulnerability stems from checkpoint timing, not agent behavior. For Authority Resurrection, we tested token reuse under three validation modes (2 trials each): stateless (signature-only), stateful\_sync (immediate revocation check), and stateful\_async (delayed check). With stateless validation, consumed tokens were accepted for unauthorized targets in 2/2 approval trials (deleting Bob's data with Alice's token). Stateful validation (both sync and async) rejected reuse in all trials (0/2 vulnerable). Payment scenarios showed mixed results requiring larger sample sizes.
+\begin{table}[t]
+\centering
+\small
+\caption{Action Replay: duplicate commits across configurations.}
+\label{tab:results}
+\begin{tabular}{lcc}
+\hline
+\textbf{Configuration} & \textbf{Trials} & \textbf{Duplicates} \\
+\hline
+Baseline (no CR) & 10 & 0 \\
+CR without \sys{} & 20 & 20 \\
+CR with \sys{} & 20 & 0 \\
+\hline
+\end{tabular}
+\end{table}
 
-\subsection{Limitations}
+Table~\ref{tab:results} summarizes Action Replay results. Without CR, no duplication occurs (baseline). With CR but without \sys{}, all 20 trials (10 transfer, 10 cloud) produced duplicate commits due to key instability. With \sys{}, fingerprint matching returns cached responses for replayed operations, eliminating all duplicates. For Authority Resurrection, under stateless validation consumed tokens were accepted for unauthorized targets (2/2 trials); stateful validation rejected reuse in all trials.
 
-Our testbed simulates checkpoint-restore via session truncation rather than OS-level mechanisms like CRIU; future work should validate with process-level checkpointing. Sample sizes are limited (10--20 trials for Action Replay, 2 for Authority Resurrection), and we evaluate only one model family (Qwen3-32B). Task prompts explicitly request UUID generation, potentially inflating key instability rates.
+\textbf{Limitations.} Our testbed simulates CR via session truncation rather than CRIU, sample sizes are limited, and we evaluate one model family (Qwen3-32B). The fork-conflict path (fingerprint mismatch) is validated manually rather than at scale.
 
-\section{Mitigation Strategies}
+\section{Discussion and Conclusion}
 
-For Action Replay, agent frameworks should persist idempotency keys to durable storage before tool calls and reload them after restore, ensuring key stability across restores; external services should implement semantic-level deduplication based on operation identity rather than relying solely on caller-provided keys. For Authority Resurrection, services should use synchronous stateful token validation (checking consumption state in real-time) rather than stateless JWT-only validation, and issue short-lived tokens to minimize the attack window. At the framework level, agent systems should define explicit checkpoint-safe boundaries ensuring external commits are recorded in agent state before checkpointing, and provide restore hooks that re-validate credentials and check for already-committed actions upon restore.
+Checkpoint-restore in LLM agent frameworks reintroduces the output commit problem in a setting where traditional solutions---which assume deterministic replay---do not apply. Our experiments confirm that semantic drift after restore consistently produces duplicate commits and can revive consumed credentials. \sys{} addresses this by making tool-effect identity an explicit runtime semantic layer: each irreversible effect gets a stable slot, and restore triggers a replay-vs-fork decision rather than silent re-execution. The key insight is that \emph{not} all post-restore divergence is harmful---agents legitimately explore alternative plans---but irreversible effects must be gated by an explicit fork decision. We believe this fork-aware discipline complements existing durable-execution and idempotency guidance~\cite{temporal_side_effects, langgraph_durable} by addressing the semantic gap that LLM non-determinism creates.
 
-\section{Conclusion}
 
-Checkpoint-restore primitives are becoming standard in LLM agent frameworks, yet their integration reintroduces the output commit problem in a setting where traditional solutions fail: LLM non-determinism defeats idempotency mechanisms, and agent state rollback does not affect external systems. Our proof-of-concept experiments demonstrate that action replay and authority resurrection consistently occur under common configurations. \sys{} addresses these vulnerabilities by maintaining stable operation identities across restores, reducing duplicate commits to zero in our evaluation. More broadly, securing checkpoint-restore for non-deterministic agents requires a commit discipline that preserves logical operation identity across state divergence.
-
+\section*{AI Use Statement}
+AI tools (Claude) were used for text polishing and iterative editing of this manuscript. All technical content, experimental design, and analysis were conducted by the authors.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
