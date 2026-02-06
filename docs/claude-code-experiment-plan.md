@@ -518,7 +518,7 @@ if __name__ == "__main__":
 
 ## 5. TM1 vs TM2 的实现区别
 
-### TM1 (Fault-Triggered) 模拟
+### TM1 (Crash-Induced) 模拟
 
 ```python
 async def simulate_tm1_crash():
@@ -543,7 +543,7 @@ async def simulate_tm1_crash():
     pass
 ```
 
-### TM2 (Time-Travel) 模拟
+### TM2 (Deliberate Rollback) 模拟
 
 ```python
 async def simulate_tm2_time_travel():
@@ -629,5 +629,5 @@ python experiment_v2_authority_resurrection.py
 ## 10. 备选方案
 
 如果需要更完整的测试:
-- 使用 **LangGraph** (有 time-travel)
+- 使用 **LangGraph** (有 rollback)
 - 使用 **CRIU + Container** (OS-level checkpoint)

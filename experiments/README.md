@@ -15,8 +15,8 @@ This directory contains the complete experiment framework for validating semanti
 
 | ID | Model | Attacker | Capability |
 |----|-------|----------|------------|
-| **TM1** | Fault-Triggered Restore | External | Controls input (email, doc) |
-| **TM2** | Time-Travel Abuse | User | Has account + time-travel access |
+| **TM1** | Crash-Induced Restore | External | Controls input (email, doc) |
+| **TM2** | Deliberate Rollback Abuse | User | Has account + rollback access |
 
 ## Directory Structure
 
@@ -143,7 +143,7 @@ python -m experiments.exp2_authority_resurrection
 
 Tests duplicate operations due to LLM key instability after checkpoint-restore.
 
-#### S1 (TM1): Fault-Triggered Denial of Wallet
+#### S1 (TM1): Crash-Induced Denial of Wallet
 
 ```
 1. Create session → agent executes task → calls create_payment(key1)
@@ -154,12 +154,12 @@ Tests duplicate operations due to LLM key instability after checkpoint-restore.
 6. Service sees new key → processes duplicate payment!
 ```
 
-#### S2 (TM2): Time-Travel Fraud
+#### S2 (TM2): Deliberate Rollback Fraud
 
 ```
 1. [CHECKPOINT] User creates checkpoint
 2. Agent processes payment → service delivers
-3. [TIME-TRAVEL] User restores checkpoint
+3. [ROLLBACK] User restores checkpoint
 4. User cancels payment
 5. Result: User got service but didn't pay!
 ```

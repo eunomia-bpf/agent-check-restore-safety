@@ -67,11 +67,11 @@
 
 \section{Threat Model}
 
-We target two invariants: (1) no replay of irreversible effects across restores, and (2) revocation monotonicity (consumed credentials must not become reusable). We consider two attacker models: \emph{Checkpoint Abuse}, where an adversary exploits CR features exposed for exploration~\cite{langgraph}, analogous to TEE restart attacks~\cite{matetic2017rote}; and \emph{Fault-Triggered Restore}, where crashes trigger restoration and the attacker benefits from duplicate effects. Both require that external operations remain consistent across checkpoints.
+We target two invariants: (1) no replay of irreversible effects across restores, and (2) revocation monotonicity (consumed credentials must not become reusable). We consider two attacker models: \emph{Deliberate Rollback Abuse}, where an adversary exploits CR features exposed for exploration~\cite{langgraph}, analogous to TEE restart attacks~\cite{matetic2017rote}; and \emph{Crash-Induced Restore}, where crashes trigger restoration and the attacker benefits from duplicate effects. Both require that external operations remain consistent across checkpoints.
 
 \section{Attacks}
 
-We identify two attack classes exploiting state divergence after restore. \emph{Action Replay} exploits idempotency key instability to enable duplicate commits (financial fraud, denial-of-wallet) and applies to both attacker models. \emph{Authority Resurrection} exploits consumed single-use tokens that reappear in rolled-back agent state to enable unauthorized operations, requiring Checkpoint Abuse where the attacker controls post-restore prompts.
+We identify two attack classes exploiting state divergence after restore. \emph{Action Replay} exploits idempotency key instability to enable duplicate commits (financial fraud, denial-of-wallet) and applies to both attacker models. \emph{Authority Resurrection} exploits consumed single-use tokens that reappear in rolled-back agent state to enable unauthorized operations, requiring Deliberate Rollback Abuse where the attacker controls post-restore prompts.
 
 \begin{figure}[t]
 	\centering
@@ -181,7 +181,7 @@ We identify two attack classes exploiting state divergence after restore. \emph{
 \begin{small}
 \[\langle \texttt{thread\_id}, \texttt{branch\_id}, \texttt{op\_slot}, \texttt{tool}, \texttt{fp}, \texttt{req}, \texttt{resp} \rangle\]
 \end{small}
-The fingerprint captures the implicit context needed to identify the intended semantic operation, enabling precise replay-or-fork decisions across restores. In our prototype, fingerprints comprise canonical tool arguments; future deployments can leverage system-level observability tools such as eBPF-based agent monitors~\cite{zheng2025agentsight} to incorporate external environment state (filesystem snapshots, resource quotas, permission validity) for greater semantic precision.
+The fingerprint captures the implicit context needed to identify the intended semantic operation, enabling precise replay-or-fork decisions across restores. In our prototype, fingerprints comprise canonical tool arguments, supplemented by system-level observability via eBPF-based agent monitors~\cite{zheng2025agentsight} to capture external environment state (filesystem snapshots, resource quotas, permission validity) for greater semantic precision.
 
 \textbf{Replay vs.\ fork semantics.} Upon restore, if the agent issues an irreversible tool call at an \texttt{op\_slot} that already has a receipt, \sys{} automatically compares fingerprints: (i)~if they match, \sys{} returns the recorded response without reissuing the side effect (\emph{replay}); (ii)~if they differ, \sys{} blocks the call, surfaces the prior receipt as context, and requires an explicit fork (new \texttt{branch\_id}) before allowing a new effect. This mechanism is purely structural; it requires no runtime model inference or semantic similarity judgments, keeping the runtime simple, fast, and trustworthy. \sys{} thus treats each irreversible tool call as a checkpoint boundary, ensuring either replay of the committed effect or an explicit fork to a new execution branch.
 

@@ -26,8 +26,8 @@ Restore/Rewind 后: Agent 状态回滚 ←→ 外部状态不变 = 状态分歧
 
 | ID | 威胁模型 | 攻击者 | 受害者 | 触发方式 | 攻击者目标 |
 |----|---------|--------|--------|---------|-----------|
-| **TM1** | Fault-Triggered Attack | 外部人员（收款方、恶意商家） | 用户 | 恶意输入触发 crash → 系统自动恢复 | 让用户重复付款/操作 |
-| **TM2** | Time-Travel Abuse | 用户/内部人员 | 服务商、公司、其他用户 | 主动使用 /rewind 功能 | 获得非法利益 |
+| **TM1** | Crash-Induced Restore | 外部人员（收款方、恶意商家） | 用户 | 恶意输入触发 crash → 系统自动恢复 | 让用户重复付款/操作 |
+| **TM2** | Deliberate Rollback Abuse | 用户/内部人员 | 服务商、公司、其他用户 | 主动使用 /rewind 功能 | 获得非法利益 |
 
 **关键区别**：
 - **TM1**: 攻击者**不控制** restore，利用系统自动恢复后 Agent 的行为
@@ -518,7 +518,7 @@ LLM Agent + /rewind 打破信任:
 
 ### 4.3 TM1 vs TM2 对比
 
-| 方面 | TM1 (Fault-Triggered) | TM2 (Time-Travel Abuse) |
+| 方面 | TM1 (Crash-Induced) | TM2 (Deliberate Rollback Abuse) |
 |------|----------------------|------------------------|
 | 攻击者 | 外部人员 | 用户/内部人员 |
 | 受害者 | 用户 | 服务商/公司/其他用户 |
@@ -692,7 +692,7 @@ python run_experiments.py --trials 10
 
 | 论文章节 | 内容 | 实验 |
 |---------|------|------|
-| §3 Threat Model | TM1 (Fault-Triggered), TM2 (Time-Travel) | - |
+| §3 Threat Model | TM1 (Crash-Induced), TM2 (Deliberate Rollback) | - |
 | §4.1 Action Replay | V1 漏洞分析 | Exp1 |
 | §4.2 Authority Resurrection | V2 漏洞分析 | Exp2 |
 | §5 Why Traditional Protections Fail | 幂等性/Token 保护失效分析 | - |

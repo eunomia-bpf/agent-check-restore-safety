@@ -328,7 +328,7 @@ LLM Agent 打破假设:
 
 #### 关于 TM2 威胁模型
 
-V2 实验中攻击者明确指示 agent 用 token 执行不同操作。这**不是**实验设计问题，而是 **TM2 (Time-Travel Abuse)** 威胁模型的一部分：
+V2 实验中攻击者明确指示 agent 用 token 执行不同操作。这**不是**实验设计问题，而是 **TM2 (Deliberate Rollback Abuse)** 威胁模型的一部分：
 
 > **TM2 定义**: 攻击者是用户/内部人员，能够主动使用 /rewind 功能并控制恢复后的指令
 
@@ -338,7 +338,7 @@ V2 实验中攻击者明确指示 agent 用 token 执行不同操作。这**不�
 
 | 要求 | 当前状态 | 说明 |
 |------|---------|------|
-| 明确的威胁模型 | ✅ | TM1 (Fault-Triggered) + TM2 (Time-Travel Abuse) |
+| 明确的威胁模型 | ✅ | TM1 (Crash-Induced) + TM2 (Deliberate Rollback Abuse) |
 | 可重复的实验 | ✅ | 代码可运行，建议增加样本量 |
 | 真实的攻击场景 | ✅ | V1 已验证；V2 符合 TM2 威胁模型 |
 | 漏洞根因分析 | ✅ | State Divergence + LLM Non-determinism |

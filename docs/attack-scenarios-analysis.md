@@ -14,9 +14,9 @@
 
 ## Tier 1: 高危安全问题 (明确的攻击者获益 + 高可行性)
 
-### S1: Time-Travel 财务欺诈
+### S1: Deliberate Rollback 财务欺诈
 
-**威胁模型**: TM2 (User-Controlled Time-Travel)
+**威胁模型**: TM2 (Deliberate Rollback Abuse)
 **漏洞类型**: V1 (Action Duplication)
 
 ```
@@ -25,7 +25,7 @@ t0: 恶意用户发起购买请求
 t1: [CHECKPOINT]
 t2: Agent 执行支付，扣款成功
 t3: 用户收到商品/服务（数字商品、API 访问权限等）
-t4: 用户使用 time-travel 回到 t1
+t4: 用户使用 rollback 回到 t1
 t5: 用户选择不执行支付，或执行其他操作
 t6: 用户保留已获得的服务，但未付款
 
@@ -37,8 +37,8 @@ t6: 用户保留已获得的服务，但未付款
 | **攻击者** | 恶意用户（有平台账户） |
 | **受害者** | 平台/商家 |
 | **攻击者获益** | 免费获得付费服务 |
-| **前提条件** | 平台提供 time-travel 功能；服务在支付后立即交付 |
-| **CR 引入的新问题?** | ✅ 是，没有 time-travel 无法实现 |
+| **前提条件** | 平台提供 rollback 功能；服务在支付后立即交付 |
+| **CR 引入的新问题?** | ✅ 是，没有 rollback 无法实现 |
 
 **安全等级**: 🔴 **高危**
 
@@ -46,7 +46,7 @@ t6: 用户保留已获得的服务，但未付款
 
 ### S2: 竞争对手发起的成本放大攻击
 
-**威胁模型**: TM1 (Fault-Triggered Restore)
+**威胁模型**: TM1 (Crash-Induced Restore)
 **漏洞类型**: V1 (Action Duplication)
 
 ```
@@ -79,7 +79,7 @@ t7: 公司 A 现在有 20 个实例，账单翻倍
 
 ### S3: 金融交易时间差利用
 
-**威胁模型**: TM1 (Fault-Triggered Restore)
+**威胁模型**: TM1 (Crash-Induced Restore)
 **漏洞类型**: V1 (Action Duplication)
 
 ```
@@ -121,7 +121,7 @@ t0: Agent 收到 single-use admin token T (JWT, 有效期 1 小时)
 t1: [CHECKPOINT] - Token T 在 Agent 内存中
 t2: Agent 使用 Token T 执行敏感操作 (如 deploy to production)
 t3: 外部服务标记 T 为 "consumed" (但只在数据库中，JWT 本身仍有效)
-t4: [CRASH 或 TIME-TRAVEL]
+t4: [CRASH 或 ROLLBACK]
 t5: [RESTORE from t1]
 t6: Agent 内存中仍有 Token T
 t7: Agent 再次使用 Token T
@@ -146,7 +146,7 @@ t8: 如果外部服务使用 stateless JWT 验证 → Token 被接受!
 
 ### S5: 支付收款方劫持 + 重复支付
 
-**威胁模型**: TM1 (Fault-Triggered Restore)
+**威胁模型**: TM1 (Crash-Induced Restore)
 **漏洞类型**: V1 (Action Duplication) + Prompt Injection
 
 ```
@@ -178,7 +178,7 @@ t6: Agent 可能再次支付 (给攻击者或原收款方)
 
 ### S6: 数据完整性破坏
 
-**威胁模型**: TM1 (Fault-Triggered Restore)
+**威胁模型**: TM1 (Crash-Induced Restore)
 **漏洞类型**: V1 (Action Duplication)
 
 ```
@@ -208,7 +208,7 @@ t6: 数据库报错或数据损坏
 
 ### S7: 审计日志污染
 
-**威胁模型**: TM1 (Fault-Triggered Restore)
+**威胁模型**: TM1 (Crash-Induced Restore)
 **漏洞类型**: V1 (Action Duplication)
 
 ```
@@ -237,7 +237,7 @@ t5: 真正的恶意操作被淹没
 
 ### S8: 重复通知导致信任侵蚀
 
-**威胁模型**: TM1 (Fault-Triggered Restore)
+**威胁模型**: TM1 (Crash-Induced Restore)
 **漏洞类型**: V1 (Action Duplication)
 
 ```
@@ -328,7 +328,7 @@ t5: Agent 再次请求审批?
 
 | 排名 | 场景 | 威胁模型 | 漏洞 | 危害 | 等级 |
 |------|------|----------|------|------|------|
-| 1 | S1: Time-Travel 财务欺诈 | TM2 | V1 | 用户免费获取服务 | 🔴 高 |
+| 1 | S1: Deliberate Rollback 财务欺诈 | TM2 | V1 | 用户免费获取服务 | 🔴 高 |
 | 2 | S2: 竞争对手成本放大 | TM1 | V1 | 经济损失 | 🔴 高 |
 | 3 | S3: 金融交易时间差 | TM1 | V1 | 市场操纵 | 🟠 中 |
 | 4 | S4: Token 复活 (Stateless) | TM1/TM2 | V2 | 未授权操作 | 🟠 中 |
@@ -343,7 +343,7 @@ t5: Agent 再次请求审批?
 
 ## 关键发现
 
-### 1. TM2 (User Time-Travel) 比 TM1 更容易造成安全问题
+### 1. TM2 (Deliberate Rollback) 比 TM1 更容易造成安全问题
 
 - TM2 场景中攻击者获益更直接 (S1)
 - TM1 需要更复杂的攻击链才能获益 (S2, S3, S5)
@@ -368,7 +368,7 @@ t5: Agent 再次请求审批?
 ## 建议: 论文应聚焦的场景
 
 **主要场景 (必须覆盖):**
-- S1: Time-Travel 财务欺诈 (TM2 + V1)
+- S1: Deliberate Rollback 财务欺诈 (TM2 + V1)
 - S2: 竞争对手成本放大 (TM1 + V1)
 
 **次要场景 (可选覆盖):**

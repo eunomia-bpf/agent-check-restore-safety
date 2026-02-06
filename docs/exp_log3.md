@@ -103,7 +103,7 @@ RESULTS
 
 ### 攻击场景
 
-**TM1 (Fault-Triggered)**:
+**TM1 (Crash-Induced)**:
 ```
 1. 攻击者发送恶意输入触发 Agent crash
 2. 系统自动从 checkpoint 恢复
@@ -111,11 +111,11 @@ RESULTS
 4. Agent 重新执行付款 → 受害者被双倍收费
 ```
 
-**TM2 (Time-Travel Abuse)**:
+**TM2 (Deliberate Rollback Abuse)**:
 ```
 1. 恶意用户创建 checkpoint
 2. 执行付款，获得服务
-3. 用户主动 time-travel 到 checkpoint
+3. 用户主动 rollback 到 checkpoint
 4. Agent 状态回滚，用户可以选择不付款
 5. 结果：用户获得服务但未付款
 ```
@@ -354,8 +354,8 @@ V1 Action Replay (1 trial):
    - Claude Code 的 /rewind 功能
 
 §3 Threat Model
-   - TM1: Fault-Triggered (外部攻击者)
-   - TM2: Time-Travel Abuse (恶意用户) ← 主要聚焦
+   - TM1: Crash-Induced (外部攻击者)
+   - TM2: Deliberate Rollback Abuse (恶意用户) ← 主要聚焦
 
 §4 Vulnerabilities
    - V1: Action Replay (重复操作)
@@ -572,7 +572,7 @@ Agent: use_token(token, "deploy_production") → 同一 token 两次使用!
 
 ### 重新定义威胁模型
 
-**TM1: Fault-Triggered Attack（故障触发攻击）**
+**TM1: Crash-Induced Restore（故障触发攻击）**
 ```
 攻击者: 外部人员（收款方、恶意商家、竞争对手）
 受害者: 用户
@@ -580,7 +580,7 @@ Agent: use_token(token, "deploy_production") → 同一 token 两次使用!
 攻击者控制: 间接（只能触发 crash，不能控制恢复后行为）
 ```
 
-**TM2: Time-Travel Abuse（时间旅行滥用）**
+**TM2: Deliberate Rollback Abuse（时间旅行滥用）**
 ```
 攻击者: 用户/内部人员
 受害者: 服务商、公司、其他用户

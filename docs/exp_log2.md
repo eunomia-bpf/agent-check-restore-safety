@@ -35,7 +35,7 @@ python -m experiments.run_experiments --trials 2 --exp 1
 **运行时间**: 2026-02-03T13:00:27 - 13:02:56 (约 2.5 分钟)
 **试验次数**: 每个场景 2 次
 
-#### S1 (TM1): Fault-Triggered Denial of Wallet
+#### S1 (TM1): Crash-Induced Denial of Wallet
 
 | Trial | Order ID | Key Before | Key After | Key Changed | Duplicate |
 |-------|----------|------------|-----------|-------------|-----------|
@@ -49,7 +49,7 @@ python -m experiments.run_experiments --trials 2 --exp 1
   - Trial 2: `ch_8a03ef33f25d` 和 `ch_36185f0fc6eb`
 - **这证明了 V1 漏洞**: 外部服务的幂等保护被绕过，因为 Agent 在 restore 后生成了不同的 key
 
-#### S2 (TM2): Time-Travel Financial Fraud
+#### S2 (TM2): Deliberate Rollback Financial Fraud
 
 | Trial | Order ID | Payment | Service Delivered | Free Service | Attacker Gain |
 |-------|----------|---------|-------------------|--------------|---------------|
@@ -57,9 +57,9 @@ python -m experiments.run_experiments --trials 2 --exp 1
 | 2 | fraud_0002_451179de | $49.99 | **YES** | **YES** | $49.99 |
 
 **关键发现**:
-- **Free Service Rate: 100%** - 用户可以获得服务后通过 time-travel 回滚
+- **Free Service Rate: 100%** - 用户可以获得服务后通过 rollback 回滚
 - **Total Attacker Gain: $99.98**
-- **这证明了 TM2 攻击可行**: 恶意用户可以利用 time-travel 功能获得免费服务
+- **这证明了 TM2 攻击可行**: 恶意用户可以利用 rollback 功能获得免费服务
 
 #### No-CR Baseline
 
@@ -96,7 +96,7 @@ python -m experiments.run_experiments --trials 2 --exp 1
 2. **Duplicate Charges**: Raw output 显示同一订单被收费两次（不同的 charge_id）
 3. **Baseline Clean**: 没有 CR 时不会发生重复
 
-### S2 (TM2): Time-Travel Fraud 漏洞已验证
+### S2 (TM2): Deliberate Rollback Fraud 漏洞已验证
 
 1. **Free Service**: 100% 的攻击成功率
 2. **Financial Impact**: 平均每次攻击获益 $49.99
