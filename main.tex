@@ -22,13 +22,13 @@
 
 \title{\sys{}: Preventing Semantic Rollback Attacks in Agent Checkpoint-Restore}
 
-\author{Anonymous Author(s)}
-\affiliation{%
-  \institution{Anonymous Institution}
-  \city{Anonymous City}
-  \country{Anonymous Country}
-}
-\email{anonymous@example.com}
+% \author{Anonymous Author(s)}
+% \affiliation{%
+%   \institution{Anonymous Institution}
+%   \city{Anonymous City}
+%   \country{Anonymous Country}
+% }
+% \email{anonymous@example.com}
 
 \begin{abstract}
 	Checkpoint and time-travel features, increasingly adopted in LLM agent frameworks for recovery and exploration, reintroduce a classic systems challenge: externally visible outputs cannot be rolled back. For tool-using LLM agents, the gap is \emph{semantic}: after restore, an agent may re-synthesize a logically equivalent action with different parameters (e.g., a fresh idempotency key), silently bypassing at-most-once defenses and potentially reviving consumed credentials. We characterize two vulnerability classes---\emph{Action Replay} and \emph{Authority Resurrection}---and reproduce them in a proof-of-concept testbed with MCP tool servers and session-level restore. We then present \sys{} (Agent Checkpoint-Restore Fence), a \emph{fork-aware tool-effect journal} that persists effect receipts and enforces an explicit replay-vs-fork decision for irreversible tool calls. In our evaluation, \sys{} eliminates duplicate commits under restore while preserving the agent's ability to explore alternative plans via explicit forking.
