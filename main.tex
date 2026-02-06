@@ -69,7 +69,9 @@ LLM agents manage cloud resources, payments, and software engineering tasks~\cit
 \subsection{Related Work and Limitations of Existing Solutions}
 
 \textbf{Durable workflows.} RPC at-most-once semantics~\cite{birrell1984rpc} are operationalized via idempotency keys~\cite{stripe_idempotent_requests, aws_ecs_idempotency, ietf_idempotency_key}. Durable engines record non-deterministic values for replay~\cite{temporal_side_effects}, but assume deterministic workflow structure.
+
 \textbf{Agent replay and security.} Record-and-replay improves agent reliability~\cite{feng2025agentrR}; debugging tools support resetting conversations~\cite{ma2025dover}; security mechanisms enforce privilege control~\cite{progent, agentspec, owaspllm}. None address CR interaction with \emph{irreversible tool effects}.
+
 \textbf{Snapshot anomalies.} TEE rollback protection~\cite{parno2011memoir, matetic2017rote} assumes deterministic programs. A Vault issue documents tokens reappearing after snapshot restore~\cite{vault_issue_28378}. No existing approach addresses transactional consistency of external environments across checkpoint boundaries.
 
 We propose \sys{} (Agent Checkpoint-Restore Fence), a runtime mechanism that enforces fork-aware tool-effect semantics to prevent semantic rollback attacks.
@@ -200,14 +202,11 @@ The fingerprint is a deterministic hash of the tool call's execution context. In
 
 \textbf{Credential monotonicity.} For single-use approvals, \sys{} records token consumption in effect receipts. Combined with stateful server-side validation (which rejects reused tokens~\cite{vault_issue_28378}), this prevents Authority Resurrection. We leave full branch management and richer environment-context fingerprinting to future work.
 
-\section{Evaluation}
+\section{Proof-of-Concept Evaluation}
 
-\textbf{Experimental Setup.}
-Our testbed uses Claude Code CLI backed by Qwen3-32B, with CR simulated via session truncation. External services are MCP servers: a bank (\texttt{transfer} with UUID idempotency), cloud provider (\texttt{create\_server}), and approval service (stateless/stateful validation). Checkpoints are placed after verification but before commit.
+\textbf{Experimental Setup.} We build a proof-of-concept testbed using Claude Code CLI backed by Qwen3-32B, with CR simulated via session truncation. External services are MCP servers: a bank (\texttt{transfer} with UUID idempotency), cloud provider (\texttt{create\_server}), and approval service (stateless/stateful validation). Checkpoints are placed after verification but before commit.
 
-\textbf{Results.}
-
-Without \sys{}, all 20 CR trials produced duplicate commits due to key instability; with \sys{}, fingerprint-based replay-vs-fork semantics eliminate all duplicates. For Authority Resurrection, stateless validation accepted reused tokens for unauthorized targets (2/2); stateful validation rejected all.
+\textbf{Results.} Without \sys{}, all 20 CR trials produced duplicate commits due to key instability; with \sys{}, fingerprint-based replay-vs-fork semantics eliminate all duplicates. For Authority Resurrection, stateless validation accepted reused tokens for unauthorized targets (2/2); stateful validation rejected all.
 
 \textbf{Limitations.} Our testbed simulates CR via session truncation rather than CRIU, sample sizes are limited, and we evaluate one model family (Qwen3-32B). The fork-conflict path (fingerprint mismatch) is validated manually rather than at scale.
 
