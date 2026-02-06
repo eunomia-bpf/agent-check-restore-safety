@@ -205,31 +205,15 @@ The fingerprint is a deterministic hash of the tool call's execution context. In
 \textbf{Experimental Setup.}
 Our testbed uses Claude Code CLI backed by Qwen3-32B, with CR simulated via session truncation. External services are MCP servers: a bank (\texttt{transfer} with UUID idempotency), cloud provider (\texttt{create\_server}), and approval service (stateless/stateful validation). Checkpoints are placed after verification but before commit.
 
-\subsection{Results}
+\textbf{Results.}
 
-\begin{table}[t]
-\centering
-\small
-\caption{Action Replay: duplicate commits across configurations.}
-\label{tab:results}
-\begin{tabular}{lcc}
-\hline
-\textbf{Configuration} & \textbf{Trials} & \textbf{Duplicates} \\
-\hline
-Baseline (no CR) & 10 & 0 \\
-CR without \sys{} & 20 & 20 \\
-CR with \sys{} & 20 & 0 \\
-\hline
-\end{tabular}
-\end{table}
-
-Table~\ref{tab:results} summarizes Action Replay results. Without CR, no duplication occurs (baseline). With CR but without \sys{}, all 20 trials (10 transfer, 10 cloud) produced duplicate commits due to key instability. With \sys{}, automatic fingerprint comparison enforces precise replay-vs-fork semantics, entirely eliminating semantic rollback vulnerabilities even under implicit semantic drift. For Authority Resurrection, under stateless validation consumed tokens were accepted for unauthorized targets (2/2 trials); stateful validation rejected reuse in all trials.
+Without \sys{}, all 20 CR trials produced duplicate commits due to key instability; with \sys{}, fingerprint-based replay-vs-fork semantics eliminate all duplicates. For Authority Resurrection, stateless validation accepted reused tokens for unauthorized targets (2/2); stateful validation rejected all.
 
 \textbf{Limitations.} Our testbed simulates CR via session truncation rather than CRIU, sample sizes are limited, and we evaluate one model family (Qwen3-32B). The fork-conflict path (fingerprint mismatch) is validated manually rather than at scale.
 
 \section{Discussion and Conclusion}
 
-Checkpoint-restore mechanisms for LLM-driven agents fundamentally require transactional semantics for external environments, a requirement neglected by existing approaches that assume deterministic replay~\cite{temporal_side_effects, langgraph_durable}. Our experiments illustrate that implicit semantic drift inevitably occurs across restores, silently breaking idempotency contracts and creating dangerous state divergence. \sys{} explicitly addresses this by capturing execution context as operational fingerprints and systematically enforcing replay-vs-fork semantics at each irreversible tool call. Crucially, our design acknowledges that post-restore semantic divergence can be legitimate exploration rather than always harmful drift, provided that such divergence is explicitly identified and managed. \sys{} represents a step towards safe, transactionally consistent checkpoint-restore for realistic, tool-using LLM agent deployments.
+Checkpoint-restore for LLM agents requires transactional semantics for external environments, a requirement neglected by approaches assuming deterministic replay~\cite{temporal_side_effects, langgraph_durable}. Our experiments show that semantic drift inevitably occurs across restores, silently breaking idempotency contracts. \sys{} addresses this by capturing execution context as operational fingerprints and enforcing replay-vs-fork semantics at each irreversible tool call. Crucially, post-restore divergence can be legitimate exploration rather than harmful drift, provided it is explicitly identified and managed. \sys{} represents a step towards safe, transactionally consistent checkpoint-restore for tool-using LLM agents.
 
 
 \section*{AI Use Statement}
