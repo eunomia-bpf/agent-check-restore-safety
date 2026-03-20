@@ -37,6 +37,12 @@ comment.cut
 # PDF output
 *.pdf
 
+# Submission archives
+arxiv-submission.tar.gz
+
+# Temp files
+*.tex.tmp.*
+
 # Editor files
 *.swp
 *.swo
