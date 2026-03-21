@@ -20,6 +20,7 @@
 %% TikZ for figures
 \usepackage{tikz}
 \usetikzlibrary{shapes,arrows,positioning,calc,fit,backgrounds}
+\usepackage{graphicx}
 
 \newcommand{\sys}{ACRFence}
 \emergencystretch=6pt
@@ -49,49 +50,9 @@ LLM agent frameworks increasingly offer checkpoint-restore for error recovery an
 
 \begin{figure}[t]
 	\centering
-	\small
-	\begin{tikzpicture}[
-			flowstep/.style={rectangle, draw, rounded corners=2pt, minimum width=7.2cm, minimum height=0.5cm, align=left, font=\scriptsize\ttfamily, anchor=west},
-			prompt/.style={flowstep, fill=blue!10},
-			action/.style={flowstep, fill=white},
-			result/.style={flowstep, fill=green!15},
-			checkpoint/.style={flowstep, fill=yellow!25, dashed},
-			attack/.style={flowstep, fill=red!15},
-			label/.style={font=\scriptsize\bfseries, anchor=east}
-		]
-		\node[prompt] (p1) at (0.5, 0) {Task: "Transfer \$500 to Bob. Generate a UUID as ref."};
-		\node[label] at (0.4, 0) {$t_0$};
-
-		\node[action] (a1) at (0.5, -0.7) {Agent: check\_balance() -> \$10000};
-		\node[label] at (0.4, -0.7) {$t_1$};
-
-		\node[action] (a2) at (0.5, -1.4) {Agent: transfer(to="Bob", amt=500, ref="a1b2c3d4")};
-		\node[label] at (0.4, -1.4) {$t_2$};
-
-		\node[result] (r1) at (0.5, -2.1) {Bank: Success. Balance: \$9500};
-		\node[label] at (0.4, -2.1) {$t_3$};
-
-		\node[checkpoint] (cp) at (0.5, -2.8) {[ CRASH (or checkpoint) ]};
-		\node[label] at (0.4, -2.8) {$t_4$};
-
-		\node[checkpoint] (rs) at (0.5, -3.5) {[ RESTORE to $t_1$, auto-continue ]};
-		\node[label] at (0.4, -3.5) {$t_5$};
-
-		\node[attack] (a3) at (0.5, -4.2) {Agent: transfer(to="Bob", amt=500, ref="f9a8b7c6")};
-		\node[label] at (0.4, -4.2) {$t_6$};
-
-		\node[attack] (r2) at (0.5, -4.9) {Bank: Success. Balance: \$9000};
-		\node[label] at (0.4, -4.9) {$t_7$};
-
-		\node[attack, fill=red!25] (out) at (0.5, -5.6) {Result: \$1000 transferred (duplicate)};
-
-		% Callout annotation
-		\node[draw, fill=red!10, rounded corners=3pt, font=\scriptsize, align=center, anchor=west] (callout) at (7.0, -3.8) {ref changed!\\a1b2c3d4\\$\downarrow$\\f9a8b7c6};
-		\draw[->, red, thick] (callout.west) -- (4.85, -4.2);
-
-	\end{tikzpicture}
-	\Description{A timeline showing an agent performing a bank transfer with a UUID reference, crashing, restoring to a prior checkpoint, and then re-generating a different UUID that bypasses duplicate detection, resulting in a double payment.}
-	\caption{Action Replay: the agent generates a UUID as a unique reference for duplicate detection. After restore, the LLM regenerates a different UUID, so the server accepts the retried call as a new request.}
+	\includegraphics[width=\columnwidth]{img/fig-sequence.pdf}
+	\Description{A sequence diagram showing four entities (User, Agent, Bank, Bob's MCP). The agent transfers money, Bob's malicious service triggers a crash, the framework restores to checkpoint, and the agent re-transfers with a different reference ID, resulting in a double payment.}
+	\caption{Action Replay attack. A malicious payee (Bob) controls an MCP service in the agent's tool chain and triggers a crash after a successful transfer. After restore, the LLM regenerates a different reference ID, so the bank accepts the retried call as a new transaction.}
 	\label{fig:action-replay}
 \end{figure}
 
