@@ -5,6 +5,11 @@
 
 \documentclass[sigplan,nonacm]{acmart}
 \settopmatter{printfolios=true}
+\AtBeginDocument{%
+  \pagestyle{plain}%
+  \fancyhf{}%
+  \fancyfoot[C]{\thepage}%
+}
 
 %%
 %% \BibTeX command to typeset BibTeX logo in the docs
@@ -29,7 +34,7 @@
 \affiliation{\institution{}\country{}}
 
 \begin{abstract}
-LLM agent frameworks increasingly offer checkpoint-restore for error recovery and exploration, advising developers to make external tool calls safe to retry. This advice assumes that a retried call will be identical to the original, an assumption that holds for traditional programs but fails for LLM agents, which re-synthesize subtly different requests after restore, even at temperature zero. Servers treat these re-generated requests as new, enabling duplicate payments, unauthorized reuse of consumed credentials, and other irreversible side effects. We term these \emph{semantic rollback attacks}. We identify two attack classes, \emph{Action Replay} (duplicate execution via regenerated request identifiers) and \emph{Authority Resurrection} (rollback-induced reuse of consumed authorization tokens), and show experimentally that recommended protections fail in 100\% of checkpoint-restore trials, while a no-checkpoint baseline produces 0\% duplicates, confirming the vulnerability is intrinsic to the restore mechanism. The underlying re-execution problem has been independently confirmed by framework maintainers, and industry analyses show that major agent frameworks lack built-in duplicate-execution prevention. We propose \sys{}, a framework-agnostic mitigation that records irreversible tool effects and enforces replay-or-fork semantics upon restoration.
+LLM agent frameworks increasingly offer checkpoint-restore for error recovery and exploration, advising developers to make external tool calls safe to retry. This advice assumes that a retried call will be identical to the original, an assumption that holds for traditional programs but fails for LLM agents, which re-synthesize subtly different requests after restore. Servers treat these re-generated requests as new, enabling duplicate payments, unauthorized reuse of consumed credentials, and other irreversible side effects; we term these \emph{semantic rollback attacks}. We identify two attack classes, \emph{Action Replay} and \emph{Authority Resurrection}, validate them in a proof of concept, and confirm that the problem has been independently acknowledged by framework maintainers. We propose \sys{}, a framework-agnostic mitigation that records irreversible tool effects and enforces replay-or-fork semantics upon restoration.
 \end{abstract}
 
 \maketitle
@@ -90,9 +95,36 @@ LLM agent frameworks increasingly offer checkpoint-restore for error recovery an
 	\label{fig:action-replay}
 \end{figure}
 
-\textbf{Root cause.} Checkpoint-restore (CR) systems save and restore local process state (memory, file descriptors, conversation history)~\cite{criu, mvvm}, but cannot undo actions already performed on external services~\cite{elnozahy2002survey, strom1985optimistic}. Framework documentation recommends making tool calls safe to retry~\cite{langgraph_functional_idempotency}, and all existing protection mechanisms (unique request IDs for duplicate rejection~\cite{stripe_idempotent_requests, ietf_idempotency_key}, recorded nondeterministic values~\cite{temporal_side_effects}, deterministic orchestrator logic~\cite{azure_durable_functions}) share the same assumption: \emph{the caller will send identical requests on retry}. LLM agents violate this assumption. Even under temperature=0, floating-point rounding in GPU kernels produces different token sequences across runs~\cite{atil2025nondeterminism, khatchadourian2026replayable, yuan2025nondeterminism, fu2026reproducibility}, so a restored agent re-synthesizes semantically equivalent but textually different requests that servers accept as new.
+\textbf{Root cause.} Checkpoint-restore (CR) saves and restores local process state~\cite{criu, mvvm} but cannot undo actions already performed on external services~\cite{elnozahy2002survey, strom1985optimistic}. All existing protection mechanisms~\cite{langgraph_functional_idempotency} (unique request IDs~\cite{stripe_idempotent_requests, ietf_idempotency_key}, recorded nondeterministic values~\cite{temporal_side_effects}, deterministic orchestrator logic~\cite{azure_durable_functions}) share the same assumption: \emph{the caller will send identical requests on retry}. LLM agents violate this assumption. Even under temperature=0, floating-point rounding in GPU kernels produces different token sequences across runs~\cite{atil2025nondeterminism, khatchadourian2026replayable, yuan2025nondeterminism, fu2026reproducibility}, so a restored agent generates requests that servers accept as new.
 
-\textbf{Real-world evidence.} A LangGraph maintainer has confirmed the re-execution problem, acknowledging it is architecturally difficult to fix~\cite{langgraph_issue_6208}. Independent analyses have shown that resume from checkpoint causes tools to fire twice~\cite{raed2025hitl}, and an industry study found that LangGraph, CrewAI, and Google ADK all lack built-in duplicate-execution prevention~\cite{schneider2026checkpoints}. A HashiCorp Vault issue documents single-use tokens reappearing after snapshot restore~\cite{vault_issue_28378}.
+\textbf{Real-world evidence.} We surveyed 12 major agent frameworks and found that tool-call side-effect issues are pervasive (Table~\ref{tab:survey}); no framework enforces exactly-once semantics at the tool boundary. Among the most notable cases, a LangGraph maintainer has confirmed the re-execution problem, acknowledging it is architecturally difficult to fix~\cite{langgraph_issue_6208}; independent analyses have shown that resume from checkpoint causes tools to fire twice~\cite{raed2025hitl}; an industry study found that LangGraph, CrewAI, and Google ADK all lack built-in duplicate-execution prevention~\cite{schneider2026checkpoints}; Google ADK's official documentation explicitly warns that rewind cannot undo external side effects~\cite{adk_rewind_docs}; and OpenClaw issued a security advisory for webhook replay enabling duplicate processing~\cite{openclaw_cve}. Similar issues have been reported in CrewAI~\cite{crewai_issue_1978}, AutoGen~\cite{autogen_issue_6595}, OpenAI Agents~\cite{openai_agents_issue_1789}, Claude Code~\cite{claude_code_issue_13897}, Cursor~\cite{cursor_forum_checkpoint}, OpenHands~\cite{openhands_issue_9595}, Vercel AI~\cite{vercel_ai_issue_7261}, LiveKit~\cite{livekit_issue_4219}, and n8n~\cite{n8n_stripe_duplicate}. A HashiCorp Vault issue documents single-use tokens reappearing after snapshot restore~\cite{vault_issue_28378}.
+
+\begin{table}[t]
+\small
+\centering
+\caption{Tool-call side-effect issues reported across 12 agent frameworks.}
+\label{tab:survey}
+\hspace{-0.5cm}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcp{4.5cm}}
+\hline
+\textbf{Framework} & \textbf{Issues} & \textbf{Key finding} \\
+\hline
+LangGraph~\cite{langgraph_issue_6208}         & 8+ & Tools re-fire on resume \\
+CrewAI~\cite{crewai_issue_1978}               & 5  & Crew runs twice; emails resent \\
+Google~ADK~\cite{adk_rewind_docs}             & 4  & Rewind leaves stale external state \\
+AutoGen~\cite{autogen_issue_6595}             & 3  & Entry node runs twice \\
+OpenAI~Agents~\cite{openai_agents_issue_1789} & 3  & Repeated function calls \\
+Claude~Code~\cite{claude_code_issue_13897}    & 5  & Tool re-fires after approval \\
+OpenClaw~\cite{openclaw_cve}                  & 6  & Webhook replay (GHSA advisory) \\
+Cursor~\cite{cursor_forum_checkpoint}         & 4  & Undo reverts unrelated agents \\
+OpenHands~\cite{openhands_issue_9595}         & 1  & Parallel agents; repeated commits \\
+Vercel~AI~\cite{vercel_ai_issue_7261}         & 1  & Repeated tool calls \\
+LiveKit~\cite{livekit_issue_4219}             & 2  & Tools fire twice in preemption \\
+n8n~\cite{n8n_stripe_duplicate}               & 3  & Retry causes repeated charges \\
+\hline
+\end{tabular}
+\end{table}
 
 %% ============================================================
 \section{Threat Model}
@@ -110,23 +142,6 @@ We identify two attack classes and validate them experimentally. Our testbed use
 
 \textbf{Authority Resurrection.}\label{sec:v2} This attack targets single-use authorization tokens that reappear in rolled-back agent state. Consider a malicious employee who instructs the agent to delete a customer's data under a legitimate GDPR request. The agent obtains a manager's approval (a single-use token), executes the deletion, and the token is marked as consumed. The employee then uses the framework's rewind feature to restore the agent to the state just after approval was granted. The agent now holds the token but has no memory of having used it. The employee redirects the agent to delete a \emph{different} customer's data using the same token. If the server validates tokens statelessly (checking only the cryptographic signature, not a consumption record), the request succeeds. The employee has effectively escalated a legitimate, scoped authorization into an unauthorized action on a different target. The audit trail shows the manager approved deletion for Alice, but Bob's data was also deleted, a discrepancy visible only through cross-referencing approval and execution logs. In our experiments with stateless validation, all token-reuse attempts succeeded (2/2); with stateful validation (server-side revocation list), all were correctly rejected. The Vault snapshot-restore bug~\cite{vault_issue_28378} demonstrates that this pattern occurs in production infrastructure.
 
-\begin{table}[t]
-\small
-\centering
-\caption{Experimental results. Duplicate rate under three conditions.}
-\label{tab:results}
-\begin{tabular}{lccc}
-\hline
-\textbf{Attack} & \textbf{No CR} & \textbf{With CR} & \textbf{+ \sys{}} \\
-\hline
-Action Replay & 0\% (0/10) & 100\% (10/10) & 0\% (0/20) \\
-Auth.\ Resurrect.\ (stateless) & --- & 100\% (2/2) & 0\% (2/2) \\
-Auth.\ Resurrect.\ (stateful) & --- & 0\% (2/2) & 0\% (2/2) \\
-\hline
-\end{tabular}
-\end{table}
-
-Table~\ref{tab:results} summarizes our results. The no-checkpoint baseline (column~2) confirms that duplicates arise from the restore mechanism, not from general LLM nondeterminism. With checkpoint-restore and no defense (column~3), recommended protections fail completely for Action Replay and for Authority Resurrection under stateless validation. \sys{} (column~4) eliminates all duplicates.
 
 %% ============================================================
 \section{Mitigation: \sys}
@@ -139,7 +154,7 @@ Table~\ref{tab:results} summarizes our results. The no-checkpoint baseline (colu
 \section{Related Work}
 %% ============================================================
 
-Checkpoint-restore systems save and restore local execution state~\cite{criu, mvvm} but cannot undo external effects, a manifestation of the output commit problem~\cite{elnozahy2002survey, strom1985optimistic}. CR is increasingly used for exploring alternative agent execution paths~\cite{xu2025agenticexploration}. Effect journaling for safe replay has precedents in I/O tabling~\cite{somogyi2003iotabling} and durable execution engines~\cite{birrell1984rpc, temporal_side_effects}; together with duplicate-detection protocols~\cite{stripe_idempotent_requests, ietf_idempotency_key}, these all assume deterministic caller behavior. Agent record-and-replay improves reliability~\cite{feng2025agentrR} and version-control systems provide rollback for agent traces~\cite{li2025agentgit}, but neither addresses irreversible external effects. Security mechanisms enforce privilege control for agents~\cite{progent, agentspec, owaspllm} without considering checkpoint-restore interactions. TEE rollback protection~\cite{parno2011memoir, matetic2017rote} assumes deterministic programs. Commercial LLM agents have been shown vulnerable to simple attacks in deployed settings~\cite{wu2025commercial}. No prior work treats nondeterministic LLM re-synthesis after restore as a security attack surface.
+The inability of checkpoint-restore to undo external effects is a manifestation of the classic output commit problem~\cite{elnozahy2002survey, strom1985optimistic}. CR is increasingly used for exploring alternative agent execution paths~\cite{xu2025agenticexploration, criu, mvvm}. Effect journaling for safe replay has precedents in I/O tabling~\cite{somogyi2003iotabling} and durable execution engines~\cite{birrell1984rpc, temporal_side_effects}; together with duplicate-detection protocols~\cite{stripe_idempotent_requests, ietf_idempotency_key}, these all assume deterministic caller behavior. Agent record-and-replay improves reliability~\cite{feng2025agentrR} and version-control systems provide rollback for agent traces~\cite{li2025agentgit}, but neither addresses irreversible external effects. Security mechanisms enforce privilege control for agents~\cite{progent, agentspec, owaspllm} without considering checkpoint-restore interactions. TEE rollback protection~\cite{parno2011memoir, matetic2017rote} assumes deterministic programs. Commercial LLM agents have been shown vulnerable to simple attacks in deployed settings~\cite{wu2025commercial}. No prior work treats nondeterministic LLM re-synthesis after restore as a security attack surface.
 
 %% ============================================================
 \section{Discussion and Conclusion}
