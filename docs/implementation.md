@@ -34,6 +34,18 @@ These are motivating observations, not a statistical benchmark. The session mech
 - `docs/framework-survey.md`, `docs/attack-scenarios.md`, and `docs/experiments.md` contain useful observations but are research diaries with repeated and stale versions.
 - The root `references.bib` has useful rollback and agent citations but is not a verified bibliography for the new paper.
 
+### Finite executable validation
+
+`artifact/` now contains a dependency-free Python authority-continuity model, six unit tests, a deterministic exhaustive explorer, and a machine-readable result. It currently checks:
+
+- universal-frontier AC against the componentwise-need formulation on 2,816 states;
+- safety and downward closure for 3,428 single-claim maximal-support promotions;
+- inclusion maximality against 27,142 safe downward-closed restrictions;
+- 13,680 ordered pairs of disjoint batched promotions for confluence;
+- the replace/live indistinguishability litmus and the safe-choice/unsafe-escape witness.
+
+This is bounded executable validation, not a proof assistant development or runtime monitor. The canonical commands and precise enumeration bounds are in `artifact/README.md`; `artifact/results/exhaustive.json` is deterministically reproduced.
+
 ### Not implemented
 
 There is currently no:
@@ -42,8 +54,8 @@ There is currently no:
 - eBPF effect receipt mechanism;
 - semantic fingerprint security boundary;
 - topology-aware authority monitor;
-- choice/parallel admission checker;
-- bounded schedule explorer;
+- structured choice/parallel incremental admission checker;
+- bounded transition-schedule and mutation explorer;
 - Lean model or proof;
 - runtime integration that prevents the modeled violations.
 
@@ -93,4 +105,3 @@ No number moves into the paper from `docs/experiments.md` alone. It must be reco
 5. Only then integrate one or two runtime adapters. Prefer explicit lifecycle hooks over eBPF inference.
 
 This order gives useful counterexamples and proof feedback before any large runtime engineering effort.
-

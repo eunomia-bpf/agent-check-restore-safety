@@ -1,0 +1,94 @@
+{
+  "artifact_kind": "finite executable validation (not mechanized proof)",
+  "checks": {
+    "ac_need_equivalence": {
+      "states": 2816,
+      "status": "pass"
+    },
+    "batched_promotion_confluence": {
+      "ordered_disjoint_batches": 13680,
+      "status": "pass"
+    },
+    "plain_escape_counterexample": {
+      "grant": [
+        1
+      ],
+      "source_safe": true,
+      "status": "pass",
+      "target_safe": false,
+      "violating_frontier": [
+        "right"
+      ],
+      "violating_load": [
+        2
+      ]
+    },
+    "single_claim_maximal_support": {
+      "safe_downward_restrictions_checked": 27142,
+      "safe_source_owner_cases": 3428,
+      "status": "pass"
+    },
+    "snapshot_local_impossibility": {
+      "live": {
+        "need": [
+          2
+        ],
+        "required_decision": "reject-for-soundness",
+        "safe": false,
+        "violating_frontier": [
+          "old",
+          "restored"
+        ]
+      },
+      "observation": {
+        "grant": [
+          1
+        ],
+        "proposal": {
+          "branch": "restored",
+          "rule": "Reserve",
+          "weight": [
+            1
+          ]
+        },
+        "snapshot": "identical-reconstructed-bytes"
+      },
+      "replace": {
+        "need": [
+          1
+        ],
+        "required_decision": "accept-for-maximal-permissiveness",
+        "safe": true
+      },
+      "status": "pass"
+    }
+  },
+  "parameters": {
+    "authority_coordinates": 1,
+    "branches": [
+      1,
+      2,
+      3
+    ],
+    "claim_weights": [
+      1,
+      2
+    ],
+    "durable_loads": [
+      0,
+      1
+    ],
+    "frontier_families": "all nonempty downward-closed families",
+    "grants": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ]
+  },
+  "schema_version": 1
+}

@@ -53,7 +53,7 @@ We prove general abstraction soundness and state the additional exactness assump
 We then show that no checker using only restored snapshot state can be both sound and maximally permissive: replacing and live restore can reconstruct identical bytes while requiring opposite authorization decisions.
 For effect escape, we derive the exact admission condition and the unique largest family of futures that can safely remain possible without new authority or cancellation of other claims; batched promotions yield the same weakest lifecycle restriction independent of order.
 Classical cograph and independent-set results then yield efficient admission for structured lifecycle contracts and explain the cost of less structured representations.
-We define an executable-validation and mechanization plan that targets the rule premises and minimal separating executions rather than model-dependent anecdotes.
+A finite executable model validates the central algebra and separating executions by exhaustive enumeration of small states; mechanization and runtime integration remain explicit evidence obligations.
 \end{abstract}
 
 \input{sections/introduction}
@@ -67,7 +67,8 @@ We define an executable-validation and mechanization plan that targets the rule 
 \input{sections/discussion}
 
 \section*{AI Use Acknowledgment}
-OpenAI Codex was used to assist with literature discovery, formal-model iteration, counterexample search, prose drafting, and code scaffolding throughout the manuscript.
+OpenAI Codex was used in all sections for initial prose drafting and rewriting, and in the executable artifact for code scaffolding and test generation.
+It was also used to assist with literature discovery, formal-model iteration, and counterexample search.
 The authors selected the research direction, checked the cited sources and mathematical arguments, and remain responsible for every claim, proof, result, and citation.
 
 \bibliographystyle{IEEEtran}

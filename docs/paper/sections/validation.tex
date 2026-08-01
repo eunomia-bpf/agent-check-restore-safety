@@ -23,10 +23,38 @@ Until these values are produced, the manuscript claims paper proofs but not comp
 
 \subsection{Executable lifecycle explorer}
 
-We use a finite executable model for two purposes.
-First, it checks the structured recurrence against explicit frontier enumeration on randomly generated unique-leaf contracts and vector demands.
-Second, it performs breadth-first search for the shortest trace violating \(\ac\) after one rule premise is removed.
-The fixed mutations are:
+The artifact includes a dependency-free Python model of finite vector grants, uniquely owned claims, downward-closed frontier families, plain promotion, and maximal-support promotion.
+It enumerates every nonempty downward-closed family over one to three branches, scalar branch demands in \(\{1,2\}\), durable demand in \(\{0,1\}\), and grants from zero through seven.
+\Cref{tab:explorer-results} reports the deterministic checks.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Finite executable validation. Each count is an exhaustively checked instance, not a statistical sample or proof.}
+\label{tab:explorer-results}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lr}
+\toprule
+\textbf{Checked property} & \textbf{Instances} \\
+\midrule
+Universal \(\ac\) iff \(\need\le G\) & 2,816 states \\
+Single-claim maximal-support safety & 3,428 promotions \\
+Inclusion maximality & 27,142 safe restrictions \\
+Disjoint-batch confluence & 13,680 ordered pairs \\
+Replace/live indistinguishability & 1 separating pair \\
+Safe-choice/unsafe-escape & 1 minimal witness \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+All checks pass.
+The escape witness has \(G=1\); after the left claim is promoted, frontier \(\{\mathit{right}\}\) has load two.
+The snapshot litmus presents the same reconstructed-state marker, one-unit grant, and one-unit Reserve proposal in both worlds; the replace target has need one and the live target need two.
+The machine-readable report is reproduced byte-for-byte by a single command.
+
+This finite exploration detects transcription errors and exercises the quantifiers in the maximality and confluence statements, but it does not establish them for unbounded states.
+The next artifact stage will add structured-contract agreement and breadth-first mutation traces.
+The planned mutations are:
 
 \begin{enumerate}[leftmargin=*,itemsep=1pt]
   \item snapshot the authoritative claim ledger;
@@ -39,10 +67,10 @@ The fixed mutations are:
   \item reopen a grant epoch or reuse a terminal claim ID on restore.
 \end{enumerate}
 
-For each mutation, the artifact reports a machine-readable schedule, violating frontier, load, grant, and responsible rule premise.
+For each implemented mutation, the artifact will report a machine-readable schedule, violating frontier, load, grant, and responsible rule premise.
 This follows the useful CSF pattern of validating a formal security definition with generated counterexamples and mutation testing~\cite{anderson2023stack}.
 
-\pending{explorer revision, number of generated instances, agreement count, shortest traces, and mutation results.}
+\pending{structured-contract agreement counts, shortest mutation traces, and expanded vector cases.}
 
 \subsection{Deterministic runtime litmus tests}
 
@@ -73,10 +101,10 @@ L8 & pure children; delayed parent transfer & admit without topology claim \\
 \end{tabular}
 \end{table}
 
-The repository's earlier ACRFence experiments provide preliminary motivation, not the primary evaluation.
-Their strongest recorded Action Replay run observed duplicate/key-changing effects in 10/10 restore trials and 0/10 strict no-restore trials.
+ACRFence reports preliminary motivating experiments, not evidence for the new formal results~\cite{zheng2026acrfence}.
+Its strongest recorded Action Replay run observed duplicate/key-changing effects in 10/10 restore trials and 0/10 strict no-restore trials.
 The Authority Resurrection scenarios are mixed across operation and validation mode, so they do not support a blanket “stateless always fails, stateful always succeeds” claim.
-They use conversation/session rewind rather than an OS checkpoint and explicitly prompt fresh operation identifiers.
+The experiments use conversation/session rewind rather than an OS checkpoint and explicitly prompt fresh operation identifiers.
 The new litmus suite retains the feasible histories while removing these sources of overgeneralization.
 
 \subsection{Reference monitor}

@@ -2,6 +2,8 @@
 
 **Status:** pre-registration for a theory-first CSF paper. Values marked TBD are not results.
 
+The first finite artifact is complete: 2,816 AC/need states, 3,428 safe-source single-claim promotions, 27,142 safe restrictions for maximality, and 13,680 ordered disjoint batches for confluence were exhaustively checked. These bounded counts support debugging and counterexample validation; they do not replace the planned proofs or runtime study.
+
 ## 1. Evidence priorities
 
 The project is not evaluated like a throughput paper. Its evidence hierarchy is:
