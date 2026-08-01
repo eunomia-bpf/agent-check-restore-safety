@@ -1,0 +1,6 @@
+Command: lake env leanchecker --fresh AuthorityContinuity.Main
+Working directory: lean/
+Toolchain: Lean v4.30.0, Mathlib v4.30.0
+Exit code: 0
+Wall time: 136.89 seconds
+Note: leanchecker emits no standard output on a successful fresh replay.

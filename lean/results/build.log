@@ -1,0 +1,446 @@
+⚠ [736/742] Built AuthorityContinuity.Model (1.9s)
+warning: AuthorityContinuity/Model.lean:96:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.State.conditionalLoad_mono`:
+  [DecidableEq Claim]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [DecidableEq Claim] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Model.lean:110:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.State.sum_demand_le_durableLoad`:
+  [DecidableEq Claim]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [DecidableEq Claim] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Model.lean:141:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.State.mem_restrictStateBy_allowed_iff`:
+  [Fintype Claim]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Claim] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Model.lean:147:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.State.restrictStateBy_status_tentative_iff`:
+  [Fintype Claim]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Claim] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Model.lean:171:2: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: AuthorityContinuity/Model.lean:178:2: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: AuthorityContinuity/Model.lean:250:2: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+⚠ [737/742] Built AuthorityContinuity.Checker (4.0s)
+warning: AuthorityContinuity/Checker.lean:32:16: This simp argument is unused:
+  ha
+
+Hint: Omit it from the simp argument list.
+  simp [ih,̵ ̵h̵a̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: AuthorityContinuity/Checker.lean:42:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.checkAC_sound`:
+  [Fintype Branch]
+  [DecidableEq Coord]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Branch] [DecidableEq Coord] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Checker.lean:70:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.guardClosure_iff`:
+  [Fintype Branch]
+  [DecidableEq Coord]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Branch] [DecidableEq Coord] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Checker.lean:80:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.simulation_preserves_ac`:
+  [Fintype Coord]
+  [Fintype Branch]
+  [DecidableEq Coord]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Coord] [Fintype Branch] [DecidableEq Coord] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Checker.lean:100:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.restriction_preserves_wf_ac`:
+  [Fintype Coord]
+  [Fintype Branch]
+  [DecidableEq Coord]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Coord] [Fintype Branch] [DecidableEq Coord] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+⚠ [738/742] Built AuthorityContinuity.Lifecycle (4.2s)
+warning: AuthorityContinuity/Lifecycle.lean:162:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.LifecycleState.rawPromotion_capacity`:
+  [Fintype Coord]
+  [DecidableEq Coord]
+  [Fintype Claim]
+  [Fintype Branch]
+  [DecidableEq Branch]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [Fintype Branch] [DecidableEq Branch] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Lifecycle.lean:166:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.LifecycleState.rawPromotion_demand`:
+  [Fintype Coord]
+  [DecidableEq Coord]
+  [Fintype Claim]
+  [Fintype Branch]
+  [DecidableEq Branch]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [Fintype Branch] [DecidableEq Branch] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Lifecycle.lean:178:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.LifecycleState.guarded_configuration_excludes_unsupported`:
+  [DecidableEq Coord]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [DecidableEq Coord] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Lifecycle.lean:200:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.LifecycleState.rawPromotion_durableLoad_eq_promotedLoad`:
+  [Fintype Coord]
+  [DecidableEq Coord]
+  [Fintype Branch]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Coord] [DecidableEq Coord] [Fintype Branch] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Lifecycle.lean:219:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.LifecycleState.rawPromotion_conditionalLoad_eq_remaining`:
+  [Fintype Coord]
+  [DecidableEq Coord]
+  [Fintype Branch]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Coord] [DecidableEq Coord] [Fintype Branch] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Lifecycle.lean:235:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.LifecycleState.rawPromotion_status_tentative_iff`:
+  [Fintype Coord]
+  [DecidableEq Coord]
+  [Fintype Claim]
+  [Fintype Branch]
+  [DecidableEq Branch]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [Fintype Branch] [DecidableEq Branch] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Lifecycle.lean:241:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.LifecycleState.preparedStatus_tentative_iff`:
+  [DecidableEq Coord]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [DecidableEq Coord] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Lifecycle.lean:254:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.LifecycleState.preparedStatus_durable_iff`:
+  [DecidableEq Coord]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [DecidableEq Coord] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Lifecycle.lean:358:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.LifecycleState.opClaim_eq_none_iff`:
+  [Fintype Coord]
+  [DecidableEq Coord]
+  [Fintype Claim]
+  [DecidableEq Claim]
+  [Fintype Branch]
+  [DecidableEq Branch]
+  [DecidableEq Grant]
+  [DecidableEq Operation]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype
+  Coord] [DecidableEq
+  Coord] [Fintype
+  Claim] [DecidableEq
+  Claim] [Fintype Branch] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Lifecycle.lean:363:20: This simp argument is unused:
+  ht
+
+Hint: Omit it from the simp argument list.
+  simp ̵[̵h̵t̵]̵
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: AuthorityContinuity/Lifecycle.lean:366:22: This simp argument is unused:
+  ht
+
+Hint: Omit it from the simp argument list.
+  simp [ht̵,̵ ̵h̵r]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: AuthorityContinuity/Lifecycle.lean:366:26: This simp argument is unused:
+  hr
+
+Hint: Omit it from the simp argument list.
+  simp [ht,̵ ̵h̵r̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: AuthorityContinuity/Lifecycle.lean:367:24: This simp argument is unused:
+  ht
+
+Hint: Omit it from the simp argument list.
+  simp [ht̵,̵ ̵h̵r]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: AuthorityContinuity/Lifecycle.lean:367:28: This simp argument is unused:
+  hr
+
+Hint: Omit it from the simp argument list.
+  simp [ht,̵ ̵h̵r̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: AuthorityContinuity/Lifecycle.lean:402:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.LifecycleState.prepareState_opClaim`:
+  [DecidableEq Coord]
+  [DecidableEq Grant]
+  [DecidableEq Operation]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [DecidableEq Coord] [DecidableEq Grant] [DecidableEq Operation] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Lifecycle.lean:411:40: This simp argument is unused:
+  opClaim
+
+Hint: Omit it from the simp argument list.
+  simp [ha,̵ ̵o̵p̵C̵l̵a̵i̵m̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: AuthorityContinuity/Lifecycle.lean:559:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.LifecycleState.ticketStep_binding_eq`:
+  [Fintype Coord]
+  [DecidableEq Coord]
+  [Fintype Claim]
+  [DecidableEq Claim]
+  [Fintype Branch]
+  [DecidableEq Branch]
+  [DecidableEq Grant]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype
+  Coord] [DecidableEq
+  Coord] [Fintype Claim] [DecidableEq Claim] [Fintype Branch] [DecidableEq Branch] [DecidableEq Grant] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Lifecycle.lean:588:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.LifecycleState.ticketStep_auth_eq`:
+  [Fintype Coord]
+  [DecidableEq Coord]
+  [Fintype Claim]
+  [DecidableEq Claim]
+  [Fintype Branch]
+  [DecidableEq Branch]
+  [DecidableEq Grant]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype
+  Coord] [DecidableEq
+  Coord] [Fintype Claim] [DecidableEq Claim] [Fintype Branch] [DecidableEq Branch] [DecidableEq Grant] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Lifecycle.lean:619:12: Try `simp at hr` instead of `simpa using hr`
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: AuthorityContinuity/Lifecycle.lean:631:12: Try `simp at hr` instead of `simpa using hr`
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: AuthorityContinuity/Lifecycle.lean:671:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.LifecycleState.restrictLifecycle_opClaim`:
+  [Fintype Coord]
+  [DecidableEq Coord]
+  [Fintype Claim]
+  [Fintype Branch]
+  [DecidableEq Grant]
+  [DecidableEq Operation]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype
+  Coord] [DecidableEq Coord] [Fintype Claim] [Fintype Branch] [DecidableEq Grant] [DecidableEq Operation] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Lifecycle.lean:676:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.LifecycleState.restrictLifecycle_status_durable_iff`:
+  [Fintype Coord]
+  [DecidableEq Coord]
+  [Fintype Claim]
+  [Fintype Branch]
+  [DecidableEq Grant]
+  [DecidableEq Operation]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype
+  Coord] [DecidableEq Coord] [Fintype Claim] [Fintype Branch] [DecidableEq Grant] [DecidableEq Operation] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Lifecycle.lean:709:12: This simp argument is unused:
+  restrictLifecycle
+
+Hint: Omit it from the simp argument list.
+  simp [r̵e̵s̵t̵r̵i̵c̵t̵L̵i̵f̵e̵c̵y̵c̵l̵e̵,̵ ̵hs.2.1, hWF.owner_open c b hs.1]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: AuthorityContinuity/Lifecycle.lean:781:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.LifecycleState.reserve_preserves_wf_ac`:
+  [DecidableEq Grant]
+  [DecidableEq Operation]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [DecidableEq Grant] [DecidableEq Operation] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Lifecycle.lean:857:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.LifecycleState.TopologyShape.opClaim_eq`:
+  [Fintype Coord]
+  [DecidableEq Coord]
+  [Fintype Claim]
+  [DecidableEq Claim]
+  [Fintype Branch]
+  [DecidableEq Branch]
+  [DecidableEq Grant]
+  [DecidableEq Operation]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype
+  Coord] [DecidableEq
+  Coord] [Fintype
+  Claim] [DecidableEq
+  Claim] [Fintype Branch] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Lifecycle.lean:1013:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.step_epoch_mono`:
+  [DecidableEq Coord]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [DecidableEq Coord] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Lifecycle.lean:1043:31: This simp argument is unused:
+  hs
+
+Hint: Omit it from the simp argument list.
+  simp [revokeState, h̵s̵,̵ ̵EpochStatus.Advances]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: AuthorityContinuity/Lifecycle.lean:1053:36: This simp argument is unused:
+  hs
+
+Hint: Omit it from the simp argument list.
+  simp [prepareState, hb, h̵s̵,̵ ̵EpochStatus.Advances]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+⚠ [739/742] Built AuthorityContinuity.Trace (1.6s)
+warning: AuthorityContinuity/Trace.lean:176:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.SimulatedTrace.abstract_trace`:
+  [DecidableEq Coord]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [DecidableEq Coord] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: AuthorityContinuity/Trace.lean:190:0: automatically included section variable(s) unused in theorem `AuthorityContinuity.SimulatedTrace.concrete_trace`:
+  [DecidableEq Coord]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [DecidableEq Coord] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+✔ [740/742] Built AuthorityContinuity.Main (1.2s)
+ℹ [741/742] Built AuthorityContinuity.Audit (1.2s)
+info: AuthorityContinuity/Audit.lean:12:0: AuthorityContinuity.checkAC_sound.{uC, uI, uB} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} [Fintype Coord]
+  [Fintype Claim] [Fintype Branch] [DecidableEq Coord] [DecidableEq Claim] [DecidableEq Branch]
+  (A : State Coord Claim Branch) (hcheck : checkAC A = true) : AC A
+info: AuthorityContinuity/Audit.lean:13:0: 'AuthorityContinuity.checkAC_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: AuthorityContinuity/Audit.lean:15:0: AuthorityContinuity.guardClosure_iff.{uC, uI, uB} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} [Fintype Coord]
+  [Fintype Claim] [Fintype Branch] [DecidableEq Coord] [DecidableEq Claim] [DecidableEq Branch]
+  (A : State Coord Claim Branch) (U : Finset Claim) (C : Finset Branch) :
+  C ∈ guardedAllowed A U ↔
+    C ∈ A.allowed ∧ ∀ (k : Coord), promotedLoad A U k + remainingConditionalLoad A U C k ≤ A.capacity k
+info: AuthorityContinuity/Audit.lean:16:0: 'AuthorityContinuity.guardClosure_iff' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: AuthorityContinuity/Audit.lean:18:0: AuthorityContinuity.simulation_preserves_ac.{uC, uI, uB} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB}
+  [Fintype Coord] [Fintype Claim] [Fintype Branch] [DecidableEq Coord] [DecidableEq Claim] [DecidableEq Branch]
+  (source target : State Coord Claim Branch) (project : Finset Branch → Finset Branch)
+  (hcapacity : target.capacity = source.capacity) (hsource : AC source)
+  (hsim :
+    ∀ C' ∈ target.allowed,
+      project C' ∈ source.allowed ∧
+        ∀ (k : Coord),
+          target.durableLoad k + target.conditionalLoad C' k ≤
+            source.durableLoad k + source.conditionalLoad (project C') k) :
+  AC target
+info: AuthorityContinuity/Audit.lean:19:0: 'AuthorityContinuity.simulation_preserves_ac' depends on axioms: [propext, Quot.sound]
+info: AuthorityContinuity/Audit.lean:21:0: AuthorityContinuity.restriction_preserves_wf_ac.{uC, uI, uB} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB}
+  [Fintype Coord] [Fintype Claim] [Fintype Branch] [DecidableEq Coord] [DecidableEq Claim] [DecidableEq Branch]
+  (A : State Coord Claim Branch) (S : Finset Branch) (keep : Finset Claim) (hWF : WF A) (hAC : AC A) :
+  WF (A.restrictStateBy S keep) ∧ AC (A.restrictStateBy S keep)
+info: AuthorityContinuity/Audit.lean:22:0: 'AuthorityContinuity.restriction_preserves_wf_ac' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: AuthorityContinuity/Audit.lean:24:0: AuthorityContinuity.prepare_preserves_wf_ac.{u_1, u_2, u_3, u_4, u_5} {Coord : Type u_1} {Claim : Type u_2}
+  {Branch : Type u_3} {Grant : Type u_4} {Operation : Type u_5} [Fintype Coord] [DecidableEq Coord] [Fintype Claim]
+  [DecidableEq Claim] [Fintype Branch] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation]
+  (A : LifecycleState Coord Claim Branch Grant Operation) (U : Finset Claim) (assignment : Operation → Option Claim)
+  (hWF : A.LWF) (hAC : AC A.auth) (hOK : A.PrepareOK U assignment) :
+  (A.prepareState U assignment).LWF ∧ AC (A.prepareState U assignment).auth
+info: AuthorityContinuity/Audit.lean:25:0: 'AuthorityContinuity.prepare_preserves_wf_ac' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: AuthorityContinuity/Audit.lean:27:0: AuthorityContinuity.ticket_step_preserves_wf_ac.{u_1, u_2, u_3, u_4, u_5} {Coord : Type u_1} {Claim : Type u_2}
+  {Branch : Type u_3} {Grant : Type u_4} {Operation : Type u_5} [Fintype Coord] [DecidableEq Coord] [Fintype Claim]
+  [DecidableEq Claim] [Fintype Branch] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation]
+  {A A' : LifecycleState Coord Claim Branch Grant Operation} {eta : LifecycleState.Label Operation Claim}
+  (hstep : A.TicketStep eta A') (hWF : A.LWF) (hAC : AC A.auth) :
+  A'.LWF ∧ AC A'.auth ∧ ∀ (e : Operation), A'.opClaim e = A.opClaim e
+info: AuthorityContinuity/Audit.lean:28:0: 'AuthorityContinuity.ticket_step_preserves_wf_ac' depends on axioms: [propext, Quot.sound]
+info: AuthorityContinuity/Audit.lean:30:0: AuthorityContinuity.step_preserves_wf_ac.{u_1, u_2, u_3, u_4, u_5} {Coord : Type u_1} {Claim : Type u_2}
+  {Branch : Type u_3} {Grant : Type u_4} {Operation : Type u_5} [Fintype Coord] [DecidableEq Coord] [Fintype Claim]
+  [DecidableEq Claim] [Fintype Branch] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation]
+  {A A' : LifecycleState Coord Claim Branch Grant Operation} {eta : LifecycleState.Label Operation Claim}
+  (hstep : Step A eta A') (hWF : A.LWF) (hAC : AC A.auth) : A'.LWF ∧ AC A'.auth
+info: AuthorityContinuity/Audit.lean:31:0: 'AuthorityContinuity.step_preserves_wf_ac' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: AuthorityContinuity/Audit.lean:33:0: AuthorityContinuity.step_attempt_safe.{u_1, u_2, u_3, u_4, u_5} {Coord : Type u_1} {Claim : Type u_2}
+  {Branch : Type u_3} {Grant : Type u_4} {Operation : Type u_5} [Fintype Coord] [DecidableEq Coord] [Fintype Claim]
+  [DecidableEq Claim] [Fintype Branch] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation]
+  {A A' : LifecycleState Coord Claim Branch Grant Operation} {e : Operation} {c : Claim}
+  (hstep : Step A (LifecycleState.Label.attempt e c) A') (hWF : A.LWF) :
+  A.opClaim e = some c ∧ A.auth.status c = ClaimStatus.durable ∧ A'.opClaim e = some c
+info: AuthorityContinuity/Audit.lean:34:0: 'AuthorityContinuity.step_attempt_safe' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: AuthorityContinuity/Audit.lean:36:0: AuthorityContinuity.step_preserves_existing_binding.{uC, uI, uB, uG, uO} {Coord : Type uC} {Claim : Type uI}
+  {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} [Fintype Coord] [Fintype Claim] [Fintype Branch]
+  [DecidableEq Coord] [DecidableEq Claim] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation]
+  {A A' : LifecycleState Coord Claim Branch Grant Operation} {eta : LifecycleState.Label Operation Claim}
+  (hStep : Step A eta A') (e : Operation) (c : Claim) : A.opClaim e = some c → A'.opClaim e = some c
+info: AuthorityContinuity/Audit.lean:37:0: 'AuthorityContinuity.step_preserves_existing_binding' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: AuthorityContinuity/Audit.lean:39:0: AuthorityContinuity.trace_preserves_existing_binding.{uC, uI, uB, uG, uO} {Coord : Type uC} {Claim : Type uI}
+  {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} [Fintype Coord] [Fintype Claim] [Fintype Branch]
+  [DecidableEq Coord] [DecidableEq Claim] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation]
+  {A A' : LifecycleState Coord Claim Branch Grant Operation} (hTrace : AbstractTrace A A') (e : Operation) (c : Claim) :
+  A.opClaim e = some c → A'.opClaim e = some c
+info: AuthorityContinuity/Audit.lean:40:0: 'AuthorityContinuity.trace_preserves_existing_binding' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: AuthorityContinuity/Audit.lean:42:0: AuthorityContinuity.trace_preserves_wf_ac.{uC, uI, uB, uG, uO} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB}
+  {Grant : Type uG} {Operation : Type uO} [Fintype Coord] [Fintype Claim] [Fintype Branch] [DecidableEq Coord]
+  [DecidableEq Claim] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation]
+  {A A' : LifecycleState Coord Claim Branch Grant Operation} (hTrace : AbstractTrace A A') (hWF : A.LWF)
+  (hAC : AC A.auth) : A'.LWF ∧ AC A'.auth
+info: AuthorityContinuity/Audit.lean:43:0: 'AuthorityContinuity.trace_preserves_wf_ac' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: AuthorityContinuity/Audit.lean:45:0: AuthorityContinuity.trace_terminal_mono.{uC, uI, uB, uG, uO} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB}
+  {Grant : Type uG} {Operation : Type uO} [Fintype Coord] [Fintype Claim] [Fintype Branch] [DecidableEq Coord]
+  [DecidableEq Claim] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation]
+  {A A' : LifecycleState Coord Claim Branch Grant Operation} (hTrace : AbstractTrace A A') : A.TerminalMonotone A'
+info: AuthorityContinuity/Audit.lean:46:0: 'AuthorityContinuity.trace_terminal_mono' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: AuthorityContinuity/Audit.lean:48:0: AuthorityContinuity.trace_epoch_mono.{uC, uI, uB, uG, uO} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB}
+  {Grant : Type uG} {Operation : Type uO} [Fintype Coord] [Fintype Claim] [Fintype Branch] [DecidableEq Coord]
+  [DecidableEq Claim] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation]
+  {A A' : LifecycleState Coord Claim Branch Grant Operation} (hTrace : AbstractTrace A A') : A.EpochMonotone A'
+info: AuthorityContinuity/Audit.lean:49:0: 'AuthorityContinuity.trace_epoch_mono' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: AuthorityContinuity/Audit.lean:51:0: AuthorityContinuity.SimulatedTrace.attempt_binding_final.{uC, uI, uB, uG, uO, uX} {Coord : Type uC} {Claim : Type uI}
+  {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} [Fintype Coord] [Fintype Claim] [Fintype Branch]
+  [DecidableEq Coord] [DecidableEq Claim] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation]
+  {Concrete : Type uX} {concreteStep : Concrete → ConcreteEvent Operation Claim Coord → Concrete → Prop}
+  {abstract : Concrete → LifecycleState Coord Claim Branch Grant Operation} {x x' : Concrete}
+  {events : List (ConcreteEvent Operation Claim Coord)} (hSimulation : SimulatedTrace concreteStep abstract x events x')
+  (hInitialWF : (abstract x).LWF) (hInitialAC : AC (abstract x).auth) {event : ConcreteEvent Operation Claim Coord}
+  (hEvent : event ∈ events) {e : Operation} {c : Claim} (hLabel : event.label = LifecycleState.Label.attempt e c) :
+  (abstract x').opClaim e = some c
+info: AuthorityContinuity/Audit.lean:52:0: 'AuthorityContinuity.SimulatedTrace.attempt_binding_final' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: AuthorityContinuity/Audit.lean:54:0: AuthorityContinuity.effect_coverage.{u_1, u_2, u_3} {Operation : Type u_1} {Claim : Type u_2} {Resource : Type u_3}
+  [DecidableEq Operation] [DecidableEq Claim] (ops : Finset Operation) (durable : Finset Claim)
+  (claimOf : Operation → Claim) (actual : Operation → Resource → ℕ) (claimDemand : Claim → Resource → ℕ)
+  (hStable : Set.InjOn claimOf ↑ops) (hPrepared : ∀ e ∈ ops, claimOf e ∈ durable)
+  (hBound : ∀ e ∈ ops, ∀ (k : Resource), actual e k ≤ claimDemand (claimOf e) k) (k : Resource) :
+  ∑ e ∈ ops, actual e k ≤ ∑ c ∈ durable, claimDemand c k
+info: AuthorityContinuity/Audit.lean:55:0: 'AuthorityContinuity.effect_coverage' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: AuthorityContinuity/Audit.lean:57:0: AuthorityContinuity.concrete_trace_authority_safety.{uC, uI, uB, uG, uO, uX} {Coord : Type uC} {Claim : Type uI}
+  {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} [Fintype Coord] [Fintype Claim] [Fintype Branch]
+  [Fintype Operation] [DecidableEq Coord] [DecidableEq Claim] [DecidableEq Branch] [DecidableEq Grant]
+  [DecidableEq Operation] {Concrete : Type uX}
+  (concreteStep : Concrete → ConcreteEvent Operation Claim Coord → Concrete → Prop)
+  (abstract : Concrete → LifecycleState Coord Claim Branch Grant Operation) {x₀ x : Concrete}
+  {events : List (ConcreteEvent Operation Claim Coord)}
+  (hStepSimulation : SimulatedTrace concreteStep abstract x₀ events x) (hInitialWF : (abstract x₀).LWF)
+  (hInitialAC : AC (abstract x₀).auth) (protectedOps : Finset Operation) (claimOf : Operation → Claim)
+  (hCompleteMediation : ∀ (e : Operation), (∃ k, aggregateActual events e k ≠ 0) → e ∈ protectedOps)
+  (hAttemptWitness : ∀ e ∈ protectedOps, ∃ event ∈ events, event.label = LifecycleState.Label.attempt e (claimOf e))
+  (hAggregateBound :
+    ∀ e ∈ protectedOps, ∀ (k : Coord), aggregateActual events e k ≤ (abstract x).auth.demand (claimOf e) k)
+  (C : Finset Branch) (hPermitted : C ∈ (abstract x).auth.allowed) (k : Coord) :
+  ∑ e, aggregateActual events e k + (abstract x).auth.conditionalLoad C k ≤ (abstract x).auth.capacity k
+info: AuthorityContinuity/Audit.lean:58:0: 'AuthorityContinuity.concrete_trace_authority_safety' depends on axioms: [propext, Classical.choice, Quot.sound]
+Build completed successfully (742 jobs).
+build_wall_seconds=13.46
+max_rss_kib=2109000

@@ -1,0 +1,5 @@
+Lean (version 4.30.0, x86_64-unknown-linux-gnu, commit d024af099ca4bf2c86f649261ebf59565dc8c622, Release)
+Lake version 5.0.0-src+d024af0 (Lean version 4.30.0)
+ℹ [584/585] Built AuthorityContinuity.Main (1.1s)
+info: AuthorityContinuity/Main.lean:13:0: 'preflight_identity' does not depend on any axioms
+Build completed successfully (585 jobs).

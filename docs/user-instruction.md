@@ -159,3 +159,15 @@ Agent 的安全状态不只有文件和数据库? 为啥? 是外部资源? 还�
 ### Message 10
 
 做完 agentcap 之后看看我的还是 eunomia-bpf 里面有一个 agent checkpoint restrore-safety 的 repo, 把它下载下来, 然后在里面迭代, 应该是一个主要是理论性很强的吧? 你想想这种文章应该要怎样的 plan? 试验是不是相对来说没那么重要? 是不是更多是写作和思考, 实验你也要简单做一下? 整个项目也要按auto research 方式 bootstrap?
+
+### Message 11
+
+能不能高层次思考一下 workload 出现了什么变化? 系统和传统方案有啥差异? 形式化的方案和 PL 能带来什么? 能证明啥不能证明啥? 更详细一些?
+
+### Message 12
+
+对于 c/r fork 啥的都能覆盖对吧? 强化学习场景也有帮助? 我希望有 principle 的, 对于工业界有帮助的真实有价值的算法. 要和真实的 agent runtime 比如 claude/codex 能结合的?
+
+### Message 13
+
+我说的话都要原话记录下来

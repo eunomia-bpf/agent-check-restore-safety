@@ -37,6 +37,16 @@ comment.cut
 # PDF output
 *.pdf
 
+# Lean build and dependency cache
+lean/.lake/
+lean/results/cache.log
+!lean/results/
+!lean/results/build.log
+!lean/results/axioms.log
+!lean/results/preflight.log
+!lean/results/leanchecker-preflight.log
+!lean/results/kernel-replay.log
+
 # Submission archives
 arxiv-submission.tar.gz
 

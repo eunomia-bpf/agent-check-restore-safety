@@ -162,3 +162,17 @@ Narrow or abandon the lead claim if:
 - mechanization reveals a transition rule that assumes the invariant it purports to preserve.
 
 If only runtime integration is missing, retain the theory result but state deployment as future work. If a theorem is classical under renamed notation, cite the classical result and move novelty to the lifecycle-specific instantiation or remove the claim.
+
+## 7. Active RQ3 mechanization experiment
+
+The current BUILD_AND_EVALUATE step tests one uncertainty: whether abstract lifecycle preservation and the conditional trace theorem can be checked in Lean without `sorry`, project axioms, or target-WF/AC premises in derived transition cases. Boundary I/II are outside this RQ3 experiment and remain paper proofs until separate mechanization.
+
+- Approved plan: `docs/tmp/build-and-evaluate/step-0001-20260801T042542-0700/experiment-001/plan.md`.
+- Plan review: `docs/tmp/build-and-evaluate/step-0001-20260801T042542-0700/experiment-001/plan-review.md`.
+- Toolchain: Lean 4.30.0 (`d024af0`), Lake 5.0.0, Mathlib tag `v4.30.0` (`c5ea0035`).
+- Real preflight: the final Lake package built `AuthorityContinuity.Main`; `#print axioms preflight_identity` reported no axioms; `leanchecker --fresh AuthorityContinuity.Main` exited 0 after 111.34 seconds.
+- Raw preflight evidence: `lean/results/preflight.log` and `lean/results/leanchecker-preflight.log`.
+- Full-run status: all ten frozen theorem names build from the root module; a clean 742-job build completed in 13.46 seconds (maximum RSS 2,109,000 KiB), the source audit found no placeholders or project axioms/constants, printed dependencies were limited to `propext`, `Quot.sound`, and `Classical.choice`, and an independent fresh kernel replay exited zero in 136.89 seconds.
+- Independent result review: **mixed**. The computed restriction, exact Prepare/cleanup, ticket, binding, AC-simulation, and conditional trace results are valid, but `TopologyShape` supplies the target's main structural WF facts fieldwise rather than deriving them from canonical Fork/Restore/Merge construction and a checked transfer certificate.
+- Paper decision: under the frozen interpretation rule, this run remains internal finite-submodel evidence and does not enter the current paper as a mechanization claim.
+- Next gate: mechanize canonical topology targets, `Mono_0(pi)`, transfer/fiber conservation and certificate-checker soundness, then repeat the clean build and fresh independent result review. A dispatch-owning adapter remains separately necessary to test complete mediation and aggregate outcome assumptions.

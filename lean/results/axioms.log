@@ -1,0 +1,115 @@
+AuthorityContinuity.checkAC_sound.{uC, uI, uB} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} [Fintype Coord]
+  [Fintype Claim] [Fintype Branch] [DecidableEq Coord] [DecidableEq Claim] [DecidableEq Branch]
+  (A : State Coord Claim Branch) (hcheck : checkAC A = true) : AC A
+'AuthorityContinuity.checkAC_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+AuthorityContinuity.guardClosure_iff.{uC, uI, uB} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} [Fintype Coord]
+  [Fintype Claim] [Fintype Branch] [DecidableEq Coord] [DecidableEq Claim] [DecidableEq Branch]
+  (A : State Coord Claim Branch) (U : Finset Claim) (C : Finset Branch) :
+  C ∈ guardedAllowed A U ↔
+    C ∈ A.allowed ∧ ∀ (k : Coord), promotedLoad A U k + remainingConditionalLoad A U C k ≤ A.capacity k
+'AuthorityContinuity.guardClosure_iff' depends on axioms: [propext, Classical.choice, Quot.sound]
+AuthorityContinuity.simulation_preserves_ac.{uC, uI, uB} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB}
+  [Fintype Coord] [Fintype Claim] [Fintype Branch] [DecidableEq Coord] [DecidableEq Claim] [DecidableEq Branch]
+  (source target : State Coord Claim Branch) (project : Finset Branch → Finset Branch)
+  (hcapacity : target.capacity = source.capacity) (hsource : AC source)
+  (hsim :
+    ∀ C' ∈ target.allowed,
+      project C' ∈ source.allowed ∧
+        ∀ (k : Coord),
+          target.durableLoad k + target.conditionalLoad C' k ≤
+            source.durableLoad k + source.conditionalLoad (project C') k) :
+  AC target
+'AuthorityContinuity.simulation_preserves_ac' depends on axioms: [propext, Quot.sound]
+AuthorityContinuity.restriction_preserves_wf_ac.{uC, uI, uB} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB}
+  [Fintype Coord] [Fintype Claim] [Fintype Branch] [DecidableEq Coord] [DecidableEq Claim] [DecidableEq Branch]
+  (A : State Coord Claim Branch) (S : Finset Branch) (keep : Finset Claim) (hWF : WF A) (hAC : AC A) :
+  WF (A.restrictStateBy S keep) ∧ AC (A.restrictStateBy S keep)
+'AuthorityContinuity.restriction_preserves_wf_ac' depends on axioms: [propext, Classical.choice, Quot.sound]
+AuthorityContinuity.prepare_preserves_wf_ac.{u_1, u_2, u_3, u_4, u_5} {Coord : Type u_1} {Claim : Type u_2}
+  {Branch : Type u_3} {Grant : Type u_4} {Operation : Type u_5} [Fintype Coord] [DecidableEq Coord] [Fintype Claim]
+  [DecidableEq Claim] [Fintype Branch] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation]
+  (A : LifecycleState Coord Claim Branch Grant Operation) (U : Finset Claim) (assignment : Operation → Option Claim)
+  (hWF : A.LWF) (hAC : AC A.auth) (hOK : A.PrepareOK U assignment) :
+  (A.prepareState U assignment).LWF ∧ AC (A.prepareState U assignment).auth
+'AuthorityContinuity.prepare_preserves_wf_ac' depends on axioms: [propext, Classical.choice, Quot.sound]
+AuthorityContinuity.ticket_step_preserves_wf_ac.{u_1, u_2, u_3, u_4, u_5} {Coord : Type u_1} {Claim : Type u_2}
+  {Branch : Type u_3} {Grant : Type u_4} {Operation : Type u_5} [Fintype Coord] [DecidableEq Coord] [Fintype Claim]
+  [DecidableEq Claim] [Fintype Branch] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation]
+  {A A' : LifecycleState Coord Claim Branch Grant Operation} {eta : LifecycleState.Label Operation Claim}
+  (hstep : A.TicketStep eta A') (hWF : A.LWF) (hAC : AC A.auth) :
+  A'.LWF ∧ AC A'.auth ∧ ∀ (e : Operation), A'.opClaim e = A.opClaim e
+'AuthorityContinuity.ticket_step_preserves_wf_ac' depends on axioms: [propext, Quot.sound]
+AuthorityContinuity.step_preserves_wf_ac.{u_1, u_2, u_3, u_4, u_5} {Coord : Type u_1} {Claim : Type u_2}
+  {Branch : Type u_3} {Grant : Type u_4} {Operation : Type u_5} [Fintype Coord] [DecidableEq Coord] [Fintype Claim]
+  [DecidableEq Claim] [Fintype Branch] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation]
+  {A A' : LifecycleState Coord Claim Branch Grant Operation} {eta : LifecycleState.Label Operation Claim}
+  (hstep : Step A eta A') (hWF : A.LWF) (hAC : AC A.auth) : A'.LWF ∧ AC A'.auth
+'AuthorityContinuity.step_preserves_wf_ac' depends on axioms: [propext, Classical.choice, Quot.sound]
+AuthorityContinuity.step_attempt_safe.{u_1, u_2, u_3, u_4, u_5} {Coord : Type u_1} {Claim : Type u_2}
+  {Branch : Type u_3} {Grant : Type u_4} {Operation : Type u_5} [Fintype Coord] [DecidableEq Coord] [Fintype Claim]
+  [DecidableEq Claim] [Fintype Branch] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation]
+  {A A' : LifecycleState Coord Claim Branch Grant Operation} {e : Operation} {c : Claim}
+  (hstep : Step A (LifecycleState.Label.attempt e c) A') (hWF : A.LWF) :
+  A.opClaim e = some c ∧ A.auth.status c = ClaimStatus.durable ∧ A'.opClaim e = some c
+'AuthorityContinuity.step_attempt_safe' depends on axioms: [propext, Classical.choice, Quot.sound]
+AuthorityContinuity.step_preserves_existing_binding.{uC, uI, uB, uG, uO} {Coord : Type uC} {Claim : Type uI}
+  {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} [Fintype Coord] [Fintype Claim] [Fintype Branch]
+  [DecidableEq Coord] [DecidableEq Claim] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation]
+  {A A' : LifecycleState Coord Claim Branch Grant Operation} {eta : LifecycleState.Label Operation Claim}
+  (hStep : Step A eta A') (e : Operation) (c : Claim) : A.opClaim e = some c → A'.opClaim e = some c
+'AuthorityContinuity.step_preserves_existing_binding' depends on axioms: [propext, Classical.choice, Quot.sound]
+AuthorityContinuity.trace_preserves_existing_binding.{uC, uI, uB, uG, uO} {Coord : Type uC} {Claim : Type uI}
+  {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} [Fintype Coord] [Fintype Claim] [Fintype Branch]
+  [DecidableEq Coord] [DecidableEq Claim] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation]
+  {A A' : LifecycleState Coord Claim Branch Grant Operation} (hTrace : AbstractTrace A A') (e : Operation) (c : Claim) :
+  A.opClaim e = some c → A'.opClaim e = some c
+'AuthorityContinuity.trace_preserves_existing_binding' depends on axioms: [propext, Classical.choice, Quot.sound]
+AuthorityContinuity.trace_preserves_wf_ac.{uC, uI, uB, uG, uO} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB}
+  {Grant : Type uG} {Operation : Type uO} [Fintype Coord] [Fintype Claim] [Fintype Branch] [DecidableEq Coord]
+  [DecidableEq Claim] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation]
+  {A A' : LifecycleState Coord Claim Branch Grant Operation} (hTrace : AbstractTrace A A') (hWF : A.LWF)
+  (hAC : AC A.auth) : A'.LWF ∧ AC A'.auth
+'AuthorityContinuity.trace_preserves_wf_ac' depends on axioms: [propext, Classical.choice, Quot.sound]
+AuthorityContinuity.trace_terminal_mono.{uC, uI, uB, uG, uO} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB}
+  {Grant : Type uG} {Operation : Type uO} [Fintype Coord] [Fintype Claim] [Fintype Branch] [DecidableEq Coord]
+  [DecidableEq Claim] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation]
+  {A A' : LifecycleState Coord Claim Branch Grant Operation} (hTrace : AbstractTrace A A') : A.TerminalMonotone A'
+'AuthorityContinuity.trace_terminal_mono' depends on axioms: [propext, Classical.choice, Quot.sound]
+AuthorityContinuity.trace_epoch_mono.{uC, uI, uB, uG, uO} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB}
+  {Grant : Type uG} {Operation : Type uO} [Fintype Coord] [Fintype Claim] [Fintype Branch] [DecidableEq Coord]
+  [DecidableEq Claim] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation]
+  {A A' : LifecycleState Coord Claim Branch Grant Operation} (hTrace : AbstractTrace A A') : A.EpochMonotone A'
+'AuthorityContinuity.trace_epoch_mono' depends on axioms: [propext, Classical.choice, Quot.sound]
+AuthorityContinuity.SimulatedTrace.attempt_binding_final.{uC, uI, uB, uG, uO, uX} {Coord : Type uC} {Claim : Type uI}
+  {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} [Fintype Coord] [Fintype Claim] [Fintype Branch]
+  [DecidableEq Coord] [DecidableEq Claim] [DecidableEq Branch] [DecidableEq Grant] [DecidableEq Operation]
+  {Concrete : Type uX} {concreteStep : Concrete → ConcreteEvent Operation Claim Coord → Concrete → Prop}
+  {abstract : Concrete → LifecycleState Coord Claim Branch Grant Operation} {x x' : Concrete}
+  {events : List (ConcreteEvent Operation Claim Coord)} (hSimulation : SimulatedTrace concreteStep abstract x events x')
+  (hInitialWF : (abstract x).LWF) (hInitialAC : AC (abstract x).auth) {event : ConcreteEvent Operation Claim Coord}
+  (hEvent : event ∈ events) {e : Operation} {c : Claim} (hLabel : event.label = LifecycleState.Label.attempt e c) :
+  (abstract x').opClaim e = some c
+'AuthorityContinuity.SimulatedTrace.attempt_binding_final' depends on axioms: [propext, Classical.choice, Quot.sound]
+AuthorityContinuity.effect_coverage.{u_1, u_2, u_3} {Operation : Type u_1} {Claim : Type u_2} {Resource : Type u_3}
+  [DecidableEq Operation] [DecidableEq Claim] (ops : Finset Operation) (durable : Finset Claim)
+  (claimOf : Operation → Claim) (actual : Operation → Resource → ℕ) (claimDemand : Claim → Resource → ℕ)
+  (hStable : Set.InjOn claimOf ↑ops) (hPrepared : ∀ e ∈ ops, claimOf e ∈ durable)
+  (hBound : ∀ e ∈ ops, ∀ (k : Resource), actual e k ≤ claimDemand (claimOf e) k) (k : Resource) :
+  ∑ e ∈ ops, actual e k ≤ ∑ c ∈ durable, claimDemand c k
+'AuthorityContinuity.effect_coverage' depends on axioms: [propext, Classical.choice, Quot.sound]
+AuthorityContinuity.concrete_trace_authority_safety.{uC, uI, uB, uG, uO, uX} {Coord : Type uC} {Claim : Type uI}
+  {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} [Fintype Coord] [Fintype Claim] [Fintype Branch]
+  [Fintype Operation] [DecidableEq Coord] [DecidableEq Claim] [DecidableEq Branch] [DecidableEq Grant]
+  [DecidableEq Operation] {Concrete : Type uX}
+  (concreteStep : Concrete → ConcreteEvent Operation Claim Coord → Concrete → Prop)
+  (abstract : Concrete → LifecycleState Coord Claim Branch Grant Operation) {x₀ x : Concrete}
+  {events : List (ConcreteEvent Operation Claim Coord)}
+  (hStepSimulation : SimulatedTrace concreteStep abstract x₀ events x) (hInitialWF : (abstract x₀).LWF)
+  (hInitialAC : AC (abstract x₀).auth) (protectedOps : Finset Operation) (claimOf : Operation → Claim)
+  (hCompleteMediation : ∀ (e : Operation), (∃ k, aggregateActual events e k ≠ 0) → e ∈ protectedOps)
+  (hAttemptWitness : ∀ e ∈ protectedOps, ∃ event ∈ events, event.label = LifecycleState.Label.attempt e (claimOf e))
+  (hAggregateBound :
+    ∀ e ∈ protectedOps, ∀ (k : Coord), aggregateActual events e k ≤ (abstract x).auth.demand (claimOf e) k)
+  (C : Finset Branch) (hPermitted : C ∈ (abstract x).auth.allowed) (k : Coord) :
+  ∑ e, aggregateActual events e k + (abstract x).auth.conditionalLoad C k ≤ (abstract x).auth.capacity k
+'AuthorityContinuity.concrete_trace_authority_safety' depends on axioms: [propext, Classical.choice, Quot.sound]

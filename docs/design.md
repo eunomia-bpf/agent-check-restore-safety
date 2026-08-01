@@ -1,6 +1,6 @@
 # Authority Continuity for History-Transforming Agents
 
-**Status:** Revision-3 scientific contract. The executable finite model checks the bounded instances reported in the paper; statements marked as theorems still require complete paper proofs and mechanization.
+**Status:** Revision-4 scientific contract. The executable Python model checks the bounded instances reported in the paper. A Lean 4 finite-carrier submodel machine-checks selected lifecycle/trace obligations, but an independent mixed verdict keeps it out of the paper until canonical topology construction and certificate checking replace the generic target-WF interface.
 
 ## 1. The missing boundary
 
@@ -450,14 +450,9 @@ Two alternatives compute with empty \(Q\); the parent transfers one claim only a
 
 The dependency-free Python artifact mirrors the finite mathematics rather than simulating an LLM. It exhaustively checks authority continuity, headroom admission, correlated residual batch admission and derivatives, exact promotion guards, the higher-order representation witness, frozen versus dynamically recomputed guards, lineage transport, and the scoped batch-order condition. Checked JSON is deterministic and must be reproduced byte for byte. These checks find modeling errors and validate finite witnesses; they are not proofs for unbounded states.
 
-Lean 4 remains the highest-value next artifact. Its minimum useful kernel should define finite typed vectors, downward-closed durability families, claim partition, Reserve, guarded promotion, and abstract effect coverage, then prove:
+The first Lean 4 pass now defines finite typed vectors, downward-closed durability families, a structural claim partition with distinct unissued/terminal states, executable AC admission, computed restriction, exact Prepare/cleanup, stable tickets and receipts, terminal/epoch monotonicity, a labeled trace simulation, effect coverage, and a conditional trace-solvency theorem. These results quantify over arbitrary finite carrier types and pass a clean build, source/axiom audit, and fresh kernel replay.
 
-- authority-continuity preservation for the modeled transition core;
-- the single-branch headroom characterization and its update counterexample;
-- correlated-residual batch exactness and the derivative law;
-- exact guarded promotion closure and frozen-row monotonicity;
-- final-owner-support serializability, with semantic rather than syntactic contract equality; and
-- trace solvency from complete mediation and effect coverage.
+The independent result review is mixed. The topology constructor's load-solvency consequence is derived from source AC and a simulation inequality, but its structural target WF is supplied fieldwise by a logical `TopologyShape` certificate. The development does not yet construct the paper's canonical Fork/Restore/Merge targets, check `Mono_0(pi)` or `rho` fiber conservation, issue fresh fragments, or mechanize Boundaries I/II. The current result therefore remains internal; the next mechanization must close this exact interface rather than enlarging claims around it.
 
 The runtime study is deliberately small. One mandatory tool proxy or dispatch-owning SDK/App Server client should instantiate fresh branch epochs, Prepare-before-Dispatch, stable operation IDs, and conservative uncertain outcomes. Product hooks alone demonstrate lifecycle correspondence but not complete mediation. Performance numbers are paper-worthy only after that path actually enforces every protected effect.
 

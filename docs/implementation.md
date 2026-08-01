@@ -1,6 +1,6 @@
 # Implementation and Evidence Boundary
 
-**Status:** repository truth as of 2026-07-31. This document distinguishes implemented artifacts, legacy evidence, and proposed work so the paper never reports a plan as a result.
+**Status:** repository truth as of 2026-08-01. This document distinguishes implemented artifacts, legacy evidence, mixed/internal evidence, and proposed work so the paper never reports a plan or a conditional submodel result as a full result.
 
 ## 1. Branch and paper source of truth
 
@@ -53,7 +53,13 @@ These are motivating observations, not a statistical benchmark. The session mech
 - an eight-state, 22-edge crash/retry/revoke ticket graph covering Prepare, Dispatch, Retry, Crash, Settle, cancellation, sealed completion after revocation, rejection of tentative claims on tombstoned branch epochs, and rejection of closed-epoch name reuse; and
 - 26 target-frontier simulations across replace/live restore and choice/parallel fork, preserving receipts and prepared/uncertain tickets.
 
-This is selected-rule bounded executable validation, not an implementation of the complete LTS, a proof assistant development, or a runtime monitor. The canonical commands and precise enumeration bounds are in `artifact/README.md`; `artifact/results/exhaustive.json` is deterministically reproduced with SHA-256 `5ae07a5505638891b4901835d4e0973a96ce6ea3e1ae202f85da565cac99a4a5`.
+This is selected-rule bounded executable validation, not an implementation of the complete LTS or a runtime monitor. The canonical commands and precise enumeration bounds are in `artifact/README.md`; `artifact/results/exhaustive.json` is deterministically reproduced with SHA-256 `5ae07a5505638891b4901835d4e0973a96ce6ea3e1ae202f85da565cac99a4a5`.
+
+### Internal Lean finite-submodel evidence
+
+`lean/` contains a pinned Lean 4.30.0/Mathlib 4.30.0 development over arbitrary finite carrier types. Its executable AC checker, computed restriction, exact Prepare/cleanup, ticket phases, binding persistence, terminal/epoch monotonicity, trace induction, effect-coverage sum, and conditional concrete trace theorem build without proof placeholders or project-declared axioms. A clean cached-dependency build completed 742 jobs, and a fresh `leanchecker` replay exited zero; exact statements and admitted foundations are retained in `lean/results/`.
+
+The independent experiment verdict is mixed, so this is not a paper mechanization result yet. The generic `TopologyShape` certificate supplies target empty/downward/support/open facts fieldwise; canonical choice/parallel Fork, replace/live Restore, merge transfer, `Mono_0(pi)`, `rho` fiber conservation, fragment issuance, Boundary I/II, and a real runtime refinement are not mechanized. The frozen experiment and review are under `docs/tmp/build-and-evaluate/step-0001-20260801T042542-0700/`.
 
 ### Not implemented
 
@@ -65,7 +71,7 @@ There is currently no:
 - production topology-aware authority monitor;
 - compact structured/guarded solver for unbounded runtime contracts;
 - bounded transition-schedule and mutation explorer;
-- Lean model or proof;
+- a positive full-lifecycle Lean mechanization of the paper's canonical topology rules and certificate checker;
 - runtime integration that prevents the modeled violations.
 
 The paper must use future tense or an explicit placeholder for all of these until an artifact and command reproduce them.
@@ -82,7 +88,7 @@ artifact/
   results/exhaustive.json       # checked-in reproducible result
 ```
 
-It does not implement the compact PB/ZDD solver, crash-atomic ledger, lifecycle controller, effect gate, or proof assistant development described by the paper. Those components should be added as separate directories only when one clean command can exercise them; scaffolding an empty architecture would create false evidence.
+It does not implement the compact PB/ZDD solver, crash-atomic ledger, lifecycle controller, effect gate, or canonical topology/certificate layer needed to close the current Lean gap. Those components should be added as separate directories only when one clean command can exercise them; scaffolding an empty architecture would create false evidence.
 
 The trusted core should accept explicit, typed facts rather than ask an LLM to infer authorization:
 
@@ -108,8 +114,8 @@ No number moves into the paper from `docs/experiments.md` alone. It must be reco
 
 ## 5. Remaining implementation order
 
-1. Mechanize typed vectors, claim partition, headroom, correlated residual derivatives, exact promotion guards, support cleanup, and the small trace invariant in Lean 4.
-2. Add a bounded transition/mutation explorer for claim duplication, stale epochs, dispatch-before-Prepare, dynamic guards, wrong lineage transport, and owner-tombstoning serialization.
+1. Replace the generic Lean topology interface with computed canonical Fork/Restore/Merge targets, `Mono_0(pi)`, transfer/fiber conservation, fresh-fragment issuance, and checker soundness; preserve unused branch identities across restriction.
+2. Mechanize Boundary I/II only after the lifecycle/topology result passes a fresh independent review.
 3. Implement a compact guarded-contract oracle with a checkable violating-configuration certificate and retain the unguarded cotree fast path.
 4. Implement one dispatch-owning adapter or mandatory tool proxy that durably assigns branch epochs and executes Prepare before every protected call.
 5. Only then measure admission latency, durable writes, contention, and safe-history rejection against split-all, parent escrow, and transaction-only baselines.
