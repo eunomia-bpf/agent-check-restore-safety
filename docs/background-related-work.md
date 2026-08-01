@@ -1,6 +1,6 @@
 # Literature, Novelty, and CSF Fit
 
-**Status:** living claim-oriented audit, last updated 2026-07-31. A paper is listed here only after at least its abstract, introduction, claimed contributions, model, and evidence sections have been inspected. “Not found” means not found in the searched corpus, not a universal priority claim.
+**Status:** living claim-oriented audit, last updated 2026-08-01. A paper is listed here only after at least its abstract, introduction, claimed contributions, model, and evidence sections have been inspected. “Not found” means not found in the searched corpus, not a universal priority claim.
 
 ## 1. Venue contract: CSF 2027
 
@@ -115,6 +115,71 @@ The surviving specialization is an *online authority-support transformer* for a 
 
 This comparison changes the intended wording from “authority-controller synthesis under partial observation” to “a certificate-checked online specialization of supervisory control for authority support in history-transforming runtimes.” It also creates a hard novelty obligation: if the final theory only adds threshold predicates to an AND/OR tree, it is not a CSF contribution.
 
+### 3.7 Agent trajectories and the observability boundary
+
+Real trajectories are necessary for workload grounding, but they answer a
+different question from the safety theorem. They can show which lifecycle
+operations, retries, tool failures, and outward-facing commands occur; they
+cannot prove authority continuity. The source-audited assets divide into three
+evidence families:
+
+| Asset | Evidence available | Use here | Missing security state |
+|---|---|---|---|
+| [SWE-chat](https://huggingface.co/datasets/SALT-NLP/SWE-chat) ([paper](https://arxiv.org/abs/2604.20779)) | 5,851 in-the-wild coding sessions, 2,692,480 transcript entries, 13,406 checkpoints, 14,459 commits, and full tool/command/diff fields across Claude Code, Codex, Gemini CLI, and others | Primary natural-workload census for checkpoints, continuation, subagents, Git history changes, and commands that may cross the workspace boundary | Checkpoint is a save point, not a typed Restore event; no grant/claim lineage, durable-support contract, stable cross-retry effect identity, effect phase, or external before/after state |
+| [General AgentBench trajectories](https://huggingface.co/datasets/cx-cmu/agent_trajectories) | 8,653 controlled trajectories over SWE, terminal, search, MCP, and stateful tool benchmarks, with messages, tool calls, rewards, and evaluation details | Cross-domain check that retries, failures, and stateful operations are not coding-only phenomena | Four passes are independent fresh attempts, not forks; exact generation-time tool menu is not always reconstructable; no authority or topology semantics |
+| [Agent LLM Traces](https://huggingface.co/datasets/DiscoPosse/agent-llm-traces) | 1,781 OpenTelemetry-style traces with timestamps, tool definitions/calls/results, response IDs, token use, and error status; a six-row public pilot found repeated call signatures under different IDs | Timing, fan-out, failure, retry-candidate, and ordinary telemetry-schema audit | Calls/results repeat inside cumulative messages; current Viewer schema has no parent span or independent tool-execution span, branch lifecycle, authorization lineage, protected-effect phase, or durable external receipt |
+| [Microsoft Orchard](https://huggingface.co/datasets/microsoft/Orchard) | 107,185 software-engineering trajectories plus 3,070 GUI rollout prefixes; public Viewer/download, structured calls, and resolved/unresolved metadata | Large controlled workload, negative-outcome, and command-schema control | Independent sandbox rollouts are not history-transforming continuations and omit trusted authorization/external-effect history |
+| [AgentRx](https://github.com/microsoft/AgentRx) and [coding-agent-misalignment](https://github.com/ND-SaNDwichLAB/coding-agent-misalignment) | Failure taxonomies and a replication package studying 20,574 real coding sessions | Select failure classes and manually audit damaging history changes | Taxonomy/issue evidence is not a complete executable lifecycle trace |
+
+The [Agent Data Protocol](https://github.com/neulab/agent-data-protocol)
+standardizes ordinary call correlation as `tool_call_id` and links an
+observation with `source_call_id`. This is valuable interchange machinery, but
+call correlation is not an authorization or idempotency contract: it does not
+say whether a call was prepared, dispatched, uncertain, retried as the same
+protected operation, or charged to a durable claim.
+
+The inspected product interfaces expose a useful split. The official
+[Codex App Server protocol](https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md)
+has thread/turn/call identifiers, records `forkedFromId`, and can send an
+experimental dynamic-tool request to the client. It is therefore the leading
+dispatch-owning adapter path. Claude Code's official
+[checkpoint limitations](https://code.claude.com/docs/en/checkpointing#limitations)
+explicitly exclude Bash modifications, most subagent edits, and external or
+concurrent-session changes, directly demonstrating that checkpoint state and
+the effect-bearing world have different rollback domains.
+
+This schema audit suggests, but does not yet prove, a stronger result. Define
+three observation maps: `O0` retains checkpoint/workspace state, `O1`
+also retains ordinary session/call/result telemetry, and `O2` additionally
+retains trusted lifecycle, authority-lineage, and effect-lifecycle events. A
+decision fiber is keyed by the same next request:
+`K_i=(alpha(O_i(prefix)), normalize(next_action))`, with run-local IDs
+alpha-renamed, alias/order structure preserved, and absolute timestamps
+removed. A nontrivial theorem program would establish:
+
+1. **ordinary-trace insufficiency** with independent `O1`-equivalent witness
+   families: replacing versus live Restore for topology; two claims mapped to
+   one one-unit grant versus distinct transferred fragments for authority;
+   and remote-success-before-crash versus never-dispatched (or
+   retry-versus-new-operation) for effects;
+2. **componentwise necessity or an information lower bound:** erasing topology
+   lineage, authority lineage, or stable effect identity/phase from `O2`
+   recreates a corresponding pair with different safe decisions; and
+3. **conditional replay sufficiency:** authenticated, self-contained `O2`
+   events reconstruct the initial `LifecycleState`, each abstract label and
+   successor state, and the checker decision; the corresponding concrete edges
+   then prove a `SimulatedTrace`, assuming complete mediation, a
+   non-rollbackable anchored log, validated certificates, and a truthful
+   idempotent/queryable sink.
+
+The first topology pair alone reuses the existing snapshot
+indistinguishability corollary; logging every checker field and rerunning the
+checker would be tautological. The observability result becomes a distinct
+contribution only if it characterizes an irredundant event basis, a minimal
+observation quotient, or a comparable monitorability boundary. Otherwise it
+remains motivation for the public schema study and controlled traces. No
+available public asset contains all required fields.
+
 ## 4. Current novelty verdict
 
 | Candidate claim | Status | Reason |
@@ -129,6 +194,7 @@ This comparison changes the intended wording from “authority-controller synthe
 | Generic maximally permissive controller / guarded AND-OR policy. | Established framework | Supervisory control, state-tree structures, predicate/BDD synthesis, and guarded transaction processes already occupy this space. |
 | Promotion non-closure plus authority-support guards and lineage transport. | Promising, closest-work sensitive | The representation result is specific to conditional-to-durable authority promotion; novelty depends on a concrete lifecycle semantics, explicit audit-continuity choice, and effect coverage rather than the existence of threshold predicates. |
 | Universal owner-group serializability iff final support. | Leading, agent-specific | Captures the non-algebraic interaction between exact promotion and deterministic branch cleanup; absent support constructs a failing order, while final support protects every prefix. |
+| Ordinary-trace non-identifiability and a compact authority/effect replay schema. | Candidate extension | Available schemas correlate tool calls but omit trusted topology, claim/grant lineage, effect phase, and durable receipts. It is a distinct result only if independent witnesses plus an irredundancy, lower-bound, or observation-quotient theorem go beyond the existing snapshot corollary; otherwise the schema is supporting instrumentation. |
 | Exact deficit / repair trilemma. | Demoted | Deficit is ordinary monus; the trilemma enumerates the fields affecting the definition. |
 | Structured choice/parallel admission is linear. | Established supporting result | It is the classical cograph cotree recurrence. |
 | General-graph safety is coNP-complete. | Established supporting result | It is inherited directly from Independent Set/MWIS and representation-sensitive. |
@@ -156,6 +222,15 @@ The following full texts are present locally and validated as PDFs:
 - `reference/csf-theory/`: capability-machine security, FLAQR, Cracking the Stateful Nut, Robust Safety for Move, Formalizing Stack Safety, modal-logic security properties, Relative Security, secure synthesis, FSLH, Nonmalleable Progress Leakage, Cryptographic Choreographies, and unified attack-tree metrics.
 
 Two IACR papers used only as venue-style context were readable from their primary web copies but blocked command-line PDF download: *Nominal State-Separating Proofs* (ePrint 2025/598) and *Computationally-Sound Symbolic Cryptography in Lean* (ePrint 2025/1700). They are not closest work for the scientific claim.
+
+Trajectory dataset cards and available schemas were inspected through their
+primary repositories on 2026-08-01; representative Viewer rows were inspected
+for Agent LLM Traces and Orchard SWE. No bulk corpus was downloaded. SWE-chat
+and General AgentBench require accepting gated access terms and sharing contact
+information. Orchard revision
+`70c05ec1f20f823ae6adc60374922e9271bb74e2` is public/ungated and its Viewer is
+live. The current environment is not authenticated, so the study plan must not
+report SWE-chat or General AgentBench rows as locally analyzed.
 
 ## 7. Writing consequence
 

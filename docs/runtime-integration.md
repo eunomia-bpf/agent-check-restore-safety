@@ -1,6 +1,6 @@
 # Runtime Integration and Workload Coverage
 
-**Status:** design grounded in official Claude Code and Codex documentation checked on 2026-07-31. Product hooks are integration evidence, not yet an implemented or verified security boundary.
+**Status:** design grounded in official Claude Code and Codex documentation plus public trajectory schemas checked on 2026-08-01. Product hooks and public traces are integration evidence, not yet an implemented or verified security boundary.
 
 ## 1. Industrial principle
 
@@ -43,12 +43,12 @@ For a tool-using rollout, the adapter may assign finite-vector claims to mediate
 
 ## 4. Codex integration surface
 
-The strongest integration is a client around the official [Codex App Server](https://learn.chatgpt.com/docs/app-server.md), not transcript scraping.
+The strongest integration is a client around the official [Codex App Server](https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md), not transcript scraping.
 
 - `thread/fork` creates a new thread ID, reports `forkedFromId`, can fork through a chosen turn, and emits `thread/started`. This supplies explicit lineage for a fresh branch epoch.
 - forked threads retain a session-tree identifier, while root and child thread IDs remain distinct.
 - thread resume, archive/delete, worktree lifecycle, subagents, and turn/item streams provide control-plane observations for lifecycle state.
-- App Server exposes command, MCP-tool, file-change, and approval events to a custom client.
+- App Server exposes command, MCP-tool, file-change, and approval events to a custom client. Its experimental dynamic-tool flow sends the client `threadId`, `turnId`, `callId`, tool identity, and arguments and waits for the client response. That makes it the leading path for a prototype in which the adapter, rather than an advisory hook, owns protected dispatch.
 
 For an existing CLI/app deployment, official [Codex hooks](https://learn.chatgpt.com/docs/hooks.md) provide a narrower prototype surface:
 
@@ -130,14 +130,246 @@ The explanation can contain a checkable violating configuration without promisin
 
 Concurrent escape requests are either prepared atomically as one batch or grouped by owner. Every owner-group ordering is executable exactly when every promoted owner remains supported by the final repaired contract; otherwise at least one ordering is disabled. A controller may validate a particular safe order, coordinate or defer cleanup, or atomically seal the fixed batch. The abstract filters commute, but that algebraic fact alone does not authorize a dispatch from a branch cleanup already removed.
 
-## 7. Minimal integration experiment
+## 7. Trace observability contract
 
-The paper needs one adapter per runtime, not a large benchmark:
+Ordinary agent telemetry is useful but insufficient. SWE-chat records sessions,
+checkpoints, commits, commands, tool calls, and tool results; OpenTelemetry
+traces record times, response IDs, schemas, results, and errors; the Agent Data
+Protocol standardizes call/result correlation. None of the inspected schemas
+states which grant funded an operation, which branches may still become
+durable together, whether a restored continuation replaces or coexists with
+the old one, or whether an outward effect is prepared, dispatched, uncertain,
+settled, or retried under the same durable operation identity.
 
-1. register root/fork/subagent/worktree lineage in the durable ledger;
-2. configure one typed one-use deployment or payment tool through an MCP proxy or blocking pre-tool hook;
-3. run fixed histories for replace, live fork, exclusive best-of-N, parallel subagents, losing-branch escape, stale resume, and merge;
-4. compare snapshot-local clone, split-all, delayed escrow, and lifecycle-aware admission;
-5. report unsafe histories admitted, safe histories rejected, returned repair, and hook/ledger latency.
+The adapter should emit a compact replayable extension rather than retain model
+text as security state. Every event carries an envelope
+`(sequence_no, previous_hash, contract_hash, event_kind, body_hash)`, and the
+canonical body is retained with it. The replay bundle begins with a canonical
+genesis record containing issuer keys, grants, the root history, and the root
+contract; later events are transition deltas, while `contract_hash` checks the
+reconstructed result:
 
-No test needs stochastic prompt behavior. The tool call, claim IDs, branch operations, and external responses should be deterministic. Product documentation establishes that the lifecycle shapes exist; the experiment establishes that the adapter observes the required facts and blocks the separating histories.
+```text
+HistoryEvent(
+  history_id, parent_history_id, operation, source_boundary,
+  branch_id, branch_epoch, active_or_retired,
+  projection_hash, canonical_projection
+)
+AuthorityEvent(
+  grant_id, grant_epoch, capacity,
+  claim_id, source_claim_id, owner_branch, demand, status,
+  support_hash, canonical_support, certificate_hash, canonical_certificate
+)
+EffectEvent(
+  effect_id, claim_id, attempt_id, request_hash, idempotency_key,
+  prepared | dispatched | uncertain | settled | aborted,
+  sink_evidence_hash, canonical_sink_evidence, aggregate_outcome
+)
+```
+
+Provider `callId` or `tool_call_id` remains a correlation field. The adapter
+generates `effect_id` before dispatch and persists it across crash, resume,
+retry, and fork; otherwise the runtime cannot distinguish a retry from a new
+authority-consuming operation. `source_boundary` identifies the exact turn or
+checkpoint prefix copied by Fork/Restore. The projection, support object,
+contract certificate, and sink evidence are canonically serialized and either
+inline or included in the immutable replay bundle; their hashes authenticate
+the bytes but are not unresolved references into mutable runtime state. Replay
+must reconstruct the initial and successor `LifecycleState` values plus their
+abstract step labels without consulting model text or an unversioned external
+pointer.
+
+Append is crash-atomic to a ledger outside the checkpoint domain. Its durable
+head `(sequence_no, event_hash)` is anchored in a non-rollbackable service such
+as a remote append log, TPM monotonic state, or independently administered
+transactional database. A hash chain without this trusted head detects interior
+tampering but not truncation to an old valid prefix. Lifecycle/authority events
+commit before a branch becomes active or a capability becomes usable. An
+effect's `prepared` record commits before dispatch; dispatch uses the stable
+idempotency key; and settlement records an authenticated receipt. The sink's
+linearizable query returns authenticated evidence of either the stored outcome
+or absence for that key. If a crash
+occurs after remote success but before settlement, recovery queries an
+idempotent/queryable sink by that key and appends the reconciled outcome. A
+non-idempotent, non-queryable, or dishonest sink leaves this case ambiguous and
+is explicitly outside the claimed refinement.
+
+This contract supports two candidate claims, not established results. An
+erasure theorem may show that ordinary traces identify too little state for
+sound-and-complete admission. A replay/refinement theorem must separately show
+that the enriched events reconstruct the initial `LifecycleState`, every
+abstract label and successor state, and each checker decision; the corresponding
+concrete edges must then form a `SimulatedTrace` under complete mediation,
+canonical certificate validation, the anchored durable head, and the stated
+sink assumptions. Dataset frequency and “logging the checker state” prove
+neither claim; an irredundancy or information lower bound is still needed for a
+distinct observability contribution.
+
+## 8. Minimal integration experiment
+
+The paper first needs one dispatch-owning adapter, not a large benchmark. Codex
+App Server supplies a native thread fork, a source-history boundary, and a
+client-owned dynamic-tool dispatch. It does **not** natively supply all of the
+paper's Restore/Merge meanings. The harness therefore owns this explicit
+mapping:
+
+- **exclusive/parallel Fork:** call the native thread-fork operation, then
+  register the returned thread as a fresh branch epoch under an adapter-owned
+  exclusive or parallel descriptor; the native verb alone does not choose the
+  authority topology;
+- **replacing Restore:** fork/copy the selected source boundary into a fresh
+  logical epoch and crash-atomically retire the source before activating the
+  target;
+- **live Restore:** copy the same boundary into a fresh epoch while retaining
+  the source as active;
+- **Merge:** invoke an adapter API with the target histories, canonical
+  serialized lineage projection/transfer certificate, contract hash, and
+  artifact hashes. This is a prototype operation over Codex histories, not a
+  claim that App Server exposes a native semantic Merge.
+
+One persistent mock sink is a map keyed by stable `effect_id` and idempotency
+key. Its linearizable query returns authenticated outcome or absence evidence.
+Each effectful YAML case
+names exactly one `dispatch_site` and one of four modes: `none`;
+`before_dispatch` (after admission/Prepare, before the sink call);
+`after_remote_success` (after the sink commits, before settlement append); or
+`after_controller_commit` (after settlement append, before the tool reply).
+Topology-only cases have no crash mode. This removes ambiguity about which of
+several calls receives a fault.
+
+The complete 20-case matrix is:
+
+| Case | Base | Named site / operation | Crash mode | Required terminal state / decision |
+|---|---|---|---|---|
+| C01 | L1 | `e1.initial` | `none` | exactly one sink outcome and settled receipt for `e1`; reject fresh `e2` |
+| C02 | L1 | `e1.initial` | `before_dispatch` | zero sink outcomes at crash; recovery reuses `e1`, dispatches once, settles exactly one outcome, then rejects fresh `e2` |
+| C03 | L1 | `e1.initial` | `after_remote_success` | one sink outcome at crash; recovery queries by key and settles it without a second outcome, then rejects fresh `e2` |
+| C04 | L1 | `e1.initial` | `after_controller_commit` | one outcome and settled receipt at crash; retry returns that receipt without redispatch, then rejects fresh `e2` |
+| C05 | L10 | `left.e1.initial`; then `right.e2` | `none` | exactly one left outcome/receipt; reject right `e2` |
+| C06 | L10 | `left.e1.initial`; then `right.e2` | `before_dispatch` | zero outcomes at crash; recover left `e1` to exactly one outcome/receipt; reject right `e2` |
+| C07 | L10 | `left.e1.initial`; then `right.e2` | `after_remote_success` | reconcile the one left outcome without duplication; reject right `e2` |
+| C08 | L10 | `left.e1.initial`; then `right.e2` | `after_controller_commit` | return the committed left receipt without redispatch; reject right `e2` |
+| C09 | L13 | prepared `e.initial_after_revoke` | `none` | settle sealed `e` exactly once; reject fresh Prepare `e2` |
+| C10 | L13 | prepared `e.initial_after_revoke` | `before_dispatch` | zero outcomes at crash; recover/dispatch sealed `e` to exactly one settlement; reject fresh `e2` |
+| C11 | L13 | prepared `e.initial_after_revoke` | `after_remote_success` | reconcile the one sealed outcome without duplication; reject fresh `e2` |
+| C12 | L13 | prepared `e.initial_after_revoke` | `after_controller_commit` | return the committed receipt without redispatch; reject fresh `e2` |
+| C13 | L8 | replacing Restore, then fresh Reserve | no crash | accept Reserve |
+| C14 | L8 | live Restore from the same bytes, then fresh Reserve | no crash | reject Reserve |
+| C15 | choice Fork, `G=1` | one conditional unit Reserve in each child | no crash | accept both alternatives; never settle both |
+| C16 | parallel shared grant lineage | `c1` and `c2` map to the same one-unit grant; Reserve in order | no crash | accept `c1` and reject `c2` |
+| C17 | parent escrow, `G=1` | two pure children, select `c1`, transfer, Prepare | no crash | accept selected `c1` Prepare |
+| C18 | parallel distinct grant lineages | transfer separate one-unit fragments `g1`/`g2` to `c1`/`c2` | no crash | accept both Reserves |
+| C19 | certified Merge, `G=1` | retain one selected claim and retire alternatives | no crash | accept Merge |
+| C20 | direct Merge, `G=1` | retain both alternative unit claims | no crash | reject Merge |
+
+A baseline may reject a prerequisite before reaching the named final operation;
+the runner records that earliest divergence as a safe or unsafe rejection
+rather than fabricating a state the policy cannot reach. Every case is replayed
+under the same two independent comparison axes:
+
+**Observation ablations**
+
+- `O0`: checkpoint/workspace state only; the monitor may use no session or
+  durable event history;
+- `O1`: `O0` plus provider session/call/result telemetry;
+- `O2`: `O1` plus the trusted lifecycle, authority, and effect replay events
+  above.
+
+These ablations do not define an enforcement policy. They project the complete
+oracle-labeled histories, not policy runs truncated by an earlier rejection.
+Admission is a function of both an observed prefix and the proposed next
+action, so the executable fiber key is
+
+```text
+K_i(prefix, action) = (α(O_i(prefix)), normalize(action)).
+```
+
+Here `α` replaces run-local thread/session/span/call/effect spellings by
+namespace-specific first-occurrence names, preserves equality/alias structure
+and event order, removes absolute timestamps/collection time, and hashes
+canonical tool arguments after secret redaction. `normalize(action)` applies
+the same renaming and fixes the operation kind, source role, typed demand,
+binding, and same-versus-fresh operation relation. Time-based expiry is outside
+the fixed suite; a later timed model must retain logical policy time. Raw IDs
+or timestamps are never used as an equality key.
+
+For each `Oi`, group controlled cases by `K_i` and count *mixed-label fibers*:
+one key containing pre-states with different oracle decisions. The three
+required witness fibers are:
+
+| Witness | Paired prefixes and identical normalized next action | `O0`/`O1` relation | Opposite labels | `O2` discriminator |
+|---|---|---|---|---|
+| topology | C13 vs C14 before `Reserve(restored, fresh-claim, 1)` | same reconstructed bytes and alpha-normalized provider trace | accept vs reject | source epoch active/retired and replace/live lineage |
+| authority | C16 vs C18 after `Reserve(c1,1)`, before `Reserve(c2,1)` | same parallel-fork/call trace; grant mapping erased | reject vs accept | shared grant versus distinct fragment lineages |
+| effect | C02 vs C03 immediately after crash, before `FinalizeAbort(e1)` | same tool request with no result after alpha-normalization | accept only when the sink proves no dispatch; reject after remote success | stable effect phase plus authenticated absence/receipt evidence |
+
+Each paired YAML case issues the named admission request as a non-mutating
+probe, records the oracle and monitor labels, and then follows its required
+terminal recovery path. Thus the effect probe does not replace C02/C03's
+mandatory eventual settlement.
+
+`O0` and `O1` are expected to contain such fibers, so decoder ambiguity,
+abstention, and wrong decisions are results rather than run failures. `O2` must
+have no mixed-label fiber in the suite, reconstruct the genesis
+`LifecycleState` plus every abstract label/successor, and reproduce every
+checker decision; the concrete edges can then be checked as a
+`SimulatedTrace`.
+
+**Admission policies**
+
+The YAML supplies ground-truth logical effect names only to the oracle. All
+policies use the same sink and crash protocol. `P1`--`P3` also share the same
+durable effect state machine: Prepare and stable idempotency precede dispatch;
+recovery queries uncertain attempts; a prepared ticket survives revocation and
+may settle once; new Prepare after revocation is rejected. The policies differ
+only in authority/topology admission. `P0` deliberately lacks this layer and is
+the end-to-end workspace-only baseline.
+
+| Policy | Complete transition rule for the fixed suite |
+|---|---|
+| `P0 workspace-only` | Fork/Restore copies rollbackable local state; replacing Restore retires the source runtime thread, live Restore keeps it, and Merge combines artifacts without authority admission. A current local revoke bit blocks a call, but restoring an older checkpoint restores the old bit. There are no durable tickets or receipts; every retry uses the new provider call ID as its sink key and every locally open call is admitted. |
+| `P1 split-all` | At any exclusive or parallel Fork with remaining vector `R` and children ordered by branch ID, each coordinate uses `divmod(R[k], n)`: every child gets the quotient and the first remainder children get one extra. Replace moves the source budget to the fresh epoch; live Restore applies the same deterministic split to the source and copy. Merge retires every input and transfers the sum of their unspent, disjoint local budgets; a Merge retaining a live input is rejected. Revoke closes all local budgets for new Prepare; the shared prepared-ticket rule still permits one settlement. |
+| `P2 parent-escrow` | Fork gives children zero protected capacity and leaves the remainder at the parent. Pure computation is allowed; `Select(c)` atomically retires siblings and transfers capacity to exactly one child before Prepare. Replace moves a selected branch's allocation or copies an unselected pure candidate; live Restore returns unprepared capacity to escrow and requires a new selection while existing prepared tickets remain sealed. Merge is accepted only as selection of one authority-bearing lineage while retiring the others; combining several authority-bearing lineages is rejected. Revoke/retry use the shared ticket rule. |
+| `P3 authority-continuity` | Apply the checked canonical Fork/Restore/Merge rules, retain a correlated coordinator unless residual rectangularity permits exact delegation, and require a durable stable ticket before every protected dispatch. Revoke, Retry, Crash, and settlement follow the checked lifecycle/effect rules. |
+
+The independent oracle encodes the existing litmus expectations: L1 keeps the
+previous durable charge and rejects fresh duplicate authority; L8 admits fresh
+Reserve after replacing Restore and rejects the equal-byte live case; L10
+rejects the second jointly durable one-use effect even though both transactions
+are individually valid; and L13 lets a prepared operation settle once after
+revocation while rejecting
+a fresh Prepare and treating retry as the same operation. The sink oracle
+additionally checks one aggregate outcome per `effect_id` and reconciles every
+success-before-commit crash from its receipt. The oracle reads only the suite
+specification and sink snapshots, not the controller's verdict.
+
+The planned reproducibility interface is:
+
+```bash
+python -m trace_study.scan \
+  --manifest trace-study/datasets.lock.json \
+  --output artifact/results/trace-study.json
+python -m adapter.codex_litmus \
+  --suite adapter/litmus.yaml \
+  --runtime-lock adapter/runtime-lock.json \
+  --raw-dir adapter/results/raw \
+  --output adapter/results/litmus.json
+python -m adapter.check_results \
+  --suite adapter/litmus.yaml \
+  --input adapter/results/litmus.json
+```
+
+These commands are completion contracts, not claims that the modules already
+exist. `datasets.lock.json` records dataset revisions/checksums;
+`runtime-lock.json` records the App Server revision, protocol feature flags,
+dependency lock, and host environment. Completion requires all three commands
+to exit zero and retain the observation projections plus all 20 cases under all
+four policies (80 policy runs), raw events, receipts, sink snapshots, and
+durable heads. `O0`/`O1` mixed-label fibers are expected and must be reported;
+`O2` must replay all abstract states/labels without a mixed-label fiber. Every
+`P0`--`P2` false accept/reject is classified against the independent oracle;
+only `P3` is required to match every suite decision, admit zero unsafe history,
+and produce zero duplicate aggregate sink outcomes. Safe rejections for every
+policy remain explicit. Only after correctness is reported should the study
+measure ledger writes and hook latency. Claude Code through a mandatory MCP
+proxy is a later portability check, not a second unfinished prototype.

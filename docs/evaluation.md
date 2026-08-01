@@ -1,6 +1,6 @@
 # Evaluation Contract
 
-**Status:** theory-first CSF 2027 evidence plan and repository truth as of 2026-07-31. A number is a result only when a checked-in command reproduces it.
+**Status:** theory-first CSF 2027 evidence plan and repository truth as of 2026-08-01. A number is a result only when a checked-in command reproduces it.
 
 ## 1. Evidence hierarchy
 
@@ -177,3 +177,132 @@ BUILD_AND_EVALUATE Step 0002 tested the exact uncertainty left by the first mixe
 - Paper decision: report a finite abstract-lifecycle mechanization. Explicitly limit fragments to preallocated source-`unissued` IDs and exclude Boundary I/II, complete mediation, natural-language binding, aggregate sink truthfulness, and deployed-runtime refinement.
 - Raw evidence: `lean/results/topology-preflight.log`, `lean/results/topology-build.log`, `lean/results/topology-axioms.log`, and the independent review under the step directory.
 - Next gate: a dispatch-owning adapter plus fixed crash/retry/fork/restore histories must test the concrete refinement hypotheses. Public agent traces should guide workload selection and expose telemetry gaps, not stand in for this gate.
+
+## 8. Real-trajectory study before the adapter
+
+The trace study has two sharply separated objectives:
+
+1. **Workload:** measure how often observable agent histories contain
+   checkpoint/continuation, subagent or fork-like execution, Git topology
+   change, retry/failure, and commands that may escape the workspace.
+2. **Observability:** audit which fields required by the refinement theorem can
+   be reconstructed from ordinary trace schemas. This is a schema result, not
+   a claim that every outward-looking command caused a real external effect.
+
+### Corpus and access
+
+- Primary natural corpus: SWE-chat, once its gated access conditions are
+  explicitly accepted. Analyze all 5,851 deduplicated sessions and join
+  conversations, sessions, checkpoints, and commits by the published IDs.
+- Public fallbacks and schema controls: the 1,781 Agent LLM OpenTelemetry traces
+  and Microsoft Orchard's 107,185 SWE trajectories plus 3,070 GUI prefixes.
+  Orchard is public/ungated at pinned revision
+  `70c05ec1f20f823ae6adc60374922e9271bb74e2`; one SWE row/schema was inspected,
+  not the full 9.72 GB corpus. General AgentBench is an additional gated
+  cross-domain corpus, not a substitute for in-the-wild data.
+- Failure taxonomy: AgentRx and coding-agent-misalignment guide manual labels;
+  they are not counted as complete lifecycle trajectories.
+- No gated corpus may be reported as analyzed until access is actually granted
+  and the exact files/checksums are retained. The current environment has no
+  Hugging Face authentication.
+- Treat the released sessions as human-derived data even when public and
+  redacted: follow dataset terms, do not resolve or join user identities, avoid
+  publishing raw prompt/code excerpts, aggregate command statistics, and seek
+  institutional ethics/IRB guidance before the full study when applicable.
+
+### Deterministic detectors and audit
+
+Parse structured tool fields first. For shell commands, use a versioned parser
+to identify `checkout`, `reset`, `revert`, `stash`, `rebase`, `merge`,
+`worktree`, `push`, deployment/package commands, database clients, and common
+network/API clients. Treat these as candidate operations, not semantic ground
+truth. Deduplicate tool-use/result pairs by the dataset's call ID and retain
+unmatched calls, errors, and repeated argument hashes as uncertainty/retry
+signals. Agent LLM Traces stores calls/results inside cumulative message JSON,
+so deduplicate by call ID before counting and do not interpret LLM-span status
+as normalized tool-dispatch truth.
+
+Before a full census, manually label a stratified sample containing detector
+positives, errors/retries, checkpoints, and random negatives. Report detector
+precision/recall with Wilson intervals and publish the annotation rubric.
+Never use an LLM-only label as the source of a safety result.
+
+### Primary outputs
+
+- session and call counts for each observable lifecycle/effect-candidate class;
+- distributions of subagent fan-out, checkpoints, repeated calls, and the
+  distance from error or missing result to retry;
+- a field-coverage matrix for `history_parent`, `source_boundary`, branch epoch
+  and liveness, Merge projection, grant/claim identity and status, stable
+  protected `effect_id`, Prepare/Dispatch/uncertain/settled phase, and external
+  receipt/outcome;
+- minimal real trace excerpts that select the controlled litmus workload, with
+  repository/user content redacted according to dataset terms.
+
+The target safety metric is not “number of unsafe traces,” because the missing
+fields make that label unidentifiable. The honest result is workload prevalence
+plus the fraction of required theorem fields that are explicit, inferable only
+under an assumption, or absent.
+
+### Instrumented complement
+
+Run the fixed 20 deterministic histories specified in
+`docs/runtime-integration.md` through a Codex App Server client whose
+dynamic-tool handler owns one mock remote service. The sink must be idempotent
+and queryable by stable `effect_id`, return authenticated receipts, and expose
+external state to an oracle. Inject crashes before dispatch, after remote
+success before durable controller commit, and after commit before reply. A
+non-queryable or dishonest sink is outside the refinement claim rather than
+silently treated as exactly-once.
+
+Keep information and enforcement comparisons separate.
+
+**Observation ablations**
+
+- `O0`: workspace/checkpoint state only;
+- `O1`: `O0` plus ordinary session/call/result telemetry;
+- `O2`: `O1` plus trusted lifecycle, authority-lineage, and effect-lifecycle
+  events in an anchored, self-contained replay bundle.
+
+Admission depends on a prefix and the proposed next action. Therefore use the
+key `K_i=(alpha(O_i(prefix)), normalize(next_action))`: alpha-rename run-local
+IDs by first occurrence while preserving alias structure/order, remove
+absolute timestamps, redact/hash canonical arguments, and normalize the action
+kind, source role, demand, binding, and same/fresh-operation relation. Group
+only equal keys and count fibers containing different oracle decisions; never
+compare raw unique run IDs or different requested actions. The required pairs
+are C13/C14 before the same Reserve (topology), C16/C18 before the same second
+Reserve (authority), and C02/C03 before the same `FinalizeAbort(e1)` (effect).
+Such mixed-label fibers, decoder abstentions, and wrong decisions are expected
+evidence of `O0`/`O1` insufficiency, not experiment failures. `O2` must
+reconstruct the genesis `LifecycleState`, each abstract label/successor and
+checker decision; the corresponding concrete edges must then check as a
+`SimulatedTrace`. The
+formal target is not merely the existing replace/live pair: give independent
+topology, forked-grant-lineage, and effect witness families for `O1`, test
+componentwise necessity of the `O2` event classes, and prove replay
+sufficiency under complete mediation, certificate validation, a trusted
+durable head, and the sink assumptions. Without an irredundancy/lower-bound or
+observation-quotient result, this remains supporting instrumentation.
+
+**Admission-policy baselines**
+
+- `P0 workspace-only`: admit locally well-formed operations and rely on rewind;
+- `P1 split-all`: permanently partition remaining capacity among live children;
+- `P2 parent-escrow`: retain capacity centrally and transfer once after winner
+  selection, rejecting protected pre-selection dispatch;
+- `P3 authority-continuity`: use the checked correlated controller and stable
+  pre-dispatch tickets.
+
+Use the exact 20 named cases, dispatch sites, and complete baseline transitions
+in `docs/runtime-integration.md`. Report observation-fiber ambiguity separately
+for `O0`--`O2`, then classify each `P0`--`P2` decision as a true/false
+accept/reject against the oracle; baseline disagreements are expected results.
+Only `P3` must match every suite decision, admit zero unsafe history, and
+produce zero duplicate aggregate sink outcomes. The controller's verdict is
+not its own oracle: L1/L8/L10/L13 expectations and the mock sink's before/after
+snapshots determine correctness. Retain dataset/runtime locks, all 80 policy
+runs, raw histories, receipts, durable heads, and JSON summaries at the paths
+defined in `docs/runtime-integration.md`; only then report latency and durable
+write overhead. Claude Code through a mandatory MCP proxy is a portability
+check after the Codex path, not a second unfinished prototype.
