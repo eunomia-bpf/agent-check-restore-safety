@@ -65,6 +65,12 @@ Thus an authority claim is not only an identity, binding, owner, and quantity. I
 
 This is the conceptual difference from both a flat capability ledger and a workspace safety model.
 
+The corresponding authorization state is not just a scalar “remaining budget.” For one fresh reservation on branch \(b\), the exact answer is the minimum headroom over every still-permitted future containing \(b\). For a batch across branches, the exact state is a correlated downward-closed region of additional branch-indexed demands. Exclusive and parallel contracts can expose the same per-branch headroom while accepting different batches. This correlation is why a checkpoint containing only local capability balances cannot precisely authorize later fork, merge, or parallel delegation.
+
+The correlated residual region has an operational advantage: in the Reserve-only fragment, accepting a batch \(x\) updates the residual by residuation, retaining exactly those \(y\) for which \(x+y\) was previously admitted. Per-branch headroom lacks this update property. Lifecycle transformations then act on this residual structure: selection restricts it, live restore and merge change its correlation, and escape changes both durable load and the support policy.
+
+There is an exact boundary for turning this correlated object back into conventional branch-local capabilities. Let \(\operatorname{Box}(H)\) be the product of every supported branch's headroom interval. The residual factorizes iff the all-headroom corner satisfies every permitted durability configuration. Only then can noncommunicating branch checkers be simultaneously sound for arbitrary concurrent Reserve and complete for each branch in isolation. If the criterion fails, a runtime must preserve a shared coordinator/escrow, reduce at least one delegated capability, or restrict which descendants may coexist. Choice can pass this test while a live restore or merge that turns the same branches parallel fails without changing either local balance.
+
 ## 4. The system is a lifecycle-aware authorization settlement layer
 
 The trusted path has three cooperating mechanisms:
@@ -104,9 +110,15 @@ The novelty should not be claimed for any one ingredient. The paper-level object
 
 A concrete runtime contains payloads, queues, logs, epochs, receipts, and scheduler detail. The abstraction \(\alpha\) keeps only the facts relevant to authorization. A soundness theorem can then show that an abstract authority-continuous state covers every concrete resolution even when the future family conservatively over-approximates reality. A reverse result needs stronger exactness and joint-realizability assumptions and must not be advertised generally.
 
-### Weakest safe transformations
+### Exact safe transformations and representation boundaries
 
-Instead of merely rejecting an unsafe escape, the semantics derives the largest subfamily of old futures that remains safe. This is a weakest-precondition result for a history transformation. It also exposes when no topology-only repair exists, when simple durable selection is conservative, and when independent promotions may be serialized without changing policy.
+Instead of merely rejecting an unsafe escape, the semantics derives the largest abstract subfamily of old futures that remains safe. The nontrivial implementation question is whether that family can still be represented by the runtime's contract language. Promotion can turn a choice/parallel tree into a higher-order constraint that permits every pair of three branches while forbidding their triple. A threshold row represents this exact restriction compactly. Freezing enforces a no-silent-policy-expansion/audit rule; a later load decrease may justify explicit safe re-admission, but must not mutate a past durable decision. A zero-preserving lineage projection transports the row across later fork, restore, and merge, with predicate-circuit size counted in the representation.
+
+This exposes two semantic costs that an allow/deny API hides. First, filtering can remove owner support or an old co-durability configuration, both of which must be reported. Second, abstract batch filters may commute while operational serialization fails because the first repair tombstones the owner of a later effect. Final-owner support is necessary and sufficient for every ordering of atomic per-owner groups to remain enabled; otherwise arbitrary order is not guaranteed, so the runtime must validate an order, coordinate cleanup, or seal the fixed batch before dispatch.
+
+### Certificate-checked refinement
+
+A topology-changing adapter must preserve durable consumption, terminal IDs, receipts, and inflight/uncertain tickets; it then supplies a monotone, zero-preserving projection from target configurations to source configurations and an injective tentative-claim transfer. A local demand-dominance obligation proves that every target outcome is simulated by a solvent source outcome. Escape uses a different certificate: an exact frozen guard plus a one-shot durable effect ticket. These obligations define the abstract preservation proof; a concrete runtime theorem additionally requires a complete-mediation refinement.
 
 ### Counterexample generation and mechanization
 
@@ -120,13 +132,21 @@ Subject to explicit assumptions, the formal layer can establish:
 |---|---|---|
 | Authority-continuity soundness | every lifecycle-permitted durable outcome fits the typed grant | actual outcomes are contained in the trusted future contract; bindings and claim identities are valid |
 | Conditional completeness | an abstract violation corresponds to a concrete insolvent resolution | exact future family and jointly realizable conditional bundles |
+| One-branch headroom characterization | minimum slack over configurations containing a branch accepts exactly its fresh Reserve proposals | safe source state, supported owner, additive coordinate-complete demands, fixed topology |
+| Headroom non-updateability | equal per-branch balances can lead to different successor balances after the same accepted Reserve | controller retains only headroom and loses cross-branch correlation |
+| Correlated residual controller | the downward residual region accepts exactly all Reserve batches and updates by \(\mathcal R_{\Sigma+x}=\{y\mid x+y\in\mathcal R_\Sigma\}\) | fixed-topology Reserve-only fragment, common structural signature, and nonnegative additive demand |
+| Exact decentralization boundary | a Cartesian product of noncommunicating branch-local budget checkers is concurrently sound and one-branch complete iff the residual equals the product of its headroom projections | fixed-topology batch Reserve, supported branches, common structural signature |
+| Knowledge-safe one-step checker | intersecting structural acceptance and residual profiles is the greatest sound checker for one observation fiber | memoryless one-step decisions; full precision requires identical concrete acceptance sets, not merely identical snapshot bytes |
 | Snapshot-local impossibility | restored bytes alone cannot support both sound and maximally permissive admission | replace/live worlds can expose the same local observation; checker lacks durable lifecycle facts |
 | Claim conservation | fork/restore cannot duplicate an issued claim and terminal IDs cannot revive | fresh global IDs, linearized ledger updates, no bypass |
 | Non-resurrection | restore cannot reopen a closed branch or grant epoch or erase durable consumption | monotone durable ledger and epoch fencing |
-| Maximal escape support | after promotion, the computed filter is the unique largest old future family safe without new capacity or other cancellations | finite downward-closed family, additive nonnegative demand, fixed bindings and grant |
-| Promotion confluence | disjoint promotions yield the same maximal surviving family in either order | unique claims and monotone support expansion |
+| Compact promotion closure | one vector-threshold row exactly represents the largest topology-only safe pruning for fixed claims | finite downward-closed contract, additive nonnegative demand; freezing additionally assumes no silent policy expansion |
+| Base-contract non-closure | promotion can create a higher-order conflict not representable by choice/parallel or pairwise conflict | unique-leaf base grammar and the stated four-branch witness |
+| Owner-liveness criterion | exact pruning preserves one support witness per owner iff each owner occurs in the repaired family | this does not preserve every prior co-durability correlation, which must be reported separately |
+| Guard transport | lineage substitution preserves the meaning of durable guards across lifecycle refinement | adapter supplies a truthful monotone, zero-preserving projection and pays for its predicate circuit |
+| Universal owner-group serializability | every owner-group ordering remains enabled and reaches the atomic denotation iff every promoted owner has final support | valid batch, exact prefix guards, fixed lifecycle state, deterministic immediate cleanup |
 | Structured checker correctness | choice uses max, parallel uses sum, exactly matching enumerated frontiers | unique leaves and the structured contract grammar |
-| Trace safety | every admitted transition sequence preserves the invariant | all relevant operations go through the controller and gate; crash atomicity satisfies the modeled order |
+| Trace safety | every protected effect has one matching durable claim before dispatch and every trace prefix preserves authority continuity | all relevant operations go through the controller and gate; local simulation/guard certificates hold; crash atomicity satisfies the modeled order |
 
 These are conditional security guarantees, as all meaningful systems theorems are. Their value is that the conditions identify the TCB and produce separating tests rather than remaining hidden in prose.
 

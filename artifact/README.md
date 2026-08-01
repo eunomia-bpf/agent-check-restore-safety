@@ -1,9 +1,32 @@
 # Executable authority-continuity validation
 
 This directory contains a dependency-free Python model of the paper's finite
-authority-continuity state.  It is executable validation, not a mechanized
-proof.  In particular, passing bounded enumeration does not replace the paper
-proofs or the planned Lean development.
+authority-continuity state and frozen threshold-guard lifecycle contracts.  It
+is executable validation, not a mechanized proof.  In particular, passing
+bounded enumeration does not establish the paper's unbounded theorems.
+
+The model computes per-branch headroom as the componentwise minimum slack over
+configurations containing that branch.  A reservation batch is a canonical
+branch-indexed demand vector.  The enumerated residual profile contains exactly
+the batches in a finite component box that keep every configuration solvent.
+The unbounded membership predicate remains separate from this enumeration.
+
+A frozen guard has nonnegative vector coefficients and a residual budget.  Its
+terms refer to stable lineage predicates: retaining any current descendant of a
+lineage charges the frozen coefficient once.  Coefficients do not track later
+changes to `Q`; changing them would silently change a durable lifecycle
+decision.  Live restore transports a lineage predicate with OR semantics rather
+than copying its charge to both continuations.
+
+The model also includes selected rules of a crash-persistent lifecycle state with grant epochs,
+prepared/inflight/uncertain tickets, settled receipts, and explicit terminal
+claims.  Its rules cover atomic Prepare, Dispatch and same-ID Retry attempts,
+crash recovery, Settle, Revoke, and certified fork/restore transformations.
+The monotone tombstone set is the artifact's finite representation of closed
+branch epochs: a tombstoned branch may not retain a tentative claim or Prepare
+one, re-enter contract support, or be reused as a supposedly fresh descendant.
+The artifact does not implement lifecycle Reserve, Select/Abort, generic
+Merge certificates, or the complete paper LTS.
 
 Run the unit tests and deterministic exhaustive explorer from this directory:
 
@@ -20,12 +43,107 @@ python3 explore.py --output results/exhaustive.json
 
 The explorer enumerates every nonempty downward-closed frontier family on one
 to three branches, scalar claim weights 1--2, durable demand 0--1, and grants
-0--7.  It checks:
+0--7.  Its headline source-state population satisfies an explicit owner-support
+well-formedness predicate: every conditional claim's owner must occur in at
+least one admitted frontier.  A separate 2,816-state raw algebra scan includes
+unsupported-owner states only as a transcription diagnostic; it is not
+headline theorem evidence.  The well-formed scan contains 1,312 states, of
+which 730 are safe source states.  It checks:
 
 - the universal-frontier and componentwise-need formulations of AC agree;
+- direct single-branch Reserve admission agrees with the headroom test;
+- direct batch admission agrees with correlated residual-profile membership;
+- the exact residual is the rectangular product `Box(H)` exactly when the
+  all-headrooms corner satisfies every configuration-slack inequality; the
+  fixed choice state is rectangular and the fixed parallel state is not;
+- choice and parallel states can have equal headroom but different residual
+  profiles and divergent successor headroom;
+- the Reserve derivative agrees with
+  `R(successor) = {y | x + y in R(parent)}` on every enumerated successor
+  batch;
+- the bounded knowledge-set checker equals the intersection of its states'
+  residual profiles;
 - maximal single-claim promotion support is nonempty, downward closed, safe,
   and contains every safe downward-closed topology restriction;
-- maximal repairs for disjoint claim batches are independent of serialization;
-- identical snapshot-local Reserve observations require opposite decisions in
-  replace and live-restore worlds; and
+- a compact frozen guard admits a frontier exactly when the explicit maximal
+  safe-support filter admits it;
+- maximal repairs for adjacent disjoint claim batches are independent of
+  serialization, both as explicit families and guarded contracts;
+- promotion in `b choice (x parallel y parallel z)` produces the higher-order
+  family `U(2,3)`: every pair is allowed but the triple is not.  No pairwise
+  conflict graph, hence no cograph lifecycle contract, represents this family;
+- recomputing guard coefficients from current `Q` after withdrawal incorrectly
+  reopens a previously excluded triple, while a frozen guard does not;
+- OR-lineage transport after live restore charges an old/restored pair once,
+  whereas naively copying the guard term charges it twice;
+- under final-owner support, an exact guarded batch and both serial orders
+  produce the same state and the same denotational support (guard syntax need
+  not agree).  When final-owner support is absent, mandatory cleanup makes the
+  `s`-first order disable the `t` step, while the enabled `t`-first order reaches
+  the atomic batch's cleaned state and denotational support;
+- abstract exact-promotion confluence still does not justify a witnessed
+  shortcut that conditions on the first owner: that shortcut can tombstone the
+  next owner and terminalize the claim needed by the second escape;
+- the snapshot-local litmus constructs the actual replace pre-state with empty
+  `Q` and the actual live-restore pre-state with a one-unit old claim, then
+  applies the same fresh `Reserve(restored, 1)` proposal to both.  The replace
+  successor has need one and is accepted, whereas the live successor has need
+  two and must be rejected; and
 - plain escape can turn a safe exclusive choice into an unsafe state.
+- the lifecycle recovery graph rejects Dispatch-before-Prepare, preserves
+  prepared work across crash, maps inflight to uncertain, reuses the same
+  stable operation ID and claim on Retry, retains durable accounting on
+  cancellation, and permits a sealed operation to dispatch after Revoke; and
+- certified replace/live restore and choice/parallel fork preserve receipts,
+  prepared/uncertain tickets, lineage guards, and per-frontier load dominance.
+
+The deterministic v5 exhaustive counts are 6,180 single-branch demands,
+17,658 batch memberships, 4,067 accepted derivative prefixes and 103,785
+successor memberships, and 730 headroom-box criterion checks (296 rectangular,
+434 nonrectangular).  It also checks 2,060 single-claim promotions and 22,246
+safe topology restrictions, 2,060 frozen-guard repairs with 11,142 frontier
+memberships, and 6,312 ordered disjoint batches for each of the explicit and
+guarded confluence checks.  The recovery graph contains 8 phase/epoch states
+and 22 valid edges, and structural simulation checks 26 target frontiers across
+four fork/restore modes.  All source-state-derived counts use the owner-support
+filter.  The unit suite contains 24 tests.
+
+For each rectangularity case, the explorer enumerates residual components
+through that source's maximum headroom component.  This contains all of
+`Box(H)`; moreover, every residual batch is componentwise bounded by the
+single-branch headrooms.  The equality check therefore does not acquire the
+fixed-box truncation artifact discussed below.
+
+The guarded contract stores base frontiers explicitly only because this explorer
+uses at most three branches.  This is not a proposed runtime representation.
+Larger implementations can keep the structured contract and frozen guards in a
+PB/ILP solver or compile them to a decision diagram; exact global admission is
+not assumed to remain linear after threshold guards introduce higher-order
+constraints.
+
+## Bounded derivative convention
+
+The derivative check does not compare two profiles both truncated at the same
+bound.  For successor candidates `y` in `[0,M]^(B x K)` and an accepted prefix
+`x`, it enumerates the parent through component bound
+`M + max_component(x)`.  This larger box contains every queried `x + y`.
+Version 5 uses `M = 2`, prefix components in `0..1`, and therefore parent bound
+at most 3.  Treating an out-of-box `x + y` as rejected would be a truncation
+artifact, not a valid derivative check.
+
+## Anonymous supplemental package
+
+Do not submit the repository as the artifact: repository history and research
+notes are not anonymous.  Build the supplemental archive from this strict
+allowlist only:
+
+```sh
+tar --sort=name --owner=0 --group=0 --numeric-owner \
+  -czf /tmp/authority-continuity-artifact.tar.gz \
+  README.md authority_continuity.py explore.py \
+  test_authority_continuity.py results/exhaustive.json
+tar -tzf /tmp/authority-continuity-artifact.tar.gz
+```
+
+The archive must contain exactly those five files and no `.git`, `docs`, cache,
+bytecode, absolute path, or user metadata.

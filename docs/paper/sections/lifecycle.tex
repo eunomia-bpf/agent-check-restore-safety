@@ -31,7 +31,7 @@ They differ in durable branch eligibility and effect history, which must not be 
 
 \subsection{Why the state is heterogeneous}
 
-An agent's security state is not only a workspace or database.
+For the aggregate-authority property studied here, the relevant state is not limited to a workspace or database.
 At least four classes evolve under different authorities and rollback mechanisms:
 
 \begin{enumerate}[leftmargin=*,itemsep=1pt]
@@ -46,6 +46,12 @@ A database transaction may cover one external service but not another.
 Capability ownership may be local while revocation is remote.
 The safe rollback boundary is therefore a property of the composition, not a single storage technology.
 
+This changes the authorization object.
+Current-state reference monitors ask whether action \(a\) is allowed now.
+Rollback continuity asks whether one restored continuation extends an accepted prefix.
+History-transforming execution asks whether all promises in every set of outcomes that may still coexist can be honored.
+Intentional branching is the ordinary path rather than only a fault, and the runtime may rewrite the correlation among futures after claims already exist.
+
 \subsection{Attacker and trusted boundary}
 
 We treat model output and agent-controlled state as adversarial.
@@ -53,7 +59,7 @@ The adversary may request documented lifecycle operations, retain an old checkpo
 The adversary cannot forge issuer-approved claim bindings or directly modify the monotone ledger.
 
 The trusted runtime components are an issuer/policy, lifecycle controller, durable ledger, and effect gate.
-The controller must durably linearize branch eligibility, selection, restore, and merge.
+The controller must durably linearize authority-changing selection, restore, and merge.
 The gate must account for a claim before dispatch and either ensure once-only delivery or conservatively retain an uncertain consumption.
 If a runtime lets the agent assert “these branches are exclusive,” the theorem does not apply.
 
@@ -61,8 +67,15 @@ If a runtime lets the agent assert “these branches are exclusive,” the theor
 
 The model distinguishes staged and escaped effects, not reads and writes.
 A prepared payment held behind a trusted outbox is staged.
-A supposedly read-only query may disclose a secret, user intent, or branch existence to its provider and is therefore escaped at issue time~\cite{mohammadi2026ghost}.
+As Ghost Tool Calls observes, a speculative query can escape at issue time through provider-visible disclosure~\cite{mohammadi2026ghost}; in our model, disclosure or quota use is charged only when represented by a protected claim coordinate.
 An abort can delete staged state.
 It cannot make an observer forget or decide that an ambiguous network send never arrived.
 
-This distinction produces the paper's main non-obvious rule: exclusive branches may share conditional authority only while their effects remain conditional too.
+Once an effect escapes, its claim can no longer be charged only to its originating branch; the controller must promote it and re-admit the remaining family, acquire compatible capacity, or reject it.
+
+\subsection{Search and reinforcement learning}
+
+The calculus contains no reinforcement-learning primitive.
+An adapter may model a hermetic choose-one rollout as exclusive only when no protected effect escapes before selection.
+If artifacts from several rollouts are retained, the adapter must supply a merge projection and finite-vector demands for the authority being tracked.
+The results then apply to those supplied claims; they do not establish reward, policy-update, privacy-accounting, licensing, or provenance correctness.

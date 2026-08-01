@@ -4,10 +4,12 @@
 \paragraph{Consumable authority and capabilities.}
 Consumable Credentials combines linear authorization logic with a distributed ratifier so that copyable proof material cannot productively exercise use-limited authority more than once~\cite{bowers2007consumable}.
 Capability calculi and resource-aware type systems split resources across concurrent processes and prove global bounds~\cite{terauchi2006capability,das2018resource}.
+BI and separation-style semantics already provide general algebraic accounts of resource composition and residual implication~\cite{pym2004bi}.
 Capability-machine and architectural work provide linear ownership, delegation, and revocation foundations~\cite{yu2023capstone}.
 DisLog shows how a program logic can explicitly reason about nested fork-join structure~\cite{moine2024dislog}.
-We rely on, rather than rediscover, linear consumption and transfer.
+We rely on, rather than rediscover, linear consumption, transfer, and generic resource residuation.
 Our additional object is a runtime promise conditioned on which intentionally forked continuations may remain durable, and the change in that promise when restore, escape, or merge changes its support.
+For fixed-topology batch Reserve, we characterize exactly when its correlated residual compiles into a Cartesian product of noncommunicating branch-local budgets without sacrificing concurrent soundness or one-branch completeness.
 
 \paragraph{Rollback and fork continuity.}
 Memoir preserves protected-module state continuity with trusted history summaries and safe replay~\cite{parno2011memoir}.
@@ -19,16 +21,25 @@ Authority continuity asks which such non-linear histories can be honored togethe
 
 \paragraph{Concurrency and workflow structure.}
 Event structures supply standard causality, consistency, conflict, and configuration semantics~\cite{winskel1987event}.
-Our downward-closed frontier family is deliberately compatible with this foundation, but we do not claim configuration reasoning as new.
+Our downward-closed durability family is deliberately compatible with this foundation, but we do not claim configuration reasoning as new.
 Structured choice/parallel contracts induce the classical cograph/cotree representation~\cite{corneil1985cographs}.
 Workflow-net research already relates concurrency thresholds to resource demand and hard graph problems~\cite{meyer2018workflow}.
 We use these facts to choose an auditable runtime representation.
 The security contribution lies in the concrete lifecycle abstraction and irreversible promotion rules, not max/sum arithmetic or independent-set complexity.
 
+\paragraph{Supervisory control and guarded workflows.}
+Ramadge--Wonham supervisory control classically constructs maximally permissive controllable behavior~\cite{ramadge1987supervisory}.
+Under partial observation, standard observability is not union-closed and a supremal observable policy need not exist~\cite{cieslak1988partial}; relative observability restores union closure under a fixed ambient language~\cite{cai2015relative}.
+Our knowledge-intersection theorem is a one-step specialization, not a new full supervisor or nonblocking result.
+State-tree structures already combine hierarchical AND/OR state organization, predicates, BDDs, and symbolic supervisor synthesis~\cite{ma2006sts}; supervisory control has also been compiled into propositional guards for communicating transaction processes~\cite{feng2007ctp}.
+We therefore do not claim guards, state trees, or maximal permissiveness as new.
+Our result identifies security-specific online boundaries: conditional-to-durable authority promotion breaks the base policy representation, determines one exact row, and interacts with immediate branch cleanup so that algebraically commuting effects are universally serializable exactly under final-owner support.
+
 \paragraph{Transactions, recovery, and external effects.}
 Rollback-recovery work identifies the output-commit problem: external output must not become visible from a computation that recovery may later abandon~\cite{elnozahy2002rollback}.
+Crab recovers agent sandbox state across filesystems, processes, and runtime artifacts, including for forked RL rollouts, but its correctness target is reconstructed OS state rather than outstanding external authority~\cite{wu2026crab}.
 Modern durable execution, transactional outboxes, and sagas offer practical staging and compensation.
-Atomix separates agent execution, sealing, frontier checks, and settlement~\cite{mohammadi2026atomix}; Cordon defines task-scoped semantic transactions spanning tools and delegated work~\cite{chen2026cordon}; DART checks whether local recovery remains semantically valid after downstream commitment~\cite{yang2026dart}.
+Atomix separates agent execution, sealing, progress checks, and settlement~\cite{mohammadi2026atomix}; Cordon defines task-scoped semantic transactions spanning tools and delegated work~\cite{chen2026cordon}; DART checks whether local recovery remains semantically valid after downstream commitment~\cite{yang2026dart}.
 These systems determine which effects settle together and when recovery is consistent.
 Two transactions can nevertheless be individually valid while jointly exercising two claims from a one-unit grant.
 Authority continuity is an orthogonal authorization solvency condition, and it imports trusted staging rather than replacing transaction protocols.
@@ -36,7 +47,7 @@ Authority continuity is an orthogonal authorization solvency condition, and it i
 \paragraph{Agent lifecycles and authorization.}
 Fork, Explore, Commit provides nested branch contexts, first-commit-wins selection, and filesystem/process isolation~\cite{wang2026fork}.
 Agent libOS combines process identity, explicit capabilities, hierarchical budgets, child processes, checkpoints, and checkpoint-derived images~\cite{zhang2026agentlibos}.
-Commit-Time Authorization requires the evidence authorizing a durable effect to remain fresh, causally prior, bound, and eligible at settlement~\cite{santos2026committime}.
+Commit-Time Authorization requires the evidence authorizing a durable effect to remain fresh, causally prior, bound, and eligible at commit~\cite{santos2026committime}.
 Ghost Tool Calls treats issue-time observation from abandoned speculative calls as an effect~\cite{mohammadi2026ghost}.
 ACRFence identifies Action Replay and Authority Resurrection after agent restore~\cite{zheng2026acrfence}.
 

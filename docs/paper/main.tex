@@ -34,9 +34,8 @@
 \newcommand{\calF}{\mathcal F}
 \newcommand{\PhiD}{\Phi{\downarrow}}
 \newcommand{\papername}{authority continuity\xspace}
-\newcommand{\pending}[1]{\textbf{[Evidence pending: #1]}}
 
-\title{Authority Continuity for History-Transforming Agents}
+\title{Authority Continuity: Residual Contracts for Fork, Restore, and Merge}
 
 \author{\IEEEauthorblockN{Anonymous Authors}}
 
@@ -44,16 +43,16 @@
 \maketitle
 
 \begin{abstract}
-Agent runtimes increasingly fork, checkpoint, restore, and merge executions while their tools mutate resources outside the copied state.
-The resulting security problem is not ordinary workspace rollback: two byte-identical continuations can require different authorization depending on whether both may still commit, and a tool call from a losing branch remains observable after that branch is discarded.
-We introduce \emph{authority continuity}, a lifecycle contract for bounded authority in history-transforming executions.
-The central distinction is between a conditional commitment, which may be shared among mutually exclusive futures, and durable consumption, which every future must account for once an effect escapes.
-We give concrete lifecycle semantics for exclusive and parallel fork, checkpoint, two restore modes, abort, escape, revocation, and merge, together with an abstraction into typed claims over co-durable frontiers.
-We prove general abstraction soundness and state the additional exactness assumptions explicitly.
-We then show that no checker using only restored snapshot state can be both sound and maximally permissive: replacing and live restore can reconstruct identical bytes while requiring opposite authorization decisions.
-For effect escape, we derive the exact admission condition and the unique largest family of futures that can safely remain possible without new authority or cancellation of other claims; batched promotions yield the same weakest lifecycle restriction independent of order.
-Classical cograph and independent-set results then yield efficient admission for structured lifecycle contracts and explain the cost of less structured representations.
-A finite executable model validates the central algebra and separating executions by exhaustive enumeration of small states; mechanization and runtime integration remain explicit evidence obligations.
+Some emerging tool-using runtimes intentionally fork, restore, and merge executions while tools create effects outside copied state.
+Authorization must therefore govern a family of possible durable futures, not one current state: mutually exclusive branches may share a bounded grant, but an early tool call or later merge can make previously alternative claims contribute together.
+We introduce \emph{authority continuity}, which distinguishes branch-conditional commitments from durable consumption and requires every permitted durability configuration to remain funded.
+We give a certificate-checked lifecycle semantics in which topology changes simulate a solvent source and every protected effect has exactly one durable matching claim before dispatch.
+Our two main results are exact runtime boundaries.
+First, in the fixed-topology batch-Reserve fragment, the residual admission region factorizes into noncommunicating branch-local budget capabilities iff its all-headrooms corner is safe; otherwise a product checker cannot be both sound for concurrent batches and complete for every one-branch batch.
+Second, for a valid promotion batch with exact prefix guards, immediate cleanup, and no interleaved lifecycle change, every owner-group order succeeds iff every promoted owner remains supported after final repair.
+The first boundary decides when reservation may be decentralized; the second decides when promotion is order-independent or instead needs a verified order, coordinated cleanup, or atomic sealing.
+Residual derivatives, frozen threshold guards, and explicit lineage projections provide the supporting constructions.
+A finite executable model exhaustively checks these constructions, including crash/retry/revocation ticket traces, on small states.
 \end{abstract}
 
 \input{sections/introduction}

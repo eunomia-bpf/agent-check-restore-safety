@@ -2,51 +2,53 @@
 \label{sec:discussion}
 
 \paragraph{What is agent-specific?}
-The theory is intentionally reusable for adaptive runtimes.
-Agents make the problem qualitatively prominent for four reasons.
-They synthesize effect identities and arguments after restore rather than replaying a fixed instruction stream; they dynamically create branch and delegation structure; they mix local context with remote tools and human approvals; and they merge semantic artifacts whose provenance may span mutually exclusive searches.
-The security definition does not depend on model nondeterminism, but the runtime phenomena are no longer exceptional failure paths.
+The calculus applies to adaptive runtimes generally.
+Agents make history transformation a common workload: they synthesize fresh effect identities after restore, create delegation structure dynamically, combine local context with remote tools and human approvals, and merge semantic artifacts from formerly alternative searches.
+The new security object is the correlated residual over possible durable futures; calling the workload an agent does not make classical linearity, guards, or supervisory control new.
 
-\paragraph{Conditional guarantees are optional.}
-A flat ledger that serializes actual consumption can enforce bounded use without knowing branch topology.
-Our stronger contract matters when the runtime promises in advance that several alternatives can commit if retained.
-Pure candidates can always use delayed escrow.
-The paper does not claim topology-aware reservation strictly dominates it.
-Instead, it states exactly when the stronger promise is solvent and how early escape changes that promise.
+\paragraph{Capabilities and residual contracts}
+The residual contract matters when the runtime offers advance branch-local guarantees or admits joint lifecycle actions.
+Per-branch scalar/vector budget capabilities implement the headroom lemma but lose cross-branch correlation.
+For the fixed-topology batch-Reserve fragment, \cref{thm:rectangularity} is the exact test for a Cartesian product of noncommunicating branch-local budget checkers; nonrectangular residuals require coordination, conservative budgets, or topology restriction.
+A parent escrow safely avoids that problem for pure choose-one candidates.
+The paper therefore complements capability enforcement rather than replacing it.
 
-\paragraph{Trusted lifecycle evidence.}
-The controller's \(\Phi\) is security-critical.
-A system that cannot durably fence old continuations or attest selection cannot safely label a restore as replacing or branches as exclusive.
-It may fall back to parallel compatibility, delayed escrow, or refusal.
-This conservatism is a real deployment cost and should appear as false rejection or lost availability in evaluation.
+\paragraph{Runtime correspondence}
+Codex documents thread fork lineage and pre-tool interception through its App Server and hooks~\cite{codexappserver,codexhooks}; Claude Code documents distinct resume/fork sessions, checkpoint rewind, subagent/worktree events, and pre-tool hooks~\cite{claudesessions,claudecheckpoint,claudehooks}.
+These interfaces identify where an adapter could observe lifecycle events and interpose on selected tools; they do not instantiate the abstract state.
+Neither product's project hooks establish complete mediation: hosted or specialized paths may bypass them, and post-tool hooks cannot undo an effect.
+A production refinement needs an App Server/SDK client that owns dispatch, a mandatory MCP proxy, OS/network mediation, or product-level support.
+Our trace theorem deliberately makes this coverage obligation visible.
 
-\paragraph{Additive authority.}
-Typed natural-number vectors cover one-shot approvals, quotas, budgets, and independently substitutable bounded effects.
-They do not directly express temporal protocols, noncommutative obligations, disjunctive bundles, replenishing leases, or compensable authority.
-For bundled issuance, the componentwise least repair may be unrealizable or have incomparable minimal bundles.
-A richer authority algebra is future work; the concrete staging, support, and irreversibility distinctions should remain applicable.
+\paragraph{What the proof does and does not establish}
+Given truthful topology, typed bindings, complete mediation, crash-atomic durable updates, and demand bounds, the model proves claim conservation, non-resurrection, correlated Reserve admission, exact promotion repair, and trace-level authority solvency.
+It cannot establish that natural-language intent was bound correctly, that an LLM classifier is robust, that a workspace merge implies a particular lineage projection, or that a remote service executed exactly once or reports honestly.
+It proves neither usefulness of an authorized action nor confidentiality, liveness, fairness, and availability unless those are modeled separately.
 
-\paragraph{External atomicity.}
-The monitor accounts before dispatch.
-Without sink-side stable tokens, it may have to charge an operation whose outcome is unknown, preserving safety at the expense of liveness.
-It does not provide exactly-once effects at a Byzantine service.
-Compensation is not history erasure and requires an explicitly authorized compensating effect.
+\paragraph{Partial observation}
+Intersecting residual profiles gives the greatest sound one-step decision at a given observation.
+It is not a full solution to partially observed nonblocking supervisory control.
+An unobserved, ungated transition that can violate the invariant between checks invalidates one-step induction.
+Deployment therefore requires every authority-changing transition to pass the gate or to be included in the checker's uncontrollable closure.
 
-\paragraph{Confidentiality and obligations.}
-Issue-time disclosures are modeled as durable demand, but the current theorem is an integrity/solvency result.
-It does not quantify information leakage or track obligations incurred by using authority.
-Ghost-call privacy contracts and information-flow properties are complementary.
+\paragraph{Policy restriction is visible}
+An exact frozen guard may keep more futures than conditioning on the escaping owner, but it may also eliminate all support for another promise.
+The API must return \texttt{AcceptWithRestriction} with the guard, support witnesses, and induced cancellations; silently converting a tool authorization into branch cancellation changes program semantics.
+Finding a globally minimum cancellation set can be expensive; a monitor can instead return checkable violating configurations without promising an optimal explanation.
 
-\paragraph{Ethics.}
-The deterministic experiments use simulated payments, approvals, and services.
-No real third-party resource should be modified and no production credential should be replayed.
-Framework reports are used to establish lifecycle behavior, not to exploit deployed users.
+\paragraph{Authority algebra and external atomicity}
+Natural-number vectors cover bounded uses, quotas, and independently substitutable grants.
+Temporal protocols, replenishing leases, disjunctive bundles, noncommutative obligations, and compensable authority require richer algebras.
+Without a stable sink operation ID, Prepare may conservatively charge an outcome that never occurred, preserving safety at the expense of liveness.
+Compensation is a newly authorized effect, not deletion of history.
+
+\paragraph{Ethics}
+The executable study uses only finite mathematical states and simulated claims.
+It accesses no production credential, external account, third-party resource, or human subject.
+A runtime adapter should retain the same discipline: fixed simulated tool calls establish lifecycle correspondence without sending consequential requests.
 
 \section{Conclusion}
 
-Checkpoint safety is not achieved by rolling back more bytes.
-History-transforming runtimes must preserve the distinction between branch-conditional commitments and effects that have become part of every future's durable past.
-Authority continuity makes that distinction explicit.
-It permits useful exclusive speculation, proves why replacing and live restore cannot be authorized from identical snapshot bytes alone, exposes merge as an authorization event when it retains alternative commitments, and explains why a losing branch's escaped effect cannot be repaired by abort.
-For escape, the maximal-support construction retains exactly the futures that remain solvent; witnessed branch selection is a simpler conservative implementation.
-As agent execution grows richer, this lifecycle contract is a more stable foundation than treating every restored call as either a replay or a fresh branch.
+For the modeled aggregate-authority property, a copied checkpoint may omit the residual profile of futures still permitted to coexist.
+Boundary~I states exactly when that profile compiles into product-local budgets; Boundary~II states exactly when a promotion batch tolerates every owner-group order under immediate cleanup.
+Together with durable claims and explicit lineage projections, these boundaries yield a conditional admission discipline for modeled fork, restore, merge, and tool-using rollout: authority follows durable support, not copied state.

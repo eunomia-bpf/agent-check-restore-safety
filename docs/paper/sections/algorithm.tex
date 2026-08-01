@@ -1,63 +1,75 @@
-\section{Representing Lifecycle Contracts}
+\section{Threshold-Guarded Contracts}
 \label{sec:algorithm}
 
-The abstract definition accepts any finite downward-closed \(\Phi\), but enforcement cost depends on representation.
-This section states inherited algorithmic facts to make the systems consequence explicit.
+The family \(\Phi\) is semantic; a runtime still needs a compact, durable representation.
+Choice/parallel syntax is efficient but is not closed under exact promotion repair (\cref{prop:nonclosure}).
 
-\subsection{Structured choice and parallel}
-
-The conflict graph induced by the structured grammar is a cograph: \(\Box\) is graph join and \(\parallel\) is disjoint union.
-Its syntax tree is a cotree.
-For tentative demand, compute
+\paragraph{Base contracts.}
+The conflict graph induced by a unique-leaf structured contract is a cograph: \(\Box\) is graph join and \(\parallel\) is disjoint union.
+The classical cotree recurrence is
 \begin{align*}
-R(\mathbf0)&=0,&
-R(b)&=\load(Q_b),\\
+R(\mathbf0)&=0,& R(b)&=r_b,\\
 R(P\Box Q)&=R(P)\vee R(Q),&
 R(P\parallel Q)&=R(P)+R(Q).
 \end{align*}
+Thus \(R(P)=\bigvee_{C\in\front(P)}q(C)\) in \(O(|P||\calK|)\) time~\cite{corneil1985cographs}.
 
-\begin{proposition}[Structured exactness]
-\label{prop:structured}
-For a unique-leaf structured contract,
+\paragraph{Capability factorization.}
+For an unguarded cotree, one bottom-up/top-down pass computes every leaf's maximum co-load and hence every \(H(b)\).
+Then \cref{eq:rectangularity} is equivalent to
 \[
-R(P)=\bigvee_{C\in\front(P)}q(C).
+\forall C\in\front(P).\quad
+\sum_{b\in C}(r_b+H(b))\le G-d,
 \]
-It is computed in \(O(|P||\calK|)\) time.
-\end{proposition}
+which is another max/sum cotree evaluation with adjusted leaf weights.
+Thus, in the fixed-topology batch-Reserve fragment, the monitor decides in \(O(|P||\calK|)\) whether the exact admission set is a Cartesian product of branch-local budgets.
+For a guarded contract, the same condition is checked by the global oracle and can return a violating configuration as a certificate.
 
-The proof is structural induction.
-This is the classical weighted-independent-set dynamic program on a cograph cotree~\cite{corneil1985cographs}, specialized to authority vectors.
-Our contribution is its use as an exact checker for the lifecycle semantics, not the recurrence.
-
-\subsection{Less structured representations}
-
-If pairwise conflict is supplied as an arbitrary graph \(H=(B,E)\), set
+\paragraph{Frozen threshold guards.}
+A guarded contract \(T=(P,\mathcal H)\) intersects \(\front(P)\) with nonnegative vector inequalities.
+A guard has residual \(r_h\) and frozen lineage terms \((a_i,\lambda_i)\):
 \[
-\Phi_H=\{C\subseteq B\mid C\text{ is independent in }H\}.
-\]
-For one scalar coordinate define
-\[
-\unsafe(H,q,G)
+C\models h
 \quad\Longleftrightarrow\quad
-\exists C\in\Phi_H.\ \sum_{b\in C}q_b>G.
+\sum_i a_i\lambda_i(C)\le r_h,
 \]
+where \(a_i\in\Nat^{\calK}\) and each explicitly represented monotone, zero-preserving predicate \(\lambda_i(C)\in\{0,1\}\) records whether a stable branch lineage is represented in \(C\).
+Nonnegativity preserves downward closure.
+Initially, \(\lambda_b(C)=\mathbf1[b\in C]\).
 
-\begin{proposition}[Inherited graph boundary]
-\(\unsafe\) is NP-complete, even for unit branch weights, and universal safety is coNP-complete.
-\end{proposition}
+The promotion row \(\gamma_U\) in \cref{eq:promotion-guard} is one such guard.
+By \cref{thm:guard-closure}, at most \(|\calK|\) scalar inequalities, \(O(|B||\calK|)\) coefficients, and singleton lineage tests represent the unique largest topology-only safe restriction for fixed target claims.
+Constructing this row takes \(O(|B||\calK|)\) space and time; checking owner support and global safety under accumulated guards may still require the guarded oracle.
 
-Membership uses an independent-set certificate.
-For hardness, reduce \textsc{Independent Set}\((H,k)\) by taking all \(q_b=1\) and \(G=k-1\).
-This is a direct inherited boundary, consistent with resource-threshold results for workflow nets~\cite{meyer2018workflow}.
-It is not a dichotomy between trees and all other graphs: perfect, chordal, bounded-treewidth, and other restricted classes can remain tractable.
+The row is \emph{frozen} when installed under a no-silent-policy-expansion rule.
+If withdrawing the claim of \(x\) recomputed its coefficient as zero, the triple \(\{x,y,z\}\) would silently reappear.
+The dynamically relaxed family may be authority-safe; nevertheless, relaxing a durable audited restriction requires an explicit topology-expansion admission.
+Reserve likewise changes the objective checked against the contract; it does not mutate old guards.
 
-Pairwise conflict also cannot express every downward-closed family.
-If three branches are pairwise compatible but the triple is forbidden, no ordinary conflict graph represents the contract.
-Such runtimes need explicit maximal frontiers, forbidden hyperedges, a membership oracle, or another adequate representation.
-If maximal frontiers are explicitly enumerated, safety is checked by a direct scan; any hardness claim must therefore name the succinct representation that causes it.
+\paragraph{Lineage transport.}
+Lifecycle refinement composes old lineage predicates with the operation's explicit projection.
+For live restore of \(b\) as \(b\parallel b'\),
+\[
+z_b\ \leftarrow\ z_b\lor z_{b'}.
+\]
+Thus retaining both continuations pays an old guard coefficient once, rather than twice as coefficient copying would.
+The specified replace and fork rules use rename and descendant OR respectively; a general merge must supply a monotone, zero-preserving projection satisfying \cref{eq:simulation}, or use full target admission.
+The guards and substitutions reside in the non-rollbackable controller state.
 
-\paragraph{Design consequence.}
-A runtime should retain a structured lifecycle witness where possible.
-It gives an auditable meaning to selection and merge and enables exact incremental admission.
-Flattening history into arbitrary compatibility edges loses both explanatory structure and cheap worst-case accounting.
+\paragraph{Admission boundary.}
+Given guards, global admission computes, for every coordinate \(k\),
+\[
+\max_{C\in\Phi(T)}\sum_{b\in C}\sum_{c\in Q_b}w_k(c).
+\]
+This boundary is inherently harder than evaluating one selected frontier.
+With all branches parallel and one scalar guard \(\sum_i a_i z_i\le r\), asking whether an allowed frontier has value above \(G\) is \textsc{Knapsack}; unsafety is NP-complete and universal safety is coNP-complete.
+A concrete frontier and its guard membership remain linearly checkable in the stored coefficient-plus-predicate-circuit representation.
+The unguarded cotree is the fast path; guarded implementations can use an incremental pseudo-Boolean solver or a decision diagram, without changing the semantics.
+Prepare can construct \(\gamma_U\) in linear time before dispatch, although support certificates may require the oracle.
+Reserve and general merge require checked admission unless a structural simulation applies.
+Nonduplicating fork and restore with OR transport are fast paths only when all simulation premises hold.
 
+\paragraph{Serial or seal.}
+Boundary~II makes final-owner support a checkable scheduler condition.
+If it holds, any owner-group order is safe under exact repair and cleanup.
+If it fails, at least one order is disabled; the controller must validate a particular order, coordinate cleanup, or atomically install the fixed batch before dispatch.

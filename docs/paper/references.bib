@@ -1,3 +1,8 @@
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/closest-work/consumable-credentials-ndss07.pdf
+% ABSTRACT: Extends logic-based access control with consumable credentials and distributed ratification so use-limited authority cannot be productively reused.
+% USED_FOR: Establishes linear consumption and durable ratification as prior foundations.
 @inproceedings{bowers2007consumable,
   author    = {Kevin D. Bowers and Lujo Bauer and Deepak Garg and Frank Pfenning and Michael K. Reiter},
   title     = {Consumable Credentials in Logic-Based Access-Control Systems},
@@ -7,6 +12,11 @@
   url       = {https://www.ndss-symposium.org/ndss2007/consumable-credentials-linear-logic-based-access-control-systems/}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/closest-work/memoir.pdf
+% ABSTRACT: Protects module state continuity with a concise trusted history summary and safe replay of deterministic module execution.
+% USED_FOR: Establishes that rollbackable snapshots alone cannot carry security history.
 @inproceedings{parno2011memoir,
   author    = {Bryan Parno and Jacob R. Lorch and John R. Douceur and James Mickens and Jonathan M. McCune},
   title     = {Memoir: Practical State Continuity for Protected Modules},
@@ -17,6 +27,11 @@
   doi       = {10.1109/SP.2011.38}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/closest-work/rote-usenix17.pdf
+% ABSTRACT: Provides distributed rollback protection for trusted execution using multiple participating platforms, tolerating compromise short of resetting all participants.
+% USED_FOR: Prior foundation for rollback-resistant protected state.
 @inproceedings{matetic2017rote,
   author    = {Sinisa Matetic and Mansoor Ahmed and Kari Kostiainen and Aritra Dhar and David Sommer and Arthur Gervais and Ari Juels and Srdjan Capkun},
   title     = {{ROTE}: Rollback Protection for Trusted Execution},
@@ -27,6 +42,11 @@
   url       = {https://www.usenix.org/conference/usenixsecurity17/technical-sessions/presentation/matetic}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/closest-work/lcm-fork-detection.pdf
+% ABSTRACT: Uses collective client memory to detect rollback and forking of trusted applications and to provide fork-linearizable views and operation stability.
+% USED_FOR: Contrasts detection of adversarial forks with authorization of intentional co-durable branches.
 @inproceedings{brandenburger2017lcm,
   author    = {Marcus Brandenburger and Christian Cachin and Matthias Lorenz and R{\"u}diger Kapitza},
   title     = {Rollback and Forking Detection for Trusted Execution Environments Using Lightweight Collective Memory},
@@ -37,6 +57,11 @@
   doi       = {10.1109/DSN.2017.45}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/foundations/event-structures-winskel.pdf
+% ABSTRACT: Develops event structures using events, consistency, enabling, causality, and configurations, relating them to Petri nets and domains.
+% USED_FOR: Supplies established causality, conflict, and configuration semantics.
 @incollection{winskel1987event,
   author    = {Glynn Winskel},
   title     = {Event Structures},
@@ -50,6 +75,11 @@
   doi       = {10.1007/3-540-17906-2_31}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: not available
+% ABSTRACT: Gives a linear-time recognition algorithm and cotree construction for cographs, which are closed under disjoint union and complement.
+% USED_FOR: Supports the cograph/cotree representation induced by structured choice and parallel composition.
 @article{corneil1985cographs,
   author  = {Derek G. Corneil and Yehoshua Perl and Lorna K. Stewart},
   title   = {A Linear Recognition Algorithm for Cographs},
@@ -61,6 +91,11 @@
   doi     = {10.1137/0214065}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/foundations/workflow-concurrency-threshold-tacas18.pdf
+% ABSTRACT: Studies resource-based concurrency thresholds in sound free-choice workflow nets, including complexity results and approximation algorithms.
+% USED_FOR: Establishes workflow concurrency thresholds and related graph-hardness machinery as prior work.
 @inproceedings{meyer2018workflow,
   author    = {Philipp J. Meyer and Javier Esparza and Hagen V{\"o}lzer},
   title     = {Computing the Concurrency Threshold of Sound Free-Choice Workflow Nets},
@@ -73,6 +108,11 @@
   doi       = {10.1007/978-3-319-89963-3_1}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/foundations/capability-calculus-concur06.pdf
+% ABSTRACT: Introduces a capability calculus whose channel capabilities support reasoning about partial confluence and determinism in concurrent processes.
+% USED_FOR: Establishes capability splitting and concurrency reasoning as foundations.
 @inproceedings{terauchi2006capability,
   author    = {Tachio Terauchi and Alex Aiken},
   title     = {A Capability Calculus for Concurrency and Determinism},
@@ -85,6 +125,11 @@
   doi       = {10.1007/11817949_15}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/foundations/resource-aware-session-types-lics18.pdf
+% ABSTRACT: Combines session types with potential-based resource analysis to derive compositional worst-case bounds on work and messages.
+% USED_FOR: Establishes typed resource splitting and global bounds across communicating processes.
 @inproceedings{das2018resource,
   author    = {Ankush Das and Jan Hoffmann and Frank Pfenning},
   title     = {Work Analysis with Resource-Aware Session Types},
@@ -95,6 +140,11 @@
   doi       = {10.1145/3209108.3209146}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/closest-work/dislog-popl24.pdf
+% ABSTRACT: Presents a separation logic for disentanglement of nested fork-join programs and mechanizes its metatheory in Coq/Iris.
+% USED_FOR: Establishes explicit program-logic reasoning about fork-join structure.
 @article{moine2024dislog,
   author    = {Alexandre Moine and Sam Westrick and Stephanie Balzer},
   title     = {{DisLog}: A Separation Logic for Disentanglement},
@@ -107,6 +157,11 @@
   doi       = {10.1145/3632853}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/closest-work/capstone-usenix23.pdf
+% ABSTRACT: Designs an architectural capability foundation supporting isolation, delegation, revocation, and trustless secure memory access.
+% USED_FOR: Establishes linear ownership, delegation, and revocation mechanisms as prior capability work.
 @inproceedings{yu2023capstone,
   author    = {Jason Zhijingcheng Yu and Conrad Watt and Aditya Badole and Trevor E. Carlson and Prateek Saxena},
   title     = {Capstone: A Capability-based Foundation for Trustless Secure Memory Access},
@@ -117,6 +172,12 @@
   url       = {https://www.usenix.org/conference/usenixsecurity23/presentation/yu-jason}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/csf-theory/csf2023-stack-safety.pdf
+% ABSTRACT: Decomposes stack safety into five observable security properties and evaluates them with property-based and mutation testing.
+% USED_FOR: Venue-shape exemplar inspected during project design; not cited by the paper.
+% STATUS: unused
 @inproceedings{anderson2023stack,
   author    = {Sean Noble Anderson and Roberto Blanco and Leonidas Lampropoulos and Benjamin C. Pierce and Andrew Tolmach},
   title     = {Formalizing Stack Safety as a Security Property},
@@ -127,6 +188,11 @@
   doi       = {10.1109/CSF57540.2023.00037}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: not available
+% ABSTRACT: Surveys rollback-recovery protocols for message-passing systems, including checkpointing, message logging, orphan processes, and output commit.
+% USED_FOR: Establishes the classic output-commit problem for effects that escape recoverable computation.
 @article{elnozahy2002rollback,
   author  = {Elmootazbell Y. Elnozahy and Lorenzo Alvisi and Yi-Min Wang and David B. Johnson},
   title   = {A Survey of Rollback-Recovery Protocols in Message-Passing Systems},
@@ -138,6 +204,11 @@
   doi     = {10.1145/568522.568525}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/closest-work/acrfence.pdf
+% ABSTRACT: Defines semantic rollback attacks in agent checkpoint/restore, demonstrates Action Replay and Authority Resurrection, and proposes an effect-log replay-or-fork mitigation.
+% USED_FOR: Establishes replay and authority-resurrection failures after agent restore; the mitigation is not treated as implemented.
 @misc{zheng2026acrfence,
   author        = {Yusheng Zheng and Yiwei Yang and Wei Zhang and Andi Quinn},
   title         = {{ACRFence}: Preventing Semantic Rollback Attacks in Agent Checkpoint-Restore},
@@ -149,6 +220,26 @@
   url           = {https://arxiv.org/abs/2603.20625}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/closest-work/crab-agent-sandbox.pdf
+% ABSTRACT: Builds a host-side agent sandbox runtime that classifies OS-visible effects and adaptively checkpoints filesystem, process, and runtime state for recovery and branching.
+% USED_FOR: Grounds the agent--OS recovery-state gap and RL rollout branching while distinguishing state fidelity from authority continuity.
+@misc{wu2026crab,
+  author        = {Tianyuan Wu and Chaokun Chang and Lunxi Cao and Wei Gao and Wei Wang},
+  title         = {Crab: A Semantics-Aware Checkpoint/Restore Runtime for Agent Sandboxes},
+  year          = {2026},
+  eprint        = {2604.28138},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.OS},
+  url           = {https://arxiv.org/abs/2604.28138}
+}
+
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/closest-work/fork-explore-commit.pdf
+% ABSTRACT: Proposes nested branch contexts with copy-on-write filesystem views, process groups, fork/explore/commit-abort, and first-commit-wins sibling invalidation; BranchFS is implemented.
+% USED_FOR: Grounds nested agent branches, first-commit-wins selection, and filesystem/process isolation.
 @misc{wang2026fork,
   author        = {Cong Wang and Yusheng Zheng},
   title         = {Fork, Explore, Commit: OS Primitives for Agentic Exploration},
@@ -160,6 +251,11 @@
   url           = {https://arxiv.org/abs/2602.08199}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/closest-work/agent-libos.pdf
+% ABSTRACT: Defines an AgentProcess authority boundary with explicit capabilities and audited primitives, including child processes, hierarchical budgets, checkpoints, and checkpoint-derived images.
+% USED_FOR: Grounds capability-controlled agent runtime primitives and shows why a ledger alone is not a co-durability contract.
 @misc{zhang2026agentlibos,
   author        = {Yingqi Zhang},
   title         = {Agent libOS: A Runtime Substrate for Capability-Controlled Self-Evolving LLM Agents},
@@ -170,6 +266,11 @@
   url           = {https://arxiv.org/abs/2606.03895}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/closest-work/atomix.pdf
+% ABSTRACT: Introduces progress-aware transactions that separate execute, seal, per-resource frontier checks, and settlement for tool effects with class-specific handling.
+% USED_FOR: Establishes practical staging and settlement boundaries that authority solvency complements.
 @misc{mohammadi2026atomix,
   author        = {Bardia Mohammadi and Nearchos Potamitis and Lars Klein and Akhil Arora and Laurent Bindschaedler},
   title         = {Atomix: Timely, Transactional Tool Use for Reliable Agentic Workflows},
@@ -180,6 +281,11 @@
   url           = {https://arxiv.org/abs/2602.14849}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/closest-work/cordon.pdf
+% ABSTRACT: Defines task-level semantic transactions over tool intents, lineage, shadow state, staged external effects, delegated authority, and recovery metadata.
+% USED_FOR: Establishes semantic transactions spanning multiple tools, model turns, and delegated tasks; cited only as an arXiv preprint.
 @misc{chen2026cordon,
   author        = {Zheng Chen and Hanqing Liu and Duling Xu and Dong Dong and Jialin Li and Bangzheng Pu and Jidong Zhai},
   title         = {Cordon: Semantic Transactions for Tool-Using LLM Agents},
@@ -190,6 +296,11 @@
   url           = {https://arxiv.org/abs/2606.17573}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/closest-work/dart.pdf
+% ABSTRACT: Formalizes semantic recoverability and checks failed-instance localization, downstream commitments, checkpoint alignment, and admissible restore points before local rollback.
+% USED_FOR: Establishes that a locally available checkpoint may cease to be semantically recoverable after downstream commitment.
 @misc{yang2026dart,
   author        = {Ke Yang and Panpan Li and Zonghan Wu and Kejin Xu and Huaxi Huang and Xiaoshui Huang},
   title         = {{DART}: Semantic Recoverability for Structured Tool Agents},
@@ -200,6 +311,11 @@
   url           = {https://arxiv.org/abs/2605.23311}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/closest-work/ghost-tool-calls.pdf
+% ABSTRACT: Shows that abandoned speculative tool calls can disclose intent to providers, logs, or caches at issue time, before commit, and studies issue-time defenses.
+% USED_FOR: Supports treating provider-visible issue-time disclosure as an escaped effect, not the paper's separate quota coordinate.
 @misc{mohammadi2026ghost,
   author        = {Bardia Mohammadi and Lars Klein and Akhil Arora and Laurent Bindschaedler},
   title         = {Ghost Tool Calls: Issue-Time Privacy for Speculative Agent Tools},
@@ -210,6 +326,11 @@
   url           = {https://arxiv.org/abs/2606.02483}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/closest-work/commit-time-authorization.pdf
+% ABSTRACT: Defines commit-time authorization requiring a durable effect's witness to remain fresh, causally prior, effect-bound, and eligible at commit, and evaluates CommitGuard.
+% USED_FOR: Establishes authorization-evidence validity at commit as adjacent to, but distinct from, aggregate co-durable authority.
 @misc{santos2026committime,
   author        = {Igor Santos-Grueiro},
   title         = {Temporary Authority, Permanent Effects: Commit-Time Authorization for LLM Agents},
@@ -220,3 +341,167 @@
   url           = {https://arxiv.org/abs/2607.10487}
 }
 
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: not available
+% ABSTRACT: Formulates supervisory control of discrete-event processes in formal-language terms and characterizes controllable legal behavior under uncontrollable events.
+% USED_FOR: Establishes maximally permissive controllable behavior as a classical framework rather than a contribution of this paper.
+@article{ramadge1987supervisory,
+  author  = {Peter J. Ramadge and W. Murray Wonham},
+  title   = {Supervisory Control of a Class of Discrete Event Processes},
+  journal = {SIAM Journal on Control and Optimization},
+  volume  = {25},
+  number  = {1},
+  pages   = {206--230},
+  year    = {1987},
+  doi     = {10.1137/0325013}
+}
+
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/supervisory-control/cieslak1986-partial-observation.pdf
+% ABSTRACT: Extends supervisory control to partial observations and studies when legal behavior can be enforced from observation-equivalent executions.
+% USED_FOR: Supports the limitation that standard observability is not union-closed and need not admit a supremal observable policy.
+@article{cieslak1988partial,
+  author  = {R. Cieslak and C. Desclaux and A. S. Fawaz and Pravin Varaiya},
+  title   = {Supervisory Control of Discrete-Event Processes with Partial Observations},
+  journal = {IEEE Transactions on Automatic Control},
+  volume  = {33},
+  number  = {3},
+  pages   = {249--260},
+  year    = {1988},
+  doi     = {10.1109/9.402}
+}
+
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: reference/supervisory-control/cai2015-relative-observability.pdf
+% ABSTRACT: Introduces relative observability, a stronger observability condition closed under union, and develops supremal relatively observable sublanguages.
+% USED_FOR: Contrasts general partial-observation limits with a union-closed condition under a fixed ambient language.
+@article{cai2015relative,
+  author  = {Kai Cai and Renyuan Zhang and W. Murray Wonham},
+  title   = {Relative Observability of Discrete-Event Systems and Its Supremal Sublanguages},
+  journal = {IEEE Transactions on Automatic Control},
+  volume  = {60},
+  number  = {3},
+  pages   = {659--670},
+  year    = {2015},
+  doi     = {10.1109/TAC.2014.2341891}
+}
+
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: not available
+% ABSTRACT: Develops nonblocking supervisory control over hierarchical state-tree structures using predicates and symbolic representations such as BDDs.
+% USED_FOR: Establishes hierarchical AND/OR state organization and symbolic supervisor synthesis as prior work.
+@article{ma2006sts,
+  author  = {Chuan Ma and W. Murray Wonham},
+  title   = {Nonblocking Supervisory Control of State Tree Structures},
+  journal = {IEEE Transactions on Automatic Control},
+  volume  = {51},
+  number  = {5},
+  pages   = {782--793},
+  year    = {2006},
+  doi     = {10.1109/TAC.2006.875030}
+}
+
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: not available
+% ABSTRACT: Applies supervisory control theory to communicating transaction processes and derives executable propositional guards for controlled interaction behavior.
+% USED_FOR: Establishes compilation of supervisory policies into guarded transaction workflows as prior work.
+@article{feng2007ctp,
+  author  = {Lei Feng and W. Murray Wonham and P. S. Thiagarajan},
+  title   = {Designing Communicating Transaction Processes by Supervisory Control Theory},
+  journal = {Formal Methods in System Design},
+  volume  = {30},
+  number  = {2},
+  pages   = {117--141},
+  year    = {2007},
+  doi     = {10.1007/s10703-006-0023-0}
+}
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: not available
+% ABSTRACT: Gives possible-world and resource semantics for BI, relating additive and multiplicative connectives to composition of resources.
+% USED_FOR: Establishes generic algebraic resource composition and residual implication as foundations.
+@article{pym2004bi,
+  author  = {David J. Pym and Peter W. O'Hearn and Hongseok Yang},
+  title   = {Possible Worlds and Resources: The Semantics of {BI}},
+  journal = {Theoretical Computer Science},
+  volume  = {315},
+  number  = {1},
+  pages   = {257--305},
+  year    = {2004},
+  doi     = {10.1016/j.tcs.2003.11.020}
+}
+
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: not available
+% ABSTRACT: Documents the Codex App Server JSON-RPC integration surface, including thread creation, resume, fork lineage, event streams, items, and approvals.
+% USED_FOR: Grounds a prospective Codex adapter in explicit thread-fork lineage and control-plane events.
+@misc{codexappserver,
+  author       = {{OpenAI}},
+  title        = {{Codex App Server}},
+  howpublished = {Official documentation},
+  year         = {2026},
+  url          = {https://learn.chatgpt.com/docs/app-server.md},
+  note         = {Accessed 2026-07-31}
+}
+
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: not available
+% ABSTRACT: Documents Codex lifecycle and tool hooks, including PreToolUse blocking or rewriting for covered local tools and explicit exclusions for hosted or opted-out paths.
+% USED_FOR: Grounds pre-tool interception while documenting that hooks alone do not prove complete mediation.
+@misc{codexhooks,
+  author       = {{OpenAI}},
+  title        = {Hooks},
+  howpublished = {Official documentation},
+  year         = {2026},
+  url          = {https://learn.chatgpt.com/docs/hooks.md},
+  note         = {Accessed 2026-07-31}
+}
+
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: not available
+% ABSTRACT: Documents Claude Code checkpoint rewind of conversation and tracked edits and identifies exclusions such as Bash, external, and most subagent changes.
+% USED_FOR: Grounds the distinction between checkpoint rewind and complete workspace or external-state restoration.
+@misc{claudecheckpoint,
+  author       = {{Anthropic}},
+  title        = {Checkpointing},
+  howpublished = {Official documentation},
+  year         = {2026},
+  url          = {https://code.claude.com/docs/en/checkpointing},
+  note         = {Accessed 2026-07-31}
+}
+
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: not available
+% ABSTRACT: Documents resuming saved Claude Code sessions and branching transcripts into independent session IDs while preserving the original.
+% USED_FOR: Grounds the difference between resume and fork lifecycle semantics.
+@misc{claudesessions,
+  author       = {{Anthropic}},
+  title        = {Manage Sessions},
+  howpublished = {Official documentation},
+  year         = {2026},
+  url          = {https://code.claude.com/docs/en/sessions},
+  note         = {Accessed 2026-07-31}
+}
+
+% VERIFIED: 2026-07-31
+% REAL: yes
+% PDF: not available
+% ABSTRACT: Documents Claude Code pre/post-tool, subagent, session, and worktree lifecycle hooks, including denial or modification before covered tool use.
+% USED_FOR: Grounds prospective lifecycle observation and pre-tool enforcement surfaces without claiming complete mediation.
+@misc{claudehooks,
+  author       = {{Anthropic}},
+  title        = {Hooks Reference},
+  howpublished = {Official documentation},
+  year         = {2026},
+  url          = {https://code.claude.com/docs/en/hooks},
+  note         = {Accessed 2026-07-31}
+}

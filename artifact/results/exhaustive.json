@@ -2,12 +2,193 @@
   "artifact_kind": "finite executable validation (not mechanized proof)",
   "checks": {
     "ac_need_equivalence": {
-      "states": 2816,
+      "status": "pass",
+      "well_formed_states": 1312
+    },
+    "batch_residual_equivalence": {
+      "batch_memberships_checked": 17658,
+      "component_box": [
+        0,
+        2
+      ],
       "status": "pass"
     },
     "batched_promotion_confluence": {
-      "ordered_disjoint_batches": 13680,
+      "guarded_ordered_disjoint_batches": 6312,
+      "ordered_disjoint_batches": 6312,
       "status": "pass"
+    },
+    "bounded_residual_derivative": {
+      "accepted_prefixes_checked": 4067,
+      "maximum_parent_component_bound": 3,
+      "parent_component_bound_rule": "2 + max(prefix component)",
+      "status": "pass",
+      "successor_component_box": [
+        0,
+        2
+      ],
+      "successor_memberships_compared": 103785
+    },
+    "exact_frozen_guard_support": {
+      "frontier_memberships_checked": 11142,
+      "repair_instances": 2060,
+      "status": "pass"
+    },
+    "final_owner_support_serialization": {
+      "absent_final_owner_support": false,
+      "absent_s_first_second_enabled": false,
+      "absent_t_first_second_enabled": true,
+      "enabled_order_matches_atomic_denotationally_after_cleanup": true,
+      "positive_atomic_equals_both_orders_denotationally": true,
+      "positive_final_owner_support": true,
+      "status": "pass"
+    },
+    "frozen_vs_dynamic_guard": {
+      "status": "pass",
+      "triple_allowed_by_frozen_guard_after_withdraw": false,
+      "triple_allowed_by_recomputed_current_q_guard_after_withdraw": true
+    },
+    "headroom_box_rectangularity": {
+      "criterion": "the all-headrooms corner satisfies every frontier slack inequality",
+      "enumeration_bound": "maximum headroom component in each source; this contains Box(H)",
+      "fixed_choice_rectangular": true,
+      "fixed_parallel_rectangular": false,
+      "nonrectangular_states": 434,
+      "rectangular_states": 296,
+      "status": "pass",
+      "well_formed_safe_source_states": 730
+    },
+    "headroom_not_update_closed": {
+      "both_unit_batch_in_choice_residual": true,
+      "both_unit_batch_in_parallel_residual": false,
+      "choice_successor_headroom": {
+        "b1": [
+          0
+        ],
+        "b2": [
+          1
+        ]
+      },
+      "initial_choice_headroom": {
+        "b1": [
+          1
+        ],
+        "b2": [
+          1
+        ]
+      },
+      "initial_parallel_headroom": {
+        "b1": [
+          1
+        ],
+        "b2": [
+          1
+        ]
+      },
+      "parallel_successor_headroom": {
+        "b1": [
+          0
+        ],
+        "b2": [
+          0
+        ]
+      },
+      "status": "pass"
+    },
+    "higher_order_support": {
+      "all_pairs_allowed": true,
+      "base_contract": "b choice (x parallel y parallel z)",
+      "conflict_graph_representable": false,
+      "guard_residual": [
+        2
+      ],
+      "post_promotion_xyz_support": [
+        [],
+        [
+          "x"
+        ],
+        [
+          "y"
+        ],
+        [
+          "z"
+        ],
+        [
+          "x",
+          "y"
+        ],
+        [
+          "x",
+          "z"
+        ],
+        [
+          "y",
+          "z"
+        ]
+      ],
+      "status": "pass",
+      "triple_allowed": false
+    },
+    "knowledge_profile_intersection": {
+      "bounded_batch_decisions_checked": 9,
+      "component_box": [
+        0,
+        2
+      ],
+      "intersection_profile_size": 3,
+      "knowledge_states": 2,
+      "status": "pass"
+    },
+    "lifecycle_recovery_graph": {
+      "dispatch_before_prepare_rejected": true,
+      "edge_counts": {
+        "crash": 8,
+        "dispatch": 2,
+        "retry": 4,
+        "revoke": 4,
+        "settle": 4
+      },
+      "inflight_recovers_uncertain": true,
+      "prepared_cancel_retains_durable_claim": true,
+      "prepared_survives_crash": true,
+      "retry_allocates_no_new_logical_effect": true,
+      "retry_attempt_reuses_claim_binding": true,
+      "retry_preserves_authority_accounting": true,
+      "retry_returns_inflight": true,
+      "retry_reuses_stable_id": true,
+      "settled_receipt_count": 1,
+      "settled_ticket_count": 0,
+      "status": "pass",
+      "tombstoned_branch_reopen_rejected": true,
+      "tombstoned_branch_retention_rejected": true,
+      "unique_phase_epoch_states": 8,
+      "valid_state_action_edges": 22
+    },
+    "lineage_or_live_restore": {
+      "naive_copy_allows_pair": false,
+      "naively_copied_charge": [
+        4
+      ],
+      "or_lineage_allows_pair": true,
+      "or_lineage_charge": [
+        2
+      ],
+      "retained_pair": [
+        "old",
+        "restored"
+      ],
+      "status": "pass"
+    },
+    "operational_serialization_boundary": {
+      "first_witnessed_owner": "a",
+      "second_escape_enabled": false,
+      "status": "pass",
+      "terminal_next_claims": [
+        "cb"
+      ],
+      "tombstoned_next_owner": [
+        "b"
+      ]
     },
     "plain_escape_counterexample": {
       "grant": [
@@ -23,44 +204,101 @@
         2
       ]
     },
+    "raw_ac_algebra_including_unsupported_owners": {
+      "headline_evidence": false,
+      "purpose": "transcription diagnostic only",
+      "states": 2816,
+      "status": "pass"
+    },
+    "reserve_headroom_equivalence": {
+      "demand_components": [
+        0,
+        1,
+        2
+      ],
+      "single_branch_demands_checked": 6180,
+      "status": "pass",
+      "well_formed_safe_source_states": 730
+    },
+    "revoke_sealed_completion": {
+      "closed_epoch": "epoch-0",
+      "prepared_ticket_retained": true,
+      "sealed_dispatch_after_revoke": true,
+      "status": "pass",
+      "terminalized_unsealed_claims": [
+        "unsealed"
+      ]
+    },
     "single_claim_maximal_support": {
-      "safe_downward_restrictions_checked": 27142,
-      "safe_source_owner_cases": 3428,
+      "safe_downward_restrictions_checked": 22246,
+      "safe_source_owner_cases": 2060,
       "status": "pass"
     },
     "snapshot_local_impossibility": {
       "live": {
-        "need": [
-          2
-        ],
-        "required_decision": "reject-for-soundness",
-        "safe": false,
-        "violating_frontier": [
-          "old",
-          "restored"
+        "pre": {
+          "conditional_claim_ids": [
+            "old"
+          ],
+          "need": [
+            1
+          ],
+          "safe": true
+        },
+        "successor": {
+          "decision": "reject-for-soundness",
+          "need": [
+            2
+          ],
+          "safe": false,
+          "violating_frontier": [
+            "old",
+            "restored"
+          ]
+        }
+      },
+      "proposal": {
+        "branch": "restored",
+        "fresh_claim_id": "same-fresh-reserve:0:restored",
+        "rule": "Reserve",
+        "weight": [
+          1
         ]
       },
-      "observation": {
-        "grant": [
-          1
-        ],
-        "proposal": {
-          "branch": "restored",
-          "rule": "Reserve",
-          "weight": [
-            1
-          ]
-        },
-        "snapshot": "identical-reconstructed-bytes"
-      },
       "replace": {
-        "need": [
-          1
-        ],
-        "required_decision": "accept-for-maximal-permissiveness",
-        "safe": true
+        "pre": {
+          "conditional_claim_ids": [],
+          "need": [
+            0
+          ],
+          "safe": true
+        },
+        "successor": {
+          "decision": "accept-for-maximal-permissiveness",
+          "need": [
+            1
+          ],
+          "safe": true
+        }
       },
+      "snapshot": "identical-reconstructed-bytes",
       "status": "pass"
+    },
+    "structural_lifecycle_preservation": {
+      "all_preserve_history": true,
+      "modes": [
+        "fork_choice",
+        "fork_parallel",
+        "restore_live",
+        "restore_replace"
+      ],
+      "source_receipts": 1,
+      "source_ticket_phases": [
+        "prepared",
+        "uncertain"
+      ],
+      "status": "pass",
+      "target_frontier_simulations_checked": 26
     }
   },
   "parameters": {
@@ -74,6 +312,9 @@
       1,
       2
     ],
+    "derivative_parent_bound": "2 + max(prefix component), hence at most 3",
+    "derivative_prefix_component_bound": 1,
+    "derivative_successor_component_bound": 2,
     "durable_loads": [
       0,
       1
@@ -88,7 +329,9 @@
       5,
       6,
       7
-    ]
+    ],
+    "headline_source_state_filter": "every conditional claim owner occurs in at least one admitted frontier",
+    "residual_batch_component_bound": 2
   },
-  "schema_version": 1
+  "schema_version": 5
 }

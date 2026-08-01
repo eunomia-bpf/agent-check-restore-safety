@@ -1,239 +1,273 @@
 \section{Security Results}
 \label{sec:results}
 
-We separate four kinds of result.
-Abstraction soundness establishes what \(\ac\) guarantees without assuming the lifecycle representation is exact.
-An indistinguishability theorem shows why snapshot state cannot provide precise authorization.
-Promotion theorems derive the weakest safe lifecycle restriction when conditional claims become durable.
-Finally, transition induction lifts the local rules to complete executions.
+This section establishes two exact runtime boundaries.
+Boundary~I characterizes when fixed-topology batch reservation compiles into a product of noncommunicating branch-local budgets.
+Boundary~II characterizes when a promotion batch may be decomposed in every owner-group order under immediate cleanup.
+Headroom, residual, guard-closure, and support results provide their constructions; lifecycle preservation supplies the common soundness layer.
 
-\subsection{Abstraction soundness}
+\subsection{What authorization information is necessary?}
 
-For a concrete state \(s\), let \(\mathcal R(s)\) be the branch sets that its controller can actually retain.
-The abstract lifecycle may be conservative:
-\[
-\mathcal R(s)\subseteq\Phi.
-\]
-A concrete resolution is \emph{solvent} when its already durable claims and all conjunctive bundles of retained branches fit the issued capacity.
+Fix a common action signature---branch labels, authority coordinates, claim schema, and candidate bindings---and consider only well-formed states satisfying \(\ac\).
+For an action class \(\mathcal A\), let \(\mathsf{str}_\Sigma(a)\) be its non-quantitative admission predicate (fresh binding, open epochs, and supported owner), and write \(\Sigma\equiv_{\mathcal A}\Sigma'\) when the two states make the same admission decision for every action in the common signature.
+A summary is \emph{fully abstract} when summary equality coincides with this decision equivalence.
+It is \emph{controller-sufficient} when the same admitted action also produces the same successor summary.
 
-\begin{theorem}[Abstraction soundness]
-\label{thm:soundness}
-If \(s\) is well formed, \(\mathcal R(s)\subseteq\Phi\), and \(\ac(\alpha(s))\), then every concrete resolution is solvent.
-\end{theorem}
-
-\begin{proof}
-Every actual retained set \(C\in\mathcal R(s)\) is in \(\Phi\).
-By \cref{def:ac}, \(d+q(C)\le G\).
-Claim uniqueness connects each summand to a distinct concrete claim, while the conjunctive-bundle condition says that \(q(C)\), rather than an unachievable internal alternative, is the promised joint load.
-\end{proof}
-
-\begin{proposition}[Conditional converse]
-\label{prop:conditional-converse}
-If \(\mathcal R(s)=\Phi\) and every bundle in every retained frontier is jointly realizable, failure of \(\ac(\alpha(s))\) witnesses an insolvent concrete resolution.
-\end{proposition}
-
-\begin{proof}
-A violating \(C\in\Phi\) is actually selectable.
-Joint realizability permits all claims represented by \(q(C)\) to occur together, producing load \(d+q(C)\nleq G\).
-\end{proof}
-
-The assumptions in \cref{prop:conditional-converse} are essential.
-If \(\Phi\) is an over-approximation, it may contain an unreachable overloaded frontier.
-If a single branch internally chooses between two claims, summing both can conservatively reject a program whose executions use only one.
-The paper therefore uses \cref{thm:soundness} as the general security guarantee and invokes the converse only for exact, conjunctive contracts.
-
-\subsection{Restored bytes are insufficient}
-
-A \emph{snapshot-local} admission checker decides a proposal from reconstructed state \(V_r\), the presented grant, and the proposal itself.
-It does not consult durable branch eligibility, existing claim ownership, selections, or escaped history.
-A checker is \emph{sound} if it never admits a proposal whose target violates \(\ac\), and \emph{maximally permissive} if it admits every well-formed proposal whose target satisfies \(\ac\).
-
-\begin{theorem}[Snapshot-local monitor impossibility]
-\label{thm:snapshot-impossibility}
-No snapshot-local admission checker is both sound and maximally permissive for Reserve across replacing and live restore.
-\end{theorem}
-
-\begin{proof}
-Use one coordinate and \(G=1\).
-Both worlds present the same reconstructed bytes \(V_r\) and the same proposal to reserve a fresh one-unit claim \(c_1\) for restored branch \(r\).
-
-In the \emph{replace} world, the old branch is durably tombstoned, \(Q_r=\varnothing\), and the only live singleton is \(r\).
-After Reserve, need is one, so maximal permissiveness requires acceptance.
-
-In the \emph{live} world, old branch \(b\) remains eligible in parallel with \(r\) and already holds one-unit claim \(c_0\).
-The frontier \(\{b,r\}\) is permitted.
-After the same Reserve proposal its load is two, so soundness requires rejection.
-
-The checker's observations are identical, hence its decision is identical.
-Either decision violates one requirement.
-\end{proof}
-
-The theorem is not contradicted by delayed escrow.
-If neither branch has an advance claim, both worlds can safely compute.
-It states that once authorization depends on durable continuation and claim state, restoring the workspace cannot restore enough information to make a precise decision.
-A global ledger that exposes those facts is outside the impossibility premise and is exactly the required remedy.
-
-\subsection{Promotion changes support}
-
-Plain escape of \(c\in Q_b\) moves \(c\) into \(D\) while leaving \(\Phi\) unchanged.
-For frontiers containing \(b\), total load is unchanged.
-For frontiers not containing \(b\), \(w(c)\) becomes a new durable burden.
-
-\begin{proposition}[Plain-escape counterexample]
-\label{prop:escape-counterexample}
-There is a safe exclusive choice for which plain escape violates \(\ac\).
-\end{proposition}
-
-\begin{proof}
-Let \(G=1\), \(D=\varnothing\), and
-\(\Phi=\downarrow\{\{b_1\},\{b_2\}\}\).
-Each branch holds one unit.
-The source is safe.
-After \(c\in Q_{b_1}\) escapes, frontier \(\{b_2\}\) carries one durable and one tentative unit.
-\end{proof}
-
-\begin{proposition}[Exact capacity for plain escape]
-\label{prop:escape-exact}
-From a safe source, independently substitutable capacity \(A\) makes plain escape safe iff
-\[
-A\ge
-\Delta_{\esc}(b,c)
-=
-[d+w(c)+M_{\neg b}-G]^+,
-\]
-where \(M_{\neg b}=\bigvee_{C\in\Phi,\,b\notin C}q(C)\).
-\end{proposition}
-
-\begin{proof}
-Frontiers containing \(b\) remain safe.
-The maximum target load among the others is exactly \(d+w(c)+M_{\neg b}\).
-Componentwise monus gives the least independent-coordinate extension.
-\end{proof}
-
-The arithmetic in \cref{prop:escape-exact} is elementary.
-The more useful question is which futures may remain possible when the runtime cannot add capacity and does not want to revoke any other commitment.
-
-For \(c\in Q_b\), define the post-promotion load of an old frontier:
-\begin{equation}
-L_c(C)
-=
-d+w(c)+q(C)-\mathbf 1_{b\in C}w(c).
-\label{eq:post-promotion-load}
-\end{equation}
-Define
-\begin{equation}
-\Phi^*_{c}
-=
-\{C\in\Phi\mid L_c(C)\le G\}.
-\label{eq:max-safe-support}
-\end{equation}
-
-\begin{theorem}[Maximal safe promotion support]
-\label{thm:max-support}
-Assume \(b\) occurs in some frontier and the source satisfies \(\ac\).
-Then:
-\begin{enumerate}[leftmargin=*,itemsep=1pt]
-  \item \(\Phi^*_{c}\) is nonempty and downward closed;
-  \item promoting \(c\) and replacing \(\Phi\) by \(\Phi^*_{c}\) is safe without new capacity or cancellation of another claim;
-  \item for every safe topology restriction \(\widehat\Phi\subseteq\Phi\) under the same promoted target, \(\widehat\Phi\subseteq\Phi^*_{c}\).
-\end{enumerate}
-Thus \(\Phi^*_{c}\) is the unique inclusion-largest zero-capacity, no-other-cancellation lifecycle repair.
-\end{theorem}
-
-\begin{proof}
-After promotion, the remaining tentative claims have nonnegative demand, so \(C'\subseteq C\) implies \(L_c(C')\le L_c(C)\).
-Therefore the safety filter in \cref{eq:max-safe-support} is downward closed.
-Choose an old frontier containing \(b\).
-Its post-promotion load equals its source load, so at least it and the empty set survive.
-Safety of the promoted state follows directly from the filter.
-Finally, any safe restriction can contain only old frontiers whose target load is at most \(G\), hence only elements of \(\Phi^*_{c}\).
-\end{proof}
-
-\cref{thm:max-support} is a weakest lifecycle precondition for escape.
-It may retain some futures not containing \(b\) when spare capacity makes them safe.
-Durably conditioning on \(b\) is simpler but potentially more conservative.
-
-\begin{lemma}[Witnessed promotion]
-\label{lem:promotion}
-For \(\Phi{\downarrow}b\) from \cref{eq:condition},
-\[
-\Phi{\downarrow}b\subseteq\Phi^*_{c}.
-\]
-Consequently, condition on \(b\), move eliminated branch claims to \(X\), promote \(c\), persist the decision, and then dispatch is safe without new capacity.
+\begin{lemma}[Single-branch Reserve summary]
+\label{thm:headroom}
+For a claim proposal of demand \(w\) in a well-formed authority-continuous state,
+\begin{align*}
+&\mathsf{Adm}_\Sigma(\mathsf{reserve}(b,w))\\
+&\qquad\Longleftrightarrow
+\mathsf{str}_\Sigma(\mathsf{reserve}(b,w))\land w\le H_\Sigma(b).
+\end{align*}
+If proposals contain every natural demand in every coordinate, the predicate \(\mathsf{str}_\Sigma\) together with \(H_\Sigma\) is fully abstract for single-branch Reserve.
 \end{lemma}
 
 \begin{proof}
-For any \(C'\in\Phi{\downarrow}b\), some old safe \(C\) contains both \(b\) and \(C'\).
-The source load of \(C\) includes \(c\) and all nonnegative claims of \(C'\).
-Hence \(L_c(C')\le d+q(C)\le G\), so \(C'\in\Phi^*_{c}\).
+Adding \(w\) changes exactly the configurations containing \(b\).
+All remain safe iff \(w\) is bounded by their componentwise minimum slack, which is \cref{eq:headroom}.
+Equality of \(H\) therefore gives equal decisions.
+If coordinate \(k\) differs, a demand strictly above the smaller and at most the larger headroom distinguishes the states.
 \end{proof}
 
-\subsection{Batched and concurrent promotion}
+Fully abstract for one step does not mean suitable for iteration.
 
-Let \(S\) be a finite set of tentative claims and \(\beta(c)\) the owning branch.
-Moving all of \(S\) to \(D\) gives frontier load
-\[
-L_S(C)
-=
-d+\sum_{c\in S}w(c)+q(C)
--\sum_{\substack{c\in S\\\beta(c)\in C}}w(c).
-\]
-Let
-\[
-\Phi^*_S=\{C\in\Phi\mid L_S(C)\le G\}.
-\]
-If \(d+\sum_{c\in S}w(c)>G\), even the empty frontier is unsafe and topology restriction alone cannot repair the batch.
-Otherwise \(\Phi^*_S\) is nonempty.
+\begin{example}[Headroom is not controller-sufficient]
+\label{prop:headroom-update}
+No deterministic updater using only the current single-Reserve structural predicate, \(H\), and an accepted Reserve can always produce exact successor headroom.
+\end{example}
 
-\begin{theorem}[Promotion confluence]
-\label{thm:promotion-confluence}
-For disjoint tentative claim sets \(S,T\), whenever the zero-capacity repairs are defined,
+Let \(G=1\), \(d=q=0\), and use two branches.
+Give both states the same open epochs and binding predicate.
+Exclusive choice and parallel composition then have the same structural Reserve predicate and \(H=(1,1)\), and both accept one unit for \(b_1\).
+Afterwards their headroom is respectively \((0,1)\) and \((0,0)\): the choice still permits a disjoint promise to \(b_2\), whereas parallel composition does not.
+
+The missing information is correlation.
+
+\begin{lemma}[Correlated residual controller]
+\label{thm:residual}
+A simultaneous reservation batch \(x\) is admitted exactly when \(\mathsf{str}_\Sigma(x)\) and \(x\in\mathcal R_\Sigma\).
+For coordinate-complete batch proposals, \(\mathsf{str}_\Sigma\) together with \(\mathcal R_\Sigma\) is fully abstract.
+Moreover, in the fixed-topology Reserve-only fragment with a fixed structural signature and fresh claim IDs,
+\begin{equation}
+x\in\mathcal R_\Sigma
+\Longrightarrow
+\mathcal R_{\Sigma+x}
+=\{y\mid x+y\in\mathcal R_\Sigma\}.
+\label{eq:residual-derivative}
+\end{equation}
+Thus a sequence \(x_1,\ldots,x_n\) is admitted iff \(\sum_i x_i\in\mathcal R_\Sigma\).
+\end{lemma}
+
+\begin{proof}
+Substituting \(q(C)+\sum_{b\in C}x_b\) in \cref{eq:ac} gives exactly \cref{eq:residual}.
+Equality of residual regions is consequently equivalent to equality of all batch decisions.
+After accepting \(x\), each configuration's slack decreases by \(\sum_{b\in C}x_b\); rearranging the defining inequalities yields \cref{eq:residual-derivative}.
+\end{proof}
+
+\begin{remark}[Reserve information lower bound]
+\label{cor:residual-lower-bound}
+Fix the structural predicate and common signature.
+Any summary from which a deterministic checker decides every batch Reserve exactly must distinguish every pair of states with different \(\mathcal R\).
+Consequently \(\mathcal R\) is the coarsest behavioral quotient for this action class, up to an injective re-encoding; this is not a claim about minimum byte size.
+\end{remark}
+
+\begin{proof}
+If \(\mathcal R_\Sigma\ne\mathcal R_{\Sigma'}\), a batch in their symmetric difference requires opposite decisions.
+Equal summaries would force the deterministic checker to return the same decision, a contradiction.
+\end{proof}
+
+Let \(B^+=\{b\mid H_\Sigma(b)\ne\bot\}\) and define the product of branch-local capability budgets
 \[
-\mathcal P_T(\mathcal P_S(\Sigma))
-=
-\mathcal P_{S\cup T}(\Sigma)
-=
-\mathcal P_S(\mathcal P_T(\Sigma)),
+\Box(H_\Sigma)=
+\{x\in\Nat^{B^+\times\calK}\mid
+\forall b.\ 0\le x_b\le H_\Sigma(b)\}.
 \]
-where \(\mathcal P_S\) promotes \(S\) and restricts to \(\Phi^*_S\).
+
+\begin{theorem}[Boundary I: exact product factorization]
+\label{thm:rectangularity}
+The projection of \(\mathcal R_\Sigma\) onto branch \(b\) is exactly \([0,H_\Sigma(b)]\), and \(\mathcal R_\Sigma\subseteq\Box(H_\Sigma)\).
+Moreover,
+\begin{equation}
+\mathcal R_\Sigma=\Box(H_\Sigma)
+\quad\Longleftrightarrow\quad
+\forall C\in\Phi.\quad
+\sum_{b\in C}H_\Sigma(b)\le s_\Sigma(C).
+\label{eq:rectangularity}
+\end{equation}
 \end{theorem}
 
 \begin{proof}
-Promotion only moves each unique claim from its branch bundle to \(D\).
-The final \(D\), \(Q\), and load \(L_{S\cup T}\) are independent of order.
-Each repair retains exactly the old frontiers safe under the current promoted set.
-Promotion never decreases a frontier's load, so an intermediate filter removes no frontier that could become safe after the second promotion.
-Both orders therefore retain exactly \(\{C\in\Phi\mid L_{S\cup T}(C)\le G\}\).
+Setting every other branch demand to zero shows that every \(w\le H_\Sigma(b)\) occurs in the projection; the headroom definition excludes larger \(w\).
+These singleton bounds give \(\mathcal R_\Sigma\subseteq\Box(H_\Sigma)\).
+The reverse inclusion holds exactly when the greatest corner \((H_\Sigma(b))_{b\in B^+}\) satisfies every residual inequality, which is \cref{eq:rectangularity}; downward closure then admits the whole box.
 \end{proof}
 
-This result lets a monitor batch or serialize concurrent escape admissions without introducing an order-dependent authorization policy, provided all claims are accounted before dispatch.
+\paragraph{Architectural consequence.}
+Among checkers whose joint acceptance set is a Cartesian product of branch-local acceptance sets, concurrent soundness and completeness for every one-branch batch are compatible iff \cref{eq:rectangularity} holds.
+Single-branch completeness forces local checker \(b\) to accept all of \([0,H_\Sigma(b)]\); independent composition therefore accepts \(\Box(H_\Sigma)\).
+This is sound exactly when the box is contained in \(\mathcal R_\Sigma\), and \cref{thm:rectangularity} gives the criterion.
+If it fails, a product-only checker must reject a sound singleton or accept an unsound batch; a runtime may instead coordinate, retain escrow, reduce local budgets, or restrict and re-admit topology.
 
-\subsection{Lifecycle preservation}
+The choice/parallel states in \cref{prop:headroom-update} have the same Reserve structural predicate and identical per-branch headroom but different residual regions: the batch assigning one unit to both branches belongs only to the choice residual.
+The choice residual is rectangular and therefore admits exact product-local budgets; the parallel residual is not.
+The result does not claim a full nonblocking supervisor; topology changes and external effects use the semantics of \cref{sec:semantics}.
 
-\begin{theorem}[Lifecycle preservation]
-\label{thm:preservation}
-Starting from a well-formed authority-continuous state, the contextual and policy-explicit rules in \cref{tab:rules}, together with target admission, preserve:
-\begin{enumerate}[leftmargin=*,itemsep=1pt]
-  \item authority continuity;
-  \item the partition into \(D\), terminal \(X\), and uniquely owned \(Q_b\);
-  \item monotonic durable and issued-ID history;
-  \item non-resurrection of closed branch and grant epochs.
-\end{enumerate}
+\subsection{Partial observation has an exact price}
+
+Let observation \(o\) identify a reachable knowledge set \(K(o)\) of authority states.
+Define
+\[
+H_o^K(b)=\bigwedge_{\Sigma\in K(o)}H_\Sigma(b),
+\qquad
+\mathcal R_o^K=\bigcap_{\Sigma\in K(o)}\mathcal R_\Sigma.
+\]
+
+\begin{proposition}[Greatest knowledge-safe one-step checker]
+\label{thm:knowledge}
+Among memoryless observation-based checkers sound for every state in \(K(o)\), the unique pointwise-greatest checker accepts \(\mathsf{reserve}(b,w)\) iff every possible state satisfies its structural premises and \(w\le H_o^K(b)\); it accepts batch \(x\) iff every state satisfies the batch's structural premises and \(x\in\mathcal R_o^K\).
+It is as precise as concrete-state admission in every possible state iff those states have the same action-class acceptance set.
+When structural admissibility is constant over the fiber and the proposal space is coordinate-complete, this is equivalent to constancy of the relevant \(H\) or \(\mathcal R\) profile.
+\end{proposition}
+
+\begin{proof}
+Soundness requires both structural admissibility and quantitative acceptance in every possible state, giving the intersection.
+Any action outside it is unsafe in one member of the knowledge set, so no sound observation-based checker can additionally accept it.
+Concrete precision is possible exactly when the members agree on all decisions.
+Under a common coordinate-complete structural proposal space, \cref{thm:headroom,thm:residual} reduce this condition to profile constancy.
+\end{proof}
+
+Snapshot-only restore is one instance.
+Replacing and live restore can reconstruct identical \(V_r\), but with one-unit capacity an old parallel branch holding one unit changes restored-branch headroom from one to zero.
+The theorem requires fresh authenticated evidence sufficient to determine the residual; it does not require a centralized ledger specifically.
+It is a one-step knowledge result, not a reinvention of general partial-observation supervisory control.
+
+\subsection{Promotion forces a richer policy language}
+
+\begin{proposition}[Choice/parallel is not promotion-closed]
+\label{prop:nonclosure}
+There exists a safe base contract whose exact safe promotion repair is not representable by any unique-leaf choice/parallel contract or pairwise conflict graph.
+\end{proposition}
+
+\begin{proof}
+Take
+\[
+P=b\Box(x\parallel y\parallel z),\qquad G=3,
+\]
+with one unit in each branch bundle.
+After promoting \(b\)'s claim, the durable unit leaves capacity two on the right: every singleton and pair among \(x,y,z\) remains possible, but their triple does not.
+A conflict graph that permits every pair has no edges and therefore also permits the triple.
+Choice/parallel contracts induce such pairwise cograph compatibility, so none represents the repaired family.
+\end{proof}
+
+Pure structured repairs exist, but there is no unique largest one: choosing which one of the three pairs to conflict yields incomparable maximal repairs.
+
+\begin{lemma}[Compact exact promotion closure]
+\label{thm:guard-closure}
+For any guarded contract \(T\) and finite tentative set \(U\) with \(a_U\le G\),
+\begin{equation}
+\front(T\wedge\gamma_U)
+=\{C\in\front(T)\mid a_U+\sum_{b\in C}u_U(b)\le G\}.
+\label{eq:guard-closure}
+\end{equation}
+This is the unique largest topology-only safe pruning for fixed claims, represented by one new vector row: at most \(|\calK|\) scalar inequalities, \(O(|B||\calK|)\) coefficients, and singleton lineage tests.
+\end{lemma}
+
+\begin{proof}
+After moving \(U\) into \(D\), the left side of the inequality is exactly the promoted load of \(C\) by \cref{eq:promotion-load}.
+Conjoining \(\gamma_U\) therefore retains exactly and all safe old configurations.
+Any safe restriction can contain no configuration failing this inequality.
+\end{proof}
+
+The result is a closure theorem for authority promotion, not a claim that threshold predicates are new.
+Under the controller's no-silent-policy-expansion rule, the installed row is frozen: if it were recomputed from current \(Q\), later withdrawal could reopen a future durably removed by promotion.
+Such reopening can be authority-safe, but it is a new lifecycle expansion and requires explicit re-admission rather than mutation of an audited decision.
+
+\begin{lemma}[Owner-support criterion]
+\label{cor:support}
+The exact repair preserves an individual support witness for every owner with a nonempty remaining bundle iff each such owner occurs in some configuration of \(\front(T\wedge\gamma_U)\).
+If owner \(b\) has no such support, no safe subfamily of the exact repair can preserve it.
+\end{lemma}
+
+This does not preserve every old correlation: two owners can each retain a witness while their former joint configuration is removed.
+An implementation therefore reports unsupported owners and removed maximal configurations (or declared correlation obligations), rather than claiming “no other cancellation.”
+
+\subsection{Algebraic commutation versus operational order}
+
+Promotion filters for a fixed batch commute as set intersections, but cleanup may tombstone the owner of a later effect.
+
+\begin{theorem}[Boundary II: order-independent promotion]
+\label{thm:serial}
+Let \(U\) be a valid atomic batch of unique tentative claims and \(U_b=U\cap Q_b\) in the fixed source state.
+Assume no interleaved lifecycle mutation, exact prefix guards, and immediate deterministic cleanup.
+Every permutation of the nonempty owner groups \(U_b\) remains enabled and reaches the same \((D,Q,X,\front(T))\) as atomic promotion of \(U\) iff every promoted owner is supported in the final family \(\front(T\wedge\gamma_U)\).
 \end{theorem}
 
-\begin{proof}[Proof sketch]
-Induct on transitions.
-Checkpoint changes only reconstructable state.
-Reserve and topology-expanding operations check their explicit targets.
-Contextual restore either transfers a binding-preserving claim once or moves it to \(X\); live restore inserts the clone at the old leaf, preserving surrounding conflicts.
-Policy-parametric merge names its new frontiers rather than inferring them from files.
-Abort and revocation restrict frontiers and move tentative IDs to \(X\).
-Escape uses plain admission, \(\Phi^*\), or witnessed promotion, and durable accounting precedes dispatch.
-No rule removes \(D\), \(X\), or an issued ID, or reopens an epoch.
+\begin{proof}
+For sufficiency, consider any owner-group prefix.
+For every prefix \(S\subseteq U\), the final safe family is contained in the prefix-safe family because promotion never decreases load.
+A final support witness for a later owner is therefore also present at every prefix, so cleanup cannot tombstone it.
+The last installed batch row implies every prefix row, so final claim placement and guarded-contract denotation depend only on \(U\), not its order; implementations may delete the redundant prefix rows as a canonical normalization.
+
+For necessity, suppose promoted owner \(b\) lacks final support and order every other owner group before \(U_b\).
+If an earlier group becomes disabled, this is already a failing permutation.
+Otherwise, after those groups promote, the support of \(b\) is exactly its final support: promoting \(b\)'s own claims would leave the load of every configuration containing \(b\) unchanged, moving equal demand from \(Q_b\) to \(D\).
+Cleanup therefore tombstones \(b\) before \(U_b\), disabling the next group.
 \end{proof}
 
-\paragraph{Repair taxonomy.}
-Within the additive, monotone, noncompensable model, an unsafe proposal can add compatible capacity, weaken tentative guarantees, or restrict/delay the lifecycle.
-This is an implementation taxonomy, not a fundamental theorem: it enumerates the abstract fields that affect \(\ac\).
-Negative delivery receipts, stable-ID coalescing, compensation, renewable quotas, or effect rebinding introduce additional protocol operations and must be modeled explicitly.
+The characterization is operational, not merely algebraic.
+Let \(G=2\), let \(s\) and \(t\) be exclusive, and set \(Q_s=\{c_s:1\}\), \(Q_t=\{c_t:1,u:1\}\).
+Promoting \(c_s\) first makes the \(t\)-configuration load three, tombstones \(t\), and prevents later promotion of \(c_t\).
+Promoting \(c_t\) first leaves both configurations at load two, so \(c_s\) can subsequently promote.
+If order-independent dispatch of both effects is required, the runtime must seal the fixed batch before either dispatch or otherwise coordinate a verified order; failure of final-owner support alone does not rule out every serial order.
 
+\subsection{Concrete effect coverage}
+
+For trace prefix \(\tau\), let \(\mathsf{Ops}(\tau)\) be the stable IDs appearing in its attempt labels, and let \(c_e\) be the unique claim paired with \(e\).
+Repeated attempts use the same pair; \(\mathsf{actual}(e)\) is their aggregate durable outcome.
+
+\begin{lemma}[Effect coverage]
+\label{lem:coverage}
+If every attempt is mediated and \(\mathsf{actual}(e)\le w(c_e)\), then
+\[
+\sum_{e\in\mathsf{Ops}(\tau)}\mathsf{actual}(e)
+\le\sum_{c\in D}w(c)=d.
+\]
+\end{lemma}
+
+\begin{theorem}[Abstract lifecycle preservation]
+\label{thm:preservation}
+If \(A\) is well formed and satisfies \(\ac\), and \(A\xrightarrow{u/\eta}A'\) is admitted by the rules of \cref{sec:semantics}, then \(A'\) is well formed and satisfies \(\ac\).
+Every attempt label uses a ticket whose matching claim is already in \(D\); all retries of one stable operation ID use the same claim, and neither the ID nor claim can be rebound to a second logical operation.
+Closed branch or grant epochs cannot authorize a new Reserve or Prepare; only a previously sealed one-shot operation may finish after closure.
+\end{theorem}
+
+\begin{proof}
+By cases on the admitted rule.
+Checkpoint and ticket-only steps stutter on \((G,D,Q,T)\).
+Restriction, abort, and revoke only remove configurations or tentative claims.
+Simulation-certified targets satisfy \(\ac\) by \cref{eq:simulation} and source continuity; directly admitted merge and Reserve satisfy their checked closed formulas.
+The fragment-conservation check on \(\rho\), global freshness, and terminalization preserve the claim partition.
+Prepare preserves \(\ac\) by \cref{thm:guard-closure} and moves each unique claim from \(Q\) to \(D\) exactly once.
+Ticket rules preserve durable history, bind every attempt to \(D\), and retain the stable ID across retry and recovery.
+Epoch premises exclude new Reserve and Prepare after closure; dispatch of a previously sealed operation changes no authority field.
+\end{proof}
+
+\begin{corollary}[Concrete trace authority safety]
+\label{thm:trace}
+Assume an initially related concrete/abstract state; complete mediation of protected effects and authority-changing transitions; durable Prepare before external observation; and a concrete implementation that forward-simulates the admitted abstract rules or takes authority-preserving stutters.
+Then for every concrete trace prefix and every currently permitted configuration \(C\),
+\[
+\sum_{e\in\mathsf{Ops}(\tau)}\mathsf{actual}(e)+q(C)\le G.
+\]
+\end{corollary}
+
+\begin{proof}
+Induction over the simulated trace uses \cref{thm:preservation}.
+The coverage lemma bounds distinct concrete operations by durable demand, and \cref{eq:ac} adds each permitted conditional bundle.
+\end{proof}
+
+The corollary is a refinement obligation, not evidence that today's optional hooks provide complete mediation.
+It cannot prove that a binding or declared demand matches natural-language intent, that a bypassing tool path does not exist, or that a remote sink reports truthfully.
+Those are explicit refinement and deployment obligations rather than facts hidden by the model.

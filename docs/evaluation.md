@@ -1,149 +1,164 @@
 # Evaluation Contract
 
-**Status:** pre-registration for a theory-first CSF paper. Values marked TBD are not results.
+**Status:** theory-first CSF 2027 evidence plan and repository truth as of 2026-07-31. A number is a result only when a checked-in command reproduces it.
 
-The first finite artifact is complete: 2,816 AC/need states, 3,428 safe-source single-claim promotions, 27,142 safe restrictions for maximality, and 13,680 ordered disjoint batches for confluence were exhaustively checked. These bounded counts support debugging and counterexample validation; they do not replace the planned proofs or runtime study.
+## 1. Evidence hierarchy
 
-## 1. Evidence priorities
+This is not a throughput paper. Evidence is ranked as follows:
 
-The project is not evaluated like a throughput paper. Its evidence hierarchy is:
+1. precise definitions and proofs with explicit assumptions;
+2. mechanized proofs of the finite core;
+3. exhaustive executable checks and minimal counterexamples for nearby wrong rules;
+4. deterministic instantiation of the lifecycle in real runtime interfaces;
+5. microbenchmarks only for a mechanism that actually enforces complete mediation.
 
-1. checked definitions and proofs;
-2. automatically generated counterexamples for nearby unsound designs;
-3. deterministic instantiations of the formal executions;
-4. limited evidence that real agent runtimes expose the modeled lifecycle operations;
-5. microbenchmarks only for explicit deployability claims.
-
-Approximate paper allocation: 70--80% semantics/theorems/proofs, 10--15% mechanization and model exploration, and 10--15% runtime instantiation and overhead.
+The intended scientific allocation is roughly 70--80% model, theorem, and proof; 10--15% mechanization/exhaustive validation; and 10--15% runtime correspondence and enforcement. Prompt benchmarks cannot validate the safety theorem and are out of scope.
 
 ## 2. Research questions
 
-### RQ1: Necessary lifecycle information
+### RQ1: What authorization state is a checkpoint missing?
 
-What durable information beyond restored workspace/context is necessary and sufficient to make sound, maximally permissive admission decisions across checkpoint, replace/live restore, abort, revocation, escape, and merge?
-
-Evidence:
-
-- one small-step semantics;
-- the replace/live indistinguishable-snapshot pair;
-- conditional-bundle and over-approximated-frontier counterexamples;
-- implication/separation table against snapshot-local authorization, flat first-commit-wins, transaction validity, and commit-time freshness.
-
-Success criterion: each distinction is witnessed by a minimal history, and independent reviewers can classify it from the formal definitions without relying on agent prose.
-
-### RQ2: Most-permissive escape promotion
-
-When a branch-conditional claim becomes irreversible, what is the largest existing future family that can safely remain possible without new authority or cancellation of other claims? Can concurrent promotions be admitted without order-dependent policy?
+For a declared class of future actions, what summary is necessary and sufficient for exact admission after fork, restore, or merge?
 
 Evidence:
 
-- proof of the exact plain-escape capacity condition;
-- proof that the safe-frontier filter is downward closed and uniquely inclusion-maximal;
-- proof that witnessed branch conditioning is a conservative subset;
-- proof that batched promotion repairs commute;
-- proof that recursive max/sum evaluation equals explicit maximal-frontier enumeration for structured trees;
-- randomized property tests comparing algorithms on small generated instances.
+- prove that minimum future headroom exactly characterizes one fresh Reserve on one supported branch;
+- exhibit choice and parallel states with the same headroom but different successor headroom;
+- prove that the correlated residual downset exactly characterizes arbitrary reservation batches and supports the derivative update;
+- prove the exact rectangularity criterion for when the correlated residual can be implemented as independent branch-local capability budgets, and the resulting coordination/splitting/topology trilemma;
+- prove that intersection over an observation fiber is the pointwise-greatest sound memoryless one-step checker, including structural admissibility such as open epochs, while explicitly excluding generic nonblocking supervisory control.
 
-Metrics:
+Success criteria:
 
-- theorem/proof status and artifact location;
-- agreement rate between recursive and exhaustive need (must be 100% for tested structured instances);
-- smallest counterexample for each mutated rule;
-- checker time by topology nodes, grant types, and graph density, only to support the tractability discussion.
+- every characterization has both directions and an explicit proposal language;
+- “fully abstract” is always scoped to that action class and structural status;
+- the artifact enumerates the same decisions and derivative law on bounded states;
+- factorization is checked without a fixed-box truncation gap, with explicit rectangular choice and nonrectangular parallel witnesses;
+- the paper does not claim generic residuation, resource composition, or partial-observation synthesis as novel.
 
-### RQ3: Reality of the lifecycle boundary
+### RQ2: What changes when a conditional effect becomes durable?
 
-Do real agent execution systems expose operations that alter co-durability, and can the formal litmus histories be instantiated without relying on a probabilistic model failure?
+Can exact promotion remain inside the natural choice/parallel policy language, and when does algebraic repair correspond to an executable ordering of effects?
 
-Evidence from at most two systems:
+Evidence:
 
-- one conversation/checkpoint runtime already represented by the repository's Claude Code session experiment;
-- one structured fork/commit or multi-agent runtime with explicit branch selection or merge.
+- the \(b\Box(x\parallel y\parallel z)\) witness in which all pairs but not the triple remain safe;
+- proof that neither unique-leaf choice/parallel syntax nor a pairwise conflict graph represents that family;
+- proof that one frozen nonnegative threshold row gives the exact largest safe subfamily;
+- a withdrawal counterexample showing why reading live claim weights from an old guard is unsound;
+- lineage-OR transport through live restore;
+- the iff final-owner-support theorem for universal owner-group serialization, plus an enabled and disabled ordering when support fails;
+- a validated serial order, coordinated cleanup, or atomic batch Prepare before dispatch when universal owner-order support fails.
 
-Required observations:
+Success criteria:
 
-- whether the old continuation remains live after restore;
-- whether losing branches can issue external calls before selection;
-- whether a merge can retain outputs or effects from more than one child;
-- which lifecycle decisions and effect receipts are durable;
-- whether authority is copied, transferred, delayed in escrow, or rechecked.
+- the theorem concludes denotational contract equality, not equality of guard syntax;
+- unsupported owners and removed maximal configurations/correlation obligations are returned explicitly;
+- every effect in a sealed batch has a stable binding and durable claim before dispatch;
+- the finite artifact reproduces every separating example.
 
-The test workload must be deterministic. LLM-generated UUID drift may be included as motivation but is not required for the core violation.
+### RQ3: Does the abstract invariant refine a real agent lifecycle?
 
-### RQ4: Enforceability and cost
+Which facts must a concrete runtime expose so checkpoint, exclusive/parallel fork, selection, abort, replace/live restore, merge, revocation, uncertain dispatch, and settlement preserve authority continuity?
 
-Can a small reference monitor reject authority-invalid histories while preserving useful pure exploration and safely admitted effects?
+Evidence:
 
-Baselines:
+- a concrete/abstract state relation separating reconstructable values from durable controller state;
+- a closed least-generated transition relation with sound simulation, admission, and sealing proof objects;
+- fragment-conserving structural certificates \((\pi,\rho)\) that dominate every target configuration by a solvent source configuration;
+- claim partition, open-epoch, binding, and support well-formedness;
+- complete effect coverage: one matching claim per stable protected operation, accounting before every attempt, and aggregate actual demand bounded by declared demand;
+- forward-simulation proof yielding trace-prefix authority solvency;
+- a documented mapping to Claude Code and Codex lifecycle/pre-tool interfaces, labeled as correspondence rather than enforcement.
 
-- **snapshot-local clone:** authorization state is copied with the checkpoint;
-- **split-all:** authority is partitioned at every fork;
-- **flat ledger / delayed escrow:** one global consumption ledger, with authority transferred only after selection;
-- **transaction-only:** effects stage and settle correctly but bounded authority is not checked across descendants;
-- **structured topology-aware:** the proposed monitor.
+Success criteria:
 
-Metrics:
+- the proof states exactly what it cannot infer from files, natural-language intent, remote receipts, or optional hooks;
+- no runtime hook is described as complete mediation unless an adapter owns every dispatch path;
+- RL is described only as a prospective adapter mapping: the calculus does not establish reward, policy-update, privacy, licensing, or provenance correctness.
 
-- invalid durable histories admitted (primary safety metric; target 0 for the proposed monitor);
-- safe histories rejected;
-- exact deficit and maximal retained frontier family returned;
-- pure candidates allowed before selection;
-- reserve, restore, merge, and escape latency;
-- durable ledger writes and contention under parallel commits.
+### RQ4: Is there a deployable algorithmic boundary?
 
-No overhead percentage will be claimed until a stable implementation and repeated measurement exist.
+Can an industrial runtime obtain useful fast paths while failing closed on the general guarded case?
+
+Evidence:
+
+- linear cotree evaluation for unguarded choice/parallel contracts;
+- linear construction of the exact promotion guard;
+- linearly checkable concrete configuration certificates;
+- an honest coNP boundary for universal safety with compact threshold guards;
+- one minimal dispatch-owning adapter or mandatory tool proxy after the proof and mechanization stabilize.
+
+Baselines for any later adapter:
+
+- snapshot-local clone;
+- always split authority;
+- parent escrow with transfer after durable selection;
+- transaction-only staging;
+- residual/guarded authority controller.
+
+Primary safety metrics are violating histories admitted (target zero) and safe useful histories rejected. Latency is secondary and must not be reported before enforcement is complete.
 
 ## 3. Fixed litmus suite
 
-| ID | History | Expected classification |
+| ID | History | Expected result |
 |---|---|---|
-| L1 | reserve one claim; escape; restore old local view; reserve/escape again | unsafe unless the first durable use remains charged |
-| L2 | reserve one unit in each of two choose-one branches; select one | safe with one unit |
-| L3 | start from L2; merge and retain both branch effects | unsafe; exact scalar deficit 1 |
-| L4 | replace leaf \(b\) by restored epoch \(b'\) after durable tombstone | preserve surrounding context and need when binding-preserving claims transfer once |
-| L5 | live-restore leaf \(b\) inside context \(E[b]\) | install \(E[b\parallel b']\), not \(E[b]\parallel b'\) |
-| L6 | losing branch performs an issue-time disclosure, then aborts | disclosure remains durable/charged |
-| L7 | reserve under epoch 0; revoke; restore epoch-0 snapshot; attempt escape | rejected as stale; earlier durable use remains accounted |
-| L8 | two pure choice branches compute; parent transfers one claim after selection | safe under flat delayed escrow and proposed monitor; prevents a strawman comparison |
-| L9 | two transaction-valid branches settle under a one-unit grant | transaction-valid but authority-invalid |
+| L1 | reserve, dispatch, restore old values, repeat with a fresh operation ID | old durable demand remains charged; duplicate authority is rejected |
+| L2 | two exclusive empty branches each request one unit under \(G=1\) | individual headroom is one; joint batch is rejected |
+| L3 | the same two branches in parallel | individual headroom is one; joint batch is rejected, and reserving one drives the other's successor headroom to zero |
+| L4 | compare L2 choice with L3 parallel before any claim | same headroom, different residual regions and successor summaries |
+| L5 | promote \(b\) in \(b\Box(x\parallel y\parallel z)\), all unit claims, \(G=3\) | retain every subset of \(\{x,y,z\}\) of size at most two; no pairwise graph representation |
+| L6 | withdraw a claim after L5 | frozen guard still forbids the triple; dynamic recomputation would silently change a durable policy, so reopening requires explicit re-admission |
+| L7 | live-restore one guarded lineage | substitute old membership by the OR of old/restored descendants and charge it once |
+| L8 | restore-replace versus restore-live with identical reconstructed values | a Reserve can be safe in one and unsafe in the other |
+| L9 | sequentially promote owners without final support | one order can tombstone the next owner; arbitrary order is not guaranteed, so validate an order, coordinate cleanup, or seal the batch |
+| L10 | two transaction-valid branch effects under one one-use grant | transaction-valid but authority-invalid when both become durable |
+| L11 | two pure candidates with empty bundles; transfer one claim after selection | safe under parent escrow and the proposed controller |
+| L12 | adapter declares a protected query in a rollout and later retains several rollout artifacts | local reset does not erase the supplied claim; applying the theory to learning still depends on a trusted provenance projection and finite demands |
+| L13 | Prepare operation \(e\); revoke its epoch; Dispatch \(e\); retry/settle | sealed operation may finish once because already charged; no new Prepare is allowed, and retry is the same stable operation rather than fresh authority |
 
 ## 4. Mutation study
 
-The explorer should delete or weaken one premise at a time:
+Delete or weaken one premise at a time:
 
-- place durable claims inside the checkpoint;
-- let abort delete escaped claims;
-- make restore-live use choice rather than parallel topology;
-- insert the restored clone outside its original lifecycle context;
-- allow merge without re-admission;
-- refresh stale epochs on restore;
-- reuse a claim ID for a fresh effect;
-- treat alternative claims inside one branch as a conjunctive bundle;
-- dispatch before durable uncertain/escaped accounting;
-- approximate general topology by pairwise data when the representation is not pairwise-complete.
+- store the authoritative ledger inside the checkpoint;
+- duplicate a claim during fork or live restore;
+- use current \(Q\) rather than frozen coefficients in an installed guard;
+- copy a lineage coefficient to every descendant instead of substituting OR;
+- let abort or reset delete a dispatched/uncertain claim;
+- accept merge from a workspace diff without \((T',\pi,\rho)\);
+- refresh a closed epoch on restore;
+- reuse one claim for distinct operation IDs;
+- dispatch before atomic Prepare;
+- let Retry change the stable operation ID or claim binding, or let a closed epoch create a new Prepare;
+- treat algebraic filter commutation as operational serializability without owner support;
+- infer exclusivity or effect equivalence from untrusted model text.
 
-For each mutation, report the shortest violating schedule found and map it to the theorem premise it demonstrates. This is stronger evidence than a collection of prompt anecdotes because it tests the logical necessity of the design.
+For each mutation, report the shortest violating schedule and the theorem premise it witnesses. This is stronger evidence for principle necessity than a collection of stochastic prompt failures.
 
 ## 5. Mechanization target
 
-Lean 4 is the preferred target because the surrounding research program already uses it and CSF 2027 has strong mechanization expertise. The minimum useful artifact proves:
+Lean 4 is preferred. The minimum paper-value development proves:
 
-- unique-claim accounting and epoch well-formedness;
-- terminal-ID non-reuse and claim-level promotion refinement;
-- snapshot-local impossibility;
-- plain-escape load split and exact capacity condition;
-- maximal safe promotion support, witnessed promotion, and batch confluence;
-- preservation for the explicitly modeled small transition core;
-- correctness of structured need recursion.
+- claim partition, terminal non-reuse, and epoch monotonicity;
+- authority-continuity preservation for the small transition core;
+- headroom exactness and the non-updateability witness;
+- residual batch exactness and the derivative law;
+- exact guarded promotion closure and frozen semantics;
+- final-owner-support serializability modulo contract denotation;
+- one-shot ticket phases, abstract preservation, effect coverage, and the conditional concrete-refinement corollary.
 
-The graph complexity proof may remain on paper if encoding it would displace higher-value mechanization. Proof size, trusted axioms, Lean version, build command, and build time are TBD.
+Report Lean version, build command, proof size, trusted axioms, and build time. Until that directory builds from a clean command, the paper must call all formal arguments paper proofs and the Python artifact bounded executable validation.
 
-## 6. Stop rules
+## 6. Stop and narrowing rules
 
-The main claim must be narrowed or abandoned if:
+Narrow or abandon the lead claim if:
 
-- prior work already states an equivalent changing-co-durability authority theorem;
-- the formal semantics cannot distinguish the proposed property from ordinary transaction validity;
-- the snapshot-local theorem is already subsumed by equivalent prior lifecycle work or the maximal-support result has no enforceable consequence;
-- a real lifecycle API cannot expose or enforce the topology witness assumed by the monitor;
-- mechanization reveals that the transition rules silently assume the desired invariant.
+- closest prior work already gives the same co-durable conditional-authority residual and lifecycle transformation;
+- conditional commitments have no enforceable meaning beyond an intention;
+- the guarded promotion theorem collapses to a claimed novelty in generic threshold predicates or supervisory control;
+- a complete-mediation path cannot expose trustworthy branch epochs, effect bindings, and dispatch outcomes;
+- every useful agent workload safely delays all authority transfer until final selection;
+- mechanization reveals a transition rule that assumes the invariant it purports to preserve.
+
+If only runtime integration is missing, retain the theory result but state deployment as future work. If a theorem is classical under renamed notation, cite the classical result and move novelty to the lifecycle-specific instantiation or remove the claim.

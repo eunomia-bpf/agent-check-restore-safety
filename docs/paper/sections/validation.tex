@@ -1,127 +1,63 @@
-\section{Mechanization and Validation}
+\section{Executable Validation}
 \label{sec:validation}
 
-The evidence for this paper should test the semantic boundary, not whether a language model happens to emit a different UUID.
-We organize validation around four questions.
+The artifact is a dependency-free Python executable model of finite vector grants, unique claim ownership, residuals, exact promotion, lineage transport, and selected crash-aware lifecycle rules.
+It stores frontiers explicitly only for bounded exploration; this is not the proposed runtime representation.
+It is not an implementation of lifecycle Reserve, Select/Abort, generic Merge certificates, or the complete LTS.
+The artifact README gives one command sequence that runs 24 unit tests and reproduces the checked-in JSON byte for byte.
 
-\subsection{Proof artifact}
-
-The planned Lean 4 development mirrors the paper rather than encoding an implementation.
-It contains finite authority coordinates, unique claim ownership, downward-closed frontier families, the lifecycle transition relation, and the abstraction \(\alpha\).
-The minimum proof dependency chain is:
-\begin{align*}
-\text{partition}
-&\longrightarrow \text{frontier load}
-\longrightarrow \text{maximal support}\\
-&\longrightarrow \text{transition preservation}
-\longrightarrow \text{trace safety}.
-\end{align*}
-The structured recurrence is proved separately by induction over the lifecycle contract.
-
-\pending{Lean version, lines of specification/proof, build command, build time, trusted axioms, and theorem coverage.}
-Until these values are produced, the manuscript claims paper proofs but not completed machine checking.
-
-\subsection{Executable lifecycle explorer}
-
-The artifact includes a dependency-free Python model of finite vector grants, uniquely owned claims, downward-closed frontier families, plain promotion, and maximal-support promotion.
-It enumerates every nonempty downward-closed family over one to three branches, scalar branch demands in \(\{1,2\}\), durable demand in \(\{0,1\}\), and grants from zero through seven.
-\Cref{tab:explorer-results} reports the deterministic checks.
+The explorer enumerates every nonempty downward-closed family on one to three branches, scalar claim weights in \(\{1,2\}\), durable demand in \(\{0,1\}\), and grants from zero through seven.
+Its explicit owner-support well-formedness predicate requires every conditional claim owner to occur in at least one admitted frontier.
+All headline source-state counts in \Cref{tab:explorer-results} apply this predicate: 1,312 states are well formed, of which 730 are safe sources.
+A separate raw algebra scan checks the \(\ac\)/need transcription on 2,816 states including unsupported owners; the JSON labels that scan as a diagnostic and we exclude it from the table's evidence counts.
+\Cref{tab:explorer-results} gives the v5 results; every check passed.
 
 \begin{table}[t]
 \centering
 \small
-\caption{Finite executable validation. Each count is an exhaustively checked instance, not a statistical sample or proof.}
+\caption{Deterministic finite validation. Counts are exhaustive instances, not samples or proofs.}
 \label{tab:explorer-results}
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{lr}
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lr@{}}
 \toprule
 \textbf{Checked property} & \textbf{Instances} \\
 \midrule
-Universal \(\ac\) iff \(\need\le G\) & 2,816 states \\
-Single-claim maximal-support safety & 3,428 promotions \\
-Inclusion maximality & 27,142 safe restrictions \\
-Disjoint-batch confluence & 13,680 ordered pairs \\
-Replace/live indistinguishability & 1 separating pair \\
-Safe-choice/unsafe-escape & 1 minimal witness \\
+Well-formed \(\ac\) iff \(\need\le G\) & 1,312 states \\
+Reserve iff branch headroom & 6,180 demands \\
+Batch iff residual membership & 17,658 batches \\
+Headroom-box rectangularity criterion & 730 states \\
+Residual derivative identities & 4,067 prefixes \\
+Derivative memberships & 103,785 batches \\
+Single-claim maximal support & 2,060 promotions \\
+Inclusion maximality & 22,246 restrictions \\
+Frozen guard / membership & 2,060 / 11,142 \\
+Confluence, explicit / guarded & 6,312 / 6,312 \\
+Recovery phase/epoch states / edges & 8 / 22 \\
+Structural target frontiers & 26 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-All checks pass.
-The escape witness has \(G=1\); after the left claim is promoted, frontier \(\{\mathit{right}\}\) has load two.
-The snapshot litmus presents the same reconstructed-state marker, one-unit grant, and one-unit Reserve proposal in both worlds; the replace target has need one and the live target need two.
-The machine-readable report is reproduced byte-for-byte by a single command.
+For derivative checks, successor components are in \([0,2]\) and the parent bound is \(2+\max_bx_b\le3\), so every queried \(x+y\) is represented rather than rejected by truncation.
 
-This finite exploration detects transcription errors and exercises the quantifiers in the maximality and confluence statements, but it does not establish them for unbounded states.
-The next artifact stage will add structured-contract agreement and breadth-first mutation traces.
-The planned mutations are:
+Fixed checks exercise boundaries that aggregate counts can hide.
+Choice and parallel over two branches both initially report \(H=(1,1)\), but the batch \((1,1)\) belongs only to the choice residual.
+Across all 730 well-formed safe sources, the exact residual equals the rectangular product \(\Box(H)\) iff the all-headrooms corner satisfies every configuration-slack inequality; 296 states are rectangular and 434 are not.
+For each source, enumeration runs through its maximum headroom component, which covers \(\Box(H)\); every residual batch is already componentwise bounded by \(H\), so this check has no fixed-box truncation gap.
+The fixed choice instance satisfies this criterion, whereas the fixed parallel instance does not.
+After reserving one unit on the first branch, successor headroom is respectively \((0,1)\) and \((0,0)\), witnessing that \(H\) is not update-closed.
+For the two-state knowledge set with common structural premises, all nine batches in \([0,2]^2\) agree with membership in the intersection of the two residual profiles.
+Promotion in \(b\Box(x\parallel y\parallel z)\) produces exactly the seven subsets of \(\{x,y,z\}\) of size at most two; exhaustive enumeration of all eight three-vertex conflict graphs finds no representation, while the threshold-two guard represents it exactly.
+Withdrawing \(x\)'s claim makes a recomputed current-\(Q\) guard admit the triple, whereas the frozen guard continues to exclude it.
+After live restore, OR-lineage transport charges the retained old/restored pair two units; naively copying the term charges four and rejects it.
+In the positive final-owner-support instance, the exact guarded atomic batch and both serial orders produce the same state and denotational support; the check deliberately does not require syntactically equal guards.
+In the absent-support instance, cleanup after the \(s\)-first step terminalizes the pending \(t\) claim and disables that order, whereas the \(t\)-first order remains enabled and reaches the atomic batch's cleaned state and denotational support.
+Separately, the witnessed condition-on-owner shortcut tombstones the next owner, terminalizes its claim, and disables the second escape.
+Finally, the snapshot-local litmus constructs a replace pre-state with empty \(Q\) and a live-restore pre-state with one unit on the old branch, applies the same fresh \textsc{Reserve}(restored,1) proposal to both, and obtains safe/unsafe successors with needs one/two respectively.
+The plain-escape witness gives load two under a one-unit grant.
+The lifecycle graph enumerates eight reachable ticket-phase/grant-epoch states and 22 valid crash, Dispatch, Retry, Settle, and Revoke edges.
+It checks that Dispatch-before-Prepare, tentative claims on tombstoned branch epochs, and reuse of a tombstoned name as a fresh restore descendant are rejected; crash preserves prepared work and maps inflight to uncertain, retry reuses \((e,c)\) without changing authority accounting, cancellation retains the durable claim, and a sealed ticket may dispatch after revocation.
+Certified replace/live restore and choice/parallel fork check 26 target frontiers while preserving one receipt and prepared/uncertain tickets.
 
-\begin{enumerate}[leftmargin=*,itemsep=1pt]
-  \item snapshot the authoritative claim ledger;
-  \item copy a claim into both restored continuations;
-  \item let abort delete a durable or uncertain claim;
-  \item classify live restore as exclusive choice;
-  \item insert a live-restored clone outside its original lifecycle context;
-  \item merge exclusive claims without target admission;
-  \item dispatch before durable promotion;
-  \item reopen a grant epoch or reuse a terminal claim ID on restore.
-\end{enumerate}
-
-For each implemented mutation, the artifact will report a machine-readable schedule, violating frontier, load, grant, and responsible rule premise.
-This follows the useful CSF pattern of validating a formal security definition with generated counterexamples and mutation testing~\cite{anderson2023stack}.
-
-\pending{structured-contract agreement counts, shortest mutation traces, and expanded vector cases.}
-
-\subsection{Deterministic runtime litmus tests}
-
-The runtime study uses the histories in \cref{tab:litmus}.
-They do not depend on model stochasticity: claim IDs, topology operations, and external responses are fixed.
-At most two runtimes are needed, provided their true lifecycle hooks can be identified.
-For each runtime we record whether the old continuation remains live after restore, whether losing branches can issue calls, whether merge retains more than one branch, and which decisions survive checkpoint rollback.
-
-\begin{table}[t]
-\centering
-\small
-\caption{Deterministic lifecycle litmus tests.}
-\label{tab:litmus}
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{p{0.08\columnwidth}p{0.55\columnwidth}p{0.25\columnwidth}}
-\toprule
- & \textbf{History} & \textbf{Required result} \\
-\midrule
-L1 & escape; restore old local state; use again & first use remains charged \\
-L2 & two one-unit claims under choice; select one & admit with \(G=1\) \\
-L3 & L2 followed by retaining both at merge & repair or reject \\
-L4 & replace old continuation, transfer claim once & preserve need \\
-L5 & restore while old continuation remains live & parallel admission \\
-L6 & losing branch discloses before selection & disclosure remains in \(D\) \\
-L7 & revoke; restore stale checkpoint; escape & reject stale epoch \\
-L8 & pure children; delayed parent transfer & admit without topology claim \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-ACRFence reports preliminary motivating experiments, not evidence for the new formal results~\cite{zheng2026acrfence}.
-Its strongest recorded Action Replay run observed duplicate/key-changing effects in 10/10 restore trials and 0/10 strict no-restore trials.
-The Authority Resurrection scenarios are mixed across operation and validation mode, so they do not support a blanket “stateless always fails, stateful always succeeds” claim.
-The experiments use conversation/session rewind rather than an OS checkpoint and explicitly prompt fresh operation identifiers.
-The new litmus suite retains the feasible histories while removing these sources of overgeneralization.
-
-\subsection{Reference monitor}
-
-A small monitor consumes typed lifecycle events and implements the rules in \cref{tab:rules}.
-We compare:
-
-\begin{enumerate}[leftmargin=*,itemsep=1pt]
-  \item snapshot-local clone;
-  \item split-all at every fork;
-  \item flat ledger with delayed escrow;
-  \item transaction-only staging;
-  \item structured topology-aware conditional commitments.
-\end{enumerate}
-
-The primary metrics are unsafe durable histories admitted and safe histories rejected.
-Secondary metrics are the reported repair, pure exploration admitted, and p50/p99 latency for reserve, selection, restore, merge, and escape admission.
-We do not claim low overhead until the monitor and repeated measurements exist.
-
-\pending{implementation revision, test pass counts, false rejection counts, and latency distribution.}
+These checks validate the executable definitions, the threshold representation, and the reported finite counterexamples.
+They do not constitute a proof for unbounded states, a performance evaluation, complete-mediation evidence, or a concrete-runtime refinement.

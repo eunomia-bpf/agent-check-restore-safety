@@ -35,27 +35,11 @@ The model covers C/R and fork as instances of support transformation, not as spe
 
 The theory does not assume that a product verb has one meaning. “Restore” is replace only if the old continuation is durably fenced. “Fork” is exclusive only if the controller guarantees one winner. A Git worktree gives file isolation but says nothing about external authority.
 
-## 3. Reinforcement learning and search workloads
+## 3. Prospective reinforcement-learning mapping
 
-The same principle applies to rollout-based agents, but the classification depends on what crosses the simulation boundary.
+The calculus contains no reinforcement-learning primitive and does not prove reward, policy-update, privacy-accounting, licensing, or provenance correctness. An adapter may model hermetic choose-one rollouts as exclusive only while no protected effect escapes before selection. A parent escrow suffices when branches need no advance guarantee.
 
-### Pure rollout
-
-If rollouts use a hermetic simulator, no external observation escapes, and only one candidate action is eventually issued, candidates can remain pure with empty branch claims or use mutually exclusive conditional claims. A parent-held escrow is sufficient when no rollout needs an advance guarantee.
-
-### Tool-using rollout
-
-If a rollout queries a live API, reads a protected secret, contacts a human, consumes a quota, provisions a resource, or writes durable memory, its effect has escaped even if the trajectory later receives low reward. Environment reset or trajectory discard does not undo that effect. Promotion must occur at the tool boundary.
-
-### Learning from many trajectories
-
-If reward, observations, or artifacts from several rollouts enter a replay buffer, policy update, evaluation report, or long-term memory, those rollouts are co-durable with respect to that learned artifact. They cannot be treated as choose-one alternatives merely because only one environment action was selected. A policy update is a merge of provenance and can require joint privacy, licensing, human-feedback, or query-budget authority.
-
-### Online and continual RL
-
-Restoring a policy/optimizer checkpoint does not restore consumed data licenses, privacy budgets, reward-service quotas, human approvals, or changes made by deployed actions. Those facts belong to durable grant epochs and effect history. The proposed runtime contract can therefore cover search, best-of-N, tree-of-thought, online RL, self-improvement loops, and evaluation agents without making the theorem depend on LLM sampling.
-
-This suggests a concrete RL rule: **a rollout may share conditional authority only while it is observationally sealed and its contribution to any learned or external artifact remains conditional on durable selection.**
+For a tool-using rollout, the adapter may assign finite-vector claims to mediated API calls, human requests, quota uses, or durable writes. Resetting the environment then cannot erase those supplied claims. If several rollout artifacts are retained, the adapter must supply a trusted merge projection describing which lineages remain represented. The authority results apply to those declared claims and projections; establishing that a replay buffer or policy update has the asserted provenance remains a separate research problem.
 
 ## 4. Codex integration surface
 
@@ -89,48 +73,62 @@ Claude Code provides particularly direct separating examples in its official doc
 
 A prototype can register each session/subagent/worktree as a fresh branch epoch and place a deterministic hook in front of high-impact tool and MCP calls. Precise session-fork and rewind semantics should be captured by an SDK/CLI wrapper rather than inferred from mutable transcript JSON. As with Codex, complete mediation requires controlling every effect path; hook availability alone does not prove that property.
 
-## 6. Runtime algorithm: incremental contracts plus safe filters
+## 6. Runtime algorithm: certificate-checked authority support
 
-A useful monitor must avoid enumerating every future set. The base implementation keeps:
+A useful monitor must avoid enumerating every future set. The implementation keeps:
 
 - a structured choice/parallel contract tree;
 - per-leaf typed conditional demand;
 - durable typed demand and terminal claim IDs;
 - cached componentwise `need` at every tree node;
-- optional monotone feasibility guards introduced by support-changing operations.
+- frozen monotone, zero-preserving threshold rows introduced by support-changing operations;
+- explicit lineage-predicate circuits and a contract state hash;
+- one-shot prepared/inflight/uncertain tickets keyed by stable operation IDs, plus receipts.
 
 For a pure structured tree, updates propagate from one leaf to the root:
 
 - choice node: componentwise maximum;
 - parallel node: componentwise sum.
 
-Reserve, transfer, fork, replace, and local topology edits therefore take \(O(h|\mathcal K|)\) time for tree height \(h\). Merge constructs an explicit target node/policy and is admitted by the same recurrence.
+Reserve on an unguarded tree takes \(O(h|\mathcal K|)\) time for tree height \(h\). Claim-preserving fork, replace, live restore, and some merges instead take a proof path: the adapter preserves \(G,D,J,R\), terminal history, and epoch closure; it supplies a monotone, zero-preserving projection plus a fragment-conserving tentative-claim map; and the controller checks that every target load is dominated by its source image. Guarded cases may need a global solver to produce a proof object, but only the sound proof checker belongs in the trusted base. A merge without simulation needs full target admission.
+
+Before distributing branch-local capabilities, the monitor tests residual factorization. If the all-headrooms corner satisfies every permitted configuration, the residual is exactly the Cartesian product of local headroom budgets and branches can check Reserve independently. If not, copying those local maxima would be unsound: the runtime retains the correlated coordinator/parent escrow, conservatively shrinks at least one delegated budget, or restricts the lifecycle contract. A choice-to-parallel live restore can cross this boundary even when no branch-local balance changes.
 
 Escape is handled before dispatch:
 
-1. tentatively move claim \(c\) from its branch bundle to durable demand;
-2. recompute the affected path and test direct admission;
-3. if unsafe, return the exact additional compatible capacity and two lifecycle repairs:
+1. verify that the owner, claim, epoch, binding, and effect path are current;
+2. construct the promoted target and test the plain fast path;
+3. if plain promotion is unsafe, return the exact additional compatible capacity and two lifecycle repairs:
    - **witnessed selection**, an always-representable conservative repair that durably conditions on the owner branch;
-   - **safe-filter repair**, the exact abstract family of old configurations whose post-promotion load fits the grant;
-4. durably install the chosen repair and promotion, then dispatch or record an uncertain send.
+   - **frozen threshold repair**, one compact row whose models are exactly the old configurations whose post-promotion load fits the grant;
+4. identify unsupported owners and removed maximal configurations/correlation obligations and report them as induced semantic changes;
+5. atomically install the chosen lifecycle restriction, promotion, one prepared ticket per stable effect operation ID, and state hash;
+6. only then Dispatch; Crash may retain the ticket as uncertain, and Retry emits another attempt with the same stable ID and claim.
 
-The pure choice/parallel grammar cannot always represent the exact safe filter. For example, promotion can leave every pair among three branches legal while forbidding their triple. The implementation must not hide this gap. The next theory iteration treats a lifecycle contract as a structured tree conjoined with typed threshold/forbidden-hyperedge guards. A concrete selected set can be checked in linear time; incremental compilation, explanation, and the complexity of maintaining advance guarantees are separate algorithmic results under development.
+The pure choice/parallel grammar cannot always represent the exact repair. For example, promotion can leave every pair among three branches legal while forbidding their triple. The frozen row is therefore part of the durable contract, not a transient solver fact. Its coefficients record the load at repair time; they never point to mutable current reservations. Later fork/restore/merge operations transport the row through monotone, zero-preserving lineage substitution; predicate-circuit size is part of the representation. Relaxing a row after capacity acquisition or claim withdrawal may be authority-safe, but is a separate, explicitly admitted topology expansion under the no-silent-expansion audit rule.
+
+Checking whether one concrete retained set satisfies the tree and sparse rows is linear in the stored coefficient-plus-predicate-circuit representation. Universal admission of a new unrestricted promise can nevertheless be coNP-complete: an all-parallel tree plus one scalar row already contains 0--1 knapsack. The implementation uses cotree dynamic programming while no guard is present, ZDD/residual-capacity compilation for small integer quotas, and an incremental pseudo-Boolean solver for the general compact contract, failing closed on timeout.
+
+Escape has a useful fail-safe asymmetry: constructing the exact frozen restriction is linear in the branch-by-coordinate matrix and does not require solving the universal optimization problem. The expensive step is deciding that no restriction is needed, optimizing cancellations, or proving support for every retained promise.
 
 The API should return a certificate, not only allow/deny:
 
 ```text
-admit
-reject(stale_epoch | duplicate_claim | uncovered_effect)
-repair(
-  extra_capacity = vector,
-  witnessed_selection = branch/path,
-  exact_guard = typed threshold constraints,
-  conflicting_claims = minimal explanation
+Accept(state_hash, certificate)
+Reject(reason, violating_configuration, coordinate, deficit)
+AcceptWithRestriction(
+  state_hash,
+  frozen_rows,
+  support_witnesses,
+  induced_cancellations,
+  removed_maximal_configurations,
+  alternatives
 )
 ```
 
-This is valuable to an industrial runtime because it distinguishes policy failure from a recoverable lifecycle choice and can explain why “keep both,” “restore live,” or early tool dispatch consumed more authority than expected.
+The explanation can contain a checkable violating configuration without promising a globally minimum cancellation set. This distinguishes policy failure from a recoverable lifecycle choice and explains why “keep both,” “restore live,” or early tool dispatch consumed more authority than expected.
+
+Concurrent escape requests are either prepared atomically as one batch or grouped by owner. Every owner-group ordering is executable exactly when every promoted owner remains supported by the final repaired contract; otherwise at least one ordering is disabled. A controller may validate a particular safe order, coordinate or defer cleanup, or atomically seal the fixed batch. The abstract filters commute, but that algebraic fact alone does not authorize a dispatch from a branch cleanup already removed.
 
 ## 7. Minimal integration experiment
 

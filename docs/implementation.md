@@ -36,15 +36,24 @@ These are motivating observations, not a statistical benchmark. The session mech
 
 ### Finite executable validation
 
-`artifact/` now contains a dependency-free Python authority-continuity model, six unit tests, a deterministic exhaustive explorer, and a machine-readable result. It currently checks:
+`artifact/` now contains a dependency-free Python authority-continuity model, 24 unit tests, a deterministic exhaustive explorer, and a machine-readable v5 result. It currently checks:
 
-- universal-frontier AC against the componentwise-need formulation on 2,816 states;
-- safety and downward closure for 3,428 single-claim maximal-support promotions;
-- inclusion maximality against 27,142 safe downward-closed restrictions;
-- 13,680 ordered pairs of disjoint batched promotions for confluence;
-- the replace/live indistinguishability litmus and the safe-choice/unsafe-escape witness.
+- universal-frontier AC against the componentwise-need formulation on 1,312 owner-support well-formed states (a separate 2,816-state raw algebra scan is diagnostic only);
+- Reserve against branch headroom for 6,180 demands over 730 owner-supported safe source states;
+- batch admission against correlated residual membership for 17,658 batches;
+- the exact headroom-box factorization criterion on all 730 safe sources (296 rectangular and 434 nonrectangular);
+- 4,067 accepted residual prefixes and 103,785 successor-membership instances of the derivative law, with an expanded parent box that covers every queried sum;
+- the bounded knowledge checker against profile intersection for all nine batches in the fixed two-state fiber;
+- safety and downward closure for 2,060 single-claim promotions;
+- inclusion maximality against 22,246 safe downward-closed restrictions;
+- exact frozen-guard membership on 2,060 repairs and 11,142 configurations;
+- 6,312 ordered disjoint promotion pairs in both explicit and guarded representations;
+- the higher-order \(U_{2,3}\) representation witness, frozen/dynamic withdrawal distinction, OR-lineage live-restore transport, and final-owner-support positive/negative serialization cases;
+- an actual fresh-Reserve replace/live indistinguishability litmus and safe-choice/unsafe-escape witness;
+- an eight-state, 22-edge crash/retry/revoke ticket graph covering Prepare, Dispatch, Retry, Crash, Settle, cancellation, sealed completion after revocation, rejection of tentative claims on tombstoned branch epochs, and rejection of closed-epoch name reuse; and
+- 26 target-frontier simulations across replace/live restore and choice/parallel fork, preserving receipts and prepared/uncertain tickets.
 
-This is bounded executable validation, not a proof assistant development or runtime monitor. The canonical commands and precise enumeration bounds are in `artifact/README.md`; `artifact/results/exhaustive.json` is deterministically reproduced.
+This is selected-rule bounded executable validation, not an implementation of the complete LTS, a proof assistant development, or a runtime monitor. The canonical commands and precise enumeration bounds are in `artifact/README.md`; `artifact/results/exhaustive.json` is deterministically reproduced with SHA-256 `5ae07a5505638891b4901835d4e0973a96ce6ea3e1ae202f85da565cac99a4a5`.
 
 ### Not implemented
 
@@ -53,26 +62,27 @@ There is currently no:
 - ACRFence reference monitor;
 - eBPF effect receipt mechanism;
 - semantic fingerprint security boundary;
-- topology-aware authority monitor;
-- structured choice/parallel incremental admission checker;
+- production topology-aware authority monitor;
+- compact structured/guarded solver for unbounded runtime contracts;
 - bounded transition-schedule and mutation explorer;
 - Lean model or proof;
 - runtime integration that prevents the modeled violations.
 
 The paper must use future tense or an explicit placeholder for all of these until an artifact and command reproduce them.
 
-## 3. New minimal artifact
+## 3. Current artifact boundary and next layer
 
-The CSF paper needs a small artifact whose code mirrors the mathematics:
+The current flat Python artifact intentionally mirrors the paper equations and stores configurations explicitly for at most three branches. It implements the finite mathematical layer:
 
 ```text
 artifact/
-  checker/          # structured and general-frontier need/deficit checker
-  explorer/         # bounded lifecycle schedules and mutation counterexamples
-  litmus/           # deterministic JSON scenarios
-  lean/             # core state, transitions, invariant, and theorems
-  tests/            # unit/property tests
+  authority_continuity.py       # state, residuals, guarded repair, litmus operations
+  explore.py                    # deterministic bounded enumeration and JSON report
+  test_authority_continuity.py  # fixed theorem and counterexample checks
+  results/exhaustive.json       # checked-in reproducible result
 ```
+
+It does not implement the compact PB/ZDD solver, crash-atomic ledger, lifecycle controller, effect gate, or proof assistant development described by the paper. Those components should be added as separate directories only when one clean command can exercise them; scaffolding an empty architecture would create false evidence.
 
 The trusted core should accept explicit, typed facts rather than ask an LLM to infer authorization:
 
@@ -96,12 +106,12 @@ Each reported result must identify:
 
 No number moves into the paper from `docs/experiments.md` alone. It must be recoverable from raw results or a fresh command. Expected output in a README is not evidence.
 
-## 5. Implementation order
+## 5. Remaining implementation order
 
-1. Implement the scalar structured checker and the six separation litmus tests.
-2. Add vector grants and property tests comparing the recursive checker with explicit frontier enumeration.
-3. Add the general conflict-graph checker and a reduction-generated hardness sanity suite.
-4. Mechanize the state split, reserve/escape/abort/restore rules, invariant preservation, and minimal-deficit arithmetic.
-5. Only then integrate one or two runtime adapters. Prefer explicit lifecycle hooks over eBPF inference.
+1. Mechanize typed vectors, claim partition, headroom, correlated residual derivatives, exact promotion guards, support cleanup, and the small trace invariant in Lean 4.
+2. Add a bounded transition/mutation explorer for claim duplication, stale epochs, dispatch-before-Prepare, dynamic guards, wrong lineage transport, and owner-tombstoning serialization.
+3. Implement a compact guarded-contract oracle with a checkable violating-configuration certificate and retain the unguarded cotree fast path.
+4. Implement one dispatch-owning adapter or mandatory tool proxy that durably assigns branch epochs and executes Prepare before every protected call.
+5. Only then measure admission latency, durable writes, contention, and safe-history rejection against split-all, parent escrow, and transaction-only baselines.
 
-This order gives useful counterexamples and proof feedback before any large runtime engineering effort.
+The runtime adapter should use explicit App Server/SDK lifecycle identifiers where possible. Optional hooks can prototype event capture, but they are not the trusted boundary unless all bypasses are closed. eBPF inference is lower priority than an explicit, proof-aligned dispatch path.

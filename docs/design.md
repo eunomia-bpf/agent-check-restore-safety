@@ -1,6 +1,6 @@
 # Authority Continuity for History-Transforming Agents
 
-**Status:** BOOTSTRAP scientific contract. Definitions and results are proposed until their paper proofs and Lean development are complete.
+**Status:** Revision-3 scientific contract. The executable finite model checks the bounded instances reported in the paper; statements marked as theorems still require complete paper proofs and mechanization.
 
 ## 1. The missing boundary
 
@@ -14,6 +14,10 @@ The key distinction is not “state versus external resources” alone. It is be
 Pure computation may be copied freely. Conditional authority may be shared among futures that are guaranteed to be mutually exclusive. It cannot be copied into futures that may survive together. Most importantly, a conditional claim cannot simply escape from a speculative branch: escape promotes it into consumption charged to every remaining future.
 
 The proposed paper contribution is a concrete lifecycle semantics and its adequate abstract authority contract. Linear resources, append-only ledgers, event structures, cograph dynamic programming, and maximum-weight independent set are prior machinery, not claimed as new.
+
+The sharper thesis is:
+
+> A checkpoint is missing not generic “history,” but the minimal residual authorization profile for the next action class. Single-branch Reserve needs a headroom vector; joint Reserve, fork, and merge need a correlated downset; and escape promotion can force the policy representation beyond a choice/parallel topology into quantitative durable guards.
 
 ## 2. Threat and trust model
 
@@ -135,15 +139,17 @@ Equivalently, \(\mathsf{need}(\Sigma)\le G\). The vector supremum need not be re
 
 Non-numeric well-formedness additionally requires unique branch labels, the claim partition, live scope/binding for tentative claims, once-only dispatch per claim (or a stable sink operation ID), and monotonic branch/grant epochs.
 
-## 5. Structured lifecycle contracts
+## 5. Authority-support contracts
 
-Common runtimes can expose an explicit contract
+### 5.1 Base topology
+
+Common runtimes can expose an explicit base contract
 
 \[
 P ::= \mathbf 0 \mid b \mid P\mathbin{\Box}P \mid P\parallel P,
 \]
 
-where every branch label occurs once, \(\Box\) retains at most one alternative, and \(\parallel\) may retain both sides. Its downward-closed frontiers are
+where every branch label occurs once, \(\Box\) retains at most one alternative, and \(\parallel\) may retain both sides. Its downward-closed durability configurations are
 
 \[
 \begin{aligned}
@@ -154,203 +160,269 @@ where every branch label occurs once, \(\Box\) retains at most one alternative, 
 \end{aligned}
 \]
 
-The conflict graphs induced by this grammar are cographs: choice is graph join, parallel is disjoint union, and the syntax tree is a cotree. The familiar recurrence
+This is an AND/OR state tree. Its conflict graph is a cograph and its max/sum admission recurrence is classical. Neither fact is claimed as new.
+
+### 5.2 Frozen support guards
+
+Pure choice/parallel topology is not closed under support-changing effects. We therefore extend it with durable guard rows:
 
 \[
-\begin{aligned}
-R(\mathbf0)&=0,\\
-R(b)&=\mathsf{load}(Q_b),\\
-R(P\Box Q)&=R(P)\vee R(Q),\\
-R(P\parallel Q)&=R(P)+R(Q)
-\end{aligned}
-\]
-
-is the classical weighted-independent-set dynamic program on cographs. We use it as an implementation corollary, not a new algorithm.
-
-A general downward-closed family need not be representable by pairwise conflict. Three branches may be pairwise compatible while the triple is forbidden. General semantics therefore uses \(\Phi\); a graph is used only under an explicit pairwise-decomposable assumption.
-
-## 6. Lifecycle rules and weakest admission conditions
-
-Every rule has a linearization point in the durable ledger.
-
-### Issue and acquire
-
-An issuer creates fresh grant capacity or explicitly extends compatible coordinates of \(G\). Creating a process, branch, checkpoint, image, or claim ID never issues authority.
-
-### Reserve
-
-Add a fresh claim \(c\) to \(Q_b\) only when its branch and grant epoch are live, its binding is valid, partition (P) is preserved, and the target state satisfies (AC).
-
-### Checkpoint
-
-Copy \(V_b\) and durable references. The abstract authority state does not change.
-
-### Choice and parallel fork
-
-Fork may copy \(V_b\), but it may not copy claims. Existing \(Q_b\) claims must be transferred exactly once, partitioned among children, retained by an explicit parent escrow, or moved to \(X\). A pure child begins with \(Q=\varnothing\).
-
-Choice installs \(\Box\); parallel fork installs \(\parallel\). Any claim reassignment is admitted against the target state.
-
-### Durable select and abort
-
-Selection durably restricts \(\Phi\) and tombstones losing epochs before releasing their tentative claims. Abort of \(b\) simultaneously removes every frontier containing \(b\), tombstones its epoch, and moves \(Q_b\) into \(X\). It never removes \(D\), reopens an epoch, or clears an uncertain dispatch. Withdrawing an individual claim is itself a durable weakening of the branch's conjunctive guarantee, not a free mutation.
-
-For a selected branch \(b\), define
-
-\[
-\Phi{\downarrow}b
-=
-\{C'\mid \exists C\in\Phi.\ b\in C\land C'\subseteq C\}.
-\]
-
-### Escape and uncertain dispatch
-
-For \(c\in Q_b\), plain escape proposes
-
-\[
-D'=D\cup\{c\},
+T ::= P \mid T\wedge h,
 \qquad
-Q'_b=Q_b\setminus\{c\},
+h=(\{(a_i,\lambda_i)\}_{i=1}^{m},r).
 \]
 
-without changing \(\Phi\). This target must be admitted before external observation. Accounting occurs before dispatch; a crash with unknown sink outcome leaves \(c\in D\).
-
-Let
+Here \(a_i,r\in\mathbb N^{\mathcal K}\) are frozen constants and \(\lambda_i:2^B\to\{0,1\}\) is an explicitly represented monotone, zero-preserving lineage predicate. A configuration satisfies the row iff
 
 \[
-M_{\neg b}
-=
-\bigvee_{\substack{C\in\Phi\\b\notin C}}q(C).
+C\models h
+\quad\Longleftrightarrow\quad
+\sum_i a_i\lambda_i(C)\le r.
 \]
 
-The exact additional capacity for plain escape is
+The semantics intersects the base family with every row. Nonnegative coefficients and monotone predicates preserve downward closure; zero preservation keeps the empty configuration. At creation, \(\lambda_b(C)=\mathbf1[b\in C]\). Under the controller's no-silent-policy-expansion rule, the row is frozen and never reads current \(Q\). Withdrawal may make an explicitly re-admitted expansion authority-safe, but it must not silently mutate a durable audited decision. Predicate-circuit size is part of the representation.
 
-\[
-\boxed{
-\Delta_{\mathrm{esc}}(b,c)
-=
-[d+w(c)+M_{\neg b}-G]^+.
-}
-\tag{E}
-\]
+Lifecycle refinement transports a row through a monotone, zero-preserving projection \(\pi:2^{B'}\to2^B\) by substituting \(\lambda_i\leftarrow\lambda_i\circ\pi\). For example:
 
-Frontiers containing \(b\) see no load change; frontiers not containing \(b\) inherit the newly universal \(w(c)\). This is why an issue-time effect in a speculative branch cannot rely only on choice sharing.
+- replace \(b\) by \(b'\): \(z_b\leftarrow z_{b'}\);
+- refine \(b\) into live descendants \(R\): \(z_b\leftarrow\bigvee_{x\in\mathsf{Leaves}(R)}z_x\);
+- merge: the operation must supply and pay for an explicit projection circuit, since copied files do not determine which source lineages the result inherits.
 
-There are several safe ways to proceed:
+The disjunction is important. If two parallel descendants are retained, an old lineage coefficient is charged once, not copied twice.
 
-1. keep the effect staged until durable selection;
-2. restrict the lifecycle to the maximal safe family defined in Section 7, promote \(c\), then dispatch;
-3. atomically condition the lifecycle on \(b\), move eliminated tentative commitments to \(X\), promote \(c\), then dispatch;
-4. acquire at least \(\Delta_{\mathrm{esc}}\) compatible capacity.
-
-### Restore-replace
-
-For a structured context \(E[b]\), atomically tombstone the old continuation and replace it by \(E[b']\) with a fresh epoch. Transfer an old tentative claim exactly once only if its issuer permits the transfer and the staged object needed by its binding remains durably available or is proven binding-equivalent after restore; otherwise move it to \(X\). Reconstruct \(V\) from the snapshot but validate all references against the current ledger. A binding-preserving alpha-renaming with exact transfer preserves need.
-
-### Restore-live
-
-For a structured context \(E[b]\), retaining the old continuation replaces the leaf by \(E[b\parallel b']\), not by \(E[b]\parallel b'\). This preserves every conflict inherited from the surrounding context. The restored branch starts with empty \(Q\) or receives a nonduplicating, issuer-permitted partition of existing claims. The restore operation itself need not create a deficit; copying old claims, subsequent reservations, or later reclassifying exclusive outcomes as co-durable does.
-
-### Merge
-
-Merging only reconstructable values has no authority effect. There is no unique authority topology induced by a workspace merge, so every authority-bearing merge supplies an explicit target policy \(\Phi'\), source tombstones, and claim transfers. A join-merge may replace sources already contained in one co-durable cone; an alternative-synthesis merge creates a new topology and is admitted as an extension. Claims transfer exactly once, subject to binding preservation. Claims already in \(D\) are never transferred or erased.
-
-### Revoke
-
-Close the durable grant epoch, move its tentative commitments into \(X\), and forbid new reserve/escape under it. Historical \(D\) remains recorded. A restored snapshot retains a stale reference, not revived authority.
-
-## 7. Proposed central results
-
-### Theorem 1: abstraction soundness and conditional exactness
-
-Assume the concrete runtime enforces claim uniqueness, trusted staging, once-only or conservatively charged dispatch, and actual frontiers are contained in \(\Phi\). Then \(\mathsf{AC}(\alpha(s))\) implies that every concrete lifecycle resolution is solvent.
-
-The converse holds only if \(\Phi\) exactly characterizes normatively selectable outcomes and every retained \(Q_b\) is a conjunctive, jointly realizable bundle. Under those assumptions, a violating frontier witnesses an insolvent concrete resolution. We keep the one-way theorem as the general guarantee and state the conditional converse explicitly rather than hiding exactness in the definition.
-
-### Theorem 2: lifecycle preservation
-
-Starting from a well-formed authority-continuous state, Issue, admitted Reserve, Checkpoint, nonduplicating fork, durable Select/Abort, admitted Escape, both restore rules, admitted Merge, and Revoke preserve:
-
-1. authority continuity;
-2. the global claim partition including terminal set \(X\);
-3. monotonic durable consumption;
-4. non-resurrection of closed branch and grant epochs.
-
-The proof is induction over concrete transitions and their abstraction. Escape requires its target admission or one of the promotion rules below; without it, the theorem is false. Contextual restore and policy-parametric merge make the target topology explicit rather than hiding safety in UI names.
-
-### Theorem 3: maximal safe escape support
-
-For \(c\in Q_b\), define its post-promotion load on an old frontier:
-
-\[
-\ell'_{b,c}(C)
-=
-d+w(c)+q(C)-\mathbf 1_{b\in C}w(c).
-\]
+### 5.3 Support and induced cancellation
 
 Define
 
 \[
-\Phi^*_{b,c}
+\mathsf{supp}_T(b)=\{C\in\Phi(T)\mid b\in C\}.
+\]
+
+A conditional commitment owned by \(b\) is live only if \(\mathsf{supp}_T(b)\ne\varnothing\). Restricting a contract can remove every support for another owner; this is semantically a cancellation even if no \(Q_b\) field was explicitly edited. Retaining one witness per owner does not preserve every old co-durability configuration. A conforming implementation must therefore return both unsupported owners and removed maximal configurations/correlation obligations, tombstone unsupported owners, and move their tentative claims to \(X\). It may not call the operation “no-other-cancellation.”
+
+## 6. Certificate-checked lifecycle semantics
+
+### 6.1 Configurations, proposals, and effect labels
+
+The abstract durable controller state is
+
+\[
+A=(G,N,B,D,X,Q,T,J,R),
+\]
+
+where \(N\) records grant and branch epoch status, \(J\) maps stable protected operation IDs to one-shot \(\mathsf{prepared}\), \(\mathsf{inflight}\), or \(\mathsf{uncertain}\) tickets, and \(R\) contains settled receipts. Reconstructable values \(V\) are paired with \(A\) in a concrete state but are not authoritative. \(G\) is the historical capacity issued for each typed grant epoch. Revocation closes an epoch to new Reserve/Prepare; it does not erase capacity, past consumption, or an operation already sealed before revocation.
+
+Controller proposals are
+
+\[
+\begin{split}
+u ::= {}&\mathsf{reserve}(b,c)\mid\mathsf{fork}_{\Box/\parallel}(E[b],\rho)
+\mid\mathsf{select}(S)\mid\mathsf{abort}(b)\\
+&\mid\mathsf{restore}_{\mathsf{replace/live}}(E[b],\rho)
+\mid\mathsf{merge}(T',\pi,\rho)\mid\mathsf{prepare}(S,\bar e)\\
+&\mid\mathsf{checkpoint}\mid\mathsf{dispatch}(e)\mid\mathsf{retry}(e)
+\mid\mathsf{crash}\mid\mathsf{settle}(e,o)\mid\mathsf{revoke}(\nu),
+\end{split}
+\]
+
+The transition relation is the least relation generated by the paper's rules. A transition is \(A\xrightarrow{u/\eta}A'\), with \(\eta=\tau\) for internal control or \(\eta=\mathsf{attempt}(e,c)\) for a protected sink attempt. Dispatch and Retry may expose the same stable \((e,c)\); effect accounting aggregates them by operation ID.
+
+### 6.2 Local simulation certificates
+
+For a topology-changing transition that does not add durable consumption, the adapter supplies a monotone, zero-preserving projection \(\pi:2^{B'}\to2^B\) and a claim transfer map. The certificate obligations are:
+
+1. \(G,D,J,R\) are preserved exactly; \(X\) and epoch closure are monotone;
+2. every target configuration maps to an allowed source configuration;
+3. every target tentative claim is unchanged or a fresh issuer-approved fragment of one source claim; per-source fragment demand is conserved, images are disjoint, and eliminated source IDs move to \(X\);
+4. binding, scope, and open-epoch checks hold; and
+5. for every target configuration \(C'\),
+   \[
+   d'+q'(C')\le d+q(\pi(C')).
+   \tag{SIM}
+   \]
+
+Condition (SIM) proves target demand is simulated by an already solvent source rather than assuming the target satisfies (AC). Structured fast paths have compositional proof objects; guarded targets may use a global oracle to produce a proof checked by the small trusted checker. General Reserve and Merge without simulation use a direct-admission certificate.
+
+The rules are:
+
+- **Checkpoint:** copy \(V\) and ledger references; \(A\) is unchanged.
+- **Choice/parallel fork:** replace the leaf in its context; claims are transferred, partitioned, escrowed, or cancelled exactly once. Copying \(V\) never copies a claim.
+- **Select/abort:** durably restrict \(T\), tombstone eliminated epochs, and move their tentative claims to \(X\). This is a load-decreasing fast path.
+- **Restore-replace:** contextual alpha-renaming plus a binding-preserving fragment transfer is a simulation fast path.
+- **Restore-live:** replace \(E[b]\) by \(E[b\parallel b']\), transport old guards by lineage disjunction, and start the clone empty or partition claims without duplication.
+- **Merge:** supply \(T'\), tombstones, transfers, and \(\pi\). A workspace diff is not a certificate.
+- **Revoke:** close the epoch, cancel its tentative claims, and retain \(D\), \(X\), issued IDs, and receipts.
+
+### 6.3 Prepare before dispatch
+
+For a batch \(S\) of tentative claims, let
+
+\[
+d_S=d+\sum_{c\in S}w(c),
+\qquad
+a_{S,b}=\sum_{c\in Q_b\setminus S}w(c),
+\qquad
+r_S=G-d_S.
+\]
+
+If \(r_S\ngeq0\), topology restriction alone cannot cover even the empty configuration. Otherwise define the frozen repair row
+
+\[
+H_S(C)\quad\Longleftrightarrow\quad
+\sum_{b\in C}a_{S,b}\le r_S.
+\tag{GRD}
+\]
+
+The formal `prepare` rule atomically:
+
+1. moves every \(c\in S\) from \(Q\) to \(D\);
+2. conjoins the frozen row \(H_S\) with \(T\);
+3. records a fresh prepared ticket \(J(\bar e(c))=(c,\mathsf{prepared})\) for each claim, plus support witnesses, removed correlations, or explicit induced cancellations; and
+4. persists the new state hash before returning the ticket.
+
+`dispatch(e)` changes prepared to inflight and emits \(\mathsf{attempt}(e,c)\). Crash maps inflight to uncertain while leaving prepared work intact. Retry from inflight/uncertain emits another attempt with the same stable \((e,c)\) and returns the phase to inflight; coverage requires trusted deduplication or an aggregate demand bound. `settle(e,o)` consumes the ticket into a receipt; a prepared ticket may settle only as cancelled. Neither path returns the claim to \(Q\) or removes it from \(D\).
+
+The trusted gate must cover every protected dispatch. A hook that observes only some tool paths is an adapter, not the complete trusted computing base.
+
+## 7. Central results
+
+### Theorem 1: abstract preservation and concrete refinement
+
+For the abstract rules, a well-formed authority-continuous source remains well formed and authority-continuous after every admitted transition. Every attempt uses a stable ID and a matching claim already in \(D\); Retry cannot allocate a new logical operation or claim. A closed epoch authorizes no new Reserve/Prepare, although an operation sealed before closure may finish because its demand is already durable.
+
+The proof checks (SIM), load-decreasing rules, exact Reserve, (GRD), claim movement, and ticket phases by cases. A separate refinement corollary says that a completely mediated concrete adapter whose steps simulate these rules inherits trace-prefix solvency. That corollary is an implementation obligation, not evidence that today's optional product hooks already provide complete mediation.
+
+### Theorem 2: residual authorization is the missing checkpoint state
+
+For \(C\in\Phi(T)\), define its componentwise slack
+
+\[
+s_\Sigma(C)=G-d-q(C).
+\]
+
+For a supported branch \(b\), define single-branch headroom
+
+\[
+H_\Sigma(b)=
+\bigwedge_{\substack{C\in\Phi(T)\\b\in C}}s_\Sigma(C),
+\]
+
+where \(\bigwedge\) is componentwise minimum and an unsupported branch has value \(\bot\). A fresh \(\mathsf{reserve}(b,w)\) is safe exactly when its structural/binding checks hold and \(w\le H_\Sigma(b)\). If proposals include every natural amount in every coordinate, two states authorize exactly the same single-branch Reserve proposals iff their structural predicates and \(H\) agree. Thus \(H\) is fully abstract for one-step single-branch Reserve.
+
+Let \(B^+=\{b\mid H_\Sigma(b)\ne\bot\}\); unsupported branches are structurally ineligible for Reserve.
+
+Headroom is not an update-closed controller state. With \(G=1\), no current claims, and two branches, exclusive choice and parallel composition both have \(H=(1,1)\). Both accept one unit for \(b_1\), but afterwards their headroom is respectively \((0,1)\) and \((0,0)\). No deterministic updater can derive exact new headroom from old \(H\) and the accepted action alone; the missing information is cross-branch correlation.
+
+The exact correlated residual profile is
+
+\[
+\mathcal R_\Sigma=
+\left\{
+x\in\mathbb N^{B^+\times\mathcal K}
+\ \middle|\
+\forall C\in\Phi(T).\ \sum_{b\in C}x_b\le s_\Sigma(C)
+\right\}.
+\tag{RES}
+\]
+
+It is precisely the set of simultaneous fresh reservation batches that can be added. For the Reserve-only fragment it is also update-closed:
+
+\[
+x\in\mathcal R_\Sigma
+\Longrightarrow
+\mathcal R_{\Sigma+x}
 =
-\{C\in\Phi\mid \ell'_{b,c}(C)\le G\}.
-\tag{M}
+\{y\mid x+y\in\mathcal R_\Sigma\}.
+\tag{RESID}
 \]
 
-\(\Phi^*_{b,c}\) is downward closed. Promoting \(c\) while restricting the lifecycle to \(\Phi^*_{b,c}\) is safe without new capacity or cancellation of any other claim. Moreover, \(\Phi^*_{b,c}\) is the unique inclusion-largest topology restriction with those properties: every safe \(\widehat\Phi\subseteq\Phi\) for the same promoted target satisfies \(\widehat\Phi\subseteq\Phi^*_{b,c}\).
+Consequently \(\mathcal R_\Sigma\) is a fully abstract residual controller state for arbitrary sequential or simultaneous Reserve, while \(H\) is only its collection of single-branch slices. The same choice/parallel pair separates them: each branch alone has one unit of headroom, but the batch assigning one unit to both is accepted only by choice.
 
-This is the most permissive abstract zero-capacity repair. It can retain safe futures not containing \(b\) when slack exists.
-
-### Lemma 4: witnessed escape promotion
-
-In an authority-continuous state, atomically restricting the lifecycle to \(\Phi{\downarrow}b\), moving eliminated branch claims to \(X\), moving \(c\in Q_b\) into \(D\), and only then dispatching preserves (AC) without new capacity.
-
-For a target frontier not containing \(b\), downward closure and the definition of \(\Phi{\downarrow}b\) provide an old frontier containing that target together with \(b\); its old safe load already includes \(c\). This is the formal justification for “stage until a durable resolution witnesses \(b\).” It is a conservative instance of Theorem 3: \(\Phi{\downarrow}b\subseteq\Phi^*_{b,c}\), sometimes strictly.
-
-### Theorem 5: batched promotion confluence
-
-For a finite set \(S\) of tentative claims, with \(\beta(c)\) denoting the owner of \(c\), define
+Let \(\operatorname{Box}(H)=\{x\mid0\le x_b\le H_\Sigma(b)\}\). The residual's projection on each branch is exactly its headroom interval, and
 
 \[
-\ell'_S(C)
+\mathcal R_\Sigma=\operatorname{Box}(H)
+\quad\Longleftrightarrow\quad
+\forall C\in\Phi(T).\ \sum_{b\in C}H_\Sigma(b)\le s_\Sigma(C).
+\]
+
+This is the exact decentralization boundary. If it holds, independent branch-local capabilities are sound for arbitrary concurrent Reserve and complete for each branch alone. If it fails, a runtime must retain correlated coordination/escrow, reduce at least one local budget, or restrict the lifecycle. The fixed choice state is rectangular; the parallel/live state with the same \(H=(1,1)\) is not.
+
+Topology changes, promotion, revocation, and dispatch require more than the Reserve residual. Let
+
+\[
+\mathcal A(h)=(G,N,B,D,X,Q,T,J,R,\mathsf{bindings})
+\]
+
+be the durable projection of history \(h\). Equality of \(\mathcal A\), modulo fresh-ID renaming, is sufficient for all controller decisions. Its component classes are necessary by paired replay, resurrection, clone-duplication, choice/parallel, scope-substitution, and uncertain-dispatch histories. The tuple may be quotiented further by full future authorization equivalence; the claim is not that its byte encoding is globally minimal.
+
+The theorem's systems consequence is precise: checkpoint safety is missing the residual authorization profile for the action class, not an undifferentiated copy of “history.” That profile may be held in a global ledger or a fresh authenticated residual certificate; the theorem does not prescribe one storage architecture.
+
+### Theorem 2b: exact precision loss under partial observation
+
+For an observation \(o\), let \(K(o)\) be the reachable concrete authority states consistent with it. Define
+
+\[
+H_o^K(b)=\bigwedge_{\Sigma\in K(o)}H_\Sigma(b),
+\qquad
+\mathcal R_o^K=\bigcap_{\Sigma\in K(o)}\mathcal R_\Sigma.
+\]
+
+The unique pointwise-greatest sound memoryless one-step checker accepts \(\mathsf{reserve}(b,w)\) exactly when every possible state satisfies the structural premises and \(w\le H_o^K(b)\), and accepts a batch \(x\) exactly when it is structurally admissible everywhere and \(x\in\mathcal R_o^K\). It is as precise as every concrete-state checker iff the concrete action-acceptance sets are identical across the observation fiber. Under constant structural admissibility and a coordinate-complete proposal space, this reduces to constancy of \(H_\Sigma\), respectively \(\mathcal R_\Sigma\). Otherwise the intersection measures the exact safe false-rejection boundary.
+
+This is a closed-form specialization of classical knowledge-based control, not a claim about a full supremal nonblocking supervisor. Trace safety still requires complete mediation and induction over gated transitions. Snapshot-only replace/live ambiguity is one fiber with nonconstant residual profiles.
+
+### Theorem 3: promotion destroys base-contract representability
+
+Let
+
+\[
+P=b\Box(x\parallel y\parallel z),
+\]
+
+give each branch one scalar unit, and set \(G=3\). The source is safe. After promoting \(b\)'s claim, the largest safe restriction permits every singleton and every pair among \(x,y,z\), but forbids their triple. No unique-leaf choice/parallel contract, and no pairwise conflict graph, represents this family: allowing every pair forces the conflict graph to have no edge, which also permits the triple.
+
+Thus exact authority promotion can introduce a higher-order conflict even when the source lifecycle is a structured tree. This is the representation gap hidden by the old abstract-filter theorem.
+
+### Theorem 4: compact exact closure under promotion
+
+For any finite contract \(T\) and batch \(S\) with \(r_S\ge0\),
+
+\[
+\Phi(T\wedge H_S)
 =
-d+\sum_{c\in S}w(c)+q(C)
--\sum_{c\in S,\,\beta(c)\in C}w(c)
+\{C\in\Phi(T)\mid d_S+q_S(C)\le G\}.
 \]
 
-and \(\Phi^*_S=\{C\in\Phi\mid \ell'_S(C)\le G\}\). If the empty frontier fits after promotion, this is the unique largest zero-capacity, no-other-cancellation restriction for the batch. For disjoint \(S,T\), sequential maximal repairs in either order equal the repair for \(S\cup T\). Promotion can only preserve or increase the load of an old frontier, so a frontier removed by the first filter cannot become safe after the second promotion. The final claim partition and surviving frontier family are therefore order independent.
+Hence one new vector-threshold row with \(O(|B||\mathcal K|)\) coefficients and singleton lineage tests exactly represents the unique largest topology-only safe pruning for fixed claims, without enumerating configurations. Existing predicate circuits and later projection-composition size are counted separately. The construction strictly extends base choice/parallel expressiveness by Theorem 3.
 
-### Theorem 6: snapshot-local monitor impossibility
+The theorem is a closure result for this authority-support transformation, not a claim that threshold predicates or guarded state trees are new. Installing the row is a semantic lifecycle restriction and must be explicitly authorized. Freezing is the additional audit rule that forbids implicit later expansion; a load decrease may instead trigger an explicit re-admission. If repair eliminates owner support or old correlations, those changes must be returned.
 
-Consider the same restored bytes \(V_r\), one-unit grant, and one-unit Reserve proposal for restored branch \(r\). In a replace world, the old branch is tombstoned and the proposal is safe. In a live world, the old branch \(b\) remains parallel with \(r\) and holds a one-unit commitment, so the same proposal is unsafe.
+### Theorem 5: owner-liveness criterion
 
-Any checker whose decision is a function only of \(V_r\) and the proposal returns the same answer in both worlds. Acceptance is unsound in the live world; rejection is not maximally permissive in the replace world. Therefore a checker that is both sound and complete relative to (AC) must consult durable lifecycle and claim state. Snapshot bytes alone are insufficient.
-
-This theorem is specific to the checkpoint lifecycle distinction. It does not claim a topology-aware monitor is necessary for pure delayed-escrow computation.
-
-### Repair taxonomy
-
-In the monotone, additive, noncompensable model, an unsafe target can be repaired by acquiring compatible capacity, weakening still-tentative guarantees, or restricting/delaying the lifecycle. This is a useful implementation taxonomy, not a headline theorem: it follows from the fields on which (AC) depends. Trusted negative receipts, stable-ID coalescing, compensation, renewable quotas, and protocol changes add operations outside the current model.
-
-### Corollary 6: weakest quantitative repair
-
-For a fixed proposed target \(\widehat\Sigma'\) with no cancellation and freely extensible independent coordinates, the least additional vector is
+Let \(O=\{b\mid Q_b\ne\varnothing\}\). The exact promotion repair preserves at least one support witness for every existing owner iff
 
 \[
-[\mathsf{need}(\widehat\Sigma')-G]^+.
+\forall b\in O.\ \exists C\in\Phi(T\wedge H_S).\ b\in C.
 \]
 
-This is ordinary componentwise monus and is not claimed as new mathematics. Equation (E) is its escape-specific form.
+If the condition fails for \(b\), no smaller topology restriction can preserve \(b\)'s support, because every safe restriction is a subset of the exact filter. The runtime must therefore acquire capacity, reject/delay the effect, or explicitly cancel the unsupported promise. Even when the condition holds, old joint configurations can disappear; the API must also report removed maximal configurations or declared correlation obligations. This corrects the false “promise-preserving/no-other-cancellation” wording.
 
-### Corollary 7: inherited algorithmic boundary
+### Theorem 6: guard transport and universal owner-group serializability
 
-For structured contracts, the classical cograph cotree recurrence computes exact need in \(O(|P||\mathcal K|)\). If pairwise conflict is instead supplied as an arbitrary graph \(H\), scalar unsafety
+Composing each frozen predicate with a zero-preserving lifecycle projection \(\pi\) preserves its old meaning under fork, restore, and explicit merge. Adjacent disjoint promotions over the same lifecycle state have the same denotational contract in either order because the final row for \(S\cup T\) implies both intermediate rows.
 
-\[
-\exists I\text{ independent in }H.\ \sum_{b\in I}q_b>G
-\]
+For a valid batch \(U\), group its claims by owner. Under exact prefix repair, fixed lifecycle state, and deterministic immediate cleanup, every owner-group order remains enabled and reaches the atomic batch's denotation iff each promoted owner has support in the final repaired family. Sufficiency follows because the final family is contained in every prefix family. For necessity, put an unsupported owner last: promoting its own claims would not change load on configurations containing it, so the other groups already remove all its support and cleanup disables it. If the condition fails, effects must be prepared atomically as one batch or replanned.
 
-is NP-complete and universal safety is coNP-complete, inherited directly from Independent Set/MWIS. Explicitly enumerated frontiers are scanned in polynomial time, and many restricted graph classes remain tractable. These are representation consequences, not headline novelty.
+### Theorem 7: honest complexity boundary
+
+Membership of one concrete retained set in a sparse guarded contract is linear in the contract representation. Pure base contracts admit the classical \(O(|P||\mathcal K|)\) cotree recurrence. In contrast, universal admission for compact guarded contracts is coNP-complete even with an all-parallel base and one scalar guard: its complement asks whether a subset satisfies one knapsack capacity while exceeding a value threshold.
+
+Practical implementations can compile small quotas to a ZDD, use pseudo-polynomial residual-capacity dynamic programming, or invoke an incremental pseudo-Boolean solver. A solver timeout fails closed. Crucially, exact escape repair itself constructs (GRD) directly and does not solve the global optimization problem; optimization is needed to prove a row redundant, admit a new unrestricted promise, or find globally preferred cancellations.
+
+### Corollary: snapshot-only checking is imprecise
+
+Replace and live restore can reconstruct the same \(V_r\) while their durable contract and old-branch eligibility differ. A one-unit Reserve is safe in the replacing world and unsafe in the parallel live world. Any snapshot-only checker makes the same decision in both, so it is either unsound or rejects a safe proposal. This is one componentwise-necessity witness for Theorem 2 and an instance of partial-observation control, not a claim that a global ledger is the only possible remedy.
 
 ## 8. Minimal separating executions
 
@@ -376,31 +448,32 @@ Two alternatives compute with empty \(Q\); the parent transfers one claim only a
 
 ## 9. Mechanization and executable validation
 
-Lean 4 should define the concrete/abstract states, claim partition, frontier family, lifecycle rules, and abstraction. The minimum checked result set is:
+The dependency-free Python artifact mirrors the finite mathematics rather than simulating an LLM. It exhaustively checks authority continuity, headroom admission, correlated residual batch admission and derivatives, exact promotion guards, the higher-order representation witness, frozen versus dynamically recomputed guards, lineage transport, and the scoped batch-order condition. Checked JSON is deterministic and must be reproduced byte for byte. These checks find modeling errors and validate finite witnesses; they are not proofs for unbounded states.
 
-- abstraction soundness and the realizability-qualified reverse direction;
-- lifecycle preservation;
-- plain-Escape counterexample;
-- exact Escape formula;
-- maximal safe escape support and witnessed promotion;
-- snapshot-local monitor impossibility;
-- structured recurrence correctness.
+Lean 4 remains the highest-value next artifact. Its minimum useful kernel should define finite typed vectors, downward-closed durability families, claim partition, Reserve, guarded promotion, and abstract effect coverage, then prove:
 
-An executable explorer should mutate one premise at a time and synthesize the shortest violating history. A small deterministic monitor should implement structured admission and compare snapshot-local clone, split-all, delayed escrow, transaction-only, and topology-aware conditional commitments.
+- authority-continuity preservation for the modeled transition core;
+- the single-branch headroom characterization and its update counterexample;
+- correlated-residual batch exactness and the derivative law;
+- exact guarded promotion closure and frozen-row monotonicity;
+- final-owner-support serializability, with semantic rather than syntactic contract equality; and
+- trace solvency from complete mediation and effect coverage.
 
-The empirical role is limited: instantiate the separating executions in at most two agent runtimes, identify their true restore/selection/merge contract, and measure only monitor operations that are actually implemented.
+The runtime study is deliberately small. One mandatory tool proxy or dispatch-owning SDK/App Server client should instantiate fresh branch epochs, Prepare-before-Dispatch, stable operation IDs, and conservative uncertain outcomes. Product hooks alone demonstrate lifecycle correspondence but not complete mediation. Performance numbers are paper-worthy only after that path actually enforces every protected effect.
 
 ## 10. Novelty boundary and falsifiers
 
 The paper does **not** claim novelty for:
 
 - linear or consumable authority;
+- BI-style resource composition, residuation, or the additive derivative identity in isolation;
 - non-rollbackable ledgers and epoch fencing;
 - event-structure configurations;
 - choice/max and parallel/sum resource algebra;
 - cograph dynamic programming or MWIS hardness;
+- generic maximally permissive supervisory control, partial-observation synthesis, guards, predicates, or BDDs;
 - transactions, effect staging, or stable idempotency tokens.
 
-The claim survives only if the concrete lifecycle semantics, snapshot-local impossibility, maximal escape-support result, and contextual restore/merge rules are not already present together in prior work and if real agent runtimes expose enforceable lifecycle decisions.
+The claim survives only if the following package is absent from prior work and operationally meaningful: a closed-form action-class residual for co-durable conditional authority; the strict separation between one-branch headroom and an update-closed correlated residual; lifecycle transformations that change authorization equivalence without changing reconstructed bytes; promotion-induced nonclosure of a natural choice/parallel policy; compact frozen-guard completion; and the owner-support/atomic-seal bridge to external effects.
 
-It fails if conditional commitments cannot be distinguished from mere intentions, if topology labels cannot be trusted, if every claimed distinction reduces to a flat ledger at dispatch time, or if the maximal-support and monitor-necessity results do not add a lifecycle-specific boundary beyond established anti-rollback work.
+It fails if conditional commitments cannot be distinguished from mere intentions, if topology labels cannot be trusted, if all useful workloads can delay authority transfer until selection, if an equivalent co-durable residual controller already exists, or if no deployable boundary can completely mediate the claimed external effects. The paper must narrow rather than relabel classical resource or supervisory-control results if any of these falsifiers fires.
