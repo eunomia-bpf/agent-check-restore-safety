@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-08-01T13:11:14-07:00",
+  "codex": {
+    "version": "codex-cli 0.146.0",
+    "binary": "/home/yunwei37/.codex/packages/standalone/releases/0.146.0-x86_64-unknown-linux-musl/bin/codex",
+    "binary_sha256": "2e863156ed35ecc5253b1e2f907a9143077b9f7cb51942070c61996471ff6e04",
+    "generated_experimental_v2_schema_sha256": "7fb7921dd4d3dea5167beb06837f885d484ff3aa5ba70f4ecdd2d66144bd40af",
+    "official_source_revision": "1e85ca099e4265bf89f4016772d299816e231bb3",
+    "official_source_url": "https://github.com/openai/codex",
+    "experimental_api": true,
+    "transport": "stdio",
+    "native_methods": [
+      "initialize",
+      "thread/start",
+      "thread/fork",
+      "turn/start",
+      "item/tool/call"
+    ]
+  },
+  "model_provider": {
+    "name": "acmock",
+    "wire_api": "responses",
+    "requires_openai_auth": false,
+    "supports_websockets": false,
+    "request_max_retries": 0,
+    "stream_max_retries": 0,
+    "deterministic_local_stub": true,
+    "live_model_or_network": false
+  },
+  "host": {
+    "python": "3.12.3",
+    "pyyaml": "6.0.1",
+    "sqlite": "3.45.1",
+    "kernel": "6.15.11-061511-generic",
+    "platform": "Linux x86_64 glibc 2.39"
+  },
+  "timeouts_seconds": {
+    "json_rpc": 15,
+    "worker_restart": 5,
+    "turn": 30,
+    "case": 60
+  },
+  "scope": {
+    "protected_tool": "protected_commit",
+    "complete_mediation": "only the isolated authenticated mock sink",
+    "crash_target": "controller worker only",
+    "excluded": [
+      "App Server or JSON-RPC frontend death",
+      "shell, MCP, hosted, and web tool mediation",
+      "native Codex Restore or Merge semantics",
+      "dishonest or non-queryable sinks",
+      "natural-language effect binding",
+      "power-loss durability"
+    ]
+  }
+}

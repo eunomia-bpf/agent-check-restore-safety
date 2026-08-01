@@ -1,0 +1,115 @@
+{
+  "failures": [],
+  "metrics": {
+    "accepted_dispatches_without_tool_call": [],
+    "baseline": {
+      "P0": {
+        "false_negative": 0,
+        "false_positive": 11,
+        "observed": 89
+      },
+      "P1": {
+        "false_negative": 4,
+        "false_positive": 0,
+        "observed": 87
+      },
+      "P2": {
+        "false_negative": 9,
+        "false_positive": 0,
+        "observed": 71
+      }
+    },
+    "duplicate_aggregate_outcomes": [],
+    "mixed_fibers": {
+      "O0": [
+        {
+          "cases": [
+            "C02",
+            "C04"
+          ],
+          "key_sha256": "f6e95cc354de039bece9204ded6de80aa4049fa9f9ad74ac0c8987362b4559f6",
+          "labels": [
+            "accept",
+            "reject"
+          ]
+        },
+        {
+          "cases": [
+            "C13",
+            "C14"
+          ],
+          "key_sha256": "fed5ab31f443fa60140c8c22f6d69135578a961b9515fb720f56c5a4c0766c10",
+          "labels": [
+            "accept",
+            "reject"
+          ]
+        },
+        {
+          "cases": [
+            "C16",
+            "C18"
+          ],
+          "key_sha256": "bfd3d8b1d5d95a10dd612f8d1792f4997f08964b8b8d8141b772bed069f7834e",
+          "labels": [
+            "accept",
+            "reject"
+          ]
+        }
+      ],
+      "O1": [
+        {
+          "cases": [
+            "C02",
+            "C04"
+          ],
+          "key_sha256": "7372d30351a33aa7196941e04d8bf9367de8cf17dd44c2ae07304be87f62fee4",
+          "labels": [
+            "accept",
+            "reject"
+          ]
+        },
+        {
+          "cases": [
+            "C13",
+            "C14"
+          ],
+          "key_sha256": "88762e3a6edf1c5749ea4ca085de37292de83565b204df7f5cfdeebbcc4943c6",
+          "labels": [
+            "accept",
+            "reject"
+          ]
+        },
+        {
+          "cases": [
+            "C16",
+            "C18"
+          ],
+          "key_sha256": "1109141ce3b9a09e243365661f0081c466e2be00355f317763347ad9a86d01e0",
+          "labels": [
+            "accept",
+            "reject"
+          ]
+        }
+      ],
+      "O2": []
+    },
+    "p3_decisions_matching": 89,
+    "p3_decisions_total": 89,
+    "p3_replay_count": 20,
+    "p3_unsafe_accepts": [],
+    "raw_protocol": {
+      "answered_callback_count": 44,
+      "item_tool_call_count": 44,
+      "native_fork_count": 187,
+      "path": "/home/yunwei37/workspace/my-paper-work/agent-check-restore-safety/adapter/results/raw/app-server.jsonl",
+      "record_count": 1378,
+      "sha256": "946fec5f252190baea01b4e76d1d8e562862d2675f979065fad9a56ed0a60cfa",
+      "summarized_history_count": 187
+    },
+    "run_count": 80,
+    "unmediated_outcomes": []
+  },
+  "ok": true,
+  "schema_version": 1,
+  "warnings": []
+}

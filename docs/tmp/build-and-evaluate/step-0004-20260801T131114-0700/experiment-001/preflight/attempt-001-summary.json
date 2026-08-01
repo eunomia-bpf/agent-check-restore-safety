@@ -1,0 +1,503 @@
+{
+  "preflight": {
+    "boundary": {
+      "call_id": "preflight-call-1",
+      "codex_binary": "/home/yunwei37/.codex/packages/standalone/releases/0.146.0-x86_64-unknown-linux-musl/bin/codex",
+      "effect_id": "preflight-effect-1",
+      "fork_thread_id": "019fbf33-126b-77e3-9982-fa07ea5ef849",
+      "initialize_result": {
+        "codexHome": "/home/yunwei37/.codex",
+        "platformFamily": "unix",
+        "platformOs": "linux",
+        "userAgent": "authority_continuity_adapter/0.146.0 (Ubuntu 24.4.0; x86_64) dumb (authority_continuity_adapter; 0.1.0)"
+      },
+      "models_request_count": 1,
+      "ok": true,
+      "protected_turn_id": "019fbf33-12ba-7460-853f-7fba396e4a09",
+      "raw_jsonl_path": "/home/yunwei37/workspace/my-paper-work/agent-check-restore-safety/docs/tmp/build-and-evaluate/step-0004-20260801T131114-0700/experiment-001/preflight/attempt-001/app-server.jsonl",
+      "raw_record_count": 46,
+      "responses_request_count": 3,
+      "seed_archived": true,
+      "seed_thread_id": "019fbf33-114c-7d82-b4d2-8c36a6e7eb28",
+      "seed_turn_id": "019fbf33-11a6-7bd3-a84a-9564356565fd"
+    },
+    "dispatch": {
+      "attempt_count": 1,
+      "controller_events": [
+        {
+          "body": {
+            "abstract_label": "tau",
+            "actual": 0,
+            "operation": {
+              "active_branches": [
+                "root"
+              ],
+              "delegations": {
+                "g": [
+                  "root"
+                ]
+              },
+              "grants": {
+                "g": 1
+              },
+              "maximal_frontiers": [
+                [
+                  "root"
+                ]
+              ],
+              "op": "genesis",
+              "root": "root"
+            }
+          },
+          "body_hash": "340887c2742ef8cb766559bd13fb55bf4879a92e34b8a57cbe0a1e7570ca6380",
+          "event_hash": "cef4e6c20d1ab43909da723558a980b129c94a22ffa3da1b016b1342f692dadf",
+          "kind": "genesis",
+          "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "seq": 1,
+          "state_hash": "82977e507f5b54871f60e56cf3fdb0584972cdee802787bd219923e8587b63a1"
+        },
+        {
+          "body": {
+            "abstract_label": "tau",
+            "actual": 0,
+            "operation": {
+              "branch": "root",
+              "claim": "c1",
+              "demand": 1,
+              "grant": "g",
+              "op": "reserve",
+              "request": "reserve_e1"
+            }
+          },
+          "body_hash": "242d1fb8fd26a0fd693ac8225e7891064d1537586751cf03ea3c90a7acff4450",
+          "event_hash": "6ec847b63b1f97ccfd90102deaea778dcaa073156e42f2933dadbd5d87c27209",
+          "kind": "reserve",
+          "previous_hash": "cef4e6c20d1ab43909da723558a980b129c94a22ffa3da1b016b1342f692dadf",
+          "seq": 2,
+          "state_hash": "1c3ad4f73aac19acff6f085cf2e1ed0bfaf55f0f633c768c9843f032d82a5b51"
+        },
+        {
+          "body": {
+            "abstract_label": "tau",
+            "actual": 0,
+            "operation": {
+              "claim": "c1",
+              "effect": "preflight-effect-1",
+              "op": "prepare",
+              "request": "prepare_e1"
+            }
+          },
+          "body_hash": "a8d1083f9eb893a467d2f20e3d0b846d9357eb8b2f9e86a40e13d71987b59f98",
+          "event_hash": "7c34d7f58471f5de0124eb619731a544ab76d392e72875dc6901418eaf790c1a",
+          "kind": "prepare",
+          "previous_hash": "6ec847b63b1f97ccfd90102deaea778dcaa073156e42f2933dadbd5d87c27209",
+          "seq": 3,
+          "state_hash": "885f458a47217c6c04d7d89c6531e4e329badf43b5b8bea2d1110d7fa4a14eb7"
+        },
+        {
+          "body": {
+            "abstract_label": "attempt",
+            "actual": 1,
+            "operation": {
+              "effect": "preflight-effect-1",
+              "op": "dispatch",
+              "request": "dispatch_e1",
+              "site": "preflight.initial"
+            }
+          },
+          "body_hash": "1b5cdd04dee32bd56394b671888e1d47b84cbef909a9365b3363fdc14cdad0ff",
+          "event_hash": "b4910b9411a44293e689f8f56e047466bc4b3b12754d2cf63d9fc3f1ffbb72af",
+          "kind": "dispatch",
+          "previous_hash": "7c34d7f58471f5de0124eb619731a544ab76d392e72875dc6901418eaf790c1a",
+          "seq": 4,
+          "state_hash": "1db4a8536ff7ea21a07d93bd2f47ffe2723f2f5ebc7a7b3a836ebd0b298a7889"
+        },
+        {
+          "body": {
+            "abstract_label": "tau",
+            "actual": 0,
+            "operation": {
+              "effects": [
+                "preflight-effect-1"
+              ],
+              "op": "crash",
+              "request": "crash_preflight-effect-1"
+            }
+          },
+          "body_hash": "acaac921194bf2bfe6e13759d59231aa937740307b570f73ae8685992cc257ed",
+          "event_hash": "70980a721b8b8a79463bd46f1a26e6f67e1a38c4bf4e53224f47dd86fd87bb3c",
+          "kind": "crash",
+          "previous_hash": "b4910b9411a44293e689f8f56e047466bc4b3b12754d2cf63d9fc3f1ffbb72af",
+          "seq": 5,
+          "state_hash": "9b809379e8ea4131ffd8768e43eb3672d8c67d67a057daafd252b3713f2f1ca8"
+        },
+        {
+          "body": {
+            "abstract_label": "tau",
+            "actual": 0,
+            "operation": {
+              "effect": "preflight-effect-1",
+              "op": "settle",
+              "outcome": "succeeded",
+              "request": "settle_preflight-effect-1"
+            }
+          },
+          "body_hash": "b1e85137dd08076729f504bf763f3fb0cbdfb507ca23dc69ae3462a07c01ea70",
+          "event_hash": "451fd62218270291d1eb83eb40a32be7e3357a63f692c559d63cd363b90e8107",
+          "kind": "settle",
+          "previous_hash": "70980a721b8b8a79463bd46f1a26e6f67e1a38c4bf4e53224f47dd86fd87bb3c",
+          "seq": 6,
+          "state_hash": "f836077798190be385187fd3bbd890037e9e71373857c899a4a7cf412e1e6225"
+        }
+      ],
+      "controller_receipt": {
+        "claim": "c1",
+        "outcome": "succeeded"
+      },
+      "controller_snapshot": {
+        "head_hash": "451fd62218270291d1eb83eb40a32be7e3357a63f692c559d63cd363b90e8107",
+        "policy": "P3",
+        "policy_state": {
+          "budgets": {
+            "g": {
+              "root": 1
+            }
+          },
+          "escrow": {
+            "g": 0
+          }
+        },
+        "sequence": 6,
+        "state": {
+          "active_branches": [
+            "root"
+          ],
+          "branch_epochs": {
+            "root": "open"
+          },
+          "checkpoints": {},
+          "claims": {
+            "c1": {
+              "demand": 1,
+              "grant": "g",
+              "owner": null,
+              "status": "durable"
+            }
+          },
+          "delegations": {
+            "g": [
+              "root"
+            ]
+          },
+          "forks": {},
+          "frontier": [
+            [],
+            [
+              "root"
+            ]
+          ],
+          "grant_epochs": {
+            "g": "open"
+          },
+          "grants": {
+            "g": 1
+          },
+          "receipts": {
+            "preflight-effect-1": {
+              "claim": "c1",
+              "outcome": "succeeded"
+            }
+          },
+          "tickets": {}
+        },
+        "state_hash": "f836077798190be385187fd3bbd890037e9e71373857c899a4a7cf412e1e6225"
+      },
+      "crash_boundary": {
+        "controller": {
+          "head_hash": "b4910b9411a44293e689f8f56e047466bc4b3b12754d2cf63d9fc3f1ffbb72af",
+          "policy": "P3",
+          "policy_state": {
+            "budgets": {
+              "g": {
+                "root": 1
+              }
+            },
+            "escrow": {
+              "g": 0
+            }
+          },
+          "sequence": 4,
+          "state": {
+            "active_branches": [
+              "root"
+            ],
+            "branch_epochs": {
+              "root": "open"
+            },
+            "checkpoints": {},
+            "claims": {
+              "c1": {
+                "demand": 1,
+                "grant": "g",
+                "owner": null,
+                "status": "durable"
+              }
+            },
+            "delegations": {
+              "g": [
+                "root"
+              ]
+            },
+            "forks": {},
+            "frontier": [
+              [],
+              [
+                "root"
+              ]
+            ],
+            "grant_epochs": {
+              "g": "open"
+            },
+            "grants": {
+              "g": 1
+            },
+            "receipts": {},
+            "tickets": {
+              "preflight-effect-1": {
+                "claim": "c1",
+                "phase": "inflight"
+              }
+            }
+          },
+          "state_hash": "1db4a8536ff7ea21a07d93bd2f47ffe2723f2f5ebc7a7b3a836ebd0b298a7889"
+        },
+        "sink": {
+          "attempts": [
+            {
+              "attempt_no": 1,
+              "effect_id": "preflight-effect-1",
+              "observed_revision": 1,
+              "request_hash": "7c3dc5bf1437329ff7e3d2d4d9bd40e2517f13ed8044f04a1cd0fc03fc9625ee",
+              "reused": false,
+              "stable_key": "preflight-effect-1"
+            }
+          ],
+          "outcomes": [
+            {
+              "effect_id": "preflight-effect-1",
+              "evidence": {
+                "body": {
+                  "effect_id": "preflight-effect-1",
+                  "kind": "receipt",
+                  "outcome": "succeeded",
+                  "request_hash": "7c3dc5bf1437329ff7e3d2d4d9bd40e2517f13ed8044f04a1cd0fc03fc9625ee",
+                  "sink_revision": 1,
+                  "stable_key": "preflight-effect-1"
+                },
+                "signature": "27c9c1fef77af9e1307218e89b8d1b2de7d393ca1b6d63f5cf59ac6a380054cb"
+              },
+              "outcome": "succeeded",
+              "request_hash": "7c3dc5bf1437329ff7e3d2d4d9bd40e2517f13ed8044f04a1cd0fc03fc9625ee",
+              "revision": 1,
+              "stable_key": "preflight-effect-1"
+            }
+          ],
+          "revision": 1
+        }
+      },
+      "dispatch_decision": {
+        "abstract_label": "attempt",
+        "decision": "accept",
+        "event_seq": 4,
+        "operation": "dispatch",
+        "reason": "admitted",
+        "request": "dispatch_e1",
+        "state_hash": "1db4a8536ff7ea21a07d93bd2f47ffe2723f2f5ebc7a7b3a836ebd0b298a7889"
+      },
+      "effect_id": "preflight-effect-1",
+      "fault_mode": "after_remote_success",
+      "initial_worker": {
+        "exitcode": -9,
+        "payload": null,
+        "pid": 362837,
+        "stage": "initial",
+        "startup_seconds": 0.0559461349985213
+      },
+      "outcome": "succeeded",
+      "outcome_count": 1,
+      "policy": "P3",
+      "provider_call_id": "preflight-call-1",
+      "recovery_action": "query_and_settle",
+      "recovery_worker": {
+        "exitcode": 0,
+        "payload": {
+          "dispatch": null,
+          "recovery": {
+            "abstract_label": "tau",
+            "decision": "accept",
+            "event_seq": 5,
+            "operation": "crash",
+            "reason": "admitted",
+            "request": "crash_preflight-effect-1",
+            "state_hash": "9b809379e8ea4131ffd8768e43eb3672d8c67d67a057daafd252b3713f2f1ca8"
+          },
+          "recovery_action": "query_and_settle",
+          "reply": {
+            "controller_receipt": {
+              "claim": "c1",
+              "outcome": "succeeded"
+            },
+            "effect_id": "preflight-effect-1",
+            "outcome": "succeeded",
+            "provider_call_id": "preflight-call-1",
+            "sink_evidence": {
+              "body": {
+                "effect_id": "preflight-effect-1",
+                "kind": "receipt",
+                "outcome": "succeeded",
+                "request_hash": "7c3dc5bf1437329ff7e3d2d4d9bd40e2517f13ed8044f04a1cd0fc03fc9625ee",
+                "sink_revision": 1,
+                "stable_key": "preflight-effect-1"
+              },
+              "signature": "27c9c1fef77af9e1307218e89b8d1b2de7d393ca1b6d63f5cf59ac6a380054cb"
+            },
+            "stable_key": "preflight-effect-1"
+          },
+          "settlement": {
+            "abstract_label": "tau",
+            "decision": "accept",
+            "event_seq": 6,
+            "operation": "settle",
+            "reason": "admitted",
+            "request": "settle_preflight-effect-1",
+            "state_hash": "f836077798190be385187fd3bbd890037e9e71373857c899a4a7cf412e1e6225"
+          },
+          "status": "completed"
+        },
+        "pid": 362847,
+        "stage": "recovery",
+        "startup_seconds": 0.05761310000161757
+      },
+      "reply": {
+        "controller_receipt": {
+          "claim": "c1",
+          "outcome": "succeeded"
+        },
+        "effect_id": "preflight-effect-1",
+        "outcome": "succeeded",
+        "provider_call_id": "preflight-call-1",
+        "sink_evidence": {
+          "body": {
+            "effect_id": "preflight-effect-1",
+            "kind": "receipt",
+            "outcome": "succeeded",
+            "request_hash": "7c3dc5bf1437329ff7e3d2d4d9bd40e2517f13ed8044f04a1cd0fc03fc9625ee",
+            "sink_revision": 1,
+            "stable_key": "preflight-effect-1"
+          },
+          "signature": "27c9c1fef77af9e1307218e89b8d1b2de7d393ca1b6d63f5cf59ac6a380054cb"
+        },
+        "stable_key": "preflight-effect-1"
+      },
+      "request_hash": "7c3dc5bf1437329ff7e3d2d4d9bd40e2517f13ed8044f04a1cd0fc03fc9625ee",
+      "sink_snapshot": {
+        "attempts": [
+          {
+            "attempt_no": 1,
+            "effect_id": "preflight-effect-1",
+            "observed_revision": 1,
+            "request_hash": "7c3dc5bf1437329ff7e3d2d4d9bd40e2517f13ed8044f04a1cd0fc03fc9625ee",
+            "reused": false,
+            "stable_key": "preflight-effect-1"
+          }
+        ],
+        "outcomes": [
+          {
+            "effect_id": "preflight-effect-1",
+            "evidence": {
+              "body": {
+                "effect_id": "preflight-effect-1",
+                "kind": "receipt",
+                "outcome": "succeeded",
+                "request_hash": "7c3dc5bf1437329ff7e3d2d4d9bd40e2517f13ed8044f04a1cd0fc03fc9625ee",
+                "sink_revision": 1,
+                "stable_key": "preflight-effect-1"
+              },
+              "signature": "27c9c1fef77af9e1307218e89b8d1b2de7d393ca1b6d63f5cf59ac6a380054cb"
+            },
+            "outcome": "succeeded",
+            "request_hash": "7c3dc5bf1437329ff7e3d2d4d9bd40e2517f13ed8044f04a1cd0fc03fc9625ee",
+            "revision": 1,
+            "stable_key": "preflight-effect-1"
+          }
+        ],
+        "revision": 1
+      },
+      "stable_key": "preflight-effect-1",
+      "status": "completed"
+    }
+  },
+  "runtime": {
+    "lock": {
+      "codex": {
+        "binary": "/home/yunwei37/.codex/packages/standalone/releases/0.146.0-x86_64-unknown-linux-musl/bin/codex",
+        "binary_sha256": "2e863156ed35ecc5253b1e2f907a9143077b9f7cb51942070c61996471ff6e04",
+        "experimental_api": true,
+        "generated_experimental_v2_schema_sha256": "7fb7921dd4d3dea5167beb06837f885d484ff3aa5ba70f4ecdd2d66144bd40af",
+        "native_methods": [
+          "initialize",
+          "thread/start",
+          "thread/fork",
+          "turn/start",
+          "item/tool/call"
+        ],
+        "official_source_revision": "1e85ca099e4265bf89f4016772d299816e231bb3",
+        "official_source_url": "https://github.com/openai/codex",
+        "transport": "stdio",
+        "version": "codex-cli 0.146.0"
+      },
+      "host": {
+        "kernel": "6.15.11-061511-generic",
+        "platform": "Linux x86_64 glibc 2.39",
+        "python": "3.12.3",
+        "pyyaml": "6.0.1",
+        "sqlite": "3.45.1"
+      },
+      "model_provider": {
+        "deterministic_local_stub": true,
+        "live_model_or_network": false,
+        "name": "acmock",
+        "request_max_retries": 0,
+        "requires_openai_auth": false,
+        "stream_max_retries": 0,
+        "supports_websockets": false,
+        "wire_api": "responses"
+      },
+      "recorded_at": "2026-08-01T13:11:14-07:00",
+      "schema_version": 1,
+      "scope": {
+        "complete_mediation": "only the isolated authenticated mock sink",
+        "crash_target": "controller worker only",
+        "excluded": [
+          "App Server or JSON-RPC frontend death",
+          "shell, MCP, hosted, and web tool mediation",
+          "native Codex Restore or Merge semantics",
+          "dishonest or non-queryable sinks",
+          "natural-language effect binding",
+          "power-loss durability"
+        ],
+        "protected_tool": "protected_commit"
+      },
+      "timeouts_seconds": {
+        "case": 60,
+        "json_rpc": 15,
+        "turn": 30,
+        "worker_restart": 5
+      }
+    },
+    "lock_sha256": "52779e5c6bd506f06249edd5cc668364c8e593f230a1c5aa59e4a26f5c0d5660",
+    "observed_codex_binary_sha256": "2e863156ed35ecc5253b1e2f907a9143077b9f7cb51942070c61996471ff6e04",
+    "observed_codex_version": "codex-cli 0.146.0",
+    "resolved_codex_binary": "/home/yunwei37/.codex/packages/standalone/releases/0.146.0-x86_64-unknown-linux-musl/bin/codex"
+  }
+}

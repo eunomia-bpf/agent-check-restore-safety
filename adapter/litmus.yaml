@@ -1,0 +1,175 @@
+version: 1
+suite_revision: 2
+description: >-
+  Declarative operation streams for the fixed authority-continuity runtime
+  suite. This file intentionally contains no expected decisions or terminal
+  labels; those are frozen separately in oracle.yaml and are never supplied to
+  controller workers.
+
+cases:
+  - id: C01
+    crash_mode: none
+    dispatch_site: e1.initial
+    operations: &l1_ops
+      - {op: grant, grant: g, capacity: 1, owner: root}
+      - {op: checkpoint, checkpoint: cp0, branch: root}
+      - {op: reserve, request: reserve_e1, claim: c1, branch: root, grant: g, demand: 1}
+      - {op: prepare, request: prepare_e1, effect: e1, claim: c1}
+      - {op: dispatch, request: dispatch_e1, effect: e1, site: e1.initial}
+      - {op: restore, request: restore_old, checkpoint: cp0, source: root, target: restored, mode: replace}
+      - {op: reserve, request: reserve_e2, claim: c2, branch: restored, grant: g, demand: 1}
+
+  - id: C02
+    crash_mode: before_dispatch
+    dispatch_site: e1.initial
+    operations: *l1_ops
+
+  - id: C03
+    crash_mode: after_remote_success
+    dispatch_site: e1.initial
+    operations: *l1_ops
+
+  - id: C04
+    crash_mode: after_controller_commit
+    dispatch_site: e1.initial
+    operations: *l1_ops
+
+  - id: C05
+    crash_mode: none
+    dispatch_site: left.e1.initial
+    operations: &l10_ops
+      - {op: grant, grant: g, capacity: 1, owner: root}
+      - {op: fork, request: parallel_fork, source: root, kind: parallel, children: [left, right]}
+      - {op: reserve, request: reserve_left, claim: c1, branch: left, grant: g, demand: 1}
+      - {op: prepare, request: prepare_e1, effect: e1, claim: c1}
+      - {op: dispatch, request: dispatch_e1, effect: e1, site: left.e1.initial}
+      - {op: reserve, request: reserve_right, claim: c2, branch: right, grant: g, demand: 1}
+
+  - id: C06
+    crash_mode: before_dispatch
+    dispatch_site: left.e1.initial
+    operations: *l10_ops
+
+  - id: C07
+    crash_mode: after_remote_success
+    dispatch_site: left.e1.initial
+    operations: *l10_ops
+
+  - id: C08
+    crash_mode: after_controller_commit
+    dispatch_site: left.e1.initial
+    operations: *l10_ops
+
+  - id: C09
+    crash_mode: none
+    dispatch_site: e.initial_after_revoke
+    operations: &l13_ops
+      - {op: grant, grant: g, capacity: 1, owner: root}
+      - {op: reserve, request: reserve_e1, claim: c1, branch: root, grant: g, demand: 1}
+      - {op: prepare, request: prepare_e1, effect: e1, claim: c1}
+      - {op: revoke, request: revoke_g, grant: g}
+      - {op: dispatch, request: dispatch_e1, effect: e1, site: e.initial_after_revoke}
+      - {op: reserve, request: reserve_e2, claim: c2, branch: root, grant: g, demand: 1}
+
+  - id: C10
+    crash_mode: before_dispatch
+    dispatch_site: e.initial_after_revoke
+    operations: *l13_ops
+
+  - id: C11
+    crash_mode: after_remote_success
+    dispatch_site: e.initial_after_revoke
+    operations: *l13_ops
+
+  - id: C12
+    crash_mode: after_controller_commit
+    dispatch_site: e.initial_after_revoke
+    operations: *l13_ops
+
+  - id: C13
+    crash_mode: none
+    dispatch_site: null
+    operations:
+      - {op: grant, grant: g, capacity: 1, owner: root}
+      - {op: checkpoint, checkpoint: cp0, branch: root}
+      - {op: reserve, request: reserve_old, claim: c_old, branch: root, grant: g, demand: 1}
+      - {op: restore, request: restore_same_bytes, checkpoint: cp0, source: root, target: restored, mode: replace}
+      - {op: reserve, request: reserve_restored, claim: c_new, branch: restored, grant: g, demand: 1}
+
+  - id: C14
+    crash_mode: none
+    dispatch_site: null
+    operations:
+      - {op: grant, grant: g, capacity: 1, owner: root}
+      - {op: checkpoint, checkpoint: cp0, branch: root}
+      - {op: reserve, request: reserve_old, claim: c_old, branch: root, grant: g, demand: 1}
+      - {op: restore, request: restore_same_bytes, checkpoint: cp0, source: root, target: restored, mode: live}
+      - {op: reserve, request: reserve_restored, claim: c_new, branch: restored, grant: g, demand: 1}
+
+  - id: C15
+    crash_mode: none
+    dispatch_site: null
+    operations:
+      - {op: grant, grant: g, capacity: 1, owner: root}
+      - {op: fork, request: choice_fork, source: root, kind: choice, children: [left, right]}
+      - {op: reserve, request: reserve_left, claim: c1, branch: left, grant: g, demand: 1}
+      - {op: reserve, request: reserve_right, claim: c2, branch: right, grant: g, demand: 1}
+
+  - id: C16
+    crash_mode: none
+    dispatch_site: null
+    operations:
+      - {op: grant, grant: g, capacity: 1, owner: root}
+      - {op: fork, request: parallel_fork, source: root, kind: parallel, children: [left, right]}
+      - {op: reserve, request: reserve_c1, claim: c1, branch: left, grant: g, demand: 1}
+      - {op: reserve, request: reserve_c2, claim: c2, branch: right, grant: g, demand: 1}
+
+  - id: C17
+    crash_mode: none
+    dispatch_site: null
+    operations:
+      - {op: grant, grant: g, capacity: 1, owner: root}
+      - {op: fork, request: choice_fork, source: root, kind: choice, children: [left, right]}
+      - {op: select, request: select_left, branch: left}
+      - {op: reserve, request: reserve_c1, claim: c1, branch: left, grant: g, demand: 1}
+      - {op: prepare, request: prepare_e1, effect: e1, claim: c1}
+
+  - id: C18
+    crash_mode: none
+    dispatch_site: null
+    operations:
+      - {op: grant, grant: g1, capacity: 1, owner: root}
+      - {op: grant, grant: g2, capacity: 1, owner: root}
+      - {op: fork, request: parallel_fork, source: root, kind: parallel, children: [left, right]}
+      - {op: delegate, request: delegate_g1, grant: g1, branch: left}
+      - {op: delegate, request: delegate_g2, grant: g2, branch: right}
+      - {op: reserve, request: reserve_c1, claim: c1, branch: left, grant: g1, demand: 1}
+      - {op: reserve, request: reserve_c2, claim: c2, branch: right, grant: g2, demand: 1}
+
+  - id: C19
+    crash_mode: none
+    dispatch_site: null
+    operations:
+      - {op: grant, grant: g, capacity: 1, owner: root}
+      - {op: fork, request: choice_fork, source: root, kind: choice, children: [left, right]}
+      - {op: reserve, request: reserve_left, claim: c1, branch: left, grant: g, demand: 1}
+      - {op: reserve, request: reserve_right, claim: c2, branch: right, grant: g, demand: 1}
+      - op: merge
+        request: merge_selected
+        mode: certified
+        sources: [left, right]
+        target: merged
+        retain_claims: [c1]
+        certificate:
+          projection: {target_configuration: [merged], source_configuration: [left]}
+          claim_map: [{source_claim: c1, target_claim: c1}]
+
+  - id: C20
+    crash_mode: none
+    dispatch_site: null
+    operations:
+      - {op: grant, grant: g, capacity: 1, owner: root}
+      - {op: fork, request: choice_fork, source: root, kind: choice, children: [left, right]}
+      - {op: reserve, request: reserve_left, claim: c1, branch: left, grant: g, demand: 1}
+      - {op: reserve, request: reserve_right, claim: c2, branch: right, grant: g, demand: 1}
+      - {op: merge, request: merge_both, mode: direct, sources: [left, right], target: merged, retain_claims: [c1, c2]}

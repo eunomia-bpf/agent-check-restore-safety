@@ -1,0 +1,72 @@
+version: 1
+provenance:
+  source: docs/evaluation.md fixed L1/L8/L10/L13 expectations and the closed lifecycle LTS
+  frozen_before_controller_run: true
+  note: >-
+    This fixture is consumed only by adapter.check_results. Controller workers
+    receive neither this file nor any expected decision, terminal state, or
+    abstract edge.
+
+cases:
+  C01: &l1_none
+    decisions: {reserve_e1: accept, prepare_e1: accept, dispatch_e1: accept, restore_old: accept, reserve_e2: reject}
+    aggregate_sink_outcomes: {e1: 1}
+    settled_receipts: [e1]
+    unsafe_if_accepted: [reserve_e2]
+  C02:
+    <<: *l1_none
+    observation_probe: {name: effect_phase, action: attempt_e1, decision: accept, abstract_label: attempt}
+  C03: *l1_none
+  C04:
+    <<: *l1_none
+    observation_probe: {name: effect_phase, action: attempt_e1, decision: reject, abstract_label: stutter_cached_receipt}
+
+  C05: &l10_none
+    decisions: {parallel_fork: accept, reserve_left: accept, prepare_e1: accept, dispatch_e1: accept, reserve_right: reject}
+    aggregate_sink_outcomes: {e1: 1}
+    settled_receipts: [e1]
+    unsafe_if_accepted: [reserve_right]
+  C06: *l10_none
+  C07: *l10_none
+  C08: *l10_none
+
+  C09: &l13_none
+    decisions: {reserve_e1: accept, prepare_e1: accept, revoke_g: accept, dispatch_e1: accept, reserve_e2: reject}
+    aggregate_sink_outcomes: {e1: 1}
+    settled_receipts: [e1]
+    unsafe_if_accepted: [reserve_e2]
+  C10: *l13_none
+  C11: *l13_none
+  C12: *l13_none
+
+  C13:
+    decisions: {reserve_old: accept, restore_same_bytes: accept, reserve_restored: accept}
+    aggregate_sink_outcomes: {}
+    observation_probe: {name: topology, action: reserve_restored, decision: accept, abstract_label: tau}
+  C14:
+    decisions: {reserve_old: accept, restore_same_bytes: accept, reserve_restored: reject}
+    aggregate_sink_outcomes: {}
+    unsafe_if_accepted: [reserve_restored]
+    observation_probe: {name: topology, action: reserve_restored, decision: reject, abstract_label: none}
+  C15:
+    decisions: {choice_fork: accept, reserve_left: accept, reserve_right: accept}
+    aggregate_sink_outcomes: {}
+  C16:
+    decisions: {parallel_fork: accept, reserve_c1: accept, reserve_c2: reject}
+    aggregate_sink_outcomes: {}
+    unsafe_if_accepted: [reserve_c2]
+    observation_probe: {name: authority_lineage, action: reserve_c2, decision: reject, abstract_label: none}
+  C17:
+    decisions: {choice_fork: accept, select_left: accept, reserve_c1: accept, prepare_e1: accept}
+    aggregate_sink_outcomes: {}
+  C18:
+    decisions: {parallel_fork: accept, delegate_g1: accept, delegate_g2: accept, reserve_c1: accept, reserve_c2: accept}
+    aggregate_sink_outcomes: {}
+    observation_probe: {name: authority_lineage, action: reserve_c2, decision: accept, abstract_label: tau}
+  C19:
+    decisions: {choice_fork: accept, reserve_left: accept, reserve_right: accept, merge_selected: accept}
+    aggregate_sink_outcomes: {}
+  C20:
+    decisions: {choice_fork: accept, reserve_left: accept, reserve_right: accept, merge_both: reject}
+    aggregate_sink_outcomes: {}
+    unsafe_if_accepted: [merge_both]

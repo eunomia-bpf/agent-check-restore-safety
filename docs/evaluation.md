@@ -272,7 +272,13 @@ kind, source role, demand, binding, and same/fresh-operation relation. Group
 only equal keys and count fibers containing different oracle decisions; never
 compare raw unique run IDs or different requested actions. The required pairs
 are C13/C14 before the same Reserve (topology), C16/C18 before the same second
-Reserve (authority), and C02/C03 before the same `FinalizeAbort(e1)` (effect).
+Reserve (authority), and C02/C04 while the same App Server request is pending
+before permission for the same physical `.attempt(e1,c1)` (effect). In C02 a
+prepared ticket admits Dispatch; in C04 a settled receipt denies a new attempt
+and the cached reply is a zero-outcome stutter. The earlier C02/C03
+`FinalizeAbort(e1)` proposal is not an existing-LTS witness because Settle
+permits cancellation from `uncertain` without an authenticated-absence
+premise.
 Such mixed-label fibers, decoder abstentions, and wrong decisions are expected
 evidence of `O0`/`O1` insufficiency, not experiment failures. `O2` must
 reconstruct the genesis `LifecycleState`, each abstract label/successor and
@@ -287,7 +293,9 @@ observation-quotient result, this remains supporting instrumentation.
 
 **Admission-policy baselines**
 
-- `P0 workspace-only`: admit locally well-formed operations and rely on rewind;
+- `P0 workspace/topology-local admission`: share the fixed durable effect/sink
+  harness for fault fairness, but admit locally well-formed authority actions
+  without correlated future accounting;
 - `P1 split-all`: permanently partition remaining capacity among live children;
 - `P2 parent-escrow`: retain capacity centrally and transfer once after winner
   selection, rejecting protected pre-selection dispatch;
@@ -306,3 +314,55 @@ runs, raw histories, receipts, durable heads, and JSON summaries at the paths
 defined in `docs/runtime-integration.md`; only then report latency and durable
 write overhead. Claude Code through a mandatory MCP proxy is a portability
 check after the Codex path, not a second unfinished prototype.
+
+## 9. Completed RQ3 Codex adapter experiment
+
+BUILD_AND_EVALUATE Step 0004 crossed the real installed Codex App Server
+boundary.  The model endpoint remained a deterministic loopback fixture, while
+native `thread/fork`, `turn/start`, and client-owned `item/tool/call` were
+executed by pinned `codex-cli 0.146.0`.  A separate controller worker was
+hard-killed at the three named persistence boundaries and reopened two
+independent SQLite durability domains while the original callback remained
+pending.
+
+An initial completed pilot was rejected by result review rather than reported:
+it erased one action/grant alias, used an oracle-only C04 attempt label, and
+omitted the C19 Merge projection.  Suite revision 2 did not change an oracle
+decision.  It records the actual C16/C18 grants with typed alias-preserving
+prefix events, executes C02/C04 admission probes, and supplies a canonical C19
+projection plus injective retained-claim map to independently implemented
+controller and replay checks.
+
+Final deterministic results:
+
+- all 80 policy/case runs terminated explicitly;
+- P3 matched all 89 frozen request decisions, admitted zero unsafe request,
+  and independently replayed all 20 complete delta/hash chains;
+- all 44 reached effects matched raw `item/tool/call` records and produced one
+  attempt, one aggregate sink outcome, and one controller receipt;
+- all 33 injected `SIGKILL` faults restarted in a distinct process and
+  recovered; 22 before-dispatch/after-commit paths executed the paired attempt
+  admission question;
+- 187 native forks matched the run actions: 80 per-run setup roots and 107
+  accepted lifecycle materializations (80 fork children, 24 restore copies,
+  and three merge targets); logical ancestry remained adapter metadata;
+- O0 and O1 each retained the three predeclared mixed-label fibers, while O2
+  retained none;
+- P0 produced 11 unsafe accepts over 89 observed decisions; P1 produced four
+  safe rejects over 87 observed decisions and truncated two later requests;
+  P2 produced nine safe rejects over 71 observed decisions and truncated 18
+  later requests.  P1/P2 produced no unsafe accept.
+
+The supported conclusion is correspondence for one isolated queryable sink and
+fixed adapter-defined lifecycle.  It is not product-wide complete mediation or
+a native Codex Restore/Merge theorem: every ephemeral child is a real fork of
+the persistent seed, but logical ancestry/topology is adapter state; topology
+commit/activation crash windows, App Server/frontend death, shell/MCP/web
+bypasses, direct same-user database access, dishonest sinks, power loss, and
+natural-language binding remain outside scope.  The unbounded concrete
+refinement result therefore keeps its explicit premises.
+
+The authoritative artifacts are `adapter/results/litmus.json`,
+`adapter/results/check.json`, `adapter/results/raw/`, and the plan, rejected
+pilot, preflight, and result review under
+`docs/tmp/build-and-evaluate/step-0004-20260801T131114-0700/`.

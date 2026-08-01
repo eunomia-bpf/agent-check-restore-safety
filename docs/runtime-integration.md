@@ -1,6 +1,9 @@
 # Runtime Integration and Workload Coverage
 
-**Status:** design grounded in official Claude Code and Codex documentation plus public trajectory schemas checked on 2026-08-01. Product hooks and public traces are integration evidence, not yet an implemented or verified security boundary.
+**Status:** design grounded in official Claude Code/Codex documentation and
+public trajectory schemas, plus a checked fixed-suite Codex App Server adapter
+as of 2026-08-01.  The prototype verifies one isolated effect path; it is not a
+product-wide security boundary.
 
 ## 1. Industrial principle
 
@@ -194,16 +197,15 @@ idempotent/queryable sink by that key and appends the reconciled outcome. A
 non-idempotent, non-queryable, or dishonest sink leaves this case ambiguous and
 is explicitly outside the claimed refinement.
 
-This contract supports two candidate claims, not established results. An
-erasure theorem may show that ordinary traces identify too little state for
-sound-and-complete admission. A replay/refinement theorem must separately show
-that the enriched events reconstruct the initial `LifecycleState`, every
-abstract label and successor state, and each checker decision; the corresponding
-concrete edges must then form a `SimulatedTrace` under complete mediation,
-canonical certificate validation, the anchored durable head, and the stated
-sink assumptions. Dataset frequency and “logging the checker state” prove
-neither claim; an irredundancy or information lower bound is still needed for a
-distinct observability contribution.
+The fixed suite now establishes a bounded result: its O0/O1 projections each
+retain three mixed-label fibers, while its O2 deltas reconstruct all 20 P3
+states, labels, decisions, and durable anchors.  This does not establish the
+general erasure or replay/refinement theorem.  That theorem must still show the
+corresponding arbitrary concrete edges form a `SimulatedTrace` under complete
+mediation, canonical certificate validation, the anchored durable head, and
+the stated sink assumptions. Dataset frequency and “logging the checker state”
+prove neither claim; an irredundancy or information lower bound is still needed
+for a distinct observability contribution.
 
 ## 8. Minimal integration experiment
 
@@ -217,9 +219,10 @@ mapping:
   register the returned thread as a fresh branch epoch under an adapter-owned
   exclusive or parallel descriptor; the native verb alone does not choose the
   authority topology;
-- **replacing Restore:** fork/copy the selected source boundary into a fresh
-  logical epoch and crash-atomically retire the source before activating the
-  target;
+- **replacing Restore:** the design requires copying the selected source
+  boundary into a fresh logical epoch and crash-atomically coupling source
+  retirement to target activation.  The current fixed adapter performs these
+  steps sequentially and leaves that crash window untested;
 - **live Restore:** copy the same boundary into a fresh epoch while retaining
   the source as active;
 - **Merge:** invoke an adapter API with the target histories, canonical
@@ -301,36 +304,42 @@ required witness fibers are:
 |---|---|---|---|---|
 | topology | C13 vs C14 before `Reserve(restored, fresh-claim, 1)` | same reconstructed bytes and alpha-normalized provider trace | accept vs reject | source epoch active/retired and replace/live lineage |
 | authority | C16 vs C18 after `Reserve(c1,1)`, before `Reserve(c2,1)` | same parallel-fork/call trace; grant mapping erased | reject vs accept | shared grant versus distinct fragment lineages |
-| effect | C02 vs C03 immediately after crash, before `FinalizeAbort(e1)` | same tool request with no result after alpha-normalization | accept only when the sink proves no dispatch; reject after remote success | stable effect phase plus authenticated absence/receipt evidence |
+| effect | C02 vs C04 while the same App Server tool request is pending, before permission for physical `.attempt(e1,c1)` | same tool request with no result after alpha-normalization | C02 has a prepared ticket and admits Dispatch; C04 is already settled, denies a new attempt, and returns the cached receipt as a zero-outcome stutter | prepared ticket versus settled receipt |
 
 Each paired YAML case issues the named admission request as a non-mutating
 probe, records the oracle and monitor labels, and then follows its required
-terminal recovery path. Thus the effect probe does not replace C02/C03's
-mandatory eventual settlement.
+terminal recovery path. Thus the C02/C04 probe compares permission to perform
+the same physical attempt without replacing C02's mandatory eventual
+settlement or C04's cached reply. The earlier C02/C03 `FinalizeAbort` proposal
+is retired: the current abstract Settle rule permits cancellation from an
+uncertain phase and has no authenticated-absence premise, so that pair would
+not witness the existing LTS.
 
 `O0` and `O1` are expected to contain such fibers, so decoder ambiguity,
 abstention, and wrong decisions are results rather than run failures. `O2` must
 have no mixed-label fiber in the suite, reconstruct the genesis
 `LifecycleState` plus every abstract label/successor, and reproduce every
-checker decision; the concrete edges can then be checked as a
-`SimulatedTrace`.
+checker decision.  The retained checker separately joins that controller
+chain to App Server, fault, and sink evidence; this fixed-suite composite audit
+does not itself construct the theorem's full `SimulatedTrace`.
 
 **Admission policies**
 
-The YAML supplies ground-truth logical effect names only to the oracle. All
-policies use the same sink and crash protocol. `P1`--`P3` also share the same
-durable effect state machine: Prepare and stable idempotency precede dispatch;
-recovery queries uncertain attempts; a prepared ticket survives revocation and
-may settle once; new Prepare after revocation is rejected. The policies differ
-only in authority/topology admission. `P0` deliberately lacks this layer and is
-the end-to-end workspace-only baseline.
+The YAML supplies typed operation streams and stable logical effect names to
+every policy, but no expected decision.  The oracle remains a separate
+checker-only fixture.  For fault-comparison fairness all policies use the same
+durable effect state machine and sink: Prepare and stable idempotency precede
+dispatch; recovery queries uncertain attempts; a prepared ticket survives
+revocation and may settle once.  They differ in authority/topology admission.
+`P0` deliberately lacks correlated future accounting; it is a null admission
+control, not a faithful end-to-end implementation of an uninstrumented agent.
 
 | Policy | Complete transition rule for the fixed suite |
 |---|---|
-| `P0 workspace-only` | Fork/Restore copies rollbackable local state; replacing Restore retires the source runtime thread, live Restore keeps it, and Merge combines artifacts without authority admission. A current local revoke bit blocks a call, but restoring an older checkpoint restores the old bit. There are no durable tickets or receipts; every retry uses the new provider call ID as its sink key and every locally open call is admitted. |
+| `P0 workspace/topology-local` | Ignore correlated authority solvency when admitting Reserve/Restore/Fork/Merge, while retaining the common durable ticket/receipt harness solely so all policies face the same worker faults and sink. The live JSON-RPC frontend retains the actual pending App Server `callId`, which P0 uses as its physical sink key; the harness never synthesizes a replacement. P0 therefore tests unsafe authority resurrection/co-durability, not duplicate behavior after frontend/App Server loss. |
 | `P1 split-all` | At any exclusive or parallel Fork with remaining vector `R` and children ordered by branch ID, each coordinate uses `divmod(R[k], n)`: every child gets the quotient and the first remainder children get one extra. Replace moves the source budget to the fresh epoch; live Restore applies the same deterministic split to the source and copy. Merge retires every input and transfers the sum of their unspent, disjoint local budgets; a Merge retaining a live input is rejected. Revoke closes all local budgets for new Prepare; the shared prepared-ticket rule still permits one settlement. |
 | `P2 parent-escrow` | Fork gives children zero protected capacity and leaves the remainder at the parent. Pure computation is allowed; `Select(c)` atomically retires siblings and transfers capacity to exactly one child before Prepare. Replace moves a selected branch's allocation or copies an unselected pure candidate; live Restore returns unprepared capacity to escrow and requires a new selection while existing prepared tickets remain sealed. Merge is accepted only as selection of one authority-bearing lineage while retiring the others; combining several authority-bearing lineages is rejected. Revoke/retry use the shared ticket rule. |
-| `P3 authority-continuity` | Apply the checked canonical Fork/Restore/Merge rules, retain a correlated coordinator unless residual rectangularity permits exact delegation, and require a durable stable ticket before every protected dispatch. Revoke, Retry, Crash, and settlement follow the checked lifecycle/effect rules. |
+| `P3 authority-continuity` | For this bounded suite, retain the explicit correlated frontier, apply canonical Fork/Restore, validate the fixed C19 Merge projection/claim map or perform direct target admission, and require a durable stable ticket before every protected dispatch. Revoke, Retry, Crash, and settlement follow the checked lifecycle/effect rules. The compact rectangular fast path is not implemented here. |
 
 The independent oracle encodes the existing litmus expectations: L1 keeps the
 previous durable charge and rejects fresh duplicate authority; L8 admits fresh
@@ -343,33 +352,38 @@ additionally checks one aggregate outcome per `effect_id` and reconciles every
 success-before-commit crash from its receipt. The oracle reads only the suite
 specification and sink snapshots, not the controller's verdict.
 
-The planned reproducibility interface is:
+The adapter reproducibility interface is implemented:
 
 ```bash
-python -m trace_study.scan \
-  --manifest trace-study/datasets.lock.json \
-  --output artifact/results/trace-study.json
+adapter_run_dir="$(mktemp -d)"
 python -m adapter.codex_litmus \
   --suite adapter/litmus.yaml \
   --runtime-lock adapter/runtime-lock.json \
-  --raw-dir adapter/results/raw \
-  --output adapter/results/litmus.json
+  --raw-dir "$adapter_run_dir/raw" \
+  --output "$adapter_run_dir/litmus.json" \
+  --workspace .
 python -m adapter.check_results \
   --suite adapter/litmus.yaml \
-  --input adapter/results/litmus.json
+  --oracle adapter/oracle.yaml \
+  --input "$adapter_run_dir/litmus.json" \
+  --output "$adapter_run_dir/check.json"
 ```
 
-These commands are completion contracts, not claims that the modules already
-exist. `datasets.lock.json` records dataset revisions/checksums;
-`runtime-lock.json` records the App Server revision, protocol feature flags,
-dependency lock, and host environment. Completion requires all three commands
-to exit zero and retain the observation projections plus all 20 cases under all
-four policies (80 policy runs), raw events, receipts, sink snapshots, and
-durable heads. `O0`/`O1` mixed-label fibers are expected and must be reported;
-`O2` must replay all abstract states/labels without a mixed-label fiber. Every
-`P0`--`P2` false accept/reject is classified against the independent oracle;
-only `P3` is required to match every suite decision, admit zero unsafe history,
-and produce zero duplicate aggregate sink outcomes. Safe rejections for every
-policy remain explicit. Only after correctness is reported should the study
-measure ledger writes and hook latency. Claude Code through a mandatory MCP
-proxy is a later portability check, not a second unfinished prototype.
+`runtime-lock.json` records the App Server version, binary/schema hashes,
+protocol feature flags, and host environment.  Both commands exit zero on the
+retained revision-2 run.  Across 80 policy runs, P3 matches 89/89 frozen
+decisions, all 20 logs replay, and no unsafe request or duplicate aggregate
+effect is admitted.  Raw JSONL matches 44 dynamic-tool calls and 187 native
+forks: 80 per-run setup roots and 107 accepted lifecycle materializations (80
+fork children, 24 restore copies, and three merge targets).  Logical ancestry
+remains adapter metadata.  All 33 hard worker crashes recover in distinct
+processes.  O0/O1 each retain the three required mixed-label fibers and O2
+retains none.  P0 has
+11 unsafe accepts; P1/P2 have respectively four/nine safe rejects and no unsafe
+accept.  Exact raw artifacts and the rejected first pilot are retained under
+`adapter/results/` and the Step 0004 directory.
+
+This result does not make the future trace census complete, measure ledger
+latency, or establish native Codex Restore/Merge semantics.  Claude Code
+through a mandatory MCP proxy remains a later portability check, not a second
+unfinished prototype.

@@ -14,11 +14,10 @@ A parent escrow safely avoids that problem for pure choose-one candidates.
 The paper therefore complements capability enforcement rather than replacing it.
 
 \paragraph{Runtime correspondence}
-Codex documents thread fork lineage and pre-tool interception through its App Server and hooks~\cite{codexappserver,codexhooks}; Claude Code documents distinct resume/fork sessions, checkpoint rewind, subagent/worktree events, and pre-tool hooks~\cite{claudesessions,claudecheckpoint,claudehooks}.
-These interfaces identify where an adapter could observe lifecycle events and interpose on selected tools; they do not instantiate the abstract state.
-Neither product's project hooks establish complete mediation: hosted or specialized paths may bypass them, and post-tool hooks cannot undo an effect.
-A production refinement needs an App Server/SDK client that owns dispatch, a mandatory MCP proxy, OS/network mediation, or product-level support.
-Our trace theorem deliberately makes this coverage obligation visible.
+Codex documents thread fork lineage and pre-tool interception through its App Server and hooks; Claude Code documents resume/fork, checkpoint, subagent/worktree, and pre-tool interfaces~\cite{codexappserver,codexhooks,claudesessions,claudecheckpoint,claudehooks}.
+Our fixed Codex 0.146.0 instantiation combines native thread fork and client-owned tool dispatch with adapter-assigned topology and Restore/Merge meaning across 20 histories (\Cref{sec:validation}).
+It is a conditional correspondence witness, not complete mediation or product-wide refinement; Claude remains interface-level only, and built-in tools, direct sink access, frontend death, and generic Merge certificates remain outside scope.
+Production use requires ownership or mandatory mediation of every protected dispatch, as required by our trace theorem.
 
 \paragraph{What the proof does and does not establish}
 Given truthful topology, typed bindings, complete mediation, crash-atomic durable updates, and demand bounds, the model proves claim conservation, non-resurrection, correlated Reserve admission, exact promotion repair, and trace-level authority solvency.
@@ -44,12 +43,12 @@ Without a stable sink operation ID, Prepare may conservatively charge an outcome
 Compensation is a newly authorized effect, not deletion of history.
 
 \paragraph{Ethics}
-The executable study uses only finite mathematical states and simulated claims.
-It accesses no production credential, external account, third-party resource, or human subject.
-A runtime adapter should retain the same discipline: fixed simulated tool calls establish lifecycle correspondence without sending consequential requests.
+The executable study uses finite mathematical states and simulated claims; the Codex instantiation uses a loopback fixture and isolated sink.
+Neither accesses a production credential, external account, third-party resource, or human subject.
+The fixed adapter tests lifecycle correspondence without sending consequential requests.
 
 \section{Conclusion}
 
-For the modeled aggregate-authority property, a copied checkpoint may omit the residual profile of futures still permitted to coexist.
-Boundary~I states exactly when that profile compiles into product-local budgets; Boundary~II states exactly when a promotion batch tolerates every owner-group order under immediate cleanup.
-Together with durable claims and explicit lineage projections, these boundaries yield a conditional admission discipline for modeled fork, restore, merge, and tool-using rollout: authority follows durable support, not copied state.
+For aggregate authority, a copied checkpoint may omit the residual profile of futures permitted to coexist.
+Boundary~I characterizes product-local compilation; Boundary~II characterizes order-independent promotion under immediate cleanup.
+With durable claims and explicit lineage projections, they yield conditional admission for fork, restore, merge, and tool effects: authority follows durable support, not copied state.

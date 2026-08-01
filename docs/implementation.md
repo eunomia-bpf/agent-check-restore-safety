@@ -61,6 +61,38 @@ This is selected-rule bounded executable validation, not an implementation of th
 
 The independent experiment verdict is positive for that finite abstract scope. A clean cached-dependency build completed 755 jobs in 10.02 seconds, and a fresh `leanchecker` replay exited zero; exact statements, controls, raw logs, and admitted foundations are retained in `lean/results/` and `docs/tmp/build-and-evaluate/step-0002-20260801T061001-0700/`. Boundary I/II, truly dynamic ID allocation, issuer approval, refined effect binding, complete mediation, aggregate sink truthfulness, and a real runtime refinement are not mechanized.
 
+### Fixed Codex adapter evidence
+
+`adapter/` now contains a checked, narrow runtime instantiation.  It launches
+the pinned real Codex 0.146.0 App Server, owns 44 dynamic-tool callbacks, and
+routes one
+isolated protected sink through a separately killable SQLite-backed authority
+controller.  The deterministic loopback Responses endpoint chooses the fixed
+tool call; it is not the system under test and uses no live model or network.
+
+The revision-2 C01--C20 matrix ran under four authority policies.  P3 matched
+89/89 frozen decisions, and all 20 controller logs replayed under an
+independently implemented transition decoder.  Across the full suite, 33 hard
+worker crashes recovered in distinct processes, and no run duplicated or
+bypassed an aggregate sink outcome.  Raw
+App Server JSONL independently matches all 44 tool calls and 187 native forks:
+80 per-run setup roots plus 107 accepted lifecycle materializations (80 fork
+children, 24 restore copies, and three merge targets).  These forks do not
+encode the adapter's logical ancestry.  C19 includes a canonical fixed
+projection and claim map; C02
+and C04 execute rather than infer their attempt-admission probes.  The complete
+artifact and checker commands are in `adapter/README.md`.
+
+This is a fixed adapter/litmus implementation, not a production monitor.
+Choice/parallel, replacing/live Restore, and Merge meanings belong to the
+adapter; native ephemeral children all fork the persistent seed.  The run does
+not cover a crash between topology admission and native activation, App Server
+or frontend death, built-in tools, direct same-user database access,
+non-queryable sinks, semantic binding, or power loss.  Consequently it
+validates one concrete correspondence witness under the paper's premises; it
+does not discharge product-wide complete mediation or the general conditional
+refinement theorem.
+
 ### Not implemented
 
 There is currently no:
@@ -71,7 +103,8 @@ There is currently no:
 - production topology-aware authority monitor;
 - compact structured/guarded solver for unbounded runtime contracts;
 - bounded transition-schedule and mutation explorer;
-- runtime integration that prevents the modeled violations.
+- production integration that prevents the modeled violations across every
+  effect path and topology crash window.
 
 The paper must use future tense or an explicit placeholder for all of these until an artifact and command reproduce them.
 
@@ -87,7 +120,14 @@ artifact/
   results/exhaustive.json       # checked-in reproducible result
 ```
 
-It does not implement the compact PB/ZDD solver, crash-atomic ledger, lifecycle controller, or effect gate needed for a real adapter. The canonical finite topology/certificate layer now exists in Lean as a proof artifact, not as production monitor code. New components should be added as separate directories only when one clean command can exercise them; scaffolding an empty architecture would create false evidence.
+It does not implement the compact PB/ZDD solver.  The canonical finite
+topology/certificate layer exists in Lean, and the separate `adapter/` now
+implements a fixed crash-atomic effect-ticket controller/ledger gate for the
+controlled suite, not crash-atomic topology activation, the full guarded-
+contract algorithm, or a production monitor. New
+components should be added as separate directories only when one clean command
+can exercise them; scaffolding an empty architecture would create false
+evidence.
 
 The trusted core should accept explicit, typed facts rather than ask an LLM to infer authorization:
 
@@ -113,10 +153,16 @@ No number moves into the paper from `docs/experiments.md` alone. It must be reco
 
 ## 5. Remaining implementation order
 
-1. Use public agent trajectories to measure the workload and document which authority/effect lineage fields ordinary telemetry omits.
-2. Implement one dispatch-owning adapter or mandatory tool proxy that durably assigns branch epochs and executes Prepare before every protected call.
-3. Run fixed crash/retry/fork/restore/merge histories against that adapter and verify complete mediation, binding capture, and aggregate outcomes.
-4. Mechanize Boundary I/II if page and proof budget permit, independently of the completed lifecycle/topology theorem.
-5. Implement a compact guarded-contract oracle with a checkable violating-configuration certificate and retain the unguarded cotree fast path before measuring latency and safe-history rejection.
+1. Complete the ethics-reviewed public-trajectory census if access is granted;
+   the existing schema/pilot work establishes telemetry gaps but not workload
+   prevalence.
+2. Mechanize Boundary I/II if page and proof budget permit, independently of
+   the completed lifecycle/topology theorem.
+3. Implement the compact guarded-contract oracle with a checkable violating-
+   configuration certificate and retain the unguarded cotree fast path before
+   measuring latency and safe-history rejection.
+4. Extend the dispatch-owning prototype to crash-atomic topology activation
+   and a mandatory tool/network proxy before making a production complete-
+   mediation claim.
 
 The runtime adapter should use explicit App Server/SDK lifecycle identifiers where possible. Optional hooks can prototype event capture, but they are not the trusted boundary unless all bypasses are closed. eBPF inference is lower priority than an explicit, proof-aligned dispatch path.
