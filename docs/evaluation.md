@@ -191,9 +191,12 @@ The trace study has two sharply separated objectives:
 
 ### Corpus and access
 
-- Primary natural corpus: SWE-chat, once its gated access conditions are
-  explicitly accepted. Analyze all 5,851 deduplicated sessions and join
-  conversations, sessions, checkpoints, and commits by the published IDs.
+- Primary public real-runtime corpus: UW TraceLab v0.0.2. Its complete
+  100,939,722-byte JSONL release was hash-verified as
+  `11ce51ec0a25e3d1d95b025bca2f7d1647e47571eb7cc968acd5fc64d4b4fb65`
+  and mechanically scanned in full. SWE-chat remains the richer natural
+  checkpoint-to-Git corpus if its gated access conditions are explicitly
+  accepted; until then, use only its public card/schema and published counts.
 - Public fallbacks and schema controls: the 1,781 Agent LLM OpenTelemetry traces
   and Microsoft Orchard's 107,185 SWE trajectories plus 3,070 GUI prefixes.
   Orchard is public/ungated at pinned revision
@@ -202,6 +205,9 @@ The trace study has two sharply separated objectives:
   cross-domain corpus, not a substitute for in-the-wild data.
 - Failure taxonomy: AgentRx and coding-agent-misalignment guide manual labels;
   they are not counted as complete lifecycle trajectories.
+- External-state comparator: WebArena and WebArena-Verified expose selected
+  Playwright/network/HAR and task-state evidence, but not lifecycle or
+  capability lineage and not a crash-relative protected-effect receipt.
 - No gated corpus may be reported as analyzed until access is actually granted
   and the exact files/checksums are retained. The current environment has no
   Hugging Face authentication.
@@ -209,6 +215,32 @@ The trace study has two sharply separated objectives:
   redacted: follow dataset terms, do not resolve or join user identities, avoid
   publishing raw prompt/code excerpts, aggregate command statistics, and seek
   institutional ethics/IRB guidance before the full study when applicable.
+
+### Completed fixed TraceLab audit
+
+The v0.0.2 scan found 665,453 rounds, 8,058 sessions from 52 deduplicated
+users, and 743,819 tool records. Every released tool call has a call ID and no
+call ID repeats within a session. The corpus contains 35,453 tools marked as
+errors (4.77%) across 4,228 sessions, 75,488 process-continuation records, and
+423,280 calls with sanitized command structure. A narrow, predeclared
+subagent-tool vocabulary occurs in 923 sessions. These are workload and
+observability counts only: a tool error is not a crash-after-effect, a process
+continuation is not Restore, and a tool name is not a semantic Fork.
+
+The union of public fields has event order, tool IDs, timestamps, error/result
+status, process continuation, and sanitized command structure. It has no
+trusted lifecycle parent/Fork/Restore event, grant/capability/claim lineage,
+durable-support record, stable protected-effect phase/receipt, or boundary
+locating a crash relative to remote durability. Public normalized traces
+therefore cannot reconstruct the exact admission decision or yield an unsafe-
+history rate. The durable report is
+`docs/tmp/writing/step-0005-20260801T150830-0700/trace-dataset-scout/trace-dataset-audit.md`;
+the downloaded corpus remains ephemeral and is reproducible from the pinned
+release/hash.
+
+Decision: do not add a broad dataset benchmark to the 12-page paper. Public
+traces support workload relevance and the joint observability gap; the formal
+model and an instrumented adapter/runtime remain the evidence for safety.
 
 ### Deterministic detectors and audit
 
@@ -366,3 +398,33 @@ The authoritative artifacts are `adapter/results/litmus.json`,
 `adapter/results/check.json`, `adapter/results/raw/`, and the plan, rejected
 pilot, preflight, and result review under
 `docs/tmp/build-and-evaluate/step-0004-20260801T131114-0700/`.
+
+## 10. Step 0005 milestone verdict and next gate
+
+A fresh blind review, primary-source attack, full reread, and artifact audit
+did not accept the current paper as CSF-ready. The problem, lifecycle semantics,
+fixed artifacts, and durable-support principle survived. The acceptance blocker
+is now narrower: configuration structures already provide arbitrary permitted
+families and higher-order conflict, while resource-sensitive event semantics,
+consumable authority, and supervisory guards are closer foundations than the
+paper currently distinguishes. Boundary II remains the strongest possible new
+result, but its final-owner-support iff theorem has not been separated from
+those models or mechanized. Boundary I and exact promotion are also outside the
+current Lean development.
+
+The next evidence gate is therefore formal rather than a broader runtime or
+trajectory study:
+
+1. encode the permitted-family, quantitative-resource, promotion, and cleanup
+   semantics into the closest configuration/resource formalism;
+2. prove or refute that cleanup-aware universal owner-order serializability is
+   an additional lifecycle theorem;
+3. mechanize Boundary I, exact promotion, and Boundary II and publish a
+   theorem-to-artifact coverage map.
+
+Complete mediation remains a major systems strengthening, not a blocker for a
+clearly theory-led submission whose Codex adapter is explicitly illustrative.
+If the formal delta collapses, the project must pivot openly to a
+security-systems contribution with a mandatory protected boundary and a
+measured availability advantage over conservative escrow/attenuation; it must
+not recover novelty by adding trajectory counts or new terminology.

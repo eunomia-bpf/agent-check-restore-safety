@@ -62,6 +62,8 @@ Surviving distinction: those systems do not, in the inspected models, give the c
 
 **Memoir** (IEEE S\&P 2011), **ROTE** (USENIX Security 2017), **LCM** (2017), and later TEE state-continuity work already establish that security-sensitive history cannot live only in rollbackable state. They use trusted nonvolatile summaries, distributed witnesses, or fork-linearizable views to prevent stale protected state from becoming current. **Crab** (arXiv 2026) instead targets agent sandbox recovery fidelity and efficiency: it classifies OS-visible effects and supports fault recovery, preemption, speculative execution, and RL rollout branching. It demonstrates why conversation or filesystem rewind is not full execution-state restoration, but does not model external authority that has already escaped the sandbox.
 
+[**Toward Systems Foundations for Agentic Exploration**](https://arxiv.org/abs/2510.05556) and its open-source [**StateFork**](https://github.com/Alex-XJK/StateFork)/[**Waypoint**](https://github.com/Alex-XJK/waypoint) stack make the adjacent systems boundary explicit. They provide snapshot/restore/fork abstractions over filesystem, process, shell, and terminal state, while identifying external side effects as requiring fork-aware services or interception. They therefore strengthen the workload premise and provide a future native C/R integration target; they do not supply the authority lineage, protected-effect receipts, or co-durability admission theorem studied here.
+
 Surviving distinction: anti-rollback normally rejects or detects histories that diverge from a valid linear continuity relation. Agent exploration intentionally creates alternatives and sometimes preserves several outcomes. The new problem is to authorize this non-linear lifecycle without treating every fork as an attack or every branch as independently funded. The non-rollbackable ledger is a premise and enforcement substrate, not the contribution.
 
 ### 3.3 Transactions and external effects
@@ -84,19 +86,20 @@ These papers make an agent wrapper insufficient. In particular:
 
 ### 3.5 Concurrency structures and resource algebra
 
-Winskel-style event structures already provide configurations, causality, conflict, and locally injective configuration-preserving maps. Process algebras, workflow nets, and resource analyses have long assigned resources to concurrent actions. Consequently:
+Winskel-style event structures already provide configurations, causality, conflict, and locally injective configuration-preserving maps. More directly, van Glabbeek and Plotkin's [configuration structures](https://arxiv.org/abs/0912.4023) model arbitrary permitted configuration families and explicitly encode ternary conflict: every pair may be permitted while the triple is forbidden. [Resource-Tracking Concurrent Games](https://link.springer.com/chapter/10.1007/978-3-030-17127-8_2) combines event-structure configurations with a resource algebra for sequential and parallel consumption. Process algebras, workflow nets, and resource analyses have long assigned resources to concurrent actions. Consequently:
 
 - the use of a conflict/configuration model is proof machinery, not novelty;
+- the all-pairs-but-not-the-triple promotion witness is established higher-order conflict, not by itself a new policy-language result;
 - structured choice/parallel terms induce cographs: choice is graph join, parallel is disjoint union, and max/sum is the classical cotree dynamic program;
 - maximum-weight independent set hardness follows directly once an arbitrary conflict graph and additive branch weights are chosen; workflow concurrency thresholds already use related reductions.
 
-Primary anchors are Corneil, Perl, and Stewart, “A Linear Recognition Algorithm for Cographs” (SIAM J. Computing 1985); Meyer, Esparza, and Völzer, “Computing the Concurrency Threshold of Sound Free-Choice Workflow Nets” (TACAS 2018); Terauchi and Aiken, “A Capability Calculus for Concurrency and Determinism” (CONCUR 2006); and Das, Hoffmann, and Pfenning, “Work Analysis with Resource-Aware Session Types” (LICS 2018). The audit therefore treats the algebra, conservation pattern, and complexity boundary as established machinery.
+Primary anchors are van Glabbeek and Plotkin, “Configuration Structures, Event Structures and Petri Nets” (TCS 2009); Castellan and Clairambault, “Resource-Tracking Concurrent Games” (FoSSaCS 2019); Corneil, Perl, and Stewart, “A Linear Recognition Algorithm for Cographs” (SIAM J. Computing 1985); Meyer, Esparza, and Völzer, “Computing the Concurrency Threshold of Sound Free-Choice Workflow Nets” (TACAS 2018); Terauchi and Aiken, “A Capability Calculus for Concurrency and Determinism” (CONCUR 2006); and Das, Hoffmann, and Pfenning, “Work Analysis with Resource-Aware Session Types” (LICS 2018). The audit therefore treats configuration expressiveness, the resource algebra, conservation pattern, and complexity boundary as established machinery.
 
 The surviving candidate contribution is an action-class authorization boundary:
 
 > For fixed-topology batch Reserve, a checkpoint may omit a correlated residual admission profile. That profile factorizes into a Cartesian product of noncommunicating branch-local budgets exactly at a closed-form rectangularity boundary. Conditional-to-durable promotion can force higher-order policy, and final-owner support exactly characterizes when every owner-group order remains enabled under immediate cleanup.
 
-This remains publishable only if the paper shows that (i) common agent lifecycle APIs genuinely change co-durability, (ii) nearby authorization and transaction models accept a violating history or reject a safe useful one, and (iii) the structured/unstructured representation choice creates a meaningful enforcement boundary rather than merely restating a textbook graph problem.
+This remains publishable only if the paper shows that (i) common agent lifecycle APIs genuinely change co-durability, (ii) nearby authorization and transaction models accept a violating history or reject a safe useful one, and (iii) the final-owner-support theorem under exact promotion and immediate cleanup is not inherited directly from configuration filtering or supervisory enabledness. The Step 0005 milestone review treats that theorem-level separation, plus headline mechanization, as the current CSF-theory blocker.
 
 ### 3.6 Supervisory control, partial observation, and guarded workflows
 
@@ -125,10 +128,12 @@ evidence families:
 
 | Asset | Evidence available | Use here | Missing security state |
 |---|---|---|---|
+| [UW TraceLab v0.0.2](https://github.com/uw-syfi/TraceLab/releases/tag/v0.0.2) ([paper](https://arxiv.org/abs/2606.30560)) | Fixed public release with 665,453 Claude/Codex rounds, 8,058 sessions from 52 deduplicated users, and 743,819 tool records; all rows were mechanically scanned at SHA-256 `11ce51ec0a25e3d1d95b025bca2f7d1647e47571eb7cc968acd5fc64d4b4fb65` | Strongest ungated real-runtime workload and ordinary-telemetry audit: ordering, tool correlation, errors, process continuations, and orchestration-like tool names | Public normalization omits semantic fork/restore parentage, authority/grant lineage, protected effect identity and phase, durable external state/receipt, and a crash-relative-to-effect boundary |
 | [SWE-chat](https://huggingface.co/datasets/SALT-NLP/SWE-chat) ([paper](https://arxiv.org/abs/2604.20779)) | 5,851 in-the-wild coding sessions, 2,692,480 transcript entries, 13,406 checkpoints, 14,459 commits, and full tool/command/diff fields across Claude Code, Codex, Gemini CLI, and others | Primary natural-workload census for checkpoints, continuation, subagents, Git history changes, and commands that may cross the workspace boundary | Checkpoint is a save point, not a typed Restore event; no grant/claim lineage, durable-support contract, stable cross-retry effect identity, effect phase, or external before/after state |
 | [General AgentBench trajectories](https://huggingface.co/datasets/cx-cmu/agent_trajectories) | 8,653 controlled trajectories over SWE, terminal, search, MCP, and stateful tool benchmarks, with messages, tool calls, rewards, and evaluation details | Cross-domain check that retries, failures, and stateful operations are not coding-only phenomena | Four passes are independent fresh attempts, not forks; exact generation-time tool menu is not always reconstructable; no authority or topology semantics |
 | [Agent LLM Traces](https://huggingface.co/datasets/DiscoPosse/agent-llm-traces) | 1,781 OpenTelemetry-style traces with timestamps, tool definitions/calls/results, response IDs, token use, and error status; a six-row public pilot found repeated call signatures under different IDs | Timing, fan-out, failure, retry-candidate, and ordinary telemetry-schema audit | Calls/results repeat inside cumulative messages; current Viewer schema has no parent span or independent tool-execution span, branch lifecycle, authorization lineage, protected-effect phase, or durable external receipt |
 | [Microsoft Orchard](https://huggingface.co/datasets/microsoft/Orchard) | 107,185 software-engineering trajectories plus 3,070 GUI rollout prefixes; public Viewer/download, structured calls, and resolved/unresolved metadata | Large controlled workload, negative-outcome, and command-schema control | Independent sandbox rollouts are not history-transforming continuations and omit trusted authorization/external-effect history |
+| [WebArena](https://github.com/web-arena-x/webarena) and [WebArena-Verified](https://github.com/ServiceNow/webarena-verified) | Stateful self-hosted web tasks plus Playwright/network traces and HAR/evaluator artifacts for selected trace families | Demonstrates that some public assets expose external request order and task-specific durable state beyond a filesystem | No history-transforming lifecycle, capability provenance, stable protected-effect/idempotency contract, or crash boundary; benchmark reset is not the paper's durable multi-owner world |
 | [AgentRx](https://github.com/microsoft/AgentRx) and [coding-agent-misalignment](https://github.com/ND-SaNDwichLAB/coding-agent-misalignment) | Failure taxonomies and a replication package studying 20,574 real coding sessions | Select failure classes and manually audit damaging history changes | Taxonomy/issue evidence is not a complete executable lifecycle trace |
 
 The [Agent Data Protocol](https://github.com/neulab/agent-data-protocol)
@@ -178,7 +183,12 @@ checker would be tautological. The observability result becomes a distinct
 contribution only if it characterizes an irredundant event basis, a minimal
 observation quotient, or a comparable monitorability boundary. Otherwise it
 remains motivation for the public schema study and controlled traces. No
-available public asset contains all required fields.
+audited public asset contains the trusted joint lifecycle, authority,
+durable-support, protected-effect, crash-boundary, and ordering state required
+for exact admission. Individual components do exist: LangSmith exposes
+call-tree parentage and order, SWE-chat links checkpoints to Git outcomes, and
+WebArena exposes some external requests/state. The defensible result is joint
+insufficiency, not that every ordinary trace lacks every component.
 
 ## 4. Current novelty verdict
 
@@ -192,8 +202,8 @@ available public asset contains all required fields.
 | Residual rectangularity iff an exact Cartesian product of branch-local budgets. | Leading, closest-work sensitive | For fixed-topology batch Reserve, converts correlation into a necessary-and-sufficient runtime test: noncommunicating product-local soundness and one-branch completeness coexist exactly when the residual equals the product of its projections. |
 | Unique maximal abstract escape filter. | Supporting specification | Set-theoretic maximality is immediate from filtering and can induce hidden promise cancellations; value comes from representation non-closure, support reporting, and operational sealing. |
 | Generic maximally permissive controller / guarded AND-OR policy. | Established framework | Supervisory control, state-tree structures, predicate/BDD synthesis, and guarded transaction processes already occupy this space. |
-| Promotion non-closure plus authority-support guards and lineage transport. | Promising, closest-work sensitive | The representation result is specific to conditional-to-durable authority promotion; novelty depends on a concrete lifecycle semantics, explicit audit-continuity choice, and effect coverage rather than the existence of threshold predicates. |
-| Universal owner-group serializability iff final support. | Leading, agent-specific | Captures the non-algebraic interaction between exact promotion and deterministic branch cleanup; absent support constructs a failing order, while final support protects every prefix. |
+| Promotion non-closure plus authority-support guards and lineage transport. | Supporting specialization | Configuration structures already own higher-order conflict/propositional configuration families. The remaining value is deriving the exact frozen row from irreversible promotion and preserving it through lifecycle lineage, not discovering non-pairwise policy. |
+| Universal owner-group serializability iff final support. | Leading but acceptance-blocked | Captures the operational interaction between exact promotion and deterministic branch cleanup; absent support constructs a failing order, while final support protects every prefix. It must now be separated theorem-by-theorem from configuration filtering/supervisory enabledness and mechanized over its stated assumptions. |
 | Ordinary-trace non-identifiability and a compact authority/effect replay schema. | Candidate extension | Available schemas correlate tool calls but omit trusted topology, claim/grant lineage, effect phase, and durable receipts. It is a distinct result only if independent witnesses plus an irredundancy, lower-bound, or observation-quotient theorem go beyond the existing snapshot corollary; otherwise the schema is supporting instrumentation. |
 | Exact deficit / repair trilemma. | Demoted | Deficit is ordinary monus; the trilemma enumerates the fields affecting the definition. |
 | Structured choice/parallel admission is linear. | Established supporting result | It is the classical cograph cotree recurrence. |
@@ -225,9 +235,11 @@ Two IACR papers used only as venue-style context were readable from their primar
 
 Trajectory dataset cards and available schemas were inspected through their
 primary repositories on 2026-08-01; representative Viewer rows were inspected
-for Agent LLM Traces and Orchard SWE. No bulk corpus was downloaded. SWE-chat
-and General AgentBench require accepting gated access terms and sharing contact
-information. Orchard revision
+for Agent LLM Traces and Orchard SWE. TraceLab v0.0.2 was downloaded to an
+ephemeral directory, hash-verified, and mechanically scanned in full; the
+release URL and SHA-256 above pin the analyzed bytes, while no user content or
+bulk trace file is retained in the repository. SWE-chat and General AgentBench
+require accepting gated access terms and sharing contact information. Orchard revision
 `70c05ec1f20f823ae6adc60374922e9271bb74e2` is public/ungated and its Viewer is
 live. The current environment is not authenticated, so the study plan must not
 report SWE-chat or General AgentBench rows as locally analyzed.
