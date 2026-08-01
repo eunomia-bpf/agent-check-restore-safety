@@ -1,0 +1,292 @@
+import AuthorityContinuity.Lifecycle
+
+/-!
+# Boundary II serialization preflight
+
+This module is deliberately limited to the accepted two-owner real preflight.
+It fixes owner groups and operation assignments in the source state, then uses
+the existing `PrepareOK`, `prepareState`, and `CoreStep.prepare` definitions for
+every sequential edge.  It does not state or assume the general Boundary II
+theorem.
+-/
+
+namespace AuthorityContinuity.Serialization
+
+open AuthorityContinuity LifecycleState
+
+/-- The claims of one owner, frozen in the source state and original batch. -/
+def ownerGroup {Coord Claim Branch : Type*}
+    [DecidableEq Claim] [DecidableEq Branch]
+    (source : State Coord Claim Branch)
+    (batch : Finset Claim) (owner : Branch) : Finset Claim :=
+  batch.filter fun c => source.status c = .tentative owner
+
+/-- Restrict one stable atomic assignment to a source-fixed owner group. -/
+def restrictAssignment {Claim Operation : Type*}
+    [DecidableEq Claim]
+    (assignment : Operation → Option Claim) (group : Finset Claim)
+    (operation : Operation) : Option Claim :=
+  match assignment operation with
+  | some c => if c ∈ group then some c else none
+  | none => none
+
+namespace Positive
+
+abbrev Coord := Fin 1
+abbrev Claim := Fin 2
+abbrev Branch := Fin 2
+abbrev Grant := Fin 1
+abbrev Operation := Fin 2
+
+namespace Claim
+def ca : Claim := 0
+def cb : Claim := 1
+end Claim
+
+namespace Branch
+def a : Branch := 0
+def b : Branch := 1
+end Branch
+
+namespace Operation
+def ea : Operation := 0
+def eb : Operation := 1
+end Operation
+
+open Claim Branch Operation
+
+/-- Two exclusive owners, each with one unit of tentative demand. -/
+def source : LifecycleState Coord Claim Branch Grant Operation where
+  auth := {
+    capacity := fun _ => 2
+    demand := fun _ _ => 1
+    status := fun c => if c = ca then .tentative a else .tentative b
+    allowed := {∅, {a}, {b}}
+  }
+  grantOf := fun _ => 0
+  branchEpoch := fun _ => .open
+  grantEpoch := fun _ => .open
+  tickets := fun _ => none
+  receipts := fun _ => none
+
+def batch : Finset Claim := {ca, cb}
+
+/-- The stable atomic assignment from the accepted batch. -/
+def assignment : Operation → Option Claim := fun e =>
+  if e = ea then some ca else if e = eb then some cb else none
+
+def groupA : Finset Claim := ownerGroup source.auth batch a
+def groupB : Finset Claim := ownerGroup source.auth batch b
+def assignmentA : Operation → Option Claim :=
+  restrictAssignment assignment groupA
+def assignmentB : Operation → Option Claim :=
+  restrictAssignment assignment groupB
+
+def afterA := prepareState source groupA assignmentA
+def afterAB := prepareState afterA groupB assignmentB
+def afterB := prepareState source groupB assignmentB
+def afterBA := prepareState afterB groupA assignmentA
+def atomic := prepareState source batch assignment
+
+theorem groups_source_fixed : groupA = {ca} ∧ groupB = {cb} := by
+  native_decide
+
+theorem source_lwf : source.LWF := by
+  refine ⟨⟨?_, ?_, ?_⟩, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · native_decide
+  · native_decide
+  · native_decide
+  · native_decide
+  · native_decide
+  · native_decide
+  · intro e ticket receipt ht
+    simp [source] at ht
+  · intro e c hop
+    simp [LifecycleState.opClaim, source] at hop
+  · intro e e' c hop
+    simp [LifecycleState.opClaim, source] at hop
+
+theorem source_ac : AC source.auth :=
+  checkAC_sound source.auth (by native_decide)
+
+theorem source_active_exact : source.ActiveExact := by
+  native_decide
+
+theorem atomic_ok : PrepareOK source batch assignment := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> native_decide
+
+theorem a_first_ok : PrepareOK source groupA assignmentA := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> native_decide
+
+theorem b_after_a_ok : PrepareOK afterA groupB assignmentB := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> native_decide
+
+theorem b_first_ok : PrepareOK source groupB assignmentB := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> native_decide
+
+theorem a_after_b_ok : PrepareOK afterB groupA assignmentA := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> native_decide
+
+/-- The atomic batch and both owner orders are admitted by the real LTS. -/
+theorem atomic_real_step : CoreStep source .tau atomic :=
+  CoreStep.prepare atomic_ok
+
+theorem order_ab_real_steps :
+    CoreStep source .tau afterA ∧ CoreStep afterA .tau afterAB :=
+  ⟨CoreStep.prepare a_first_ok, CoreStep.prepare b_after_a_ok⟩
+
+theorem order_ba_real_steps :
+    CoreStep source .tau afterB ∧ CoreStep afterB .tau afterBA :=
+  ⟨CoreStep.prepare b_first_ok, CoreStep.prepare a_after_b_ok⟩
+
+/-- The atomic final guard retains a support witness for both source owners. -/
+theorem atomic_final_supports_both :
+    (∃ C ∈ guardedAllowed source.auth batch, a ∈ C) ∧
+    (∃ C ∈ guardedAllowed source.auth batch, b ∈ C) := by
+  native_decide
+
+theorem order_ab_auth_eq_atomic : afterAB.auth = atomic.auth := by
+  apply State.ext <;> native_decide
+
+theorem order_ba_auth_eq_atomic : afterBA.auth = atomic.auth := by
+  apply State.ext <;> native_decide
+
+end Positive
+
+namespace Unsupported
+
+abbrev Coord := Fin 1
+abbrev Claim := Fin 3
+abbrev Branch := Fin 2
+abbrev Grant := Fin 1
+abbrev Operation := Fin 2
+
+namespace Claim
+def cs : Claim := 0
+def ct : Claim := 1
+def u : Claim := 2
+end Claim
+
+namespace Branch
+def s : Branch := 0
+def t : Branch := 1
+end Branch
+
+namespace Operation
+def es : Operation := 0
+def et : Operation := 1
+end Operation
+
+open Claim Branch Operation
+
+/-- The accepted asymmetric witness: `u` is the unpromoted unit owned by `t`. -/
+def source : LifecycleState Coord Claim Branch Grant Operation where
+  auth := {
+    capacity := fun _ => 2
+    demand := fun _ _ => 1
+    status := fun c =>
+      if c = cs then .tentative s else .tentative t
+    allowed := {∅, {s}, {t}}
+  }
+  grantOf := fun _ => 0
+  branchEpoch := fun _ => .open
+  grantEpoch := fun _ => .open
+  tickets := fun _ => none
+  receipts := fun _ => none
+
+def batch : Finset Claim := {cs, ct}
+
+/-- The stable atomic assignment, restricted below without rebinding IDs. -/
+def assignment : Operation → Option Claim := fun e =>
+  if e = es then some cs else if e = et then some ct else none
+
+def groupS : Finset Claim := ownerGroup source.auth batch s
+def groupT : Finset Claim := ownerGroup source.auth batch t
+def assignmentS : Operation → Option Claim :=
+  restrictAssignment assignment groupS
+def assignmentT : Operation → Option Claim :=
+  restrictAssignment assignment groupT
+
+def afterT := prepareState source groupT assignmentT
+def afterTS := prepareState afterT groupS assignmentS
+def afterS := prepareState source groupS assignmentS
+def atomic := prepareState source batch assignment
+
+theorem groups_source_fixed : groupS = {cs} ∧ groupT = {ct} := by
+  native_decide
+
+theorem source_lwf : source.LWF := by
+  refine ⟨⟨?_, ?_, ?_⟩, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · native_decide
+  · native_decide
+  · native_decide
+  · native_decide
+  · native_decide
+  · native_decide
+  · intro e ticket receipt ht
+    simp [source] at ht
+  · intro e c hop
+    simp [LifecycleState.opClaim, source] at hop
+  · intro e e' c hop
+    simp [LifecycleState.opClaim, source] at hop
+
+theorem source_ac : AC source.auth :=
+  checkAC_sound source.auth (by native_decide)
+
+theorem source_active_exact : source.ActiveExact := by
+  native_decide
+
+theorem atomic_ok : PrepareOK source batch assignment := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> native_decide
+
+theorem t_first_ok : PrepareOK source groupT assignmentT := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> native_decide
+
+theorem s_after_t_ok : PrepareOK afterT groupS assignmentS := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> native_decide
+
+theorem s_first_ok : PrepareOK source groupS assignmentS := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> native_decide
+
+/-- The atomic final guard has no support for owner `t`. -/
+theorem atomic_t_unsupported :
+    ¬ ∃ C ∈ guardedAllowed source.auth batch, t ∈ C := by
+  native_decide
+
+/-- Taking `s` first immediately tombstones both still-tentative `t` claims. -/
+theorem after_s_terminalizes_t_claims :
+    afterS.auth.status ct = .terminal ∧ afterS.auth.status u = .terminal := by
+  native_decide
+
+/-- The rejected second edge fails the existing `PrepareOK.member_open` field. -/
+theorem t_after_s_prepareOK_impossible :
+    ¬ PrepareOK afterS groupT assignmentT := by
+  intro ok
+  have hct : ct ∈ groupT := by native_decide
+  obtain ⟨owner, hstatus, -, -⟩ := ok.member_open ct hct
+  have hterminal : afterS.auth.status ct = .terminal := by native_decide
+  rw [hterminal] at hstatus
+  simp at hstatus
+
+/-- The atomic batch and the successful `t`-then-`s` order use real LTS edges. -/
+theorem atomic_real_step : CoreStep source .tau atomic :=
+  CoreStep.prepare atomic_ok
+
+theorem order_ts_real_steps :
+    CoreStep source .tau afterT ∧ CoreStep afterT .tau afterTS :=
+  ⟨CoreStep.prepare t_first_ok, CoreStep.prepare s_after_t_ok⟩
+
+theorem order_ts_auth_eq_atomic : afterTS.auth = atomic.auth := by
+  apply State.ext <;> native_decide
+
+end Unsupported
+
+#print axioms Positive.order_ab_real_steps
+#print axioms Positive.order_ba_real_steps
+#print axioms Positive.order_ab_auth_eq_atomic
+#print axioms Positive.order_ba_auth_eq_atomic
+#print axioms Unsupported.order_ts_real_steps
+#print axioms Unsupported.t_after_s_prepareOK_impossible
+#print axioms Unsupported.order_ts_auth_eq_atomic
+
+end AuthorityContinuity.Serialization

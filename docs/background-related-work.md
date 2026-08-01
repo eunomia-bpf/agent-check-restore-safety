@@ -60,7 +60,7 @@ Surviving distinction: those systems do not, in the inspected models, give the c
 
 ### 3.2 Rollback, fork detection, and monotone state
 
-**Memoir** (IEEE S\&P 2011), **ROTE** (USENIX Security 2017), **LCM** (2017), and later TEE state-continuity work already establish that security-sensitive history cannot live only in rollbackable state. They use trusted nonvolatile summaries, distributed witnesses, or fork-linearizable views to prevent stale protected state from becoming current. **Crab** (arXiv 2026) instead targets agent sandbox recovery fidelity and efficiency: it classifies OS-visible effects and supports fault recovery, preemption, speculative execution, and RL rollout branching. It demonstrates why conversation or filesystem rewind is not full execution-state restoration, but does not model external authority that has already escaped the sandbox.
+**Memoir** (IEEE S\&P 2011), **ROTE** (USENIX Security 2017), **LCM** (2017), and later TEE state-continuity work already establish that security-sensitive history cannot live only in rollbackable state. They use trusted nonvolatile summaries, distributed witnesses, or fork-linearizable views to prevent stale protected state from becoming current. **Crab** (arXiv 2026) instead targets agent sandbox recovery fidelity and efficiency: it classifies OS-visible effects and supports fault recovery, preemption, speculative execution, and RL rollout branching. Crab already owns the broad agent--OS semantic-gap and full-sandbox C/R story. Its correctness target is reconstruction of sandbox-local filesystem, process, and runtime state; it does not model an irreversible service outside that recovery domain, bounded authority, branch-conditioned reservations, co-durable outcomes, promotion, or merge admission.
 
 [**Toward Systems Foundations for Agentic Exploration**](https://arxiv.org/abs/2510.05556) and its open-source [**StateFork**](https://github.com/Alex-XJK/StateFork)/[**Waypoint**](https://github.com/Alex-XJK/waypoint) stack make the adjacent systems boundary explicit. They provide snapshot/restore/fork abstractions over filesystem, process, shell, and terminal state, while identifying external side effects as requiring fork-aware services or interception. They therefore strengthen the workload premise and provide a future native C/R integration target; they do not supply the authority lineage, protected-effect receipts, or co-durability admission theorem studied here.
 
@@ -74,7 +74,7 @@ Surviving distinction: transaction validity does not itself answer whether two i
 
 ### 3.4 Agent execution and authorization
 
-**Fork, Explore, Commit** supplies nested branch contexts, isolated filesystem/process state, and first-commit-wins selection. **Agent libOS** exposes explicit capabilities, hierarchical budgets, child processes, checkpoints, and checkpoint-derived images. **Commit-Time Authorization** binds durable effects to authority that remains valid at settlement. **Ghost Tool Calls** shows that a losing speculative branch may leak information before selection. **ACRFence** identifies action replay and authority resurrection after conversation restore.
+**Fork, Explore, Commit** supplies nested branch contexts, isolated filesystem/process state, and first-commit-wins selection. **Agent libOS** exposes explicit capabilities, hierarchical budgets, child processes, checkpoints, and checkpoint-derived images. **Commit-Time Authorization** binds durable effects to authority that remains valid at settlement. **Ghost Tool Calls** shows that a losing speculative branch may leak information before selection. **ACRFence** already identifies semantic rollback, Action Replay, and Authority Resurrection after conversation restore. It proposes an irreversible-effect log and a prose classifier that returns a cached response for equivalent replay, blocks a semantically different call until an explicit fork/new branch is declared, and rejects obvious reuse of consumed credentials. Its paper explicitly leaves the mitigation unimplemented.
 
 These papers make an agent wrapper insufficient. In particular:
 
@@ -82,7 +82,9 @@ These papers make an agent wrapper insufficient. In particular:
 - a branch ID never creates new authority;
 - a global capability ledger can safely delay delegation until selection, defeating any claim that authority must always be partitioned or conditionally reserved at fork time;
 - commit-time freshness and pre-commit disclosure are adjacent lifecycle properties, not substitutes for bounded authority across compatible descendants;
-- ACRFence's old “replay or fork” rule is unsound as a general authorization rule because the explicit fork may still reuse the same grant.
+- ACRFence must not be caricatured as permitting arbitrary credential reuse after a fork: it separately checks consumed credentials. Its precise open boundary is that a new branch identifier is not an authorization derivation. The policy does not define how bounded aggregate authority is split or conditionally shared, whether old and new branches may both become durable, or how restore and merge transport claims.
+
+The paper must therefore attribute the external-effect rollback problem and the two named attacks to ACRFence rather than claim their discovery. The direct separating history begins *before* any effect exists: two alternative continuations receive advance promises backed by one bounded grant, a live restore or merge changes their co-durability, and both later issue distinct authorized actions. A pairwise post-effect replay classifier has no aggregate authorization fact with which to decide that history. ACRFence is a prose-policy baseline, not an implementation/performance baseline.
 
 ### 3.5 Concurrency structures and resource algebra
 
@@ -93,15 +95,80 @@ Winskel-style event structures already provide configurations, causality, confli
 - structured choice/parallel terms induce cographs: choice is graph join, parallel is disjoint union, and max/sum is the classical cotree dynamic program;
 - maximum-weight independent set hardness follows directly once an arbitrary conflict graph and additive branch weights are chosen; workflow concurrency thresholds already use related reductions.
 
-Primary anchors are van Glabbeek and Plotkin, “Configuration Structures, Event Structures and Petri Nets” (TCS 2009); Castellan and Clairambault, “Resource-Tracking Concurrent Games” (FoSSaCS 2019); Corneil, Perl, and Stewart, “A Linear Recognition Algorithm for Cographs” (SIAM J. Computing 1985); Meyer, Esparza, and Völzer, “Computing the Concurrency Threshold of Sound Free-Choice Workflow Nets” (TACAS 2018); Terauchi and Aiken, “A Capability Calculus for Concurrency and Determinism” (CONCUR 2006); and Das, Hoffmann, and Pfenning, “Work Analysis with Resource-Aware Session Types” (LICS 2018). The audit therefore treats configuration expressiveness, the resource algebra, conservation pattern, and complexity boundary as established machinery.
+Primary anchors are van Glabbeek and Plotkin, “Configuration Structures, Event Structures and Petri Nets” (TCS 2009); Alcolei, Clairambault, and Laurent, “Resource-Tracking Concurrent Games” (FoSSaCS 2019); Corneil, Perl, and Stewart, “A Linear Recognition Algorithm for Cographs” (SIAM J. Computing 1985); Meyer, Esparza, and Völzer, “Computing the Concurrency Threshold of Sound Free-Choice Workflow Nets” (TACAS 2018); Terauchi and Aiken, “A Capability Calculus for Concurrency and Determinism” (CONCUR 2006); and Das, Hoffmann, and Pfenning, “Work Analysis with Resource-Aware Session Types” (LICS 2018). The audit therefore treats configuration expressiveness, the resource algebra, conservation pattern, and complexity boundary as established machinery.
+
+The operational left side of Boundary II is also established concurrency structure. Flanagan and Godefroid define independence by preservation of enabledness plus commutation; Katz and Peled permit state-predicate conditional independence; van Glabbeek and Plotkin's asynchronous step requires every intermediate configuration; and Fecher and Majster-Cederbaum model set-indexed disabling followed by remainder cleanup. Thus “all schedules exist,” conditional commutativity, and executed work deleting disabled future work are not new. No inspected source, however, derives the paper-specific guard
+
+\[
+K_O=\bigwedge_{b\in O}\mathsf{Supp}_b(F_O)
+\]
+
+from exact authority promotion and proves it complete for both the fixed-batch asynchronous cube and equality with an atomic seal. The defensible delta is this closed-form authority certificate and refinement, not a new notion of concurrency or serializability. Its proof must be translated to the real `PrepareOK` transition and mechanized before it can carry a headline claim.
 
 The surviving candidate contribution is an action-class authorization boundary:
 
 > For fixed-topology batch Reserve, a checkpoint may omit a correlated residual admission profile. That profile factorizes into a Cartesian product of noncommunicating branch-local budgets exactly at a closed-form rectangularity boundary. Conditional-to-durable promotion can force higher-order policy, and final-owner support exactly characterizes when every owner-group order remains enabled under immediate cleanup.
 
-This remains publishable only if the paper shows that (i) common agent lifecycle APIs genuinely change co-durability, (ii) nearby authorization and transaction models accept a violating history or reject a safe useful one, and (iii) the final-owner-support theorem under exact promotion and immediate cleanup is not inherited directly from configuration filtering or supervisory enabledness. The Step 0005 milestone review treats that theorem-level separation, plus headline mechanization, as the current CSF-theory blocker.
+This remains publishable only if the paper shows that (i) common agent lifecycle APIs genuinely change co-durability, (ii) nearby authorization and transaction models accept a violating history or reject a safe useful one, and (iii) final-owner support is derived as a complete authority-specific guard rather than inherited as a generic concurrency result. Step 0006 found no literal prior theorem, but also found that generic independence, full-cube, disruption, and selected-order feasibility structure are established. Headline mechanization and an agent-specific versioned lifecycle refinement now remain the current CSF-theory blockers.
 
-### 3.6 Supervisory control, partial observation, and guarded workflows
+### 3.6 Safe-order synthesis and atomic repair
+
+Under the paper's fixed-batch assumptions, selected-order synthesis is simpler
+than the initial subset-DP proposal. Let `p_b` be owner `b`'s promoted vector,
+`r_b` its full tentative demand, `d` the durable load, and
+`h_b = G - d - r_b`. Source owner support, downward closure, nonnegative
+demand, and `p_b <= r_b` make the singleton `{b}` the cheapest support witness:
+
+\[
+\mathsf{Supp}_b(F_S) \quad\Longleftrightarrow\quad
+\sum_{a\in S\setminus\{b\}}p_a\le h_b.
+\]
+
+Thus a forward owner order is safe exactly when each owner's predecessor load
+fits its vector start deadline. Backward peeling repeatedly chooses any owner
+`b` in the remaining set `R` satisfying
+`sum_{a in R \ {b}} p_a <= h_b`. Eligibility is monotone as `R` shrinks, so
+any choice is complete. Emptying `R` yields a safe order; a stuck, choice-
+independent residual yields a compact no-order certificate by naming, for each
+residual owner, one overloaded coordinate. The direct implementation costs
+`O(n^2 k)` arithmetic, or `O(n^2)` generic support queries; the scalar case is
+ordinary earliest-due-date scheduling. Boundary II is exactly the corollary in
+which every owner is eligible in the initial remaining set, hence every order
+works.
+
+This abstract algorithm is not new. Möhring, Skutella, and Stork's
+*Scheduling with AND/OR Precedence Constraints* gives the same peeling
+feasibility algorithm and generalized-cycle obstruction after reversing the
+minimal authority-killer relation. Arbach et al.'s conflict-free Dual Event
+Structure traces express the same AND-of-OR prerequisite rule. Ardila and
+Maneva show that a process in which an element, once removable, remains
+removable is an antimatroid/pruning process with a unique residual core.
+Consequently, killer hypergraphs, arbitrary eligible choice, and the dead core
+are reusable machinery, not a headline contribution. The authority-specific
+benefit is a compact derivation from vectors, avoiding an exponentially large
+explicit killer family and emitting arithmetic certificates.
+
+A more useful fallback is *serial or seal*: serialize owners that peeling can
+remove, then execute a chosen remainder `H` in one final atomic Prepare. A
+candidate exact criterion requires peeling to empty `P \ H` and every
+`b in H` to remain supported after that prefix. The internal Step 0006 proof
+gives a minimum-cost formulation that is weakly NP-complete even for a scalar
+pure-choice contract, and an explicit rank-two killer reduction from Vertex
+Cover. These hardness facts are not by themselves novel: Jain, Hajiaghayi, and
+Talwar already study minimum-cost generalized AND/OR deadlock repair, while
+transaction chopping and dynamic-causality event structures cover adjacent
+atomic grouping and changing-dependency structure. The reductions must also be
+independently reviewed and mechanized before entering the paper.
+
+The plausible new package is therefore a version-bound authority certificate:
+derive vector deadlines from conditional-to-durable promotion; return a safe
+order, dead core, or explicit atomic seal; and prove which Fork/Restore/Merge/
+Abort/Revoke transitions preserve the certificate and which invalidate it
+before Dispatch. Static peeling is the runtime algorithm. Lifecycle refinement,
+crash-stable installation with a prepared effect ticket, and enforcement at a
+real agent dispatch boundary must carry the agent-specific novelty.
+
+### 3.7 Supervisory control, partial observation, and guarded workflows
 
 Ramadge--Wonham supervisory control already asks for the largest legal behavior obtainable by disabling controllable events. Under full observation, supremal controllable sublanguages and fixpoint algorithms are classical. Under partial observation, the boundary is more delicate: standard observability is not closed under union, so a unique supremal observable-and-controllable sublanguage need not exist. Cieslak, Desclaux, Fawaz, and Varaiya established this partial-observation setting; Cai, Zhang, and Wonham later introduced relative observability, which fixes an ambient language, is union-closed, and therefore recovers a computable supremal policy at the cost of a stronger condition.
 
@@ -118,7 +185,7 @@ The surviving specialization is an *online authority-support transformer* for a 
 
 This comparison changes the intended wording from “authority-controller synthesis under partial observation” to “a certificate-checked online specialization of supervisory control for authority support in history-transforming runtimes.” It also creates a hard novelty obligation: if the final theory only adds threshold predicates to an AND/OR tree, it is not a CSF contribution.
 
-### 3.7 Agent trajectories and the observability boundary
+### 3.8 Agent trajectories and the observability boundary
 
 Real trajectories are necessary for workload grounding, but they answer a
 different question from the safety theorem. They can show which lifecycle
@@ -128,6 +195,7 @@ evidence families:
 
 | Asset | Evidence available | Use here | Missing security state |
 |---|---|---|---|
+| [Trace Commons Agent Traces](https://huggingface.co/datasets/trace-commons/agent-traces) | Pinned public revision `112ebd4d03ce852b00e935d523107c3d0c9a65bf`; all 30 donated sessions were read through the Dataset Viewer, comprising 18,012 trace events, 4,264 tool calls, 4,262 results, and 953 file-history snapshots | Direct schema-level contrast between a real runtime's recoverable file history and tool activity aimed at repositories, processes, networks, databases, packages, and deployment systems; also exposes two calls with no matching result | No trusted semantic Fork/Restore edge, authority/grant lineage, effect phase, durable receipt, compensation/idempotence contract, or relation between a local snapshot and external truth; the sample is small and Claude-Code-heavy |
 | [UW TraceLab v0.0.2](https://github.com/uw-syfi/TraceLab/releases/tag/v0.0.2) ([paper](https://arxiv.org/abs/2606.30560)) | Fixed public release with 665,453 Claude/Codex rounds, 8,058 sessions from 52 deduplicated users, and 743,819 tool records; all rows were mechanically scanned at SHA-256 `11ce51ec0a25e3d1d95b025bca2f7d1647e47571eb7cc968acd5fc64d4b4fb65` | Strongest ungated real-runtime workload and ordinary-telemetry audit: ordering, tool correlation, errors, process continuations, and orchestration-like tool names | Public normalization omits semantic fork/restore parentage, authority/grant lineage, protected effect identity and phase, durable external state/receipt, and a crash-relative-to-effect boundary |
 | [SWE-chat](https://huggingface.co/datasets/SALT-NLP/SWE-chat) ([paper](https://arxiv.org/abs/2604.20779)) | 5,851 in-the-wild coding sessions, 2,692,480 transcript entries, 13,406 checkpoints, 14,459 commits, and full tool/command/diff fields across Claude Code, Codex, Gemini CLI, and others | Primary natural-workload census for checkpoints, continuation, subagents, Git history changes, and commands that may cross the workspace boundary | Checkpoint is a save point, not a typed Restore event; no grant/claim lineage, durable-support contract, stable cross-retry effect identity, effect phase, or external before/after state |
 | [General AgentBench trajectories](https://huggingface.co/datasets/cx-cmu/agent_trajectories) | 8,653 controlled trajectories over SWE, terminal, search, MCP, and stateful tool benchmarks, with messages, tool calls, rewards, and evaluation details | Cross-domain check that retries, failures, and stateful operations are not coding-only phenomena | Four passes are independent fresh attempts, not forks; exact generation-time tool menu is not always reconstructable; no authority or topology semantics |

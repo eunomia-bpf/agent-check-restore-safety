@@ -242,6 +242,45 @@ Decision: do not add a broad dataset benchmark to the 12-page paper. Public
 traces support workload relevance and the joint observability gap; the formal
 model and an instrumented adapter/runtime remain the evidence for safety.
 
+### Completed Trace Commons schema audit
+
+A second read-only audit used the public
+[Trace Commons Agent Traces](https://huggingface.co/datasets/trace-commons/agent-traces)
+at pinned main revision
+`112ebd4d03ce852b00e935d523107c3d0c9a65bf` and Viewer parquet revision
+`72c58f6a93393d75b1cbff4369430deda2f19c48`. All 30 donated sessions were
+read through the Dataset Viewer API; no raw donated trace was copied into the
+repository. The sample is small and heavily Claude-Code-skewed, so these are
+schema and workload-shape observations rather than population estimates.
+
+The rows contain 18,012 trace events, 4,264 tool calls, 4,262 matching tool
+results, 269 explicitly marked result errors, and 953 file-history snapshot
+events. The snapshot records name tracked file versions, while the same
+sessions contain shell syntax for Git pushes, network or remote operations,
+process/service management, package installation, databases, and deployment.
+The descriptive command classes overlap and must not be reported as
+prevalence. Two PowerShell calls have no matching result; one starts a build
+and one stops processes before building. A missing result establishes
+uncertainty, not that the call had no effect and not that a rollback was unsafe.
+
+This audit makes the three-state-plane distinction concrete:
+
+1. reconstructable state, exemplified by tracked file versions;
+2. monotone lifecycle and authority state, such as closed branch/grant epochs,
+   consumed claims, and stable operation bindings; and
+3. external reality, which requires an effect-specific receipt or a
+   conservative uncertainty marker rather than inference from local rewind.
+
+Trace `uuid`/`parentUuid`, call IDs, result/error fields, working directory,
+and Git branch support ordinary lineage and correlation. They do not expose a
+trusted semantic Fork/Restore cut, grant/claim provenance, protected-effect
+phase, durable receipt, or compensation/idempotence contract. Consequently,
+the corpus cannot reconstruct an authority-continuity decision or support an
+unsafe-history rate. It instead motivates the minimum industrial telemetry
+contract and confirms that a workspace snapshot and the security state needed
+for safe restore are different objects. The complete reproducible audit is
+`docs/tmp/build-and-evaluate/step-0006-20260801T153740-0700/trace-commons-audit.md`.
+
 ### Deterministic detectors and audit
 
 Parse structured tool fields first. For shell commands, use a versioned parser
@@ -428,3 +467,77 @@ If the formal delta collapses, the project must pivot openly to a
 security-systems contribution with a mandatory protected boundary and a
 measured availability advantage over conservative escrow/attenuation; it must
 not recover novelty by adding trajectory counts or new terminology.
+
+## 11. Step 0006 formal gate and evidence disposition
+
+Step 0006 froze the following RQ2 experiment without changing the paper-facing
+question:
+
+> RQ2: What changes when a conditional effect becomes durable? Can exact
+> promotion remain inside the natural choice/parallel policy language, and
+> when does algebraic repair correspond to an executable ordering of effects?
+
+The admitted experiment targeted the actual `PrepareOK`/`CoreStep.prepare`
+semantics, source-fixed owner groups, exact prefix repair, immediate cleanup,
+and equality of final authorization state with atomic sealing. Its independent
+plan review accepted the design while imposing a novelty ceiling: universal
+order existence is the established conditional-independence/asynchronous-cube
+target; only an authority-derived final-support certificate and atomic
+refinement could be claimed as new.
+
+The Lean preflight exhausted its frozen three-attempt budget without compiling
+the proposed theorem module. Attempt 1 lacked the pinned `lake` on `PATH`;
+attempt 2 exposed namespace/type shadowing; attempt 3 reached the intended
+module but left 15 proof-elaboration obligations, including quantified
+downward closure, open-claim, active-exactness, and `PrepareOK` membership
+facts. The generated declarations depended on synthetic `sorryAx`; therefore
+the draft is not proof evidence. Independent result review classifies the
+experiment as **inconclusive**, not as a counterexample to Boundary II, and
+forbids any paper-claim update from this run.
+
+The failed source is retained byte-for-byte at SHA-256
+`bb25e8fa5f47576da00511a734c55b2c5db241b1115f4f0ff404f9884b535faa`
+under `experiment-001/preflight/Serialization.failed.lean.txt`, outside Lake's
+source glob. A post-disposition regression build of the unchanged authoritative
+library completed 755 jobs successfully; this is repository hygiene, not a
+fourth preflight or evidence for RQ2. The plan, three logs, result review, and
+regression log are retained under
+`docs/tmp/build-and-evaluate/step-0006-20260801T153740-0700/experiment-001/`.
+
+The closest-work result is nevertheless decisive for framing. Generic
+enabledness preservation plus commutation, state-conditional independence,
+full asynchronous cubes, and disruption/remainder cleanup are established.
+No inspected source states the authority-specific closed form
+`K_O = AND_{b in O} Supp_b(F_O)` or its equality-with-atomic-seal refinement.
+Boundary II may survive only in that specialized form and only after a fresh,
+materially revised mechanization.
+
+The separate selected-order audit corrects an earlier exponential-search
+intuition. In the current nonnegative downward-closed model, the singleton
+configuration is the cheapest witness of an owner's support. Writing `p_b` for
+the promoted vector and `h_b = G - d - r_b`, owner `b` remains enabled after
+predecessors `S` exactly when `sum_{a in S} p_a <= h_b`. A backward algorithm
+can therefore peel any owner that is safe as the last remaining owner. It uses
+`O(n^2 k)` direct arithmetic, returns a safe forward order when it empties the
+batch, and otherwise returns a choice-independent dead core with one overloaded
+coordinate per owner as a compact no-order certificate. Boundary II is the
+special case in which every owner is peelable initially.
+
+This static result cannot become the new headline. Möhring--Skutella--Stork's
+AND/OR precedence feasibility gives the same abstract peeling algorithm and
+obstruction; conflict-free Dual Event Structure traces express the same
+reversed bundle condition; and antimatroid pruning gives arbitrary-choice
+completeness and the unique core. The authority vectors provide a compact
+domain derivation without enumerating exponentially many minimal killers, but
+not a new scheduling theory.
+
+The next materially revised question is *serial or seal*. A runtime should
+return a version-bound safe order, a dead-core obstruction, or an explicitly
+costed final atomic seal, then prove which Fork/Restore/Merge/Abort/Revoke
+transitions preserve or invalidate that certificate before Dispatch. The
+Step 0006 report contains an exact final-seal criterion and candidate hardness
+reductions, but these remain internal until independently reviewed and
+mechanized. Static peeling is useful machinery; the versioned lifecycle theorem
+and crash-stable real-runtime enforcement must carry any new agent-specific
+claim. The complete theorem/prior-art audit is
+`docs/tmp/build-and-evaluate/step-0006-20260801T153740-0700/killer-hypergraph/report.md`.
