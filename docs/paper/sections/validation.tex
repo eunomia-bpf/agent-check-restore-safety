@@ -1,0 +1,99 @@
+\section{Mechanization and Validation}
+\label{sec:validation}
+
+The evidence for this paper should test the semantic boundary, not whether a language model happens to emit a different UUID.
+We organize validation around four questions.
+
+\subsection{Proof artifact}
+
+The planned Lean 4 development mirrors the paper rather than encoding an implementation.
+It contains finite authority coordinates, unique claim ownership, downward-closed frontier families, the lifecycle transition relation, and the abstraction \(\alpha\).
+The minimum proof dependency chain is:
+\begin{align*}
+\text{partition}
+&\longrightarrow \text{frontier load}
+\longrightarrow \text{maximal support}\\
+&\longrightarrow \text{transition preservation}
+\longrightarrow \text{trace safety}.
+\end{align*}
+The structured recurrence is proved separately by induction over the lifecycle contract.
+
+\pending{Lean version, lines of specification/proof, build command, build time, trusted axioms, and theorem coverage.}
+Until these values are produced, the manuscript claims paper proofs but not completed machine checking.
+
+\subsection{Executable lifecycle explorer}
+
+We use a finite executable model for two purposes.
+First, it checks the structured recurrence against explicit frontier enumeration on randomly generated unique-leaf contracts and vector demands.
+Second, it performs breadth-first search for the shortest trace violating \(\ac\) after one rule premise is removed.
+The fixed mutations are:
+
+\begin{enumerate}[leftmargin=*,itemsep=1pt]
+  \item snapshot the authoritative claim ledger;
+  \item copy a claim into both restored continuations;
+  \item let abort delete a durable or uncertain claim;
+  \item classify live restore as exclusive choice;
+  \item insert a live-restored clone outside its original lifecycle context;
+  \item merge exclusive claims without target admission;
+  \item dispatch before durable promotion;
+  \item reopen a grant epoch or reuse a terminal claim ID on restore.
+\end{enumerate}
+
+For each mutation, the artifact reports a machine-readable schedule, violating frontier, load, grant, and responsible rule premise.
+This follows the useful CSF pattern of validating a formal security definition with generated counterexamples and mutation testing~\cite{anderson2023stack}.
+
+\pending{explorer revision, number of generated instances, agreement count, shortest traces, and mutation results.}
+
+\subsection{Deterministic runtime litmus tests}
+
+The runtime study uses the histories in \cref{tab:litmus}.
+They do not depend on model stochasticity: claim IDs, topology operations, and external responses are fixed.
+At most two runtimes are needed, provided their true lifecycle hooks can be identified.
+For each runtime we record whether the old continuation remains live after restore, whether losing branches can issue calls, whether merge retains more than one branch, and which decisions survive checkpoint rollback.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Deterministic lifecycle litmus tests.}
+\label{tab:litmus}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{p{0.08\columnwidth}p{0.55\columnwidth}p{0.25\columnwidth}}
+\toprule
+ & \textbf{History} & \textbf{Required result} \\
+\midrule
+L1 & escape; restore old local state; use again & first use remains charged \\
+L2 & two one-unit claims under choice; select one & admit with \(G=1\) \\
+L3 & L2 followed by retaining both at merge & repair or reject \\
+L4 & replace old continuation, transfer claim once & preserve need \\
+L5 & restore while old continuation remains live & parallel admission \\
+L6 & losing branch discloses before selection & disclosure remains in \(D\) \\
+L7 & revoke; restore stale checkpoint; escape & reject stale epoch \\
+L8 & pure children; delayed parent transfer & admit without topology claim \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The repository's earlier ACRFence experiments provide preliminary motivation, not the primary evaluation.
+Their strongest recorded Action Replay run observed duplicate/key-changing effects in 10/10 restore trials and 0/10 strict no-restore trials.
+The Authority Resurrection scenarios are mixed across operation and validation mode, so they do not support a blanket “stateless always fails, stateful always succeeds” claim.
+They use conversation/session rewind rather than an OS checkpoint and explicitly prompt fresh operation identifiers.
+The new litmus suite retains the feasible histories while removing these sources of overgeneralization.
+
+\subsection{Reference monitor}
+
+A small monitor consumes typed lifecycle events and implements the rules in \cref{tab:rules}.
+We compare:
+
+\begin{enumerate}[leftmargin=*,itemsep=1pt]
+  \item snapshot-local clone;
+  \item split-all at every fork;
+  \item flat ledger with delayed escrow;
+  \item transaction-only staging;
+  \item structured topology-aware conditional commitments.
+\end{enumerate}
+
+The primary metrics are unsafe durable histories admitted and safe histories rejected.
+Secondary metrics are the reported repair, pure exploration admitted, and p50/p99 latency for reserve, selection, restore, merge, and escape admission.
+We do not claim low overhead until the monitor and repeated measurements exist.
+
+\pending{implementation revision, test pass counts, false rejection counts, and latency distribution.}

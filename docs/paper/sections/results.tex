@@ -1,0 +1,239 @@
+\section{Security Results}
+\label{sec:results}
+
+We separate four kinds of result.
+Abstraction soundness establishes what \(\ac\) guarantees without assuming the lifecycle representation is exact.
+An indistinguishability theorem shows why snapshot state cannot provide precise authorization.
+Promotion theorems derive the weakest safe lifecycle restriction when conditional claims become durable.
+Finally, transition induction lifts the local rules to complete executions.
+
+\subsection{Abstraction soundness}
+
+For a concrete state \(s\), let \(\mathcal R(s)\) be the branch sets that its controller can actually retain.
+The abstract lifecycle may be conservative:
+\[
+\mathcal R(s)\subseteq\Phi.
+\]
+A concrete resolution is \emph{solvent} when its already durable claims and all conjunctive bundles of retained branches fit the issued capacity.
+
+\begin{theorem}[Abstraction soundness]
+\label{thm:soundness}
+If \(s\) is well formed, \(\mathcal R(s)\subseteq\Phi\), and \(\ac(\alpha(s))\), then every concrete resolution is solvent.
+\end{theorem}
+
+\begin{proof}
+Every actual retained set \(C\in\mathcal R(s)\) is in \(\Phi\).
+By \cref{def:ac}, \(d+q(C)\le G\).
+Claim uniqueness connects each summand to a distinct concrete claim, while the conjunctive-bundle condition says that \(q(C)\), rather than an unachievable internal alternative, is the promised joint load.
+\end{proof}
+
+\begin{proposition}[Conditional converse]
+\label{prop:conditional-converse}
+If \(\mathcal R(s)=\Phi\) and every bundle in every retained frontier is jointly realizable, failure of \(\ac(\alpha(s))\) witnesses an insolvent concrete resolution.
+\end{proposition}
+
+\begin{proof}
+A violating \(C\in\Phi\) is actually selectable.
+Joint realizability permits all claims represented by \(q(C)\) to occur together, producing load \(d+q(C)\nleq G\).
+\end{proof}
+
+The assumptions in \cref{prop:conditional-converse} are essential.
+If \(\Phi\) is an over-approximation, it may contain an unreachable overloaded frontier.
+If a single branch internally chooses between two claims, summing both can conservatively reject a program whose executions use only one.
+The paper therefore uses \cref{thm:soundness} as the general security guarantee and invokes the converse only for exact, conjunctive contracts.
+
+\subsection{Restored bytes are insufficient}
+
+A \emph{snapshot-local} admission checker decides a proposal from reconstructed state \(V_r\), the presented grant, and the proposal itself.
+It does not consult durable branch eligibility, existing claim ownership, selections, or escaped history.
+A checker is \emph{sound} if it never admits a proposal whose target violates \(\ac\), and \emph{maximally permissive} if it admits every well-formed proposal whose target satisfies \(\ac\).
+
+\begin{theorem}[Snapshot-local monitor impossibility]
+\label{thm:snapshot-impossibility}
+No snapshot-local admission checker is both sound and maximally permissive for Reserve across replacing and live restore.
+\end{theorem}
+
+\begin{proof}
+Use one coordinate and \(G=1\).
+Both worlds present the same reconstructed bytes \(V_r\) and the same proposal to reserve a fresh one-unit claim \(c_1\) for restored branch \(r\).
+
+In the \emph{replace} world, the old branch is durably tombstoned, \(Q_r=\varnothing\), and the only live singleton is \(r\).
+After Reserve, need is one, so maximal permissiveness requires acceptance.
+
+In the \emph{live} world, old branch \(b\) remains eligible in parallel with \(r\) and already holds one-unit claim \(c_0\).
+The frontier \(\{b,r\}\) is permitted.
+After the same Reserve proposal its load is two, so soundness requires rejection.
+
+The checker's observations are identical, hence its decision is identical.
+Either decision violates one requirement.
+\end{proof}
+
+The theorem is not contradicted by delayed escrow.
+If neither branch has an advance claim, both worlds can safely compute.
+It states that once authorization depends on durable continuation and claim state, restoring the workspace cannot restore enough information to make a precise decision.
+A global ledger that exposes those facts is outside the impossibility premise and is exactly the required remedy.
+
+\subsection{Promotion changes support}
+
+Plain escape of \(c\in Q_b\) moves \(c\) into \(D\) while leaving \(\Phi\) unchanged.
+For frontiers containing \(b\), total load is unchanged.
+For frontiers not containing \(b\), \(w(c)\) becomes a new durable burden.
+
+\begin{proposition}[Plain-escape counterexample]
+\label{prop:escape-counterexample}
+There is a safe exclusive choice for which plain escape violates \(\ac\).
+\end{proposition}
+
+\begin{proof}
+Let \(G=1\), \(D=\varnothing\), and
+\(\Phi=\downarrow\{\{b_1\},\{b_2\}\}\).
+Each branch holds one unit.
+The source is safe.
+After \(c\in Q_{b_1}\) escapes, frontier \(\{b_2\}\) carries one durable and one tentative unit.
+\end{proof}
+
+\begin{proposition}[Exact capacity for plain escape]
+\label{prop:escape-exact}
+From a safe source, independently substitutable capacity \(A\) makes plain escape safe iff
+\[
+A\ge
+\Delta_{\esc}(b,c)
+=
+[d+w(c)+M_{\neg b}-G]^+,
+\]
+where \(M_{\neg b}=\bigvee_{C\in\Phi,\,b\notin C}q(C)\).
+\end{proposition}
+
+\begin{proof}
+Frontiers containing \(b\) remain safe.
+The maximum target load among the others is exactly \(d+w(c)+M_{\neg b}\).
+Componentwise monus gives the least independent-coordinate extension.
+\end{proof}
+
+The arithmetic in \cref{prop:escape-exact} is elementary.
+The more useful question is which futures may remain possible when the runtime cannot add capacity and does not want to revoke any other commitment.
+
+For \(c\in Q_b\), define the post-promotion load of an old frontier:
+\begin{equation}
+L_c(C)
+=
+d+w(c)+q(C)-\mathbf 1_{b\in C}w(c).
+\label{eq:post-promotion-load}
+\end{equation}
+Define
+\begin{equation}
+\Phi^*_{c}
+=
+\{C\in\Phi\mid L_c(C)\le G\}.
+\label{eq:max-safe-support}
+\end{equation}
+
+\begin{theorem}[Maximal safe promotion support]
+\label{thm:max-support}
+Assume \(b\) occurs in some frontier and the source satisfies \(\ac\).
+Then:
+\begin{enumerate}[leftmargin=*,itemsep=1pt]
+  \item \(\Phi^*_{c}\) is nonempty and downward closed;
+  \item promoting \(c\) and replacing \(\Phi\) by \(\Phi^*_{c}\) is safe without new capacity or cancellation of another claim;
+  \item for every safe topology restriction \(\widehat\Phi\subseteq\Phi\) under the same promoted target, \(\widehat\Phi\subseteq\Phi^*_{c}\).
+\end{enumerate}
+Thus \(\Phi^*_{c}\) is the unique inclusion-largest zero-capacity, no-other-cancellation lifecycle repair.
+\end{theorem}
+
+\begin{proof}
+After promotion, the remaining tentative claims have nonnegative demand, so \(C'\subseteq C\) implies \(L_c(C')\le L_c(C)\).
+Therefore the safety filter in \cref{eq:max-safe-support} is downward closed.
+Choose an old frontier containing \(b\).
+Its post-promotion load equals its source load, so at least it and the empty set survive.
+Safety of the promoted state follows directly from the filter.
+Finally, any safe restriction can contain only old frontiers whose target load is at most \(G\), hence only elements of \(\Phi^*_{c}\).
+\end{proof}
+
+\cref{thm:max-support} is a weakest lifecycle precondition for escape.
+It may retain some futures not containing \(b\) when spare capacity makes them safe.
+Durably conditioning on \(b\) is simpler but potentially more conservative.
+
+\begin{lemma}[Witnessed promotion]
+\label{lem:promotion}
+For \(\Phi{\downarrow}b\) from \cref{eq:condition},
+\[
+\Phi{\downarrow}b\subseteq\Phi^*_{c}.
+\]
+Consequently, condition on \(b\), move eliminated branch claims to \(X\), promote \(c\), persist the decision, and then dispatch is safe without new capacity.
+\end{lemma}
+
+\begin{proof}
+For any \(C'\in\Phi{\downarrow}b\), some old safe \(C\) contains both \(b\) and \(C'\).
+The source load of \(C\) includes \(c\) and all nonnegative claims of \(C'\).
+Hence \(L_c(C')\le d+q(C)\le G\), so \(C'\in\Phi^*_{c}\).
+\end{proof}
+
+\subsection{Batched and concurrent promotion}
+
+Let \(S\) be a finite set of tentative claims and \(\beta(c)\) the owning branch.
+Moving all of \(S\) to \(D\) gives frontier load
+\[
+L_S(C)
+=
+d+\sum_{c\in S}w(c)+q(C)
+-\sum_{\substack{c\in S\\\beta(c)\in C}}w(c).
+\]
+Let
+\[
+\Phi^*_S=\{C\in\Phi\mid L_S(C)\le G\}.
+\]
+If \(d+\sum_{c\in S}w(c)>G\), even the empty frontier is unsafe and topology restriction alone cannot repair the batch.
+Otherwise \(\Phi^*_S\) is nonempty.
+
+\begin{theorem}[Promotion confluence]
+\label{thm:promotion-confluence}
+For disjoint tentative claim sets \(S,T\), whenever the zero-capacity repairs are defined,
+\[
+\mathcal P_T(\mathcal P_S(\Sigma))
+=
+\mathcal P_{S\cup T}(\Sigma)
+=
+\mathcal P_S(\mathcal P_T(\Sigma)),
+\]
+where \(\mathcal P_S\) promotes \(S\) and restricts to \(\Phi^*_S\).
+\end{theorem}
+
+\begin{proof}
+Promotion only moves each unique claim from its branch bundle to \(D\).
+The final \(D\), \(Q\), and load \(L_{S\cup T}\) are independent of order.
+Each repair retains exactly the old frontiers safe under the current promoted set.
+Promotion never decreases a frontier's load, so an intermediate filter removes no frontier that could become safe after the second promotion.
+Both orders therefore retain exactly \(\{C\in\Phi\mid L_{S\cup T}(C)\le G\}\).
+\end{proof}
+
+This result lets a monitor batch or serialize concurrent escape admissions without introducing an order-dependent authorization policy, provided all claims are accounted before dispatch.
+
+\subsection{Lifecycle preservation}
+
+\begin{theorem}[Lifecycle preservation]
+\label{thm:preservation}
+Starting from a well-formed authority-continuous state, the contextual and policy-explicit rules in \cref{tab:rules}, together with target admission, preserve:
+\begin{enumerate}[leftmargin=*,itemsep=1pt]
+  \item authority continuity;
+  \item the partition into \(D\), terminal \(X\), and uniquely owned \(Q_b\);
+  \item monotonic durable and issued-ID history;
+  \item non-resurrection of closed branch and grant epochs.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+Induct on transitions.
+Checkpoint changes only reconstructable state.
+Reserve and topology-expanding operations check their explicit targets.
+Contextual restore either transfers a binding-preserving claim once or moves it to \(X\); live restore inserts the clone at the old leaf, preserving surrounding conflicts.
+Policy-parametric merge names its new frontiers rather than inferring them from files.
+Abort and revocation restrict frontiers and move tentative IDs to \(X\).
+Escape uses plain admission, \(\Phi^*\), or witnessed promotion, and durable accounting precedes dispatch.
+No rule removes \(D\), \(X\), or an issued ID, or reopens an epoch.
+\end{proof}
+
+\paragraph{Repair taxonomy.}
+Within the additive, monotone, noncompensable model, an unsafe proposal can add compatible capacity, weaken tentative guarantees, or restrict/delay the lifecycle.
+This is an implementation taxonomy, not a fundamental theorem: it enumerates the abstract fields that affect \(\ac\).
+Negative delivery receipts, stable-ID coalescing, compensation, renewable quotas, or effect rebinding introduce additional protocol operations and must be modeled explicitly.
+

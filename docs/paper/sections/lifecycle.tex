@@ -1,0 +1,68 @@
+\section{History-Transforming Agent Lifecycles}
+\label{sec:lifecycle}
+
+\subsection{Running example}
+
+Suppose a user grants an agent authority for one deployment.
+The runtime creates an exclusive choice between branches \(b_1\) and \(b_2\).
+Each branch builds and tests a candidate and obtains a conditional deployment claim.
+Because only one branch may be retained, the two one-unit commitments fit a one-unit grant.
+
+Three variants expose the missing boundary.
+
+\begin{description}[leftmargin=*,style=nextline,itemsep=3pt]
+  \item[Durable selection.]
+  The runtime durably selects \(b_1\), tombstones \(b_2\), withdraws \(b_2\)'s tentative claim, and releases \(b_1\)'s staged deployment.
+  One deployment becomes durable.
+
+  \item[Early escape.]
+  Before selection, \(b_1\) sends a deployment-triggering request.
+  Even if \(b_2\) later wins, the first request cannot be unsent.
+  The escaped claim is no longer conditional on retaining \(b_1\); it must be charged in the \(b_2\) future as well.
+
+  \item[Choice-to-merge.]
+  An operator keeps the artifacts and deployment commitments of both alternatives.
+  The lifecycle no longer promises exclusivity.
+  The two claims must be jointly funded, one withdrawn, or the merge rejected.
+\end{description}
+
+These variants may have identical files and model context at a checkpoint.
+They differ in durable branch eligibility and effect history, which must not be reconstructed from that checkpoint.
+
+\subsection{Why the state is heterogeneous}
+
+An agent's security state is not only a workspace or database.
+At least four classes evolve under different authorities and rollback mechanisms:
+
+\begin{enumerate}[leftmargin=*,itemsep=1pt]
+  \item \emph{reconstructable computation}: files, prompts, model context, plans, cached observations, and staged payloads;
+  \item \emph{lifecycle control}: branch epochs, parent/child relations, durable selection, tombstones, restore mode, and merge eligibility;
+  \item \emph{authorization state}: grant issuance, scope, ownership, conditional reservations, delegation, revocation, and consumption;
+  \item \emph{external history}: messages, payments, disclosures, remote mutations, receipts, and dispatches whose outcome may be uncertain.
+\end{enumerate}
+
+A filesystem snapshot covers only part of the first class.
+A database transaction may cover one external service but not another.
+Capability ownership may be local while revocation is remote.
+The safe rollback boundary is therefore a property of the composition, not a single storage technology.
+
+\subsection{Attacker and trusted boundary}
+
+We treat model output and agent-controlled state as adversarial.
+The adversary may request documented lifecycle operations, retain an old checkpoint, trigger a crash, synthesize new tool arguments after restore, and control an external tool that creates ambiguous failure.
+The adversary cannot forge issuer-approved claim bindings or directly modify the monotone ledger.
+
+The trusted runtime components are an issuer/policy, lifecycle controller, durable ledger, and effect gate.
+The controller must durably linearize branch eligibility, selection, restore, and merge.
+The gate must account for a claim before dispatch and either ensure once-only delivery or conservatively retain an uncertain consumption.
+If a runtime lets the agent assert “these branches are exclusive,” the theorem does not apply.
+
+\subsection{Effect timing}
+
+The model distinguishes staged and escaped effects, not reads and writes.
+A prepared payment held behind a trusted outbox is staged.
+A supposedly read-only query may disclose a secret, user intent, or branch existence to its provider and is therefore escaped at issue time~\cite{mohammadi2026ghost}.
+An abort can delete staged state.
+It cannot make an observer forget or decide that an ambiguous network send never arrived.
+
+This distinction produces the paper's main non-obvious rule: exclusive branches may share conditional authority only while their effects remain conditional too.

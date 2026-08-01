@@ -1,0 +1,76 @@
+\documentclass[conference]{IEEEtran}
+
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xspace}
+\usepackage{microtype}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit}
+
+\newtheorem{definition}{Definition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}
+\newtheorem{example}{Example}
+\newtheorem{remark}{Remark}
+
+\newcommand{\ac}{\mathsf{AC}}
+\newcommand{\need}{\mathsf{need}}
+\newcommand{\load}{\mathsf{load}}
+\newcommand{\front}{\mathsf{front}}
+\newcommand{\live}{\mathsf{live}}
+\newcommand{\dead}{\mathsf{dead}}
+\newcommand{\esc}{\mathsf{esc}}
+\newcommand{\safe}{\mathsf{Safe}}
+\newcommand{\unsafe}{\mathsf{Unsafe}}
+\newcommand{\Nat}{\mathbb N}
+\newcommand{\calK}{\mathcal K}
+\newcommand{\calF}{\mathcal F}
+\newcommand{\PhiD}{\Phi{\downarrow}}
+\newcommand{\papername}{authority continuity\xspace}
+\newcommand{\pending}[1]{\textbf{[Evidence pending: #1]}}
+
+\title{Authority Continuity for History-Transforming Agents}
+
+\author{\IEEEauthorblockN{Anonymous Authors}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Agent runtimes increasingly fork, checkpoint, restore, and merge executions while their tools mutate resources outside the copied state.
+The resulting security problem is not ordinary workspace rollback: two byte-identical continuations can require different authorization depending on whether both may still commit, and a tool call from a losing branch remains observable after that branch is discarded.
+We introduce \emph{authority continuity}, a lifecycle contract for bounded authority in history-transforming executions.
+The central distinction is between a conditional commitment, which may be shared among mutually exclusive futures, and durable consumption, which every future must account for once an effect escapes.
+We give concrete lifecycle semantics for exclusive and parallel fork, checkpoint, two restore modes, abort, escape, revocation, and merge, together with an abstraction into typed claims over co-durable frontiers.
+We prove general abstraction soundness and state the additional exactness assumptions explicitly.
+We then show that no checker using only restored snapshot state can be both sound and maximally permissive: replacing and live restore can reconstruct identical bytes while requiring opposite authorization decisions.
+For effect escape, we derive the exact admission condition and the unique largest family of futures that can safely remain possible without new authority or cancellation of other claims; batched promotions yield the same weakest lifecycle restriction independent of order.
+Classical cograph and independent-set results then yield efficient admission for structured lifecycle contracts and explain the cost of less structured representations.
+We define an executable-validation and mechanization plan that targets the rule premises and minimal separating executions rather than model-dependent anecdotes.
+\end{abstract}
+
+\input{sections/introduction}
+\input{sections/lifecycle}
+\input{sections/model}
+\input{sections/semantics}
+\input{sections/results}
+\input{sections/algorithm}
+\input{sections/validation}
+\input{sections/related}
+\input{sections/discussion}
+
+\section*{AI Use Acknowledgment}
+OpenAI Codex was used to assist with literature discovery, formal-model iteration, counterexample search, prose drafting, and code scaffolding throughout the manuscript.
+The authors selected the research direction, checked the cited sources and mathematical arguments, and remain responsible for every claim, proof, result, and citation.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

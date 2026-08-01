@@ -1,0 +1,120 @@
+\section{Authority over Durable Futures}
+\label{sec:model}
+
+\subsection{Typed grants and unique claims}
+
+Let \(\calK\) be a finite set of authority coordinates.
+A coordinate includes the issuer, resource, scope, and grant epoch needed to decide substitutability.
+The vector
+\[
+G\in\Nat^{\calK}
+\]
+records issued capacity.
+Vector order, addition, positive part, and supremum are componentwise.
+
+A claim \(c\) has a globally unique identifier, effect binding, and demand \(w(c)\in\Nat^{\calK}\).
+The binding fixes the authority-relevant operation independently of incidental request fields.
+Bindings come from typed tool schemas, issuers, or deterministic policy; an LLM may suggest but cannot certify one.
+
+Let \(B\) be the set of live branch epochs.
+The ledger partitions all issued claim IDs:
+\begin{equation}
+  I_{\mathrm{issued}}
+  =
+  D\;\dot\cup\;X\;\dot\cup\;\dot\bigcup_{b\in B}Q_b .
+  \label{eq:partition}
+\end{equation}
+\(D\) contains escaped effects, committed effects, and uncertain dispatches.
+\(X\) contains cancelled or otherwise terminal IDs, which can never be reused.
+\(Q_b\) contains conditional commitments owned by branch \(b\).
+The disjoint union matters: if restore places the same ID in two branches, it violates well-formedness; if it creates a fresh second ID, both demands are counted.
+
+\begin{definition}[Conditional commitment]
+A set \(Q_b\) is a conditional commitment bundle when the trusted runtime guarantees that, if \(b\) is retained by the declared lifecycle and the grant epoch remains live, all claims in \(Q_b\) may jointly pass the commit gate without obtaining new authority.
+\end{definition}
+
+This definition excludes speculative intentions that will merely be reauthorized later.
+A parent that holds one capability while two pure children compute has made no child commitment and sets their \(Q\)'s to empty.
+It also excludes hidden alternatives within one branch: if the program can exercise \(c_0\) or \(c_1\) but never both, that choice must be represented in the lifecycle or the abstraction is only conservative.
+
+\subsection{Co-durable frontiers}
+
+The lifecycle controller exposes a nonempty downward-closed family
+\[
+  \Phi\subseteq 2^B .
+\]
+A frontier \(C\in\Phi\) is a set of branch epochs whose reserved outcomes may all be retained.
+Downward closure captures the ability to discard additional tentative branches.
+It does not assert that every subset will actually be selected.
+For the general soundness result, actual retained frontiers need only be contained in \(\Phi\).
+The converse additionally requires \(\Phi\) to characterize the normatively selectable frontiers exactly and the bundles in every such frontier to be jointly realizable.
+
+Let
+\[
+d=\sum_{c\in D}w(c)
+\quad\text{and}\quad
+q(C)=\sum_{b\in C}\sum_{c\in Q_b}w(c).
+\]
+Durable consumption \(d\) belongs to every future.
+Only the commitments of branches retained in \(C\) are added.
+
+\begin{definition}[Authority continuity]
+\label{def:ac}
+An abstract state \(\Sigma=(G,D,Q,\Phi)\) is authority-continuous when
+\begin{equation}
+\ac(\Sigma)
+\quad\Longleftrightarrow\quad
+\forall C\in\Phi.\ d+q(C)\le G .
+\label{eq:ac}
+\end{equation}
+\end{definition}
+
+Define
+\[
+M(\Phi,Q)=\bigvee_{C\in\Phi}q(C)
+\quad\text{and}\quad
+\need(\Sigma)=d+M(\Phi,Q).
+\]
+Then \(\ac(\Sigma)\) iff \(\need(\Sigma)\le G\).
+For several coordinates, different frontiers may maximize different coordinates; the componentwise supremum still characterizes \cref{eq:ac} exactly.
+
+\subsection{Structured contracts}
+
+Many branch APIs can expose the grammar
+\[
+P ::= \mathbf0 \mid b \mid P\mathbin{\Box}P \mid P\parallel P ,
+\]
+with unique leaf labels.
+\(P\Box Q\) promises that at most one side is retained, whereas \(P\parallel Q\) permits both.
+Its downward-closed semantics is
+\begin{align*}
+\front(\mathbf0)&=\{\varnothing\},\\
+\front(b)&=\{\varnothing,\{b\}\},\\
+\front(P\Box Q)&=\front(P)\cup\front(Q),\\
+\front(P\parallel Q)
+ &=\{C\cup C'\mid C\in\front(P),\,C'\in\front(Q)\}.
+\end{align*}
+
+The grammar describes commitment compatibility, not process scheduling.
+Two branches may run concurrently under \(\Box\), provided the lifecycle controller durably prevents both conditional outcomes from being retained.
+Conversely, a UI operation named “restore” has parallel semantics if the old continuation stays eligible.
+
+\subsection{Concrete state and abstraction}
+
+A concrete runtime state is \(s=(V,L,P)\).
+\(V\) maps branch epochs to reconstructable state.
+The durable ledger \(L\) records grants, the claim partition, branch/grant epochs, lifecycle decisions, receipts, and uncertain dispatches.
+\(P\) is a structured contract or an implementation-specific representation of \(\Phi\).
+
+The abstraction \(\alpha(s)\) drops payloads and scheduling detail, sums issuer-compatible grant coordinates, places ledger-recorded escaped or uncertain claims in \(D\), places live conditional reservations in their unique \(Q_b\), and obtains \(\Phi\) from the controller's durable contract.
+Snapshots affect \(V\) but cannot overwrite the inputs to \(\alpha\).
+
+In addition to \(\ac\), well-formed concrete states satisfy:
+
+\begin{enumerate}[leftmargin=*,itemsep=1pt]
+  \item claim IDs and branch labels are globally unique, and IDs in \(X\) are never reused;
+  \item each effect occurrence is bound to at most one claim;
+  \item each claim is dispatched at most once, or the sink deduplicates a stable operation ID;
+  \item only tentative claims require a live branch and grant epoch;
+  \item closed epochs never reopen and neither \(D\) nor the issued-ID set shrinks.
+\end{enumerate}

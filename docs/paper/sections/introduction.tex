@@ -1,0 +1,69 @@
+\section{Introduction}
+\label{sec:introduction}
+
+An agent is given one approval to perform a consequential action.
+To improve reliability, its runtime forks two candidate plans and promises that only one will be retained.
+Each branch prepares a different action under the approval.
+This can be safe: the two promises are conditional on mutually exclusive futures, so one unit of authority can cover either outcome.
+Now consider two lifecycle changes.
+First, one branch sends its prepared request before selection.
+The remote observer retains that effect even if the branch later loses.
+Second, an operator merges both candidate results rather than choosing one.
+In both cases, claims that were previously alternatives can now contribute to one durable history.
+No branch-local capability check, workspace snapshot, or successful transaction by itself explains whether the change is authorized.
+
+This boundary is becoming common.
+Tool-using agents restore conversation checkpoints after errors, run best-of-\(N\) searches, delegate work to parallel subagents, resume old sessions after human edits, and merge artifacts from several branches.
+The execution state being copied is heterogeneous: files, database rows, model context, plans, branch eligibility, approvals, capability ownership, revocation epochs, and remote effects can reside in different rollback domains.
+Restoring all of it is often impossible; restoring only the workspace is insufficient.
+The security-relevant question is not which bytes were copied, but which descendant outcomes may still become durable together and which effects have already escaped.
+
+Existing foundations solve important parts of this problem.
+Linear capabilities and consumable credentials prevent syntactic duplication from creating additional use-limited authority~\cite{bowers2007consumable,terauchi2006capability}.
+State-continuity systems preserve monotone history across rollback~\cite{parno2011memoir,matetic2017rote,brandenburger2017lcm}.
+Transactions and durable execution separate tentative work from settlement.
+Recent agent systems provide branch isolation, first-commit-wins selection, explicit capabilities, semantic transactions, and commit-time checks~\cite{wang2026fork,zhang2026agentlibos,mohammadi2026atomix,chen2026cordon,santos2026committime}.
+These mechanisms do not yet supply a common security contract for \emph{conditional authority promises} across a lifecycle that may later restore, expose, or merge their branches.
+
+The tempting formulation is “forking must not fork authority.”
+It is too coarse.
+Always splitting authority at fork is safe but rejects useful late-bound exploration.
+Keeping authority in a parent escrow and transferring it only after selection is also safe, and refutes any claim that topology is necessary for pure speculation.
+Topology becomes security-relevant only when the runtime makes an advance commitment to a branch or lets an effect escape before the choice is durably resolved.
+We therefore model a tentative claim as an enforceable promise: if its branch is retained and its grant remains live, the claim may pass the trusted commit gate without obtaining new authority.
+
+Our central observation is that lifecycle operations change the \emph{support} of such promises.
+A claim held by one alternative is conditional on futures containing that branch.
+When its effect escapes, the claim becomes durable consumption that all remaining futures must carry.
+A merge can similarly turn previously exclusive commitments into jointly retained commitments.
+Restore-replace and restore-live may reconstruct identical local state, yet the former kills the old continuation while the latter makes it concurrent with the restored one.
+Authorization must follow these lifecycle facts rather than checkpoint bytes.
+
+We formalize this idea as \emph{authority continuity}.
+For every set of branches that the trusted lifecycle permits to remain durable together, durable consumption plus their conditional claims must fit a typed grant.
+The definition is deliberately simple.
+Its content comes from connecting it to a concrete runtime semantics, proving why restored bytes omit necessary authorization facts, and deriving the weakest safe future restriction when conditional effects become irreversible.
+
+\paragraph{Contributions.}
+This paper makes four contributions.
+
+\begin{enumerate}[leftmargin=*,itemsep=2pt]
+  \item We give a concrete semantics for history-transforming execution that separates reconstructable agent state from a monotone security ledger and covers exclusive and parallel fork, checkpoint, replacing and live restore, selection, abort, escape, uncertain dispatch, merge, and revocation.
+  We define an abstraction from this state into typed, uniquely identified conditional and durable claims over co-durable frontiers.
+
+  \item We define authority continuity and prove abstraction soundness for conservative lifecycle contracts, with a converse only under exact frontiers and conjunctively realizable branch bundles.
+  We prove that no snapshot-local checker can be both sound and maximally permissive, because replacing and live restore can present identical restored bytes but require opposite decisions.
+
+  \item We identify \emph{escape promotion}, a lifecycle boundary missed by a topology-only account.
+  A two-branch counterexample shows that moving a conditional claim into durable history can invalidate a safe exclusive choice.
+  We derive its exact admission condition and the unique inclusion-largest safe restriction of the existing future family without new capacity or other cancellations.
+  We prove atomic durable selection is a conservative instance and that batched promotion repairs commute.
+
+  \item We give contextual rules for replacing and live restore, a policy-parametric merge rule, and an end-to-end preservation theorem over terminal claim IDs, durable consumption, and closed epochs.
+  We connect the semantics to implementable representations without claiming classical mathematics as new.
+  Structured choice/parallel contracts induce cographs and admit the standard linear cotree dynamic program; arbitrary pairwise conflict inherits independent-set hardness.
+  We specify a small mechanization and executable mutation study, plus deterministic runtime litmus tests centered on the formal distinctions rather than model nondeterminism.
+\end{enumerate}
+
+The theory applies to adaptive non-LLM runtimes as well.
+Agents make it urgent because they combine cheap semantic branching, long-lived delegated authority, dynamically synthesized effects, external tools, human resume, and artifact merge in one execution model.

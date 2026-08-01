@@ -1,0 +1,63 @@
+\section{Representing Lifecycle Contracts}
+\label{sec:algorithm}
+
+The abstract definition accepts any finite downward-closed \(\Phi\), but enforcement cost depends on representation.
+This section states inherited algorithmic facts to make the systems consequence explicit.
+
+\subsection{Structured choice and parallel}
+
+The conflict graph induced by the structured grammar is a cograph: \(\Box\) is graph join and \(\parallel\) is disjoint union.
+Its syntax tree is a cotree.
+For tentative demand, compute
+\begin{align*}
+R(\mathbf0)&=0,&
+R(b)&=\load(Q_b),\\
+R(P\Box Q)&=R(P)\vee R(Q),&
+R(P\parallel Q)&=R(P)+R(Q).
+\end{align*}
+
+\begin{proposition}[Structured exactness]
+\label{prop:structured}
+For a unique-leaf structured contract,
+\[
+R(P)=\bigvee_{C\in\front(P)}q(C).
+\]
+It is computed in \(O(|P||\calK|)\) time.
+\end{proposition}
+
+The proof is structural induction.
+This is the classical weighted-independent-set dynamic program on a cograph cotree~\cite{corneil1985cographs}, specialized to authority vectors.
+Our contribution is its use as an exact checker for the lifecycle semantics, not the recurrence.
+
+\subsection{Less structured representations}
+
+If pairwise conflict is supplied as an arbitrary graph \(H=(B,E)\), set
+\[
+\Phi_H=\{C\subseteq B\mid C\text{ is independent in }H\}.
+\]
+For one scalar coordinate define
+\[
+\unsafe(H,q,G)
+\quad\Longleftrightarrow\quad
+\exists C\in\Phi_H.\ \sum_{b\in C}q_b>G.
+\]
+
+\begin{proposition}[Inherited graph boundary]
+\(\unsafe\) is NP-complete, even for unit branch weights, and universal safety is coNP-complete.
+\end{proposition}
+
+Membership uses an independent-set certificate.
+For hardness, reduce \textsc{Independent Set}\((H,k)\) by taking all \(q_b=1\) and \(G=k-1\).
+This is a direct inherited boundary, consistent with resource-threshold results for workflow nets~\cite{meyer2018workflow}.
+It is not a dichotomy between trees and all other graphs: perfect, chordal, bounded-treewidth, and other restricted classes can remain tractable.
+
+Pairwise conflict also cannot express every downward-closed family.
+If three branches are pairwise compatible but the triple is forbidden, no ordinary conflict graph represents the contract.
+Such runtimes need explicit maximal frontiers, forbidden hyperedges, a membership oracle, or another adequate representation.
+If maximal frontiers are explicitly enumerated, safety is checked by a direct scan; any hardness claim must therefore name the succinct representation that causes it.
+
+\paragraph{Design consequence.}
+A runtime should retain a structured lifecycle witness where possible.
+It gives an auditable meaning to selection and merge and enables exact incremental admission.
+Flattening history into arbitrary compatibility edges loses both explanatory structure and cheap worst-case accounting.
+
