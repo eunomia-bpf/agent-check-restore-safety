@@ -52,7 +52,7 @@ First, in the fixed-topology batch-Reserve fragment, the residual admission regi
 Second, for a valid promotion batch with exact prefix guards, immediate cleanup, and no interleaved lifecycle change, every owner-group order succeeds iff every promoted owner remains supported after final repair.
 The first boundary decides when reservation may be decentralized; the second decides when promotion is order-independent or instead needs a verified order, coordinated cleanup, or atomic sealing.
 Residual derivatives, frozen threshold guards, and explicit lineage projections provide the supporting constructions.
-A finite executable model exhaustively checks these constructions, including crash/retry/revocation ticket traces, on small states.
+A Lean 4 development kernel-checks the finite canonical Fork/Restore and checked-Merge lifecycle; a separate executable model exhaustively checks the two boundaries and crash/retry/revocation tickets on small states.
 \end{abstract}
 
 \input{sections/introduction}

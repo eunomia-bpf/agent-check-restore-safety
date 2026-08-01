@@ -42,6 +42,12 @@ builds the library, executes all `#print axioms` commands in
 | `restriction_preserves_wf_ac` | Explicit support-preserving, load-decreasing restriction preserves well-formedness and AC. |
 | `prepare_preserves_wf_ac` | Exact promotion and cleanup preserve well-formedness and AC without assuming either property of the target. |
 | `ticket_step_preserves_wf_ac` | Ticket-only dispatch, retry, crash, and settlement preserve well-formedness, AC, and the stable operation binding. |
+| `checkTransfer_sound` | The finite transfer checker implies exact domain, preallocated-fragment provenance, grant agreement, owner projection, and coordinatewise fiber conservation. |
+| `topology_fiber_conservation` | A checked transfer makes every target conditional load no larger than its projected source load. |
+| `choiceFork_preserves_wf_ac` / `parallelFork_preserves_wf_ac` | Exact computed choice/parallel Fork targets preserve lifecycle WF, AC, and active-support exactness. |
+| `replaceRestore_preserves_wf_ac` / `liveRestore_preserves_wf_ac` | Exact computed replacing/live Restore targets preserve the same invariants. |
+| `simulation_merge_preserves_wf_ac` | Atomized structure, `Mono_0`, and simulation checks derive safe explicit Merge targets without checking target AC. |
+| `direct_merge_preserves_wf_ac` | The separate direct Merge mode uses the same structure checker and explicit target AC admission. |
 | `step_preserves_wf_ac` | Every constructor of the abstract lifecycle `Step` preserves well-formedness and AC. |
 | `trace_preserves_wf_ac` | The reflexive-transitive closure of `Step` preserves well-formedness and AC. |
 | `effect_coverage` | Finite stable operation IDs injectively bound to durable claims, with aggregate actual demand bounded per claim, consume no more than total durable demand. |
@@ -49,12 +55,11 @@ builds the library, executes all `#print axioms` commands in
 
 The names and logical roles above are frozen by the approved RQ3 experiment
 plan.  Reserve and direct-admission Merge expose executable target-AC checks.
-Restriction, Prepare, and ticket cases derive their targets without target
-AC/WF premises.  The generic topology case does not take a bundled `LWF A'`
-premise, but `TopologyShape` supplies the target empty/downward/support/open
-facts fieldwise; only target AC is derived from source AC and load simulation.
-The independent experiment review therefore classified the result as mixed,
-not a mechanization of the paper's full derived topology semantics.
+Restriction, Prepare, ticket cases, and the four canonical Fork/Restore cases
+derive their targets without target AC/WF premises.  Canonical checkers inspect
+only source-local freshness, transfer, and owner facts; the exact target
+contract and epochs come from the operation builder.  An independent result
+review classified this finite abstract-topology experiment as positive.
 
 Two audited auxiliary theorems, `trace_terminal_mono` and `trace_epoch_mono`,
 lift one-step terminal-ID and branch/grant epoch monotonicity over the same
@@ -96,18 +101,26 @@ and later steps cannot erase or rebind its operation ID.
 
 This RQ3 development does not mechanize Boundary I or Boundary II, general
 pseudo-Boolean proof-object checker completeness, a real runtime adapter,
-liveness, authority reclamation, or truthful external receipts.  It also does
-not claim that checkpoint/restore by itself enforces non-resurrection: that
-property holds only for transitions represented by the model and persistent
-facts exposed through the stated refinement assumptions.
+liveness, authority reclamation, natural-language binding correctness, issuer
+approval, or truthful external receipts.  It also does not claim that
+checkpoint/restore by itself enforces non-resurrection: that property holds
+only for transitions represented by the model and persistent facts exposed
+through the stated refinement assumptions.
 
-The topology constructor is deliberately generic: it checks an
-identity-preserving conditional topology simulation, and direct Merge checks a
-well-formed target plus executable AC.  The development does **not** mechanize
-the paper's canonical choice/parallel Fork, replace/live Restore shape
-predicates, `Mono₀(π)`, the `ρ` transfer map and fiber-conservation conditions,
-or fragment issuance.  It must therefore not be described as a mechanization
-of the paper's full checkpoint/fork/restore/merge syntax.
+The four canonical topology constructors cover exact choice/parallel Fork and
+replacing/live Restore.  Their `rho` fibers can split a tentative source claim
+only into identifiers that already exist in the fixed finite type and are
+`unissued` in the source; the development does not prove truly dynamic
+identifier-space extension.  Arbitrary Merge is intentionally explicit: an
+atomized finite checker validates target structure, and the simulation mode
+checks `Mono₀(π)` plus per-configuration dominance while direct admission
+separately invokes target AC.  These facts support a finite abstract lifecycle
+claim, not a full production-runtime refinement.
+
+The final preflight, clean-build, and axiom outputs are retained in
+`results/topology-preflight.log`, `results/topology-build.log`, and
+`results/topology-axioms.log`.  The compatibility file `results/axioms.log`
+contains the same final theorem signatures and dependencies.
 
 Lean foundational dependencies introduced by finite-set extensionality or
 Mathlib (`propext`, `Quot.sound`, and `Classical.choice`) are permitted and are

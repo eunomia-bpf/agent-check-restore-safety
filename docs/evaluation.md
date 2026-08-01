@@ -163,16 +163,17 @@ Narrow or abandon the lead claim if:
 
 If only runtime integration is missing, retain the theory result but state deployment as future work. If a theorem is classical under renamed notation, cite the classical result and move novelty to the lifecycle-specific instantiation or remove the claim.
 
-## 7. Active RQ3 mechanization experiment
+## 7. Completed RQ3 canonical-topology mechanization
 
-The current BUILD_AND_EVALUATE step tests one uncertainty: whether abstract lifecycle preservation and the conditional trace theorem can be checked in Lean without `sorry`, project axioms, or target-WF/AC premises in derived transition cases. Boundary I/II are outside this RQ3 experiment and remain paper proofs until separate mechanization.
+BUILD_AND_EVALUATE Step 0002 tested the exact uncertainty left by the first mixed run: whether canonical Fork/Restore targets and fragment-conserving transfer can derive target lifecycle invariants rather than accepting a fieldwise target certificate. Boundary I/II remain paper proofs and were not silently added to this experiment.
 
-- Approved plan: `docs/tmp/build-and-evaluate/step-0001-20260801T042542-0700/experiment-001/plan.md`.
-- Plan review: `docs/tmp/build-and-evaluate/step-0001-20260801T042542-0700/experiment-001/plan-review.md`.
+- Approved plan: `docs/tmp/build-and-evaluate/step-0002-20260801T061001-0700/experiment-001/plan.md`.
+- Plan review: `docs/tmp/build-and-evaluate/step-0002-20260801T061001-0700/experiment-001/plan-review.md`.
 - Toolchain: Lean 4.30.0 (`d024af0`), Lake 5.0.0, Mathlib tag `v4.30.0` (`c5ea0035`).
-- Real preflight: the final Lake package built `AuthorityContinuity.Main`; `#print axioms preflight_identity` reported no axioms; `leanchecker --fresh AuthorityContinuity.Main` exited 0 after 111.34 seconds.
-- Raw preflight evidence: `lean/results/preflight.log` and `lean/results/leanchecker-preflight.log`.
-- Full-run status: all ten frozen theorem names build from the root module; a clean 742-job build completed in 13.46 seconds (maximum RSS 2,109,000 KiB), the source audit found no placeholders or project axioms/constants, printed dependencies were limited to `propext`, `Quot.sound`, and `Classical.choice`, and an independent fresh kernel replay exited zero in 136.89 seconds.
-- Independent result review: **mixed**. The computed restriction, exact Prepare/cleanup, ticket, binding, AC-simulation, and conditional trace results are valid, but `TopologyShape` supplies the target's main structural WF facts fieldwise rather than deriving them from canonical Fork/Restore/Merge construction and a checked transfer certificate.
-- Paper decision: under the frozen interpretation rule, this run remains internal finite-submodel evidence and does not enter the current paper as a mechanization claim.
-- Next gate: mechanize canonical topology targets, `Mono_0(pi)`, transfer/fiber conservation and certificate-checker soundness, then repeat the clean build and fresh independent result review. A dispatch-owning adapter remains separately necessary to test complete mediation and aggregate outcome assumptions.
+- Real preflight: the named fresh-fragment split reaches the final parallel-Fork preservation theorem; 750 jobs completed in 1.60 seconds and its printed dependencies are limited to `propext`, `Quot.sound`, and `Classical.choice`.
+- Full-run status: exact choice/parallel Fork and replacing/live Restore builders, checked transfer/fiber conservation, distinct simulation/direct Merge, and the authoritative full Step/Trace theorem all build. A clean 755-job build completed in 10.02 seconds (maximum RSS 2,099,376 KiB); source scans found no placeholder, project axiom/constant, or retired fieldwise topology interface; a fresh kernel replay exited zero.
+- Controls: named positive and negative witnesses cover all four canonical forms, fresh fragmentation, copied demand, retained/fresh mixing, terminal-ID reuse, invalid `rho`, closed-epoch reopening, Merge-mode separation, unsafe co-durability, history preservation, and replacing Restore.
+- Independent result review: **positive**. Canonical target WF, active-support exactness, load simulation, and AC are derived from builders, source invariants, and source-local checked transfer. The AC proof invokes the fiber-conservation theorem rather than a target check.
+- Paper decision: report a finite abstract-lifecycle mechanization. Explicitly limit fragments to preallocated source-`unissued` IDs and exclude Boundary I/II, complete mediation, natural-language binding, aggregate sink truthfulness, and deployed-runtime refinement.
+- Raw evidence: `lean/results/topology-preflight.log`, `lean/results/topology-build.log`, `lean/results/topology-axioms.log`, and the independent review under the step directory.
+- Next gate: a dispatch-owning adapter plus fixed crash/retry/fork/restore histories must test the concrete refinement hypotheses. Public agent traces should guide workload selection and expose telemetry gaps, not stand in for this gate.

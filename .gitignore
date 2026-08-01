@@ -46,6 +46,9 @@ lean/results/cache.log
 !lean/results/preflight.log
 !lean/results/leanchecker-preflight.log
 !lean/results/kernel-replay.log
+!lean/results/topology-preflight.log
+!lean/results/topology-build.log
+!lean/results/topology-axioms.log
 
 # Submission archives
 arxiv-submission.tar.gz

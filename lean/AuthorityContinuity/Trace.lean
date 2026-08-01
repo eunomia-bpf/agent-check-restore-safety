@@ -1,4 +1,4 @@
-import AuthorityContinuity.Lifecycle
+import AuthorityContinuity.Step
 import Mathlib.Algebra.Order.BigOperators.Group.Finset
 
 /-!
@@ -33,18 +33,21 @@ abbrev AbstractTrace
     (A A' : LifecycleState Coord Claim Branch Grant Operation) : Prop :=
   Relation.ReflTransGen AbstractStep A A'
 
-/-- Every finite admitted abstract trace preserves lifecycle well-formedness
-and authority continuity. -/
+/-- Every finite admitted abstract trace preserves lifecycle well-formedness,
+authority continuity, and exact correspondence between open epochs and the
+computed contract support. -/
 theorem trace_preserves_wf_ac
     {A A' : LifecycleState Coord Claim Branch Grant Operation}
     (hTrace : AbstractTrace A A')
-    (hWF : LifecycleState.LWF A) (hAC : AC A.auth) :
-    LifecycleState.LWF A' ∧ AC A'.auth := by
+    (hWF : LifecycleState.LWF A) (hAC : AC A.auth)
+    (hActive : LifecycleState.ActiveExact A) :
+    LifecycleState.LWF A' ∧ AC A'.auth ∧
+      LifecycleState.ActiveExact A' := by
   induction hTrace with
-  | refl => exact ⟨hWF, hAC⟩
+  | refl => exact ⟨hWF, hAC, hActive⟩
   | tail _ hStep ih =>
       obtain ⟨η, hStep⟩ := hStep
-      exact step_preserves_wf_ac hStep ih.1 ih.2
+      exact step_preserves_wf_ac hStep ih.1 ih.2.1 ih.2.2
 
 /-- Terminal claim IDs cannot be revived by any finite admitted abstract
 trace.  This says only what the modeled `Step` constructors enforce. -/
@@ -75,36 +78,6 @@ theorem trace_epoch_mono
       exact ⟨
         fun b => EpochStatus.Advances.trans (ih.1 b) (hOne.1 b),
         fun g => EpochStatus.Advances.trans (ih.2 g) (hOne.2 g)⟩
-
-/-- Once a stable operation ID is bound, no admitted lifecycle step rebinds
-or erases it.  Settlement moves the same binding from a ticket to a receipt. -/
-theorem step_preserves_existing_binding
-    {A A' : LifecycleState Coord Claim Branch Grant Operation}
-    {eta : Label Operation Claim} (hStep : Step A eta A') :
-    ∀ e c, A.opClaim e = some c → A'.opClaim e = some c := by
-  intro e c hBound
-  cases hStep with
-  | checkpoint => exact hBound
-  | reserve ok => exact hBound
-  | restriction S keep => exact hBound
-  | revoke g => exact hBound
-  | topology project shape simulates =>
-      rw [shape.opClaim_eq]
-      exact hBound
-  | directMerge shape checked =>
-      rw [shape.opClaim_eq]
-      exact hBound
-  | @prepare U assignment ok =>
-      rw [LifecycleState.prepareState_opClaim]
-      cases hAssign : assignment e with
-      | none => simpa [hAssign] using hBound
-      | some assigned =>
-          have hFresh := ok.fresh e assigned hAssign
-          rw [hBound] at hFresh
-          simp at hFresh
-  | ticket ticketStep =>
-      rw [LifecycleState.ticketStep_binding_eq ticketStep]
-      exact hBound
 
 /-- Stable bindings persist through the full admitted abstract closure. -/
 theorem trace_preserves_existing_binding
@@ -211,6 +184,7 @@ theorem SimulatedTrace.attempt_binding_final
     (hSimulation : SimulatedTrace concreteStep abstract x events x')
     (hInitialWF : LifecycleState.LWF (abstract x))
     (hInitialAC : AC (abstract x).auth)
+    (hInitialActive : LifecycleState.ActiveExact (abstract x))
     {event : ConcreteEvent Operation Claim Coord} (hEvent : event ∈ events)
     {e : Operation} {c : Claim} (hLabel : event.label = .attempt e c) :
     (abstract x').opClaim e = some c := by
@@ -232,7 +206,7 @@ theorem SimulatedTrace.attempt_binding_final
         have hAttemptStep := hStep
         rw [hLabel] at hAttemptStep
         have hPrefixInvariant := trace_preserves_wf_ac
-          hPrefix.abstract_trace hInitialWF hInitialAC
+          hPrefix.abstract_trace hInitialWF hInitialAC hInitialActive
         exact (step_attempt_safe hAttemptStep hPrefixInvariant.1).2.2
 
 end AbstractTrace
@@ -278,7 +252,9 @@ variable [DecidableEq Grant] [DecidableEq Operation]
 /--
 Conditional concrete authority safety.  The theorem does not manufacture a
 runtime refinement: complete mediation, durable pre-dispatch binding,
-per-step simulation, and the sink's aggregate outcome bound are hypotheses.
+per-step simulation, and the sink's aggregate outcome bound remain the same
+explicit hypotheses.  `ActiveExact` is only the abstract lifecycle invariant
+needed by the computed topology preservation theorem.
 -/
 theorem concrete_trace_authority_safety
     {Concrete : Type uX}
@@ -288,6 +264,7 @@ theorem concrete_trace_authority_safety
     (hStepSimulation : SimulatedTrace concreteStep abstract x₀ events x)
     (hInitialWF : LifecycleState.LWF (abstract x₀))
     (hInitialAC : AC (abstract x₀).auth)
+    (hInitialActive : LifecycleState.ActiveExact (abstract x₀))
     (protectedOps : Finset Operation)
     (claimOf : Operation → Claim)
     (hCompleteMediation : ∀ e,
@@ -302,13 +279,15 @@ theorem concrete_trace_authority_safety
   intro k
   have hAbstractTrace : AbstractTrace (abstract x₀) (abstract x) :=
     hStepSimulation.abstract_trace
-  have hCurrent : LifecycleState.LWF (abstract x) ∧ AC (abstract x).auth :=
-    trace_preserves_wf_ac hAbstractTrace hInitialWF hInitialAC
+  have hCurrent : LifecycleState.LWF (abstract x) ∧
+      AC (abstract x).auth ∧ LifecycleState.ActiveExact (abstract x) :=
+    trace_preserves_wf_ac hAbstractTrace hInitialWF hInitialAC hInitialActive
   have hFinalBinding : ∀ e ∈ protectedOps,
       (abstract x).opClaim e = some (claimOf e) := by
     intro e he
     obtain ⟨event, hEvent, hLabel⟩ := hAttemptWitness e he
-    exact hStepSimulation.attempt_binding_final hInitialWF hInitialAC hEvent hLabel
+    exact hStepSimulation.attempt_binding_final hInitialWF hInitialAC
+      hInitialActive hEvent hLabel
   have hStableBinding : Set.InjOn claimOf (protectedOps : Set Operation) := by
     intro e he e' he' hClaim
     apply hCurrent.1.binding_injective e e' (claimOf e)
@@ -333,7 +312,8 @@ theorem concrete_trace_authority_safety
     by_contra hNonzero
     exact he (hCompleteMediation e ⟨k, hNonzero⟩)
   rw [hAllEffects]
-  exact (Nat.add_le_add_right hCovered _).trans (hCurrent.2 C hPermitted k)
+  exact (Nat.add_le_add_right hCovered _).trans
+    (hCurrent.2.1 C hPermitted k)
 
 end ConcreteTrace
 

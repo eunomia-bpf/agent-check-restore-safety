@@ -22,6 +22,7 @@ Our trace theorem deliberately makes this coverage obligation visible.
 
 \paragraph{What the proof does and does not establish}
 Given truthful topology, typed bindings, complete mediation, crash-atomic durable updates, and demand bounds, the model proves claim conservation, non-resurrection, correlated Reserve admission, exact promotion repair, and trace-level authority solvency.
+The Lean result checks the finite abstract lifecycle, including canonical Fork/Restore and separately admitted Merge, but assumes a fixed finite identifier type; fresh fragments are identifiers that were already unissued.
 It cannot establish that natural-language intent was bound correctly, that an LLM classifier is robust, that a workspace merge implies a particular lineage projection, or that a remote service executed exactly once or reports honestly.
 It proves neither usefulness of an authorized action nor confidentiality, liveness, fairness, and availability unless those are modeled separately.
 

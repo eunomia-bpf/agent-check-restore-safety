@@ -6,8 +6,7 @@ import AuthorityContinuity.Checker
 This module adds the temporal state that is deliberately absent from a
 reconstructable checkpoint: monotone branch/grant epochs and stable protected
 operation tickets.  Authority-changing derived operations below compute their
-target; only Reserve and direct-admission Merge use the executable target AC
-checker.
+target; only Reserve uses the executable target AC checker in this module.
 -/
 
 namespace AuthorityContinuity
@@ -111,6 +110,13 @@ structure LWF
     A.auth.status c = .durable
   binding_injective : ∀ e e' c,
     A.opClaim e = some c → A.opClaim e' = some c → e = e'
+
+/-- Open branch epochs are exactly the extensional support of the finite
+durability contract.  This is stronger than `LWF.configuration_open`. -/
+def ActiveExact
+    [Fintype Claim] [DecidableEq Claim] [DecidableEq Branch]
+    (A : LifecycleState Coord Claim Branch Grant Operation) : Prop :=
+  ∀ b, A.branchEpoch b = .open ↔ ∃ C ∈ A.auth.allowed, b ∈ C
 
 variable [Fintype Coord] [DecidableEq Coord]
 variable [Fintype Claim] [DecidableEq Claim]
@@ -510,6 +516,80 @@ theorem prepare_preserves_wf_ac
               exact hWF.binding_injective e e' c he he'
   · exact hcore.2
 
+/-- Prepare preserves exact branch activity without assuming any property of
+its target.  If an open owner still has a tentative claim, deterministic
+cleanup supplies a guarded witness.  Otherwise its singleton configuration
+survives because the remaining conditional load is zero. -/
+theorem prepare_preserves_active_exact
+    (A : LifecycleState Coord Claim Branch Grant Operation)
+    (U : Finset Claim) (assignment : Operation → Option Claim)
+    (hWF : LWF A) (hActive : ActiveExact A)
+    (hOK : PrepareOK A U assignment) :
+    ActiveExact (prepareState A U assignment) := by
+  classical
+  intro b
+  constructor
+  · intro hbOpen
+    change (if b ∈ unsupportedOwners A.auth U then .closed
+      else A.branchEpoch b) = .open at hbOpen
+    by_cases hbUnsupported : b ∈ unsupportedOwners A.auth U
+    · simp [hbUnsupported] at hbOpen
+    · have hbSourceOpen : A.branchEpoch b = .open := by
+        simpa [hbUnsupported] using hbOpen
+      obtain ⟨C, hC, hbC⟩ := (hActive b).1 hbSourceOpen
+      have hsingleton : {b} ∈ A.auth.allowed :=
+        hWF.core.downward hC (Finset.singleton_subset_iff.mpr hbC)
+      by_cases hremaining :
+          ∃ c, (rawPromotion A.auth U).status c = .tentative b
+      · have hguarded : ∃ C ∈ guardedAllowed A.auth U, b ∈ C := by
+          by_contra hnone
+          have hbBad : b ∈ unsupportedOwners A.auth U := by
+            simp only [unsupportedOwners, Finset.mem_filter,
+              Finset.mem_univ, true_and]
+            exact ⟨hremaining, hnone⟩
+          exact hbUnsupported hbBad
+        obtain ⟨C', hC', hbC'⟩ := hguarded
+        refine ⟨C', ?_, hbC'⟩
+        change C' ∈ cleanedAllowed A.auth U
+        rw [cleanedAllowed_eq_guardedAllowed]
+        exact hC'
+      · have hzero : ∀ k,
+            remainingConditionalLoad A.auth U {b} k = 0 := by
+          intro k
+          rw [← rawPromotion_conditionalLoad_eq_remaining A.auth U {b} k]
+          unfold State.conditionalLoad
+          apply Finset.sum_eq_zero
+          intro c hc
+          cases hs : (rawPromotion A.auth U).status c with
+          | unissued => simp [State.conditionalClaims, hs] at hc
+          | durable => simp [State.conditionalClaims, hs] at hc
+          | terminal => simp [State.conditionalClaims, hs] at hc
+          | tentative owner =>
+              have howner : owner ∈ ({b} : Finset Branch) := by
+                simpa [State.conditionalClaims, hs] using hc
+              have hownerEq : owner = b := Finset.mem_singleton.mp howner
+              subst owner
+              exact False.elim (hremaining ⟨c, hs⟩)
+        have hguardedSingleton : {b} ∈ guardedAllowed A.auth U := by
+          rw [mem_guardedAllowed_iff]
+          refine ⟨hsingleton, ?_⟩
+          intro k
+          simpa [hzero k] using hOK.base k
+        refine ⟨{b}, ?_, Finset.mem_singleton_self b⟩
+        change {b} ∈ cleanedAllowed A.auth U
+        rw [cleanedAllowed_eq_guardedAllowed]
+        exact hguardedSingleton
+  · rintro ⟨C, hC, hbC⟩
+    change C ∈ cleanedAllowed A.auth U at hC
+    rw [cleanedAllowed_eq_guardedAllowed] at hC
+    have hsource : C ∈ A.auth.allowed :=
+      ((mem_guardedAllowed_iff A.auth U C).1 hC).1
+    have hbSourceOpen := (hActive b).2 ⟨C, hsource, hbC⟩
+    have hbUnsupported : b ∉ unsupportedOwners A.auth U :=
+      Finset.disjoint_left.mp
+        (guarded_configuration_excludes_unsupported A.auth U hC) hbC
+    simp [prepareState, hbUnsupported, hbSourceOpen]
+
 inductive Label (Operation Claim : Type*) where
   | tau
   | attempt (operation : Operation) (claim : Claim)
@@ -656,16 +736,59 @@ theorem ticket_step_preserves_wf_ac
     · exact hbinding
 
 /-- Exact owner/claim restriction lifted to the durable lifecycle state. -/
+def restrictBranchEpoch (status : EpochStatus) (retained : Bool) : EpochStatus :=
+  match status with
+  | .open => if retained then .open else .closed
+  | .unissued => .unissued
+  | .closed => .closed
+
+@[simp]
+theorem restrictBranchEpoch_eq_open_iff
+    (status : EpochStatus) (retained : Bool) :
+    restrictBranchEpoch status retained = .open ↔
+      status = .open ∧ retained = true := by
+  cases status <;> cases retained <;> simp [restrictBranchEpoch]
+
 def restrictLifecycle
     (A : LifecycleState Coord Claim Branch Grant Operation)
     (S : Finset Branch) (keep : Finset Claim) :
     LifecycleState Coord Claim Branch Grant Operation where
   auth := A.auth.restrictStateBy S keep
   grantOf := A.grantOf
-  branchEpoch b := if b ∈ S then A.branchEpoch b else .closed
+  branchEpoch b := restrictBranchEpoch (A.branchEpoch b) (b ∈ S)
   grantEpoch := A.grantEpoch
   tickets := A.tickets
   receipts := A.receipts
+
+/-- Restriction retains every retained epoch exactly, closes only excluded
+open epochs, and never consumes an unissued identity.  Grant epochs are
+unchanged. -/
+theorem restrictLifecycle_epoch_exact
+    (A : LifecycleState Coord Claim Branch Grant Operation)
+    (S : Finset Branch) (keep : Finset Claim) :
+    (∀ b, b ∈ S →
+      (restrictLifecycle A S keep).branchEpoch b = A.branchEpoch b) ∧
+    (∀ b, A.branchEpoch b = .unissued →
+      (restrictLifecycle A S keep).branchEpoch b = .unissued) ∧
+    (∀ b, A.branchEpoch b = .closed →
+      (restrictLifecycle A S keep).branchEpoch b = .closed) ∧
+    (∀ b, A.branchEpoch b = .open → b ∉ S →
+      (restrictLifecycle A S keep).branchEpoch b = .closed) ∧
+    (restrictLifecycle A S keep).grantEpoch = A.grantEpoch := by
+  constructor
+  · intro b hb
+    cases hs : A.branchEpoch b <;>
+      simp [restrictLifecycle, restrictBranchEpoch, hs, hb]
+  constructor
+  · intro b hs
+    simp [restrictLifecycle, restrictBranchEpoch, hs]
+  constructor
+  · intro b hs
+    simp [restrictLifecycle, restrictBranchEpoch, hs]
+  constructor
+  · intro b hs hb
+    simp [restrictLifecycle, restrictBranchEpoch, hs, hb]
+  · rfl
 
 @[simp]
 theorem restrictLifecycle_opClaim
@@ -700,13 +823,14 @@ theorem restriction_lifecycle_preserves_wf_ac
     · intro C hC b hbC
       have hc := (State.mem_restrictStateBy_allowed_iff
         A.auth S keep C).1 hC
-      change (if b ∈ S then A.branchEpoch b else .closed) = .open
-      simp [hc.2 hbC, hWF.configuration_open C hc.1 b hbC]
+      have hbS := hc.2 hbC
+      have hbOpen := hWF.configuration_open C hc.1 b hbC
+      simp [restrictLifecycle, restrictBranchEpoch, hbOpen, hbS]
     · intro c b hs
       change (A.auth.restrictStateBy S keep).status c = .tentative b at hs
       rw [State.restrictStateBy_status_tentative_iff] at hs
-      change (if b ∈ S then A.branchEpoch b else .closed) = .open
-      simp [restrictLifecycle, hs.2.1, hWF.owner_open c b hs.1]
+      have hbOpen := hWF.owner_open c b hs.1
+      simp [restrictLifecycle, restrictBranchEpoch, hbOpen, hs.2.1]
     · intro c b hs
       change (A.auth.restrictStateBy S keep).status c = .tentative b at hs
       rw [State.restrictStateBy_status_tentative_iff] at hs
@@ -721,6 +845,33 @@ theorem restriction_lifecycle_preserves_wf_ac
       rw [restrictLifecycle_opClaim] at he he'
       exact hWF.binding_injective e e' c he he'
   · exact hcore.2
+
+/-- Exact branch activity is preserved by owner restriction: every retained
+open branch keeps a (possibly smaller) witness configuration, while every
+excluded open branch is closed. -/
+theorem restriction_lifecycle_preserves_active_exact
+    (A : LifecycleState Coord Claim Branch Grant Operation)
+    (S : Finset Branch) (keep : Finset Claim)
+    (hWF : LWF A) (hActive : ActiveExact A) :
+    ActiveExact (restrictLifecycle A S keep) := by
+  intro b
+  constructor
+  · intro hbOpen
+    change restrictBranchEpoch (A.branchEpoch b) (b ∈ S) = .open at hbOpen
+    rw [restrictBranchEpoch_eq_open_iff] at hbOpen
+    have hbS : b ∈ S := by simpa using hbOpen.2
+    obtain ⟨C, hC, hbC⟩ := (hActive b).1 hbOpen.1
+    refine ⟨C ∩ S, ?_, Finset.mem_inter.mpr ⟨hbC, hbS⟩⟩
+    change C ∩ S ∈ (A.auth.restrictStateBy S keep).allowed
+    rw [State.mem_restrictStateBy_allowed_iff]
+    exact ⟨hWF.core.downward hC Finset.inter_subset_left,
+      Finset.inter_subset_right⟩
+  · rintro ⟨C, hC, hbC⟩
+    have hsource := (State.mem_restrictStateBy_allowed_iff
+      A.auth S keep C).1 hC
+    have hbOpen := (hActive b).2 ⟨C, hsource.1, hbC⟩
+    have hbS := hsource.2 hbC
+    simp [restrictLifecycle, restrictBranchEpoch, hbOpen, hbS]
 
 /-- Revoking grant epoch `g` closes it and terminalizes exactly its remaining
 tentative claims; durable tickets and receipts are retained. -/
@@ -823,80 +974,6 @@ theorem reserve_preserves_wf_ac
     · exact hWF.binding_injective
   · exact checkAC_sound _ hOK.checked
 
-/-- Explicit non-circular structural evidence for topology targets.  The
-mechanized core omits fragment issuance: unissued IDs remain unissued, and a
-tentative claim may only move owner or become terminal. -/
-structure TopologyShape
-    (A A' : LifecycleState Coord Claim Branch Grant Operation) : Prop where
-  capacity : A'.auth.capacity = A.auth.capacity
-  demand : A'.auth.demand = A.auth.demand
-  grant_metadata : A'.grantOf = A.grantOf
-  tickets : A'.tickets = A.tickets
-  receipts : A'.receipts = A.receipts
-  empty_mem : ∅ ∈ A'.auth.allowed
-  downward : ∀ ⦃C C' : Finset Branch⦄, C ∈ A'.auth.allowed →
-    C' ⊆ C → C' ∈ A'.auth.allowed
-  supported : ∀ c b, A'.auth.status c = .tentative b →
-    ∃ C ∈ A'.auth.allowed, b ∈ C
-  configuration_open : ∀ C ∈ A'.auth.allowed, ∀ b ∈ C,
-    A'.branchEpoch b = .open
-  owner_open : ∀ c b, A'.auth.status c = .tentative b →
-    A'.branchEpoch b = .open
-  grant_open : ∀ c b, A'.auth.status c = .tentative b →
-    A'.claimOpen c
-  terminal : A.TerminalMonotone A'
-  epochs : A.EpochMonotone A'
-  durable : ∀ c, A.auth.status c = .durable →
-    A'.auth.status c = .durable
-  unissued : ∀ c, A.auth.status c = .unissued →
-    A'.auth.status c = .unissued
-  tentative : ∀ c b, A.auth.status c = .tentative b →
-    (∃ b', A'.auth.status c = .tentative b') ∨
-      A'.auth.status c = .terminal
-
-theorem TopologyShape.opClaim_eq
-    {A A' : LifecycleState Coord Claim Branch Grant Operation}
-    (h : TopologyShape A A') (e : Operation) :
-    A'.opClaim e = A.opClaim e := by
-  unfold opClaim
-  rw [h.tickets, h.receipts]
-
-theorem TopologyShape.target_lwf
-    {A A' : LifecycleState Coord Claim Branch Grant Operation}
-    (h : TopologyShape A A') (hWF : LWF A) : LWF A' := by
-  refine ⟨⟨h.empty_mem, h.downward, h.supported⟩,
-    h.configuration_open, h.owner_open, h.grant_open,
-    ?_, ?_, ?_⟩
-  · intro e t r ht hr
-    rw [h.tickets] at ht
-    rw [h.receipts] at hr
-    exact hWF.ticket_receipt_disjoint e t r ht hr
-  · intro e c he
-    have hs := hWF.bound_durable e c ((h.opClaim_eq e).symm.trans he)
-    exact h.durable c hs
-  · intro e e' c he he'
-    exact hWF.binding_injective e e' c
-      ((h.opClaim_eq e).symm.trans he) ((h.opClaim_eq e').symm.trans he')
-
-theorem simulated_topology_preserves_wf_ac
-    (A A' : LifecycleState Coord Claim Branch Grant Operation)
-    (project : Finset Branch → Finset Branch)
-    (shape : TopologyShape A A') (hWF : LWF A) (hAC : AC A.auth)
-    (hsim : ∀ C' ∈ A'.auth.allowed,
-      project C' ∈ A.auth.allowed ∧ ∀ k,
-        A'.auth.durableLoad k + A'.auth.conditionalLoad C' k ≤
-          A.auth.durableLoad k + A.auth.conditionalLoad (project C') k) :
-    LWF A' ∧ AC A'.auth := by
-  exact ⟨shape.target_lwf hWF,
-    simulation_preserves_ac A.auth A'.auth project shape.capacity hAC hsim⟩
-
-theorem direct_merge_preserves_wf_ac
-    (A A' : LifecycleState Coord Claim Branch Grant Operation)
-    (shape : TopologyShape A A') (hWF : LWF A)
-    (hcheck : checkAC A'.auth = true) :
-    LWF A' ∧ AC A'.auth :=
-  ⟨shape.target_lwf hWF, checkAC_sound A'.auth hcheck⟩
-
 end LifecycleState
 
 open LifecycleState
@@ -907,32 +984,23 @@ variable [Fintype Claim] [DecidableEq Claim]
 variable [Fintype Branch] [DecidableEq Branch]
 variable [DecidableEq Grant] [DecidableEq Operation]
 
-/-- Closed abstract one-step kernel.  The topology constructor mechanizes the
-identity-preserving certificate obligations above, not concrete syntax-level
-Fork/Restore shapes or fragmentation. -/
-inductive Step :
+/-- Non-topology lifecycle kernel.  Canonical Fork/Restore/Merge operations
+extend this relation in `AuthorityContinuity.Topology`; no abstract target
+certificate is admitted here. -/
+inductive CoreStep :
     LifecycleState Coord Claim Branch Grant Operation →
     Label Operation Claim →
     LifecycleState Coord Claim Branch Grant Operation → Prop where
-  | checkpoint (A) : Step A .tau A
+  | checkpoint (A) : CoreStep A .tau A
   | reserve {A b c} (ok : ReserveOK A b c) :
-      Step A .tau (reserveState A b c)
+      CoreStep A .tau (reserveState A b c)
   | restriction (A) (S : Finset Branch) (keep : Finset Claim) :
-      Step A .tau (restrictLifecycle A S keep)
-  | revoke (A) (g : Grant) : Step A .tau (revokeState A g)
-  | topology {A A'} (project : Finset Branch → Finset Branch)
-      (shape : TopologyShape A A')
-      (simulates : ∀ C' ∈ A'.auth.allowed,
-        project C' ∈ A.auth.allowed ∧ ∀ k,
-          A'.auth.durableLoad k + A'.auth.conditionalLoad C' k ≤
-            A.auth.durableLoad k + A.auth.conditionalLoad (project C') k) :
-      Step A .tau A'
-  | directMerge {A A'} (shape : TopologyShape A A')
-      (checked : checkAC A'.auth = true) : Step A .tau A'
+      CoreStep A .tau (restrictLifecycle A S keep)
+  | revoke (A) (g : Grant) : CoreStep A .tau (revokeState A g)
   | prepare {A U assignment} (ok : PrepareOK A U assignment) :
-      Step A .tau (prepareState A U assignment)
+      CoreStep A .tau (prepareState A U assignment)
   | ticket {A A' eta} (ticketStep : TicketStep A eta A') :
-      Step A eta A'
+      CoreStep A eta A'
 
 /-- Root paper-facing alias for the exact Prepare preservation theorem. -/
 theorem prepare_preserves_wf_ac
@@ -952,12 +1020,12 @@ theorem ticket_step_preserves_wf_ac
     LWF A' ∧ AC A'.auth ∧ ∀ e, A'.opClaim e = A.opClaim e :=
   LifecycleState.ticket_step_preserves_wf_ac hstep hWF hAC
 
-/-- Every generated transition preserves lifecycle WF and authority
-continuity.  Only Reserve/direct Merge appeal to the executable target AC
-checker; all other cases use computed targets or simulation inequalities. -/
-theorem step_preserves_wf_ac
+/-- Every core transition preserves lifecycle WF and authority continuity.
+Only Reserve appeals to the executable target AC checker; every other target
+is computed and proved safe from source invariants. -/
+theorem core_step_preserves_wf_ac
     {A A' : LifecycleState Coord Claim Branch Grant Operation}
-    {eta : Label Operation Claim} (hstep : Step A eta A')
+    {eta : Label Operation Claim} (hstep : CoreStep A eta A')
     (hWF : LWF A) (hAC : AC A.auth) : LWF A' ∧ AC A'.auth := by
   cases hstep with
   | checkpoint => exact ⟨hWF, hAC⟩
@@ -965,20 +1033,60 @@ theorem step_preserves_wf_ac
   | restriction S keep =>
       exact restriction_lifecycle_preserves_wf_ac _ S keep hWF hAC
   | revoke g => exact revoke_preserves_wf_ac _ g hWF hAC
-  | topology project shape simulates =>
-      exact simulated_topology_preserves_wf_ac _ _ project shape hWF hAC simulates
-  | directMerge shape checked =>
-      exact direct_merge_preserves_wf_ac _ _ shape hWF checked
   | prepare ok => exact prepare_preserves_wf_ac _ _ _ hWF hAC ok
   | ticket ticketStep =>
       have h := ticket_step_preserves_wf_ac ticketStep hWF hAC
       exact ⟨h.1, h.2.1⟩
 
+/-- Core steps preserve the exact correspondence between open epochs and
+branches occurring in the durability contract. -/
+theorem core_step_preserves_active_exact
+    {A A' : LifecycleState Coord Claim Branch Grant Operation}
+    {eta : Label Operation Claim} (hstep : CoreStep A eta A')
+    (hWF : LWF A) (hActive : ActiveExact A) : ActiveExact A' := by
+  cases hstep with
+  | checkpoint => exact hActive
+  | reserve ok => simpa [ActiveExact, reserveState, reserveCore] using hActive
+  | restriction S keep =>
+      exact restriction_lifecycle_preserves_active_exact _ S keep hWF hActive
+  | revoke g =>
+      simpa [revokeState] using
+        (restriction_lifecycle_preserves_active_exact A Finset.univ
+          (Finset.univ.filter fun c => A.grantOf c ≠ g) hWF hActive)
+  | prepare ok =>
+      exact LifecycleState.prepare_preserves_active_exact _ _ _ hWF hActive ok
+  | ticket ticketStep =>
+      cases ticketStep <;>
+        simpa [ActiveExact, setTicketPhase, crashState, settleState] using hActive
+
+/-- Existing operation-to-claim bindings are immutable across every core
+step.  Prepare may add fresh bindings but cannot replace an existing one. -/
+theorem core_step_preserves_existing_binding
+    {A A' : LifecycleState Coord Claim Branch Grant Operation}
+    {eta : Label Operation Claim} (hstep : CoreStep A eta A') :
+    ∀ e c, A.opClaim e = some c → A'.opClaim e = some c := by
+  intro e c hbound
+  cases hstep with
+  | checkpoint => exact hbound
+  | reserve ok => exact hbound
+  | restriction S keep => exact hbound
+  | revoke g => exact hbound
+  | @prepare U assignment ok =>
+      rw [LifecycleState.prepareState_opClaim]
+      cases ha : assignment e with
+      | none => simpa [ha] using hbound
+      | some assigned =>
+          have hfresh := ok.fresh e assigned ha
+          rw [hbound] at hfresh
+          simp at hfresh
+  | ticket ticketStep =>
+      exact (LifecycleState.ticketStep_binding_eq ticketStep e).trans hbound
+
 /-- Temporal terminality invariant: no admitted step resurrects a tombstoned
 claim.  Reserve's only source is explicitly `unissued`. -/
-theorem step_terminal_mono
+theorem core_step_terminal_mono
     {A A' : LifecycleState Coord Claim Branch Grant Operation}
-    {eta : Label Operation Claim} (hstep : Step A eta A') :
+    {eta : Label Operation Claim} (hstep : CoreStep A eta A') :
     A.TerminalMonotone A' := by
   intro c hc
   cases hstep with
@@ -994,8 +1102,6 @@ theorem step_terminal_mono
       simp [restrictLifecycle, State.restrictStateBy, hc]
   | revoke g =>
       simp [revokeState, restrictLifecycle, State.restrictStateBy, hc]
-  | topology project shape simulates => exact shape.terminal c hc
-  | directMerge shape checked => exact shape.terminal c hc
   | @prepare U assignment ok =>
       have hcNot : c ∉ U := by
         intro hcU
@@ -1010,9 +1116,9 @@ theorem step_terminal_mono
 
 /-- Epoch closure is temporal: a closed branch or grant epoch never reopens;
 new openings are possible only from `unissued` through `Advances`. -/
-theorem step_epoch_mono
+theorem core_step_epoch_mono
     {A A' : LifecycleState Coord Claim Branch Grant Operation}
-    {eta : Label Operation Claim} (hstep : Step A eta A') :
+    {eta : Label Operation Claim} (hstep : CoreStep A eta A') :
     A.EpochMonotone A' := by
   cases hstep with
   | checkpoint =>
@@ -1024,18 +1130,17 @@ theorem step_epoch_mono
   | @restriction S keep =>
       constructor
       · intro b
-        by_cases hb : b ∈ S
-        · simpa [restrictLifecycle, hb] using
-            EpochStatus.Advances.refl (A.branchEpoch b)
-        · cases hs : A.branchEpoch b <;>
-            simp [restrictLifecycle, hb, EpochStatus.Advances]
+        cases hs : A.branchEpoch b <;> by_cases hb : b ∈ S <;>
+          simp [restrictLifecycle, restrictBranchEpoch, hs, hb,
+            EpochStatus.Advances]
       · intro g
         exact EpochStatus.Advances.refl _
   | @revoke g =>
       constructor
       · intro b
-        simpa [revokeState, restrictLifecycle] using
-          EpochStatus.Advances.refl (A.branchEpoch b)
+        cases hs : A.branchEpoch b <;>
+          simp [revokeState, restrictLifecycle, restrictBranchEpoch, hs,
+            EpochStatus.Advances]
       · intro g'
         by_cases hgg : g' = g
         · subst g'
@@ -1043,8 +1148,6 @@ theorem step_epoch_mono
             simp [revokeState, hs, EpochStatus.Advances]
         · simpa [revokeState, hgg] using
             EpochStatus.Advances.refl (A.grantEpoch g')
-  | topology project shape simulates => exact shape.epochs
-  | directMerge shape checked => exact shape.epochs
   | @prepare U assignment ok =>
       constructor
       · intro b
@@ -1062,10 +1165,10 @@ theorem step_epoch_mono
 
 /-- Every emitted attempt is the dispatch or retry of the same stable
 operation/claim binding, and that claim was already durable in the pre-state. -/
-theorem attempt_uses_durable_ticket
+theorem core_attempt_uses_durable_ticket
     {A A' : LifecycleState Coord Claim Branch Grant Operation}
     {e : Operation} {c : Claim}
-    (hstep : Step A (.attempt e c) A') (hWF : LWF A) :
+    (hstep : CoreStep A (.attempt e c) A') (hWF : LWF A) :
     A.opClaim e = some c ∧ A.auth.status c = .durable ∧
       A'.opClaim e = some c := by
   cases hstep with
@@ -1082,12 +1185,12 @@ theorem attempt_uses_durable_ticket
             (hbinding e).trans hop⟩
 
 /-- Audited paper-facing name for the attempt-label safety clause. -/
-theorem step_attempt_safe
+theorem core_step_attempt_safe
     {A A' : LifecycleState Coord Claim Branch Grant Operation}
     {e : Operation} {c : Claim}
-    (hstep : Step A (.attempt e c) A') (hWF : LWF A) :
+    (hstep : CoreStep A (.attempt e c) A') (hWF : LWF A) :
     A.opClaim e = some c ∧ A.auth.status c = .durable ∧
       A'.opClaim e = some c :=
-  attempt_uses_durable_ticket hstep hWF
+  core_attempt_uses_durable_ticket hstep hWF
 
 end AuthorityContinuity

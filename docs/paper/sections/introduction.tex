@@ -60,7 +60,8 @@ This paper makes four contributions.
   \item Boundary~II proves that, with exact prefix repair and immediate cleanup, final-owner support exactly characterizes when every owner-group promotion order remains executable.
   Promotion is not closed in the base choice/parallel language; frozen vector-threshold guards give exact closure and expose when the runtime must validate an order, coordinate cleanup, or atomically seal a batch.
 
-  \item A dependency-free executable model checks both boundaries, frozen guards, lineage transport, and finite ticket traces with crash, retry, and revocation.
+  \item A Lean 4 development kernel-checks the finite canonical abstract lifecycle: computed choice/parallel Fork, replacing/live Restore, checked fragment transfer, distinct Merge modes, stable bindings, and trace preservation.
+  A dependency-free executable model separately checks both boundaries, frozen guards, lineage transport, and finite crash/retry/revocation traces.
   Documented Claude Code and Codex interfaces identify possible adapter points; they neither instantiate the abstract state nor establish complete mediation.
 \end{enumerate}
 

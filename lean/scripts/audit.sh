@@ -12,10 +12,51 @@ frozen_constants=(
   restriction_preserves_wf_ac
   prepare_preserves_wf_ac
   ticket_step_preserves_wf_ac
+  restrictLifecycle_epoch_exact
+  canonicalProjection_zero
+  canonicalProjection_mono
+  checkTransfer_sound
+  topology_fiber_conservation
+  choiceFork_allowed_iff
+  parallelFork_allowed_iff
+  replaceRestore_allowed_iff
+  liveRestore_allowed_iff
+  choiceFork_preserves_wf_ac
+  parallelFork_preserves_wf_ac
+  replaceRestore_preserves_wf_ac
+  liveRestore_preserves_wf_ac
+  checkMergeStructure_sound
+  simulation_merge_preserves_wf_ac
+  direct_merge_preserves_wf_ac
   step_preserves_wf_ac
   trace_preserves_wf_ac
   effect_coverage
   concrete_trace_authority_safety
+  fresh_fragment_parallel_preflight
+)
+
+# Named executable controls are elaborated through `AuthorityContinuity.Main`.
+# Most use `native_decide`, so they are frozen for presence separately from the
+# proof-theorem axiom whitelist above.
+frozen_controls=(
+  choice_fork_admission_accepts
+  parallel_fork_admission_accepts
+  replace_restore_admission_accepts
+  live_restore_admission_accepts
+  choice_rejects_child_copresence
+  parallel_accepts_child_copresence
+  copied_full_demand_rejected
+  retained_fragment_mix_rejected
+  terminal_fragment_reuse_rejected
+  nontentative_rho_rejected
+  closed_epoch_reopen_rejected
+  simulation_merge_identity_accepts
+  direct_merge_identity_accepts
+  merge_modes_separated
+  exclusive_source_ac
+  unsafe_codurable_direct_merge_rejected
+  canonical_history_definitionally_preserved
+  replace_restore_closes_parent
 )
 
 placeholder_pattern='(^|[^[:alnum:]_])(sorryAx|sorry|admit)([^[:alnum:]_]|$)'
@@ -30,6 +71,11 @@ if rg --line-number --glob '*.lean' "$declaration_pattern" AuthorityContinuity; 
   exit 1
 fi
 
+if rg --line-number --glob '*.lean' 'TopologyShape' AuthorityContinuity; then
+  echo "audit: former fieldwise topology certificate remains in authoritative source" >&2
+  exit 1
+fi
+
 for name in "${frozen_constants[@]}"; do
   if ! rg --quiet --glob '*.lean' \
       "^[[:space:]]*(theorem|lemma)[[:space:]]+${name}([^[:alnum:]_]|$)" \
@@ -39,11 +85,20 @@ for name in "${frozen_constants[@]}"; do
   fi
 done
 
+for name in "${frozen_controls[@]}"; do
+  if ! rg --quiet --glob '*.lean' \
+      "^[[:space:]]*(theorem|lemma)[[:space:]]+${name}([^[:alnum:]_]|$)" \
+      AuthorityContinuity; then
+    echo "audit: frozen executable control is missing: $name" >&2
+    exit 1
+  fi
+done
+
 lake build AuthorityContinuity
 
 mkdir -p results
-audit_log="results/axioms.log"
-lake env lean AuthorityContinuity/Audit.lean 2>&1 | tee "$audit_log"
+audit_log="results/topology-axioms.log"
+lake env lean AuthorityContinuity/Audit.lean 2>&1 | tee "$audit_log" results/axioms.log
 
 for name in "${frozen_constants[@]}"; do
   if ! rg --quiet "${name}' (does not depend on any axioms|depends on axioms:)" \
@@ -76,4 +131,4 @@ for dependency in "${reported_axioms[@]}"; do
 done
 
 lake env leanchecker --fresh AuthorityContinuity.Main
-echo "audit: all frozen theorems present; source and kernel replay checks passed"
+echo "audit: all frozen theorems and controls present; source and kernel replay checks passed"
