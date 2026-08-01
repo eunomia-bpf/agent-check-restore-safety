@@ -3,7 +3,7 @@
 %% Checkpoint/Restore Meets Tool-Using LLM Agents Paper
 %%
 
-\documentclass[sigplan,nonacm,review]{acmart}
+\documentclass[sigplan,nonacm]{acmart}
 \settopmatter{printfolios=true}
 
 %%
@@ -23,37 +23,62 @@
 
 \title{\sys{}: Preventing Semantic Rollback Attacks in Agent Checkpoint-Restore}
 
-% \author{Anonymous Author(s)}
-% \affiliation{%
-%   \institution{Anonymous Institution}
-%   \city{Anonymous City}
-%   \country{Anonymous Country}
-% }
-% \email{anonymous@example.com}
+\author{Yusheng Zheng}
+\affiliation{%
+  \institution{UC Santa Cruz}
+  \city{Santa Cruz}
+  \country{USA}
+}
+\email{yzhen165@ucsc.edu}
+
+\author{Yiwei Yang}
+\affiliation{%
+  \institution{UC Santa Cruz}
+  \city{Santa Cruz}
+  \country{USA}
+}
+\email{yyang363@ucsc.edu}
+
+\author{Wei Zhang}
+\affiliation{%
+  \institution{UConn}
+  \city{Storrs}
+  \country{USA}
+}
+\email{yzhen165wei.13.zhang@uconn.edu}
+
+\author{Andi Quinn}
+\affiliation{%
+  \institution{UC Santa Cruz}
+  \city{Santa Cruz}
+  \country{USA}
+}
+\email{aquinn1@ucsc.edu}
+
 
 \begin{abstract}
 	Checkpoint-restore mechanisms, increasingly adopted in LLM agent frameworks for both error recovery and exploration, reintroduce a classic systems challenge: externally visible outputs cannot be rolled back. Unlike traditional deterministic systems, tool-using LLM agents may depend on implicit execution context (e.g., user permissions in prompt, quotas, external API state), and re-synthesize semantically equivalent but subtly different actions after restoring from checkpoints. This \emph{semantic drift} silently bypasses traditional at-most-once defenses such as idempotency keys and may revive consumed credentials, leading to what we term \emph{semantic rollback attacks}. We characterize two vulnerability classes, \emph{Action Replay} and \emph{Authority Resurrection}, and demonstrate their reproducibility in a proof-of-concept testbed with realistic external tool servers. We introduce \sys{} (Agent Checkpoint-Restore Fence), a framework-agnostic runtime mechanism providing a \emph{fork-aware tool-effect journal} that enforces safe replay-or-fork semantics for external tool calls. \sys{} captures tool-call context as stable effect fingerprints via eBPF and reliably distinguishes replay from exploration upon restoration. We demonstrate \sys{} can eliminate semantic rollback vulnerabilities while preserving agents' flexibility for exploration of alternative execution paths.
 \end{abstract}
 
-% \begin{CCSXML}
-% <ccs2012>
-%    <concept>
-%        <concept_id>10002978.10002991.10002992</concept_id>
-%        <concept_desc>Security and privacy~Software security engineering</concept_desc>
-%        <concept_significance>500</concept_significance>
-%    </concept>
-%    <concept>
-%        <concept_id>10010147.10010257</concept_id>
-%        <concept_desc>Computing methodologies~Machine learning</concept_desc>
-%        <concept_significance>300</concept_significance>
-%    </concept>
-% </ccs2012>
-% \end{CCSXML}
+\begin{CCSXML}
+<ccs2012>
+   <concept>
+       <concept_id>10002978.10002991.10002992</concept_id>
+       <concept_desc>Security and privacy~Software security engineering</concept_desc>
+       <concept_significance>500</concept_significance>
+   </concept>
+   <concept>
+       <concept_id>10010147.10010257</concept_id>
+       <concept_desc>Computing methodologies~Machine learning</concept_desc>
+       <concept_significance>300</concept_significance>
+   </concept>
+</ccs2012>
+\end{CCSXML}
 
-% \ccsdesc[500]{Security and privacy~Software security engineering}
-% \ccsdesc[300]{Computing methodologies~Machine learning}
+\ccsdesc[500]{Security and privacy~Software security engineering}
+\ccsdesc[300]{Computing methodologies~Machine learning}
 
-% \keywords{LLM agents, checkpoint-restore, security, semantic rollback, fault tolerance}
+\keywords{LLM agents, checkpoint-restore, security, semantic rollback, fault tolerance}
 
 \maketitle
 
