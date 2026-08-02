@@ -541,3 +541,86 @@ mechanized. Static peeling is useful machinery; the versioned lifecycle theorem
 and crash-stable real-runtime enforcement must carry any new agent-specific
 claim. The complete theorem/prior-art audit is
 `docs/tmp/build-and-evaluate/step-0006-20260801T153740-0700/killer-hypergraph/report.md`.
+
+## 12. RQ3 dynamic-redemption-topology experiment
+
+Step 0007 experiment 002 reopens one RQ3 premise after a hostile review found
+that current-occurrence linearity is sufficient but not necessary.  Several
+history handles can safely race through one durable linearization cell, while
+one restored occurrence can redeem twice if its local admission state was
+cloned.  Equal labels, process IDs, worktrees, or endpoint names do not decide
+which case holds.
+
+The accepted revision-2 hypothesis uses two maps:
+
+```text
+history handles --resolve--> semantic redemption cells
+                --lineage--> source authority atoms.
+```
+
+For every lifecycle-derived co-redeemability configuration, aliases are first
+quotiented by `resolve`; `lineage` must then be locally injective and its image
+must be a permitted source configuration after durable commitments are
+retained.  The planned finite theorem characterizes this condition as
+preservation of every nonnegative additive bounded-authority policy.  The
+condition is classical configuration-morphism machinery; the proposed
+paper-level delta is the semantic-cell quotient and typed refinement of agent
+Fork/Restore/Merge/Prepare.  Global
+`charged + sum(unspent rights) <= capacity` is explicitly only the detached,
+product-independent escrow corollary.
+
+Paper-value role: **decisive theory experiment**.  It repairs a false universal
+necessity claim and tests the strongest surviving operator-level novelty.
+Positive, contradictory, and mixed paper decisions are fixed in the approved
+plan.  The plan and two-round independent review are in
+`docs/tmp/build-and-evaluate/step-0007-20260801T164024-0700/experiment-002-domain-conservation/`.
+
+Current run status: **partially complete; central operator theorem still
+blocked**.  `ConfigurationCellQuotient.lean` now kernel-checks the exact finite
+additive iff without a target-safety premise, including explicit
+capacity-one collision and forbidden-image indicator witnesses.  This closes
+item 1 below but remains classical supporting machinery.  A first operational
+commitment LTS also compiled and proved real single-step/RTC preservation, but
+independent review returned **REVISE**: its aggregate ledger obscured the
+cell-local implementation boundary, external phases lacked well-formedness,
+retry identity was weaker than Replay, and label-erased RTC could not count
+fresh commitment events.  It is not accepted evidence until those issues are
+repaired.
+
+The quotient module passed standalone elaboration, the integrated library
+build, the frozen axiom/declaration checks, and a fresh kernel replay of
+`AuthorityContinuity.Main` on 2026-08-02.  Its source SHA-256 is
+`6d29f8f3c6c6eb21365d34e93448ad27e75691af9901dda912853788b09d6c81`;
+the regenerated identical axiom-log hashes are
+`e72bd514020f16dffb1a14d1a97ae9f157e510b1d82f589a7c4cb919f3d0e518`.
+
+The supporting seven-case in-memory semantic oracle separates event,
+occurrence, cell, operation-key, commitment, and sink identities.  Its latest
+59-test adapter regression passed in 13.063 seconds.  This is dependency
+evidence for the detached/escrow profile, not execution of the decisive typed
+operator theorem.  It does not prove storage durability, native product
+lifecycle refinement, or external exactly-once.
+
+A separate traditional-model audit also rejects dynamic graph growth,
+different control/effect histories, rollback-resistant output state, and
+configuration local injectivity as novelty.  The future graph will be modeled
+intensionally by a versioned co-durability contract.  The scoped lower bound
+applies only when the runtime immediately materializes independently
+redeemable authority; delayed delegation and shared ratification remain valid
+escape mechanisms.
+
+Completion requires, before any central paper rewrite:
+
+1. a kernel-checked cell-quotient characterization with collision and
+   forbidden-image counterexamples;
+2. operational balance-to-commitment conservation with Fresh/Replay Prepare;
+3. typed operator preservation and arbitrary checked-history induction;
+4. clone and sequential-restore necessity plus strict shared/cloned/Merge
+   witnesses; and
+5. durable-commitment-before-mediated-Dispatch, leaving physical exactly-once
+   conditional on the sink.
+
+The real Codex callback remains one effect-boundary correspondence seam.  The
+self-hosted paper-formation trajectory may test whether required fields occur
+and remain private after aggregation; it cannot validate the theorem or imply
+product-wide mediation.

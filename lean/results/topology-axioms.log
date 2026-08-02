@@ -677,3 +677,191 @@ AuthorityContinuity.TokenWeightedAccounting.binding_witness_matches_spec.{uE, uN
 'AuthorityContinuity.TokenWeightedAccounting.binding_witness_matches_spec' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
+AuthorityContinuity.ConfigurationCellQuotient.collision_capacity_one_witness.{uU, uD} {U : Type uU} {D : Type uD}
+  [Fintype U] [DecidableEq U] [Fintype D] [DecidableEq D] (source : Finset (Finset U)) (target : Finset (Finset D))
+  (ell : D → U) {C : Finset D} (hC : C ∈ target) {d0 d1 : D} (hd0 : d0 ∈ C) (hd1 : d1 ∈ C) (hne : d0 ≠ d1)
+  (hlineage : ell d0 = ell d1) :
+  ∃ w, ConfigurationCellQuotient.SourceSafe source w 1 ∧ ¬ConfigurationCellQuotient.TargetSafe target ell w 1
+'AuthorityContinuity.ConfigurationCellQuotient.collision_capacity_one_witness' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ConfigurationCellQuotient.forbidden_image_indicator_witness.{uU, uD} {U : Type uU} {D : Type uD}
+  [Fintype U] [DecidableEq U] [Fintype D] [DecidableEq D] (source : Finset (Finset U)) (target : Finset (Finset D))
+  (ell : D → U) (wf : ConfigurationCellQuotient.SourceFamilyWellFormed source) {C : Finset D} (hC : C ∈ target)
+  (hinj : Set.InjOn ell ↑C) (hForbidden : Finset.image ell C ∉ source) :
+  ∃ w,
+    ConfigurationCellQuotient.SourceSafe source w ((Finset.image ell C).card - 1) ∧
+      ¬ConfigurationCellQuotient.TargetSafe target ell w ((Finset.image ell C).card - 1)
+'AuthorityContinuity.ConfigurationCellQuotient.forbidden_image_indicator_witness' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ConfigurationCellQuotient.universalAdditiveTransport_iff_configMorphism.{uU, uD} {U : Type uU}
+  {D : Type uD} [Fintype U] [DecidableEq U] [Fintype D] [DecidableEq D] (source : Finset (Finset U))
+  (target : Finset (Finset D)) (ell : D → U) (wf : ConfigurationCellQuotient.SourceFamilyWellFormed source) :
+  ConfigurationCellQuotient.UniversalAdditiveTransport source target ell ↔
+    ConfigurationCellQuotient.ConfigMorphism source target ell
+'AuthorityContinuity.ConfigurationCellQuotient.universalAdditiveTransport_iff_configMorphism' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ConfigurationCellQuotient.Fixtures.two_handles_one_cell :
+  (ConfigurationCellQuotient.Fixtures.semanticCells {false, true} fun x => ()).card = 1
+'AuthorityContinuity.ConfigurationCellQuotient.Fixtures.two_handles_one_cell' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ConfigurationCellQuotient.Fixtures.exclusive_shared_lineage_transports :
+  ConfigurationCellQuotient.UniversalAdditiveTransport ConfigurationCellQuotient.Fixtures.unitSource
+    ConfigurationCellQuotient.Fixtures.exclusiveTarget ConfigurationCellQuotient.Fixtures.collapseLineage
+'AuthorityContinuity.ConfigurationCellQuotient.Fixtures.exclusive_shared_lineage_transports' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ConfigurationCellQuotient.Fixtures.parallel_capacity_one_counterexample :
+  ConfigurationCellQuotient.SourceSafe ConfigurationCellQuotient.Fixtures.unitSource (fun x => 1) 1 ∧
+    ¬ConfigurationCellQuotient.TargetSafe ConfigurationCellQuotient.Fixtures.parallelTarget
+        ConfigurationCellQuotient.Fixtures.collapseLineage (fun x => 1) 1
+'AuthorityContinuity.ConfigurationCellQuotient.Fixtures.parallel_capacity_one_counterexample' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RedemptionDomainFrontier.ResponseIdentity.retry_successes_share_one_commitment :
+  (RedemptionDomainFrontier.distinctReceipts RedemptionDomainFrontier.ResponseIdentity.retryResponses).card = 1
+'AuthorityContinuity.RedemptionDomainFrontier.ResponseIdentity.retry_successes_share_one_commitment' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RedemptionDomainFrontier.ResponseIdentity.same_operation_two_cells_create_two_commitments :
+  (RedemptionDomainFrontier.distinctOperationKeys RedemptionDomainFrontier.ResponseIdentity.crossCellResponses).card =
+      1 ∧
+    (RedemptionDomainFrontier.distinctReceipts RedemptionDomainFrontier.ResponseIdentity.crossCellResponses).card = 2 ∧
+      RedemptionDomainFrontier.ResponseIdentity.firstReceipt.cell ≠
+        RedemptionDomainFrontier.ResponseIdentity.secondCellReceipt.cell
+'AuthorityContinuity.RedemptionDomainFrontier.ResponseIdentity.same_operation_two_cells_create_two_commitments' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RedemptionDomainFrontier.OneShotRun.spent_mono.{uA, uD} {Attempt : Type uA} {Domain : Type uD}
+  [DecidableEq Domain] {cellOf : Attempt → Domain} {spent final : Finset Domain} {accepted : List Attempt}
+  (run : RedemptionDomainFrontier.OneShotRun cellOf spent accepted final) : spent ⊆ final
+'AuthorityContinuity.RedemptionDomainFrontier.OneShotRun.spent_mono' depends on axioms: [propext, Quot.sound]
+AuthorityContinuity.RedemptionDomainFrontier.OneShotRun.final_card_eq_initial_add_commitment_length.{uA, uD}
+  {Attempt : Type uA} {Domain : Type uD} [DecidableEq Domain] {cellOf : Attempt → Domain} {spent final : Finset Domain}
+  {accepted : List Attempt} (run : RedemptionDomainFrontier.OneShotRun cellOf spent accepted final) :
+  final.card = spent.card + accepted.length
+'AuthorityContinuity.RedemptionDomainFrontier.OneShotRun.final_card_eq_initial_add_commitment_length' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RedemptionDomainFrontier.OneShotRun.initial_card_add_commitment_length_le_reachable_card.{uA, uD}
+  {Attempt : Type uA} {Domain : Type uD} [DecidableEq Domain] {cellOf : Attempt → Domain} {spent final : Finset Domain}
+  {accepted : List Attempt} (offered : Finset Attempt) [DecidableEq Attempt]
+  (run : RedemptionDomainFrontier.OneShotRun cellOf spent accepted final)
+  (within : ∀ attempt ∈ accepted, attempt ∈ offered) :
+  spent.card + accepted.length ≤ (spent ∪ Finset.image cellOf offered).card
+'AuthorityContinuity.RedemptionDomainFrontier.OneShotRun.initial_card_add_commitment_length_le_reachable_card' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RedemptionDomainFrontier.admissible_card_le_unusedActiveCells_card.{uA, uO, uD} {Attempt : Type uA}
+  {Occurrence : Type uO} {Domain : Type uD} [DecidableEq Attempt] [DecidableEq Domain]
+  {H : RedemptionDomainFrontier.FixedHorizon Attempt Occurrence Domain} {LifecycleFeasible : Finset Attempt → Prop}
+  {accepted : Finset Attempt} (h : RedemptionDomainFrontier.AdmissibleExtension H LifecycleFeasible accepted) :
+  accepted.card ≤ (RedemptionDomainFrontier.unusedActiveCells H).card
+'AuthorityContinuity.RedemptionDomainFrontier.admissible_card_le_unusedActiveCells_card' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RedemptionDomainFrontier.committed_add_accepted_card_le_reachableCells_card.{uA, uO, uD}
+  {Attempt : Type uA} {Occurrence : Type uO} {Domain : Type uD} [DecidableEq Attempt] [DecidableEq Domain]
+  {H : RedemptionDomainFrontier.FixedHorizon Attempt Occurrence Domain} {LifecycleFeasible : Finset Attempt → Prop}
+  {accepted : Finset Attempt} (hHistory : RedemptionDomainFrontier.HistoryValid H)
+  (h : RedemptionDomainFrontier.AdmissibleExtension H LifecycleFeasible accepted) :
+  H.committed.card + accepted.card ≤ (RedemptionDomainFrontier.reachableCells H).card
+'AuthorityContinuity.RedemptionDomainFrontier.committed_add_accepted_card_le_reachableCells_card' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RedemptionDomainFrontier.exists_tight_admissible_of_soloAvailable_productIndependent.{uA, uO, uD}
+  {Attempt : Type uA} {Occurrence : Type uO} {Domain : Type uD} [DecidableEq Attempt] [DecidableEq Domain]
+  (H : RedemptionDomainFrontier.FixedHorizon Attempt Occurrence Domain) (LifecycleFeasible : Finset Attempt → Prop)
+  (hHistory : RedemptionDomainFrontier.HistoryValid H)
+  (hSolo : RedemptionDomainFrontier.SoloAvailable H LifecycleFeasible)
+  (hProduct : RedemptionDomainFrontier.ProductIndependent H LifecycleFeasible) :
+  ∃ accepted,
+    RedemptionDomainFrontier.AdmissibleExtension H LifecycleFeasible accepted ∧
+      accepted.card = (RedemptionDomainFrontier.unusedActiveCells H).card
+'AuthorityContinuity.RedemptionDomainFrontier.exists_tight_admissible_of_soloAvailable_productIndependent' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RedemptionDomainFrontier.all_admissible_card_le_iff_unusedActiveCells_card_le_of_independent.{uA,
+    uO, uD}
+  {Attempt : Type uA} {Occurrence : Type uO} {Domain : Type uD} [DecidableEq Attempt] [DecidableEq Domain]
+  (H : RedemptionDomainFrontier.FixedHorizon Attempt Occurrence Domain) (LifecycleFeasible : Finset Attempt → Prop)
+  (hHistory : RedemptionDomainFrontier.HistoryValid H)
+  (hSolo : RedemptionDomainFrontier.SoloAvailable H LifecycleFeasible)
+  (hProduct : RedemptionDomainFrontier.ProductIndependent H LifecycleFeasible) (budget : ℕ) :
+  (∀ (accepted : Finset Attempt),
+      RedemptionDomainFrontier.AdmissibleExtension H LifecycleFeasible accepted → accepted.card ≤ budget) ↔
+    (RedemptionDomainFrontier.unusedActiveCells H).card ≤ budget
+'AuthorityContinuity.RedemptionDomainFrontier.all_admissible_card_le_iff_unusedActiveCells_card_le_of_independent' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RedemptionDomainFrontier.unusedActiveCells_card_eq_activeOccurrences_card_of_independent.{uA, uO,
+    uD}
+  {Attempt : Type uA} {Occurrence : Type uO} {Domain : Type uD} [DecidableEq Attempt] [DecidableEq Domain]
+  (H : RedemptionDomainFrontier.FixedHorizon Attempt Occurrence Domain) [DecidableEq Occurrence]
+  (hOccurrence : Set.InjOn H.occurrenceOf ↑H.offered) (hCell : Set.InjOn H.cellOf ↑H.offered)
+  (hUnconsumed : Disjoint (Finset.image H.cellOf H.offered) (RedemptionDomainFrontier.consumedCells H)) :
+  (RedemptionDomainFrontier.unusedActiveCells H).card = (RedemptionDomainFrontier.activeOccurrences H).card
+'AuthorityContinuity.RedemptionDomainFrontier.unusedActiveCells_card_eq_activeOccurrences_card_of_independent' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RedemptionDomainFrontier.independentOccurrences_single_redemption_iff_current_card_le_one.{uA, uO,
+    uD}
+  {Attempt : Type uA} {Occurrence : Type uO} {Domain : Type uD} [DecidableEq Attempt] [DecidableEq Domain]
+  (H : RedemptionDomainFrontier.FixedHorizon Attempt Occurrence Domain) [DecidableEq Occurrence]
+  (LifecycleFeasible : Finset Attempt → Prop) (hHistory : RedemptionDomainFrontier.HistoryValid H)
+  (hSolo : RedemptionDomainFrontier.SoloAvailable H LifecycleFeasible)
+  (hProduct : RedemptionDomainFrontier.ProductIndependent H LifecycleFeasible)
+  (hOccurrence : Set.InjOn H.occurrenceOf ↑H.offered) (hCell : Set.InjOn H.cellOf ↑H.offered)
+  (hUnconsumed : Disjoint (Finset.image H.cellOf H.offered) (RedemptionDomainFrontier.consumedCells H)) :
+  (∀ (accepted : Finset Attempt),
+      RedemptionDomainFrontier.AdmissibleExtension H LifecycleFeasible accepted → accepted.card ≤ 1) ↔
+    (RedemptionDomainFrontier.activeOccurrences H).card ≤ 1
+'AuthorityContinuity.RedemptionDomainFrontier.independentOccurrences_single_redemption_iff_current_card_le_one' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RedemptionDomainFrontier.SharedCellAliases.shared_cell_aliases_safe_but_not_occurrence_linear :
+  (∀ (accepted : Finset Bool),
+      RedemptionDomainFrontier.AdmissibleExtension RedemptionDomainFrontier.SharedCellAliases.horizon
+          RedemptionDomainFrontier.SharedCellAliases.feasible accepted →
+        accepted.card ≤ 1) ∧
+    ¬(RedemptionDomainFrontier.activeOccurrences RedemptionDomainFrontier.SharedCellAliases.horizon).card ≤ 1
+'AuthorityContinuity.RedemptionDomainFrontier.SharedCellAliases.shared_cell_aliases_safe_but_not_occurrence_linear' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RedemptionDomainFrontier.DurableConsumedHistory.restored_attempt_blocked_by_pruned_consumed_history
+  (accepted : Finset Bool) :
+  RedemptionDomainFrontier.AdmissibleExtension RedemptionDomainFrontier.DurableConsumedHistory.horizon
+      RedemptionDomainFrontier.DurableConsumedHistory.feasible accepted →
+    accepted.card = 0
+'AuthorityContinuity.RedemptionDomainFrontier.DurableConsumedHistory.restored_attempt_blocked_by_pruned_consumed_history' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RedemptionDomainFrontier.ExclusiveChoice.two_cells_but_choice_accepts_at_most_one :
+  (RedemptionDomainFrontier.unusedActiveCells RedemptionDomainFrontier.ExclusiveChoice.horizon).card = 2 ∧
+    ∀ (accepted : Finset Bool),
+      RedemptionDomainFrontier.AdmissibleExtension RedemptionDomainFrontier.ExclusiveChoice.horizon
+          RedemptionDomainFrontier.ExclusiveChoice.feasible accepted →
+        accepted.card ≤ 1
+'AuthorityContinuity.RedemptionDomainFrontier.ExclusiveChoice.two_cells_but_choice_accepts_at_most_one' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RedemptionDomainFrontier.ExclusiveChoice.choice_is_not_productIndependent :
+  ¬RedemptionDomainFrontier.ProductIndependent RedemptionDomainFrontier.ExclusiveChoice.horizon
+      RedemptionDomainFrontier.ExclusiveChoice.feasible
+'AuthorityContinuity.RedemptionDomainFrontier.ExclusiveChoice.choice_is_not_productIndependent' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RedemptionDomainFrontier.RollbackClonedCells.rollback_clone_double_accept_counterexample :
+  ∃ accepted,
+    RedemptionDomainFrontier.AdmissibleExtension RedemptionDomainFrontier.RollbackClonedCells.horizon
+        RedemptionDomainFrontier.RollbackClonedCells.feasible accepted ∧
+      accepted.card = 2 ∧
+        (Finset.image RedemptionDomainFrontier.RollbackClonedCells.horizon.occurrenceOf accepted).card = 1 ∧
+          (Finset.image RedemptionDomainFrontier.RollbackClonedCells.sameLabel accepted).card = 1 ∧
+            (Finset.image RedemptionDomainFrontier.RollbackClonedCells.sameOperationKey accepted).card = 1
+'AuthorityContinuity.RedemptionDomainFrontier.RollbackClonedCells.rollback_clone_double_accept_counterexample' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]

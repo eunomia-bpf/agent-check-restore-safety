@@ -71,6 +71,28 @@ frozen_constants=(
   trace_initial_token_same_epoch
   current_witness_matches_spec
   binding_witness_matches_spec
+  collision_capacity_one_witness
+  forbidden_image_indicator_witness
+  universalAdditiveTransport_iff_configMorphism
+  two_handles_one_cell
+  exclusive_shared_lineage_transports
+  parallel_capacity_one_counterexample
+  retry_successes_share_one_commitment
+  same_operation_two_cells_create_two_commitments
+  spent_mono
+  final_card_eq_initial_add_commitment_length
+  initial_card_add_commitment_length_le_reachable_card
+  admissible_card_le_unusedActiveCells_card
+  committed_add_accepted_card_le_reachableCells_card
+  exists_tight_admissible_of_soloAvailable_productIndependent
+  all_admissible_card_le_iff_unusedActiveCells_card_le_of_independent
+  unusedActiveCells_card_eq_activeOccurrences_card_of_independent
+  independentOccurrences_single_redemption_iff_current_card_le_one
+  shared_cell_aliases_safe_but_not_occurrence_linear
+  restored_attempt_blocked_by_pruned_consumed_history
+  two_cells_but_choice_accepts_at_most_one
+  choice_is_not_productIndependent
+  rollback_clone_double_accept_counterexample
 )
 
 # Named executable controls are elaborated through `AuthorityContinuity.Main`.
