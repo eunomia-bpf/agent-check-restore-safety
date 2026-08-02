@@ -1175,6 +1175,77 @@ AuthorityContinuity.ControllerCoverAdmission.Fixtures.split_controllers_admit_fo
 'AuthorityContinuity.ControllerCoverAdmission.Fixtures.split_controllers_admit_forbidden_triple' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.no_exact_checker_of_observation_collision.{uU, uG, u_1} {U : Type uU}
+  {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G] {O : Type u_1}
+  (observe : ControllerCoverAdmission.CoLiveFamily G → O)
+  (check :
+    Finset (Finset U) →
+      Finset (Finset U) →
+        ControllerCoverAdmission.ControllerAccess U G → ControllerCoverAdmission.LocalControllerFamilies U G → O → Bool)
+  (required admitted : Finset (Finset U)) (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G)
+  (safeCoLive badCoLive : ControllerCoverAdmission.CoLiveFamily G) (hCollision : observe safeCoLive = observe badCoLive)
+  (hSafe : ControllerCoverAdmission.DeploymentReady required admitted access families safeCoLive)
+  (hUnsafe : ¬ControllerCoverAdmission.DeploymentReady required admitted access families badCoLive) :
+  ¬ControllerCoverAdmission.ExactThroughObservation observe check
+'AuthorityContinuity.ControllerCoverAdmission.no_exact_checker_of_observation_collision' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.Fixtures.pairwise_realization_ready :
+  ControllerCoverAdmission.DeploymentReady CoordinationDecomposition.Fixtures.rankTwoFamily
+    CoordinationDecomposition.Fixtures.rankTwoFamily ControllerCoverAdmission.Fixtures.completeAccess3
+    ControllerCoverAdmission.Fixtures.singletonLocal3 ControllerCoverAdmission.Fixtures.pairwiseCoLive3
+'AuthorityContinuity.ControllerCoverAdmission.Fixtures.pairwise_realization_ready' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.Fixtures.pairwise_raw_eq_rankTwo :
+  ControllerCoverAdmission.rawPhysicalCoverProduct ControllerCoverAdmission.Fixtures.completeAccess3
+      ControllerCoverAdmission.Fixtures.singletonLocal3 ControllerCoverAdmission.Fixtures.pairwiseCoLive3 =
+    CoordinationDecomposition.Fixtures.rankTwoFamily
+'AuthorityContinuity.ControllerCoverAdmission.Fixtures.pairwise_raw_eq_rankTwo' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.Fixtures.triple_realization_not_ready :
+  ¬ControllerCoverAdmission.DeploymentReady CoordinationDecomposition.Fixtures.rankTwoFamily
+      CoordinationDecomposition.Fixtures.rankTwoFamily ControllerCoverAdmission.Fixtures.completeAccess3
+      ControllerCoverAdmission.Fixtures.singletonLocal3 ControllerCoverAdmission.Fixtures.tripleCoLive3
+'AuthorityContinuity.ControllerCoverAdmission.Fixtures.triple_realization_not_ready' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.Fixtures.triple_realization_gateCutWitness :
+  ControllerCoverAdmission.GateCutWitness CoordinationDecomposition.Fixtures.rankTwoFamily
+    ControllerCoverAdmission.Fixtures.completeAccess3 ControllerCoverAdmission.Fixtures.singletonLocal3
+    ControllerCoverAdmission.Fixtures.tripleCoLive3 CoordinationDecomposition.Fixtures.triple
+'AuthorityContinuity.ControllerCoverAdmission.Fixtures.triple_realization_gateCutWitness' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.Fixtures.pairwiseCoLive3_downwardClosed :
+  ControllerCoverAdmission.CoLiveDownwardClosed ControllerCoverAdmission.Fixtures.pairwiseCoLive3
+'AuthorityContinuity.ControllerCoverAdmission.Fixtures.pairwiseCoLive3_downwardClosed' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.Fixtures.tripleCoLive3_downwardClosed :
+  ControllerCoverAdmission.CoLiveDownwardClosed ControllerCoverAdmission.Fixtures.tripleCoLive3
+'AuthorityContinuity.ControllerCoverAdmission.Fixtures.tripleCoLive3_downwardClosed' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.Fixtures.pairwise_projection_collision :
+  ControllerCoverAdmission.coLiveProjection 2 ControllerCoverAdmission.Fixtures.pairwiseCoLive3 =
+    ControllerCoverAdmission.coLiveProjection 2 ControllerCoverAdmission.Fixtures.tripleCoLive3
+'AuthorityContinuity.ControllerCoverAdmission.Fixtures.pairwise_projection_collision' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.Fixtures.no_pairwise_observation_checker_exact
+  (check :
+    Finset (Finset (Fin 3)) →
+      Finset (Finset (Fin 3)) →
+        ControllerCoverAdmission.ControllerAccess (Fin 3) (Fin 3) →
+          ControllerCoverAdmission.LocalControllerFamilies (Fin 3) (Fin 3) →
+            ControllerCoverAdmission.CoLiveFamily (Fin 3) → Bool) :
+  ¬ControllerCoverAdmission.ExactThroughObservation (ControllerCoverAdmission.coLiveProjection 2) check
+'AuthorityContinuity.ControllerCoverAdmission.Fixtures.no_pairwise_observation_checker_exact' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
 AuthorityContinuity.RedemptionCommitment.fresh_preserves_safe.{u_1, u_2, u_3, u_4, u_5, u_6} {Atom : Type u_2}
   {Cell : Type u_3} {Epoch : Type u_4} {Operation : Type u_5} {Receipt : Type u_6} [DecidableEq Atom] [DecidableEq Cell]
   [DecidableEq Epoch] [DecidableEq Operation] [DecidableEq Receipt] {Digest : Type u_1}

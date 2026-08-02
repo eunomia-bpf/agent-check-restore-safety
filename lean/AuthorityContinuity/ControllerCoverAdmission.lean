@@ -49,6 +49,11 @@ abbrev LocalControllerFamilies (U : Type uU) (G : Type uG) :=
 /-- Controller sets that the runtime may make live together. -/
 abbrev CoLiveFamily (G : Type uG) := Finset (Finset G)
 
+/-- Removing controllers from a possible co-live set leaves another possible
+co-live set. -/
+def CoLiveDownwardClosed (coLive : CoLiveFamily G) : Prop :=
+  ∀ active ∈ coLive, ∀ smaller ⊆ active, smaller ∈ coLive
+
 /-- Every cell in `piece` is accessible through controller `g`. -/
 def PieceAccessible (access : ControllerAccess U G)
     (g : G) (piece : Finset U) : Prop :=
@@ -273,6 +278,54 @@ def MissingRequired (required : Finset (Finset U))
   (coLive : CoLiveFamily G) : Prop :=
   ∃ C : Finset U,
     C ∈ required ∧ C ∉ rawPhysicalCoverProduct access families coLive
+
+/-! ## Observation lower bounds -/
+
+/-- The controller sets of size at most `arity` that can occur inside some
+co-live set.  This is the complete low-arity projection of the controller
+realization, not merely a graph extracted by one particular analyzer. -/
+def coLiveProjection (arity : Nat)
+    (coLive : CoLiveFamily G) : CoLiveFamily G :=
+  (Finset.univ : Finset G).powerset.filter fun observed =>
+    observed.card ≤ arity ∧
+      ∃ active ∈ coLive, observed ⊆ active
+
+/-- A checker is exact through an observation when that observation contains
+all controller information on which its deployment decision depends. -/
+def ExactThroughObservation {O : Type*}
+    (observe : CoLiveFamily G → O)
+    (check : Finset (Finset U) → Finset (Finset U) →
+      ControllerAccess U G → LocalControllerFamilies U G → O → Bool) :
+    Prop :=
+  ∀ required admitted access families coLive,
+    check required admitted access families (observe coLive) = true ↔
+      DeploymentReady required admitted access families coLive
+
+/-- An information-theoretic collision principle.  If two controller
+realizations have the same observation but different readiness decisions,
+no checker using only that observation can be both sound and complete. -/
+theorem no_exact_checker_of_observation_collision {O : Type*}
+    (observe : CoLiveFamily G → O)
+    (check : Finset (Finset U) → Finset (Finset U) →
+      ControllerAccess U G → LocalControllerFamilies U G → O → Bool)
+    (required admitted : Finset (Finset U))
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (safeCoLive badCoLive : CoLiveFamily G)
+    (hCollision : observe safeCoLive = observe badCoLive)
+    (hSafe : DeploymentReady required admitted access families safeCoLive)
+    (hUnsafe : ¬DeploymentReady required admitted access families badCoLive) :
+    ¬ExactThroughObservation observe check := by
+  intro hExact
+  have hAcceptSafe :
+      check required admitted access families (observe safeCoLive) = true :=
+    (hExact required admitted access families safeCoLive).2 hSafe
+  have hAcceptUnsafe :
+      check required admitted access families (observe badCoLive) = true := by
+    rw [← hCollision]
+    exact hAcceptSafe
+  exact hUnsafe
+    ((hExact required admitted access families badCoLive).1 hAcceptUnsafe)
 
 /-- Readiness fails for at least one of two semantic reasons: the physical
 implementation adds behavior, it cannot realize a required behavior, or both
@@ -1022,6 +1075,178 @@ theorem split_gateCut_uses_two_controllers :
 theorem each_cell_has_shared_access (u : Fin 3) :
     sharedAccess u false ∧ sharedAccess u true := by
   simp [sharedAccess]
+
+/-! ### Pairwise observation is insufficient -/
+
+/-- Three controller identities and three redemption cells are kept distinct;
+every controller can name every cell, while its local family may select only
+its own singleton. -/
+def completeAccess3 (_u : Fin 3) (_g : Fin 3) : Prop := True
+
+def singletonLocal3 (g : Fin 3) : Finset (Finset (Fin 3)) :=
+  ({g} : Finset (Fin 3)).powerset
+
+/-- The safe realization may co-schedule any controller set of size at most
+two. -/
+def pairwiseCoLive3 : CoLiveFamily (Fin 3) :=
+  (Finset.univ : Finset (Fin 3)).powerset.filter fun active =>
+    active.card ≤ 2
+
+/-- The unsafe realization allows every controller subset, including all
+three controllers together. -/
+def tripleCoLive3 : CoLiveFamily (Fin 3) :=
+  (Finset.univ : Finset (Fin 3)).powerset
+
+theorem pairwiseCoLive3_downwardClosed :
+    CoLiveDownwardClosed pairwiseCoLive3 := by
+  intro active hActive smaller hSubset
+  have hActiveCard : active.card ≤ 2 := by
+    simpa [pairwiseCoLive3] using hActive
+  have hSmallerCard : smaller.card ≤ 2 :=
+    (Finset.card_le_card hSubset).trans hActiveCard
+  simpa [pairwiseCoLive3] using hSmallerCard
+
+theorem tripleCoLive3_downwardClosed :
+    CoLiveDownwardClosed tripleCoLive3 := by
+  intro active hActive smaller hSubset
+  simp [tripleCoLive3]
+
+theorem singletonLocal3_sound :
+    LocalFamiliesSound rankTwoFamily completeAccess3 singletonLocal3 := by
+  intro g C hC
+  constructor
+  · simp only [rankTwoFamily, Finset.mem_filter, Finset.mem_univ, true_and]
+    have hCard := Finset.card_le_card (Finset.mem_powerset.mp hC)
+    have hSingleton : ({g} : Finset (Fin 3)).card = 1 := by simp
+    rw [hSingleton] at hCard
+    omega
+  · simp [PieceAccessible, completeAccess3]
+
+/-- Every physical configuration in the pairwise realization is admitted:
+local singleton choices make the chosen cells a subset of the active
+controllers, whose cardinality is at most two. -/
+theorem pairwise_raw_subset_rankTwo :
+    rawPhysicalCoverProduct completeAccess3 singletonLocal3 pairwiseCoLive3
+      ⊆ rankTwoFamily := by
+  intro C hC
+  obtain ⟨plan, hValid⟩ :=
+    (mem_rawPhysicalCoverProduct_iff
+      completeAccess3 singletonLocal3 pairwiseCoLive3 C).1 hC
+  have hActiveCard : plan.active.card ≤ 2 := by
+    simpa [pairwiseCoLive3] using hValid.1
+  have hSubset : C ⊆ plan.active := by
+    intro u huC
+    have huUnion : u ∈ plan.active.biUnion plan.piece := by
+      rw [hValid.2.2.2]
+      exact huC
+    obtain ⟨g, hgActive, huPiece⟩ := Finset.mem_biUnion.mp huUnion
+    have hPieceSubset : plan.piece g ⊆ ({g} : Finset (Fin 3)) :=
+      Finset.mem_powerset.mp (hValid.2.1 g hgActive)
+    have hug : u = g := by
+      simpa using hPieceSubset huPiece
+    simpa [hug] using hgActive
+  simp only [rankTwoFamily, Finset.mem_filter, Finset.mem_univ, true_and]
+  exact (Finset.card_le_card hSubset).trans hActiveCard
+
+/-- Every admitted rank-two configuration is also realizable by activating
+exactly its singleton controllers. -/
+theorem rankTwo_subset_pairwise_raw :
+    rankTwoFamily ⊆
+      rawPhysicalCoverProduct completeAccess3 singletonLocal3 pairwiseCoLive3 := by
+  intro C hC
+  rw [mem_rawPhysicalCoverProduct_iff]
+  let plan : CoverPlan (Fin 3) (Fin 3) :=
+    { active := C
+      piece := fun g => {g} }
+  refine ⟨plan, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · simp only [rankTwoFamily, Finset.mem_filter, Finset.mem_univ, true_and] at hC
+    simpa [plan, pairwiseCoLive3] using hC
+  · intro g hg
+    simp [plan, singletonLocal3]
+  · intro g hg
+    simp [plan, PieceAccessible, completeAccess3]
+  · ext u
+    simp [plan]
+
+theorem pairwise_raw_eq_rankTwo :
+    rawPhysicalCoverProduct completeAccess3 singletonLocal3 pairwiseCoLive3 =
+      rankTwoFamily :=
+  Finset.Subset.antisymm pairwise_raw_subset_rankTwo
+    rankTwo_subset_pairwise_raw
+
+theorem pairwise_realization_ready :
+    DeploymentReady rankTwoFamily rankTwoFamily
+      completeAccess3 singletonLocal3 pairwiseCoLive3 :=
+  ⟨rankTwo_subset_pairwise_raw, pairwise_raw_subset_rankTwo⟩
+
+def tripleSingletonCoverPlan : CoverPlan (Fin 3) (Fin 3) where
+  active := Finset.univ
+  piece := fun g => {g}
+
+theorem tripleSingletonCoverPlan_valid :
+    tripleSingletonCoverPlan.Valid
+      completeAccess3 singletonLocal3 tripleCoLive3 triple := by
+  refine ⟨by simp [tripleSingletonCoverPlan, tripleCoLive3], ?_, ?_, ?_⟩
+  · intro g hg
+    simp [tripleSingletonCoverPlan, singletonLocal3]
+  · intro g hg
+    simp [tripleSingletonCoverPlan, PieceAccessible, completeAccess3]
+  · ext u
+    constructor
+    · intro hu
+      exact Finset.mem_univ u
+    · intro hu
+      exact Finset.mem_biUnion.mpr
+        ⟨u, Finset.mem_univ u, by simp [tripleSingletonCoverPlan]⟩
+
+theorem triple_realization_gateCutWitness :
+    GateCutWitness rankTwoFamily completeAccess3 singletonLocal3
+      tripleCoLive3 triple := by
+  refine ⟨triple_minimalNonface, tripleSingletonCoverPlan,
+    tripleSingletonCoverPlan_valid, ?_⟩
+  intro g hg
+  exact (singletonLocal3_sound g (tripleSingletonCoverPlan.piece g)
+    (tripleSingletonCoverPlan_valid.2.1 g hg)).1
+
+theorem triple_realization_admits_forbidden_triple :
+    triple ∈ rawPhysicalCoverProduct
+        completeAccess3 singletonLocal3 tripleCoLive3 ∧
+      triple ∉ rankTwoFamily := by
+  constructor
+  · rw [mem_rawPhysicalCoverProduct_iff]
+    exact ⟨tripleSingletonCoverPlan, tripleSingletonCoverPlan_valid⟩
+  · exact triple_minimalNonface.2.1
+
+theorem triple_realization_not_ready :
+    ¬DeploymentReady rankTwoFamily rankTwoFamily
+      completeAccess3 singletonLocal3 tripleCoLive3 := by
+  intro hReady
+  exact triple_realization_admits_forbidden_triple.2
+    (hReady.2 triple_realization_admits_forbidden_triple.1)
+
+/-- The two realizations have exactly the same complete pairwise projection.
+Thus the collision is not an artifact of a lossy heuristic graph. -/
+theorem pairwise_projection_collision :
+    coLiveProjection 2 pairwiseCoLive3 =
+      coLiveProjection 2 tripleCoLive3 := by
+  decide
+
+/-- No checker that receives the required/admitted families, the complete
+access relation, every controller-local family, and the complete pairwise
+co-liveness projection can exactly decide deployment readiness.  The missing
+ternary fact changes the answer. -/
+theorem no_pairwise_observation_checker_exact
+    (check : Finset (Finset (Fin 3)) → Finset (Finset (Fin 3)) →
+      ControllerAccess (Fin 3) (Fin 3) →
+      LocalControllerFamilies (Fin 3) (Fin 3) →
+      CoLiveFamily (Fin 3) → Bool) :
+    ¬ExactThroughObservation (coLiveProjection 2) check :=
+  no_exact_checker_of_observation_collision
+    (coLiveProjection 2) check rankTwoFamily rankTwoFamily
+    completeAccess3 singletonLocal3 pairwiseCoLive3 tripleCoLive3
+    pairwise_projection_collision pairwise_realization_ready
+    triple_realization_not_ready
 
 end Fixtures
 

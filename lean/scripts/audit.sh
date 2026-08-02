@@ -125,6 +125,15 @@ frozen_constants=(
   physical_overpermission_has_gateCutWitness
   gateCut_uses_distinct_contributing_controllers
   split_controllers_admit_forbidden_triple
+  no_exact_checker_of_observation_collision
+  pairwise_raw_eq_rankTwo
+  pairwise_realization_ready
+  triple_realization_not_ready
+  triple_realization_gateCutWitness
+  pairwiseCoLive3_downwardClosed
+  tripleCoLive3_downwardClosed
+  pairwise_projection_collision
+  no_pairwise_observation_checker_exact
   fresh_preserves_safe
   step_preserves_phaseWF
   step_phase_mono

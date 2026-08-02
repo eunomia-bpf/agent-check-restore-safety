@@ -409,6 +409,33 @@ namespace AuthorityContinuity
 #check ControllerCoverAdmission.Fixtures.split_controllers_admit_forbidden_triple
 #print axioms ControllerCoverAdmission.Fixtures.split_controllers_admit_forbidden_triple
 
+#check ControllerCoverAdmission.no_exact_checker_of_observation_collision
+#print axioms ControllerCoverAdmission.no_exact_checker_of_observation_collision
+
+#check ControllerCoverAdmission.Fixtures.pairwise_realization_ready
+#print axioms ControllerCoverAdmission.Fixtures.pairwise_realization_ready
+
+#check ControllerCoverAdmission.Fixtures.pairwise_raw_eq_rankTwo
+#print axioms ControllerCoverAdmission.Fixtures.pairwise_raw_eq_rankTwo
+
+#check ControllerCoverAdmission.Fixtures.triple_realization_not_ready
+#print axioms ControllerCoverAdmission.Fixtures.triple_realization_not_ready
+
+#check ControllerCoverAdmission.Fixtures.triple_realization_gateCutWitness
+#print axioms ControllerCoverAdmission.Fixtures.triple_realization_gateCutWitness
+
+#check ControllerCoverAdmission.Fixtures.pairwiseCoLive3_downwardClosed
+#print axioms ControllerCoverAdmission.Fixtures.pairwiseCoLive3_downwardClosed
+
+#check ControllerCoverAdmission.Fixtures.tripleCoLive3_downwardClosed
+#print axioms ControllerCoverAdmission.Fixtures.tripleCoLive3_downwardClosed
+
+#check ControllerCoverAdmission.Fixtures.pairwise_projection_collision
+#print axioms ControllerCoverAdmission.Fixtures.pairwise_projection_collision
+
+#check ControllerCoverAdmission.Fixtures.no_pairwise_observation_checker_exact
+#print axioms ControllerCoverAdmission.Fixtures.no_pairwise_observation_checker_exact
+
 /-! Operational commitment core; topology-changing operators are separate. -/
 
 #check RedemptionCommitment.fresh_preserves_safe
