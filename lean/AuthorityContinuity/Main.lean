@@ -2,6 +2,7 @@ import AuthorityContinuity.Audit
 import AuthorityContinuity.PlanTokenStrengthening
 import AuthorityContinuity.TokenWeightedAccounting
 import AuthorityContinuity.ConfigurationCellQuotient
+import AuthorityContinuity.CoordinationDecomposition
 import AuthorityContinuity.RedemptionCommitment
 import AuthorityContinuity.RedemptionDomainFrontier
 
@@ -22,6 +23,12 @@ specialization, and three separating lifecycle examples.  The classical
 configuration-morphism bridge is replayed separately: it establishes the exact
 finite additive certificate while deliberately making no novelty claim for
 local injectivity or configuration preservation themselves.
+The exact coordination module characterizes candidate controller partitions by
+minimal nonfaces and identifies their connected-component closure as the
+least required co-location equivalence, whose classes give the finest exact
+partition up to block-label renaming.  Its static combinatorics are
+classical supporting machinery; the checked output is intended to drive a
+later typed Fork/Restore/Merge compiler.
 The operational commitment core separately derives unit-atom conservation,
 ledger/phase monotonicity, and exact fresh-event accounting for
 Prepare/Replay/Retry/Crash/Settle.  Fork/Restore/Merge preservation remains a

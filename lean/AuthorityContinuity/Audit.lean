@@ -3,6 +3,7 @@ import AuthorityContinuity.TopologyExamples
 import AuthorityContinuity.PlanTokenStrengthening
 import AuthorityContinuity.TokenWeightedAccounting
 import AuthorityContinuity.ConfigurationCellQuotient
+import AuthorityContinuity.CoordinationDecomposition
 import AuthorityContinuity.RedemptionCommitment
 import AuthorityContinuity.RedemptionDomainFrontier
 
@@ -249,6 +250,32 @@ namespace AuthorityContinuity
 
 #check ConfigurationCellQuotient.Fixtures.parallel_capacity_one_counterexample
 #print axioms ConfigurationCellQuotient.Fixtures.parallel_capacity_one_counterexample
+
+/-! Exact coordination factorization over future configuration families. -/
+
+#check CoordinationDecomposition.cut_minimalNonface_witness
+#print axioms CoordinationDecomposition.cut_minimalNonface_witness
+
+#check CoordinationDecomposition.exactFactorization_iff_minimalNonfaces_withinBlocks
+#print axioms CoordinationDecomposition.exactFactorization_iff_minimalNonfaces_withinBlocks
+
+#check CoordinationDecomposition.exactFactorization_iff_constant_on_mustCoordinate
+#print axioms CoordinationDecomposition.exactFactorization_iff_constant_on_mustCoordinate
+
+#check CoordinationDecomposition.cut_minimalNonface_additive_witness
+#print axioms CoordinationDecomposition.cut_minimalNonface_additive_witness
+
+#check CoordinationDecomposition.Fixtures.every_pair_allowed
+#print axioms CoordinationDecomposition.Fixtures.every_pair_allowed
+
+#check CoordinationDecomposition.Fixtures.splitBlock_admits_forbidden_triple
+#print axioms CoordinationDecomposition.Fixtures.splitBlock_admits_forbidden_triple
+
+#check CoordinationDecomposition.Fixtures.rankTwoFamily_not_exactly_factorized
+#print axioms CoordinationDecomposition.Fixtures.rankTwoFamily_not_exactly_factorized
+
+#check CoordinationDecomposition.Fixtures.rankTwoFamily_additive_counterexample
+#print axioms CoordinationDecomposition.Fixtures.rankTwoFamily_additive_counterexample
 
 /-! Operational commitment core; topology-changing operators are separate. -/
 

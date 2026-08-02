@@ -236,7 +236,8 @@ its minimal forbidden configurations are its minimal nonfaces.  For a
 partition of the support, the family factorizes as the join/product of its
 block restrictions exactly when every minimal nonface lies within one block.
 Equivalently, the connected components of the minimal-nonface hypergraph give
-the unique finest factorizing partition.  If a proposed controller partition
+the finest factorizing partition, unique up to block-label renaming.  If a
+proposed controller partition
 cuts a minimal nonface, locally allowed pieces can recombine into that globally
 forbidden outcome.  An indicator-weight policy supplies a concrete separating
 witness.  The rank-two family containing every subset of `{a,b,c}` of size at
