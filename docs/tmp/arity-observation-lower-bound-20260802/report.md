@@ -42,7 +42,7 @@ pairwise-to-global adapter obligation.
 - `no_exact_checker_of_observation_collision`
 - `pairwise_raw_eq_rankTwo`
 - `pairwise_realization_ready`
-- `triple_realization_gateCutWitness`
+- `triple_realization_correlationCutWitness`
 - `triple_realization_not_ready`
 - `pairwise_projection_collision`
 - `no_pairwise_observation_checker_exact`

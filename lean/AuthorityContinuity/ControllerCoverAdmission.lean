@@ -858,12 +858,12 @@ theorem physical_overpermission_is_correlationCut
   intro g hg
   exact (hSound g (plan.piece g) (hValid.2.1 g hg)).1
 
-/-! ## Minimal nonfaces and GateCut witnesses -/
+/-! ## Minimal nonfaces and correlation-cut witnesses -/
 
 /-- A physically realized minimal nonface whose active local pieces are all
 admitted.  The local-admittedness conjunct prevents a single locally
-overpermissive controller from being mislabeled as a GateCut. -/
-def GateCutWitness (admitted : Finset (Finset U))
+overpermissive controller from being mislabeled as a correlation cut. -/
+def CorrelationCutWitness (admitted : Finset (Finset U))
     (access : ControllerAccess U G)
     (families : LocalControllerFamilies U G)
     (coLive : CoLiveFamily G) (K : Finset U) : Prop :=
@@ -889,9 +889,9 @@ theorem physical_overpermission_contains_minimalNonface
   exact exists_minimalNonface_subset admitted hSupport hForbidden
 
 /-- With downward-closed local families, the minimal nonface can be obtained
-by restricting the same cover plan, so it is an actual physical GateCut
-witness rather than merely a forbidden subset. -/
-theorem physical_overpermission_has_gateCutWitness
+by restricting the same cover plan, so it is an actual physical correlation-
+cut witness rather than merely a forbidden subset. -/
+theorem physical_overpermission_has_correlationCutWitness
     (admitted : Finset (Finset U))
     (access : ControllerAccess U G)
     (families : LocalControllerFamilies U G)
@@ -902,7 +902,7 @@ theorem physical_overpermission_has_gateCutWitness
     (hPhysical : C ∈ physicalCoverProduct admitted access families coLive)
     (hForbidden : C ∉ admitted) :
     ∃ K : Finset U, K ⊆ C ∧
-      GateCutWitness admitted access families coLive K := by
+      CorrelationCutWitness admitted access families coLive K := by
   obtain ⟨K, hSubset, hMinimal⟩ :=
     physical_overpermission_contains_minimalNonface
       admitted access families coLive hPhysical hForbidden
@@ -914,15 +914,15 @@ theorem physical_overpermission_has_gateCutWitness
   intro g hg
   exact (hSound g (plan.piece g) (hValid.2.1 g hg)).1
 
-theorem gateCutWitness_overpermission
+theorem correlationCutWitness_overpermission
     (admitted : Finset (Finset U))
     (access : ControllerAccess U G)
     (families : LocalControllerFamilies U G)
     (coLive : CoLiveFamily G)
     {K : Finset U}
-    (hGateCut : GateCutWitness admitted access families coLive K) :
+    (hCut : CorrelationCutWitness admitted access families coLive K) :
     K ∈ physicalCoverProduct admitted access families coLive ∧ K ∉ admitted := by
-  obtain ⟨hMinimal, plan, hValid, _hLocal⟩ := hGateCut
+  obtain ⟨hMinimal, plan, hValid, _hLocal⟩ := hCut
   constructor
   · rw [mem_physicalCoverProduct_iff]
     exact ⟨hMinimal.1, plan, hValid⟩
@@ -930,7 +930,7 @@ theorem gateCutWitness_overpermission
 
 /-- For a genuine correlation cut, every active controller contributes only a
 proper subset of the forbidden minimal nonface. -/
-theorem gateCut_each_active_piece_proper
+theorem correlationCut_each_active_piece_proper
     (admitted : Finset (Finset U))
     {access : ControllerAccess U G}
     {families : LocalControllerFamilies U G}
@@ -954,9 +954,9 @@ theorem gateCut_each_active_piece_proper
   rw [← hEq]
   exact (hSound g (plan.piece g) (hLocal g hg)).1
 
-/-- A locally sound GateCut of a well-formed family necessarily uses at least
+/-- A locally sound correlation cut of a well-formed family necessarily uses at least
 two distinct controllers with nonempty contributions. -/
-theorem gateCut_uses_distinct_contributing_controllers
+theorem correlationCut_uses_distinct_contributing_controllers
     (admitted : Finset (Finset U))
     {access : ControllerAccess U G}
     {families : LocalControllerFamilies U G}
@@ -975,7 +975,7 @@ theorem gateCut_uses_distinct_contributing_controllers
     rw [hUnion]
     exact huK
   obtain ⟨g1, hg1, huPiece⟩ := Finset.mem_biUnion.mp huUnion
-  have hProper := gateCut_each_active_piece_proper admitted
+  have hProper := correlationCut_each_active_piece_proper admitted
     hSound hMinimal hValid g1 hg1
   have hMissing : ∃ v : U, v ∈ K ∧ v ∉ plan.piece g1 := by
     by_contra hNoMissing
@@ -998,7 +998,7 @@ theorem gateCut_uses_distinct_contributing_controllers
   exact ⟨g1, g2, hg1, hg2, hDistinct,
     ⟨u, huPiece⟩, ⟨v, hvPiece⟩⟩
 
-/-! ## A relational U(2,3) GateCut fixture -/
+/-! ## A relational U(2,3) correlation-cut fixture -/
 
 namespace Fixtures
 
@@ -1049,8 +1049,8 @@ theorem splitCoverPlan_valid :
   · ext u
     fin_cases u <;> simp [splitCoverPlan, splitPiece, triple]
 
-theorem triple_gateCutWitness :
-    GateCutWitness rankTwoFamily sharedAccess splitLocal splitCoLive triple := by
+theorem triple_correlationCutWitness :
+    CorrelationCutWitness rankTwoFamily sharedAccess splitLocal splitCoLive triple := by
   refine ⟨triple_minimalNonface, splitCoverPlan, splitCoverPlan_valid, ?_⟩
   intro g hg
   exact (splitLocal_sound g (splitCoverPlan.piece g)
@@ -1060,15 +1060,15 @@ theorem split_controllers_admit_forbidden_triple :
     triple ∈ physicalCoverProduct
         rankTwoFamily sharedAccess splitLocal splitCoLive ∧
       triple ∉ rankTwoFamily :=
-  gateCutWitness_overpermission
-    rankTwoFamily sharedAccess splitLocal splitCoLive triple_gateCutWitness
+  correlationCutWitness_overpermission
+    rankTwoFamily sharedAccess splitLocal splitCoLive triple_correlationCutWitness
 
-theorem split_gateCut_uses_two_controllers :
+theorem split_correlationCut_uses_two_controllers :
     ∃ g1 g2 : Bool,
       g1 ∈ splitCoverPlan.active ∧ g2 ∈ splitCoverPlan.active ∧ g1 ≠ g2 ∧
         (splitCoverPlan.piece g1).Nonempty ∧
         (splitCoverPlan.piece g2).Nonempty :=
-  gateCut_uses_distinct_contributing_controllers
+  correlationCut_uses_distinct_contributing_controllers
     rankTwoFamily rankTwoFamily_wellFormed splitLocal_sound
     triple_minimalNonface splitCoverPlan_valid
 
@@ -1200,8 +1200,8 @@ theorem tripleSingletonCoverPlan_valid :
       exact Finset.mem_biUnion.mpr
         ⟨u, Finset.mem_univ u, by simp [tripleSingletonCoverPlan]⟩
 
-theorem triple_realization_gateCutWitness :
-    GateCutWitness rankTwoFamily completeAccess3 singletonLocal3
+theorem triple_realization_correlationCutWitness :
+    CorrelationCutWitness rankTwoFamily completeAccess3 singletonLocal3
       tripleCoLive3 triple := by
   refine ⟨triple_minimalNonface, tripleSingletonCoverPlan,
     tripleSingletonCoverPlan_valid, ?_⟩

@@ -122,14 +122,14 @@ frozen_constants=(
   forbidden_valid_cover_cases
   rawPhysical_subset_admitted_iff_avoids_obstructions
   deploymentReady_iff_required_coverage_and_avoids_obstructions
-  physical_overpermission_has_gateCutWitness
-  gateCut_uses_distinct_contributing_controllers
+  physical_overpermission_has_correlationCutWitness
+  correlationCut_uses_distinct_contributing_controllers
   split_controllers_admit_forbidden_triple
   no_exact_checker_of_observation_collision
   pairwise_raw_eq_rankTwo
   pairwise_realization_ready
   triple_realization_not_ready
-  triple_realization_gateCutWitness
+  triple_realization_correlationCutWitness
   pairwiseCoLive3_downwardClosed
   tripleCoLive3_downwardClosed
   pairwise_projection_collision

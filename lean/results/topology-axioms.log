@@ -1143,19 +1143,20 @@ AuthorityContinuity.ControllerCoverAdmission.deploymentReady_iff_required_covera
 'AuthorityContinuity.ControllerCoverAdmission.deploymentReady_iff_required_coverage_and_avoids_obstructions' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
-AuthorityContinuity.ControllerCoverAdmission.physical_overpermission_has_gateCutWitness.{uU, uG} {U : Type uU}
+AuthorityContinuity.ControllerCoverAdmission.physical_overpermission_has_correlationCutWitness.{uU, uG} {U : Type uU}
   {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G] (admitted : Finset (Finset U))
   (access : ControllerCoverAdmission.ControllerAccess U G)
   (families : ControllerCoverAdmission.LocalControllerFamilies U G) (coLive : ControllerCoverAdmission.CoLiveFamily G)
   (hDown : ControllerCoverAdmission.LocalFamiliesDownwardClosed families)
   (hSound : ControllerCoverAdmission.LocalFamiliesSound admitted access families) {C : Finset U}
   (hPhysical : C ∈ ControllerCoverAdmission.physicalCoverProduct admitted access families coLive)
-  (hForbidden : C ∉ admitted) : ∃ K ⊆ C, ControllerCoverAdmission.GateCutWitness admitted access families coLive K
-'AuthorityContinuity.ControllerCoverAdmission.physical_overpermission_has_gateCutWitness' depends on axioms: [propext,
+  (hForbidden : C ∉ admitted) :
+  ∃ K ⊆ C, ControllerCoverAdmission.CorrelationCutWitness admitted access families coLive K
+'AuthorityContinuity.ControllerCoverAdmission.physical_overpermission_has_correlationCutWitness' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
-AuthorityContinuity.ControllerCoverAdmission.gateCut_uses_distinct_contributing_controllers.{uU, uG} {U : Type uU}
-  {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G] (admitted : Finset (Finset U))
+AuthorityContinuity.ControllerCoverAdmission.correlationCut_uses_distinct_contributing_controllers.{uU, uG}
+  {U : Type uU} {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G] (admitted : Finset (Finset U))
   {access : ControllerCoverAdmission.ControllerAccess U G}
   {families : ControllerCoverAdmission.LocalControllerFamilies U G} {coLive : ControllerCoverAdmission.CoLiveFamily G}
   {K : Finset U} {plan : ControllerCoverAdmission.CoverPlan U G}
@@ -1163,7 +1164,7 @@ AuthorityContinuity.ControllerCoverAdmission.gateCut_uses_distinct_contributing_
   (hSound : ControllerCoverAdmission.LocalFamiliesSound admitted access families)
   (hMinimal : CoordinationDecomposition.MinimalNonface admitted K) (hValid : plan.Valid access families coLive K) :
   ∃ g1 g2, g1 ∈ plan.active ∧ g2 ∈ plan.active ∧ g1 ≠ g2 ∧ (plan.piece g1).Nonempty ∧ (plan.piece g2).Nonempty
-'AuthorityContinuity.ControllerCoverAdmission.gateCut_uses_distinct_contributing_controllers' depends on axioms: [propext,
+'AuthorityContinuity.ControllerCoverAdmission.correlationCut_uses_distinct_contributing_controllers' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
 AuthorityContinuity.ControllerCoverAdmission.Fixtures.split_controllers_admit_forbidden_triple :
@@ -1212,11 +1213,11 @@ AuthorityContinuity.ControllerCoverAdmission.Fixtures.triple_realization_not_rea
 'AuthorityContinuity.ControllerCoverAdmission.Fixtures.triple_realization_not_ready' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
-AuthorityContinuity.ControllerCoverAdmission.Fixtures.triple_realization_gateCutWitness :
-  ControllerCoverAdmission.GateCutWitness CoordinationDecomposition.Fixtures.rankTwoFamily
+AuthorityContinuity.ControllerCoverAdmission.Fixtures.triple_realization_correlationCutWitness :
+  ControllerCoverAdmission.CorrelationCutWitness CoordinationDecomposition.Fixtures.rankTwoFamily
     ControllerCoverAdmission.Fixtures.completeAccess3 ControllerCoverAdmission.Fixtures.singletonLocal3
     ControllerCoverAdmission.Fixtures.tripleCoLive3 CoordinationDecomposition.Fixtures.triple
-'AuthorityContinuity.ControllerCoverAdmission.Fixtures.triple_realization_gateCutWitness' depends on axioms: [propext,
+'AuthorityContinuity.ControllerCoverAdmission.Fixtures.triple_realization_correlationCutWitness' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
 AuthorityContinuity.ControllerCoverAdmission.Fixtures.pairwiseCoLive3_downwardClosed :

@@ -57,7 +57,7 @@ builds the library, executes all `#print axioms` commands in
 | `forbidden_valid_cover_cases` | Every forbidden controller cover is honestly classified as outside-support, local overpermission, or a locally admitted correlation cut. |
 | `actual_prefixConfigMorphism_of_deploymentReady` | Under `Required <= Actual <= RawPhysical`, manifest readiness transports the admitted durable-prefix certificate to the actual runtime family. |
 | `rawPhysical_partition_eq_localProduct` / `canonicalPartition_deploymentReady_iff_mustCoordinate` | The canonical one-controller-per-cell adapter is a proved instance of the relational model, and its readiness criterion reduces to `MustCoordinate`. |
-| `split_controllers_admit_forbidden_triple` | A finite U(2,3) fixture exposes a higher-order GateCut that every pairwise check misses. |
+| `split_controllers_admit_forbidden_triple` | A finite U(2,3) fixture exposes a higher-order correlation cut that every pairwise check misses. |
 
 The legacy lifecycle names and logical roles above are frozen by the approved
 RQ3 experiment plan; the history-admission and controller-cover rows freeze the
