@@ -40,6 +40,7 @@ REPETITIONS = 5
 CELL_COUNTS = (4, 6, 8, 10, 12)
 OVERLAP_CELLS = 6
 CONTROLLER_COUNTS = (1, 2, 3, 4)
+PROJECTION_CONTROLLER_COUNTS = (2, 4, 6, 8, 10)
 CELL_CAP_FAILURE = 13
 CONTROLLER_CAP_FAILURE = 5
 
@@ -112,7 +113,7 @@ def _request(
             }
         )
     return {
-        "schema": "history-admission.request.v2",
+        "schema": "history-admission.request.v3",
         "request_id": request_id,
         "authority": {
             "id": "grant:scale",
@@ -217,6 +218,34 @@ def overlap_request(
     )
 
 
+def projection_overlap_request(
+    controller_count: int,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Full cell contract with unary Required and an exact unary projection."""
+
+    request, full_dimensions = overlap_request(controller_count)
+    names = _cell_names(OVERLAP_CELLS)
+    anchors = [f"controller:{index:02d}" for index in range(controller_count)]
+    request["request_id"] = f"scaling:projection-controllers:{controller_count}"
+    request["operation"]["checkpoint"]["required_maxima"] = [
+        [name] for name in names
+    ]
+    request["operation"]["controller_future_maxima"] = [
+        [anchor] for anchor in anchors
+    ]
+    request["operation"][
+        "controller_future_coverage"
+    ] = "exact_projection_through_r"
+    return request, {
+        **full_dimensions,
+        "analytically_reconstructed_submitted_pair_expansion_iterations": (
+            controller_count * (1 << OVERLAP_CELLS)
+        ),
+        "expected_required_coliveness_arity": 1,
+        "expected_physical_scope": "exact_projection_lower_bound",
+    }
+
+
 def _write_json(path: Path, value: Any) -> None:
     path.write_text(
         json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
@@ -273,7 +302,7 @@ def _run_passing_case(
     root: Path,
     label: str,
     request: dict[str, Any],
-    dimensions: dict[str, int],
+    dimensions: dict[str, Any],
 ) -> dict[str, Any]:
     case_root = root / label
     case_root.mkdir()
@@ -309,6 +338,19 @@ def _run_passing_case(
         )
         if result["coordination"]["status"] != "exact":
             raise RuntimeError(f"{label}: expected exact coordination")
+        expected_arity = dimensions.get("expected_required_coliveness_arity")
+        if (
+            expected_arity is not None
+            and result["coordination"]["required_coliveness_arity"]
+            != expected_arity
+        ):
+            raise RuntimeError(f"{label}: unexpected observation arity")
+        expected_scope = dimensions.get("expected_physical_scope")
+        if (
+            expected_scope is not None
+            and result["coordination"]["physical_scope"] != expected_scope
+        ):
+            raise RuntimeError(f"{label}: unexpected physical evidence scope")
         if result["co_liveness_repair"]["status"] != "not_needed":
             raise RuntimeError(
                 f"{label}: exact controller product unexpectedly needs repair"
@@ -435,6 +477,17 @@ def run_experiment() -> dict[str, Any]:
                     root, f"controllers-{count}", request, dimensions
                 )
             )
+        projection_rows = []
+        for count in PROJECTION_CONTROLLER_COUNTS:
+            request, dimensions = projection_overlap_request(count)
+            projection_rows.append(
+                _run_passing_case(
+                    root,
+                    f"projection-controllers-{count}",
+                    request,
+                    dimensions,
+                )
+            )
         cell_request, cell_dimensions = threshold_request(CELL_CAP_FAILURE)
         cell_failure = _run_failure_case(
             root,
@@ -465,7 +518,7 @@ def run_experiment() -> dict[str, Any]:
         )
         product_failure["full_pair_expansion_iteration_count_executed"] = False
     return {
-        "experiment": "history-admission-scaling-v1",
+        "experiment": "history-admission-scaling-v2",
         "role": "supporting",
         "timing_scope": (
             "fresh-process end-to-end CLI wall time; deterministic request "
@@ -506,6 +559,7 @@ def run_experiment() -> dict[str, Any]:
         },
         "cell_sweep": cell_rows,
         "controller_sweep": controller_rows,
+        "projection_sweep": projection_rows,
         "expected_failures": [cell_failure, product_failure],
         "correctness": {
             "all_passing_outputs_deterministic": True,
@@ -513,6 +567,7 @@ def run_experiment() -> dict[str, Any]:
             "minimal_nonface_oracles_matched": True,
             "exercised_source_cell_cap_failed_closed": True,
             "exercised_controller_product_iteration_cap_failed_closed": True,
+            "exact_projection_outputs_independently_verified": True,
         },
         "limitations": [
             "Synthetic manifests characterize the finite algorithm, not real-agent prevalence.",
@@ -521,6 +576,7 @@ def run_experiment() -> dict[str, Any]:
             "Only the source-cell and controller-product iteration limits are exercised; target-cell, controller-count, and expanded-configuration limits are not tested.",
             "Per-case requests, results, and seals use a temporary directory and are not archived; a clean pinned rerun is required to audit historical timings independently.",
             "The sweep does not justify extrapolation past the declared caps.",
+            "Projection exactness is supplied by the synthetic generator; the executables validate its shape but cannot observe the hidden full runtime family.",
         ],
     }
 

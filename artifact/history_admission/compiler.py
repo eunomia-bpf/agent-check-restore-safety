@@ -625,10 +625,14 @@ def _parse_request(document: Any) -> ParsedRequest:
         operation_obj["controller_future_coverage"],
         "$.operation.controller_future_coverage",
     )
-    if controller_future_coverage not in {"exact", "sound_overapprox"}:
+    if controller_future_coverage not in {
+        "exact",
+        "exact_projection_through_r",
+        "sound_overapprox",
+    }:
         raise SchemaError(
-            "$.operation.controller_future_coverage must be exact or "
-            "sound_overapprox"
+            "$.operation.controller_future_coverage must be exact, "
+            "exact_projection_through_r, or sound_overapprox"
         )
 
     occurrences: dict[OccurrenceRef, Occurrence] = {}
@@ -1069,6 +1073,28 @@ def _required_coliveness_arity(
     return max(required_arity, obstruction_arity, outside_arity)
 
 
+def _validate_exact_projection(parsed: ParsedRequest, arity: int) -> None:
+    """Check projection shape; equality to hidden Gamma is attested externally."""
+
+    if parsed.controller_future_coverage != "exact_projection_through_r":
+        return
+    if parsed.controllers and arity == 0:
+        raise SchemaError(
+            "exact_projection_through_r has r=0 but declares controllers; "
+            "submit full exact coverage instead"
+        )
+    oversized = [
+        config for config in parsed.controller_future if len(config) > arity
+    ]
+    if oversized:
+        first = _sorted_configs(oversized)[0]
+        raise SchemaError(
+            "$.operation.controller_future_maxima is not a projection through "
+            f"derived r={arity}: configuration {sorted(first)!r} has "
+            f"cardinality {len(first)}"
+        )
+
+
 def _coordination_components(family: Family) -> list[list[str]]:
     support = sorted(_support(family))
     parent = {cell: cell for cell in support}
@@ -1187,26 +1213,50 @@ def _coliveness_repair(
     missing_required = required - repaired_physical
     changes_coliveness = repaired_future != parsed.controller_future
     if missing_required:
-        status = "infeasible"
+        declared_product_status = "infeasible"
     elif changes_coliveness:
-        status = "feasible"
+        declared_product_status = "feasible"
     else:
-        status = "not_needed"
+        declared_product_status = "not_needed"
+
+    coverage = parsed.controller_future_coverage
+    if coverage == "exact":
+        kind = "co_liveness_only"
+        status = declared_product_status
+        coverage_scope = "declared_controller_product"
+        covered: bool | None = not missing_required
+        installation_required = status == "feasible"
+    elif coverage == "exact_projection_through_r":
+        kind = "co_liveness_projection_only"
+        status = declared_product_status
+        coverage_scope = "restricted_exact_projection"
+        covered = not missing_required
+        installation_required = status == "feasible"
+    elif coverage == "sound_overapprox":
+        kind = "co_liveness_upper_bound_only"
+        status = "diagnostic_upper_bound"
+        coverage_scope = "declared_upper_bound_product"
+        covered = False if missing_required else None
+        installation_required = False
+    else:
+        raise SchemaError(f"internal error: unsupported coverage mode {coverage!r}")
 
     return {
-        "kind": "co_liveness_only",
+        "kind": kind,
         "status": status,
+        "declared_product_status": declared_product_status,
         "restriction_maxima": _maxima(repaired_future),
-        "declared_coverage": parsed.controller_future_coverage,
+        "declared_coverage": coverage,
         "required_coverage": {
-            "scope": "declared_controller_product",
-            "covered": not missing_required,
+            "scope": coverage_scope,
+            "covered": covered,
+            "declared_product_covered": not missing_required,
             "covered_maxima": _maxima(frozenset(covered_required)),
             "missing_required": [
                 sorted(config) for config in _sorted_configs(missing_required)
             ],
         },
-        "installation_required": status == "feasible",
+        "installation_required": installation_required,
         "effect_authorizes": False,
     }
 
@@ -1230,6 +1280,53 @@ def _minimal_covering_controllers(
     return chosen
 
 
+def _scope_coordination_result(
+    coverage: str, result: dict[str, Any]
+) -> dict[str, Any]:
+    """Attach evidence scope and remove conclusions the evidence cannot prove."""
+
+    if result["status"] == "not_applicable":
+        result["physical_scope"] = "not_applicable"
+        result["declared_required_covered"] = None
+        result["required_coverage_accepted"] = None
+        return result
+
+    declared_required_covered = result["required_covered"]
+    result["declared_required_covered"] = declared_required_covered
+    if coverage == "exact":
+        result["physical_scope"] = "declared_full_product"
+        result["required_coverage_accepted"] = declared_required_covered
+        return result
+    if coverage == "exact_projection_through_r":
+        result["physical_scope"] = "exact_projection_lower_bound"
+        result["required_coverage_accepted"] = declared_required_covered
+        if result["status"] == "safe_restriction":
+            # The hidden full product may contain the omitted optional
+            # behavior.  Readiness is exact by the projection theorem, while
+            # full-family fidelity is intentionally left unknown.
+            result["status"] = "ready_fidelity_unknown"
+            result["exact_fidelity"] = None
+            result["witness"] = None
+        return result
+    if coverage != "sound_overapprox":
+        raise SchemaError(f"internal error: unsupported coverage mode {coverage!r}")
+
+    result["physical_scope"] = "declared_upper_bound_product"
+    result["required_coverage_accepted"] = False
+    result["exact_fidelity"] = None
+    if declared_required_covered:
+        # Required <= RawUpper says nothing about Required <= Actual.
+        result["required_covered"] = None
+    if result["status"] in {"exact", "safe_restriction"}:
+        result["status"] = "safety_upper_bound"
+        result["witness"] = None
+    elif result["status"] == "unsafe_overapprox":
+        result["status"] = "upper_bound_not_safe"
+    elif result["status"] == "unsafe_and_incomplete":
+        result["status"] = "upper_bound_not_safe_and_missing_required"
+    return result
+
+
 def _coordination_result(
     parsed: ParsedRequest,
     admitted: Family | None,
@@ -1238,7 +1335,7 @@ def _coordination_result(
     product_witnesses: Mapping[Config, dict[str, Any]] | None,
 ) -> dict[str, Any]:
     if admitted is None:
-        return {
+        return _scope_coordination_result(parsed.controller_future_coverage, {
             "status": "not_applicable",
             "required_covered": None,
             "admitted_respected": None,
@@ -1248,7 +1345,7 @@ def _coordination_result(
             "minimal_nonfaces": [],
             "components": [],
             "witness": None,
-        }
+        })
     if physical is None or product_witnesses is None:
         raise SchemaError("internal error: missing controller product analysis")
     nonfaces = _minimal_nonfaces(admitted)
@@ -1257,7 +1354,7 @@ def _coordination_result(
     missing = admitted - physical
     missing_required = required - physical
     if not extra and not missing:
-        return {
+        return _scope_coordination_result(parsed.controller_future_coverage, {
             "status": "exact",
             "required_covered": True,
             "admitted_respected": True,
@@ -1267,11 +1364,11 @@ def _coordination_result(
             "minimal_nonfaces": [sorted(config) for config in nonfaces],
             "components": components,
             "witness": None,
-        }
+        })
 
     if not extra and not missing_required:
         configuration = _sorted_configs(missing)[0]
-        return {
+        return _scope_coordination_result(parsed.controller_future_coverage, {
             "status": "safe_restriction",
             "required_covered": True,
             "admitted_respected": True,
@@ -1284,7 +1381,7 @@ def _coordination_result(
                 "kind": "OptionalBehaviorRestricted",
                 "missing_configuration": sorted(configuration),
             },
-        }
+        })
 
     witness: dict[str, Any]
     if extra:
@@ -1383,7 +1480,7 @@ def _coordination_result(
             "kind": "MissingRequiredBehavior",
             "required_configuration": sorted(configuration),
         }
-    return {
+    return _scope_coordination_result(parsed.controller_future_coverage, {
         "status": (
             "unsafe_and_incomplete"
             if extra and missing_required
@@ -1399,7 +1496,7 @@ def _coordination_result(
         "minimal_nonfaces": [sorted(config) for config in nonfaces],
         "components": components,
         "witness": witness,
-    }
+    })
 
 
 def _lease_results(parsed: ParsedRequest, semantic_class: str) -> list[dict[str, Any]]:
@@ -1471,6 +1568,16 @@ def compile_request(document: Any) -> dict[str, Any]:
             "reasons": obstructions[rejected_required],
         }
 
+    required_coliveness_arity = (
+        None
+        if admitted is None
+        else _required_coliveness_arity(
+            required, admitted, parsed.normalized_cells
+        )
+    )
+    if required_coliveness_arity is not None:
+        _validate_exact_projection(parsed, required_coliveness_arity)
+
     if admitted is None:
         coordination = _coordination_result(
             parsed, admitted, required, None, None
@@ -1495,17 +1602,34 @@ def compile_request(document: Any) -> dict[str, Any]:
         coliveness_repair = _coliveness_repair(
             parsed, required, repaired_future, repaired_physical
         )
-    coordination["required_coliveness_arity"] = (
-        None
-        if admitted is None
-        else _required_coliveness_arity(
-            required, admitted, parsed.normalized_cells
-        )
-    )
+    coordination["required_coliveness_arity"] = required_coliveness_arity
     restriction_required = semantic_class == "NeedsMechanism"
-    coordination_ready = coordination["status"] in {"exact", "safe_restriction"}
+    exact_coverage_evidence = parsed.controller_future_coverage in {
+        "exact",
+        "exact_projection_through_r",
+    }
+    declared_sandwich = bool(
+        coordination["declared_required_covered"] is True
+        and coordination["admitted_respected"] is True
+    )
+    coordination_ready = bool(
+        exact_coverage_evidence
+        and coordination["required_coverage_accepted"] is True
+        and coordination["admitted_respected"] is True
+    )
     if semantic_class == "Reject":
         readiness = "NotApplicable"
+    elif (
+        parsed.controller_future_coverage == "sound_overapprox"
+        and coordination["declared_required_covered"] is False
+    ):
+        readiness = (
+            "NeedsRestrictionAndCoordination"
+            if restriction_required
+            else "NeedsCoordination"
+        )
+    elif parsed.controller_future_coverage == "sound_overapprox":
+        readiness = "RequiresExactCoverage"
     elif restriction_required and coordination_ready:
         readiness = "ReadyWithRestriction"
     elif restriction_required:
@@ -1522,8 +1646,19 @@ def compile_request(document: Any) -> dict[str, Any]:
         "controller_installation_and_freshness",
         "manifest_ledger_and_receipt_authenticity",
         "runtime_required_coverage",
-        "runtime_soundness_against_declared_physical_family",
     ]
+    if parsed.controller_future_coverage == "exact_projection_through_r":
+        external_obligations.extend(
+            [
+                "controller_projection_exactness_attestation",
+                "hidden_coliveness_downward_closure",
+                "runtime_soundness_against_attested_full_controller_family",
+            ]
+        )
+    else:
+        external_obligations.append(
+            "runtime_soundness_against_declared_physical_family"
+        )
     if semantic_class in {"ReadmitOK", "NeedsMechanism"}:
         external_obligations.append("fresh_authority_issuance")
 
@@ -1613,7 +1748,7 @@ def compile_request(document: Any) -> dict[str, Any]:
         "deployment": {
             "restriction": (
                 "manifest_supplied"
-                if restriction_required and coordination_ready
+                if restriction_required and declared_sandwich
                 else "required"
                 if restriction_required
                 else "not_required"

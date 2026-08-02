@@ -886,10 +886,14 @@ def _parse_request(document: Any) -> _RequestModel:
         operation["controller_future_coverage"],
         "$.operation.controller_future_coverage",
     )
-    if controller_future_coverage not in {"exact", "sound_overapprox"}:
+    if controller_future_coverage not in {
+        "exact",
+        "exact_projection_through_r",
+        "sound_overapprox",
+    }:
         raise SchemaError(
-            "$.operation.controller_future_coverage must be exact or "
-            "sound_overapprox"
+            "$.operation.controller_future_coverage must be exact, "
+            "exact_projection_through_r, or sound_overapprox"
         )
 
     occurrences: dict[OccurrenceRef, _OccurrenceRow] = {}
@@ -1224,6 +1228,29 @@ def _required_coliveness_arity(
     return max(required_arity, obstruction_arity, outside_arity)
 
 
+def _validate_exact_projection(model: _RequestModel, arity: int) -> None:
+    """Check shape independently; equality to hidden Gamma is external."""
+
+    if model.controller_future_coverage != "exact_projection_through_r":
+        return
+    if model.controllers and arity == 0:
+        raise SchemaError(
+            "exact_projection_through_r has r=0 but declares controllers; "
+            "submit full exact coverage instead"
+        )
+    oversized = [
+        mask for mask in model.controller_future if mask.bit_count() > arity
+    ]
+    if oversized:
+        first = _ordered_masks(oversized, model.controller_names)[0]
+        raise SchemaError(
+            "$.operation.controller_future_maxima is not a projection through "
+            f"derived r={arity}: configuration "
+            f"{_mask_members(first, model.controller_names)!r} has cardinality "
+            f"{first.bit_count()}"
+        )
+
+
 def _components(family: MaskFamily, names: Sequence[str]) -> list[list[str]]:
     support = _support(family)
     adjacency: dict[int, set[int]] = {
@@ -1347,22 +1374,46 @@ def _coliveness_repair(
     missing_required = required - repaired_physical
     changes_coliveness = repaired_future != model.controller_future
     if missing_required:
-        status = "infeasible"
+        declared_product_status = "infeasible"
     elif changes_coliveness:
-        status = "feasible"
+        declared_product_status = "feasible"
     else:
-        status = "not_needed"
+        declared_product_status = "not_needed"
+
+    coverage = model.controller_future_coverage
+    if coverage == "exact":
+        kind = "co_liveness_only"
+        status = declared_product_status
+        coverage_scope = "declared_controller_product"
+        covered: bool | None = not missing_required
+        installation_required = status == "feasible"
+    elif coverage == "exact_projection_through_r":
+        kind = "co_liveness_projection_only"
+        status = declared_product_status
+        coverage_scope = "restricted_exact_projection"
+        covered = not missing_required
+        installation_required = status == "feasible"
+    elif coverage == "sound_overapprox":
+        kind = "co_liveness_upper_bound_only"
+        status = "diagnostic_upper_bound"
+        coverage_scope = "declared_upper_bound_product"
+        covered = False if missing_required else None
+        installation_required = False
+    else:
+        raise SchemaError(f"internal error: unsupported coverage mode {coverage!r}")
 
     return {
-        "kind": "co_liveness_only",
+        "kind": kind,
         "status": status,
+        "declared_product_status": declared_product_status,
         "restriction_maxima": _maxima(
             repaired_future, model.controller_names
         ),
-        "declared_coverage": model.controller_future_coverage,
+        "declared_coverage": coverage,
         "required_coverage": {
-            "scope": "declared_controller_product",
-            "covered": not missing_required,
+            "scope": coverage_scope,
+            "covered": covered,
+            "declared_product_covered": not missing_required,
             "covered_maxima": _maxima(
                 frozenset(covered_required), model.target_names
             ),
@@ -1371,7 +1422,7 @@ def _coliveness_repair(
                 for mask in _ordered_masks(missing_required, model.target_names)
             ],
         },
-        "installation_required": status == "feasible",
+        "installation_required": installation_required,
         "effect_authorizes": False,
     }
 
@@ -1404,6 +1455,49 @@ def _minimal_covering_controllers(
     return chosen
 
 
+def _scope_coordination(
+    coverage: str, result: dict[str, Any]
+) -> dict[str, Any]:
+    """Independently scope conclusions to the submitted evidence mode."""
+
+    if result["status"] == "not_applicable":
+        result["physical_scope"] = "not_applicable"
+        result["declared_required_covered"] = None
+        result["required_coverage_accepted"] = None
+        return result
+
+    declared_required_covered = result["required_covered"]
+    result["declared_required_covered"] = declared_required_covered
+    if coverage == "exact":
+        result["physical_scope"] = "declared_full_product"
+        result["required_coverage_accepted"] = declared_required_covered
+        return result
+    if coverage == "exact_projection_through_r":
+        result["physical_scope"] = "exact_projection_lower_bound"
+        result["required_coverage_accepted"] = declared_required_covered
+        if result["status"] == "safe_restriction":
+            result["status"] = "ready_fidelity_unknown"
+            result["exact_fidelity"] = None
+            result["witness"] = None
+        return result
+    if coverage != "sound_overapprox":
+        raise SchemaError(f"internal error: unsupported coverage mode {coverage!r}")
+
+    result["physical_scope"] = "declared_upper_bound_product"
+    result["required_coverage_accepted"] = False
+    result["exact_fidelity"] = None
+    if declared_required_covered:
+        result["required_covered"] = None
+    if result["status"] in {"exact", "safe_restriction"}:
+        result["status"] = "safety_upper_bound"
+        result["witness"] = None
+    elif result["status"] == "unsafe_overapprox":
+        result["status"] = "upper_bound_not_safe"
+    elif result["status"] == "unsafe_and_incomplete":
+        result["status"] = "upper_bound_not_safe_and_missing_required"
+    return result
+
+
 def _coordination(
     model: _RequestModel,
     admitted: MaskFamily | None,
@@ -1412,7 +1506,7 @@ def _coordination(
     product_witnesses: Mapping[Mask, dict[str, Any]] | None,
 ) -> dict[str, Any]:
     if admitted is None:
-        return {
+        return _scope_coordination(model.controller_future_coverage, {
             "status": "not_applicable",
             "required_covered": None,
             "admitted_respected": None,
@@ -1422,7 +1516,7 @@ def _coordination(
             "minimal_nonfaces": [],
             "components": [],
             "witness": None,
-        }
+        })
     if physical is None or product_witnesses is None:
         raise SchemaError("internal error: missing controller product analysis")
     nonfaces = _minimal_nonfaces(admitted, model.target_names)
@@ -1431,7 +1525,7 @@ def _coordination(
     missing = admitted - physical
     missing_required = required - physical
     if not extra and not missing:
-        return {
+        return _scope_coordination(model.controller_future_coverage, {
             "status": "exact",
             "required_covered": True,
             "admitted_respected": True,
@@ -1443,11 +1537,11 @@ def _coordination(
             ],
             "components": components,
             "witness": None,
-        }
+        })
 
     if not extra and not missing_required:
         configuration = _ordered_masks(missing, model.target_names)[0]
-        return {
+        return _scope_coordination(model.controller_future_coverage, {
             "status": "safe_restriction",
             "required_covered": True,
             "admitted_respected": True,
@@ -1464,7 +1558,7 @@ def _coordination(
                     configuration, model.target_names
                 ),
             },
-        }
+        })
 
     if extra:
         configuration = _ordered_masks(extra, model.target_names)[0]
@@ -1582,7 +1676,7 @@ def _coordination(
                 configuration, model.target_names
             ),
         }
-    return {
+    return _scope_coordination(model.controller_future_coverage, {
         "status": (
             "unsafe_and_incomplete"
             if extra and missing_required
@@ -1600,7 +1694,7 @@ def _coordination(
         ],
         "components": components,
         "witness": witness,
-    }
+    })
 
 
 def _lease_results(model: _RequestModel, semantic_class: str) -> list[dict[str, Any]]:
@@ -1670,6 +1764,16 @@ def _expected_result(document: Any) -> dict[str, Any]:
             "reasons": obstructions[rejected],
         }
 
+    required_coliveness_arity = (
+        None
+        if admitted is None
+        else _required_coliveness_arity(
+            required, admitted, len(model.target_names)
+        )
+    )
+    if required_coliveness_arity is not None:
+        _validate_exact_projection(model, required_coliveness_arity)
+
     if admitted is None:
         coordination = _coordination(
             model, admitted, required, None, None
@@ -1694,17 +1798,34 @@ def _expected_result(document: Any) -> dict[str, Any]:
         coliveness_repair = _coliveness_repair(
             model, required, repaired_future, repaired_physical
         )
-    coordination["required_coliveness_arity"] = (
-        None
-        if admitted is None
-        else _required_coliveness_arity(
-            required, admitted, len(model.target_names)
-        )
-    )
+    coordination["required_coliveness_arity"] = required_coliveness_arity
     restriction_required = semantic_class == "NeedsMechanism"
-    controllers_exact = coordination["status"] in {"exact", "safe_restriction"}
+    exact_coverage_evidence = model.controller_future_coverage in {
+        "exact",
+        "exact_projection_through_r",
+    }
+    declared_sandwich = bool(
+        coordination["declared_required_covered"] is True
+        and coordination["admitted_respected"] is True
+    )
+    controllers_exact = bool(
+        exact_coverage_evidence
+        and coordination["required_coverage_accepted"] is True
+        and coordination["admitted_respected"] is True
+    )
     if semantic_class == "Reject":
         readiness = "NotApplicable"
+    elif (
+        model.controller_future_coverage == "sound_overapprox"
+        and coordination["declared_required_covered"] is False
+    ):
+        readiness = (
+            "NeedsRestrictionAndCoordination"
+            if restriction_required
+            else "NeedsCoordination"
+        )
+    elif model.controller_future_coverage == "sound_overapprox":
+        readiness = "RequiresExactCoverage"
     elif restriction_required and controllers_exact:
         readiness = "ReadyWithRestriction"
     elif restriction_required:
@@ -1721,8 +1842,19 @@ def _expected_result(document: Any) -> dict[str, Any]:
         "controller_installation_and_freshness",
         "manifest_ledger_and_receipt_authenticity",
         "runtime_required_coverage",
-        "runtime_soundness_against_declared_physical_family",
     ]
+    if model.controller_future_coverage == "exact_projection_through_r":
+        external_obligations.extend(
+            [
+                "controller_projection_exactness_attestation",
+                "hidden_coliveness_downward_closure",
+                "runtime_soundness_against_attested_full_controller_family",
+            ]
+        )
+    else:
+        external_obligations.append(
+            "runtime_soundness_against_declared_physical_family"
+        )
     if semantic_class in {"ReadmitOK", "NeedsMechanism"}:
         external_obligations.append("fresh_authority_issuance")
 
@@ -1824,7 +1956,7 @@ def _expected_result(document: Any) -> dict[str, Any]:
         "deployment": {
             "restriction": (
                 "manifest_supplied"
-                if restriction_required and controllers_exact
+                if restriction_required and declared_sandwich
                 else "required"
                 if restriction_required
                 else "not_required"
@@ -1858,6 +1990,9 @@ def verify_result(request: Any, result: Any) -> dict[str, Any]:
         valid
         and semantic_class in {"Inherit", "ReadmitOK", "NeedsMechanism"}
         and readiness in {"Ready", "ReadyWithRestriction"}
+        and expected["coordination"]["required_coverage_accepted"] is True
+        and expected["controllers"]["co_live_coverage"]
+        in {"exact", "exact_projection_through_r"}
     )
     return {
         "schema": VERIFICATION_SCHEMA,
@@ -1903,6 +2038,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         valid
         and semantic_class in {"Inherit", "ReadmitOK", "NeedsMechanism"}
         and readiness in {"Ready", "ReadyWithRestriction"}
+        and expected["coordination"]["required_coverage_accepted"] is True
+        and expected["controllers"]["co_live_coverage"]
+        in {"exact", "exact_projection_through_r"}
     )
     seal = {
         "schema": VERIFICATION_SCHEMA,

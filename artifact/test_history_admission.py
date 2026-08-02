@@ -73,7 +73,7 @@ def higher_order_request() -> dict:
         for name in ("a", "b", "c")
     }
     return {
-        "schema": "history-admission.request.v2",
+        "schema": "history-admission.request.v3",
         "request_id": "fixture:higher-order-u23",
         "authority": {
             "id": "grant:H",
@@ -145,6 +145,32 @@ def higher_order_request() -> dict:
             "controller_future_coverage": "exact",
         },
     }
+
+
+def unary_projection_request() -> dict:
+    """A full three-cell contract whose exact readiness arity is one."""
+
+    request = higher_order_request()
+    request["request_id"] = "fixture:unary-exact-projection"
+    request["authority"]["allowed_maxima"] = [
+        ["grant:H:0", "grant:H:1", "grant:H:2", "grant:H:3"]
+    ]
+    request["source"]["future_maxima"] = [["old-a", "old-b", "old-c"]]
+    request["operation"]["checkpoint"]["may_maxima"] = [["a", "b", "c"]]
+    request["operation"]["checkpoint"]["required_maxima"] = [
+        ["a"],
+        ["b"],
+        ["c"],
+    ]
+    request["operation"]["controller_future_maxima"] = [
+        ["controller:a"],
+        ["controller:b"],
+        ["controller:c"],
+    ]
+    request["operation"][
+        "controller_future_coverage"
+    ] = "exact_projection_through_r"
+    return request
 
 
 def retag_binary_operator(
@@ -231,7 +257,7 @@ def refinement_oracle_request(
         ]
         controller_future = [["controller:oracle"]]
     return {
-        "schema": "history-admission.request.v2",
+        "schema": "history-admission.request.v3",
         "request_id": "oracle:refinement",
         "authority": {
             "id": "grant:oracle",
@@ -291,7 +317,7 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
         second_use["id"] = "gate-use:choice-alias"
         request["operation"]["gate_uses"].append(second_use)
         result = compile_base(request)
-        self.assertEqual("history-admission.result.v3", result["schema"])
+        self.assertEqual("history-admission.result.v4", result["schema"])
         self.assertEqual("Inherit", result["semantic_admission"]["class"])
         self.assertEqual("Ready", result["deployment"]["readiness"])
         self.assertTrue(result["history_admission"]["structurally_eligible"])
@@ -357,13 +383,63 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
             result["co_liveness_repair"]["declared_coverage"],
         )
         self.assertEqual(
-            "declared_controller_product",
+            "declared_upper_bound_product",
             result["co_liveness_repair"]["required_coverage"]["scope"],
         )
+        self.assertEqual(
+            "co_liveness_upper_bound_only",
+            result["co_liveness_repair"]["kind"],
+        )
+        self.assertEqual(
+            "diagnostic_upper_bound", result["co_liveness_repair"]["status"]
+        )
+        self.assertEqual("safety_upper_bound", result["coordination"]["status"])
+        self.assertEqual(
+            "declared_upper_bound_product",
+            result["coordination"]["physical_scope"],
+        )
+        self.assertIsNone(result["coordination"]["required_covered"])
+        self.assertTrue(result["coordination"]["declared_required_covered"])
+        self.assertFalse(result["coordination"]["required_coverage_accepted"])
+        self.assertEqual(
+            "RequiresExactCoverage", result["deployment"]["readiness"]
+        )
+        self.assertFalse(result["history_admission"]["structurally_eligible"])
+        seal = verify_result(request, result)
+        self.assertFalse(seal["structurally_admits"])
+        self.assertEqual("diagnostic", seal["seal_kind"])
         self.assertIn(
             "controller_coliveness_coverage_attestation",
             result["history_admission"]["external_obligations"],
         )
+
+    def test_sound_upper_bound_missing_required_needs_coordination(self) -> None:
+        request = base_request()
+        left_ref = {"role": "left", "local_id": "left-effect"}
+        request["operation"]["gate_uses"] = [
+            {
+                "id": "gate-use:left-upper",
+                "gate_origin": "gate-origin:left-upper",
+                "controller_anchor": "controller:left-upper",
+                "controller_version": 1,
+                "members": [left_ref],
+                "local_maxima": [[left_ref]],
+            }
+        ]
+        request["operation"]["controller_future_maxima"] = [
+            ["controller:left-upper"]
+        ]
+        request["operation"]["controller_future_coverage"] = "sound_overapprox"
+        result = compile_request(request)
+        self.assertEqual("missing_required", result["coordination"]["status"])
+        self.assertFalse(result["coordination"]["declared_required_covered"])
+        self.assertFalse(result["coordination"]["required_coverage_accepted"])
+        self.assertEqual("NeedsCoordination", result["deployment"]["readiness"])
+        self.assertEqual(
+            "infeasible",
+            result["co_liveness_repair"]["declared_product_status"],
+        )
+        self.assertFalse(verify_result(request, result)["structurally_admits"])
 
     def test_optional_unsafe_parallel_future_accepts_manifest_restriction(self) -> None:
         request = base_request()
@@ -810,6 +886,78 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
             3, pairwise_result["coordination"]["required_coliveness_arity"]
         )
 
+    def test_exact_projection_preserves_readiness_not_optional_fidelity(self) -> None:
+        projection = unary_projection_request()
+        result = compile_request(projection)
+        self.assertEqual(1, result["coordination"]["required_coliveness_arity"])
+        self.assertEqual(
+            "exact_projection_lower_bound",
+            result["coordination"]["physical_scope"],
+        )
+        self.assertEqual(
+            "ready_fidelity_unknown", result["coordination"]["status"]
+        )
+        self.assertTrue(result["coordination"]["required_covered"])
+        self.assertTrue(result["coordination"]["required_coverage_accepted"])
+        self.assertTrue(result["coordination"]["admitted_respected"])
+        self.assertIsNone(result["coordination"]["exact_fidelity"])
+        self.assertIsNone(result["coordination"]["witness"])
+        self.assertEqual("Ready", result["deployment"]["readiness"])
+        seal = verify_result(projection, result)
+        self.assertTrue(seal["structurally_admits"])
+        self.assertEqual("history_admission", seal["seal_kind"])
+
+        full_triple = deepcopy(projection)
+        full_triple["operation"]["controller_future_coverage"] = "exact"
+        full_triple["operation"]["controller_future_maxima"] = [
+            ["controller:a", "controller:b", "controller:c"]
+        ]
+        full_result = compile_request(full_triple)
+        self.assertEqual("Ready", full_result["deployment"]["readiness"])
+        self.assertTrue(full_result["coordination"]["exact_fidelity"])
+
+        full_pairwise = deepcopy(projection)
+        full_pairwise["operation"]["controller_future_coverage"] = "exact"
+        full_pairwise["operation"]["controller_future_maxima"] = [
+            ["controller:a", "controller:b"],
+            ["controller:a", "controller:c"],
+            ["controller:b", "controller:c"],
+        ]
+        self.assertEqual(
+            "Ready", compile_request(full_pairwise)["deployment"]["readiness"]
+        )
+
+    def test_exact_projection_rejects_group_above_derived_arity(self) -> None:
+        request = unary_projection_request()
+        request["operation"]["controller_future_maxima"] = [
+            ["controller:a", "controller:b"],
+            ["controller:c"],
+        ]
+        with self.assertRaisesRegex(SchemaError, "derived r=1"):
+            compile_request(request)
+        with self.assertRaisesRegex(SchemaError, "derived r=1"):
+            verify_result(request, {})
+
+    def test_exact_projection_zero_arity_with_controllers_fails_closed(self) -> None:
+        request = unary_projection_request()
+        request["operation"]["checkpoint"]["required_maxima"] = [[]]
+        with self.assertRaisesRegex(SchemaError, "r=0"):
+            compile_request(request)
+
+    def test_projection_repair_is_scoped_to_submitted_projection(self) -> None:
+        request = higher_order_request()
+        request["operation"][
+            "controller_future_coverage"
+        ] = "exact_projection_through_r"
+        result = compile_request(request)
+        repair = result["co_liveness_repair"]
+        self.assertEqual("co_liveness_projection_only", repair["kind"])
+        self.assertEqual(
+            "restricted_exact_projection", repair["required_coverage"]["scope"]
+        )
+        self.assertEqual("feasible", repair["status"])
+        self.assertTrue(repair["installation_required"])
+
     def test_all_six_typed_operators_follow_choice_tensor_semantics(self) -> None:
         expected = {
             "ForkChoice": "Inherit",
@@ -860,7 +1008,7 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
         with self.assertRaisesRegex(SchemaError, "rebound source receipt"):
             compile_base(request)
 
-    def test_request_v2_and_strict_json_fail_closed(self) -> None:
+    def test_request_v3_and_strict_json_fail_closed(self) -> None:
         with self.assertRaisesRegex(SchemaError, "duplicate JSON object key"):
             loads_json('{"schema":"a","schema":"b"}')
         with self.assertRaisesRegex(SchemaError, "floating-point"):
@@ -868,7 +1016,7 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
 
         request = base_request()
         request["schema"] = "history-admission.request.v1"
-        with self.assertRaisesRegex(SchemaError, "history-admission.request.v2"):
+        with self.assertRaisesRegex(SchemaError, "history-admission.request.v3"):
             compile_base(request)
 
         request = base_request()
@@ -878,7 +1026,7 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
 
         request = base_request()
         request["operation"]["controller_future_coverage"] = "pairwise"
-        with self.assertRaisesRegex(SchemaError, "exact or sound_overapprox"):
+        with self.assertRaisesRegex(SchemaError, "exact_projection_through_r"):
             compile_base(request)
 
     def test_raw_manifest_caps_fail_closed(self) -> None:
@@ -971,7 +1119,7 @@ class HistoryAdmissionVerifierTests(unittest.TestCase):
         completed = self._run_cli(request, compile_base(request))
         self.assertEqual(0, completed.returncode, completed.stderr)
         seal = verify_result(request, compile_base(request))
-        self.assertEqual("history-admission.verification.v3", seal["schema"])
+        self.assertEqual("history-admission.verification.v4", seal["schema"])
         self.assertTrue(seal["valid"])
         self.assertTrue(seal["structurally_admits"])
         self.assertFalse(seal["effect_authorizes"])
@@ -981,6 +1129,20 @@ class HistoryAdmissionVerifierTests(unittest.TestCase):
         request = higher_order_request()
         completed = self._run_cli(request, compile_request(request))
         self.assertEqual(0, completed.returncode, completed.stderr)
+
+    def test_verifier_accepts_exact_projection_result(self) -> None:
+        request = unary_projection_request()
+        result = compile_request(request)
+        completed = self._run_cli(request, result)
+        self.assertEqual(0, completed.returncode, completed.stderr)
+        self.assertTrue(verify_result(request, result)["structurally_admits"])
+
+    def test_verifier_rejects_tampered_projection_scope(self) -> None:
+        request = unary_projection_request()
+        result = compile_request(request)
+        result["coordination"]["physical_scope"] = "declared_full_product"
+        completed = self._run_cli(request, result)
+        self.assertEqual(3, completed.returncode)
 
     def test_verifier_rejects_tampered_semantic_class(self) -> None:
         request = base_request()

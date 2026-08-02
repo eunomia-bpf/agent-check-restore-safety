@@ -42,11 +42,13 @@ mediation, controller freshness, atomic redemption, and refinement between the
 declared controller product and the runtime's actual behavior.  `Reject` is
 always diagnostic.
 
-The request schema is version 2; result and verification schemas are version
-3.  Request version 2 makes `operation.controller_future_coverage` mandatory.
-Result version 3 retains the version-2 coverage/readiness fields and adds the
-canonical `co_liveness_repair` proposal described below.  The verifier schema
-is bumped because it now authenticates that additional result surface.
+The request schema is version 3; result and verification schemas are version
+4.  Request version 3 adds the theorem-guided
+`exact_projection_through_r` controller-evidence mode.  Result version 4
+scopes the computed physical family, distinguishes declared from accepted
+required coverage, and prevents a `sound_overapprox` from receiving a Ready
+decision or structural seal.  The verifier independently authenticates this
+surface.
 
 ## Quick start
 
@@ -66,11 +68,14 @@ python3 -m unittest -v test_history_admission
 Both programs reject duplicate JSON keys, floats, unknown fields, missing
 receipt bindings, nonmonotone receipt phases, undeclared reuse of a stable cell
 anchor, an alias that changes the commitment or effect binding, silently
-inactive declared controllers, and inputs beyond the finite analysis caps.  A
-verified `Reject` is a valid diagnostic result and exits successfully;
-malformed input or an invalid certificate exits nonzero.  An arm marked
-`sound_overapprox` yields a conservative result relative to that declared
-overapproximation; the result records this precision explicitly.
+inactive declared controllers, projection members above the independently
+derived arity whenever an admitted family exists, and inputs beyond the finite
+analysis caps.  A verified
+`Reject` is a valid diagnostic result and exits successfully; malformed input
+or an invalid certificate exits nonzero.  An arm marked `sound_overapprox`
+yields a conservative result relative to that declared overapproximation.  A
+controller family marked `sound_overapprox` is diagnostic only and can never
+receive a structural seal.
 
 ## Co-liveness contract and observation arity
 
@@ -87,19 +92,29 @@ the same contract.  Receipt-frontier growth starts a new decision.
 the compiler or verifier.  `exact` says the submitted family is the complete
 runtime co-liveness family for that epoch.  `sound_overapprox` says it contains
 every actually co-live controller set, while allowing extra sets.  A truthful
-overapproximation preserves the upper safety check but may conservatively
-request coordination or reject; it does not establish that every required
-future is implementable.  The latter remains the separate
-`runtime_required_coverage` obligation.  In either mode, the parser checks only
-the enum value.  The runtime adapter must establish the attestation and the
-`Actual <= RawPhysical` relation.
+overapproximation can prove upper safety when its whole product is admitted,
+but `Required <= RawUpper` does not prove `Required <= Actual`; this mode now
+returns `RequiresExactCoverage` when the upper bound covers `Required`, or a
+definite coordination failure when even the upper bound does not, and never a
+structural seal.  Any overpermission witness in this mode belongs to the
+declared upper bound and is not evidence that `Actual` exercised it.
+
+`exact_projection_through_r` says the submitted family is exactly
+`Pi_{<=r}(Gamma)`, where the compiler and verifier independently derive `r`
+from the required and admitted contracts.  The parser expands the submitted
+maxima downward, and both executables reject any member above `r`; exactness
+relative to the hidden full `Gamma` remains an adapter obligation.  Under the
+Lean theorem's fixed-access, fixed-downward-closed-local-family, and
+downward-closed-`Gamma` assumptions, this projection preserves both required
+coverage and physical safety, and therefore preserves readiness.
 
 In particular, a list of pairwise projections is not a complete Gamma for a
 runtime in which three controllers may contribute before the next prefix
-recheck.  Such a runtime may not label that projection `exact`; nor is the
-projection a sound overapproximation.  The prototype consumes the full
-declared Gamma (or a sound overapproximation of it) when constructing
-`RawPhysical`.
+recheck.  It may be submitted as `exact_projection_through_r` only when the
+submitted sets do not exceed the derived `r` and the adapter attests that the
+list is the complete projection of the hidden downward-closed Gamma through
+that `r`.  Calling such a list `exact` or `sound_overapprox` would describe a
+different contract.
 
 For every non-`Reject` decision, the result also reports
 `coordination.required_coliveness_arity`:
@@ -110,22 +125,22 @@ r* = max(max{|x| : x in Required},
          1 if a target cell is outside support(Admitted), else 0).
 ```
 
-This contract-derived number is an engineering diagnostic: it bounds the size
-of controller groups whose nonempty local contributions may be relevant to a
-required configuration or an admitted-family obstruction.  For example, the
-`U(2,3)` fixture reports `r*=3`, even though every pair is admitted, because
-its only minimal nonface is the triple.  `Reject` reports `null` because there
-is no admitted deployment family.  The current prototype neither uses `r*` to
-truncate Gamma nor accepts an `r*`-wise projection in place of full coverage.
-The Lean development proves that complete projections through `r*` preserve
-readiness (under fixed access, fixed downward-closed local families, and
-downward-closed co-liveness), as well as an arbitrary-arity lower bound; the
-executable deliberately retains the simpler full-family interface.
+This contract-derived number bounds the size of controller groups whose
+nonempty local contributions can witness a required configuration or an
+admitted-family obstruction.  For example, the `U(2,3)` fixture reports
+`r*=3`, even though every pair is admitted, because its only minimal nonface is
+the triple.  `Reject` reports `null` because there is no admitted deployment
+family.  Version 3 uses this theorem operationally: the projection mode
+enumerates only the submitted lower-order family.  Its `physical_maxima`
+therefore has scope `exact_projection_lower_bound`; when readiness holds but
+optional behavior is absent from that lower bound, status is
+`ready_fidelity_unknown` and `exact_fidelity` is `null` rather than false.
 
 ## Canonical co-liveness-only repair
 
-For each non-`Reject` decision, `co_liveness_repair` filters the declared full
-co-liveness family without changing any controller's local permission family.
+For each non-`Reject` decision, `co_liveness_repair` filters the submitted
+co-liveness evidence without changing any controller's local permission
+family.
 Writing `E_i` for controller `i`'s downward-closed local family and `A` for
 `Admitted`, it computes
 
@@ -147,24 +162,32 @@ canonical `restriction_maxima`.  It also obtains the physical product under
 configuration rather than taking the downward closure of that generally
 non-downward-closed difference.
 
-The status is `not_needed` when the declared Gamma is already safe and covers
-the required family, `feasible` when a strict Gamma restriction is safe and
-still covers every required configuration, and `infeasible` when no
-co-liveness-only restriction can retain declared-product required coverage.
+Under `exact`, the status is `not_needed` when the declared Gamma is already
+safe and covers the required family, `feasible` when a strict Gamma
+restriction is safe and still covers every required configuration, and
+`infeasible` when no co-liveness-only restriction can retain declared-product
+required coverage.
 Only `feasible` sets `installation_required` to true.  A local overpermission
 can therefore be diagnosed as infeasible: preventing controllers from being
 co-live cannot repair a forbidden choice made by one controller while still
 retaining behavior that needs that controller.
 
+Under `exact_projection_through_r`, the output kind is
+`co_liveness_projection_only`: it is the greatest safe restriction of the
+submitted projection, not a claim about the maxima of the hidden full Gamma.
+Installing it means using that restricted projection as a concrete full
+co-liveness policy (thereby disallowing unlisted higher-order groups), pruning
+any controller declarations that become unreachable, and then resubmitting.
+Under `sound_overapprox`, the kind is
+`co_liveness_upper_bound_only`, status is `diagnostic_upper_bound`, and
+installation is never claimed sufficient.
+
 This object is an offline proposal, not an installed policy.  It always sets
 `effect_authorizes` to false and does not alter the submitted manifest,
 `deployment.readiness`, `history_admission.structurally_eligible`, or the
 verifier's seal kind.  The runtime must install the restriction and submit a
-new manifest before it can affect readiness.  With `sound_overapprox`, the
-proposal safely filters the declared upper bound, but its required-coverage
-claim remains explicitly scoped to `declared_controller_product`; it cannot
-prove `Required <= Actual`.  `Reject` has no `Admitted` family and therefore
-reports `co_liveness_repair: null`.
+new manifest before it can affect readiness.  `Reject` has no `Admitted`
+family and therefore reports `co_liveness_repair: null`.
 
 ## Proof crosswalk and scope
 
@@ -211,11 +234,14 @@ admitted but their union is not.  Only the last class is emitted as a
 configuration may expose different causes; the tool does not claim a globally
 unique root cause.
 
-The model-level check is `Required <= RawPhysical <= Admitted`.  If `Actual` is
-the runtime family, deployment correctness additionally requires
-`Required <= Actual <= RawPhysical <= Admitted`.  The verifier cannot infer the
-relations involving `Actual` from a manifest, so it records runtime soundness
-and required coverage as external obligations.
+With full `exact` evidence, the model-level check is
+`Required <= Raw(Gamma) <= Admitted`.  With `sound_overapprox`, the tool can
+establish only `Actual <= RawUpper <= Admitted`; required coverage remains
+unproved.  With `exact_projection_through_r`, it directly checks the sandwich
+for `Raw(P)` and uses the projection theorem to lift both halves to the hidden
+full `Gamma`; `Raw(P)` itself is not an upper bound on `Actual`.  The verifier
+cannot establish any adapter attestation or runtime refinement, so it records
+those facts as external obligations in every mode.
 
 The seal is conditional on the manifest being a truthful, completely mediated
 runtime abstraction.  This artifact does not authenticate receipts or leases,

@@ -13,9 +13,9 @@ import unicodedata
 from typing import Any, Iterable, Mapping
 
 
-REQUEST_SCHEMA = "history-admission.request.v2"
-RESULT_SCHEMA = "history-admission.result.v3"
-VERIFICATION_SCHEMA = "history-admission.verification.v3"
+REQUEST_SCHEMA = "history-admission.request.v3"
+RESULT_SCHEMA = "history-admission.result.v4"
+VERIFICATION_SCHEMA = "history-admission.verification.v4"
 
 MAX_ATOMS = 16
 MAX_SOURCE_CELLS = 12

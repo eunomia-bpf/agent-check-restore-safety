@@ -38,27 +38,25 @@ implementation may safely omit optional behavior without being confused with
 a GateClone over-approximation.  Its seal certifies structural history
 admission only; it deliberately does not authorize an external effect.
 
-The history-admission request schema is version 2, while result and verifier
-schemas are version 3.  The request requires the adapter to label the declared
-controller co-liveness family as `exact` or a
-`sound_overapprox`; this label is an external coverage attestation, not a fact
-the parser can establish.  Results echo that label and report
-`coordination.required_coliveness_arity` (`r*`), a contract-derived diagnostic
-for the largest sandwich-relevant required configuration or obstruction.  The
-prototype still consumes the full declared co-liveness family Gamma (or a
-sound overapproximation): neither a pairwise projection nor an `r*`-wise
-projection is accepted as a substitute for full coverage.  See
-`history_admission/README.md` for the fixed-prefix semantics and boundary.
+The history-admission request schema is version 3, while result and verifier
+schemas are version 4.  The adapter labels controller co-liveness evidence as
+`exact`, `sound_overapprox`, or `exact_projection_through_r`; this is an
+external attestation, not a fact the parser can establish.  Both executables
+derive `coordination.required_coliveness_arity` (`r*`) from `Required` and
+`Admitted`.  In projection mode they reject submitted controller groups above
+`r*`, enumerate only the exact lower-order projection, and use the Lean
+readiness theorem to decide the hidden full family.  In contrast,
+`sound_overapprox` can prove an upper safety bound but never obtains a Ready
+decision or structural seal.  See `history_admission/README.md` for the
+fixed-prefix semantics and boundary.
 
-For every non-`Reject` result, the tool also proposes the unique greatest
-downward-closed subset of declared Gamma whose independent controller product
-stays within `Admitted`.  It reports canonical restriction maxima, declared-
-product coverage of `Required`, exact missing required configurations, and a
-`not_needed`, `feasible`, or `infeasible` status.  This co-liveness-only repair
-is diagnostic: it neither changes readiness nor authorizes an effect, and a
-feasible restriction must be installed and resubmitted before it can support a
-seal.  Under `sound_overapprox`, required coverage remains an upper-bound-model
-claim rather than evidence about the runtime's actual family.
+For every non-`Reject` result, the tool also filters the submitted controller
+family to its greatest safe subfamily.  Under `exact`, this is a full-Gamma
+repair.  Under `exact_projection_through_r`, it is explicitly a
+projection-only concrete restriction, not the maxima of the hidden full
+Gamma.  Under `sound_overapprox`, it is diagnostic upper-bound information and
+is never marked installable.  Every proposal remains non-authorizing and must
+be installed and resubmitted before it can affect a later decision.
 
 Run the unit tests and deterministic exhaustive explorer from this directory:
 
@@ -205,3 +203,10 @@ lake exe cache get
 lake build AuthorityContinuity
 bash scripts/audit.sh
 ```
+
+The scaling driver includes a theory-directed projection sweep.  On its
+six-cell full contract, the submitted unary projection grows from 128 product
+iterations at two controllers to 640 at ten, while reconstructing the hidden
+full powerset would grow from 4,288 to 16,846,784 iterations and cross the
+200,000 fail-closed cap at five controllers.  These are deterministic loop
+counts for a synthetic workload; wall-clock values remain machine-specific.
