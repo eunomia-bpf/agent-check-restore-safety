@@ -114,6 +114,15 @@ frozen_constants=(
   choice_shared_controller_exact
   parallel_has_no_shared_lease_refinement
   parallel_shared_lease_has_no_pruning_repair
+  rawPhysicalCoverProduct_mono_coLive
+  safeGroup_of_subset
+  hereditarySafeCoLiveRestriction_subset
+  hereditarySafeCoLiveRestriction_downwardClosed
+  hereditarySafeCoLiveRestriction_rawPhysical_safe
+  hereditarySafeCoLiveRestriction_greatest
+  required_subset_hereditarySafeCoLiveRestriction_iff_exists_deploymentReady
+  prefixThenControllerRepair_rawPhysical_safe
+  prefixThenControllerRepair_greatest
   not_deploymentReady_iff_overpermission_or_missingRequired
   actual_prefixConfigMorphism_of_deploymentReady
   functionalPartition_deploymentReady_iff_mustCoordinate

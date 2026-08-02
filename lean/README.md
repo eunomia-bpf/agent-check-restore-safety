@@ -57,6 +57,9 @@ a completed check.
 | `effect_coverage` | Finite stable operation IDs injectively bound to durable claims, with aggregate actual demand bounded per claim, consume no more than total durable demand. |
 | `concrete_trace_authority_safety` | Under explicit mediation and forward-simulation premises, actual protected effects plus any currently permitted conditional bundle fit within capacity. |
 | `classifyAdmission_sound` | The typed Fork/Restore/Merge classifier returns only inheritance, full readmission, pruning repair, or rejection justified by its semantic predicates. |
+| `hereditarySafeCoLiveRestriction_subset` / `hereditarySafeCoLiveRestriction_downwardClosed` / `hereditarySafeCoLiveRestriction_rawPhysical_safe` | Filtering `Gamma` by `SafeGroup(G) := RawPhysical(G.powerset) <= Admitted` removes no outside group, preserves downward closure, and leaves only admitted physical behavior. |
+| `hereditarySafeCoLiveRestriction_greatest` / `required_subset_hereditarySafeCoLiveRestriction_iff_exists_deploymentReady` | The filter is the greatest downward-closed, physically safe subfamily of `Gamma`; it covers `Required` exactly when some downward-closed deployment-ready restriction of `Gamma` exists. |
+| `prefixThenControllerRepair_greatest` | Composing the greatest durable-prefix filter `safeFuture` with the greatest hereditary-safe controller filter is jointly principal: every prefix-safe candidate pruning and subordinate safe controller repair embeds in the computed two-level repair. |
 | `deploymentReady_iff_required_coverage_and_avoids_obstructions` | Raw controller-product readiness is exactly required coverage plus avoidance of support escape and realizable minimal nonfaces. |
 | `rawPhysicalCoverProduct_has_card_bounded_plan` | Every physical realization of a cell configuration `C` can be compressed to at most `|C|` active controllers when co-liveness is downward closed. |
 | `deploymentReady_iff_of_contract_observation` | Two downward-closed controller realizations with the same co-liveness projection through a contract bound have the same readiness decision. The bound covers maximum required size, maximum admitted minimal-nonface size, and unary outside-support witnesses. |
@@ -95,6 +98,18 @@ minimal nonface or a realizable outside-support singleton.  The arbitrary-`k`
 fixture is a worst-case necessity theorem, not a claim that this conservative
 contract-only maximum is minimal for each concrete access/local-family
 manifest.
+
+The controller repair is also canonical under the paper's stated control
+boundary.  For each active group `G`, `SafeGroup(G)` checks the raw product of
+the entire powerset of `G`, not only the maximal group.  Filtering a supplied
+downward-closed co-liveness family `Gamma` by this predicate yields
+`Gamma*`: a downward-closed safe restriction that contains every other
+downward-closed safe `Delta <= Gamma`.  Consequently, required behavior
+survives `Gamma*` exactly when any deployment-ready co-liveness pruning can
+preserve it.  This maximality assumes the runtime can disable co-liveness
+groups; it does not synthesize new access paths or controller-local choices.
+The `prefixThenControllerRepair_greatest` theorem links this controller-level
+principal repair to the earlier configuration-level `safeFuture` filter.
 
 Two audited auxiliary theorems, `trace_terminal_mono` and `trace_epoch_mono`,
 lift one-step terminal-ID and branch/grant epoch monotonicity over the same

@@ -253,6 +253,134 @@ theorem rawPhysicalCoverProduct_downwardClosed
   obtain ⟨plan, hValid⟩ := hC
   exact ⟨plan.restrict K, plan.restrict_valid hValid hSubset hDown⟩
 
+/-! ## Canonical hereditary-safe co-liveness restriction -/
+
+/-- Enlarging the co-live family can only add physical realizations. -/
+theorem rawPhysicalCoverProduct_mono_coLive
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    {left right : CoLiveFamily G}
+    (hSubset : left ⊆ right) :
+    rawPhysicalCoverProduct access families left ⊆
+      rawPhysicalCoverProduct access families right := by
+  intro C hC
+  rw [mem_rawPhysicalCoverProduct_iff] at hC ⊢
+  obtain ⟨plan, hValid⟩ := hC
+  exact ⟨plan, ⟨hSubset hValid.1, hValid.2⟩⟩
+
+/-- An active controller group is hereditarily safe when every physical
+realization enabled by any subset of that group is admitted.  The powerset is
+essential: checking only the group itself would not make safety survive later
+controller removal when the input co-liveness manifest is not trusted to
+encode all subsets correctly. -/
+def SafeGroup (admitted : Finset (Finset U))
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (active : Finset G) : Prop :=
+  rawPhysicalCoverProduct access families active.powerset ⊆ admitted
+
+/-- Hereditary group safety itself is downward closed. -/
+theorem safeGroup_of_subset
+    (admitted : Finset (Finset U))
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    {active smaller : Finset G}
+    (hSafe : SafeGroup admitted access families active)
+    (hSubset : smaller ⊆ active) :
+    SafeGroup admitted access families smaller := by
+  intro C hC
+  apply hSafe
+  refine rawPhysicalCoverProduct_mono_coLive access families
+    (left := smaller.powerset) (right := active.powerset) ?_ hC
+  intro group hGroup
+  exact Finset.mem_powerset.mpr
+    ((Finset.mem_powerset.mp hGroup).trans hSubset)
+
+/-- The canonical repair removes exactly the co-live groups whose hereditary
+physical behavior is not admitted. -/
+noncomputable def hereditarySafeCoLiveRestriction
+    (admitted : Finset (Finset U))
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (coLive : CoLiveFamily G) : CoLiveFamily G := by
+  classical
+  exact coLive.filter fun active => SafeGroup admitted access families active
+
+theorem mem_hereditarySafeCoLiveRestriction_iff
+    (admitted : Finset (Finset U))
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (coLive : CoLiveFamily G) (active : Finset G) :
+    active ∈ hereditarySafeCoLiveRestriction admitted access families coLive ↔
+      active ∈ coLive ∧ SafeGroup admitted access families active := by
+  classical
+  simp [hereditarySafeCoLiveRestriction]
+
+/-- The canonical repair is a restriction of the supplied manifest. -/
+theorem hereditarySafeCoLiveRestriction_subset
+    (admitted : Finset (Finset U))
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (coLive : CoLiveFamily G) :
+    hereditarySafeCoLiveRestriction admitted access families coLive ⊆ coLive := by
+  intro active hActive
+  exact ((mem_hereditarySafeCoLiveRestriction_iff
+    admitted access families coLive active).1 hActive).1
+
+/-- Filtering a downward-closed manifest by hereditary safety preserves
+downward closure. -/
+theorem hereditarySafeCoLiveRestriction_downwardClosed
+    (admitted : Finset (Finset U))
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (coLive : CoLiveFamily G)
+    (hDown : CoLiveDownwardClosed coLive) :
+    CoLiveDownwardClosed
+      (hereditarySafeCoLiveRestriction admitted access families coLive) := by
+  intro active hActive smaller hSubset
+  rw [mem_hereditarySafeCoLiveRestriction_iff] at hActive ⊢
+  exact ⟨hDown active hActive.1 smaller hSubset,
+    safeGroup_of_subset admitted access families hActive.2 hSubset⟩
+
+/-- Every physical configuration left by the canonical repair is admitted. -/
+theorem hereditarySafeCoLiveRestriction_rawPhysical_safe
+    (admitted : Finset (Finset U))
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (coLive : CoLiveFamily G) :
+    rawPhysicalCoverProduct access families
+        (hereditarySafeCoLiveRestriction admitted access families coLive) ⊆
+      admitted := by
+  intro C hC
+  rw [mem_rawPhysicalCoverProduct_iff] at hC
+  obtain ⟨plan, hValid⟩ := hC
+  have hActive := (mem_hereditarySafeCoLiveRestriction_iff
+    admitted access families coLive plan.active).1 hValid.1
+  apply hActive.2
+  rw [mem_rawPhysicalCoverProduct_iff]
+  exact ⟨plan, ⟨Finset.mem_powerset.mpr Finset.Subset.rfl, hValid.2⟩⟩
+
+/-- Principality: every downward-closed, physically safe subfamily of the
+supplied manifest is contained in the canonical repair. -/
+theorem hereditarySafeCoLiveRestriction_greatest
+    (admitted : Finset (Finset U))
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (coLive delta : CoLiveFamily G)
+    (hDeltaDown : CoLiveDownwardClosed delta)
+    (hDeltaSubset : delta ⊆ coLive)
+    (hDeltaSafe : rawPhysicalCoverProduct access families delta ⊆ admitted) :
+    delta ⊆ hereditarySafeCoLiveRestriction admitted access families coLive := by
+  intro active hActive
+  rw [mem_hereditarySafeCoLiveRestriction_iff]
+  refine ⟨hDeltaSubset hActive, ?_⟩
+  intro C hC
+  apply hDeltaSafe
+  refine rawPhysicalCoverProduct_mono_coLive access families
+    (left := active.powerset) (right := delta) ?_ hC
+  intro smaller hSmaller
+  exact hDeltaDown active hActive smaller (Finset.mem_powerset.mp hSmaller)
+
 /-! ## Readiness and failure decomposition -/
 
 /-- Deployment readiness checks the raw physical product.  `required` records
@@ -264,6 +392,94 @@ def DeploymentReady (required admitted : Finset (Finset U))
     (coLive : CoLiveFamily G) : Prop :=
   required ⊆ rawPhysicalCoverProduct access families coLive ∧
     rawPhysicalCoverProduct access families coLive ⊆ admitted
+
+/-- The canonical repair admits the required behaviors exactly when some
+downward-closed safe restriction of the supplied manifest can do so.  Thus the
+filter is not merely sound: it is the principal repair for deployment
+readiness under controllable co-liveness pruning. -/
+theorem required_subset_hereditarySafeCoLiveRestriction_iff_exists_deploymentReady
+    (required admitted : Finset (Finset U))
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (coLive : CoLiveFamily G)
+    (hCoLiveDown : CoLiveDownwardClosed coLive) :
+    required ⊆ rawPhysicalCoverProduct access families
+        (hereditarySafeCoLiveRestriction admitted access families coLive) ↔
+      ∃ delta : CoLiveFamily G,
+        CoLiveDownwardClosed delta ∧
+          delta ⊆ coLive ∧
+          DeploymentReady required admitted access families delta := by
+  constructor
+  · intro hRequired
+    exact ⟨hereditarySafeCoLiveRestriction admitted access families coLive,
+      hereditarySafeCoLiveRestriction_downwardClosed admitted access families
+        coLive hCoLiveDown,
+      hereditarySafeCoLiveRestriction_subset admitted access families coLive,
+      hRequired,
+      hereditarySafeCoLiveRestriction_rawPhysical_safe admitted access families
+        coLive⟩
+  · rintro ⟨delta, hDeltaDown, hDeltaSubset, hReady⟩
+    exact Finset.Subset.trans hReady.1
+      (rawPhysicalCoverProduct_mono_coLive access families
+        (hereditarySafeCoLiveRestriction_greatest admitted access families
+          coLive delta hDeltaDown hDeltaSubset hReady.2))
+
+/-! ### Bridge to durable-prefix pruning -/
+
+universe uS
+
+variable {A : Type uS} [Fintype A] [DecidableEq A]
+
+/-- The two-level principal repair first computes the greatest pointwise
+prefix-safe candidate future, then computes the greatest hereditary-safe
+co-liveness restriction against that admitted future. -/
+noncomputable def prefixThenControllerRepair
+    (source : Finset (Finset A)) (durable : Finset A)
+    (candidate : Finset (Finset U)) (ell : U → A)
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (coLive : CoLiveFamily G) : CoLiveFamily G :=
+  hereditarySafeCoLiveRestriction
+    (safeFuture source durable candidate ell) access families coLive
+
+/-- The second level admits only behavior that survived the first-level
+durable-prefix filter. -/
+theorem prefixThenControllerRepair_rawPhysical_safe
+    (source : Finset (Finset A)) (durable : Finset A)
+    (candidate : Finset (Finset U)) (ell : U → A)
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (coLive : CoLiveFamily G) :
+    rawPhysicalCoverProduct access families
+        (prefixThenControllerRepair source durable candidate ell
+          access families coLive) ⊆
+      safeFuture source durable candidate ell := by
+  exact hereditarySafeCoLiveRestriction_rawPhysical_safe
+    (safeFuture source durable candidate ell) access families coLive
+
+/-- Joint principality of the two repair levels.  If `admitted` is any
+prefix-safe pruning of `candidate`, and `delta` is any downward-closed
+co-liveness pruning whose physical product stays within `admitted`, then
+`delta` is contained in the repair obtained from the two greatest filters. -/
+theorem prefixThenControllerRepair_greatest
+    (source : Finset (Finset A)) (durable : Finset A)
+    (candidate admitted : Finset (Finset U)) (ell : U → A)
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (coLive delta : CoLiveFamily G)
+    (hAdmittedSubset : admitted ⊆ candidate)
+    (hPrefixSafe : PrefixConfigMorphism source durable admitted ell)
+    (hDeltaDown : CoLiveDownwardClosed delta)
+    (hDeltaSubset : delta ⊆ coLive)
+    (hDeltaPhysical : rawPhysicalCoverProduct access families delta ⊆ admitted) :
+    delta ⊆ prefixThenControllerRepair source durable candidate ell
+      access families coLive := by
+  apply hereditarySafeCoLiveRestriction_greatest
+    (safeFuture source durable candidate ell) access families
+    coLive delta hDeltaDown hDeltaSubset
+  exact Finset.Subset.trans hDeltaPhysical
+    (safeFuture_greatest source durable candidate admitted ell
+      hAdmittedSubset hPrefixSafe)
 
 def Overpermission (admitted : Finset (Finset U))
     (access : ControllerAccess U G)
