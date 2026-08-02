@@ -149,6 +149,203 @@ theorem normalizedAccess_distinct_distinct (cell controller : Bool) :
   cases cell <;> cases controller <;>
     simp [normalizedAccess, distinctCellOf, distinctControllerOf]
 
+/-! ## Well-structuredness of every quotient world -/
+
+/-- The fixture assumptions used by deployment readiness are explicit: the
+semantic future and every local/controller family are downward closed, and
+local choices are both admitted and access-valid. -/
+def WellStructured (cellOf controllerOf : Bool → Bool) : Prop :=
+  SourceFamilyWellFormed (normalizedFuture cellOf) ∧
+    LocalFamiliesDownwardClosed (normalizedLocal cellOf controllerOf) ∧
+    LocalFamiliesSound
+      (normalizedFuture cellOf)
+      (normalizedAccess cellOf controllerOf)
+      (normalizedLocal cellOf controllerOf) ∧
+    CoLiveDownwardClosed (normalizedCoLive controllerOf)
+
+theorem singletonFuture_wellFormed :
+    SourceFamilyWellFormed (({false} : Finset Bool).powerset) := by
+  refine ⟨⟨∅, by simp⟩, by simp, ?_⟩
+  intro C K hC hSubset
+  exact Finset.mem_powerset.mpr
+    (hSubset.trans (Finset.mem_powerset.mp hC))
+
+theorem rawHandleFuture_wellFormed :
+    SourceFamilyWellFormed rawHandleFuture := by
+  refine ⟨⟨∅, by simp [rawHandleFuture, exclusiveTarget]⟩,
+    by simp [rawHandleFuture, exclusiveTarget], ?_⟩
+  intro C K hC hSubset
+  simp only [rawHandleFuture, exclusiveTarget, Finset.mem_insert,
+    Finset.mem_singleton] at hC ⊢
+  rcases hC with rfl | rfl | rfl
+  · exact Or.inl (Finset.Subset.antisymm hSubset (Finset.empty_subset K))
+  · by_cases hEmpty : K = ∅
+    · exact Or.inl hEmpty
+    · obtain ⟨cell, hCell⟩ := Finset.nonempty_iff_ne_empty.mpr hEmpty
+      have hCellFalse : cell = false := by simpa using hSubset hCell
+      subst cell
+      exact Or.inr (Or.inl (Finset.Subset.antisymm hSubset (by simpa)))
+  · by_cases hEmpty : K = ∅
+    · exact Or.inl hEmpty
+    · obtain ⟨cell, hCell⟩ := Finset.nonempty_iff_ne_empty.mpr hEmpty
+      have hCellTrue : cell = true := by simpa using hSubset hCell
+      subst cell
+      exact Or.inr (Or.inr (Finset.Subset.antisymm hSubset (by simpa)))
+
+theorem normalizedFuture_shared_wellFormed :
+    SourceFamilyWellFormed (normalizedFuture sharedCellOf) := by
+  rw [normalizedFuture_shared]
+  exact singletonFuture_wellFormed
+
+theorem normalizedFuture_distinct_wellFormed :
+    SourceFamilyWellFormed (normalizedFuture distinctCellOf) := by
+  rw [normalizedFuture_distinct]
+  exact rawHandleFuture_wellFormed
+
+theorem normalizedCoLive_shared_downwardClosed :
+    CoLiveDownwardClosed (normalizedCoLive sharedControllerOf) := by
+  intro active hActive smaller hSubset
+  rw [normalizedCoLive_shared] at hActive ⊢
+  exact Finset.mem_powerset.mpr
+    (hSubset.trans (Finset.mem_powerset.mp hActive))
+
+theorem normalizedCoLive_distinct_downwardClosed :
+    CoLiveDownwardClosed (normalizedCoLive distinctControllerOf) := by
+  intro active hActive smaller hSubset
+  rw [normalizedCoLive_distinct]
+  simp [rawGateCoLive]
+
+theorem normalizedLocal_shared_shared_downwardClosed :
+    LocalFamiliesDownwardClosed
+      (normalizedLocal sharedCellOf sharedControllerOf) := by
+  intro controller C K hC hSubset
+  rw [normalizedLocal_shared_shared] at hC ⊢
+  by_cases hc : controller = false
+  · simp only [hc, ↓reduceIte] at hC ⊢
+    exact Finset.mem_powerset.mpr
+      (hSubset.trans (Finset.mem_powerset.mp hC))
+  · simp [hc] at hC
+
+theorem normalizedLocal_shared_distinct_downwardClosed :
+    LocalFamiliesDownwardClosed
+      (normalizedLocal sharedCellOf distinctControllerOf) := by
+  intro controller C K hC hSubset
+  rw [normalizedLocal_shared_distinct] at hC ⊢
+  exact Finset.mem_powerset.mpr
+    (hSubset.trans (Finset.mem_powerset.mp hC))
+
+theorem normalizedLocal_distinct_shared_downwardClosed :
+    LocalFamiliesDownwardClosed
+      (normalizedLocal distinctCellOf sharedControllerOf) := by
+  intro controller C K hC hSubset
+  rw [normalizedLocal_distinct_shared] at hC ⊢
+  by_cases hc : controller = false
+  · simp only [hc, ↓reduceIte] at hC ⊢
+    exact rawHandleFuture_wellFormed.downwardClosed hC hSubset
+  · simp [hc] at hC
+
+theorem normalizedLocal_distinct_distinct_downwardClosed :
+    LocalFamiliesDownwardClosed
+      (normalizedLocal distinctCellOf distinctControllerOf) := by
+  intro controller C K hC hSubset
+  rw [normalizedLocal_distinct_distinct] at hC ⊢
+  exact Finset.mem_powerset.mpr
+    (hSubset.trans (Finset.mem_powerset.mp hC))
+
+theorem normalizedLocal_shared_shared_sound :
+    LocalFamiliesSound
+      (normalizedFuture sharedCellOf)
+      (normalizedAccess sharedCellOf sharedControllerOf)
+      (normalizedLocal sharedCellOf sharedControllerOf) := by
+  intro controller C hC
+  rw [normalizedLocal_shared_shared] at hC
+  by_cases hc : controller = false
+  · subst controller
+    simp only [↓reduceIte] at hC
+    constructor
+    · rw [normalizedFuture_shared]
+      exact hC
+    · intro cell hCell
+      rw [normalizedAccess_shared_shared]
+      have hSubset := Finset.mem_powerset.mp hC
+      exact ⟨by simpa using hSubset hCell, rfl⟩
+  · simp [hc] at hC
+
+theorem normalizedLocal_shared_distinct_sound :
+    LocalFamiliesSound
+      (normalizedFuture sharedCellOf)
+      (normalizedAccess sharedCellOf distinctControllerOf)
+      (normalizedLocal sharedCellOf distinctControllerOf) := by
+  intro controller C hC
+  rw [normalizedLocal_shared_distinct] at hC
+  constructor
+  · rw [normalizedFuture_shared]
+    exact hC
+  · intro cell hCell
+    rw [normalizedAccess_shared_distinct]
+    have hSubset := Finset.mem_powerset.mp hC
+    simpa using hSubset hCell
+
+theorem normalizedLocal_distinct_shared_sound :
+    LocalFamiliesSound
+      (normalizedFuture distinctCellOf)
+      (normalizedAccess distinctCellOf sharedControllerOf)
+      (normalizedLocal distinctCellOf sharedControllerOf) := by
+  intro controller C hC
+  rw [normalizedLocal_distinct_shared] at hC
+  by_cases hc : controller = false
+  · subst controller
+    simp only [↓reduceIte] at hC
+    constructor
+    · rw [normalizedFuture_distinct]
+      exact hC
+    · intro cell hCell
+      simp [normalizedAccess_distinct_shared]
+  · simp [hc] at hC
+
+theorem normalizedLocal_distinct_distinct_sound :
+    LocalFamiliesSound
+      (normalizedFuture distinctCellOf)
+      (normalizedAccess distinctCellOf distinctControllerOf)
+      (normalizedLocal distinctCellOf distinctControllerOf) := by
+  intro controller C hC
+  rw [normalizedLocal_distinct_distinct] at hC
+  have hSubset := Finset.mem_powerset.mp hC
+  constructor
+  · rw [normalizedFuture_distinct]
+    apply rawHandleFuture_wellFormed.downwardClosed
+      (C := ({controller} : Finset Bool))
+    · cases controller <;> native_decide
+    · exact hSubset
+  · intro cell hCell
+    rw [normalizedAccess_distinct_distinct]
+    simpa using hSubset hCell
+
+/-- None of the four readiness outcomes is caused by a malformed future,
+local family, access declaration, or co-liveness family. -/
+theorem identityQuotient_worlds_wellStructured :
+    WellStructured sharedCellOf sharedControllerOf ∧
+      WellStructured sharedCellOf distinctControllerOf ∧
+      WellStructured distinctCellOf sharedControllerOf ∧
+      WellStructured distinctCellOf distinctControllerOf := by
+  exact ⟨
+    ⟨normalizedFuture_shared_wellFormed,
+      normalizedLocal_shared_shared_downwardClosed,
+      normalizedLocal_shared_shared_sound,
+      normalizedCoLive_shared_downwardClosed⟩,
+    ⟨normalizedFuture_shared_wellFormed,
+      normalizedLocal_shared_distinct_downwardClosed,
+      normalizedLocal_shared_distinct_sound,
+      normalizedCoLive_distinct_downwardClosed⟩,
+    ⟨normalizedFuture_distinct_wellFormed,
+      normalizedLocal_distinct_shared_downwardClosed,
+      normalizedLocal_distinct_shared_sound,
+      normalizedCoLive_shared_downwardClosed⟩,
+    ⟨normalizedFuture_distinct_wellFormed,
+      normalizedLocal_distinct_distinct_downwardClosed,
+      normalizedLocal_distinct_distinct_sound,
+      normalizedCoLive_distinct_downwardClosed⟩⟩
+
 theorem raw_sharedCell_sharedController :
     rawPhysicalCoverProduct
         (normalizedAccess sharedCellOf sharedControllerOf)
