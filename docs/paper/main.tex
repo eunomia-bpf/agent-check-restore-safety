@@ -41,48 +41,41 @@
 \newcommand{\Dispatch}{\ensuremath{\mathsf{Dispatch}}\xspace}
 \newcommand{\Retry}{\ensuremath{\mathsf{Retry}}\xspace}
 
-\title{History Admission: Structural Readiness for Fork, Restore, and Merge}
+\title{History Admission: Safe Fork, Restore, and Merge under Durable Authority}
 
-\author{}
+\author{\IEEEauthorblockN{Anonymous Authors}}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-Agent runtimes may fork, restore, and merge histories without retracting
-durable receipts or external effects.  These operations change which future
-effects can become durable together: three fresh, individually authorized
-effects can violate a contract that permits every pair but forbids their
-union.  Per-effect authorization, linear capabilities, and rollback protection
-do not decide this joint-outcome question.
-
-Within a finite model of unordered, downward-closed future effects, we define
-\emph{history admission}.  Before installing a typed history edge, its
-submitted manifest must show
-\[
-  \mathsf{Required}\subseteq\mathsf{RawPhysical}
-  \subseteq\mathsf{Admitted}.
-\]
-The left inclusion preserves the behavior promised by the edge; the right
-prevents its independently live controllers from realizing a future excluded
-by the authority contract and immutable receipt prefix.
-
-Our central result characterizes an exact manifest-relative decision.  For
-fixed normalized contracts, access, and local controller families, any two
-downward-closed co-liveness families with the same projection through a
-contract-derived arity $r$ have the same readiness Boolean.  For every
-uniformly smaller arity, a well-formed pair has the same visible projection
-and opposite decisions.  Before normalization, a separate two-by-two
-construction shows that copied-handle identity and authoritative-controller
-identity are independently nonerasable.  Thus the contract, rather than a
-fixed pairwise rule, determines the worst-case observation depth.
-
-An untrusted compiler derives Fork/Restore/Merge futures and emits a decision
-or counterexample; an independent verifier recomputes it, and Lean~4
-mechanizes the theorem spine.  The result is exact for the submitted finite
-manifest.  Transferring it to an installed runtime additionally requires
-authenticated evidence, complete mediation, and explicit runtime-refinement
-obligations; the compiler does not prove those facts.
+Agent runtimes fork, restore, and merge execution histories while protected
+tool effects and receipts outlive any restorable workspace.  Such an edge can
+leave each prospective effect fresh yet change which sets may become durable
+together, so locally correct gates can compose a forbidden outcome.  Rollback,
+per-effect checks, linear capabilities, and history monitors address parts of
+this boundary but do not decide a topology-changing edge and its controller
+realization.
+We define \emph{history admission}.  Three family constructors instantiate six
+Fork/Restore/Merge labels, derive candidate and required futures, and
+filter them against an immutable receipt prefix.  Controller covers then
+check $\mathsf{Required}\subseteq\mathsf{RawPhysical}
+\subseteq\mathsf{Admitted}$.  Exact admission distinguishes copied handles
+from authoritative controller instances: a mechanized two-by-two construction
+fixes all other raw fields and shows that erasing either identity normalization
+conflates ready and nonready worlds.
+We prove a contract-indexed exact evidence boundary: after normalization, the
+complete co-liveness projection through arity $r$ determines readiness.
+Fixed-manifest collisions make each raw identity relation nonerasable, while an
+arbitrary-$k$ cover rules out uniformly lower projection arity in the worst case.
+Greatest prefix admission, obstruction extraction, and pruning make the result
+constructive.  A small compiler
+accepts full exact evidence, its attested exact $r$-projection, or a diagnostic
+upper bound, and an independent verifier recomputes the result.  Lean~4 checks
+the theorem spine, 38 focused tests (62 total) cover the executables, and an
+oracle agrees on all 2,166 three-cell refinement instances.  Claude/Codex
+trajectories expose adapter telemetry gaps but provide neither safety labels
+nor effect authorization.
 \end{abstract}
 
 \input{sections/introduction}
@@ -99,6 +92,9 @@ obligations; the compiler does not prove those facts.
 OpenAI Codex was used in all sections for initial prose drafting and rewriting, and in the executable artifact for code scaffolding and test generation.
 It was also used to assist with literature discovery, formal-model iteration, and counterexample search.
 The authors selected the research direction, checked the cited sources and mathematical arguments, and remain responsible for every claim, proof, result, and citation.
+
+\appendices
+\input{sections/appendix}
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}

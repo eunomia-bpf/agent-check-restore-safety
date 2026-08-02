@@ -215,3 +215,94 @@ Agent 的安全状态不只有文件和数据库? 为啥? 是外部资源? 还�
 ### Message 24
 
 去做, 在 yunwei37/agent-check-restore-safety 里面迭代, 做一步 commit push 一步, 应该是一个主要是理论性很强的吧? 你想想这种文章应该要怎样的 plan? 试验是不是相对来说没那么重要? 是不是更多是写作和思考, 实验你也要简单做一下? 整个项目也要按auto research 方式 bootstrap. 把论文写到 csf 可以发表的程度, 大部分是理论, 一部分实验. 要按照安全顶会的目标来, 也要研究一下 2027 PC, 以及往年的论文, 相关的论文都要下载下来看, 分析一下他们的写作风格, 看看 csf 的要求. 可以不一定完全按照 auto research loop, 你可以自己决定什么样的方式好, 禁止任何形式主义的额外操作, 尽快把论文写好. 在你迭代 2-3 轮的时候就应该去把论文写好. 目标越大越好, novelty 越大越好, 场景不要太小, 提出的理论应该是符合直觉, 简单, 又 non trival 能解决重要的问题, 有现实意义, 能给未来充分的启发, 尤其是 agent 的执行变得越来越丰富的时候. 这些也要记录 user insn. 我们要在这个上面构建什么工具? 理论是不是要指导方案构建? 可以不是一个复杂的系统. 另外能不能更 non trivel 和通用一点? 和旧的工具或者理论的区别是啥? novelty 能不能更大一些? 做一步就 commit push 一步
+
+## 2026-08-02 follow-up messages
+
+### Message 25
+
+你看看现在情况是啥样, 能投 csf 吗
+
+### Message 26
+
+继续
+
+### Message 27
+
+你得看看论文是哪里的? 我们仓库里面有两套论文吗?
+
+### Message 28
+
+论文编译了吗
+
+### Message 29
+
+根目录的放进 legacy
+
+### Message 30
+
+继续
+
+### Message 31
+
+要不要图? 格式符合要求吗?
+
+### Message 32
+
+从头讲解一下故事?
+
+### Message 33
+
+从 csf 审稿人角度
+
+### Message 34
+
+你应该只要关注论文就好吧?
+
+### Message 35
+
+你现在不是 full 吗
+
+### Message 36
+
+啊? 你去继续改
+
+### Message 37
+
+至少 4 位审稿阅读这个 paper. 审稿要全新的 subagent, 告诉它是 csf, 只看论文, 但不要给它别的指导
+
+### Message 38
+
+每次修改完至少 4 位审稿阅读这个 paper. 审稿要全新的 subagent, 告诉它是 csf, 只看论文, 但不要给它别的指导
+
+### Message 39
+
+能不能要统一的大的贡献的理论, 而不是一堆“既有理论组件的安全组合”,
+  Agent 是关键应用场景, 绝对不能自行降级
+
+### Message 40
+
+你觉得现在好还是 phase1 里面的好?
+
+### Message 41
+
+你看看能不能 load skill
+
+### Message 42
+
+我们自己的目录里面的 skill 吗
+
+### Message 43
+
+结论：不能整体退回 phase1；应以当前稿为底，但把“贡献姿态”换回并超过 phase1。
+当前稿明显更好的地方：
+故事更易读：第一页 forbidden triple 图、精确的 RestoreReplace(K) worked instance、proof-boundary 表都比 phase1 强。
+中心结果更可审计：主定理提前到第 6 页，量词拆开，identity 的 2×2 fixture 和 projection 证明路线都写出来了。
+投稿更稳：正文止于第 12 页、无 appendix 依赖、匿名和 AI disclosure 符合 CSF 2027。
+删掉了 phase1 中较弱的 TraceLab 和次级定理堆。
+但在“贡献是什么”这一点，phase1 的方向比当前稿好。phase1 至少把它叫作一个 exact-evidence theorem，从 Agent 在线图、durable receipts、controller realization 一路讲到 refinement chain；当前稿新增的 “individual ingredients are established / novelty is this security composition”，再加标题里删掉 Agent，等于作者自己替审稿人写了拒稿理由。第二轮已回来的 3 位也全都据此给 Weak Reject。
+所以最佳方案不是 phase1 回滚，而是：
+当前稿的结构、示例、证明细节和格式
+＋ phase1 的 Agent 中心性
+＋ 一个比两版都更统一的 Agent History-Admission Theorem
+
+标题也应改成类似 Agent History Admission: An Exact and Tight Evidence Theory for Fork, Restore, and Merge。我会等第 4 份冻结稿审完，然后按这个方向重构；不是降级回 phase1。 整体退回 phase1, 然后在 phase 1 的基础上重写.

@@ -95,17 +95,89 @@ The result is maximal only within this fixed candidate, prefix, lineage, and
 pruning-only repair space; it does not authorize reissued atoms or a changed
 workload contract.
 
-\subsection{Decision scope over time}
+\subsection{Structural inheritance and full readmission}
 
-Equation~\eqref{eq:required-preservable} separates two cases.  If
-$\mathsf{Required}_{op}\nsubseteq\mathsf{Admitted}_{op}$, no pruning-only
-implementation can preserve the typed promise.  Otherwise, a controller
-restriction may be eligible only by satisfying the deployment sandwich; the
-admitted family alone is not an enforcement mechanism.
+An admitted envelope stores a version $v$, the fixed prefix $D$, an admitted
+old future $\mathcal F$, its lineage $\ell_0$, and a proof that every
+$X\in\mathcal F$ is prefix-compatible.
+A structural refinement of a typed target at version $v'$ supplies a parent
+map $p:\mathcal D_{op}\to\mathcal D_0$ such that $v\leq v'$, every target
+configuration maps injectively into a configuration of $\mathcal F$, and the
+lineage square commutes:
+\[
+  \ell(x)=\ell_0(p(x)).
+\]
+These obligations transport the old prefix certificate to the complete
+candidate $\mathsf{Candidate}_{op}$ without rechecking the authority family.
+They do not assert that a concrete runtime realizes that candidate.
 
-One decision fixes $D$.  When immutable receipt bindings grow it to $D'$,
-admission is rerun: a candidate lineage newly present in $D'$ fails the
-disjointness clause of \cref{eq:prefix-ok}, while unrelated cells may survive.
-The authenticated ledger and atomic redemption semantics that supply this
-monotone prefix are assumptions at the boundary, not physical exactly-once
-guarantees.
+If no such parent map is available, the full-readmission path checks
+$\mathsf{Candidate}_{op}=\mathsf{Admitted}_{op}$ directly.  Structural
+inheritance is therefore a sufficient certificate-reuse path into full
+readmission, not a weaker safety class.  Refinements compose: version order is
+transitive, parent maps compose, their configuration morphisms compose, and
+the two lineage squares yield the commuting square for the endpoint.  A
+runtime may consequently certify a sequence of Fork/Restore/Merge edges at the
+same durable prefix by composing their edge refinements.
+
+\subsection{Four fixed-prefix outcomes}
+
+The classifier checks structural inheritance first, then complete
+readmission, then the admitted future.  For a valid typed operator
+it returns one of four outcomes:
+\paragraph{$\mathsf{Inherit}$}
+A version-monotone structural refinement transports the old certificate to
+the complete candidate.
+
+\paragraph{$\mathsf{ReadmitOK}$}
+Structural inheritance is unavailable, but the complete candidate passes the
+fixed-prefix check directly.
+
+\paragraph{$\mathsf{NeedsMechanism}$}
+The complete candidate fails fixed-prefix admission, while every required
+configuration survives in $\mathsf{Admitted}_{op}$.  This is not an accepted
+deployment by itself: the admitted future is not an enforcement mechanism.
+Deployment becomes structurally eligible only if the submitted controller
+manifest supplies a restriction satisfying
+$\mathsf{Required}\subseteq\mathsf{RawPhysical}\subseteq\mathsf{Admitted}$;
+installation and complete mediation remain external obligations.
+
+\paragraph{$\mathsf{Reject}$}
+No prefix-safe pruning between $\mathsf{Required}_{op}$ and
+$\mathsf{Candidate}_{op}$ exists for the fixed authority family, durable
+prefix, and lineage.  Reauthorization, fresh identities, or a changed contract
+constitutes a new admission problem.
+
+The first two outcomes partition complete admission according to whether an
+old certificate can be reused.  The latter two are separated exactly by
+\cref{eq:required-preservable}; required behavior cannot be relabeled as
+optional to obtain acceptance.  All four remain structural results rather
+than credentials for executing an external effect.
+
+\subsection{Receipt-frontier growth}
+
+The durable prefix is obtained from immutable receipt bindings.  Ledger
+monotonicity therefore gives $D\subseteq D'$ as execution commits additional
+atoms.  Structural transport deliberately preserves $D$ definitionally: it
+cannot turn a proof about $(\mathcal A,D)$ into one about
+$(\mathcal A,D')$.  Once the receipt prefix grows, the runtime must reconstruct
+the envelope and rerun prefix admission against $D'$ before applying further
+structural inheritance.
+
+This recheck is substantive rather than bookkeeping.  If a candidate cell
+maps to an atom newly present in $D'$, the disjointness conjunct in
+\cref{eq:prefix-ok} rules out policy-oblivious reuse even when a snapshot-only
+configuration morphism would still succeed.  A future using a distinct atom
+may remain admissible.  Thus prefix growth forces readmission, not automatic
+rejection; the new receipt determines which candidate configurations survive.
+
+\subsection{Operational commitment substrate}
+
+The prefix comes from a separate unit-normalized commitment semantics.  A
+fresh \Prepare{} atomically checks an open cell, a held unspent atom, an unbound
+stable key, and a fresh receipt; it consumes the hold, records the spent
+cell--epoch--atom triple and immutable bindings, and marks the receipt prepared.
+Replay and Retry resolve that binding and stutter; settlement advances only the
+external phase, and Crash is an atomic stutter.  The preserved invariant and
+monotone ledger show that only a fresh step adds a receipt, justifying $D$ as a
+monotone prefix.  They do not prove physical exactly-once execution at a sink.
