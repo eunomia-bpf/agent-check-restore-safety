@@ -103,10 +103,28 @@ Physical = Admitted                  exact fidelity
 ```
 
 A strict middle inclusion is a safe implementation that omits only optional
-behavior.  `Physical - Admitted` is an over-permission error; if it contains a
-minimal nonface split across controllers, the compiler emits a concrete
-`GateClone` or `GateCut` product witness.  `Required - Physical` is a missing
-behavior error rather than a security over-permission.
+behavior.  An over-permission witness is classified before it is named.  A
+physical cell outside `support(Admitted)` yields `OutsideSupport`, not a fake
+minimal nonface.  Within support, a chosen local controller configuration that
+is already forbidden yields `LocalOverpermission`.  Only when every local
+choice is individually admitted does a forbidden union yield
+`CorrelationCut`, with `GateClone` and `GateCut` as same-origin and
+distinct-origin subcases.  The certificate restricts the chosen local
+configurations to an inclusion-minimal controller cover of the actual minimal
+nonface.  `Required - Physical` is a missing behavior error rather than a
+security over-permission.
+
+This remains a manifest-relative result.  For an actual runtime family
+`Actual`, the deployable refinement obligation is
+
+```text
+Required <= Actual <= Physical <= Admitted.
+```
+
+The compiler checks the outer model sandwich but cannot establish the two
+relations involving `Actual`; complete mediation, runtime soundness against
+the declared product, and required-behavior coverage remain external adapter
+obligations.
 
 The connected components of the minimal-nonface hypergraph give the finest
 functional controller partition that preserves every correlation.  A runtime

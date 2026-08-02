@@ -509,6 +509,10 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
         self.assertEqual("Inherit", result["semantic_admission"]["class"])
         self.assertEqual("NeedsCoordination", result["deployment"]["readiness"])
         self.assertEqual("GateClone", result["coordination"]["witness"]["kind"])
+        self.assertEqual(
+            "CorrelationCut",
+            result["coordination"]["witness"]["failure_class"],
+        )
         self.assertFalse(result["history_admission"]["structurally_eligible"])
 
     def test_cloned_controllers_over_one_aliased_cell_need_atomic_redemption(self) -> None:
@@ -642,6 +646,55 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
         ]
         result = compile_base(request)
         self.assertEqual("GateCut", result["coordination"]["witness"]["kind"])
+        self.assertEqual(
+            "CorrelationCut",
+            result["coordination"]["witness"]["failure_class"],
+        )
+
+    def test_one_locally_unsafe_controller_is_not_called_a_gate_cut(self) -> None:
+        request = higher_order_request()
+        refs = [
+            {"role": "checkpoint", "local_id": name}
+            for name in ("a", "b", "c")
+        ]
+        request["operation"]["gate_uses"] = [
+            {
+                "id": "gate-use:overpermit",
+                "gate_origin": "gate-origin:overpermit",
+                "controller_anchor": "controller:overpermit",
+                "controller_version": 1,
+                "members": refs,
+                "local_maxima": [refs],
+            }
+        ]
+        request["operation"]["controller_future_maxima"] = [
+            ["controller:overpermit"]
+        ]
+        result = compile_request(request)
+        witness = result["coordination"]["witness"]
+        self.assertEqual("ControllerOverpermit", witness["kind"])
+        self.assertEqual("LocalOverpermission", witness["failure_class"])
+        self.assertEqual(
+            ["occ:checkpoint:a", "occ:checkpoint:b", "occ:checkpoint:c"],
+            witness["minimal_nonface"],
+        )
+
+    def test_pruned_cell_is_reported_outside_admitted_support(self) -> None:
+        request = base_request()
+        right = request["operation"]["right"]
+        right["cells"][0]["atom"] = "grant:G:0"
+        right["cells"][0]["parent"] = None
+        right["cells"][0]["lease"] = None
+        right["required_maxima"] = [[]]
+        result = compile_base(request)
+        self.assertEqual("NeedsMechanism", result["semantic_admission"]["class"])
+        witness = result["coordination"]["witness"]
+        self.assertEqual("OutsideSupport", witness["kind"])
+        self.assertEqual("OutsideSupport", witness["failure_class"])
+        self.assertNotIn("minimal_nonface", witness)
+        self.assertEqual(
+            ["occ:right:right-effect"], witness["outside_support_cells"]
+        )
 
     def test_higher_order_constraint_requires_joint_coordination(self) -> None:
         result = compile_request(higher_order_request())

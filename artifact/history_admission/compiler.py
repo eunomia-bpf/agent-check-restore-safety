@@ -1112,6 +1112,25 @@ def _physical_controller_family(
     return frozenset(physical), witnesses
 
 
+def _minimal_covering_controllers(
+    target: Config,
+    local_choices: Mapping[str, list[str]],
+) -> list[str]:
+    """Return a deterministic inclusion-minimal controller cover of target."""
+
+    chosen = sorted(
+        anchor for anchor, local in local_choices.items() if set(local) & target
+    )
+    for anchor in reversed(chosen.copy()):
+        without = [candidate for candidate in chosen if candidate != anchor]
+        covered = set().union(
+            *(set(local_choices[candidate]) & target for candidate in without)
+        ) if without else set()
+        if target <= covered:
+            chosen.remove(anchor)
+    return chosen
+
+
 def _coordination_result(
     parsed: ParsedRequest,
     admitted: Family | None,
@@ -1170,31 +1189,94 @@ def _coordination_result(
     witness: dict[str, Any]
     if extra:
         configuration = _sorted_configs(extra)[0]
-        contained = [nonface for nonface in nonfaces if nonface <= configuration]
-        minimal = _sorted_configs(contained)[0] if contained else configuration
         product_witness = product_witnesses[configuration]
-        used = [
-            anchor
-            for anchor, local in product_witness["local_choices"].items()
-            if set(local) & set(minimal)
-        ]
-        origins = {parsed.controllers[anchor].gate_origin for anchor in used}
-        if len(used) > 1 and len(origins) == 1:
-            kind = "GateClone"
-        elif len(used) > 1:
-            kind = "GateCut"
+        outside = configuration - _support(admitted)
+        if outside:
+            cell = sorted(outside)[0]
+            anchor = next(
+                anchor
+                for anchor, local in sorted(
+                    product_witness["local_choices"].items()
+                )
+                if cell in local
+            )
+            witness = {
+                "kind": "OutsideSupport",
+                "failure_class": "OutsideSupport",
+                "forbidden_configuration": [cell],
+                "outside_support_cells": [cell],
+                "co_live_controllers": [anchor],
+                "local_choices": {anchor: [cell]},
+                "gate_origins": {
+                    anchor: parsed.controllers[anchor].gate_origin
+                },
+            }
         else:
-            kind = "ControllerOverpermit"
-        witness = {
-            "kind": kind,
-            "forbidden_configuration": sorted(configuration),
-            "minimal_nonface": sorted(minimal),
-            **product_witness,
-            "gate_origins": {
-                anchor: parsed.controllers[anchor].gate_origin
-                for anchor in sorted(used)
-            },
-        }
+            contained = [
+                nonface for nonface in nonfaces if nonface <= configuration
+            ]
+            if not contained:
+                raise SchemaError(
+                    "internal error: unsupported controller configuration has "
+                    "neither an outside-support cell nor a minimal nonface"
+                )
+            minimal = _sorted_configs(contained)[0]
+            local_choices = product_witness["local_choices"]
+            locally_unsafe = [
+                anchor
+                for anchor, local in sorted(local_choices.items())
+                if frozenset(local) not in admitted
+            ]
+            if locally_unsafe:
+                anchor = locally_unsafe[0]
+                local = frozenset(local_choices[anchor])
+                local_nonfaces = [
+                    nonface for nonface in nonfaces if nonface <= local
+                ]
+                if not local_nonfaces:
+                    raise SchemaError(
+                        "internal error: locally unsafe controller choice has "
+                        "no minimal nonface"
+                    )
+                local_minimal = _sorted_configs(local_nonfaces)[0]
+                witness = {
+                    "kind": "ControllerOverpermit",
+                    "failure_class": "LocalOverpermission",
+                    "forbidden_configuration": sorted(local_minimal),
+                    "minimal_nonface": sorted(local_minimal),
+                    "offending_controller": anchor,
+                    "co_live_controllers": [anchor],
+                    "local_choices": {anchor: sorted(local_minimal)},
+                    "gate_origins": {
+                        anchor: parsed.controllers[anchor].gate_origin
+                    },
+                }
+            else:
+                used = _minimal_covering_controllers(minimal, local_choices)
+                origins = {
+                    parsed.controllers[anchor].gate_origin for anchor in used
+                }
+                if len(used) < 2:
+                    raise SchemaError(
+                        "internal error: a locally sound product minimal "
+                        "nonface is not split across controllers"
+                    )
+                kind = "GateClone" if len(origins) == 1 else "GateCut"
+                witness = {
+                    "kind": kind,
+                    "failure_class": "CorrelationCut",
+                    "forbidden_configuration": sorted(minimal),
+                    "minimal_nonface": sorted(minimal),
+                    "co_live_controllers": used,
+                    "local_choices": {
+                        anchor: sorted(set(local_choices[anchor]) & minimal)
+                        for anchor in used
+                    },
+                    "gate_origins": {
+                        anchor: parsed.controllers[anchor].gate_origin
+                        for anchor in used
+                    },
+                }
     else:
         configuration = _sorted_configs(missing_required)[0]
         witness = {
@@ -1310,6 +1392,8 @@ def compile_request(document: Any) -> dict[str, Any]:
         "complete_mediation",
         "controller_installation_and_freshness",
         "manifest_ledger_and_receipt_authenticity",
+        "runtime_required_coverage",
+        "runtime_soundness_against_declared_physical_family",
     ]
     if semantic_class == "ReadmitOK":
         external_obligations.append("fresh_authority_issuance")

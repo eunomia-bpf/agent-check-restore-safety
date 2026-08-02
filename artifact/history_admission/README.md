@@ -31,7 +31,9 @@ verified deployment result is `Ready`.  The verifier emits a
 `history_admission` seal, not an effect-authorization credential.  It always
 sets `effect_authorizes` to false and lists the runtime obligations that remain,
 including manifest authenticity, complete mediation, controller freshness,
-and atomic redemption.  `NeedsMechanism` and `Reject` remain diagnostic.
+atomic redemption, and refinement between the declared controller product and
+the runtime's actual behavior.  `NeedsMechanism` and `Reject` remain
+diagnostic.
 
 ## Quick start
 
@@ -78,6 +80,19 @@ independently product-composable.  A runtime with a hidden shared ratifier must
 represent it as one authoritative controller or supply a stronger joint
 contract; co-liveness alone is not an exploit proof.  `GateClone` and `GateCut`
 are precise witnesses under this independent-product abstraction.
+
+Unsafe products are split into three theorem-backed causes. `OutsideSupport`
+means a controller exposes a cell absent from admitted support;
+`LocalOverpermission` means one controller alone exposes an admitted minimal
+nonface; and `CorrelationCut` means every chosen local configuration is
+admitted but their union is not.  Only the last class is emitted as a
+`GateClone` or `GateCut`.
+
+The model-level check is `Required <= Physical <= Admitted`.  If `Actual` is
+the runtime family, deployment correctness additionally requires
+`Required <= Actual <= Physical <= Admitted`.  The verifier cannot infer the
+relations involving `Actual` from a manifest, so it records runtime soundness
+and required coverage as external obligations.
 
 The seal is conditional on the manifest being a truthful, completely mediated
 runtime abstraction.  This artifact does not authenticate receipts or leases,

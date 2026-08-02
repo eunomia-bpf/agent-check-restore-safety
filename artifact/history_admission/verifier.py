@@ -1274,6 +1274,34 @@ def _controller_product(
     return frozenset(physical), witnesses
 
 
+def _minimal_covering_controllers(
+    target: Mask,
+    local_choices: Mapping[str, list[str]],
+    names: Sequence[str],
+) -> list[str]:
+    """Independently compute a deterministic inclusion-minimal cover."""
+
+    positions = _indices(names)
+
+    def choice_mask(anchor: str) -> Mask:
+        mask = 0
+        for name in local_choices[anchor]:
+            mask |= 1 << positions[name]
+        return mask
+
+    chosen = sorted(
+        anchor for anchor in local_choices if choice_mask(anchor) & target
+    )
+    for anchor in reversed(chosen.copy()):
+        covered = 0
+        for candidate in chosen:
+            if candidate != anchor:
+                covered |= choice_mask(candidate) & target
+        if target & ~covered == 0:
+            chosen.remove(anchor)
+    return chosen
+
+
 def _coordination(
     model: _RequestModel,
     admitted: MaskFamily | None,
@@ -1336,38 +1364,112 @@ def _coordination(
 
     if extra:
         configuration = _ordered_masks(extra, model.target_names)[0]
-        contained = [
-            nonface for nonface in nonfaces if nonface & ~configuration == 0
-        ]
-        minimal = (
-            _ordered_masks(contained, model.target_names)[0]
-            if contained
-            else configuration
-        )
         product_witness = product_witnesses[configuration]
-        used = [
-            anchor
-            for anchor, local_cells in product_witness["local_choices"].items()
-            if set(local_cells) & set(_mask_members(minimal, model.target_names))
-        ]
-        origins = {model.controllers[anchor].origin for anchor in used}
-        if len(used) > 1 and len(origins) == 1:
-            kind = "GateClone"
-        elif len(used) > 1:
-            kind = "GateCut"
+        support = _support(admitted)
+        outside = configuration & ~support
+        if outside:
+            cell_mask = outside & -outside
+            cell = _mask_members(cell_mask, model.target_names)[0]
+            anchor = next(
+                anchor
+                for anchor, local in sorted(
+                    product_witness["local_choices"].items()
+                )
+                if cell in local
+            )
+            witness = {
+                "kind": "OutsideSupport",
+                "failure_class": "OutsideSupport",
+                "forbidden_configuration": [cell],
+                "outside_support_cells": [cell],
+                "co_live_controllers": [anchor],
+                "local_choices": {anchor: [cell]},
+                "gate_origins": {anchor: model.controllers[anchor].origin},
+            }
         else:
-            kind = "ControllerOverpermit"
-        witness: dict[str, Any] = {
-            "kind": kind,
-            "forbidden_configuration": _mask_members(
-                configuration, model.target_names
-            ),
-            "minimal_nonface": _mask_members(minimal, model.target_names),
-            **product_witness,
-            "gate_origins": {
-                anchor: model.controllers[anchor].origin for anchor in sorted(used)
-            },
-        }
+            contained = [
+                nonface for nonface in nonfaces if nonface & ~configuration == 0
+            ]
+            if not contained:
+                raise SchemaError(
+                    "internal error: unsupported controller configuration has "
+                    "neither an outside-support cell nor a minimal nonface"
+                )
+            minimal = _ordered_masks(contained, model.target_names)[0]
+            positions = _indices(model.target_names)
+
+            def local_mask(anchor: str) -> Mask:
+                mask = 0
+                for name in product_witness["local_choices"][anchor]:
+                    mask |= 1 << positions[name]
+                return mask
+
+            locally_unsafe = [
+                anchor
+                for anchor in sorted(product_witness["local_choices"])
+                if local_mask(anchor) not in admitted
+            ]
+            if locally_unsafe:
+                anchor = locally_unsafe[0]
+                local = local_mask(anchor)
+                local_nonfaces = [
+                    nonface for nonface in nonfaces if nonface & ~local == 0
+                ]
+                if not local_nonfaces:
+                    raise SchemaError(
+                        "internal error: locally unsafe controller choice has "
+                        "no minimal nonface"
+                    )
+                local_minimal = _ordered_masks(
+                    local_nonfaces, model.target_names
+                )[0]
+                members = _mask_members(local_minimal, model.target_names)
+                witness = {
+                    "kind": "ControllerOverpermit",
+                    "failure_class": "LocalOverpermission",
+                    "forbidden_configuration": members,
+                    "minimal_nonface": members,
+                    "offending_controller": anchor,
+                    "co_live_controllers": [anchor],
+                    "local_choices": {anchor: members},
+                    "gate_origins": {
+                        anchor: model.controllers[anchor].origin
+                    },
+                }
+            else:
+                used = _minimal_covering_controllers(
+                    minimal,
+                    product_witness["local_choices"],
+                    model.target_names,
+                )
+                if len(used) < 2:
+                    raise SchemaError(
+                        "internal error: a locally sound product minimal "
+                        "nonface is not split across controllers"
+                    )
+                origins = {model.controllers[anchor].origin for anchor in used}
+                kind = "GateClone" if len(origins) == 1 else "GateCut"
+                minimal_members = set(
+                    _mask_members(minimal, model.target_names)
+                )
+                witness = {
+                    "kind": kind,
+                    "failure_class": "CorrelationCut",
+                    "forbidden_configuration": sorted(minimal_members),
+                    "minimal_nonface": sorted(minimal_members),
+                    "co_live_controllers": used,
+                    "local_choices": {
+                        anchor: sorted(
+                            set(product_witness["local_choices"][anchor])
+                            & minimal_members
+                        )
+                        for anchor in used
+                    },
+                    "gate_origins": {
+                        anchor: model.controllers[anchor].origin
+                        for anchor in used
+                    },
+                }
     else:
         configuration = _ordered_masks(missing_required, model.target_names)[0]
         witness = {
@@ -1485,6 +1587,8 @@ def _expected_result(document: Any) -> dict[str, Any]:
         "complete_mediation",
         "controller_installation_and_freshness",
         "manifest_ledger_and_receipt_authenticity",
+        "runtime_required_coverage",
+        "runtime_soundness_against_declared_physical_family",
     ]
     if semantic_class == "ReadmitOK":
         external_obligations.append("fresh_authority_issuance")
