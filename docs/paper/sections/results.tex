@@ -1,433 +1,186 @@
-\section{The Agent History-Admission Theorem}
+\section{Canonical Causal Epoch Theorem}
 \label{sec:results}
 
-This section gives one characterization of when the reference monitor for an
-Agent history edge can be compiled into a post-edge controller epoch.  The
-older family, obstruction, refinement, and evidence results appear as lemmas
-supporting that characterization rather than as independent contribution
-claims.
+Write $\mathsf{Sound}_R(E)$ when
+$\mathsf{FreshTraces}(E)\subseteq F_R$, and
+$\mathsf{Pres}_R(E)$ when every $\omega\in\Omega_e$ has a linearization in
+$\mathsf{FreshTraces}(E)$.  These predicates quantify over behavior, not a
+caller-supplied controller manifest.
 
-Fix a valid typed edge $e$, authority family $\mathcal A$, durable frontier
-$D\in\mathcal A$, and lineage $\ell$.  Write
-$\mathsf{Cand}_e$, $\mathsf{Req}_e$, and $\mathsf{Adm}_e(D)$ for its candidate,
-required, and admitted endpoint families.  For a distinct-cell trace $\sigma$,
-let $\operatorname{cells}(\sigma)$ be its endpoint set.  The operational global
-monitor $\mathsf{GM}_e(D)$ starts at $\varnothing$ and admits a fresh cell $d$
-exactly when the extended endpoint belongs to $\mathsf{Adm}_e(D)$.  For a
-normalized controller manifest, define
-\[
-\begin{aligned}
-\mathsf{Phys}(E,L,\Gamma)=
- \{\sigma\mid{}&\sigma\text{ contains distinct cells and}\\[-2pt]
- &\operatorname{cells}(\sigma)\in
-   \mathsf{RawPhysical}(E,L,\Gamma)\}.
-\end{aligned}
-\]
-Thus $\mathsf{GM}_e(D)$ is the serialized reference semantics, whereas
-$\mathsf{Phys}$ is the language of controllers allowed to commit without a
-call to that monitor at every effect.
-
-\subsection{Family lemmas used by the characterization}
-
-\begin{lemma}[Typed generation]
-\label{thm:typed-generation}
-For every valid instance of the six edge relations in
-\cref{sec:semantics}, $\mathsf{Cand}_e$ and $\mathsf{Req}_e$ are nonempty,
-contain $\varnothing$, and are downward closed, with
-\[
-  \mathsf{Req}_e\subseteq\mathsf{Cand}_e.
-\]
-\end{lemma}
-
-The proof is structural.  Choice is family union; parallel or live composition
-is tensor; replacement selects the checkpoint contract.  The result checks
-composition of supplied leaf contracts, not their truth about a runtime.
-
-For compactness, write
-\[
-\begin{aligned}
-  \mathsf{PCM}(\mathcal A,D,\mathcal F,\ell)
-  \quad\Longleftrightarrow\quad{}&
-  D\in\mathcal A\\[-2pt]
-  &{}\land\forall X\in\mathcal F.\ \mathsf{PrefixOK}_D(X).
-\end{aligned}
-\]
-
-\begin{lemma}[Greatest fixed-frontier monitor family]
-\label{thm:greatest-residual}
-The family $\mathsf{Adm}_e(D)$ in \cref{eq:admitted-future} satisfies
-\[
-\mathsf{PCM}(\mathcal A,D,\mathsf{Adm}_e(D),\ell)
-\quad\text{and}\quad
-\mathsf{Adm}_e(D)\subseteq\mathsf{Cand}_e.
-\]
-For every $\mathcal H\subseteq\mathsf{Cand}_e$,
-\[
-  \mathsf{PCM}(\mathcal A,D,\mathcal H,\ell)
-  \Longrightarrow \mathcal H\subseteq\mathsf{Adm}_e(D).
-\]
-Consequently,
-\begin{equation}
-\label{eq:required-preservable-result}
-\begin{aligned}
-\mathsf{Req}_e\subseteq\mathsf{Adm}_e(D)
-\quad\Longleftrightarrow\quad
-\exists\mathcal H.\quad&
-\mathsf{Req}_e\subseteq\mathcal H
-\subseteq\mathsf{Cand}_e\\[-2pt]
-&{}\land\mathsf{PCM}(\mathcal A,D,\mathcal H,\ell).
-\end{aligned}
-\end{equation}
-\end{lemma}
-
-This is a greatest-language fact only inside the fixed candidate, authority
-family, frontier, and lineage.  It is classical pruning machinery specialized
-to the family derived by the Agent edge.
-
-\subsection{Exact monitor compilation}
-
-History admissibility asks for two properties simultaneously.  It is
-\emph{monitor-sound} when
-$\mathsf{Phys}(E,L,\Gamma)\subseteq
-\mathsf{Traces}(\mathsf{GM}_e(D))$.  It is
-\emph{required-transparent} when every $X\in\mathsf{Req}_e$ is the endpoint of
-some trace in $\mathsf{Phys}(E,L,\Gamma)$.  The second condition matters even
-when a global monitor would eventually reject every unsafe commit: an Agent
-edge that promises a join but is certain to fail only at its final required
-effect is not a transparent compilation.
-
-Let
-\begin{equation}
-\label{eq:required-coliveness-arity}
-\begin{aligned}
-r_e=\max\{&
- \max_{X\in\mathsf{Req}_e}|X|,
- \max_{K\in\mathsf{MNF}(\mathsf{Adm}_e(D))}|K|,\\[-2pt]
-&\mathbf 1[
- \operatorname{supp}(\mathsf{Adm}_e(D))\ne\mathcal D]\},
-\end{aligned}
-\end{equation}
-where an empty maximum is zero.  The final term retains unary
-outside-support evidence.
-
-\begin{theorem}[Agent History-Admission / Monitor-Compilation]
-\label{thm:agent-history-admission}
-Assume exact normalized cell and controller identities, a truthful complete
-manifest, and downward-closed controller-local and co-liveness families.
-Then:
+\begin{theorem}[Canonical Causal Epoch]
+\label{thm:canonical-epoch}
+Let $R$ be well formed, let $\delta\in\mathcal A$, and assume complete
+mediation through the linearizable, crash-stable kernel rules in
+\cref{sec:semantics}.
 \begin{enumerate}[leftmargin=*,itemsep=2pt]
-  \item the reference monitor has exactly the admitted language,
-  \begin{equation}
-  \label{eq:global-monitor-language}
-  \begin{aligned}
-  \mathsf{Traces}(\mathsf{GM}_e(D))
-  =\{\sigma\mid{}&
-    \sigma\text{ is distinct-cell},\\[-2pt]
-    &\operatorname{cells}(\sigma)\in\mathsf{Adm}_e(D)\}.
-  \end{aligned}
-  \end{equation}
+  \item \textbf{Exact feasibility.}
+  \[
+    \mathsf{Admit}(R)
+    \quad\Longleftrightarrow\quad
+    \exists E.\ \mathsf{Sound}_R(E)\land\mathsf{Pres}_R(E).
+  \]
+  If it holds, $\mathsf{Can}(R)$ is such an epoch and
+  \[
+    \mathsf{FreshTraces}(\mathsf{Can}(R))
+      =\mathsf{FreshTraces}(\mathsf{GM}(R))=F_R .
+  \]
+  Hence it preserves every monitor-legal behavior, and every monitor-sound
+  epoch has a language contained in its language.
 
-  \item monitor soundness and required transparency have the exact endpoint
-  characterization
-  \begin{equation}
-  \label{eq:history-admission-equivalence}
-  \boxed{
-  \begin{aligned}
-  &\mathsf{HistoryAdmissible}_D(e;E,L,\Gamma)\\
-  &\quad\Longleftrightarrow\
-   \mathsf{DeploymentReady}_D(e;E,L,\Gamma)\\
-  &\quad\Longleftrightarrow\
-   \mathsf{Req}_e
-   \subseteq\mathsf{RawPhysical}(E,L,\Gamma)
-   \subseteq\mathsf{Adm}_e(D)\\
-  &\quad\Longleftrightarrow\
-  \mathsf{HA}\!\left(
-    e,\mathcal A,D,q_{\rm cell},\ell,q_{\rm ctrl},\right.\\[-2pt]
-  &\hspace{24mm}\left.
-    E,L,\Pi_{\le r_e}(\Gamma)
-  \right)=\mathsf{accept};
-  \end{aligned}}
-  \end{equation}
-  here $\mathsf{HA}$ is the finite structural checker and the last equivalence
-  assumes an attested exact $r_e$-projection of the same installed $\Gamma$;
-  and
+  \item \textbf{Atomic-cut equivalence.}
+  Installing a verified seal at its named
+  $(\kappa,\nu,\delta,\mathsf{src})$ establishes
+  \cref{eq:kernel-reference-relation}.  The compiled kernel and ideal
+  history-cut monitor are bisimilar on \textnormal{\textsc{Prepare}} and
+  \textnormal{\textsc{Install}}, with replay, retry, settlement, and crash as matching
+  stutters.  A failed install has no state effect, and after a successful
+  install no source epoch can make a fresh preparation.
 
-  \item if a mediated runtime establishes
-  $\mathsf{Req}_e\subseteq\mathsf{Actual}$ and
-  $\mathsf{ActualTrace}\subseteq\mathsf{Phys}(E,L,\Gamma)$,
-  an accepted seal transports both conclusions to the runtime:
-  every actual trace belongs to
-  $\mathsf{Traces}(\mathsf{GM}_e(D))$ and every required endpoint remains
-  realizable.
+  \item \textbf{Online composition.}
+  For every finite interleaving of fresh preparations, stutters, and
+  successfully installed admitted Fork/Restore/Merge requests
+  $R_0,R_1,\ldots$ under the same $(\kappa,\mathcal A)$, the execution
+  partitions at installs into traces
+  $\sigma_i\in F_{R_i}$.  At every prefix,
+  \[
+    \delta_0\ell_0^*(\sigma_0)
+      \ell_1^*(\sigma_1)\cdots\in\mathcal A ,
+  \]
+  and a fresh event belongs to exactly one side of every history cut.
 \end{enumerate}
 \end{theorem}
 
 \begin{proof}
-For \cref{eq:global-monitor-language}, the monitor guard maintains membership
-in $\mathsf{Adm}_e(D)$ after every step.  Conversely, take any
-$X\in\mathsf{Adm}_e(D)$.  Downward closure places every prefix set of every
-enumeration of $X$ in the same family, so the monitor accepts that enumeration.
-This proves language equality, not merely monitor soundness.
+\emph{Feasibility.}
+If a sound, promise-preserving $E$ exists, each promised outcome has a
+linearization in $\mathsf{FreshTraces}(E)\subseteq F_R$, which is precisely
+\cref{eq:causal-admission}.  Conversely, when
+$\mathsf{Admit}(R)$ holds, \cref{lem:residual-exact} gives
+$\mathsf{FreshTraces}(\mathsf{Can}(R))=F_R$; every promise therefore has a
+canonical-epoch execution.  Equality with the global monitor follows from
+\cref{eq:gm-language}.  The maximality statement is the definition of monitor
+soundness.
 
-The endpoints of $\mathsf{Phys}(E,L,\Gamma)$ are exactly
-$\mathsf{RawPhysical}(E,L,\Gamma)$ by the cover semantics.  Substituting the
-reference-language equality into the two definitions of history admissibility
-therefore yields the sandwich in
-\cref{eq:history-admission-equivalence}.  The contract bound $r_e$ preserves
-both required coverage and every safety obstruction at fixed $E,L$, giving
-the checker equivalence.  The runtime clause is inclusion composition.
+\emph{One cut.}
+Relate the initial canonical state to the ideal monitor at $\epsilon$.
+Suppose the relation holds after $\sigma$.  The canonical program enables $d$
+iff $\sigma d\in F_R$ by \cref{eq:canonical-epoch}; this is exactly the ideal
+monitor guard.  Both \Prepare{} steps append the same $\ell(d)$ and move to
+states related at $\sigma d$.  The \textsc{Install} guards compare the same
+durable fields.  On success both semantics close the complete source set,
+activate the target at $\epsilon$, and advance the view; on failure both
+stutter.  All remaining rules emit no fresh symbol and preserve the relation.
+This proves bisimulation by induction on transitions.  In particular, an old
+\Prepare{} before the cut changes the compared $\delta$, whereas after the
+cut its closed-phase premise is false.
+
+\emph{Many cuts.}
+Within epoch $i$, the one-cut argument gives
+$\sigma_i\in F_{R_i}$, so the definition of $F_{R_i}$ keeps the cumulative
+receipt trace in $\mathcal A$ after every prefix.  A successful next install
+is anchored to that exact trace and starts the relation at $\epsilon$.
+Induction over successful installs proves the displayed invariant and unique
+cut ownership.
 \end{proof}
 
-The global monitor is intentionally the strongest baseline: under complete
-serialized mediation it prevents replay and forbidden unions without knowing
-the future Agent graph.  The theorem does not say history admission is
-necessary for such a monitor to be safe.  It says exactly when that monitor can
-be replaced for one edge by the submitted controller epoch without either
-expanding its language or silently losing required behavior.
+The theorem is one compiler-correctness result.  Its first clause prevents
+``safe'' admission by deleting a promised causal outcome; its equality
+prevents deleting optional monitor behavior; and its last two clauses connect
+that language to the live controller generation that may actually prepare an
+effect.
 
-\subsection{Necessity and the coordination consequence}
+\subsection{Complete negative evidence}
 
-The sandwich yields a sharp three-way boundary.  If
-$\mathsf{Req}_e\nsubseteq\mathsf{Adm}_e(D)$, then even the global monitor
-cannot preserve the fixed edge contract; by
-\cref{eq:required-preservable-result}, no pruning-only compilation can repair
-it.  If the required family survives but the physical language escapes
-$\mathsf{Adm}_e(D)$, the detached epoch must restrict joint commitment,
-coordinate through a shared monitor or reservation point, or be rejected.  If
-the physical language is safe but misses $\mathsf{Req}_e$, accepting it would
-change the meaning of the typed edge.
-
-These alternatives can be decided constructively.  For
-$\mathcal R=\mathsf{Req}_e$, $\mathcal F=\mathsf{Adm}_e(D)$, and
-$\mathcal P=\mathsf{RawPhysical}(E,L,\Gamma)$, let
-$\mathsf{MNF}(\mathcal F)$ be the minimal nonfaces of $\mathcal F$.
-
-\begin{lemma}[Complete physical obstructions]
-\label{thm:deployment-obstructions}
-If every $L_g$ is downward closed, then
+If admission fails, choose
 \[
-\begin{aligned}
-\mathcal R\subseteq\mathcal P\subseteq\mathcal F
-\Longleftrightarrow{}&
-\mathcal R\subseteq\mathcal P\\[-2pt]
-&{}\land\bigl(\forall C\in\mathcal P.\
-  C\subseteq\operatorname{supp}(\mathcal F)\bigr)\\[-2pt]
-&{}\land\bigl(\forall K\in\mathsf{MNF}(\mathcal F).\
-  K\notin\mathcal P\bigr).
-\end{aligned}
+ \omega\in\Omega_e
+ \quad\text{with}\quad
+ \mathsf{Lin}(\omega)\cap F_R=\varnothing .
 \]
-Without local downward closure, failure still has the exact decomposition
-\[
-\neg(\mathcal R\subseteq\mathcal P\subseteq\mathcal F)
-\Longleftrightarrow
-(\mathcal P\setminus\mathcal F\ne\varnothing)
-\lor(\mathcal R\setminus\mathcal P\ne\varnothing).
-\]
-The two differences may both be nonempty.
-\end{lemma}
+This is a complete witness, not merely a compiler timeout.
 
-The support notation in the first display abbreviates that every
-$C\in\mathcal P$ is contained in $\operatorname{supp}(\mathcal F)$.  Minimal
-nonfaces are complete only after excluding this support escape.  They are
-classical configuration-structure obstructions
-~\cite{vanglabbeek2009configuration,winskel1987event}, not a new combinatorial
-object introduced here.
-
-For fixed $E,L$, write
-$\mathsf{Raw}(\Delta)=\mathsf{RawPhysical}(E,L,\Delta)$ and define
-\begin{equation}
-\label{eq:principal-coliveness-repair}
-\Gamma^\star_{\mathcal F}
-=\{G\in\Gamma\mid \mathsf{Raw}(2^G)\subseteq\mathcal F\}.
-\end{equation}
-
-\begin{lemma}[Greatest co-liveness compilation]
-\label{prop:principal-coliveness-repair}
-If $\Gamma$ is downward closed, then
-$\Gamma^\star_{\mathcal F}$ is its greatest downward-closed restriction whose
-physical language is contained in $\mathcal F$.  Moreover,
-\[
-\begin{aligned}
-&\mathcal R\subseteq\mathsf{Raw}(\Gamma^\star_{\mathcal F})\\
-&\quad\Longleftrightarrow
-\exists\Delta\subseteq\Gamma.\quad
-\Delta\text{ downward closed}\\[-2pt]
-&\hspace{31mm}{}\land\
-\mathcal R\subseteq\mathsf{Raw}(\Delta)\subseteq\mathcal F.
-\end{aligned}
-\]
-\end{lemma}
-
-Thus failure on $\Gamma^\star_{\mathcal F}$ is a necessity result within the
-declared repair space: no restriction of controller co-liveness alone can
-compile the monitor transparently at fixed $E,L$.  A runtime must instead add
-a shared serialization/reservation mechanism, change the controller
-realization, change the edge contract under new authorization, or reject the
-edge.  Merely dropping a required outcome is not history admission.  This is a
-specialized range-control consequence, not a claim that all coordination
-problems reduce to our model.
-
-For diagnostics, a fixed bad cover is classified as support escape, local
-overpermission, or a correlation cut in which every local piece is admitted
-but their union is not.  The cases are exclusive for that cover, not globally
-unique across all covers.  Under local downward closure and local soundness, a
-support-contained overpermission contains a physically realizable minimal
-nonface; a genuine correlation cut has at least two active controllers.
-These extraction lemmas explain a failed compilation but do not add a second
-security property.
-
-\subsection{Composition across Agent edges and receipt growth}
-
-\begin{lemma}[Edge and frontier evolution]
-\label{thm:structural-transport}
-At a fixed durable frontier $D$, a version-monotone structural edge refinement
-that is injective on each target configuration, maps every target
-configuration into the old admitted family, and commutes with lineage
-transports the old prefix certificate.  Such refinements compose, including
-version order, configuration injectivity, and the lineage square.
-
-A seal is bound to $D$.  When a fresh \Prepare{} grows the ledger frontier to
-$D'\supsetneq D$, that seal cannot authorize a subsequent edge: admission must
-be recomputed against $D'$.  If the candidate and lineage are unchanged, then
-$\mathsf{Adm}_e(D')\subseteq\mathsf{Adm}_e(D)$.
-\end{lemma}
-
-The fixed-frontier composition supports an execution graph discovered online;
-it does not require the complete Agent plan in advance.  The frontier rule is
-security-relevant rather than a cache invalidation convention: a restored cell
-whose lineage atom enters $D'$ is removed even when a snapshot parent map still
-exists.
-
-Operationally, a version-bound installation must linearize the proof step.  It
-checks that the edge source version, $D$, contracts, identities, and manifest
-still match the seal; closes the old epoch; and only then publishes the new
-controllers.  A concurrent \Prepare{} or version change makes the comparison
-fail.  Conditional on this atomic edge cut, the old and new epochs cannot both
-prepare effects across the proof boundary.  This installation bridge is not
-implemented by the offline compiler and is not part of the Lean development.
-
-\begin{lemma}[Runtime certificate transport]
-\label{thm:runtime-transport}
-If the manifest satisfies the history-admission sandwich and the runtime
-establishes
-$\mathsf{Req}_e\subseteq\mathsf{Actual}
-\subseteq\mathsf{RawPhysical}$, then
-\[
-\mathsf{Req}_e\subseteq\mathsf{Actual}\subseteq\mathsf{Adm}_e(D)
-\quad\text{and}\quad
-\mathsf{PCM}(\mathcal A,D,\mathsf{Actual},\ell).
-\]
-\end{lemma}
-
-This conclusion is conditional on truthful manifests, complete mediation, and
-the two inclusions involving $\mathsf{Actual}$; the compiler proves none of
-those premises.
-
-\subsection{Tight evidence for an exact verdict}
-
-The exact checker does not require a full listing of arbitrarily large
-controller sets.  At fixed $E,L$, the contract determines how much co-liveness
-evidence is sufficient.
-
-\begin{lemma}[Exact projection and worst-case lower bound]
-\label{thm:observation-arity}
-Two downward-closed co-liveness families with equal
-$\Pi_{\le r_e}$ have the same history-admission verdict.  Conversely, for
-every $k\ge1$, the family
-\[
-U(k,k{+}1)=
-\{X\subseteq\{d_0,\ldots,d_k\}\mid |X|\le k\}
-\]
-has a safe and an unsafe controller realization with identical access,
-controller-local families, identities, and $\Pi_{\le k}$ observations.
-Only the unsafe realization permits all $k{+}1$ controllers jointly.  Hence no
-arity-$k$ checker is exact over all downward-closed realizations; here
-$r_e=k{+}1$.
-\end{lemma}
-
-The boundary/full-simplex collision is classical
-~\cite{vanglabbeek2009configuration,emtander2010hypergraphs,
-wang2024hypergraph}.  The mechanized result lifts it through controller-cover
-realizability and required coverage.
-
-\begin{proposition}[Independent identity erasures]
-\label{prop:identity-erasure}
-There is one fixed two-handle, two-gate raw manifest whose four normalized
-worlds satisfy
-\[
-\mathsf{Ready}_M(q_{\mathrm{cell}}^x,q_{\mathrm{ctrl}}^y)
-\Longleftrightarrow x={=}\lor y={=},
-\qquad x,y\in\{=,\ne\}.
-\]
-Keeping the raw manifest and either quotient while erasing the other therefore
-equates a ready world with the nonready $(\ne,\ne)$ world.
-\end{proposition}
-
-Together with two further mechanized collisions, this yields the complete
-evidence claim:
-\begin{corollary}[Worst-case tight history-admission evidence]
-\label{cor:evidence-boundary}
-The tuple
-\[
-(e,\mathcal A,D,q_{\rm cell},\ell,q_{\rm ctrl},
-E,L,\Pi_{\le r_e}(\Gamma))
-\]
-is sufficient for the exact structural verdict.  In the model class, no exact
-verdict can uniformly erase any of the following semantic distinctions:
-\begin{enumerate}[leftmargin=*,itemsep=1pt]
-  \item \emph{edge mode}: identical arms under choice Fork are admissible,
-  whereas parallel Fork requires their forbidden joint future;
-  \item \emph{durable frontier}: the same restored cell is fresh at $D$ and
-  stale after a receipt for its lineage atom grows the frontier;
-  \item \emph{cell identity}: aliases of one atomic redemption cell and two
-  independently redeemable cells can have opposite verdicts;
-  \item \emph{controller identity}: one shared controller and two independently
-  live controllers can have opposite verdicts; and
-  \item \emph{co-liveness arity}: the $U(k,k{+}1)$ collision rules out every
-  uniformly smaller projection bound.
-\end{enumerate}
+\begin{corollary}[No pruning repair]
+\label{cor:no-pruning-repair}
+For such an $\omega$, no monitor-sound epoch can preserve the request.  Adding
+authority, changing the typed operation or its promise, or changing ledger
+identity produces a new request; restricting behavior cannot repair this one.
 \end{corollary}
+\begin{proof}
+Every monitor-sound epoch has trace language contained in $F_R$, which
+contains no linearization of $\omega$.
+\end{proof}
 
-The claim is semantic irredundancy, not uniqueness of representation:
-equivalent evidence may encode a distinction differently, concrete $E,L$ can
-lower the required arity, and a fail-closed checker can reject with less
-information.
+In the procurement example, if $p_B$ prepares before selection, the new
+durable residual may contain no completion of the promised supplier-$A$
+outcome.  The stale seal fails first; recompilation then returns that outcome
+as the witness instead of installing a controller that is certain to break
+the promise later.
 
-\subsection{Mechanized and paper-level proof boundary}
+\subsection{Why the trace lift is strict}
 
-\begin{table}[t]
-\centering
-\caption{Proof boundary of the unified theorem.}
-\label{tab:proof-boundary}
-\small
-\begin{tabular}{@{}
->{\raggedright\arraybackslash}p{0.35\columnwidth}
->{\raggedright\arraybackslash}p{0.20\columnwidth}
->{\raggedright\arraybackslash}p{0.35\columnwidth}@{}}
-\toprule
-Component & Evidence & Boundary \\
-\midrule
-Typed families, greatest fixed-prefix admission, classifier
-& Lean~4 & Finite supplied contracts \\
-Structural refinement, prefix transport, receipt monotonicity
-& Lean~4 & Fixed-frontier model \\
-Controller sandwich, obstructions, pruning, identities, arity
-& Lean~4 & Exact normalized manifest \\
-Global-monitor language equality and theorem assembly
-& Paper proof & Not yet mechanized \\
-Version-bound atomic edge cut and $\mathsf{Actual}$ refinements
-& Runtime premise & Not implemented or inferred \\
-Python compiler/verifier correspondence
-& Tests and oracle & No extraction/refinement proof \\
-\bottomrule
-\end{tabular}
-\end{table}
+The causal model is not a notational lift of endpoint families.  Consider
+\[
+  F_1=\{\epsilon,a,b,ab\},
+  \qquad
+  F_2=\{\epsilon,a,b,ba\}.
+\]
+Both have exactly the endpoint family
+$\{\varnothing,\{a\},\{b\},\{a,b\}\}$, yet one admits $a\prec b$ and the
+other $b\prec a$.  The traces $ab$ and $ba$ have the same endpoint and
+opposite verdicts under an order-sensitive policy.
 
-The append-only commitment model additionally proves that fresh \Prepare{}
-steps, and only those steps, grow the durable atom frontier; Replay, Retry,
-Crash, and Settle do not mint a second receipt.  This mechanized substrate
-justifies successive $D$ values.  It does not prove external exactly-once
-effects or the atomic installation bridge.  The central theorem is therefore
-an exact conditional statement: it specifies the evidence and refinement
-obligations a concrete Agent runtime must discharge rather than treating
-adapter attestations as proved facts.
+\begin{proposition}[Endpoint erasure is incomplete]
+\label{prop:endpoint-incomplete}
+No admission decider that factors only through
+$\{\operatorname{set}(\sigma)\mid\sigma\in F_R\}$ is exact for the request
+class in \cref{eq:raw-plan}.
+\end{proposition}
+\begin{proof}
+Use the same two-action endpoint family in two requests, promising
+$a\prec b$.  Let the first policy admit $ab$ and the second admit only $ba$
+(in addition to both one-event traces).  The endpoint observation agrees, but
+\cref{eq:causal-admission} accepts only the first.
+\end{proof}
+
+Sequence and Merge barriers therefore add expressive power that qualified
+endpoint names cannot recover without encoding the entire causal state into
+each name.  When policy and plant are permutation invariant, quotienting by
+endpoint sets recovers the older commutative corollary in
+\cref{sec:validation}.
+
+\subsection{Tightness of the atomic cut}
+
+The program equality alone does not imply the online theorem.  Both durable
+comparisons in \cref{eq:install-rule} have small counterexamples.
+
+\paragraph{Receipt-frontier comparison}
+Let $\mathcal A=\{\epsilon,x,y\}$, let an old source be able to prepare $x$,
+and compile a target whose sole fresh action is $y$ at
+$\delta=\epsilon$.  If old $x$ linearizes first but installation ignores the
+changed receipt trace, target $y$ produces $xy\notin\mathcal A$.  Comparing
+only a workspace or view version does not detect this race.
+
+\paragraph{Complete source closure}
+Use the same policy, let installation linearize first, and omit the old source
+from the closed set.  Target $y$ and stale $x$ can again both prepare, in
+either order, although the canonical target program is exact.  Therefore a
+successful cut must compare and close the complete authoritative source set,
+not only publish a fresh target identifier.
+
+Policy and view versions prevent analogous ABA reuse: without them, a seal for
+an earlier Restore can overwrite a later Fork whose receipt trace happens to
+match.  Program and request hashes prevent rebinding a valid cut to different
+plan or anchor data.  We do not claim these literal fields are the only
+encoding; the counterexamples require their semantic distinctions or
+equivalent information.
+
+\subsection{The Agent-specific boundary}
+
+For a fixed $F_R$, residual synthesis is classical.  For a fixed configuration
+change with no protected race, compare-and-swap is classical.  The theorem
+quantifies over their shared linearization boundary: the typed Agent edge
+simultaneously changes the causal plant, the controller generation, and the
+meaning of copied handles, while the receipt trace may irreversibly advance.
+Its bisimulation fails if the cut is treated as an offline compiler call or if
+the installer is left as a refinement assumption.  This online
+raw-edge-to-durable-epoch statement is the claimed contribution.

@@ -1,99 +1,82 @@
-\section{Evaluation}
+\section{Proof and Artifact Boundary}
 \label{sec:validation}
 
-The evaluation is intentionally subordinate to the theory.  It asks three
-questions: which parts of the history-admission characterization are
-machine-checked (EQ1), whether two executable implementations agree with the
-finite semantics (EQ2), and whether the predicted information losses and
-coordination failures appear as concrete witnesses (EQ3).  It does not claim
-that an existing Agent runtime satisfies the edge-cut refinement.
+The causal epoch theorem is a paper proof.  Our existing artifact predates the
+trace reformulation and checks only its permutation-invariant endpoint
+corollary.  We make this boundary explicit because neither successful tests
+nor component mechanization establishes a production Agent refinement.
 
-\subsection{EQ1: Mechanized theorem components}
+\begin{table}[t]
+\centering
+\caption{Evidence boundary.  ``Paper'' means a self-contained proof in this
+submission, not mechanization.}
+\label{tab:proof-boundary}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}p{0.43\columnwidth}p{0.48\columnwidth}@{}}
+\toprule
+Claim/component & Current evidence\\
+\midrule
+Raw plan normalization and causal $F_R$ &
+Paper (\cref{lem:normalization})\\
+Residual epoch trace equality and complete rejection &
+Paper (\cref{thm:canonical-epoch})\\
+Prepare/Install cut and multi-edge safety &
+Paper LTS (\cref{thm:canonical-epoch})\\
+Permutation-invariant endpoint corollary &
+Lean~4 component theorems\\
+Legacy endpoint compiler/verifier &
+62 Python regression tests; exhaustive three-cell oracle\\
+Causal compiler extraction &
+Not implemented\\
+Production installer or Agent mediation &
+Not claimed\\
+\bottomrule
+\end{tabular}
+\end{table}
 
-Lean~4 checks the finite components from which
-\cref{thm:agent-history-admission} is assembled:
+\subsection{Mechanized commutative corollary}
 
-\begin{itemize}[leftmargin=*,itemsep=2pt]
-  \item the choice, tensor, and replacement family constructors used by the
-  six typed edges, including well-formedness and
-  $\mathsf{Req}_e\subseteq\mathsf{Cand}_e$;
-  \item the durable-prefix morphism, its universal additive-policy
-  characterization, and greatest admitted future;
-  \item controller-cover deployment readiness, obstruction extraction,
-  greatest fixed-manifest co-liveness restriction, and the exact
-  contract-indexed projection theorem;
-  \item independent cell/controller identity separation and the
-  $U(k,k{+}1)$ lower-bound family; and
-  \item monotone commitment receipts and compositional structural transport.
-\end{itemize}
-
-The audit rejects placeholders, project axioms, and dependencies beyond
+If both $\mathsf{Plant}_R$ and $\mathcal A$ are closed under permutations of
+distinct events, a trace is characterized by its endpoint set.  In that
+profile, the old downward-closed family semantics is a quotient of
+\cref{eq:reference-language}.  The Lean development checks typed
+choice/tensor/replacement constructors, durable-prefix filtering, monotone
+fresh receipts, semantic-cell aliases, controller-cover decomposition, and
+fixed-prefix structural transport for finite carriers.  Its audit uses no
+project axioms; the remaining dependencies are Lean's standard
 \texttt{propext}, \texttt{Quot.sound}, and
-\texttt{Classical.choice}.  The reference-monitor LTS equality, the
-before/after history-to-effect lift, and the bidirectional connection between a
-real installed controller epoch and the manifest language are currently
-paper proofs or explicit refinement premises, not one extracted end-to-end
-Lean theorem.  We state that boundary in
-\cref{tab:proof-boundary}; ``mechanized components'' does not mean verified
-Codex or Claude enforcement.
+\texttt{Classical.choice}.
 
-\subsection{EQ2: Compiler--verifier agreement}
+This evidence catches useful mistakes in the unordered submodel, but it does
+not prove sequence, shuffle, residual automata, or the installation LTS.
+Accordingly, the abstract and contributions do not call the causal theorem
+mechanized.
 
-The dependency-free Python artifact contains two semantic implementations.
-The compiler represents configurations as symbolic cell sets; the independent
-verifier reparses the original request and reconstructs the semantics with bit
-masks.  Both derive the typed candidate and required families, the admitted
-monitor language, the contract arity, and the physical controller language.
-The verifier compares canonical results rather than importing compiler code.
-It rejects duplicate keys, unknown fields, inconsistent aliases, malformed
-receipt bindings, phase regressions, undeclared controller reuse, tampering,
-and resource-cap violations.
+\subsection{Executable legacy checks}
 
-Of 62 tests, 38 focus on the six history labels, evidence modes,
-monitor-language filtering, readiness grades, proposed restrictions,
-obstructions, malformed inputs, determinism, and tampering.  Every positive
-certificate sets
-$\mathsf{effect\_authorizes}=\mathsf{false}$: installation and individual
-effect release remain separate runtime acts.
+The dependency-free Python artifact has independent symbolic and bit-mask
+implementations of the endpoint predicate.  Thirty-eight of its 62 tests
+exercise the six history labels, receipt growth, alias/clone distinctions,
+controller correlations, malformed manifests, tampering, and deterministic
+certificates.  A direct oracle agrees on all 2,166 candidate/required/physical
+family instances over three cells.  These results validate the commutative
+corollary and preserve regression coverage for the earlier compiler.
 
-An exhaustive oracle enumerates all 19 downward-closed families over three
-cells.  Across every full-support candidate, required subfamily, and physical
-family, it checks 2,166 instances of
-\[
-  \mathsf{Req}_e\subseteq\mathsf{RawPhysical}(E,L,\Gamma)
-  \subseteq\mathsf{Adm}_e(D).
-\]
-The compiler's five diagnostic grades agree with the direct set differences
-in every instance, and the independent verifier accepts every untampered
-result.  This cross-checks the finite algorithms; it is not a proof that the
-JSON parser refines Lean or that a runtime manifest is complete.
+They are not reported as evaluation of $\mathsf{Can}(R)$.  In particular, the
+artifact does not generate the causal residual program, bind it through a
+version/frontier CAS, recover a partially installed epoch, or prove complete
+mediation in Codex or Claude.  Implementing those bridges is engineering work
+needed before a systems claim; the security statement here is the abstract
+kernel theorem under the TCB in \cref{sec:model}.
 
-A deterministic scaling characterization uses threshold families through
-12 cells.  With six cells and one through four controllers, exact full-family
-expansion grows from 64 to 70,592 pair iterations.  On a six-cell contract
-whose decisive arity is one, projected checking uses 128--640 iterations for
-two through ten controllers, whereas explicit full expansion requires
-4,288--16,846,784 and exceeds the 200,000 fail-closed cap at five controllers.
-These are operation counts, not latency or deployment claims.
+\subsection{Falsifiable scope}
 
-\subsection{EQ3: Separating witnesses}
-
-The litmus suite instantiates the lower bounds in
-\cref{thm:agent-history-admission}.  A snapshot-identical
-\textsc{RestoreReplace}/\textsc{RestoreLive} pair receives opposite verdicts
-because only the latter retains the old controller.  A receipt-free and a
-receipt-grown copy of the same Restore request separate durable-frontier
-evidence.  The $2\times2$ identity fixture keeps all remaining fields fixed:
-folding copied handles to one redemption cell removes a replay, while folding
-gate uses to one authoritative controller removes a forbidden product; erasing
-either quotient conflates an accepted and rejected instance.
-
-For higher-order correlation, every pair of $a,b,c$ is monitor-legal but the
-triple is not.  Three independent locally safe controllers therefore produce
-a \textsc{CorrelationCut}; a shared controller or the synthesized pairwise
-co-liveness restriction passes after resubmission.  Generalizing the fixture,
-the $U(k,k{+}1)$ family agrees on every observation of arity at most $k$ but
-differs on the $(k{+}1)$-way verdict.  The executable witnesses match the
-mechanized constructions and show why edge mode, receipts, both identities,
-and contract-indexed co-liveness are theorem inputs rather than logging
-conveniences.
+The main result would be falsified by a well-formed request for which the
+constructed epoch admits a word outside $F_R$, omits a word in $F_R$, accepts
+a stale-source fresh \Prepare{} after a successful install, or installs after
+the compared receipt trace has changed.  It would also be falsified by a
+monitor-sound, outcome-preserving epoch for a request rejected by
+\cref{eq:causal-admission}.  These are finite trace/LTS statements suitable
+for future mechanization and bounded model checking; no empirical workload
+prevalence assumption is needed for the theorem.

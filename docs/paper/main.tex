@@ -40,8 +40,9 @@
 \newcommand{\Prepare}{\ensuremath{\mathsf{Prepare}}\xspace}
 \newcommand{\Dispatch}{\ensuremath{\mathsf{Dispatch}}\xspace}
 \newcommand{\Retry}{\ensuremath{\mathsf{Retry}}\xspace}
+\newcommand{\shuf}{\mathbin{\Join}}
 
-\title{Agent History Admission: Exact Monitor Compilation for Fork, Restore,
+\title{Agent History Admission: Canonical Causal Epochs for Fork, Restore,
 and Merge}
 
 \author{}
@@ -50,43 +51,35 @@ and Merge}
 \maketitle
 
 \begin{abstract}
-Tool-using Agents increasingly fork alternatives, restore checkpoints, and
-merge descendants while their effects and authorization receipts outlive any
-restorable workspace.  A serialized atomic monitor can keep every commit safe,
-but it gives no advance guarantee that the controller topology created by a
-history edge can still realize the outcomes that edge promises.  It may accept
-two individually legal effects and discover only at a required join that the
-third is forbidden.  Calling the monitor at every effect also defeats detached
-or low-latency controllers.
-
-We introduce \emph{Agent history admission}: the property that a post-edge
-controller epoch both refines this strongest atomic monitor and preserves every
-declared required outcome that the monitor permits.  Six typed
-Fork/Restore/Merge relations derive candidate and required futures from the
-before/after Agent history; immutable receipts derive the monitor language;
-and a controller manifest derives the physical language.  Our main theorem is
-an exact characterization:
-\[
-  \mathsf{Required}\subseteq\mathsf{Physical}
-  \subseteq\mathsf{Admitted},
-\]
-where $\mathsf{Admitted}$ is exactly the endpoint family of the atomic
-monitor's trace language.
-Thus history admission is neither an extra safety check nor a composition
-slogan: it is the precise criterion for compiling serialized authorization
-into the controllers created by an Agent history edge without silently
-dropping required behavior.
-
-The characterization is constructive and worst-case tight.  A
-proof-producing compiler emits an independently checkable certificate, a
-coordination/pruning proposal, or a concrete obstruction.  Exact verdicts
-require, up to equivalent encodings, the edge mode, durable frontier,
-redemption-cell identity, controller identity, and contract-indexed
-co-liveness information; fixed-field collisions and an arbitrary-arity family
-establish the lower bounds.  Lean~4 mechanizes the typed-family,
-durable-prefix, controller-cover, and evidence-tightness components.  The
-compiler/verifier passes 38 focused tests (62 artifact tests total), and an
-independent oracle agrees on all 2,166 bounded refinement instances.
+Tool-using Agents build execution graphs online by forking alternatives,
+restoring checkpoints, and merging descendants while protected effects reach
+services that no workspace restore can undo.
+A history edge can therefore preserve every endpoint set yet violate the
+promised causal outcome: payment may precede approval, a canceled branch may
+commit after selection, or a join continuation may run before both inputs.
+The structural cause is that a restorable Agent view, an append-only receipt
+trace, and the controller epochs that remain able to prepare effects advance
+at different history cuts.
+Atomic monitors and classical supervisor synthesis enforce a fixed
+prefix-closed language, but do not establish that an online history rewrite
+closes old controllers at the same durable frontier.
+We treat each bounded protected slice as a causal-language compilation
+request whose output is a new, version-bound epoch.
+We formalize raw Fork/Restore/Merge plans, normalize ledger-backed handle
+aliases, derive the exact future language of the strongest atomic monitor,
+and construct its canonical residual epoch.
+Our Canonical Causal Epoch Theorem proves that admission is equivalent to
+every promised partial-order outcome having a reference-language
+linearization; the synthesized epoch then realizes the entire reference
+language, and frontier-CAS installation preserves that equality across
+Prepare/Install races and successive edges.
+Residual automata are classical machinery; the theorem's new boundary is the
+raw Agent-edge-to-installed-epoch refinement, including source-controller
+fencing and stale-receipt failure.
+We give self-contained paper proofs for the causal language, exact epoch, and
+installer invariant; the existing Lean and Python artifacts are reported only
+as evidence for the permutation-invariant endpoint corollary, not as
+mechanization of the causal theorem or a production Agent integration.
 \end{abstract}
 
 \input{sections/introduction}

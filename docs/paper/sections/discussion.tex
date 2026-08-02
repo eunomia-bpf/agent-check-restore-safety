@@ -1,38 +1,43 @@
-\section{Discussion and Limitations}
+\section{Scope and Limitations}
 \label{sec:discussion}
 
-\paragraph{When history admission matters}
-If every protected effect can synchronously consult one atomic service, the
-reference monitor is already safe and maximally permissive one commit at a
-time.  History admission is useful when a runtime wants to detach authority,
-avoid a global round trip, reserve a multi-effect outcome in advance, or
-promise that a parallel/join continuation remains executable.  A choose-one
-Agent may instead retain authority at its parent until selection.
+\paragraph{Why an Agent epoch rather than the global monitor?}
+Keeping $\mathsf{GM}$ forever is safe.  A canonical epoch is useful when a
+bounded Agent continuation should run at a local tool gateway, survive
+detachment from the policy service, or receive an advance guarantee that a
+Fork/Restore/Merge promise remains possible.  It specializes the current
+policy residual; it does not remove the atomic redemption ledger or make
+irreversible effects rollbackable.
 
-\paragraph{Trusted and effect boundary}
-Stable keys and installer-minted identifiers must determine the two
-quotients; the edge constructor must derive its target relation; and actual
-controllers must refine the manifest.  A production installer must bind the
-certificate atomically to the observed receipts and epoch, closing the old
-epoch.  The prototype establishes none of these facts.  External delivery
-additionally needs an outbox, idempotent/queryable sink, or conservative
-issue-time charging.  We prove neither exactly-once effects nor that an
-authorized Agent action is useful, truthful, confidential, or aligned.
+\paragraph{Bounded plans, open-ended Agents}
+The protected slice is an enforced authorization envelope, not a prediction of
+model behavior.  Internal computation remains open ended.  An unlisted
+protected action fails closed and causes a new request, policy grant, or
+history cut.  Large shuffle products can make exact compilation expensive;
+abstraction, symbolic automata, and verified factorization are future work.
 
-\paragraph{Finite representation}
-The compiler enumerates small families and fails closed at fixed caps.  Exact
-projection removes irrelevant high-arity behavior, but no uniformly
-low-order summary covers every policy.
+\paragraph{Trusted systems boundary}
+The theorem assumes authenticated policy and anchor data, complete mediation,
+and linearizable crash-stable \textsc{Prepare}/\textsc{Install} storage.  It
+models the install protocol but does not implement those primitives.  It
+proves fresh authority-trace safety, not useful or aligned actions,
+confidentiality of losing speculative branches, prompt integrity, physical
+exactly-once delivery, or compensation at an external sink.
 
-\paragraph{Ethics}
-The artifact uses synthetic manifests and finite models, recruits no users,
-and releases no private histories.  Certificates decline to authorize effects.
+\paragraph{One logical controller}
+The emitted epoch may be replicated as one fault-tolerant service, but the
+proof does not shard it among communication-free controllers.  The old
+permutation-invariant artifact contains an exact endpoint factorization
+corollary; extending trace-equivalent factorization to the causal language is
+separate supervisory-control work, not silently assumed here.
 
 \section{Conclusion}
 
-Agent history admission answers when Fork, Restore, or Merge may replace
-per-effect global-monitor calls with an installed controller epoch.  Exactly
-when the epoch contains every required endpoint and no trace outside the
-monitor language, it is both transparent and monitor-sound.  The same
-characterization exposes necessary coordination and the edge, receipt,
-identity, and co-liveness evidence an exact compiler cannot generally erase.
+Fork, Restore, and Merge are authorization cuts when protected effects outlive
+the Agent state they transform.  The Canonical Causal Epoch Theorem gives one
+end-to-end account of such a cut: typed Agent history derives a causal plant,
+durable receipts select the exact global-monitor residual, compilation
+produces a trace-equal scoped epoch, and a version/frontier CAS closes stale
+commit paths.  The result is exact in both directions---a missing promised
+outcome is a complete rejection witness, while an admitted request retains
+the entire reference language across arbitrary commit/install races.

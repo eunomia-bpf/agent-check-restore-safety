@@ -1,266 +1,239 @@
-\section{Agent History-Admission Model}
+\section{Raw Edges and Causal Reference Semantics}
 \label{sec:model}
 
-An Agent history edge changes which continuations may commit together.  The
-admission question is whether the controller epoch installed after that edge
-can run without consulting one serialized monitor while producing only traces
-that the monitor would have accepted and retaining every outcome that the edge
-declares required.  We model one edge at a time.  All carriers and families are
-finite, so the decision is executable; a runtime may install unboundedly many
-successive finite epochs.
+We model only protected effects between two history cuts.  The Agent may reason,
+edit files, query models, and create speculative state without appearing in the
+model.  An operation that would make a protected effect durable must pass
+through the epoch described below.  This separation permits rich, open-ended
+computation without pretending to predict the Agent's complete future.
 
-\subsection{Redemption cells, lineage, and durable receipts}
+\subsection{A bounded protected-slice calculus}
 
-Let $\mathcal H$ be target-handle occurrences, $\mathcal D$ semantic
-redemption cells, and $\mathcal U$ qualified authority atoms.  A trusted
-normalization
-\[
-  q_{\mathrm{cell}}:\mathcal H\to\mathcal D
-\]
-maps aliases to their shared atomic spent-state linearization point.  Two
-handles mapped to one cell denote one possible fresh commitment.  Independent
-arm occurrences remain distinct cells even when their payload text matches.
-The adapter must therefore supply any epoch, scope, issuer, nonce, or unit
-index needed to distinguish identities; the model does not infer aliasing from
-a copied workspace.
-
-Each prospective cell has source-authority lineage
-\[
-  \ell:\mathcal D\to\mathcal U.
-\]
-Distinct cells may share an atom only when no admitted outcome contains both:
-one indivisible source atom cannot fund two fresh commitments.  A retry already
-resolved by a durable receipt is not a prospective cell; successful replays
-stutter and do not appear as fresh commits.
-
-Source authority is a nonempty downward-closed family
-$\mathcal A\subseteq2^{\mathcal U}$.  The authenticated receipt frontier names
-a set $D\subseteq\mathcal U$ with $D\in\mathcal A$.  Receipt bindings are
-immutable and injective by authority atom.  One admission decision fixes $D$;
-an older local snapshot cannot remove an atom from it.
-
-For a cell set $X$, write $\ell[X]$ for its lineage image.  Exactly three
-conditions make $X$ compatible with the fixed durable past:
+Let $\mathcal H$ be raw handle occurrences and $\mathcal J$ raw gate-use
+occurrences.  A protected action and a finite plan are
 \begin{equation}
-\label{eq:prefix-ok}
-\begin{aligned}
-  \mathsf{PrefixOK}_{D}(X) \iff {}&
-    \mathsf{InjOn}(\ell,X)\\
-  &{}\land D\cap\ell[X]=\varnothing\\
-  &{}\land D\cup\ell[X]\in\mathcal A.
-\end{aligned}
-\end{equation}
-They respectively rule out two fresh cells spending one atom, reuse of an atom
-already named by a receipt, and a future outside the source contract.
-Downward closure of $\mathcal A$ makes $\mathsf{PrefixOK}_{D}$ downward closed.
-
-\subsection{Typed before/after Agent edges}
-
-A continuation contract $K=(M_K,R_K)$ contains a downward-closed
-\emph{may} family and a downward-closed \emph{required} family over cells, with
-$\varnothing\in R_K\subseteq M_K$.  May describes the outcomes the
-continuation can expose; required describes outcomes that installing the edge
-may not silently remove.  The adapter supplies complete leaf contracts.
-Admission checks their finite shape but does not infer them from model text,
-tool arguments, or a filesystem diff.
-
-A typed edge $e$ records a before node and one of six before/after relations:
-\[
-\begin{gathered}
-  \mathsf{ForkChoice},\quad \mathsf{ForkParallel},\\
-  \mathsf{RestoreReplace},\quad \mathsf{RestoreLive},\\
-  \mathsf{MergeSelect},\quad \mathsf{MergeJoin}.
-\end{gathered}
-\]
-Choice/select leave alternatives; parallel/live/join leave both continuations
-capable of durable commitment; replace retires the current continuation in
-favor of the checkpoint continuation.  The type and its target contracts
-derive two endpoint families
-\[
-  \mathsf{Cand}_{e},\qquad \mathsf{Req}_{e}\subseteq2^{\mathcal D}.
-\]
-The caller does not submit either family directly.
-\Cref{sec:semantics} gives the six derivations and proves
-$\mathsf{Req}_{e}\subseteq\mathsf{Cand}_{e}$.
-
-At the fixed receipt frontier, the greatest candidate subfamily safe for the
-serialized monitor is:
-\begin{definition}[Admitted endpoint family]
-\label{def:admitted-future}
-\begin{equation}
-\label{eq:admitted-future}
-  \mathsf{Adm}_{e}(D)
-  =\{X\in\mathsf{Cand}_{e}\mid\mathsf{PrefixOK}_{D}(X)\}.
-\end{equation}
-\end{definition}
-The word ``greatest'' is scoped to the fixed edge, candidate, authority family,
-frontier, and lineage map.  Admission may prune candidate behavior; it does
-not reissue atoms, change lineage, or expand the source contract.
-
-\subsection{Fresh-commit traces and the exact monitor}
-
-A trace $\sigma=d_1\cdots d_n$ lists successful \emph{fresh} commitments and
-contains no repeated cell.  Let
-$\operatorname{cells}(\sigma)=\{d_1,\ldots,d_n\}$ and, for a trace language
-$\mathcal T$, let
-\[
-  \mathsf{End}(\mathcal T)
-    =\{\operatorname{cells}(\sigma)\mid\sigma\in\mathcal T\}.
-\]
-Replays, retries, and crashes are stutters and are erased from this trace.
-Authorization and the edge contract are order-insensitive here; order-sensitive
-application policies must first be represented by qualified cells or a richer
-leaf contract.
-
-The strongest baseline is a serialized atomic monitor that knows the entire
-typed candidate, authority family, frontier, and lineage.  From the
-within-epoch committed set $X$, it has the single successful transition
-\begin{equation}
-\label{eq:global-monitor-step}
-\frac{
-  d\notin X\quad
-  X\cup\{d\}\in\mathsf{Cand}_{e}\quad
-  \mathsf{PrefixOK}_{D}(X\cup\{d\})
-}{
-  X\xrightarrow{\mathsf{commit}(d)}X\cup\{d\}
-}.
-\end{equation}
-Call this transition system $\mathsf{GM}_{e}(D)$ and its fresh-commit language
-$\mathsf{Traces}(\mathsf{GM}_{e}(D))$.  The transition checks the accumulated
-durable prefix, not each effect in isolation.  Because both predicates are
-downward closed, every prefix of an accepted trace is accepted and
-\begin{equation}
-\label{eq:global-monitor-endpoints}
-  \mathsf{End}\bigl(\mathsf{Traces}(\mathsf{GM}_{e}(D))\bigr)
-  =\mathsf{Adm}_{e}(D).
-\end{equation}
-Any serialized monitor that stays within the same candidate and never violates
-\cref{eq:prefix-ok} accepts a sublanguage of
-$\mathsf{Traces}(\mathsf{GM}_{e}(D))$.  The baseline is therefore maximally
-permissive for these fixed inputs.
-
-\subsection{Controller-epoch physical language}
-
-The monitor language is a specification, not the behavior of detached
-controllers.  Let $\mathcal J$ be gate-use occurrences, $\mathcal G$
-authoritative controller instances, and
-\[
-  q_{\mathrm{ctrl}}:\mathcal J\to\mathcal G
-\]
-an independent normalization.  Two uses may share one redemption cell yet
-reach different controllers, or distinct cells may be coordinated by one
-controller.  Atomic redemption resolves the former identity question; it
-does not make independently live controllers preserve a correlated policy.
-
-A normalized controller manifest contains:
-\begin{itemize}[leftmargin=*,itemsep=1pt]
-  \item access $E\subseteq\mathcal D\times\mathcal G$;
-  \item a downward-closed local family $L_g\subseteq2^{\mathcal D}$ for each
-        $g\in\mathcal G$; and
-  \item a downward-closed co-liveness family
-        $\Gamma\subseteq2^{\mathcal G}$.
-\end{itemize}
-A set $G_0\in\Gamma$ means that its controllers may remain authoritative in
-the same co-durable epoch; it is not a scheduler snapshot.  A cover chooses
-$G_0\in\Gamma$ and an accessible local piece $X_g\in L_g$ for each live
-controller.  The manifest-induced endpoint family is
-\begin{equation}
-\label{eq:raw-physical}
+\label{eq:raw-plan}
 \begin{split}
-  &\mathsf{RawPhysical}(E,L,\Gamma)\\[-2pt]
-  &\quad=\{C\subseteq\mathcal D\mid
-    \exists G_0\in\Gamma,\ \exists(X_g)_{g\in G_0},\\[-2pt]
-  &\hspace{12mm}C=\textstyle\bigcup_{g\in G_0}X_g,\\[-2pt]
-  &\hspace{12mm}\forall g\in G_0:\ X_g\in L_g,\\[-2pt]
-  &\hspace{12mm}\forall g\in G_0,\ \forall d\in X_g:\ E(d,g)\}.
+ a &::= \mathsf{use}(j,h),\\
+ P &::= \mathbf 0 \mid a \mid P;P \mid P\oplus P
+                 \mid P\parallel P .
 \end{split}
 \end{equation}
-The product is deliberately raw: it is not intersected with the candidate or
-admitted family before checking safety.  Access may overlap, so one cell can
-be reachable through several controllers.
+Every syntactic action occurrence is branch tagged.  Repeated payload text
+does not create an alias.
 
-The corresponding physical trace language contains every serialization
-consistent with this order-insensitive manifest:
-\begin{definition}[Controller-epoch physical language]
-\label{def:physical-language}
+Write $\mathsf D(P)$ for the completed raw traces of $P$ and
+$\shuf$ for order-preserving shuffle:
 \begin{equation}
-\label{eq:physical-language}
-\begin{split}
-  &\mathsf{Phys}(E,L,\Gamma)\\[-2pt]
-  &\quad=\{\sigma\mid \sigma\text{ is distinct},\
-    \operatorname{cells}(\sigma)\in
-    \mathsf{RawPhysical}(E,L,\Gamma)\}.
-\end{split}
-\end{equation}
-\end{definition}
-Hence
-$\mathsf{End}(\mathsf{Phys}(E,L,\Gamma))
-=\mathsf{RawPhysical}(E,L,\Gamma)$.
-A concrete controller may impose additional order constraints; its actual
-language must refine, not extend, this declared language.
-
-\subsection{History admissibility}
-
-An epoch is safe only if its physical traces refine the exact monitor.  It is
-faithful only if every required endpoint remains physically possible.  These
-two clauses are the definition of Agent history admissibility:
-\begin{definition}[Agent history admissibility]
-\label{def:history-admissible}
-\begin{equation}
-\label{eq:history-admissible}
+\label{eq:done-language}
 \begin{aligned}
-&\mathsf{HistoryAdmissible}_{D}(e;E,L,\Gamma)\\[-2pt]
-&\quad\iff
-  \mathsf{Phys}(E,L,\Gamma)
-    \subseteq\mathsf{Traces}(\mathsf{GM}_{e}(D))\\[-2pt]
-&\qquad{}\land
-  \mathsf{Req}_{e}
-    \subseteq\mathsf{End}(\mathsf{Phys}(E,L,\Gamma)).
+\mathsf D(\mathbf 0)&=\{\epsilon\},&
+\mathsf D(a)&=\{a\},\\
+\mathsf D(P;Q)&=\mathsf D(P)\mathsf D(Q),&
+\mathsf D(P\oplus Q)&=\mathsf D(P)\cup\mathsf D(Q),\\
+\mathsf D(P\parallel Q)&=
+  \mathsf D(P)\shuf\mathsf D(Q).&&
 \end{aligned}
 \end{equation}
-\end{definition}
-The first conjunct is \emph{monitor soundness}; the second is
-\emph{required transparency}.  Transparency is a possibility guarantee, not
-scheduler fairness or eventual task completion.  We separately name the
-finite endpoint judgment checked by the compiler:
-\begin{definition}[Structural deployment readiness]
-\label{def:deployment-ready}
-\begin{equation}
-\label{eq:deployment-ready}
-\begin{aligned}
-&\mathsf{DeploymentReady}_{D}(e;E,L,\Gamma)\\[-2pt]
-&\quad\iff
-  \mathsf{Req}_{e}\subseteq\mathsf{RawPhysical}(E,L,\Gamma)\\[-2pt]
-&\hspace{22mm}\subseteq\mathsf{Adm}_{e}(D).
-\end{aligned}
-\end{equation}
-\end{definition}
-We call any family $\mathcal K$ with
-$\mathsf{Req}_{e}\subseteq\mathcal K\subseteq\mathsf{Adm}_{e}(D)$ an
-\emph{admissible edge cut}.  A successful manifest supplies the concrete cut
-$\mathcal K=\mathsf{RawPhysical}(E,L,\Gamma)$.
-
-Let $\mathsf{ActualTrace}$ be the fresh-commit language of an installed
-runtime and
-$\mathsf{Actual}=\mathsf{End}(\mathsf{ActualTrace})$.  The runtime owes
-required reachability and conservative manifestation:
-\begin{equation}
-\label{eq:actual-refinement}
-  \mathsf{Req}_{e}\subseteq\mathsf{Actual},
-  \qquad
-  \mathsf{ActualTrace}\subseteq\mathsf{Phys}(E,L,\Gamma).
-\end{equation}
-Together with history admissibility these obligations yield both
-$\mathsf{ActualTrace}\subseteq
-\mathsf{Traces}(\mathsf{GM}_{e}(D))$ and
+The union remains tagged because action occurrences are branch tagged.
+The executable plant of a plan is its prefix closure
 \[
-  \mathsf{Req}_{e}\subseteq\mathsf{Actual}
-  \subseteq\mathsf{RawPhysical}(E,L,\Gamma)
-  \subseteq\mathsf{Adm}_{e}(D).
+  \mathsf{Pref}(P)=\mathsf{prefixes}(\mathsf D(P)).
 \]
-The finite checker establishes history admissibility for supplied inputs.  It
-does not establish truthful leaf contracts or identities, an authentic and
-complete frontier, conservative controller evidence, complete mediation,
-atomic cell redemption, or \cref{eq:actual-refinement}.  A seal is consequently
-not permission for an external effect and proves neither exactly-once delivery
-nor the safety of unmodeled Agent behavior.
+Thus $a;b$ does not enable $b$ first, whereas
+$a\parallel b$ permits either interleaving.  Choice is resolved by the first
+arm-specific fresh commitment; after that point the other arm has no trace in
+the same epoch.
+
+A \emph{promised outcome} $\omega$ is a finite partial order of protected
+occurrences; $\mathsf{Lin}(\omega)$ is its set of linearizations.  A plan
+contract carries a finite, nonempty set $\Omega_P$ of outcomes that installing
+the plan promises to keep possible.  The promise concerns possibility, not
+scheduler fairness or task completion.  Sequence, choice, and parallel derive
+outcome contracts by ordered product, tagged union, and disjoint partial-order
+union, respectively.  Leaf promises come from the protected tool API or the
+operation request.  Understating them weakens only the stated transparency
+guarantee; it cannot enlarge the language enforced by the synthesized epoch.
+Writing $\omega\mathbin{\triangleright}\omega'$ for adding every event of
+$\omega$ as a predecessor of every event of $\omega'$ and $\uplus$ for
+disjoint partial-order union, the derivation is
+\begin{equation}
+\label{eq:promise-algebra}
+\begin{aligned}
+\Omega_{P;Q}
+ &=\{\omega\triangleright\omega'
+       \mid\omega\in\Omega_P,\omega'\in\Omega_Q\},\\
+\Omega_{P\oplus Q}&=\Omega_P\uplus\Omega_Q,\\
+\Omega_{P\parallel Q}
+ &=\{\omega\uplus\omega'
+       \mid\omega\in\Omega_P,\omega'\in\Omega_Q\}.
+\end{aligned}
+\end{equation}
+
+\begin{table}[t]
+\centering
+\caption{The six Agent history cuts.  Every cut closes the listed source
+controller classes; a retained continuation is reintroduced inside the newly
+minted target epoch.}
+\label{tab:edge-semantics}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Edge $e$ & target plan $P_e$ & source fate\\
+\midrule
+$\mathsf{ForkChoice}(L,R)$ & $L\oplus R$ & replace parent\\
+$\mathsf{ForkParallel}(L,R)$ & $L\parallel R$ & replace parent\\
+$\mathsf{RestoreReplace}(N,K)$ & $K$ & retire $N$\\
+$\mathsf{RestoreLive}(N,K)$ & $N\parallel K$ & carry $N$\\
+$\mathsf{MergeSelect}_b(L,R;J)$ & $P_b;J$ & retire loser\\
+$\mathsf{MergeJoin}(L,R;J)$ & $(L\parallel R);J$ & join both\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A raw edge request
+\[
+ R=(\kappa,\nu,\delta,e,P_e,\Omega_e,\mathsf{src},\mathsf{anchors})
+\]
+contains a policy version $\kappa$, view version $\nu$, authenticated durable
+receipt trace $\delta$, one typed edge from
+\cref{tab:edge-semantics}, its derived target plan and promises, and the source
+controller anchors that the cut must close.  The caller chooses the operation
+and leaf plans, but cannot submit an arbitrary target language or target
+controller layout.  A new protected action outside $P_e$ is denied until a new
+request extends the bounded slice.
+
+\subsection{Authenticated normalization}
+
+Snapshots copy handles and gate references, so syntax is not security
+identity.  The redemption service authenticates for each $h\in\mathcal H$ a
+cell anchor, issuer, scope, effect digest, and authority lineage.  Define
+\[
+  h\equiv_{\rm cell}h'
+  \quad\Longleftrightarrow\quad
+  \mathsf{cellAnchor}(h)=\mathsf{cellAnchor}(h')
+\]
+and let $q_{\rm cell}:\mathcal H\to\mathcal D$ be the quotient.  A request is
+well formed only when issuer, scope, digest, and lineage agree inside each
+class.  Consequently lineage descends to
+$\ell:\mathcal D\to\mathcal U$, where $\mathcal U$ is the authority-event
+alphabet.  Independent arm occurrences receive fresh anchors by default;
+only authenticated equality creates an alias.
+
+Gate-use occurrences have a separate source relation
+\begin{equation}
+\label{eq:source-equivalence}
+\begin{aligned}
+  j\equiv_{\rm src}j'
+  \quad\Longleftrightarrow\quad{}
+  &\mathsf{controllerAnchor}(j)\\[-2pt]
+  &{}=\mathsf{controllerAnchor}(j').
+\end{aligned}
+\end{equation}
+Its classes determine which old controller states an installation must close.
+It does \emph{not} determine the target layout.  Successful synthesis mints
+one edge-scoped epoch identifier $\eta$ and binds every target gate use to its
+new residual state.  Hence the target controller identity is a compiler
+output, not an attested $q_{\rm ctrl}$, access relation, or co-liveness family.
+
+Normalization is stateful because replay is not a second authority event.
+Starting from the receipt ledger named by $\delta$, a deterministic transducer
+$N_\delta$ processes a raw trace.  On $\mathsf{use}(j,h)$ it resolves
+$d=q_{\rm cell}(h)$.  If $d$ already has a receipt, or was emitted earlier in
+this raw trace, the step emits $\epsilon$; otherwise it emits the fresh cell
+$d$ and marks it pending.  Malformed anchor collisions reject the request
+rather than guessing.  The normalized plant is
+\begin{equation}
+\label{eq:normalized-plant}
+  \mathsf{Plant}_R
+  =\{N_\delta(\hat\sigma)\mid
+       \hat\sigma\in\mathsf{Pref}(P_e)\}.
+\end{equation}
+Its words contain no repeated cell.  Because $N_\delta$ is
+prefix preserving, $\mathsf{Plant}_R$ is prefix closed.
+
+\begin{lemma}[Normalization matters]
+\label{lem:normalization}
+For every well-formed request, $\mathsf{Plant}_R$ is a finite prefix-closed
+language.  Changing an authenticated cell class can change
+$\mathsf{Plant}_R$, while changing a source controller class can change the
+set closed by installation even when $\mathsf{Plant}_R$ is unchanged.
+\end{lemma}
+\begin{proof}
+Induction on a raw trace prefix proves prefix preservation.  Two branch-tagged
+uses mapped to different cells emit two symbols; mapping them to one cell
+makes the second a stutter.  Conversely, source classes occur in the
+\textsc{Install} premise in \cref{sec:semantics}, not in cell emission.
+\end{proof}
+
+This is the formal separation missing from a workspace-only account: one
+quotient decides fresh redemption, while another decides which stale
+authoritative state must lose commit eligibility.
+
+\subsection{Durable causal policy and the exact monitor}
+
+Let $\mathcal A\subseteq\mathcal U^*$ be a regular prefix-closed
+durable-authority policy and assume the authenticated receipt trace
+$\delta\in\mathcal A$.  Symbols in $\mathcal U$ are qualified ledger events:
+they include the authority root, scope, unit/cell anchor, and effect class, so
+$\delta$ is the exact receipt trace rather than a trace of coarse action
+names.  Order is semantic: for example, the policy may contain
+$\mathsf{approve}\,\mathsf{pay}$ but not
+$\mathsf{pay}\,\mathsf{approve}$.  Extend lineage homomorphically to traces as
+$\ell^*$.  The exact safe future at request $R$ is
+\begin{definition}[Durable residual language]
+\label{def:reference-language}
+\begin{equation}
+\label{eq:reference-language}
+ F_R=\{\sigma\in\mathsf{Plant}_R
+       \mid \delta\cdot\ell^*(\sigma)\in\mathcal A\}.
+\end{equation}
+\end{definition}
+$F_R$ is prefix closed: both the plant and policy are prefix closed.
+
+The strongest atomic reference monitor $\mathsf{GM}(R)$ stores the normalized
+within-epoch trace $\sigma$ and has the fresh transition
+\begin{equation}
+\label{eq:gm-step}
+ \frac{\sigma d\in F_R}
+      {\sigma\xrightarrow{\mathsf{fresh}(d)}\sigma d}.
+\end{equation}
+Retry, replay, settlement, and crash recovery are stutters in its fresh trace.
+By construction,
+\begin{equation}
+\label{eq:gm-language}
+  \mathsf{FreshTraces}(\mathsf{GM}(R))=F_R .
+\end{equation}
+This monitor is the baseline, not a straw man: under complete mediation and an
+atomic durable ledger it is maximally permissive for the fixed plan, receipt
+trace, and policy.
+
+The edge's preservation condition is
+\begin{definition}[Causal history admission]
+\label{def:causal-admission}
+\begin{equation}
+\label{eq:causal-admission}
+ \mathsf{Admit}(R)
+ \iff
+ \forall\omega\in\Omega_e.\quad
+ \mathsf{Lin}(\omega)\cap F_R\ne\varnothing .
+\end{equation}
+\end{definition}
+Parallel scheduler orders count as one promised partial-order outcome, so one
+policy-legal linearization suffices.  A sequential prerequisite, exclusive
+choice, or join barrier is part of $\omega$ and cannot be reordered away.
+When the only promise is the empty outcome, a seal can still enforce safety,
+but it is reported as carrying no nontrivial transparency claim.
+
+\subsection{Adversary and trusted boundary}
+
+The adversary controls Agent output, tool arguments, stale snapshots, retries,
+and requested history edges.  It may race a fresh commitment against an
+installation and present copied raw handles.  Trusted components are the
+policy issuer, authenticated cell and source-controller anchors, the
+append-only receipt ledger, complete mediation of protected effects, and the
+linearizable crash-stable primitives used by \textsc{Prepare} and
+\textsc{Install}.  The calculus does not infer natural-language intent or
+external state.  Remote exactly-once delivery still requires an idempotent or
+queryable sink, an outbox, or conservative issue-time charging.

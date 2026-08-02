@@ -1,125 +1,91 @@
-\section{Proof-Producing Monitor Compiler}
+\section{Compilation and Verification}
 \label{sec:algorithm}
 
-The theorem suggests a small compiler, not another Agent runtime.  For one
-proposed Fork, Restore, or Merge, the artifact specializes the reference
-monitor language to a submitted controller epoch and emits a proof witness.
-An independent verifier recomputes the decision.  The tool neither creates
-checkpoints nor releases effects; it returns a certificate, a controller
-restriction that would make the edge admissible after installation and
-resubmission, or a concrete obstruction.
+The theorem yields a compiler for one proposed history cut, not a new Agent
+planner.  Its input is the raw request $R$ from \cref{sec:model}; its output is
+either a version-bound epoch seal or a promised outcome that no sound epoch
+can preserve.
 
-\subsection{Manifest boundary}
-
-A request supplies the authority family, append-only receipt frontier, typed
-edge and leaf may/required maxima, explicit stable-cell aliases, and normalized
-controller access/local/co-liveness evidence.  Aliases must preserve the cell
-anchor, authority atom, commitment key, and effect digest; same-controller
-uses must agree on anchor, version, and local family.  Co-liveness evidence is
-either full exact $\Gamma$, an attested exact
-$P=\Pi_{\le r}(\Gamma)$, or a diagnostic sound upper bound.
-
-These are adapter attestations, not transcript inferences.  Neither executable
-proves completeness, a projection label, or old-epoch closure.  A production
-adapter must derive the typed label from the runtime constructor; natural
-language does not establish a leaf contract or either identity quotient.
-
-\subsection{Compilation pipeline}
-
-The compiler follows the proof decomposition.
+\subsection{Canonical construction}
 
 \begin{enumerate}[leftmargin=*,itemsep=2pt]
-  \item It arm-tags every target occurrence, then folds only alias classes
-  backed by explicit stable-cell evidence.  This computes
-  $q_{\mathrm{cell}}$ without conflating it with controller identity.
+  \item \textbf{Validate and normalize.}
+  Check the typed edge shape, source versions, authenticated anchors, and
+  within-class digest/issuer/scope/lineage agreement.  Translate the plan to a
+  finite automaton for $\mathsf{Plant}_R$, making receipt-backed replays
+  $\epsilon$-transitions.
 
-  \item It applies the typed before/after edge rule to the leaf families,
-  producing $\mathsf{Cand}_e$ and $\mathsf{Req}_e$ and checking
-  $\mathsf{Req}_e\subseteq\mathsf{Cand}_e$.
+  \item \textbf{Take the durable residual.}
+  Product the plant with the policy automaton after reading $\delta$.  Remove
+  states whose policy component is rejecting.  The resulting prefix automaton
+  recognizes exactly $F_R$.
 
-  \item It computes the exact reference-monitor language by filtering the
-  candidate against the current durable prefix and normalized lineage.  The
-  result is the greatest admitted family inside this fixed candidate,
-  $\mathsf{Adm}_e$; the compiler also records prefix-replay,
-  lineage-collision, or forbidden-union reasons for removed configurations.
+  \item \textbf{Check promises.}
+  For each $\omega\in\Omega_e$, explore its linearizations jointly with the
+  residual automaton.  If none reaches completion, return
+  $(\omega,\mathsf{cut}_\omega)$, where
+  $\mathsf{cut}_\omega$ records the first disabled causal frontier on every
+  explored linearization.  This is an explanation of the complete
+  impossibility in \cref{thm:canonical-epoch}, not a heuristic repair.
 
-  \item It recomputes whether the source envelope is structurally inheritable.
-  This requires an unchanged durable prefix and a commuting, collision-free
-  parent map into the source future.  The prototype does not consume a prior
-  verification seal or implement certificate-chain reuse; \textsc{Inherit}
-  reports eligibility inside the canonical recomputation.
-
-  \item Independently, it normalizes gate uses by controller anchor and derives
-  $r=r(\mathsf{Req}_e,\mathsf{Adm}_e)$.  Projection mode rejects every
-  submitted controller set larger than $r$, then the compiler enumerates
-  \[
-    \mathsf{Raw}(\widehat\Gamma)
-      =\bigcup_{G\in\widehat\Gamma}\ \bigotimes_{g\in G} L_g,
-  \]
-  where $L_g$ is controller $g$'s local family after cell normalization.
-
-  \item With full \texttt{exact} evidence, it checks the monitor-compilation
-  sandwich directly.  With \texttt{exact\_projection\_through\_r}, it checks
-  the same
-  predicate on $P$ and applies \cref{thm:observation-arity} to decide readiness
-  for hidden $\Gamma$ without reconstructing optional behavior.  A safe
-  \texttt{sound\_overapprox} product proves only upper safety: it cannot prove
-  hidden $\Gamma$ covers required behavior and therefore never yields
-  \textsc{Ready} or a structural seal.
+  \item \textbf{Emit the canonical epoch.}
+  Merge states with the same right residual and encode the transition
+  relation of $\mathsf{Can}(R)$.  Mint a target epoch identifier and bind its
+  initial state, policy/view versions, exact receipt trace, source-controller
+  set, target gate uses, and program hash into a seal.
 \end{enumerate}
 
-The same capped pass filters the submitted family to its hereditary-safe
-subfamily.  For full exact $\Gamma$, this is the greatest fixed-$E,L$ repair in
-\cref{prop:principal-coliveness-repair}.  For exact projection $P$, the claim
-is scoped only to $P$; a feasible result becomes a concrete full epoch policy
-only after installation and resubmission.  For a sound upper bound, it is
-diagnostic and never installable.  No proposal changes the current decision or
-seal.
+The construction operates on automata, not an enumerated list of histories.
+Choice adds alternatives, sequence connects accepting frontiers, and parallel
+takes an order-preserving product.  Parallel composition and promise
+linearization can be exponential in the number of protected occurrences; we
+claim finite decidability for bounded slices, not a polynomial algorithm for
+arbitrary partial orders.  The residual quotient may reduce the emitted
+state space, but minimal-automaton theory itself is classical
+~\cite{brzozowski1964derivatives}.
 
-The output separates semantic feasibility from controller realization.  Full
-exact evidence distinguishes exact, safely restricted, unsafe, incomplete,
-and doubly failing layouts; exact projection preserves the readiness bit.
-Sound upper bounds never seal.  A proposed safe restriction becomes effective
-only after installation and resubmission under a new version-bound
-certificate.
+\subsection{Small trusted checker}
 
-\subsection{Constructive negative evidence}
-
-For a deterministic bad cover the compiler emits: the cell for
-\textsc{OutsideSupport}; a contained minimal nonface and controller for
-\textsc{LocalOverpermission}; or an inclusion-minimal multi-controller cover
-for \textsc{CorrelationCut}.  Declared common origins further label the last
-case \textsc{GateClone}.  The causes are exclusive for the chosen cover, not
-globally unique.  Missing behavior instead yields a witness in
-$\mathsf{Req}_e\setminus\mathsf{Raw}(\widehat\Gamma)$; both differences may be
-reported.  A witness from a sound upper bound describes that bound, not
-necessarily the hidden runtime.
-
-\subsection{Independent verification and fail-closed limits}
-
-The untrusted compiler emits canonical JSON.  A verifier that imports no
-compiler code reparses the request, reconstructs the semantics with bit masks,
-and compares the complete result.  It rejects unknown/duplicate fields,
-malformed receipts, inconsistent aliases or anchors, tampering, and
-\texttt{sound\_overapprox} certificates.  Digests bind the decision to its
-request and evidence mode.  Fixed caps (12 source and target cells, 10
-controllers, 4,096 configurations, and 200,000 product iterations) fail
-closed; the artifact targets small contracts, not scale.
-
-Even a valid positive result is only a \emph{history-admission} certificate,
-and the verifier always emits
-$\mathsf{effect\_authorizes}=\mathsf{false}$.  In
-projection mode, $\mathsf{Raw}(P)$ is not claimed to upper-bound runtime
-behavior.  The adapter must attest exact projection, hidden-$\Gamma$ downward
-closure, and the same installed $E,L$; the runtime must establish the
-version-bound edge cut and
+The compiler is an untrusted witness producer.  A checker reparses $R$,
+authenticates its anchors and receipt trace, independently reconstructs the
+plan/policy product, and verifies:
 \[
-  \mathsf{Req}_e\subseteq\mathsf{Actual}
-  \subseteq\mathsf{Raw}(E,L,\Gamma).
+\begin{gathered}
+ \mathsf{FreshTraces}(\mathsf{program})=F_R,\\
+ \forall\omega\in\Omega_e.\quad
+ \mathsf{Lin}(\omega)\cap F_R\ne\varnothing,\\
+ \mathsf{seal.scope}
+  =(\kappa,\nu,\delta,\mathsf{src},\mathsf{hash}(R),
+    \mathsf{hash}(\mathsf{program})).
+\end{gathered}
 \]
-Receipt authenticity, complete mediation, controller installation and
-freshness, atomic redemption, and lease revalidation remain external
-obligations.
-The Lean model specifies the finite decision but is not an extraction of the
-Python parser or verifier; proof replay, independent reimplementation, and
-exhaustive small-model cross-checks are distinct evidence layers.
+Language equality is checked by the standard symmetric-difference product.
+The checker does not authorize an individual external effect.  A verified seal
+becomes installable only through the \textsc{Install} transition and only
+while its entire scope still matches durable state.  This producer/checker
+split follows the proof-carrying-code trust pattern
+~\cite{necula1997pcc}.
+
+For a negative result, the checker verifies that $\omega$ belongs to the
+edge-derived promise set and that its product with $F_R$ has no accepting
+state.  It does not accept a compiler-supplied prose reason.  A caller may
+change the plan, promise, policy grant, or history operation and submit a new
+request; that is a different theorem instance.
+
+\subsection{Why the output is one logical epoch}
+
+$\mathsf{Can}(R)$ is one authoritative logical state machine, even if a
+deployment later replicates it behind a consensus service or compiles a
+trace-equivalent distributed realization.  This choice removes a hidden
+assumption from the security theorem: the caller no longer asserts that
+several controllers preserve a correlation.  Decentralized supervisor
+synthesis and language separability characterize when such a factorization is
+possible~\cite{komenda2017decentralized}; they are optional lowerings below
+the verified epoch, not part of causal history admission.
+
+The logical epoch need not be a remote global round trip.  It is scoped to one
+bounded Agent edge and can be placed with the protected tool gateway.  It
+differs from the reference monitor in how it is obtained and retired: the
+global policy and receipt history are compiled at the cut, while subsequent
+fresh decisions use the installed residual state until another protected
+slice or history edge forces a new cut.

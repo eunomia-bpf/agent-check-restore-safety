@@ -1,200 +1,166 @@
-\section{Typed Edges and Admission Semantics}
+\section{Canonical Epoch and Durable Kernel}
 \label{sec:semantics}
 
-This section instantiates the model in three steps.  The edge type derives its
-candidate and required endpoint families; the durable prefix derives the exact
-serialized-monitor language; and the proposed controller epoch is accepted
-only when its physical language refines that monitor without hiding a required
-endpoint.
+\subsection{Residual epoch synthesis}
 
-\subsection{Six before/after derivations}
-
-For endpoint families $\mathcal F,\mathcal G$, define
-\begin{align*}
-  \mathsf{choice}(\mathcal F,\mathcal G)
-    &=\mathcal F\cup\mathcal G,\\
-  \mathsf{tensor}(\mathcal F,\mathcal G)
-    &=\{X\cup Y\mid X\in\mathcal F,\ Y\in\mathcal G\}.
-\end{align*}
-Choice preserves either alternative without introducing their union.  Tensor
-allows one outcome from each continuation to become durable together.  If one
-semantic cell occurs in both operands, set union counts it once; the adapter
-must justify that alias through $q_{\mathrm{cell}}$.
-
-Let $N$ be the current continuation, $K$ a checkpoint continuation, and $L,R$
-two branch continuations.  The before/after relation fixes the family
-constructor:
-\begin{center}
-\scriptsize
-\setlength{\tabcolsep}{2pt}
-\begin{tabular}{@{}p{0.28\columnwidth}p{0.23\columnwidth}
-                  p{0.19\columnwidth}p{0.19\columnwidth}@{}}
-  \toprule
-  Edge $e$ & before $\Rightarrow$ after
-    & $\mathsf{Cand}_{e}$ & $\mathsf{Req}_{e}$\\
-  \midrule
-  $\mathsf{ForkChoice}(L,R)$
-    & $N\Rightarrow L\mathbin{\mid}R$
-    & $M_L\cup M_R$ & $R_L\cup R_R$\\
-  $\mathsf{ForkParallel}(L,R)$
-    & $N\Rightarrow L\otimes R$
-    & $M_L\otimes M_R$ & $R_L\otimes R_R$\\
-  $\mathsf{RestoreReplace}(K)$
-    & $N\Rightarrow K$
-    & $M_K$ & $R_K$\\
-  $\mathsf{RestoreLive}(N,K)$
-    & $N\Rightarrow N\otimes K$
-    & $M_N\otimes M_K$ & $R_N\otimes R_K$\\
-  $\mathsf{MergeSelect}(L,R)$
-    & $(L,R)\Rightarrow L\mathbin{\mid}R$
-    & $M_L\cup M_R$ & $R_L\cup R_R$\\
-  $\mathsf{MergeJoin}(L,R)$
-    & $(L,R)\Rightarrow L\otimes R$
-    & $M_L\otimes M_R$ & $R_L\otimes R_R$\\
-  \bottomrule
-\end{tabular}
-\end{center}
-Here $\mid$ and $\otimes$ in the middle column describe the post-edge
-continuation relation, while the final columns apply the corresponding family
-constructor.  The source $N$ does not grant new authority to freshly declared
-Fork arms; their lineage and the fixed receipt prefix do.  A pure Checkpoint
-records reconstructable state and creates no history edge.
-
-Union and tensor preserve nonemptiness, the empty endpoint, and downward
-closure.  Monotonicity of both constructors gives, for every valid typed edge,
+For a language $F$ and trace $\sigma$, its right residual is
+\[
+  F/\sigma=\{\rho\mid\sigma\rho\in F\}.
+\]
+The canonical epoch for request $R$ is the deterministic transition system
 \begin{equation}
-\label{eq:required-candidate}
-  \mathsf{Req}_{e}\subseteq\mathsf{Cand}_{e}.
+\label{eq:canonical-epoch}
+\begin{split}
+ Q_R &=\{F_R/\sigma\mid\sigma\in F_R\},\\
+ q_R^0&=F_R/\epsilon,\\
+ (F_R/\sigma)\xrightarrow{d}(F_R/\sigma d)
+   &\quad\Longleftrightarrow\quad \sigma d\in F_R .
+\end{split}
 \end{equation}
-Thus the operation type, rather than a caller-proposed ``safe successor,''
-determines whether outcomes remain alternatives or may coexist.
+Equality of residuals makes the transition well defined: if
+$F_R/\sigma=F_R/\tau$, then $d\rho$ belongs to one residual exactly when it
+belongs to the other.  Write $\mathsf{Can}(R)$ for this program together with
+the target gate-use bindings and request scope.
 
-\subsection{Exact serialized-monitor semantics}
+\begin{lemma}[Exact residual epoch]
+\label{lem:residual-exact}
+For every well-formed $R$,
+\[
+  \mathsf{FreshTraces}(\mathsf{Can}(R))=F_R .
+\]
+Moreover, $\mathsf{Can}(R)$ is the unique smallest deterministic realization
+of $F_R$ up to state renaming.
+\end{lemma}
+\begin{proof}
+After reading $\sigma\in F_R$, induction on $|\sigma|$ places the epoch in
+$F_R/\sigma$.  The transition rule enables $d$ exactly when
+$\sigma d\in F_R$, proving both inclusions.  The last statement is the
+standard distinguishable-residual argument; we use it only for canonical
+representation, not as a novelty claim.
+\end{proof}
 
-The transition in \cref{eq:global-monitor-step} is atomic: it evaluates against
-$D\cup\ell[X]$ and publishes the new spent state before another successful
-fresh commit.  Replays resolve an existing binding and stutter.
+The epoch preserves the \emph{entire} atomic-monitor language.  Promises do
+not select a smaller safe implementation: they decide whether installing this
+edge can honestly retain the behavior its type and leaf contract advertise.
 
-\Cref{eq:global-monitor-language} is the exact trace language of
-\cref{eq:global-monitor-step}.  The forward direction follows because every
-transition leaves its endpoint in $\mathsf{Adm}_{e}(D)$.  Conversely, if
-$X\in\mathsf{Adm}_{e}(D)$, downward closure makes every prefix of every
-enumeration of $X$ pass the transition.  This proves
-\cref{eq:global-monitor-endpoints} and the monitor's maximal permissiveness:
-no serialized implementation satisfying the same candidate and prefix
-invariant can admit an additional fresh-commit trace.
+\subsection{Durable kernel state}
 
-Filtering also gives the exact semantic feasibility boundary
+The store state relevant to one authority scope is
+\[
+ S=(\kappa,\nu,\delta,\mathsf{phase},\mathsf{bind},
+       \mathsf{prog},\mathsf{q},\mathsf{rcpt}).
+\]
+$\kappa$ and $\nu$ are policy and Agent-view versions; $\delta$ is the
+append-only authority receipt trace.  For each controller epoch,
+$\mathsf{phase}\in\{\mathsf{inactive},\mathsf{active},\mathsf{closed}\}$.
+$\mathsf{bind}$ resolves gate uses to epochs, $\mathsf{prog}$ stores their
+verified programs, $\mathsf q$ their current states, and $\mathsf{rcpt}$ maps
+redeemed cells to immutable receipts and settlement phases.  A well-formed
+scope has one authoritative active epoch after a canonical installation; all
+live Agent branches route protected actions through it.
+
+A seal is
+\[
+ Z=(\kappa_Z,\nu_Z,\delta_Z,\mathsf{src}_Z,
+       \mathsf{targetUses}_Z,H_R,H_{\mathsf{Can}},\eta_Z),
+\]
+where the two hashes bind the normalized request and canonical program and
+$\eta_Z$ is fresh.  The active source set is derived from the typed view and
+authenticated source anchors.  A caller cannot omit an authoritative source
+epoch and still satisfy the equality check below.
+
+\paragraph{Fresh preparation}
+Let gate use $j$ resolve to active epoch $\eta$ and handle $h$ to cell
+$d=q_{\rm cell}(h)$.  The security linearization point is
 \begin{equation}
-\label{eq:required-preservable}
-\begin{aligned}
-  &\mathsf{Req}_{e}\subseteq\mathsf{Adm}_{e}(D)\\
-  &\quad\Longleftrightarrow
-    \exists\mathcal K.\quad
-      \mathsf{Req}_{e}\subseteq\mathcal K
-      \subseteq\mathsf{Cand}_{e}\\[-2pt]
-  &\hspace{36mm}{}\land
-      \forall X\in\mathcal K.\ \mathsf{PrefixOK}_{D}(X).
-\end{aligned}
-\end{equation}
-When the left side fails, even the exact atomic monitor must eventually block
-some required endpoint.  Installing the history edge anyway would remain safe
-one commit at a time but would make the edge's required contract false.  This
-is the gap between commit authorization and history admission.
-
-\subsection{Controller compilation as language refinement}
-
-The manifest replaces a global round trip only when its entire physical
-language is contained in the monitor language.  Containment alone is
-insufficient: the empty language is safe but destroys every nonempty promise.
-Required transparency rules out that degenerate compilation.  Expanding
-\cref{eq:history-admissible} using
-\cref{eq:global-monitor-endpoints,eq:physical-language}, and writing
-$\mathcal T=\mathsf{Phys}(E,L,\Gamma)$ and
-$\mathcal P=\mathsf{RawPhysical}(E,L,\Gamma)$, gives
-\[
-\begin{aligned}
- &\mathcal T\subseteq\mathsf{Traces}(\mathsf{GM}_{e}(D))
- \ \Longleftrightarrow\
- \mathcal P\subseteq\mathsf{Adm}_{e}(D),\\
- &\mathsf{Req}_{e}\subseteq\mathsf{End}(\mathcal T)
- \ \Longleftrightarrow\
- \mathsf{Req}_{e}\subseteq\mathcal P.
-\end{aligned}
-\]
-Their conjunction is exactly \cref{eq:deployment-ready}.  It characterizes,
-for the supplied finite model, when the edge's serialized monitor can be
-compiled into a controller epoch.  A pointwise atomic monitor proves the right
-inclusion during execution; history admission additionally proves the left
-inclusion before the edge becomes active.
-
-This comparison gives the baseline its strongest reasonable advantage.  It
-knows the complete edge candidate and current receipt frontier, serializes all
-fresh commits, and checks the full source family.  History admission does not
-claim a safer per-commit decision.  It establishes the different fact that a
-specific post-edge controller topology refines that decision for every trace
-and does not obtain safety by deleting required outcomes.
-
-\subsection{Version-bound edge cuts and seals}
-
-The mathematical predicate is useful only if the checked cut is the one the
-runtime installs.  We state the required binding as an abstract transition
-contract rather than claiming an implemented protocol.
-
-Let an authoritative admission view at version $\nu$ be
-\[
-  V_\nu=
-  \langle\mathcal A,e,q_{\mathrm{cell}},\ell,
-  q_{\mathrm{ctrl}},E,L,\Gamma\rangle.
-\]
-An \emph{edge-cut seal}
-\[
-  S=\langle\nu,D,V_\nu,\mathcal K,\pi\rangle
-\]
-binds the exact receipt frontier and view, sets
-$\mathcal K=\mathsf{RawPhysical}(E,L,\Gamma)$, and carries a checkable
-derivation
-$\pi:\mathsf{HistoryAdmissible}_{D}(e;E,L,\Gamma)$.
-Its abstract installation rule is
-\begin{equation}
-\label{eq:seal-install}
+\label{eq:prepare-rule}
 \frac{
-  \mathsf{CurrentView}=V_\nu\quad
-  \mathsf{CurrentFrontier}=D\quad
-  \mathsf{Valid}(S)
-}{
-  \mathsf{ActiveEpoch}\xleftarrow{\;\mathsf{Install}(S)\;}
-  \langle\nu,D,e,E,L,\Gamma,\mathcal K\rangle
-}.
+\begin{gathered}
+ \mathsf{phase}(\eta)=\mathsf{active}\quad
+ \mathsf{bind}(j)=\eta\quad d\notin\operatorname{dom}(\mathsf{rcpt})\\[-2pt]
+ \mathsf q(\eta)\xrightarrow{d}_{\mathsf{prog}(\eta)}q'
+\quad \ell(d)\text{ is unspent}
+\end{gathered}}
+{\begin{aligned}
+ S&\xrightarrow{\mathsf{Prepare}(j,h)}S'\\[-2pt]
+ S'&=S[\mathsf q(\eta):=q',\
+   \delta:=\delta\ell(d),\\[-2pt]
+ &\hspace{22mm}\mathsf{rcpt}(d):=\mathsf{prepared}]
+\end{aligned}} .
 \end{equation}
-The assignment in \cref{eq:seal-install} is one compare-and-install event: it
-retires the preceding controller epoch and makes only the sealed epoch
-authoritative.  A parallel Fork, live Restore, or join Merge retains old
-continuations by placing them inside the new typed epoch, not by leaving an
-unversioned predecessor authoritative.  Every protected fresh commitment must
-carry the active epoch identity, and retired epochs must fail closed.
+The transition, receipt append, and authority consumption are one durable
+atomic step.  Dispatch may occur after it; ambiguous remote outcomes are
+settled by a separate protocol.
 
-If the view version or receipt frontier changes before installation, the
-comparison fails and admission is recomputed.  Commits produced after
-installation are not stale reuse of the seal: they form one trace in
-$\mathsf{Phys}(E,L,\Gamma)$, already covered from base frontier $D$ by the
-trace refinement.  The next history edge observes the now-grown authenticated
-frontier and obtains a new view and seal.  A receipt created outside the active
-epoch, an unversioned controller, or a bypass around the epoch check violates
-the stated runtime boundary rather than the finite predicate.
+\paragraph{Atomic installation}
+Programs may be preloaded while inactive.  Publishing one uses the single
+compare-and-install rule
+\begin{equation}
+\label{eq:install-rule}
+\frac{
+\begin{gathered}
+ \kappa=\kappa_Z\quad\nu=\nu_Z\quad\delta=\delta_Z\\[-2pt]
+ \mathsf{ActiveSources}(S)=\mathsf{src}_Z\quad
+ \mathsf{hash}(R)=H_R\\[-2pt]
+ \mathsf{Verify}(\mathsf{Can}(R),H_{\mathsf{Can}})
+\end{gathered}}
+{\begin{aligned}
+ S&\xrightarrow{\mathsf{Install}(Z)}S'\\[-2pt]
+ S'=S[&
+   \mathsf{src}_Z:=\mathsf{closed},\
+   \eta_Z:=\mathsf{active},\\[-2pt]
+  &\mathsf{targetUses}_Z\mapsto\eta_Z,\
+   \mathsf q(\eta_Z):=q_R^0,\\[-2pt]
+  &\nu:=\nu+1]
+\end{aligned}} .
+\end{equation}
+Closing every source, opening the target, rebinding its uses, and advancing
+the view version occur at one linearization point.  If any premise fails,
+\textsc{Install} returns stale and leaves $S$ unchanged.  A retained
+continuation, as in live Restore, is rebound inside $\eta_Z$; its source epoch
+does not remain active beside the target.
 
-\Cref{eq:seal-install} is an integration obligation.  The current compiler and
-Lean development check finite family, prefix, cover, and evidence results; they
-do not implement or mechanize this atomic installer, authenticate $V_\nu$, or
-prove that a concrete Agent runtime's traces equal the supplied manifest.
+\paragraph{Stutters and crashes}
+If $d$ already has a receipt, \textsc{Retry} or \textsc{Replay} returns it
+without a $d$ transition.  \textsc{Dispatch} and \textsc{Settle} update only
+the receipt phase.  A crash discards nondurable computation but not any field
+of $S$.  In particular, no recovery rule reopens a closed generation.
 
-\subsection{Commitment substrate}
+\subsection{Ideal history-cut monitor}
 
-The fixed frontier relies on a separate atomic redemption substrate.  A fresh
-prepare checks an open cell, a held unspent atom, an unbound stable key, and a
-fresh receipt; it then consumes the hold and records immutable
-cell--epoch--atom and receipt bindings.  Retry and replay resolve the binding
-and stutter, settlement changes only the external phase, and crashes do not
-erase the ledger.  These assumptions justify the monotone $D$ used above.
-They do not by themselves guarantee exactly-once execution at a remote sink,
-which requires idempotency, status reconciliation, or a transactional outbox.
+For comparison, define $\mathsf{Ref}$ to store the same durable fields but to
+interpret the active request directly with \cref{eq:gm-step}, consulting
+$F_R$ rather than an emitted program.  It uses the same atomic history-cut
+guard as \cref{eq:install-rule}: a cut is enabled only at the named policy
+version, view, receipt trace, and complete source set.  Thus $\mathsf{Ref}$ is
+the strongest serialized monitor extended with an ideal atomic
+Fork/Restore/Merge operation.
+
+Relate a compiled state $S$ and reference state $\bar S$ when their durable
+fields, bindings, and active request agree and, for the within-epoch fresh
+trace $\sigma$,
+\begin{equation}
+\label{eq:kernel-reference-relation}
+ \mathsf q(\eta)=F_R/\sigma
+ \quad\text{and}\quad
+ \bar S.\mathsf{monitorTrace}=\sigma .
+\end{equation}
+This relation exposes the intended proof boundary: the compiler replaces
+online membership in $F_R$ with one state of its residual program, while the
+durable installation protocol remains observable on both sides.
+
+\subsection{The cut race}
+
+\textsc{Prepare} and \textsc{Install} both linearize through the same store.
+If an old \Prepare{} wins, it changes $\delta$ before the install comparison;
+the seal is stale.  If \textsc{Install} wins, every source epoch becomes
+closed before any later step, so \cref{eq:prepare-rule} has no premise through
+an old binding.  There is no execution in which an old fresh event is absent
+from the compared frontier yet commits after the target becomes active.
+
+Each successful target \Prepare{} advances both the canonical residual and
+the durable trace.  At the next history edge the compiler uses this new trace
+as $\delta_Z$; seals cannot be inherited across receipt growth.  The result in
+\cref{sec:results} lifts this one-cut argument to an arbitrary online sequence
+of Agent edges under one policy version.  Changing $\kappa$ invalidates the
+seal and begins a new theorem instance after policy migration.

@@ -1,90 +1,84 @@
 \section{Related Work}
 \label{sec:related}
 
-\paragraph{The strongest baseline: a serialized global monitor}
-Execution monitors can enforce prefix-closed safety policies by mediating
+\paragraph{Safety monitors and Agent authorization}
+Execution monitors enforce prefix-closed policies by mediating
 security-relevant actions~\cite{schneider2000enforceable}.  Consumable
-credentials already combine linear authorization with atomic durable
-ratification~\cite{bowers2007consumable}; Rebound places authorized rollback
-and audit state in one authoritative order~\cite{burke2026rebound};
-Commit-Time Authorization checks that one effect witness is still fresh,
-bound, ordered, and eligible when the effect becomes durable
-~\cite{santos2026committime}.  FORGE is the closest Agent-specific history
-monitor: it evaluates Datalog policies over an assumed causal-history view at
-policy-relevant actions~\cite{palumbo2026forge}.  Given complete serialized
-mediation, such a monitor can reject replay and the final member of a forbidden
-combination without preadmitting the Agent edge.  We therefore use it as the
-reference semantics, not as a weak baseline.  Our question is when its exact
-language can be compiled into the independently live controllers created by a
-Fork, Restore, or Merge while retaining every required monitor-legal outcome.
+credentials provide atomic durable ratification
+~\cite{bowers2007consumable}; Commit-Time Authorization binds freshness,
+order, and eligibility to effect release~\cite{santos2026committime}; and
+FORGE evaluates policies over an Agent's causal-history view
+~\cite{palumbo2026forge}.  Under complete serialized mediation these systems
+can form the strong $\mathsf{GM}$ baseline used here.  Our result does not
+claim better per-action safety.  It gives a typed history-cut semantics,
+compiles the resulting causal residual into an epoch, and proves that an
+atomic live replacement preserves the reference language under races.
 
-\paragraph{Configuration structures and correlated behavior}
-Event and configuration structures already represent causality, conflict, and
-higher-order configuration consistency
-~\cite{winskel1987event,vanglabbeek2009configuration}.  BI, separation logics,
-and workflow models provide further composition foundations
-~\cite{pym2004bi,moine2024dislog,meyer2018workflow}.  Downward-closed families,
-minimal nonfaces, and the boundary/full-simplex distinction are consequently
-classical; low-order projection can lose higher-order structure
-~\cite{emtander2010hypergraphs,wang2024hypergraph}.  We use this mathematics
-to represent the monitor and controller languages.  The paper's claim is the
-Agent-edge derivation, exact compilation equivalence, evolution across durable
-frontiers, and tight evidence result---not a new theory of configurations or
-minimal obstructions.
+\paragraph{Automata and supervisory control}
+Residual languages, canonical deterministic automata, and language
+equivalence are classical~\cite{brzozowski1964derivatives}.  Supervisory
+control synthesizes legal sublanguages under controllability and observation
+constraints~\cite{ramadge1987supervisory,cieslak1988partial}; range control
+adds lower and upper language bounds~\cite{yin2017range}; and decentralized
+supervision/localization distribute a monolithic supervisor while preserving
+controlled behavior~\cite{komenda2017decentralized,
+zhang2017localization}.  Reconfigurable DES work introduces explicit events
+for moving between already modeled configurations
+~\cite{macktoobian2022reconfiguration}.
 
-\paragraph{Supervisory control, range control, and enforcement}
-Supervisory control synthesizes legal sublanguages under controllability and
-observation assumptions~\cite{ramadge1987supervisory,cieslak1988partial,
-cai2015relative}; decentralized and relative-coobservable variants coordinate
-several local supervisors~\cite{cai2019coobservability,
-komenda2017decentralized}.  State-tree and transaction-process work already
-compiles structured policies into executable supervisors
-~\cite{ma2006sts,feng2007ctp}.  Most directly, range control seeks a maximally
-permissive language between required and legal bounds
-~\cite{yin2017range}; our greatest $\Gamma$ pruning is an instance of this
-classical pattern.  Our distinction is that a typed online Agent edge and its
-receipts derive both bounds, while the theorem identifies the evidence needed
-to compile the serialized monitor for that edge.
+We use the first of these results to represent $F_R$ and deliberately emit one
+logical epoch rather than claiming a new separability criterion.  The
+Agent-specific theorem begins one level earlier and ends one level later: a
+raw Fork/Restore/Merge cut plus copied identities and an irreversible receipt
+trace derives the language, while a version/frontier CAS retires the old
+language in the presence of concurrent fresh effects.  Removing either side
+reduces our construction to established automata or supervisor machinery.
 
-\paragraph{Coordination criteria and transactional effects}
-Invariant confluence characterizes when fixed database operations can preserve
-an invariant without coordination~\cite{bailis2014coordination}; Complete CALM
-gives a broader history-based coordination criterion
-~\cite{hellerstein2026completecalm}.  We do not claim a universal coordination
-criterion.  Our necessity result is conditional and local: if the controller
-language for one edge exceeds its global-monitor language, that submitted
-detached epoch must be restricted, coordinated, or rejected; if the greatest
-fixed-$E,L$ co-liveness restriction loses a required outcome, co-liveness
-pruning alone is insufficient.  Transactional outboxes and stable idempotency
-keys bind intent durably and deduplicate retries
-~\cite{aws2026outbox,aws2026idempotency}; Atomix and Cordon stage and settle
-multi-tool Agent effects~\cite{mohammadi2026atomix,chen2026cordon}.  These are
-candidate substrates for the theorem's edge-cut and commitment premises.
+\paragraph{Causality, choice, and rollback}
+Event and configuration structures represent causality, conflict, and
+concurrency~\cite{winskel1987event,vanglabbeek2009configuration}; workflow and
+separation models provide related composition foundations
+~\cite{meyer2018workflow,pym2004bi}.  Our plan grammar uses only finite
+sequence, tagged choice, and shuffle, and makes no claim to a new model of
+concurrency.  Its purpose is to prevent the security reduction from collapsing
+approval-before-payment, exclusive alternatives, and join prerequisites to
+the same endpoint set.
 
-\paragraph{Rollback, capabilities, and evolving Agent authority}
-Rollback recovery reconstructs a consistent past and identifies output commit
-as the point beyond recoverable computation~\cite{elnozahy2002rollback}.
-Memoir, ROTE, and LCM protect state continuity or detect rollback and forks
-~\cite{parno2011memoir,matetic2017rote,brandenburger2017lcm}.  Capability
-calculi, resource-aware types, and capability architectures split, delegate,
-bound, and revoke authority~\cite{terauchi2006capability,das2018resource,
-yu2023capstone}.  Earned Authority proves a fixed effect ceiling across Agent
-mutation, while PORTICO compiles task contracts into epoch-bound revocable
-capabilities~\cite{zhang2026earned,santos2026lingering}.  These mechanisms
-supply essential premises for cell redemption, durable continuity, and
-controller fencing.  They do not by themselves derive the correlated
-post-edge language or prove that a detached controller epoch both refines the
-global monitor and preserves the edge's required future.
+Rollback recovery reconstructs a consistent past and treats output commit as
+a boundary beyond recoverable computation~\cite{elnozahy2002rollback}.
+Memoir, ROTE, and LCM preserve or detect continuity, rollback, and forks
+~\cite{parno2011memoir,matetic2017rote,brandenburger2017lcm}.  These protect
+past state.  A live Agent cut additionally needs a future controller program
+and a linearization point between old and new commit eligibility; that is the
+role of the canonical epoch and \textsc{Install}.
 
-\paragraph{Agent checkpoint and branching systems}
-ACRFence exposes replay and authority resurrection after restore, and DART
-checks whether downstream commitments leave a checkpoint semantically
-recoverable~\cite{zheng2026acrfence,yang2026dart}.  Crab,
-Fork--Explore--Commit, and Agent libOS provide concrete branching,
-checkpointing, selection, and capability-controlled Agent substrates
-~\cite{wu2026crab,wang2026fork,zhang2026agentlibos}.  Ghost Tool Calls shows
-that abandoned speculative calls may disclose intent before commit
-~\cite{mohammadi2026ghost}.  Our six edge relations distinguish exclusive
-from co-durable Fork, replacing from live Restore, and select from join Merge.
-The theorem concerns durable effect languages after those relations; it
-neither supplies checkpoint fidelity nor prevents issue-time disclosure.
+\paragraph{Agent lifecycle and effect substrates}
+ACRFence exposes authority resurrection after restore, while DART checks
+whether downstream commitments leave a checkpoint recoverable
+~\cite{zheng2026acrfence,yang2026dart}.  Crab, Fork--Explore--Commit, and
+Agent libOS provide concrete branching, checkpoint, selection, and
+capability-controlled substrates~\cite{wu2026crab,wang2026fork,
+zhang2026agentlibos}.  PORTICO compiles task contracts into epoch-bound
+capabilities, and Earned Authority bounds effects across Agent mutation
+~\cite{santos2026lingering,zhang2026earned}.  Atomix and Cordon stage
+multi-tool effects~\cite{mohammadi2026atomix,chen2026cordon}; transactional
+outboxes and stable idempotency keys are possible durable substrates
+~\cite{aws2026outbox,aws2026idempotency}.
+
+These mechanisms can implement anchors, receipts, fencing, or effect release.
+They do not give the theorem proved here: exact causal monitor residualization
+for six online history cuts plus a race-safe replacement rule that closes every
+source epoch.  Conversely, our abstract kernel does not establish their
+parsers, mediation, crash recovery, or external exactly-once delivery.
+
+\paragraph{Coordination and hyperproperties}
+Invariant confluence and Complete CALM characterize when coordination can be
+avoided for broader classes of state or history specifications
+~\cite{bailis2014coordination,hellerstein2026completecalm}.  Runtime
+enforcement and synthesis for hyperproperties relate several traces
+~\cite{clarkson2008hyperproperties,bonakdarpour2020controller,
+coenen2022hyperproperties}.  We claim neither a universal coordination
+criterion nor a new hyperproperty formalism.  The cross-history issue here is
+compiled into one finite causal safety language at each Agent cut; the new
+obligation is to replace its authoritative epoch without admitting a
+cross-version trace.
