@@ -504,3 +504,180 @@ promised causal outcomes survive the durable-policy residual; the canonical
 residual epoch preserves the entire surviving monitor language, and a
 frontier-CAS installation makes that equivalence stable under stale-history
 and fresh-commit races.
+
+## Current Frontier: Exact Agent History Realization Contract
+
+The causal-epoch rewrite failed four independent CSF reviews for the same
+substantive reasons.  Its promises lived over raw occurrences while its
+reference language lived over normalized cells; its request supplied the
+plan, promise family, source set, and anchors that the claimed Agent
+refinement needed to derive; its runtime checked only a cell transition, so a
+wrong gate occurrence could borrow an enabled cell; and its reference future
+contained pointwise-safe dead ends.  The revision below supersedes that
+contract rather than patching those defects.
+
+**One security object: the Agent history machine.**  A trusted state is
+\[
+  H=(G,T,K,\rho,\mathsf{owner},\chi,\nu).
+\]
+\(G\) is an append-only Fork/Restore/Merge provenance DAG; \(T\) is its live
+frontier with choice, parallel, selected, and joined structure; \(K\) is an
+immutable checkpoint registry; \(\rho\) authenticates every logical protected
+occurrence, gate, semantic redemption cell, and authority lineage;
+\(\mathsf{owner}\) maps live gates to controller generations; \(\chi\) records
+completed logical occurrences, including aliases; and \(\nu\) is the trusted
+view version.  The non-restorable store separately holds policy version
+\(\kappa\), exact authority-receipt trace \(\delta\), receipt phases, and an
+ordered outbox.
+
+The untrusted Agent may propose only a typed operation over identifiers already
+present in \(H\), plus newly registered leaf contracts where the operation
+introduces a future:
+\[
+\begin{split}
+ &\mathsf{ForkChoice}(b,L,R),\quad
+ \mathsf{ForkParallel}(b,L,R),\\
+ &\mathsf{RestoreReplace}(b,k),\quad
+ \mathsf{RestoreLive}(b,k),\\
+ &\mathsf{MergeSelect}(g,w,J),\quad
+ \mathsf{MergeJoin}(g,J).
+\end{split}
+\]
+It cannot submit a target plan, promise family, source set, anchor family, or
+receipt frontier.  Leaf contracts come from the protected tool/API registry;
+an unregistered protected call is denied and requires a new admission.
+
+**One contract representation.**  A causal-completion contract
+\(\mathcal C\) is a finite nonempty family of finite pomsets over unique
+logical protected occurrences.  Different pomsets are complete outcomes;
+their order is causal obligation.  Tagged alternative \(\oplus\), disjoint
+parallel product \(\otimes\), and ordered product \(\triangleright\) compose
+contracts.  There is no separate caller-controlled promise set.
+
+The trusted history rewrite judgment
+\[
+  H\vdash u\Downarrow
+  (H',\mathcal C_{H,u},\mathsf{Src}_{H,u},\mathsf{Tgt}_{H,u})
+\]
+is deterministic.  Choice and parallel Fork rewrite one live branch into a
+tagged alternative or parallel group.  Replace Restore retires the current
+continuation and installs a checkpoint clone; live Restore carries the current
+continuation beside a clone.  Select Merge verifies the named winner belongs
+to the named choice group, retires the group, and sequences its remaining
+contract before \(J\); join Merge verifies a parallel group and sequences
+\(J\) after the parallel product of every remaining input.  `clone` freshens
+logical occurrence and gate identities while retaining authenticated semantic
+cell anchors; `carry` retains remaining logical occurrences and cells while
+rebinding gates.  The affected live-frontier closure determines every source
+owner, and the target frontier determines every compiler-minted binding.
+
+**Length-preserving resolution.**  Raw occurrences and policy events are not
+compared as languages.  For a raw linearization \(w=x_1\cdots x_n\), the
+deterministic transducer \(\mathsf{Resolve}_{\delta}(w)\) emits one resolved
+event per logical occurrence:
+\[
+  \mathsf{fresh}(x_i,d)
+  \quad\text{or}\quad
+  \mathsf{alias}(x_i,d),
+  \qquad d=q_{\rm cell}(x_i).
+\]
+The first redemption of \(d\) is fresh; an already receipted cell or a distinct
+copied occurrence of the same cell is an alias.  Only the fresh projection
+\(\mathsf{auth}(-)\) advances the durable authority policy.  A retry of the
+same invocation is the only stutter.  Thus an alias still consumes its exact
+logical occurrence, resolves a choice, and may satisfy a join predecessor.
+
+**Exact history admission.**  For each structurally derived outcome
+\(p\in\mathcal C_{H,u}\), its safe complete executions are
+\[
+ M_p(H,u)=
+ \{\mathsf{Resolve}_{\delta}(w)\mid
+   w\in\mathsf{Lin}(p),\
+   \delta\cdot\mathsf{auth}(
+      \mathsf{Resolve}_{\delta}(w))\in\mathcal A\}.
+\]
+Admission is the typed, non-understatable condition
+\[
+  \mathsf{Admit}(H,u)
+  \iff
+  \forall p\in\mathcal C_{H,u}.\ M_p(H,u)\ne\varnothing.
+\]
+The ideal post-cut language is not every pointwise-safe prefix.  It is
+\[
+  W_{H,u}=
+  \mathsf{Pref}\!\left(
+    \bigcup_{p\in\mathcal C_{H,u}}M_p(H,u)\right),
+\]
+the prefixes of all safe complete executions.  Hence every admitted prefix
+has a safe completion, every structurally promised outcome remains possible,
+and all safe complete linearizations are retained.  The construction is the
+greatest language that is history faithful, authority-policy safe,
+completion-nonblocking, and covers every derived outcome.
+
+**One theorem: Exact Agent History Realization.**  For every well-formed
+history, prefix-closed authority policy, and typed operation, the following
+are equivalent:
+
+1. \(\mathsf{Admit}(H,u)\);
+2. there exists a history-faithful, policy-safe,
+   completion-nonblocking realization covering every derived outcome; and
+3. compilation returns an installable controller and cut seal.
+
+When they hold, the compiled controller realizes exactly \(W_{H,u}\), and
+every realization satisfying the four requirements has a language contained
+in \(W_{H,u}\).  When they fail, a derived pomset \(p\) with \(M_p=\varnothing\)
+is a complete impossibility witness for the fixed history, policy, receipts,
+and leaf contracts.
+
+The theorem's global clause proves
+\[
+  \mathsf{CompiledAgent}(H_0)
+  \approx
+  \mathsf{IdealAtomicHistory}(H_0)
+\]
+by weak bisimulation for arbitrary sequences of all six operations, fresh
+commitments, logical aliases, protected-call results, retries, dispatch,
+settlement, and crashes.  The compiler may implement \(W\) by residual
+automata, but that classical representation is only a lemma.  The theorem is
+about exact realizability of Agent history rewrites.
+
+**Atomic history cut.**  An install re-derives the rewrite and source set from
+the current trusted \(H\); compares
+\((\kappa,\nu,\delta,\chi,\mathsf{CutDigest})\); closes every derived source
+generation; persists \(H\to H'\); activates one target generation; and binds
+all target gates in one transaction.  Comparing \(\chi\) as well as \(\delta\)
+is essential: an alias can change choice or join progress without appending a
+receipt.  If a fresh or alias occurrence wins the race, the seal is stale; if
+install wins, the old gate's generation is closed.  The ordered outbox releases
+prepared effects in receipt order, so the theorem protects durable
+authorization and release order while making no claim about remote network
+completion.
+
+**Tightness.**  The trusted observation
+\[
+ \alpha(H,u)=
+ (\mathcal C_{H,u},q_{\rm cell},\ell,\delta,\chi,
+   \mathsf{Src}_{H,u},\kappa,\nu)
+\]
+is sufficient.  Paired indistinguishable histories show componentwise
+worst-case irredundance of causal topology, cell identity, controller
+ownership, receipt frontier, logical-occurrence frontier, and
+choice-versus-parallel mode.  This is an information lower bound, not a claim
+that the literal tuple is the only encoding.
+
+**Novelty boundary.**  Sound-and-complete live controller update, update
+bridges, most-general property-preserving state transfer, maximal nonblocking
+supervision, online DES control, history-dependent authorization, consumable
+credentials, commit-time authorization, and epoch fencing are established
+prior results.  The claimed result is their missing Agent-history boundary:
+the persistent history topology itself derives the new causal-completion
+contract and every still-authoritative source; Restore creates new logical
+occurrences that retain old semantic effect identities; alias progress can
+race the cut without changing receipts; and history persistence, complete
+source fencing, and target activation are refined to one durable transition.
+
+**One-sentence claim.**  Agents can rewrite which past continuations remain
+capable of acting; history admission characterizes exactly when such a rewrite
+has a policy-safe, completion-preserving realization and compiles every
+admitted Fork, Restore, or Merge into a runtime globally equivalent to an
+ideal atomic Agent-history machine.

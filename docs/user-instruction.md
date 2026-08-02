@@ -306,3 +306,12 @@ Agent 的安全状态不只有文件和数据库? 为啥? 是外部资源? 还�
 ＋ 一个比两版都更统一的 Agent History-Admission Theorem
 
 标题也应改成类似 Agent History Admission: An Exact and Tight Evidence Theory for Fork, Restore, and Merge。我会等第 4 份冻结稿审完，然后按这个方向重构；不是降级回 phase1。 整体退回 phase1, 然后在 phase 1 的基础上重写.
+
+### Message 44
+
+讲解一下现在的故事
+
+### Message 45
+
+能不能要统一的大的贡献的理论, 而不是一堆“既有理论组件的安全组合”,
+  Agent 是关键应用场景, 绝对不能自行降级? 要听起来就很有趣很有吸引力的

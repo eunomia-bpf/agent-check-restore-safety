@@ -592,3 +592,56 @@ The paper can honestly target CSF if it delivers:
 - limited real-runtime evidence showing that Claude/Codex traces contain the
   relevant operators and outward effects, and that ordinary workspace/checkpoint
   telemetry omits the semantic fields required by the compiler.
+
+## 8. Dynamic-update closest-work boundary (2026-08-02)
+
+The third rewrite must not claim novelty for generic live controller update,
+sound/complete bridge synthesis, property-preserving state transfer, or
+maximal supervisor evolution.
+
+- Amram, Maoz, Segall, and Yossef, *Dynamic Update for Synthesized GR(1)
+  Controllers*, ICSE 2022, DOI `10.1145/3510003.3510054`, updates an
+  already-running controller whose state moves while the bridge is computed,
+  proves soundness/completeness, and proves worst-case bridge-length
+  optimality.
+- Nahabedian et al., *Dynamic Update of Discrete Event Controllers*, IEEE TSE
+  2020, DOI `10.1109/TSE.2018.2876843`, synthesizes a transition controller
+  around atomic hot-swap/reconfiguration, preserves the old goal until stop,
+  establishes the new goal after start, and proves soundness/completeness.
+- Bresolin and Lanese, *Static and Dynamic Property-Preserving Updates*,
+  Information and Computation 2021, DOI `10.1016/j.ic.2020.104611`, constructs
+  most-general property-preserving replacements and gives sufficient and,
+  under its stated maximality condition, necessary state-transfer criteria.
+- Thuijsman and Reniers, *Transformational Supervisor Synthesis for Evolving
+  Systems*, DEDS 2022, DOI `10.1007/s10626-021-00354-0`, transforms a prior
+  supervisor after model evolution and proves equality with synthesis from
+  scratch, including maximal permissiveness.
+- Garcia and Ray 1996, Kramer and Magee 1990, Darabi et al. 2003, Sampath et
+  al. 2008, and later switched/online DES work already cover broad real-time
+  reconfiguration, switching, recovery, and structural-change claims.
+- Abadi and Fournet 2003 and Krukow, Nielsen, and Sassone 2008 already give
+  history-based access control with fork/join semantics or event-structure
+  histories.  FORGE supplies the direct Agent causal-DAG policy baseline.
+
+The defensible delta is narrower but substantial.  These works take the
+controller/specification pair, transfer relation, or semantic handoff as
+input.  Agent History Admission derives both the future causal-completion
+contract and the complete affected owner set from an authenticated,
+append-only Fork/Restore/Merge graph; preserves raw occurrence provenance
+through copied semantic-cell aliases; binds the cut to both the durable
+receipt prefix and logical occurrence frontier; and proves that history
+persistence, source fencing, and target activation refine one ideal atomic
+history edit under fresh/alias/install races.
+
+Unsafe phrases include “first sound-and-complete dynamic update,” “first live
+moving-controller bridge,” “first property-preserving state transfer,” “first
+online/reconfigurable supervisor,” “first causal-DAG authorization,” “first
+consumable or commit-time authorization,” and “first epoch fencing.”  A safe
+positioning sentence is:
+
+> Existing work synthesizes sound-and-complete bridge controllers for live
+> reactive updates.  We instead characterize and refine an Agent history
+> handoff on an irreversible-authority substrate: trusted history topology
+> derives the exact completion contract and every still-authoritative source,
+> while one cut orders fresh and alias progress against complete fencing and
+> target activation.
