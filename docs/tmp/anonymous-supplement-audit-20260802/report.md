@@ -27,7 +27,7 @@ format, and the gzip header are normalized.
 Two builds after the final included-source edits were byte-identical:
 
 - files: 52;
-- SHA-256: `8503547bda882d37842957f1869c039aa27b98eeb44410ff9e8b2506527d1545`.
+- SHA-256: `8140a2d651500edc503a7176798144e5cf75309ee7ce6db5518e418257274832`.
 
 The digest is diagnostic rather than frozen because any included source edit
 correctly changes it.

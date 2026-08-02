@@ -1567,21 +1567,19 @@ def _expected_result(document: Any) -> dict[str, Any]:
         }
 
     coordination = _coordination(model, admitted, required)
-    fence_required = semantic_class == "NeedsMechanism"
+    restriction_required = semantic_class == "NeedsMechanism"
     controllers_exact = coordination["status"] in {"exact", "safe_restriction"}
     if semantic_class == "Reject":
         readiness = "NotApplicable"
-    elif fence_required and controllers_exact:
-        readiness = "NeedsFence"
-    elif fence_required:
-        readiness = "NeedsFenceAndCoordination"
+    elif restriction_required and controllers_exact:
+        readiness = "ReadyWithRestriction"
+    elif restriction_required:
+        readiness = "NeedsRestrictionAndCoordination"
     elif controllers_exact:
         readiness = "Ready"
     else:
         readiness = "NeedsCoordination"
-    structurally_eligible = (
-        semantic_class in {"Inherit", "ReadmitOK"} and readiness == "Ready"
-    )
+    structurally_eligible = semantic_class != "Reject" and controllers_exact
     external_obligations = [
         "atomic_redemption",
         "complete_mediation",
@@ -1687,7 +1685,13 @@ def _expected_result(document: Any) -> dict[str, Any]:
         },
         "coordination": coordination,
         "deployment": {
-            "fence": "required" if fence_required else "not_required",
+            "restriction": (
+                "manifest_supplied"
+                if restriction_required and controllers_exact
+                else "required"
+                if restriction_required
+                else "not_required"
+            ),
             "coordination": coordination["status"],
             "readiness": readiness,
         },
@@ -1715,8 +1719,8 @@ def verify_result(request: Any, result: Any) -> dict[str, Any]:
     readiness = expected["deployment"]["readiness"]
     structurally_admits = bool(
         valid
-        and semantic_class in {"Inherit", "ReadmitOK"}
-        and readiness == "Ready"
+        and semantic_class in {"Inherit", "ReadmitOK", "NeedsMechanism"}
+        and readiness in {"Ready", "ReadyWithRestriction"}
     )
     return {
         "schema": VERIFICATION_SCHEMA,
@@ -1760,8 +1764,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     readiness = expected["deployment"]["readiness"]
     structurally_admits = bool(
         valid
-        and semantic_class in {"Inherit", "ReadmitOK"}
-        and readiness == "Ready"
+        and semantic_class in {"Inherit", "ReadmitOK", "NeedsMechanism"}
+        and readiness in {"Ready", "ReadyWithRestriction"}
     )
     seal = {
         "schema": VERIFICATION_SCHEMA,

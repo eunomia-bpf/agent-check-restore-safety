@@ -1372,21 +1372,19 @@ def compile_request(document: Any) -> dict[str, Any]:
         }
 
     coordination = _coordination_result(parsed, admitted, required)
-    fence_required = semantic_class == "NeedsMechanism"
+    restriction_required = semantic_class == "NeedsMechanism"
     coordination_ready = coordination["status"] in {"exact", "safe_restriction"}
     if semantic_class == "Reject":
         readiness = "NotApplicable"
-    elif fence_required and coordination_ready:
-        readiness = "NeedsFence"
-    elif fence_required and not coordination_ready:
-        readiness = "NeedsFenceAndCoordination"
+    elif restriction_required and coordination_ready:
+        readiness = "ReadyWithRestriction"
+    elif restriction_required:
+        readiness = "NeedsRestrictionAndCoordination"
     elif coordination_ready:
         readiness = "Ready"
     else:
         readiness = "NeedsCoordination"
-    structurally_eligible = (
-        semantic_class in {"Inherit", "ReadmitOK"} and readiness == "Ready"
-    )
+    structurally_eligible = semantic_class != "Reject" and coordination_ready
     external_obligations = [
         "atomic_redemption",
         "complete_mediation",
@@ -1480,7 +1478,13 @@ def compile_request(document: Any) -> dict[str, Any]:
         },
         "coordination": coordination,
         "deployment": {
-            "fence": "required" if fence_required else "not_required",
+            "restriction": (
+                "manifest_supplied"
+                if restriction_required and coordination_ready
+                else "required"
+                if restriction_required
+                else "not_required"
+            ),
             "coordination": coordination["status"],
             "readiness": readiness,
         },

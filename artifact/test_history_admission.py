@@ -332,14 +332,17 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
             result["operator"]["coverage_by_role"],
         )
 
-    def test_optional_unsafe_parallel_future_needs_fence(self) -> None:
+    def test_optional_unsafe_parallel_future_accepts_manifest_restriction(self) -> None:
         request = base_request()
         make_two_atom_choice(request)
         request["operation"]["kind"] = "ForkParallel"
         request["operation"]["right"]["required_maxima"] = [[]]
         result = compile_base(request)
         self.assertEqual("NeedsMechanism", result["semantic_admission"]["class"])
-        self.assertEqual("NeedsFence", result["deployment"]["readiness"])
+        self.assertEqual("ReadyWithRestriction", result["deployment"]["readiness"])
+        self.assertEqual("manifest_supplied", result["deployment"]["restriction"])
+        self.assertTrue(result["history_admission"]["structurally_eligible"])
+        self.assertTrue(verify_result(request, result)["structurally_admits"])
         self.assertEqual(
             "OptionalConfigurationPruned",
             result["semantic_admission"]["pruning_witness"]["kind"],

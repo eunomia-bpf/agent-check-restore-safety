@@ -14,8 +14,8 @@ from typing import Any, Iterable, Mapping
 
 
 REQUEST_SCHEMA = "history-admission.request.v1"
-RESULT_SCHEMA = "history-admission.result.v1"
-VERIFICATION_SCHEMA = "history-admission.verification.v1"
+RESULT_SCHEMA = "history-admission.result.v2"
+VERIFICATION_SCHEMA = "history-admission.verification.v2"
 
 MAX_ATOMS = 16
 MAX_SOURCE_CELLS = 12

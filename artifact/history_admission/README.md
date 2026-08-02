@@ -26,14 +26,22 @@ compiler then:
    union, gate-cut, or gate-clone witness.
 
 Semantic admission and deployment readiness are intentionally separate.
-`Inherit` or `ReadmitOK` is structurally eligible only when the independently
-verified deployment result is `Ready`.  The verifier emits a
+`NeedsMechanism` says the complete candidate needs pruning; when the submitted
+controller manifest already satisfies `Required <= RawPhysical <= Admitted`,
+it supplies that restriction and receives `ReadyWithRestriction`.  Otherwise
+the result remains diagnostic.  `Inherit`, `ReadmitOK`, or `NeedsMechanism` is
+structurally eligible only when the independently verified manifest sandwich
+holds.  The verifier emits a
 `history_admission` seal, not an effect-authorization credential.  It always
 sets `effect_authorizes` to false and lists the runtime obligations that remain,
 including manifest authenticity, complete mediation, controller freshness,
 atomic redemption, and refinement between the declared controller product and
-the runtime's actual behavior.  `NeedsMechanism` and `Reject` remain
-diagnostic.
+the runtime's actual behavior.  `Reject` is always diagnostic.
+
+Result and verification schemas are version 2.  Version 2 replaces the
+ambiguous deployment `fence` field with `restriction` and allows a verified
+`NeedsMechanism` result to seal a manifest that already supplies the required
+safe restriction.
 
 ## Quick start
 
