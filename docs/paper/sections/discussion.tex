@@ -1,54 +1,27 @@
 \section{Discussion and Limitations}
 \label{sec:discussion}
 
-\paragraph{What is agent-specific?}
-The calculus applies to adaptive runtimes generally.
-Agents make history transformation a common workload: they synthesize fresh effect identities after restore, create delegation structure dynamically, combine local context with remote tools and human approvals, and merge semantic artifacts from formerly alternative searches.
-The new security object is the correlated residual over possible durable futures; calling the workload an agent does not make classical linearity, guards, or supervisory control new.
+\paragraph{Scope.}
+Snapshots cannot retract external effects or receipts, and total rollback is
+wrong when histories remain live.  The problem extends to workflows,
+deployments, notebooks, search, and RL; agents make it routine by constructing
+the graph online around external tools.  Edge-local certificates compose until
+receipt growth forces readmission.  Hermetic choose-one rollouts may delay
+authority; parallel or merged external-state rollouts cannot.
 
-\paragraph{Capabilities and residual contracts}
-The residual contract matters when the runtime offers advance branch-local guarantees or admits joint lifecycle actions.
-Per-branch scalar/vector budget capabilities implement the headroom lemma but lose cross-branch correlation.
-For the fixed-topology batch-Reserve fragment, \cref{thm:rectangularity} is the exact test for a Cartesian product of noncommunicating branch-local budget checkers; nonrectangular residuals require coordination, conservative budgets, or topology restriction.
-A parent escrow safely avoids that problem for pure choose-one candidates.
-The paper therefore complements capability enforcement rather than replacing it.
-
-\paragraph{Runtime correspondence}
-Codex documents thread fork lineage and pre-tool interception through its App Server and hooks; Claude Code documents resume/fork, checkpoint, subagent/worktree, and pre-tool interfaces~\cite{codexappserver,codexhooks,claudesessions,claudecheckpoint,claudehooks}.
-Our fixed Codex 0.146.0 instantiation combines native thread fork and client-owned tool dispatch with adapter-assigned topology and Restore/Merge meaning across 20 histories (\Cref{sec:validation}).
-It is a conditional correspondence witness, not complete mediation or product-wide refinement; Claude remains interface-level only, and built-in tools, direct sink access, frontend death, and generic Merge certificates remain outside scope.
-Production use requires ownership or mandatory mediation of every protected dispatch, as required by our trace theorem.
-
-\paragraph{What the proof does and does not establish}
-Given truthful topology, typed bindings, complete mediation, crash-atomic durable updates, and demand bounds, the model proves claim conservation, non-resurrection, correlated Reserve admission, exact promotion repair, and trace-level authority solvency.
-The Lean result checks the finite abstract lifecycle, including canonical Fork/Restore and separately admitted Merge, but assumes a fixed finite identifier type; fresh fragments are identifiers that were already unissued.
-It cannot establish that natural-language intent was bound correctly, that an LLM classifier is robust, that a workspace merge implies a particular lineage projection, or that a remote service executed exactly once or reports honestly.
-It proves neither usefulness of an authorized action nor confidentiality, liveness, fairness, and availability unless those are modeled separately.
-
-\paragraph{Partial observation}
-Intersecting residual profiles gives the greatest sound one-step decision at a given observation.
-It is not a full solution to partially observed nonblocking supervisory control.
-An unobserved, ungated transition that can violate the invariant between checks invalidates one-step induction.
-Deployment therefore requires every authority-changing transition to pass the gate or to be included in the checker's uncontrollable closure.
-
-\paragraph{Policy restriction is visible}
-An exact frozen guard may keep more futures than conditioning on the escaping owner, but it may also eliminate all support for another promise.
-The API must return \texttt{AcceptWithRestriction} with the guard, support witnesses, and induced cancellations; silently converting a tool authorization into branch cancellation changes program semantics.
-Finding a globally minimum cancellation set can be expensive; a monitor can instead return checkable violating configurations without promising an optimal explanation.
-
-\paragraph{Authority algebra and external atomicity}
-Natural-number vectors cover bounded uses, quotas, and independently substitutable grants.
-Temporal protocols, replenishing leases, disjunctive bundles, noncommutative obligations, and compensable authority require richer algebras.
-Without a stable sink operation ID, Prepare may conservatively charge an outcome that never occurred, preserving safety at the expense of liveness.
-Compensation is a newly authorized effect, not deletion of history.
-
-\paragraph{Ethics}
-The executable study uses finite mathematical states and simulated claims; the Codex instantiation uses a loopback fixture and isolated sink.
-Neither accesses a production credential, external account, third-party resource, or human subject.
-The fixed adapter tests lifecycle correspondence without sending consequential requests.
+\paragraph{Assumptions and nonclaims.}
+Atomic redemption protects a cell; joint control protects correlations.
+$\mathsf{RawPhysical}$ composes declared co-live controllers, so hidden
+coordination may reject safely while an unmodeled bypass is unsound.  Lean
+proves a finite manifest theorem, not a runtime; Python and its parser are
+unverified refinements.  Truthful evidence, complete mediation, freshness, and
+redemption remain runtime obligations.  The seal never authorizes effects or
+proves exactly-once sinks, liveness, reward correctness, or safe learning.
 
 \section{Conclusion}
 
-For aggregate authority, a copied checkpoint may omit the residual profile of futures permitted to coexist.
-Boundary~I characterizes product-local compilation; Boundary~II characterizes order-independent promotion under immediate cleanup.
-With durable claims and explicit lineage projections, they yield conditional admission for fork, restore, merge, and tool effects: authority follows durable support, not copied state.
+History admission derives the correlated future of Fork, Restore, or Merge,
+conditions it on the durable past, normalizes cells separately from
+controllers, and certifies or refutes its realization.  It admits an edge only
+if its required future survives and its realizable future cannot exceed the
+admitted one.

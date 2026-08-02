@@ -10,7 +10,7 @@
 \usepackage[hidelinks]{hyperref}
 \usepackage[nameinlink,noabbrev]{cleveref}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning,fit}
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds}
 
 \newtheorem{definition}{Definition}
 \newtheorem{theorem}{Theorem}
@@ -33,9 +33,15 @@
 \newcommand{\calK}{\mathcal K}
 \newcommand{\calF}{\mathcal F}
 \newcommand{\PhiD}{\Phi{\downarrow}}
-\newcommand{\papername}{authority continuity\xspace}
+\newcommand{\papername}{history admission\xspace}
+\newcommand{\Remaining}{\ensuremath{\mathsf{remaining}}\xspace}
+\newcommand{\Prepared}{\ensuremath{\mathsf{prepared}}\xspace}
+\newcommand{\Withdrawn}{\ensuremath{\mathsf{withdrawn}}\xspace}
+\newcommand{\Prepare}{\ensuremath{\mathsf{Prepare}}\xspace}
+\newcommand{\Dispatch}{\ensuremath{\mathsf{Dispatch}}\xspace}
+\newcommand{\Retry}{\ensuremath{\mathsf{Retry}}\xspace}
 
-\title{Authority Continuity: Residual Contracts for Fork, Restore, and Merge}
+\title{History Admission: Safe Fork, Restore, and Merge under Durable Authority}
 
 \author{\IEEEauthorblockN{Anonymous Authors}}
 
@@ -43,16 +49,36 @@
 \maketitle
 
 \begin{abstract}
-Some emerging tool-using runtimes intentionally fork, restore, and merge executions while tools create effects outside copied state.
-Authorization must therefore govern a family of possible durable futures, not one current state: mutually exclusive branches may share a bounded grant, but an early tool call or later merge can make previously alternative claims contribute together.
-We introduce \emph{authority continuity}, which distinguishes branch-conditional commitments from durable consumption and requires every permitted durability configuration to remain funded.
-We give a certificate-checked lifecycle semantics in which topology changes simulate a solvent source and every protected effect has exactly one durable matching claim before dispatch.
-Our two main results are exact runtime boundaries.
-First, in the fixed-topology batch-Reserve fragment, the residual admission region factorizes into noncommunicating branch-local budget capabilities iff its all-headrooms corner is safe; otherwise a product checker cannot be both sound for concurrent batches and complete for every one-branch batch.
-Second, for a valid promotion batch with exact prefix guards, immediate cleanup, and no interleaved lifecycle change, every owner-group order succeeds iff every promoted owner remains supported after final repair.
-The first boundary decides when reservation may be decentralized; the second decides when promotion is order-independent or instead needs a verified order, coordinated cleanup, or atomic sealing.
-Residual derivatives, frozen threshold guards, and explicit lineage projections provide the supporting constructions.
-Lean 4 kernel-checks the finite canonical lifecycle, a bounded model exhaustively checks both boundaries and crash/retry/revocation tickets, and a fixed Codex 0.146.0 adapter matches all 89 frozen decisions over 20 histories under one policy; the latter is not complete mediation or product-wide refinement.
+Agent runtimes increasingly fork, restore, and merge execution histories while
+protected tool effects and receipts outlive any restorable workspace.
+A history edge can leave every prospective effect individually fresh while
+changing which sets of effects may become durable together, so locally correct
+gates can compose a globally forbidden outcome.
+The root cause is that security state includes a fixed durable past, a
+correlated future, and a controller layout that can outlive or recombine the
+restored workspace.
+Rollback protocols, per-effect commit checks, linear capabilities, and
+history-sensitive monitors each address part of this boundary but do not by
+themselves decide a topology-changing edge and its controller realization.
+We observe that a sound boundary must normalize copied handles into semantic
+redemption cells independently from gate uses into authoritative controller
+instances, then admit each topology-changing edge against both the durable
+prefix and the product of controllers that may remain live.
+We formalize six typed Fork/Restore/Merge operators that derive candidate and
+required future families, compute the greatest prefix-compatible admitted
+family, and check the manifest relation
+$\mathsf{Required}\subseteq\mathsf{RawPhysical}
+\subseteq\mathsf{Admitted}$.
+We prove a four-way semantic classifier, compositional certificate inheritance,
+an exact minimal-obstruction criterion for overlapping controller covers, a
+higher-order GateCut missed by pairwise checks, and safety transport to any
+runtime family satisfying the explicit refinement premises.
+A small compiler and independent verifier realize the finite decision; Lean~4
+checks the theorem spine, 55 tests cover the executable distinctions, and an
+exhaustive oracle agrees on all 2,166 three-cell refinement instances.
+Public and private Claude/Codex trajectories characterize the need for online
+adapters and their telemetry gaps, but neither traces nor a verified structural
+seal are treated as effect authorization.
 \end{abstract}
 
 \input{sections/introduction}
@@ -69,6 +95,9 @@ Lean 4 kernel-checks the finite canonical lifecycle, a bounded model exhaustivel
 OpenAI Codex was used in all sections for initial prose drafting and rewriting, and in the executable artifact for code scaffolding and test generation.
 It was also used to assist with literature discovery, formal-model iteration, and counterexample search.
 The authors selected the research direction, checked the cited sources and mathematical arguments, and remain responsible for every claim, proof, result, and citation.
+
+\appendices
+\input{sections/appendix}
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}

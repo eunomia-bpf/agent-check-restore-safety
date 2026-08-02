@@ -1,142 +1,243 @@
-\section{Authority over Durable Futures}
+\section{Typed History-Admission Model}
 \label{sec:model}
 
-\subsection{Typed claims and durability configurations}
+The security state at a history-transformation boundary has a fixed durable
+past and a correlated future.  We model both explicitly, before choosing a
+controller implementation.  All carrier types and families below are finite;
+this makes one admission decision executable, but does not bound the lifetime
+of a runtime that installs successive versions.
 
-Let \(\calK\) be a finite set of authority coordinates.
-A coordinate fixes issuer, resource, scope, and grant epoch, so quantities are substitutable only within that coordinate.
-Issued historical capacity is \(G\in\Nat^{\calK}\).
-A claim \(c\) has a globally unique ID, an effect binding, and demand \(w(c)\in\Nat^{\calK}\).
-Bindings are validated by typed schemas, issuers, or deterministic policy; an LLM may propose but cannot certify them.
+\subsection{Semantic redemption cells and lineage}
 
-Let \(B\) be the live branch epochs.
-The durable ledger partitions all issued claim IDs:
+Let $\mathcal H$ be target-handle occurrences, $\mathcal D$ semantic
+redemption cells, and $\mathcal U$ qualified authority atoms.  A trusted
+normalization map
+\[
+  q_{\mathrm{cell}}:\mathcal H\to\mathcal D
+\]
+identifies handles that meet the same atomic spent-state linearization point.
+Thus two aliases mapped to one cell denote one possible fresh commitment, not
+two independently redeemable copies.  Conversely, independent arm
+occurrences must remain distinct cells even if their payloads or resource names
+match.  Any epoch, scope, issuer, nonce, or unit index needed to distinguish
+such occurrences is part of the adapter-supplied identity evidence; the model
+does not infer aliases from copied text.
+
+Each target cell has source-authority lineage
+\[
+  \ell:\mathcal D\to\mathcal U.
+\]
+Two distinct cells may share one lineage atom when they are mutually exclusive.
+They may not both occur in one admitted configuration: that would represent two
+independent redemption points for one indivisible source atom.  This distinction
+between handle aliasing, cell identity, and authority lineage is intentional.
+A retry already resolved by an existing durable receipt is not a prospective
+cell in $\mathcal D$; cells represent only possible fresh commitments.
+
+\subsection{Correlated futures and the durable past}
+
+A future family $F\subseteq 2^{\mathcal D}$ records which sets of fresh
+commitments may become durable together.  It is nonempty, contains
+$\varnothing$, and is downward closed:
+\[
+  X\in F\land Y\subseteq X \quad\Longrightarrow\quad Y\in F.
+\]
+The family retains correlation that per-cell flags erase.  For example,
+$\{\varnothing,\{d_1\},\{d_2\}\}$ admits either alternative without admitting
+$\{d_1,d_2\}$.
+
+Let $\mathcal A\subseteq 2^{\mathcal U}$ be the downward-closed source
+authority family.  Let $D\subseteq\mathcal U$ be the atoms named by the trusted
+durable receipt frontier.  The ledger supplying $D$ is append-only, its receipt
+bindings are immutable and injective by atom, and $D\in\mathcal A$.  An
+admission decision holds $D$ fixed: receipt growth creates a new frontier and
+requires a new decision rather than structural reuse of the old result.
+
+For $X\subseteq\mathcal D$, write $\ell[X]$ for its lineage image.  Compatibility
+with the durable past requires three independent facts:
 \begin{equation}
-I_{\mathrm{issued}}
-=D\;\dot\cup\;X\;\dot\cup\;\dot\bigcup_{b\in B}Q_b.
-\label{eq:partition}
+\label{eq:prefix-ok}
+\begin{aligned}
+  \mathsf{PrefixOK}(X) \iff {}&
+    \mathsf{InjOn}(\ell,X) \\
+  &{}\land D\cap\ell[X]=\varnothing \\
+  &{}\land D\cup\ell[X]\in\mathcal A.
+\end{aligned}
 \end{equation}
-\(D\) contains durable or conservatively uncertain consumption, \(X\) contains terminal IDs that never revive, and \(Q_b\) contains conditional commitments owned by \(b\).
-Here \(I_{\mathrm{issued}}\) is state-indexed and monotone: Reserve adds its fresh ID, certified fragmentation adds its fresh target IDs, and every other rule only moves already issued IDs.
-Copying an ID violates \cref{eq:partition}; minting a fresh second claim counts its demand twice.
-For \(c\in\bigcup_b Q_b\), write \(\mathsf{own}_A(c)=b\) exactly when \(c\in Q_b\).
-Ownership is therefore state indexed and may move once under a certified topology transfer; the claim ID, grant epoch, demand, and effect binding remain immutable.
+The first clause forbids a within-future lineage collision, the second forbids
+replaying an atom already committed in the durable past, and the third preserves
+the source authority contract.  These clauses characterize transport for every
+finite additive source policy, but the family formulation also retains
+non-pairwise correlation directly.
 
-\begin{definition}[Conditional commitment]
-The bundle \(Q_b\) is a runtime promise that, if \(b\) remains eligible under the declared lifecycle and each claim's grant epoch is open, all claims in the bundle may jointly pass the trusted effect gate without acquiring new authority.
+\subsection{Typed history operations}
+
+A leaf contract is a pair $(M,R)$ of downward-closed families over normalized
+target cells, where $R\subseteq M$.  The may-family $M$ lists possible behavior;
+the required family $R$ lists behavior that an implementation may not silently
+remove.  The adapter supplies complete leaf contracts; the compiler checks their
+shape but does not infer them from a transcript or filesystem diff.
+
+A typed operation $op$ is one of
+\[
+\begin{gathered}
+  \mathsf{forkChoice},\ \mathsf{forkParallel},\\
+  \mathsf{restoreReplace},\ \mathsf{restoreLive},\\
+  \mathsf{mergeSelect},\ \mathsf{mergeJoin}.
+\end{gathered}
+\]
+It derives two families
+\[
+  \mathsf{Candidate}_{op},\qquad \mathsf{Required}_{op}
+  \subseteq 2^{\mathcal D}.
+\]
+Choice Fork and select Merge take the union of their arm families.  Parallel
+Fork, live Restore, and join Merge take their tensor: all unions
+$X_1\cup X_2$ with one configuration selected from each arm.  Replacing Restore
+uses the checkpoint contract alone.  The construction is applied componentwise
+to may and required families.  For a valid operation, both outputs are
+downward closed and
+\[
+  \mathsf{Required}_{op}\subseteq\mathsf{Candidate}_{op}.
+\]
+Detailed transition rules appear in the next section; here the important point
+is that the future family is generated by the typed operation rather than
+chosen as a premise that already satisfies the desired conclusion.
+
+\subsection{Greatest fixed-candidate admission}
+
+For fixed $\mathcal A$, $D$, $\ell$, and the generated candidate, define
+\begin{definition}[Admitted future]
+\label{def:admitted-future}
+\begin{equation}
+\label{eq:admitted-future}
+  \mathsf{Admitted}_{op}
+  = \{X\in\mathsf{Candidate}_{op}\mid\mathsf{PrefixOK}(X)\}.
+\end{equation}
 \end{definition}
+This filter is downward closed and is the greatest prefix-compatible subfamily
+of this fixed candidate.  The scope is essential: it assumes complete
+observation of the supplied candidate and controllable pruning.  It neither
+changes lineage, reissues atoms, expands the source contract, nor proves that
+the candidate or required family describes a real runtime.
 
-Pure speculation can instead leave child bundles empty and retain authority in parent escrow.
-An internal either/or between claims must be represented as lifecycle choice; otherwise summing the bundle is a conservative approximation.
-
-The lifecycle contract denotes a nonempty downward-closed family \(\Phi\subseteq2^B\).
-We call \(C\in\Phi\) a \emph{durability configuration}: every branch in \(C\) may contribute a reserved outcome to one durable result.
-Downward closure permits further discard.
-Define
+The semantic admission axis compares the typed output with this filter.
+Structural \emph{inheritance} additionally requires a version-monotone parent
+map into an old admitted envelope, injective on each target configuration, with
+a commuting lineage map and unchanged durable prefix.  If inheritance is
+unavailable, full readmission succeeds when
+$\mathsf{Candidate}_{op}=\mathsf{Admitted}_{op}$.  If instead
 \[
-d=\sum_{c\in D}w(c),
-\qquad
-r_b=\sum_{c\in Q_b}w(c),
-\qquad
-q(C)=\sum_{b\in C}r_b.
+  \mathsf{Required}_{op}\subseteq\mathsf{Admitted}_{op}
+  \subsetneq\mathsf{Candidate}_{op},
 \]
+the operation needs a pruning or coordination mechanism.  If
+$\mathsf{Required}_{op}\nsubseteq\mathsf{Admitted}_{op}$, no pruning-only repair
+can preserve the declared requirement.  These are respectively the semantic
+meanings of \textsc{Inherit}, \textsc{ReadmitOK}, \textsc{NeedsMechanism}, and
+\textsc{Reject}; none is yet a claim about controller deployment.
 
-\begin{definition}[Authority continuity]
-\label{def:ac}
-An authority state \(\Sigma=(G,D,Q,\Phi)\) is continuous when
+\subsection{Independent controller realization}
+
+Redemption-cell identity does not determine which executions share the state
+that enforces a correlated family.  Let $\mathcal J$ be gate-use occurrences,
+$\mathcal G$ authoritative controller instances, and
+\[
+  q_{\mathrm{ctrl}}:\mathcal J\to\mathcal G
+\]
+be a second, independent normalization.  Two handles may correctly share one
+redemption cell while their gate uses map to different controllers.  Atomic
+redemption then protects that cell, but the controllers may still recombine
+different locally allowed cells into a globally forbidden configuration.
+
+The manifest exposes this realization through:
+\begin{itemize}[leftmargin=*,itemsep=1pt]
+  \item an access relation $E\subseteq\mathcal D\times\mathcal G$, because one
+  cell may be reachable through zero, one, or several controllers;
+  \item a local family $L_g\subseteq 2^{\mathcal D}$ for each controller $g$;
+  and
+  \item a co-liveness family $\Gamma\subseteq 2^{\mathcal G}$ describing which
+  controller sets may run together.
+\end{itemize}
+We do not assume that every entry of $L_g$ is admitted: a forbidden local
+entry is precisely a local-overpermission witness.  Downward closure of the
+local families is an additional premise for shrinking a physical failure to a
+minimal obstruction.
+A cover plan chooses $G_0\in\Gamma$ and, for every $g\in G_0$, a piece
+$X_g\in L_g$ whose cells are accessible through $g$.  Its realized
+configuration is $\bigcup_{g\in G_0}X_g$.  The manifest's raw physical family
+is therefore
 \begin{equation}
-\ac(\Sigma)
-\quad\Longleftrightarrow\quad
-\forall C\in\Phi.\ d+q(C)\le G.
-\label{eq:ac}
+\label{eq:raw-physical}
+\begin{split}
+  \mathsf{RawPhysical}(E,L,\Gamma) = {}
+  &\{C\subseteq\mathcal D\mid\\[-2pt]
+  &\quad \exists G_0\in\Gamma,\ \exists (X_g)_{g\in G_0},\\[-2pt]
+  &\quad C=\textstyle\bigcup_{g\in G_0}X_g,\\[-2pt]
+  &\quad \forall g\in G_0:\ X_g\in L_g,\\[-2pt]
+  &\quad \forall g\in G_0,\ \forall d\in X_g:\ E(d,g)\}.
+\end{split}
+\end{equation}
+The product is deliberately \emph{raw}: it ranges over every cell configuration
+and does not discard behavior outside
+$\operatorname{supp}(\mathsf{Admitted}_{op})$ before checking safety.
+
+Let $\mathsf{Actual}\subseteq2^{\mathcal D}$ denote the configurations that the
+installed runtime can in fact make durable together.  The compiler does not
+observe or compute this family.  It checks the manifest-relative structural
+predicate
+\begin{definition}[Structural deployment readiness]
+\label{def:deployment-ready}
+\begin{equation}
+\label{eq:deployment-ready}
+  \mathsf{Required}_{op}
+  \subseteq\mathsf{RawPhysical}
+  \subseteq\mathsf{Admitted}_{op}.
 \end{equation}
 \end{definition}
+The left inclusion is required-behavior coverage; the right inclusion excludes
+physical over-permission.  Equality
+$\mathsf{RawPhysical}=\mathsf{Admitted}_{op}$ is exact manifest fidelity, while
+a strict right inclusion is a safe restriction that may omit only optional
+behavior.
 
-For reporting and the unguarded fast path, write
-\[
-\need(\Sigma)=d+\bigvee_{C\in\Phi}q(C).
-\]
-Then \(\ac(\Sigma)\) iff \(\need(\Sigma)\le G\).
-
-Actual durable outcomes may be a subset of \(\Phi\), making \cref{eq:ac} conservative.
-An exact converse additionally requires that every advertised configuration is selectable and each bundle is jointly realizable.
-
-\subsection{Residual authorization profiles}
-
-For a configuration \(C\), its residual slack is
+Actual deployment additionally owes
 \begin{equation}
-s_\Sigma(C)=G-d-q(C).
-\label{eq:slack}
+\label{eq:actual-refinement}
+  \mathsf{Required}_{op}
+  \subseteq\mathsf{Actual}
+  \subseteq\mathsf{RawPhysical}
+  \subseteq\mathsf{Admitted}_{op}.
 \end{equation}
-For supported branch \(b\), define its componentwise headroom
-\begin{equation}
-H_\Sigma(b)=
-\bigwedge_{\substack{C\in\Phi\\b\in C}}s_\Sigma(C),
-\label{eq:headroom}
-\end{equation}
-and set \(H_\Sigma(b)=\bot\) if no allowed configuration contains \(b\).
-Write \(B^+=\{b\in B\mid H_\Sigma(b)\ne\bot\}\); structural admission rejects Reserve for \(B\setminus B^+\).
+The first two inclusions in \cref{eq:actual-refinement} are adapter/runtime
+refinement obligations: required behavior must be reachable, and the declared
+raw product must conservatively cover all actual behavior.  Together with
+\cref{eq:deployment-ready}, they place every actual configuration inside the
+prefix-safe family.  Structural readiness alone does not establish either
+runtime inclusion.
 
-Headroom describes one branch at a time.
-The correlated residual region describes arbitrary additional reservation batches:
-\begin{equation}
-\mathcal R_\Sigma=
-\left\{x\in\Nat^{B^+\times\calK}\ \middle|\
-\forall C\in\Phi.\ \sum_{b\in C}x_b\le s_\Sigma(C)
-\right\}.
-\label{eq:residual}
-\end{equation}
-It is a downward-closed set.
-The distinction between \(H\) and \(\mathcal R\) will expose why local balances lose the correlation needed by fork and merge.
+\subsection{Assumptions and two decision axes}
 
-\subsection{Structured and guarded contracts}
+Semantic admission and controller deployment are independent axes.  The first
+derives the greatest continuation allowed by the source authority family,
+durable prefix, lineage, and typed operation.  The second asks whether declared
+controllers realize at least the required continuation without adding a
+forbidden union.  A semantically admissible candidate can still have an unsafe
+controller cover, and a locally linear redeemer does not by itself preserve
+higher-order correlation.
 
-A base lifecycle contract is
-\[
-P::=\mathbf0\mid b\mid P\mathbin\Box P\mid P\parallel P,
-\]
-with unique leaf labels.
-Choice permits at most one side, while parallel permits both:
-\begin{align*}
-\front(\mathbf0)&=\{\varnothing\},\\
-\front(b)&=\{\varnothing,\{b\}\},\\
-\front(P\Box Q)&=\front(P)\cup\front(Q),\\
-\front(P\parallel Q)&=\{C\cup C'\mid
- C\in\front(P),\ C'\in\front(Q)\}.
-\end{align*}
+The formal result is conditional on truthful, complete leaf contracts;
+normalized cell identities or explicit aliases; qualified lineage atoms; an
+authentic and complete append-only receipt frontier; and truthful controller
+access, local-family, and co-liveness evidence.  Runtime use further assumes
+complete mediation, atomic redemption at each semantic cell, controller
+installation and freshness, and the two $\mathsf{Actual}$ refinements above.
+The compiler and verifier check the finite structural model, not the truth of
+these external facts.
 
-Promotion will require a strictly richer durable policy.
-A frozen guard row is \(\gamma=(\{(a_i,\lambda_i)\}_{i=1}^m,k)\), where \(a_i,k\in\Nat^{\calK}\) and each lineage predicate \(\lambda_i:2^B\to\{0,1\}\) is an explicitly represented monotone, zero-preserving Boolean circuit.
-It accepts \(C\) iff
-\begin{equation}
-C\models\gamma
-\quad\Longleftrightarrow\quad
-\sum_i a_i\lambda_i(C)\le k.
-\label{eq:guard}
-\end{equation}
-A guarded contract \(T=(P,\Gamma)\) denotes base configurations satisfying every row.
-Nonnegative coefficients and monotone predicates preserve downward closure; zero preservation ensures that the empty configuration remains accepted when \(0\le k\).
-Rows contain frozen values, not pointers to current \(Q\); later claim withdrawal cannot silently reopen a discarded future.
-Representation size includes predicate-circuit size, not only numeric coefficients.
-
-Each old branch initially uses \(\lambda_b(C)=\mathbf1[b\in C]\).
-A zero-preserving lifecycle projection \(\pi:2^{B'}\to2^B\) transports old rows by \(\lambda\leftarrow\lambda\circ\pi\).
-Refining \(b\) into live descendants substitutes the disjunction of their membership variables, charging the old lineage once even when several descendants survive.
-Standard fork/restore projections preserve compact OR-lineage predicates; a general merge must provide and pay for an explicit projection circuit or use full target re-admission.
-
-\subsection{Concrete state and well-formedness}
-
-A concrete state pairs reconstructable values \(V\) with durable controller state
-\[
-A=(G,N,B,D,X,Q,T,J,R),
-\]
-where \(N\) records branch/grant epoch status, \(J\) maps protected operation IDs to one-shot tickets in \(\mathsf{prepared}\), \(\mathsf{inflight}\), or \(\mathsf{uncertain}\) phase, and \(R\) records settled receipts.
-The abstraction \(\alpha\) drops payload and scheduling detail but retains the authority fields and \(\Phi=\front(T)\).
-A snapshot may overwrite \(V\), never \(A\).
-
-Well-formedness requires \cref{eq:partition}, monotone epoch and terminal status, valid bindings, and support for every promised owner.
-Let \(\mathsf{claim}_{J,R}(e)\) project the claim from either a ticket or receipt.
-We require \(\operatorname{dom}J\cap\operatorname{dom}R=\varnothing\), \(\mathsf{claim}_{J,R}\) injective on \(\operatorname{dom}J\cup\operatorname{dom}R\), and \(\operatorname{ran}(\mathsf{claim}_{J,R})\subseteq D\).
-Thus every protected external operation ID is bound to exactly one durable claim and distinct IDs have distinct claims, except that physical retries reuse the same stable ID and ticket.
-Its concrete demand is bounded by \(w(c)\), and the matching claim must already be durable or uncertain before emission.
-These effect-coverage obligations are part of the trusted gate, not consequences of \cref{eq:ac} alone.
+Accordingly, an accepted structural seal is not an effect-authorization
+credential.  The model does not infer natural-language intent, prove full lease
+validity, establish a parser-to-model refinement, guarantee external
+exactly-once execution, or claim that a concrete agent runtime realizes
+$\mathsf{RawPhysical}$.  Those obligations remain outside typed history
+admission.

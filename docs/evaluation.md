@@ -633,3 +633,37 @@ The real Codex callback remains one effect-boundary correspondence seam.  The
 self-hosted paper-formation trajectory may test whether required fields occur
 and remain private after aggregation; it cannot validate the theorem or imply
 product-wide mediation.
+
+## 13. RQ4 bounded history-admission scaling characterization
+
+Paper-value role: **supporting internal artifact evidence**. The admitted
+question was whether the compiler and independent verifier complete a selected
+nontrivial small contract and engage finite bounds, not whether an industrial
+runtime is deployable or fast.
+
+The deterministic cell sweep reaches 2,510 configurations and 792 minimal
+nonfaces at 12 cells. The controller sweep fixes 6 cells and 64 final physical
+configurations while source-grounded pair-expansion counts grow from 64 to
+70,592 for one through four overlapping controllers. Both implementations
+accept every planned row, produce stable hashes over five repetitions, and
+agree exactly. They reject 13 source cells at the 12-cell limit and reject five
+overlapping controllers at pair-expansion iteration 200,001; 202,688 is only
+the hypothetical uncapped total. Target-cell, raw controller-count, and
+expanded-configuration limits were not tested.
+
+Independent review verdict: **valid and matrix-complete, but provenance-
+incomplete as a historical archive**. A 103-check recomputation found no
+arithmetic or summary errors, and a fresh temporary rerun reproduced every
+non-timing field. The historical run used a dirty tree and deleted temporary
+requests/results/seals, so a clean pinned rerun remains necessary for a fully
+auditable timing archive.
+
+Paper decision: retain bounded family/certificate counts and fail-closed
+engagement of the two exercised limits. Detailed wall times stay in the
+internal report because this evaluation contract forbids paper-facing latency
+before complete runtime enforcement. No throughput, prevalence, fast-path, or
+deployability claim follows.
+
+- Plan and reviews: `docs/tmp/history-admission-scaling-20260802/`.
+- Runner: `artifact/bench_history_admission_scaling.py`.
+- Raw result: `artifact/results/history_admission_scaling.json`.

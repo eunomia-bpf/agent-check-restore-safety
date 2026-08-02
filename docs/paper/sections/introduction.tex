@@ -1,69 +1,102 @@
 \section{Introduction}
 \label{sec:introduction}
 
-An agent receives one approval to perform a consequential action.
-Its runtime forks two candidate plans and promises to retain at most one.
-Each branch reserves the approval for a different action.
-This is safe: one unit of authority can back two promises whose futures are mutually exclusive.
-Now suppose one branch calls a remote tool before selection, or an operator merges both branch results.
-The former effect survives even if its branch loses; the latter makes two previously alternative promises contribute together.
-The files may still look valid, and each tool transaction may be individually well formed, yet the execution can consume two uses of a one-use grant.
+Modern agent runtimes increasingly transform their own execution histories.
+They fork alternatives for search, retain parallel descendants, restore saved
+sessions, and merge results while the execution graph is still being
+discovered.  Codex and Claude expose session or thread branching, and emerging
+agent substrates make checkpointing and speculative execution first-class
+operations~\cite{codexappserver,claudesessions,wang2026fork,wu2026crab}.
+Unlike a conventional restart, these operations may intentionally keep several
+continuations alive while tools mutate services outside any copied workspace.
 
-This is not merely a workspace rollback bug.
-Traditional authorization decides an action in one current state.
-State-continuity systems decide whether one recovered continuation extends an accepted history.
-Some emerging tool-using runtimes instead make \emph{history transformation} routine: they create intentional alternatives, keep old continuations live, delegate in parallel, issue effects during search, and merge artifacts from several trajectories.
-Authorization must now decide whether an evolving \emph{family of promised futures} remains jointly solvent.
+However, individually safe continuations can become unsafe when a history edge
+changes which outcomes may coexist.  Suppose three prospective commitments
+$a,b,c$ are governed by a contract that permits every pair but forbids the
+triple.  Each commitment is fresh, and three controllers may each expose only
+one locally admitted singleton; nevertheless, a parallel Fork or live Restore
+can make all three controllers co-live and thereby realize
+$\{a,b,c\}$.  Per-effect authorization succeeds, every pairwise conflict check
+succeeds, and no authority cell is spent twice, yet the resulting configuration
+violates the original contract.  Replaying an already durable cell after
+Restore is the simpler unary instance of the same missing admission boundary.
 
-The state relevant to that decision spans different rollback domains.
-Files, model context, and staged payloads may be reconstructed; branch eligibility, selections, claim ownership, and revocation epochs are lifecycle facts; messages, disclosures, remote writes, and uncertain sends are external history.
-Rolling back all of them is usually impossible and often wrong: restore-live intentionally preserves the old continuation, and merge intentionally preserves information from several branches.
-The question is which outcomes may still become durable together and which effects every future must already carry.
+The problem exists because security state is not one workspace snapshot.
+One decision has an immutable durable receipt prefix and a correlated family of
+prospective commitments; it also has a controller layout describing which
+local choices can run together, while remote writes and disclosures remain in
+external reality.  Whole-workspace rollback cannot undo an escaped effect,
+must not rewind the receipt prefix, and implements the wrong semantics when
+Fork, live Restore, or join Merge deliberately retains several descendants.
+Nor can the complete future execution graph be named in advance: the runtime
+must certify each topology-changing edge from its current contracts and then
+compose those local certificates.
 
-Linear capabilities, consumable credentials, and state-continuity systems provide essential ownership and anti-rollback foundations~\cite{bowers2007consumable,terauchi2006capability,parno2011memoir,matetic2017rote,brandenburger2017lcm}.
-Transactions and recent agent runtimes provide staging, branch isolation, first-commit-wins selection, semantic transactions, and commit-time checks~\cite{wang2026fork,mohammadi2026atomix,chen2026cordon,santos2026committime}.
-These mechanisms do not by themselves characterize an advance authorization promise whose validity depends on which branches may later coexist.
-Nonduplicating conservative splitting prevents cross-branch oversubscription under our mediation and demand assumptions but rejects useful choose-one exploration; parent escrow is sufficient for pure candidates but gives branches no advance guarantee.
-In our action model, topology affects quantitative admission once a runtime offers a conditional reservation or changes that claim's support.
+Existing mechanisms each cover only part of this boundary.  Rollback recovery,
+state continuity, and ACRFence preserve or check the past but do not derive the
+co-durable future of six distinct history operators
+~\cite{elnozahy2002rollback,parno2011memoir,zheng2026acrfence}.
+Consumable capabilities, revocable agent capabilities, and commit-time
+authorization can protect one use or one effect witness, but several valid
+cells may still form a forbidden union
+~\cite{bowers2007consumable,santos2026lingering,santos2026committime}.
+General history-sensitive monitors such as FORGE can enforce declared policies
+over observed causal predicates~\cite{palumbo2026forge}; they do not themselves
+derive a counterfactual future family for a proposed Fork/Restore/Merge or
+verify that independently live controllers realize only that family.
 
-We introduce \emph{authority continuity} for this boundary.
-A tentative claim is funded only in durability configurations containing its branch.
-After the effect escapes, the same claim becomes durable consumption funded in every remaining configuration.
-Selection and replacing restore shrink support; live restore and merge can change correlation; escape expands support.
-The memorable rule is: \emph{authority follows durable support, not copied state}.
+We observe that a sound history boundary requires two independent
+normalizations.  The first maps copied handles to semantic \emph{redemption
+cells}, the units at which one fresh durable commitment is consumed.  The
+second maps gate uses to authoritative \emph{controller instances}, the units
+whose joint state preserves correlations among several cells.  Conflating the
+two misses the example above: atomic redemption can be correct for every cell
+while distinct controllers product-compose a forbidden configuration.  This
+leads to the central refinement chain
+\[
+  \mathsf{Required}\subseteq\mathsf{Actual}
+  \subseteq\mathsf{RawPhysical}\subseteq\mathsf{Admitted},
+\]
+where the typed history operation derives the required behavior, the durable
+prefix derives the admitted future, the manifest derives the raw controller
+product, and a concrete runtime must refine that manifest.
 
-This view gives a sharper answer to what a checkpoint is missing.
-For a fresh reservation on one branch, the exact authorization summary is that branch's minimum headroom over all permitted futures containing it.
-For reservations across branches, per-branch headroom is insufficient: exclusive and parallel states can expose identical individual headroom but accept different batches.
-The minimal Reserve behavior is a correlated, downward-closed \emph{residual authorization profile}.
-It is update-closed under further reservations, while its one-branch slices are not.
-Thus the missing state is not generic “history” or a scalar balance, but the residual profile for the action class.
-Boundary~I derives when that profile is rectangular---and therefore implementable by a Cartesian product of noncommunicating branch-local budgets---and when a product-only runtime must instead coordinate, reduce local budgets, or restrict topology.
+We present a theory-guided \emph{history-admission compiler} for this boundary.
+Six typed Fork/Restore/Merge operators derive candidate and required
+downward-closed families; durable-prefix filtering computes the greatest safe
+residual inside that candidate; and a relational controller-cover analysis
+checks required coverage and physical overpermission.  The theory dictates the
+compiler's finite intermediate representation and its positive and negative
+certificates: an independent verifier reconstructs the decision and reports
+support escape, local overpermission, a correlation GateCut, or missing
+required behavior.  The tool is deliberately not a checkpoint engine or an
+effect authorizer.  It assumes truthful runtime manifests and leaves complete
+mediation, controller installation, and the two inclusions involving
+$\mathsf{Actual}$ as explicit integration obligations.
 
-Escape exposes a second boundary.
-The exact safe pruning after promotion may no longer be expressible by a choice/parallel tree: promotion can permit every pair among three branches while forbidding their triple.
-We complete the representation with frozen quantitative support guards.
-One compact row expresses the exact promotion repair; freezing prevents later withdrawal from silently reopening discarded futures.
-The specified fork and restore rules transport singleton lineage by OR; a general merge is covered only with an explicit projection certificate or full target re-admission.
-
-\paragraph{Contributions}
-This paper makes four contributions.
+\paragraph{Contributions.}
+This paper makes three contributions.
+\nopagebreak[4]
 
 \begin{enumerate}[leftmargin=*,itemsep=2pt]
-  \item We give a closed labeled transition system for checkpoint, fork, selection, abort, replacing and live restore, merge, revocation, Prepare, crash-aware dispatch/retry, and settlement.
-  Checked simulation, admission, and sealing certificates cover every authority-changing rule.
-  We prove abstract preservation and a conditional concrete trace corollary under complete mediation, demand bounds, and sink retry assumptions.
+  \item A typed security model for history-transforming computation.  It derives
+  correlated may/required futures for choice and parallel Fork, replacing and
+  live Restore, and select and join Merge; computes the greatest continuation
+  compatible with an immutable receipt prefix; and supports compositional
+  inheritance over an online graph
+  (\cref{sec:model,sec:semantics,sec:results}).
 
-  \item Boundary~I gives a necessary-and-sufficient test for compiling fixed-topology batch Reserve into a product of noncommunicating branch-local budget checkers without losing concurrent soundness or one-branch completeness.
-  Headroom and an update-closed correlated residual provide the construction and expose the information omitted by snapshot-only recovery.
+  \item A controller-realization theory that separates cell identity from
+  controller identity.  It gives an exact manifest-readiness and obstruction
+  criterion for overlapping controller access, extracts honest minimal
+  GateCuts including a higher-order $U(2,3)$ case, recovers functional
+  partitions as a canonical special case, and transports prefix safety under
+  explicit runtime refinement premises (\cref{sec:results}).
 
-  \item Boundary~II proves that, with exact prefix repair and immediate cleanup, final-owner support exactly characterizes when every owner-group promotion order remains executable.
-  Promotion is not closed in the base choice/parallel language; frozen vector-threshold guards give exact closure and expose when the runtime must validate an order, coordinate cleanup, or atomically seal a batch.
-
-  \item We kernel-check the finite canonical lifecycle, stable bindings, and trace preservation in Lean 4, and separately check both boundaries and crash/retry/revocation in a bounded executable model.
-  A fixed Codex 0.146.0 adapter exercises native fork and client-owned dispatch across 20 histories; one policy matches all 89 frozen decisions.
-  This fixed correspondence witness is not complete mediation or product-wide refinement.
+  \item A small compiler and independent verifier whose certificate and witness
+  schema follows the proof decomposition.  Lean~4 checks the theorem spine;
+  55 executable tests and an exhaustive 2,166-instance oracle cross-check the
+  implementation; public TraceLab and the private paper-formation lineage
+  characterize workload and adapter observability without supplying safety
+  labels (\cref{sec:algorithm,sec:validation}).
 \end{enumerate}
-
-The mathematics applies to adaptive non-LLM runtimes.
-Agents make it urgent because fresh effect bindings, branch topology, external tools, human resume, and semantic merge are synthesized during execution rather than fixed before it.

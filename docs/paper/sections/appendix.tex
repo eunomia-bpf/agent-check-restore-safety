@@ -1,0 +1,30 @@
+\section{Private-Trajectory Methodology}
+\label{app:private-trace}
+
+The private case is one self-hosted longitudinal lineage, not a sample of
+independent tasks.  A fixed cutoff selects one root and every recursive spawn
+descendant created before that cutoff.  For the two observed Codex versions,
+pinned source says the legacy fork filter removes inter-agent metadata from
+copied history~\cite{codexspawn145,codexspawn146}.  The extractor identifies
+each child's native suffix from that source-grounded delivery boundary, reads
+one immutable byte image per rollout, checks header, edge, and cutoff
+consistency, and fails closed on ambiguous lineage or unsupported versions.
+Two unchanged-input extractions were byte-identical.  Synthetic regressions
+cover cutoff placement, false spawn triggers, multiple parents, external-root
+parents, malformed rows, duplicate tool IDs, determinism, and the allowlisted
+privacy schema.
+
+One record carries a UI rollback marker, but it is not treated as a typed
+Restore; copied rows are not duplicate effects, and tool-call IDs are not
+durable redemption receipts.  Claude contributes only an explicitly selected
+historical project index.  Its declared raw action paths were unavailable;
+bounded exact-ID recovery found metadata references but no provenance-valid
+action corpus, so we report no Claude tool, mutation, fork, or effect counts.
+
+The author-operated case recruited or manipulated no users.  Extraction emits
+only path-free allowlisted aggregates and private keyed commitments; it excludes
+prompts, commands, bodies, paths, and stable raw identifiers.  Raw histories,
+the commitment key, and the private summary are withheld.  The published
+artifact contains the extractor, public-data analysis, formal development,
+compiler/verifier, and synthetic fixtures.  These choices reduce linkage risk
+while retaining the limited workload-shape evidence.

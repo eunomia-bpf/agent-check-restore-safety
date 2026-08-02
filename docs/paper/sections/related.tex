@@ -1,56 +1,151 @@
 \section{Related Work}
 \label{sec:related}
 
-\paragraph{Consumable authority and capabilities.}
-Consumable Credentials combines linear authorization logic with a distributed ratifier so that copyable proof material cannot productively exercise use-limited authority more than once~\cite{bowers2007consumable}.
-Capability calculi and resource-aware type systems split resources across concurrent processes and prove global bounds~\cite{terauchi2006capability,das2018resource}.
-BI and separation-style semantics already provide general algebraic accounts of resource composition and residual implication~\cite{pym2004bi}.
-Capability-machine and architectural work provide linear ownership, delegation, and revocation foundations~\cite{yu2023capstone}.
-DisLog shows how a program logic can explicitly reason about nested fork-join structure~\cite{moine2024dislog}.
-We rely on, rather than rediscover, linear consumption, transfer, and generic resource residuation.
-Our additional object is a runtime promise conditioned on which intentionally forked continuations may remain durable, and the change in that promise when restore, escape, or merge changes its support.
-For fixed-topology batch Reserve, we characterize exactly when its correlated residual compiles into a Cartesian product of noncommunicating branch-local budgets without sacrificing concurrent soundness or one-branch completeness.
+\paragraph{Checkpointing, rollback, and output commit.}
+Rollback-recovery work reconstructs a consistent past and identifies output
+commit as the boundary at which effects escape recoverable computation
+~\cite{elnozahy2002rollback}.  Memoir protects module state continuity with a
+trusted history summary, ROTE distributes rollback protection, and LCM detects
+rollback and adversarial forks
+~\cite{parno2011memoir,matetic2017rote,brandenburger2017lcm}.  Rebound instead
+makes an authorized rollback an append-only transition in one authenticated
+state history~\cite{burke2026rebound}.  We rely on the same principle that a
+snapshot cannot rewind security history.  Our question begins after that
+boundary is fixed: a typed operation may intentionally retain several
+continuations or join them, so admission must derive the correlated future
+that remains compatible with the durable past.  We do not propose a new
+snapshot algorithm, rollback protocol, or output-commit solution.
 
-\paragraph{Rollback and fork continuity.}
-Memoir preserves protected-module state continuity with trusted history summaries and safe replay~\cite{parno2011memoir}.
-ROTE distributes rollback protection across enclaves~\cite{matetic2017rote}, while LCM detects rollback and forking and provides fork-linearizable client views~\cite{brandenburger2017lcm}.
-These systems establish the premise that security history cannot live only in rollbackable state.
-Their goal is to reject or expose adversarial divergence from a continuity relation.
-Agent runtimes intentionally create alternatives, sometimes retain several, and make advance commitments inside them.
-Authority continuity asks which such non-linear histories can be honored together; the durable ledger is enforcement machinery, not our novelty.
+\paragraph{Configurations, conflict, and minimal obstructions.}
+Event structures already represent causality, conflict, and valid
+configurations, while BI, fork/join separation logics, and workflow models
+provide established accounts of resource composition and concurrency
+~\cite{winskel1987event,pym2004bi,moine2024dislog,meyer2018workflow}.  Our
+downward-closed future families, choice/tensor operators, and use of minimal
+nonfaces build on this vocabulary.  We make no mathematical novelty claim for
+configuration families or minimal nonfaces themselves.  The contribution is
+their placement in a security decision with an immutable receipt prefix: the
+typed history operator generates both candidate and required families, lineage
+filters that candidate, and an independent controller product is then checked
+against the resulting admitted family.  Minimal nonfaces serve as compact
+deployment counterexamples only after outside-support and locally forbidden
+choices have been ruled out.
 
-\paragraph{Concurrency and workflow structure.}
-Event structures supply standard causality, consistency, conflict, and configuration semantics~\cite{winskel1987event}.
-Our downward-closed durability family is deliberately compatible with this foundation, but we do not claim configuration reasoning as new.
-Structured choice/parallel contracts induce the classical cograph/cotree representation~\cite{corneil1985cographs}.
-Workflow-net research already relates concurrency thresholds to resource demand and hard graph problems~\cite{meyer2018workflow}.
-We use these facts to choose an auditable runtime representation.
-The security contribution lies in the concrete lifecycle abstraction and irreversible promotion rules, not max/sum arithmetic or independent-set complexity.
+\paragraph{Capabilities, linear resources, and consumable authority.}
+Consumable credentials combine linear authorization with durable ratification
+so copied proof material cannot productively reuse bounded authority
+~\cite{bowers2007consumable}.  Capability calculi, resource-aware session
+types, and capability architectures likewise reason about splitting,
+transferring, bounding, delegating, and revoking resources
+~\cite{terauchi2006capability,das2018resource,yu2023capstone}.  We therefore do
+not claim linear tokens, atomic consumption, or stable nonces.  Such mechanisms
+can implement one semantic redemption cell and stop two aliases from spending
+it twice.  They do not alone exclude a forbidden union of several distinct,
+individually fresh cells.  Our additional problem is that redemption-cell
+identity and enforcement-controller identity can be transformed independently;
+the controller-cover theorem checks the higher-order correlation that remains
+after per-cell linearity succeeds.
 
-\paragraph{Supervisory control and guarded workflows.}
-Ramadge--Wonham supervisory control classically constructs maximally permissive controllable behavior~\cite{ramadge1987supervisory}.
-Under partial observation, standard observability is not union-closed and a supremal observable policy need not exist~\cite{cieslak1988partial}; relative observability restores union closure under a fixed ambient language~\cite{cai2015relative}.
-Our knowledge-intersection theorem is a one-step specialization, not a new full supervisor or nonblocking result.
-State-tree structures already combine hierarchical AND/OR state organization, predicates, BDDs, and symbolic supervisor synthesis~\cite{ma2006sts}; supervisory control has also been compiled into propositional guards for communicating transaction processes~\cite{feng2007ctp}.
-We therefore do not claim guards, state trees, or maximal permissiveness as new.
-Our result identifies security-specific online boundaries: conditional-to-durable authority promotion breaks the base policy representation, determines one exact row, and interacts with immediate branch cleanup so that algebraically commuting effects are universally serializable exactly under final-owner support.
+\paragraph{Transactions, coordination, and invariant confluence.}
+Transactional outboxes and stable idempotency keys couple local intent with
+eventual delivery and deduplicate retries
+~\cite{aws2026outbox,aws2026idempotency}.  Atomix stages and settles agent tool
+effects across resource frontiers, while Cordon constructs semantic
+transactions over task lineage, state, effects, and delegated authority
+~\cite{mohammadi2026atomix,chen2026cordon}.  These mechanisms are plausible
+substrates for implementing a history-admission decision; they do not make the
+decision itself a transaction theorem.  Invariant-confluence-style analyses
+ask when fixed operations can preserve an invariant without coordination
+~\cite{bailis2014coordination}.
+Our input is different: Fork/Restore/Merge first rewrites the may and required
+future, and the compiler then identifies whether the declared controller
+product introduces a forbidden union.  In the canonical functional-partition
+case the minimal-nonface hypergraph yields mandatory coordination components;
+for overlapping access and arbitrary local families we claim neither a unique
+finest cover nor a coordination-free execution theorem.
 
-\paragraph{Transactions, recovery, and external effects.}
-Rollback-recovery work identifies the output-commit problem: external output must not become visible from a computation that recovery may later abandon~\cite{elnozahy2002rollback}.
-Crab recovers agent sandbox state across filesystems, processes, and runtime artifacts, including for forked RL rollouts, but its correctness target is reconstructed OS state rather than outstanding external authority~\cite{wu2026crab}.
-Modern durable execution, transactional outboxes, and sagas offer practical staging and compensation.
-Atomix separates agent execution, sealing, progress checks, and settlement~\cite{mohammadi2026atomix}; Cordon defines task-scoped semantic transactions spanning tools and delegated work~\cite{chen2026cordon}; DART checks whether local recovery remains semantically valid after downstream commitment~\cite{yang2026dart}.
-These systems determine which effects settle together and when recovery is consistent.
-Two transactions can nevertheless be individually valid while jointly exercising two claims from a one-unit grant.
-Authority continuity is an orthogonal authorization solvency condition, and it imports trusted staging rather than replacing transaction protocols.
+\paragraph{Supervisory enforcement and certifying compilation.}
+Supervisory control synthesizes legal behavior under controllability and
+observation assumptions; later work studies partial and relative observability,
+hierarchical state structures, and guarded transaction processes
+~\cite{ramadge1987supervisory,cieslak1988partial,cai2015relative,ma2006sts,feng2007ctp}.
+Security-automata-style monitors likewise enforce trace properties at mediated
+events~\cite{schneider2000enforceable}.  We do not claim a general maximally
+permissive supervisor,
+nonblocking control, or a new enforcement-automata formalism.  Our greatest
+residual is the simpler complete-information filter inside one fixed,
+operator-generated candidate.  The distinct controller-cover layer then asks
+whether a manifest's independently composed local choices refine that
+residual.
 
-\paragraph{Agent lifecycles and authorization.}
-Fork, Explore, Commit provides nested branch contexts, first-commit-wins selection, and filesystem/process isolation~\cite{wang2026fork}.
-Agent libOS combines process identity, explicit capabilities, hierarchical budgets, child processes, checkpoints, and checkpoint-derived images~\cite{zhang2026agentlibos}.
-Commit-Time Authorization requires the evidence authorizing a durable effect to remain fresh, causally prior, bound, and eligible at commit~\cite{santos2026committime}.
-Ghost Tool Calls treats issue-time observation from abandoned speculative calls as an effect~\cite{mohammadi2026ghost}.
-ACRFence identifies Action Replay and Authority Resurrection after agent restore~\cite{zheng2026acrfence}.
+The artifact also follows the familiar certifying pattern of an untrusted
+producer and a smaller independent checker~\cite{necula1997pcc}.  This is
+trust-structure reuse,
+not a claim to proof-carrying code or verified compilation: the checker
+reconstructs one finite manifest decision, the Python implementation is not
+extracted from Lean, and no theorem connects the JSON parser or an arbitrary
+runtime to the formal model.  In particular, a verified seal does not establish
+the runtime's $\mathsf{Actual}\subseteq\mathsf{RawPhysical}$ obligation.
 
-These works make several easy claims unavailable.
-A new branch identifier is not new authority; first-commit-wins does not authorize retaining both results; a capability ledger does not by itself describe conditional reservation guarantees; and commit-time freshness does not bound aggregate authority across co-durable descendants.
-Our model unifies these lifecycle distinctions and replaces the coarse “replay or fork” rule with typed admission: divergence is allowed only with a live, adequately supported claim.
+\paragraph{Agent checkpoint and branching substrates.}
+ACRFence identifies action replay and authority resurrection after agent
+restore and proposes a branch-tagged replay-or-fork check at the tool boundary
+~\cite{zheng2026acrfence}.  DART checks when a local checkpoint remains
+semantically recoverable after downstream commitments~\cite{yang2026dart}.
+Crab reconstructs sandbox-visible state; Fork--Explore--Commit supplies
+isolated branch contexts and winner selection; and Agent libOS exposes
+capability-controlled agent processes and checkpoints
+~\cite{wu2026crab,wang2026fork,zhang2026agentlibos}.  Our complementary result
+types choice/parallel Fork, replacing/live Restore, and select/join Merge, then
+checks the derived future against receipts and controller realization.  It
+neither improves checkpoint fidelity nor establishes an unmodified runtime's
+adapter obligations.
+
+\paragraph{History-sensitive agent policy and evolving authority.}
+FORGE specifies Datalog policies over history predicates maintained by an
+observability service with an assume/guarantee contract, and a reference
+monitor consults those predicates at policy-relevant actions
+~\cite{palumbo2026forge}.  It treats general causal history and observation;
+we instead generate one correlated family from a typed edge, filter it by
+receipts, and check a co-live controller product.  We do not offer FORGE's
+policy language or online-monitor theorem.
+
+Earned Authority fixes a transition envelope and effect ceiling when a grant
+is issued, distinguishes requested from realized effects, and conditions
+authorization continuity on evidence supplied during later agent mutation
+~\cite{zhang2026earned}.  Our result neither replaces nor strengthens that
+ceiling: it asks which configurations remain after a typed history edge and
+whether the controller layout can exceed them.
+PORTICO addresses a complementary temporal gap by compiling task contracts
+into epoch-bound resource/effect capabilities and withdrawing them when the
+justifying episode closes~\cite{santos2026lingering}.  Such revocable handles
+can implement local cell authority; our result concerns correlations among
+still-valid cells and does not infer episode closure.
+
+\paragraph{Commit authorization and external effects.}
+Commit-Time Authorization checks whether one effect witness remains fresh,
+causally prior, target-bound, and eligible when the effect commits
+~\cite{santos2026committime}.  Ghost Tool Calls shows that an abandoned
+speculative call may disclose intent at issue time, before any later commit
+decision~\cite{mohammadi2026ghost}.  Atomix and Cordon address transactional
+grouping, staging, recovery, and settlement of agent tool effects
+~\cite{mohammadi2026atomix,chen2026cordon}.  These per-effect and transaction
+boundaries are orthogonal to our configuration-level question: several effects
+may each have a fresh valid witness yet be forbidden from becoming durable
+together.  Conversely, our structural admission seal neither authorizes an
+individual effect nor prevents issue-time disclosure.
+
+\paragraph{Combined claim boundary.}
+No isolated ingredient---durable receipts, typed choice and parallel
+composition, greatest safe restriction, minimal nonfaces, linear redemption,
+coordination, or independent checking---is our novelty claim.  The combined
+result is a decision procedure for a typed history transformation at a fixed
+durable frontier.  It normalizes semantic cells independently from controller
+instances, derives candidate and required futures, computes the greatest
+prefix-compatible continuation, checks the relational controller product, and
+emits independently checkable positive evidence or a typed minimal failure
+witness.  Subject to
+$\mathsf{Required}\subseteq\mathsf{Actual}
+\subseteq\mathsf{RawPhysical}$, the admitted prefix certificate then transports
+to actual runtime behavior.  This combination, rather than any reused
+foundation above, is the paper's claim.

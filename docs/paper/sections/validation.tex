@@ -1,88 +1,119 @@
-\section{Mechanized and Executable Validation}
+\section{Evaluation}
 \label{sec:validation}
 
-The artifact is a dependency-free Python executable model of finite vector grants, unique claim ownership, residuals, exact promotion, lineage transport, and selected crash-aware lifecycle rules.
-It stores frontiers explicitly only for bounded exploration; this is not the proposed runtime representation.
-It is not an implementation of lifecycle Reserve, Select/Abort, generic Merge certificates, or the complete LTS.
-The artifact README gives one command sequence that runs 24 unit tests and reproduces the checked-in JSON byte for byte.
+Our evaluation assigns different claims to four evidence layers.
+Lean checks the mathematical results; an executable cross-check tests the
+compiler; litmus manifests exercise distinctions that simpler policies miss;
+and public plus private traces characterize workload shape and adapter
+observability.
+No observational trace is labeled safe or unsafe, and no trace statistic is
+used to establish either inclusion involving $\mathsf{Actual}$.
 
-The explorer enumerates every nonempty downward-closed family on one to three branches, scalar claim weights in \(\{1,2\}\), durable demand in \(\{0,1\}\), and grants from zero through seven.
-Its explicit owner-support well-formedness predicate requires every conditional claim owner to occur in at least one admitted frontier.
-All headline source-state counts in \Cref{tab:explorer-results} apply this predicate: 1,312 states are well formed, of which 730 are safe sources.
-A separate raw algebra scan checks the \(\ac\)/need transcription on 2,816 states including unsupported owners; the JSON labels that scan as a diagnostic and we exclude it from the table's evidence counts.
-\Cref{tab:explorer-results} gives the v5 results; every check passed.
+\subsection{Mechanized theorem spine}
 
-\begin{table}[t]
-\centering
-\small
-\caption{Deterministic finite validation. Counts are exhaustive instances, not samples or proofs.}
-\label{tab:explorer-results}
-\setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{@{}lr@{}}
-\toprule
-\textbf{Checked property} & \textbf{Instances} \\
-\midrule
-Well-formed \(\ac\) iff \(\need\le G\) & 1,312 states \\
-Reserve iff branch headroom & 6,180 demands \\
-Batch iff residual membership & 17,658 batches \\
-Headroom-box rectangularity criterion & 730 states \\
-Residual derivative identities & 4,067 prefixes \\
-Derivative memberships & 103,785 batches \\
-Single-claim maximal support & 2,060 promotions \\
-Inclusion maximality & 22,246 restrictions \\
-Frozen guard / membership & 2,060 / 11,142 \\
-Confluence, explicit / guarded & 6,312 / 6,312 \\
-Recovery phase/epoch states / edges & 8 / 22 \\
-Structural target frontiers & 26 \\
-\bottomrule
-\end{tabular}
-\end{table}
+The Lean~4 development covers four linked layers.
+The typed-history module derives may and required families for all six
+operators, proves $\mathsf{Required}\subseteq\mathsf{Candidate}$, and checks
+the four semantic outcomes.
+The durable-prefix module proves that the admitted residual is prefix-safe and
+greatest within the fixed supplied candidate.
+The controller-cover module formalizes overlapping cell/controller access,
+local families, co-liveness, and the raw physical product.
+It proves the readiness and obstruction equivalences, transports an admitted
+prefix certificate to an actual subfamily under the explicit refinement
+premises, and constructs the older functional partition as a canonical special
+case.
+The operational commitment module supplies append-only receipt, phase
+monotonicity, retry binding, and exact fresh-event accounting.
 
-For derivative checks, successor components are in \([0,2]\) and the parent bound is \(2+\max_bx_b\le3\), so every queried \(x+y\) is represented rather than rejected by truncation.
+The audit scans all project Lean sources for placeholders and project axioms,
+checks a frozen paper-theorem list, builds the library, prints every listed
+kernel dependency, rejects dependencies outside
+\texttt{propext}, \texttt{Quot.sound}, and
+\texttt{Classical.choice}, and replays the root with a fresh kernel checker.
+The U(2,3) fixture is part of this replay: every pair of three cells is
+admitted, the triple is a minimal nonface, and two controllers with admitted
+proper local pieces physically realize that forbidden triple.
 
-Fixed checks exercise boundaries that aggregate counts can hide.
-Choice and parallel over two branches both initially report \(H=(1,1)\), but the batch \((1,1)\) belongs only to the choice residual.
-Across all 730 well-formed safe sources, the exact residual equals the rectangular product \(\Box(H)\) iff the all-headrooms corner satisfies every configuration-slack inequality; 296 states are rectangular and 434 are not.
-For each source, enumeration runs through its maximum headroom component, which covers \(\Box(H)\); every residual batch is already componentwise bounded by \(H\), so this check has no fixed-box truncation gap.
-The fixed choice instance satisfies this criterion, whereas the fixed parallel instance does not.
-After reserving one unit on the first branch, successor headroom is respectively \((0,1)\) and \((0,0)\), witnessing that \(H\) is not update-closed.
-For the two-state knowledge set with common structural premises, all nine batches in \([0,2]^2\) agree with membership in the intersection of the two residual profiles.
-Promotion in \(b\Box(x\parallel y\parallel z)\) produces exactly the seven subsets of \(\{x,y,z\}\) of size at most two; exhaustive enumeration of all eight three-vertex conflict graphs finds no representation, while the threshold-two guard represents it exactly.
-Withdrawing \(x\)'s claim makes a recomputed current-\(Q\) guard admit the triple, whereas the frozen guard continues to exclude it.
-After live restore, OR-lineage transport charges the retained old/restored pair two units; naively copying the term charges four and rejects it.
-In the positive final-owner-support instance, the exact guarded atomic batch and both serial orders produce the same state and denotational support; the check deliberately does not require syntactically equal guards.
-In the absent-support instance, cleanup after the \(s\)-first step terminalizes the pending \(t\) claim and disables that order, whereas the \(t\)-first order remains enabled and reaches the atomic batch's cleaned state and denotational support.
-Separately, the witnessed condition-on-owner shortcut tombstones the next owner, terminalizes its claim, and disables the second escape.
-Finally, the snapshot-local litmus constructs a replace pre-state with empty \(Q\) and a live-restore pre-state with one unit on the old branch, applies the same fresh \textsc{Reserve}(restored,1) proposal to both, and obtains safe/unsafe successors with needs one/two respectively.
-The plain-escape witness gives load two under a one-unit grant.
-The lifecycle graph enumerates eight reachable ticket-phase/grant-epoch states and 22 valid crash, Dispatch, Retry, Settle, and Revoke edges.
-It checks that Dispatch-before-Prepare, tentative claims on tombstoned branch epochs, and reuse of a tombstoned name as a fresh restore descendant are rejected; crash preserves prepared work and maps inflight to uncertain, retry reuses \((e,c)\) without changing authority accounting, cancellation retains the durable claim, and a sealed ticket may dispatch after revocation.
-Certified replace/live restore and choice/parallel fork check 26 target frontiers while preserving one receipt and prepared/uncertain tickets.
+This proves a finite manifest-relative theorem.
+It does not prove that a Claude or Codex adapter reports complete contracts,
+that its declared controller product contains every actual behavior, or that
+an external effect executes exactly once.
 
-These checks validate the executable definitions, the threshold representation, and the reported finite counterexamples.
-They do not constitute a proof for unbounded states, a performance evaluation, complete-mediation evidence, or a concrete-runtime refinement.
+\subsection{Compiler--verifier cross-check}
 
-\paragraph{Lean mechanization}
-A separate Lean 4.30.0 development over arbitrary finite carrier types defines one authoritative lifecycle step relation containing Reserve, selection/restriction, Prepare, ticket recovery, revocation, four canonical topology operations, and two explicit Merge modes.
-Choice/parallel Fork and replacing/live Restore compute exact target contracts and branch epochs.
-Their checker inspects only freshness and source-local transfer facts; target lifecycle well-formedness, active-support exactness, and authority continuity are derived using a checked coordinatewise fiber-conservation theorem.
-Simulation Merge checks atomized target structure, a monotone zero-preserving projection, and load simulation; direct Merge instead performs explicit target admission.
-Trace induction additionally preserves terminal IDs, epochs, and stable effect bindings.
-A clean build completed 755 jobs in 10.02 seconds; source and dependency audits found no placeholder or project axiom, and fresh kernel replay succeeded.
-The mechanization limits fragments to identifiers preallocated in the finite type and unissued at the source; it does not cover Boundaries I--II, issuer approval, semantic effect binding, complete mediation, or sink truthfulness.
+The dependency-free Python artifact contains two semantic implementations.
+The compiler uses symbolic cell sets; the verifier does not import it and
+reconstructs the request with integer bit masks.  The artifact suite has 55
+tests: 31 focus on history admission, and 24 exercise the supporting authority
+continuity layer.  The focused tests cover all operators and outcomes,
+readiness grades, both identity normalizations, every failure class, malformed
+evidence, resource caps, determinism, and tampering.  The end-to-end positive
+seal still sets $\mathsf{effect\_authorizes}=\mathsf{false}$.
 
-\paragraph{Concrete adapter instantiation}
-Codex 0.146.0 executes native \texttt{thread/fork}, \texttt{turn/start}, and client-owned \texttt{item/tool/call}; a loopback fixture selects the tool.
-While its callback is pending, we kill a durable-controller worker before dispatch, after isolated-sink success, or after settlement.
-The adapter, not Codex, assigns topology and Restore/Merge meaning.
+An exhaustive oracle enumerates all 19 downward-closed families over three
+cells.  Across every full-support candidate, every required subfamily, and
+every physical family, it checks 2,166 refinement instances.
+The compiler's five deployment grades agree with direct set differences in
+every instance, and the independent verifier accepts every untampered result.
+This enumeration checks the finite algorithm and its independent
+reimplementation; it is not a proof that the JSON parser refines Lean.
 
-Across its 20 histories, P3 matches 89/89 frozen decisions and replays 20/20 delta/hash chains, with no unsafe accept or duplicate aggregate effect.
-Across all four policies, all 44 reached effects match raw callbacks and finish once; all 33 crashes recover in distinct processes.
-Raw records match all 187 native forks (80 setup roots; 107 lifecycle materializations), while logical ancestry remains adapter metadata.
-The local null control unsafely accepts 11/89 observed requests; split-all and parent escrow have no unsafe accept but safely reject 4/87 and 9/71, truncating two and 18 successors.
-O0 and O1 each retain three mixed-label fibers---topology, grant lineage, and effect phase---whereas O2 retains none.
-C02/C04 execute the paired accept/reject attempt probe, and the controller and independent replay decoder both check C19's projection and injective claim map.
+A separate bounded characterization exercises the production CLIs on
+threshold families through 12 cells.  Their configuration/nonface counts are
+$11/4$, $42/15$, $163/56$, $638/210$, and $2{,}510/792$ for
+$4,6,8,10,12$ cells.  With six cells and one through four overlapping co-live
+controllers, the final physical family stays at 64 configurations while the
+analytically reconstructed pair-expansion iterations rise from 64 to 70,592.
+Both implementations reject 13 source cells, and a five-controller instance
+whose uncapped expansion would make 202,688 iterations stops at iteration
+200,001.  These synthetic counts demonstrate bounded completion and the two
+exercised fail-closed limits; they are neither latency nor deployability
+evidence, and the other declared limits remain untested.
 
-This fixed witness is not Codex refinement: all histories fork one seed; ancestry and Restore/Merge are adapter state; topology-activation crashes are untested.
-Frontend death, built-in tools, direct sink access, dishonest sinks, semantic binding, power loss, and generic Merge certificates remain out of scope.
-The run instantiates one conditional boundary, not complete mediation or the general concrete simulation theorem.
+\subsection{Distinguishing litmus manifests}
+
+Four litmus manifests separate the failure classes.  A prefix-spent restored
+cell exposed by a stale controller yields \textsc{OutsideSupport}; one locally
+unsafe controller yields \textsc{LocalOverpermission}; three locally safe
+one-cell controllers that compose the U(2,3) triple yield a higher-order
+\textsc{GateCut}; and cloned controller anchors that product-compose one
+exclusive gate yield \textsc{GateClone}.  Aliasing handles to one cell does
+not repair controller cloning.  Conversely, multiple controllers are harmless
+for a full powerset future, so the rule does not require one global monitor.
+
+\subsection{Public workload evidence}
+
+TraceLab collects real Claude Code and Codex workload telemetry and reports
+long autonomous loops and heterogeneous tool behavior
+~\cite{zhu2026tracelab}.
+We verified its v0.0.2 release of 8,058 sessions and 743,819 normalized tool
+calls against the published artifact digest~\cite{tracelab2026release}.
+Its normalized schema provides ordinary call/result correlation but not the
+joint typed history edge, durable receipt prefix, cell-alias evidence,
+controller identity and co-liveness, or a correlated leaf future contract.
+The missing fields make history-admission prevalence unidentifiable; they do
+not imply that failures are rare.
+
+\subsection{The paper-formation lineage}
+
+We also analyze the paper-formation trajectory as one author-operated
+longitudinal case.  A fixed-cutoff recursive lineage contains over 80 rollout
+files, roughly 39,000 native rows, and roughly 6,000 tool calls after excluding
+over 200,000 copied-prefix rows.  It exhibits branching, inherited history,
+compaction, aborted turns, lifecycle events, workspace mutation, and
+call/result correlation.  Yet it does not jointly expose complete leaf
+contracts, cell aliases, controller origin/co-liveness, effect binding, and
+durable receipt phase.  It therefore motivates adapter fields and parser
+tests, but cannot estimate unsafe-restore prevalence or validate admission.
+The source-grounded extraction and its limitations appear in
+\cref{app:private-trace}.
+
+\subsection{Privacy and ethics}
+
+The case recruited or manipulated no users, but histories may contain private
+workspace and incidental third-party text.  Extraction emits only path-free
+allowlisted aggregates and private keyed commitments; raw histories, prompts,
+commands, paths, stable identifiers, the key, and the anonymous private summary
+are not released.  We make no IRB approval or exemption claim; further
+minimization details appear in \cref{app:private-trace}.
