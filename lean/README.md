@@ -1,7 +1,7 @@
 # Authority Continuity Lean Development
 
-This directory contains the Lean 4 mechanization used as supporting evidence
-for RQ3.  Its scope is the finite abstract authority model, selected
+This directory contains the Lean 4 mechanization used for the paper's VQ1
+formal validation.  Its scope is the finite abstract authority model, selected
 certificate obligations, the closed lifecycle transition relation, and the
 conditional trace-level authority theorem.  It is not an implementation or a
 proof about an unmodified agent product.
@@ -31,6 +31,10 @@ builds the library, executes all `#print axioms` commands in
 `results/axioms.log`, rejects `sorryAx` and every dependency outside
 `propext`, `Quot.sound`, and `Classical.choice`, and finally replays
 `AuthorityContinuity.Main` with `leanchecker --fresh`.
+For the current observation-arity additions, the controller module and the
+complete `Audit.lean` elaboration/axiom allowlist pass.  A full fresh replay of
+the root was resource-incomplete on the development host and is not claimed as
+a completed check.
 
 ## Frozen paper-facing theorem matrix
 
@@ -54,14 +58,18 @@ builds the library, executes all `#print axioms` commands in
 | `concrete_trace_authority_safety` | Under explicit mediation and forward-simulation premises, actual protected effects plus any currently permitted conditional bundle fit within capacity. |
 | `classifyAdmission_sound` | The typed Fork/Restore/Merge classifier returns only inheritance, full readmission, pruning repair, or rejection justified by its semantic predicates. |
 | `deploymentReady_iff_required_coverage_and_avoids_obstructions` | Raw controller-product readiness is exactly required coverage plus avoidance of support escape and realizable minimal nonfaces. |
+| `rawPhysicalCoverProduct_has_card_bounded_plan` | Every physical realization of a cell configuration `C` can be compressed to at most `|C|` active controllers when co-liveness is downward closed. |
+| `deploymentReady_iff_of_contract_observation` | Two downward-closed controller realizations with the same co-liveness projection through a contract bound have the same readiness decision. The bound covers maximum required size, maximum admitted minimal-nonface size, and unary outside-support witnesses. |
+| `deploymentReady_iff_of_contractObservationArity_projection_eq` | The preceding sufficiency theorem instantiated with the finite maximum computed directly from the required and admitted families. |
 | `forbidden_valid_cover_cases` | Every forbidden controller cover is honestly classified as outside-support, local overpermission, or a locally admitted correlation cut. |
 | `actual_prefixConfigMorphism_of_deploymentReady` | Under `Required <= Actual <= RawPhysical`, manifest readiness transports the admitted durable-prefix certificate to the actual runtime family. |
 | `rawPhysical_partition_eq_localProduct` / `canonicalPartition_deploymentReady_iff_mustCoordinate` | The canonical one-controller-per-cell adapter is a proved instance of the relational model, and its readiness criterion reduces to `MustCoordinate`. |
 | `split_controllers_admit_forbidden_triple` | A finite U(2,3) fixture exposes a higher-order correlation cut that every pairwise check misses. |
 | `no_pairwise_observation_checker_exact` | Two downward-closed realizations agree on every input through complete pairwise co-liveness but require opposite readiness decisions. |
+| `ArbitraryArity.contractObservationArity_rankFamily` / `ArbitraryArity.no_lower_arity_downwardClosed_observation_checker_exact` | For positive `k`, the computed contract maximum of `U(k,k+1)` is exactly `k+1`, local choices are sound, and the unsafe full configuration is a genuine correlation-cut witness; for every `k`, downward-closed safe/unsafe realizations agree through complete arity-`k` co-liveness observation but require opposite readiness decisions. Thus the upper bound is worst-case arity-tight. |
 
-The legacy lifecycle names and logical roles above are frozen by the approved
-RQ3 experiment plan; the history-admission and controller-cover rows freeze the
+The legacy lifecycle names and logical roles above are frozen by the prior
+mechanization plan; the history-admission and controller-cover rows freeze the
 new compiler-facing theory layer.  Reserve and direct-admission Merge expose
 executable target-AC checks.
 Restriction, Prepare, ticket cases, and the four canonical Fork/Restore cases
@@ -69,6 +77,24 @@ derive their targets without target AC/WF premises.  Canonical checkers inspect
 only source-local freshness, transfer, and owner facts; the exact target
 contract and epochs come from the operation builder.  An independent result
 review classified this finite abstract-topology experiment as positive.
+
+The observation-arity result is contract indexed, not a claim that one global
+arity is necessary for every runtime.  For fixed access and local families,
+the computed upper bound is
+
+```text
+max(maximum required-configuration size,
+    maximum admitted minimal-nonface size,
+    1 when a cell exists outside admitted support, else 0).
+```
+
+Its proof uses downward closure twice: co-liveness permits shrinking any cover
+to one contributing controller per realized cell, while local-family downward
+closure turns an arbitrary forbidden realization into either a realizable
+minimal nonface or a realizable outside-support singleton.  The arbitrary-`k`
+fixture is a worst-case necessity theorem, not a claim that this conservative
+contract-only maximum is minimal for each concrete access/local-family
+manifest.
 
 Two audited auxiliary theorems, `trace_terminal_mono` and `trace_epoch_mono`,
 lift one-step terminal-ID and branch/grant epoch monotonicity over the same
@@ -108,7 +134,7 @@ and later steps cannot erase or rebind its operation ID.
 
 ## Deliberate non-claims
 
-This RQ3 development does not mechanize Boundary I or Boundary II, general
+This development does not mechanize Boundary I or Boundary II, general
 pseudo-Boolean proof-object checker completeness, a real runtime adapter,
 liveness, authority reclamation, natural-language binding correctness, issuer
 approval, or truthful external receipts.  It also does not claim that
@@ -126,10 +152,9 @@ checks `Mono₀(π)` plus per-configuration dominance while direct admission
 separately invokes target AC.  These facts support a finite abstract lifecycle
 claim, not a full production-runtime refinement.
 
-The final preflight, clean-build, and axiom outputs are retained in
-`results/topology-preflight.log`, `results/topology-build.log`, and
-`results/topology-axioms.log`.  The compatibility file `results/axioms.log`
-contains the same final theorem signatures and dependencies.
+The audit regenerates build and axiom logs under `results/`; these outputs are
+not shipped in the anonymous supplement.  The paper-facing evidence is the
+pinned source, the frozen theorem list, and reproducible build/axiom checks.
 
 Lean foundational dependencies introduced by finite-set extensionality or
 Mathlib (`propext`, `Quot.sound`, and `Classical.choice`) are permitted and are

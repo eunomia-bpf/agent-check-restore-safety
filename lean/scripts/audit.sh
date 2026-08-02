@@ -126,6 +126,10 @@ frozen_constants=(
   correlationCut_uses_distinct_contributing_controllers
   split_controllers_admit_forbidden_triple
   no_exact_checker_of_observation_collision
+  rawPhysicalCoverProduct_has_card_bounded_plan
+  contractObservationArity_is_bound
+  deploymentReady_iff_of_contract_observation
+  deploymentReady_iff_of_contractObservationArity_projection_eq
   pairwise_raw_eq_rankTwo
   pairwise_realization_ready
   triple_realization_not_ready
@@ -134,6 +138,13 @@ frozen_constants=(
   tripleCoLive3_downwardClosed
   pairwise_projection_collision
   no_pairwise_observation_checker_exact
+  bounded_realization_ready
+  full_realization_not_ready
+  full_configuration_minimalNonface
+  full_configuration_correlationCutWitness
+  contractObservationArity_rankFamily
+  projection_collision
+  no_lower_arity_downwardClosed_observation_checker_exact
   fresh_preserves_safe
   step_preserves_phaseWF
   step_phase_mono

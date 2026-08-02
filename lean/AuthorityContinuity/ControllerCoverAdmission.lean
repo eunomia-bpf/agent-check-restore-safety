@@ -301,6 +301,20 @@ def ExactThroughObservation {O : Type*}
     check required admitted access families (observe coLive) = true ↔
       DeploymentReady required admitted access families coLive
 
+/-- Exactness restricted to the well-structured realization class used by the
+observation-arity theorems: both controller-local choice families and global
+co-liveness are downward closed. -/
+def ExactThroughDownwardClosedObservation {O : Type*}
+    (observe : CoLiveFamily G → O)
+    (check : Finset (Finset U) → Finset (Finset U) →
+      ControllerAccess U G → LocalControllerFamilies U G → O → Bool) :
+    Prop :=
+  ∀ required admitted access families coLive,
+    LocalFamiliesDownwardClosed families →
+      CoLiveDownwardClosed coLive →
+      (check required admitted access families (observe coLive) = true ↔
+        DeploymentReady required admitted access families coLive)
+
 /-- An information-theoretic collision principle.  If two controller
 realizations have the same observation but different readiness decisions,
 no checker using only that observation can be both sound and complete. -/
@@ -326,6 +340,380 @@ theorem no_exact_checker_of_observation_collision {O : Type*}
     exact hAcceptSafe
   exact hUnsafe
     ((hExact required admitted access families badCoLive).1 hAcceptUnsafe)
+
+/-- The same collision argument inside the downward-closed realization class.
+This form rules out exactness even after excluding malformed local and global
+controller manifests. -/
+theorem no_exact_downwardClosed_checker_of_observation_collision {O : Type*}
+    (observe : CoLiveFamily G → O)
+    (check : Finset (Finset U) → Finset (Finset U) →
+      ControllerAccess U G → LocalControllerFamilies U G → O → Bool)
+    (required admitted : Finset (Finset U))
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (safeCoLive badCoLive : CoLiveFamily G)
+    (hFamiliesDown : LocalFamiliesDownwardClosed families)
+    (hSafeDown : CoLiveDownwardClosed safeCoLive)
+    (hBadDown : CoLiveDownwardClosed badCoLive)
+    (hCollision : observe safeCoLive = observe badCoLive)
+    (hSafe : DeploymentReady required admitted access families safeCoLive)
+    (hUnsafe : ¬DeploymentReady required admitted access families badCoLive) :
+    ¬ExactThroughDownwardClosedObservation observe check := by
+  intro hExact
+  have hAcceptSafe :
+      check required admitted access families (observe safeCoLive) = true :=
+    (hExact required admitted access families safeCoLive
+      hFamiliesDown hSafeDown).2 hSafe
+  have hAcceptUnsafe :
+      check required admitted access families (observe badCoLive) = true := by
+    rw [← hCollision]
+    exact hAcceptSafe
+  exact hUnsafe
+    ((hExact required admitted access families badCoLive
+      hFamiliesDown hBadDown).1 hAcceptUnsafe)
+
+/-! ### Contract-indexed observation sufficiency -/
+
+/-- For a downward-closed co-liveness family, the complete arity projection
+contains exactly the genuinely co-live controller sets of that arity. -/
+theorem mem_coLiveProjection_iff_of_downwardClosed
+    (arity : Nat) (coLive : CoLiveFamily G)
+    (hDown : CoLiveDownwardClosed coLive) (active : Finset G) :
+    active ∈ coLiveProjection arity coLive ↔
+      active.card ≤ arity ∧ active ∈ coLive := by
+  constructor
+  · intro hObserved
+    obtain ⟨hCard, larger, hLarger, hSubset⟩ := by
+      simpa [coLiveProjection] using hObserved
+    exact ⟨hCard, hDown larger hLarger active hSubset⟩
+  · rintro ⟨hCard, hActive⟩
+    simp only [coLiveProjection, Finset.mem_filter, Finset.mem_powerset]
+    exact ⟨Finset.subset_univ active, hCard, active, hActive,
+      Finset.Subset.rfl⟩
+
+/-- Equal complete arity projections of two downward-closed co-liveness
+families imply agreement on every controller set within the arity bound. -/
+theorem coLive_membership_iff_of_projection_eq
+    (arity : Nat) (left right : CoLiveFamily G)
+    (hLeftDown : CoLiveDownwardClosed left)
+    (hRightDown : CoLiveDownwardClosed right)
+    (hProjection : coLiveProjection arity left =
+      coLiveProjection arity right)
+    {active : Finset G} (hCard : active.card ≤ arity) :
+    active ∈ left ↔ active ∈ right := by
+  have hObserved :
+      active ∈ coLiveProjection arity left ↔
+        active ∈ coLiveProjection arity right := by
+    rw [hProjection]
+  rw [mem_coLiveProjection_iff_of_downwardClosed
+      arity left hLeftDown active,
+    mem_coLiveProjection_iff_of_downwardClosed
+      arity right hRightDown active] at hObserved
+  simpa [hCard] using hObserved
+
+/-- Any physical realization of a cell configuration `C` has a subplan using
+at most `|C|` active controllers.  Choose one contributing controller per
+cell and discard all other active controllers.  Downward-closed co-liveness
+is exactly what makes the smaller controller set executable. -/
+theorem rawPhysicalCoverProduct_has_card_bounded_plan
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (coLive : CoLiveFamily G)
+    (hCoLiveDown : CoLiveDownwardClosed coLive)
+    {C : Finset U}
+    (hRaw : C ∈ rawPhysicalCoverProduct access families coLive) :
+    ∃ plan : CoverPlan U G,
+      plan.Valid access families coLive C ∧
+        plan.active.card ≤ C.card := by
+  classical
+  obtain ⟨plan, hValid⟩ :=
+    (mem_rawPhysicalCoverProduct_iff access families coLive C).1 hRaw
+  have hCovered : ∀ u : {u // u ∈ C},
+      ∃ g : G, g ∈ plan.active ∧ u.1 ∈ plan.piece g := by
+    intro u
+    have huUnion : u.1 ∈ plan.active.biUnion plan.piece := by
+      rw [hValid.2.2.2]
+      exact u.2
+    exact Finset.mem_biUnion.mp huUnion
+  let chooseController : {u // u ∈ C} → G :=
+    fun u => Classical.choose (hCovered u)
+  have hChooseController : ∀ u : {u // u ∈ C},
+      chooseController u ∈ plan.active ∧
+        u.1 ∈ plan.piece (chooseController u) := by
+    intro u
+    exact Classical.choose_spec (hCovered u)
+  let selected : Finset G := C.attach.image chooseController
+  have hSelectedSubset : selected ⊆ plan.active := by
+    intro g hg
+    obtain ⟨u, _huAttach, rfl⟩ := Finset.mem_image.mp hg
+    exact (hChooseController u).1
+  have hSelectedCoLive : selected ∈ coLive :=
+    hCoLiveDown plan.active hValid.1 selected hSelectedSubset
+  have hSelectedCard : selected.card ≤ C.card := by
+    have hImage : (C.attach.image chooseController).card ≤ C.attach.card :=
+      Finset.card_image_le
+    simpa [selected] using hImage
+  let compressed : CoverPlan U G :=
+    { active := selected
+      piece := plan.piece }
+  refine ⟨compressed, ?_, hSelectedCard⟩
+  refine ⟨hSelectedCoLive, ?_, ?_, ?_⟩
+  · intro g hg
+    exact hValid.2.1 g (hSelectedSubset hg)
+  · intro g hg
+    exact hValid.2.2.1 g (hSelectedSubset hg)
+  · ext u
+    constructor
+    · intro hu
+      obtain ⟨g, hgSelected, huPiece⟩ := Finset.mem_biUnion.mp hu
+      have huOriginal : u ∈ plan.active.biUnion plan.piece :=
+        Finset.mem_biUnion.mpr
+          ⟨g, hSelectedSubset hgSelected, huPiece⟩
+      rw [hValid.2.2.2] at huOriginal
+      exact huOriginal
+    · intro huC
+      let uC : {u // u ∈ C} := ⟨u, huC⟩
+      have hgSelected : chooseController uC ∈ selected := by
+        apply Finset.mem_image.mpr
+        exact ⟨uC, Finset.mem_attach C uC, rfl⟩
+      exact Finset.mem_biUnion.mpr
+        ⟨chooseController uC, hgSelected, (hChooseController uC).2⟩
+
+/-- Complete co-liveness observations through arity `k` determine physical
+membership for every cell configuration of size at most `k`. -/
+theorem rawPhysical_membership_iff_of_projection_eq
+    (arity : Nat)
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (left right : CoLiveFamily G)
+    (hLeftDown : CoLiveDownwardClosed left)
+    (hRightDown : CoLiveDownwardClosed right)
+    (hProjection : coLiveProjection arity left =
+      coLiveProjection arity right)
+    {C : Finset U} (hCard : C.card ≤ arity) :
+    C ∈ rawPhysicalCoverProduct access families left ↔
+      C ∈ rawPhysicalCoverProduct access families right := by
+  constructor
+  · intro hRaw
+    obtain ⟨plan, hValid, hPlanCard⟩ :=
+      rawPhysicalCoverProduct_has_card_bounded_plan
+        access families left hLeftDown hRaw
+    rw [mem_rawPhysicalCoverProduct_iff]
+    refine ⟨plan, ?_⟩
+    refine ⟨?_, hValid.2⟩
+    exact (coLive_membership_iff_of_projection_eq
+      arity left right hLeftDown hRightDown hProjection
+      (hPlanCard.trans hCard)).1 hValid.1
+  · intro hRaw
+    obtain ⟨plan, hValid, hPlanCard⟩ :=
+      rawPhysicalCoverProduct_has_card_bounded_plan
+        access families right hRightDown hRaw
+    rw [mem_rawPhysicalCoverProduct_iff]
+    refine ⟨plan, ?_⟩
+    refine ⟨?_, hValid.2⟩
+    exact (coLive_membership_iff_of_projection_eq
+      arity left right hLeftDown hRightDown hProjection
+      (hPlanCard.trans hCard)).2 hValid.1
+
+/-- A contract-relative upper bound on the co-liveness facts needed for an
+exact readiness decision.  Required configurations bound missing-behavior
+witnesses; minimal nonfaces bound in-support overpermissions; and each cell
+outside the admitted support contributes a unary support-escape witness. -/
+def ContractObservationBound
+    (required admitted : Finset (Finset U)) (arity : Nat) : Prop :=
+  (∀ C ∈ required, C.card ≤ arity) ∧
+    (∀ K : Finset U, MinimalNonface admitted K → K.card ≤ arity) ∧
+    (∀ u : U, u ∉ support admitted → 1 ≤ arity)
+
+/-- The finite family of all minimal nonfaces of an admitted contract. -/
+noncomputable def minimalNonfacesOf
+    (admitted : Finset (Finset U)) : Finset (Finset U) := by
+  classical
+  exact (support admitted).powerset.filter fun K =>
+    MinimalNonface admitted K
+
+/-- The least syntactic maximum exposed by the three classes of bounded
+witnesses.  The support-escape component is zero for full support and one
+otherwise. -/
+noncomputable def contractObservationArity
+    (required admitted : Finset (Finset U)) : Nat := by
+  classical
+  exact max (required.sup fun C => C.card)
+    (max ((minimalNonfacesOf admitted).sup fun K => K.card)
+      (if support admitted = (Finset.univ : Finset U) then 0 else 1))
+
+theorem contractObservationArity_is_bound
+    (required admitted : Finset (Finset U)) :
+    ContractObservationBound required admitted
+      (contractObservationArity required admitted) := by
+  classical
+  refine ⟨?_, ?_, ?_⟩
+  · intro C hC
+    have hRequired := Finset.le_sup
+      (f := fun C : Finset U => C.card) hC
+    simpa [contractObservationArity] using hRequired.trans
+      (le_max_left
+        (required.sup fun C : Finset U => C.card)
+        (max ((minimalNonfacesOf admitted).sup fun K : Finset U => K.card)
+          (if support admitted = (Finset.univ : Finset U) then 0 else 1)))
+  · intro K hMinimal
+    have hKMem : K ∈ minimalNonfacesOf admitted := by
+      simp [minimalNonfacesOf, hMinimal.1, hMinimal]
+    have hMinimalSup := Finset.le_sup
+      (f := fun K : Finset U => K.card) hKMem
+    have hInner :
+        (minimalNonfacesOf admitted).sup (fun K : Finset U => K.card) ≤
+          max ((minimalNonfacesOf admitted).sup fun K : Finset U => K.card)
+            (if support admitted = (Finset.univ : Finset U) then 0 else 1) :=
+      le_max_left _ _
+    have hOuter :
+        max ((minimalNonfacesOf admitted).sup fun K : Finset U => K.card)
+            (if support admitted = (Finset.univ : Finset U) then 0 else 1) ≤
+          max (required.sup fun C : Finset U => C.card)
+            (max ((minimalNonfacesOf admitted).sup fun K : Finset U => K.card)
+              (if support admitted = (Finset.univ : Finset U) then 0 else 1)) :=
+      le_max_right _ _
+    simpa [contractObservationArity] using
+      hMinimalSup.trans (hInner.trans hOuter)
+  · intro u huOutside
+    have hNotFull : support admitted ≠ (Finset.univ : Finset U) := by
+      intro hFull
+      apply huOutside
+      rw [hFull]
+      exact Finset.mem_univ u
+    have hUnary :
+        1 ≤ max ((minimalNonfacesOf admitted).sup fun K => K.card)
+          (if support admitted = (Finset.univ : Finset U) then 0 else 1) := by
+      simp [hNotFull]
+    have hOuter :
+        max ((minimalNonfacesOf admitted).sup fun K : Finset U => K.card)
+            (if support admitted = (Finset.univ : Finset U) then 0 else 1) ≤
+          max (required.sup fun C : Finset U => C.card)
+            (max ((minimalNonfacesOf admitted).sup fun K : Finset U => K.card)
+              (if support admitted = (Finset.univ : Finset U) then 0 else 1)) :=
+      le_max_right _ _
+    simpa [contractObservationArity] using hUnary.trans hOuter
+
+/-- Under downward-closed local families, equality of contract-bounded
+co-liveness observations preserves physical safety. -/
+theorem rawPhysical_subset_admitted_of_projection_eq
+    (arity : Nat) (admitted : Finset (Finset U))
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (left right : CoLiveFamily G)
+    (hFamiliesDown : LocalFamiliesDownwardClosed families)
+    (hLeftDown : CoLiveDownwardClosed left)
+    (hRightDown : CoLiveDownwardClosed right)
+    (hProjection : coLiveProjection arity left =
+      coLiveProjection arity right)
+    (hMinimalBound : ∀ K : Finset U,
+      MinimalNonface admitted K → K.card ≤ arity)
+    (hOutsideBound : ∀ u : U, u ∉ support admitted → 1 ≤ arity)
+    (hSafe : rawPhysicalCoverProduct access families left ⊆ admitted) :
+    rawPhysicalCoverProduct access families right ⊆ admitted := by
+  intro C hRaw
+  by_contra hForbidden
+  by_cases hSupport : C ⊆ support admitted
+  · obtain ⟨K, hKSubset, hMinimal⟩ :=
+      exists_minimalNonface_subset admitted hSupport hForbidden
+    have hKRawRight := rawPhysicalCoverProduct_downwardClosed
+      access families right hFamiliesDown hRaw hKSubset
+    have hKRawLeft :=
+      (rawPhysical_membership_iff_of_projection_eq
+        arity access families left right hLeftDown hRightDown hProjection
+        (hMinimalBound K hMinimal)).2 hKRawRight
+    exact hMinimal.2.1 (hSafe hKRawLeft)
+  · have hOutside : ∃ u : U, u ∈ C ∧ u ∉ support admitted := by
+      simpa [Finset.subset_iff] using hSupport
+    obtain ⟨u, huC, huOutside⟩ := hOutside
+    have hSingletonSubset : ({u} : Finset U) ⊆ C := by
+      simpa using huC
+    have hSingletonRawRight := rawPhysicalCoverProduct_downwardClosed
+      access families right hFamiliesDown hRaw hSingletonSubset
+    have hSingletonRawLeft :=
+      (rawPhysical_membership_iff_of_projection_eq
+        arity access families left right hLeftDown hRightDown hProjection
+        (by simpa using hOutsideBound u huOutside)).2 hSingletonRawRight
+    have hSingletonAdmitted := hSafe hSingletonRawLeft
+    exact huOutside (source_mem_support hSingletonAdmitted (by simp))
+
+/-- Physical safety is therefore invariant under equal observations at every
+arity satisfying the admitted contract's obstruction bounds. -/
+theorem rawPhysical_subset_admitted_iff_of_projection_eq
+    (arity : Nat) (admitted : Finset (Finset U))
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (left right : CoLiveFamily G)
+    (hFamiliesDown : LocalFamiliesDownwardClosed families)
+    (hLeftDown : CoLiveDownwardClosed left)
+    (hRightDown : CoLiveDownwardClosed right)
+    (hProjection : coLiveProjection arity left =
+      coLiveProjection arity right)
+    (hMinimalBound : ∀ K : Finset U,
+      MinimalNonface admitted K → K.card ≤ arity)
+    (hOutsideBound : ∀ u : U, u ∉ support admitted → 1 ≤ arity) :
+    rawPhysicalCoverProduct access families left ⊆ admitted ↔
+      rawPhysicalCoverProduct access families right ⊆ admitted := by
+  constructor
+  · exact rawPhysical_subset_admitted_of_projection_eq
+      arity admitted access families left right hFamiliesDown
+      hLeftDown hRightDown hProjection hMinimalBound hOutsideBound
+  · exact rawPhysical_subset_admitted_of_projection_eq
+      arity admitted access families right left hFamiliesDown
+      hRightDown hLeftDown hProjection.symm hMinimalBound hOutsideBound
+
+/-- Main observation-arity upper bound: for fixed access and local families,
+the required-family maximum, admitted minimal-nonface maximum, and unary
+outside-support witnesses contain all co-liveness information needed to
+decide deployment readiness. -/
+theorem deploymentReady_iff_of_contract_observation
+    (arity : Nat) (required admitted : Finset (Finset U))
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (left right : CoLiveFamily G)
+    (hFamiliesDown : LocalFamiliesDownwardClosed families)
+    (hLeftDown : CoLiveDownwardClosed left)
+    (hRightDown : CoLiveDownwardClosed right)
+    (hProjection : coLiveProjection arity left =
+      coLiveProjection arity right)
+    (hBound : ContractObservationBound required admitted arity) :
+    DeploymentReady required admitted access families left ↔
+      DeploymentReady required admitted access families right := by
+  have hRequired :
+      required ⊆ rawPhysicalCoverProduct access families left ↔
+        required ⊆ rawPhysicalCoverProduct access families right := by
+    constructor <;> intro hSubset C hC
+    · exact (rawPhysical_membership_iff_of_projection_eq
+        arity access families left right hLeftDown hRightDown hProjection
+        (hBound.1 C hC)).1 (hSubset hC)
+    · exact (rawPhysical_membership_iff_of_projection_eq
+        arity access families left right hLeftDown hRightDown hProjection
+        (hBound.1 C hC)).2 (hSubset hC)
+  have hSafe := rawPhysical_subset_admitted_iff_of_projection_eq
+    arity admitted access families left right hFamiliesDown
+    hLeftDown hRightDown hProjection hBound.2.1 hBound.2.2
+  unfold DeploymentReady
+  exact and_congr hRequired hSafe
+
+/-- Canonical corollary using the maximum computed directly from the required
+and admitted contract families. -/
+theorem deploymentReady_iff_of_contractObservationArity_projection_eq
+    (required admitted : Finset (Finset U))
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (left right : CoLiveFamily G)
+    (hFamiliesDown : LocalFamiliesDownwardClosed families)
+    (hLeftDown : CoLiveDownwardClosed left)
+    (hRightDown : CoLiveDownwardClosed right)
+    (hProjection :
+      coLiveProjection (contractObservationArity required admitted) left =
+        coLiveProjection (contractObservationArity required admitted) right) :
+    DeploymentReady required admitted access families left ↔
+      DeploymentReady required admitted access families right :=
+  deploymentReady_iff_of_contract_observation
+    (contractObservationArity required admitted) required admitted
+    access families left right hFamiliesDown hLeftDown hRightDown hProjection
+    (contractObservationArity_is_bound required admitted)
 
 /-- Readiness fails for at least one of two semantic reasons: the physical
 implementation adds behavior, it cannot realize a required behavior, or both
@@ -1247,6 +1635,266 @@ theorem no_pairwise_observation_checker_exact
     completeAccess3 singletonLocal3 pairwiseCoLive3 tripleCoLive3
     pairwise_projection_collision pairwise_realization_ready
     triple_realization_not_ready
+
+/-! ### Arbitrary observation arity is sometimes necessary -/
+
+namespace ArbitraryArity
+
+/-- `U(k,k+1)`: every cell configuration of size at most `k` is admitted over
+`k+1` cells. -/
+def rankFamily (k : Nat) : Finset (Finset (Fin (k + 1))) :=
+  (Finset.univ : Finset (Fin (k + 1))).powerset.filter fun C =>
+    C.card ≤ k
+
+def completeAccess (k : Nat)
+    (_u : Fin (k + 1)) (_g : Fin (k + 1)) : Prop := True
+
+/-- Controller `g` may contribute either nothing or its matching singleton. -/
+def singletonLocal (k : Nat) (g : Fin (k + 1)) :
+    Finset (Finset (Fin (k + 1))) :=
+  ({g} : Finset (Fin (k + 1))).powerset
+
+/-- The safe realization co-schedules at most `k` controllers. -/
+def boundedCoLive (k : Nat) : CoLiveFamily (Fin (k + 1)) :=
+  (Finset.univ : Finset (Fin (k + 1))).powerset.filter fun active =>
+    active.card ≤ k
+
+/-- The unsafe realization may co-schedule all `k+1` controllers. -/
+def fullCoLive (k : Nat) : CoLiveFamily (Fin (k + 1)) :=
+  (Finset.univ : Finset (Fin (k + 1))).powerset
+
+theorem singletonLocal_downwardClosed (k : Nat) :
+    LocalFamiliesDownwardClosed (singletonLocal k) := by
+  intro g C K hC hSubset
+  exact Finset.mem_powerset.mpr
+    (hSubset.trans (Finset.mem_powerset.mp hC))
+
+theorem singletonLocal_sound (k : Nat) (hk : 1 ≤ k) :
+    LocalFamiliesSound (rankFamily k) (completeAccess k)
+      (singletonLocal k) := by
+  intro g C hC
+  constructor
+  · have hCard : C.card ≤ 1 := by
+      have hSubset := Finset.mem_powerset.mp hC
+      simpa using Finset.card_le_card hSubset
+    simp only [rankFamily, Finset.mem_filter, Finset.mem_powerset]
+    exact ⟨Finset.subset_univ C, hCard.trans hk⟩
+  · simp [PieceAccessible, completeAccess]
+
+theorem boundedCoLive_downwardClosed (k : Nat) :
+    CoLiveDownwardClosed (boundedCoLive k) := by
+  intro active hActive smaller hSubset
+  have hActiveCard : active.card ≤ k := by
+    simpa [boundedCoLive] using hActive
+  have hSmallerCard : smaller.card ≤ k :=
+    (Finset.card_le_card hSubset).trans hActiveCard
+  simpa [boundedCoLive] using hSmallerCard
+
+theorem fullCoLive_downwardClosed (k : Nat) :
+    CoLiveDownwardClosed (fullCoLive k) := by
+  intro active hActive smaller hSubset
+  simp [fullCoLive]
+
+/-- Singleton local choices make every realized cell set a subset of the
+active-controller set.  Hence the bounded realization adds no behavior beyond
+`U(k,k+1)`. -/
+theorem bounded_raw_subset_rankFamily (k : Nat) :
+    rawPhysicalCoverProduct (completeAccess k) (singletonLocal k)
+        (boundedCoLive k) ⊆
+      rankFamily k := by
+  intro C hC
+  obtain ⟨plan, hValid⟩ :=
+    (mem_rawPhysicalCoverProduct_iff
+      (completeAccess k) (singletonLocal k) (boundedCoLive k) C).1 hC
+  have hActiveCard : plan.active.card ≤ k := by
+    simpa [boundedCoLive] using hValid.1
+  have hSubset : C ⊆ plan.active := by
+    intro u huC
+    have huUnion : u ∈ plan.active.biUnion plan.piece := by
+      rw [hValid.2.2.2]
+      exact huC
+    obtain ⟨g, hgActive, huPiece⟩ := Finset.mem_biUnion.mp huUnion
+    have hPieceSubset : plan.piece g ⊆ ({g} : Finset (Fin (k + 1))) :=
+      Finset.mem_powerset.mp (hValid.2.1 g hgActive)
+    have hug : u = g := by
+      simpa using hPieceSubset huPiece
+    simpa [hug] using hgActive
+  simp only [rankFamily, Finset.mem_filter, Finset.mem_powerset]
+  exact ⟨Finset.subset_univ C,
+    (Finset.card_le_card hSubset).trans hActiveCard⟩
+
+/-- Every admitted configuration is realized by activating exactly its
+matching singleton controllers. -/
+theorem rankFamily_subset_bounded_raw (k : Nat) :
+    rankFamily k ⊆
+      rawPhysicalCoverProduct (completeAccess k) (singletonLocal k)
+        (boundedCoLive k) := by
+  intro C hC
+  rw [mem_rawPhysicalCoverProduct_iff]
+  let plan : CoverPlan (Fin (k + 1)) (Fin (k + 1)) :=
+    { active := C
+      piece := fun g => {g} }
+  refine ⟨plan, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · have hCard : C.card ≤ k := by
+      simpa [rankFamily] using hC
+    simpa [plan, boundedCoLive] using hCard
+  · intro g hg
+    simp [plan, singletonLocal]
+  · intro g hg
+    simp [plan, PieceAccessible, completeAccess]
+  · ext u
+    simp [plan]
+
+theorem bounded_raw_eq_rankFamily (k : Nat) :
+    rawPhysicalCoverProduct (completeAccess k) (singletonLocal k)
+        (boundedCoLive k) =
+      rankFamily k :=
+  Finset.Subset.antisymm (bounded_raw_subset_rankFamily k)
+    (rankFamily_subset_bounded_raw k)
+
+theorem bounded_realization_ready (k : Nat) :
+    DeploymentReady (rankFamily k) (rankFamily k)
+      (completeAccess k) (singletonLocal k) (boundedCoLive k) :=
+  ⟨rankFamily_subset_bounded_raw k, bounded_raw_subset_rankFamily k⟩
+
+def fullCoverPlan (k : Nat) :
+    CoverPlan (Fin (k + 1)) (Fin (k + 1)) where
+  active := Finset.univ
+  piece := fun g => {g}
+
+theorem fullCoverPlan_valid (k : Nat) :
+    (fullCoverPlan k).Valid (completeAccess k) (singletonLocal k)
+      (fullCoLive k) (Finset.univ : Finset (Fin (k + 1))) := by
+  refine ⟨by simp [fullCoverPlan, fullCoLive], ?_, ?_, ?_⟩
+  · intro g hg
+    simp [fullCoverPlan, singletonLocal]
+  · intro g hg
+    simp [fullCoverPlan, PieceAccessible, completeAccess]
+  · ext u
+    simp [fullCoverPlan]
+
+theorem full_configuration_forbidden (k : Nat) :
+    (Finset.univ : Finset (Fin (k + 1))) ∉ rankFamily k := by
+  simp [rankFamily]
+
+theorem support_rankFamily_eq_univ (k : Nat) (hk : 1 ≤ k) :
+    support (rankFamily k) =
+      (Finset.univ : Finset (Fin (k + 1))) := by
+  apply Finset.eq_univ_of_forall
+  intro u
+  apply Finset.mem_biUnion.mpr
+  refine ⟨({u} : Finset (Fin (k + 1))), ?_, by simp⟩
+  simp [rankFamily, hk]
+
+/-- For positive `k`, the new `(k+1)`-cell configuration is precisely a
+minimal nonface, rather than merely some forbidden behavior. -/
+theorem full_configuration_minimalNonface
+    (k : Nat) (hk : 1 ≤ k) :
+    MinimalNonface (rankFamily k)
+      (Finset.univ : Finset (Fin (k + 1))) := by
+  refine ⟨?_, full_configuration_forbidden k, ?_⟩
+  · rw [support_rankFamily_eq_univ k hk]
+  · intro L hProper
+    have hCardLt := Finset.card_lt_card hProper
+    have hCard : L.card ≤ k := by
+      simpa using hCardLt
+    simp [rankFamily, hCard]
+
+theorem full_configuration_correlationCutWitness
+    (k : Nat) (hk : 1 ≤ k) :
+    CorrelationCutWitness (rankFamily k) (completeAccess k)
+      (singletonLocal k) (fullCoLive k)
+      (Finset.univ : Finset (Fin (k + 1))) := by
+  refine ⟨full_configuration_minimalNonface k hk,
+    fullCoverPlan k, fullCoverPlan_valid k, ?_⟩
+  intro g hg
+  exact (singletonLocal_sound k hk g ((fullCoverPlan k).piece g)
+    ((fullCoverPlan_valid k).2.1 g hg)).1
+
+/-- The contract maximum from the sufficiency theorem is exactly `k+1` on
+the positive-rank `U(k,k+1)` family used by the lower bound. -/
+theorem contractObservationArity_rankFamily
+    (k : Nat) (hk : 1 ≤ k) :
+    contractObservationArity (rankFamily k) (rankFamily k) = k + 1 := by
+  apply Nat.le_antisymm
+  · unfold contractObservationArity
+    apply max_le
+    · apply Finset.sup_le
+      intro C hC
+      exact (Finset.card_le_card (Finset.subset_univ C)).trans_eq (by simp)
+    · apply max_le
+      · apply Finset.sup_le
+        intro K hK
+        have hSubset : K ⊆ (Finset.univ : Finset (Fin (k + 1))) :=
+          Finset.subset_univ K
+        exact (Finset.card_le_card hSubset).trans_eq (by simp)
+      · split <;> simp
+  · have hBound := contractObservationArity_is_bound
+      (rankFamily k) (rankFamily k)
+    have hMinimalBound := hBound.2.1
+      (Finset.univ : Finset (Fin (k + 1)))
+      (full_configuration_minimalNonface k hk)
+    simpa using hMinimalBound
+
+theorem full_realization_not_ready (k : Nat) :
+    ¬DeploymentReady (rankFamily k) (rankFamily k)
+      (completeAccess k) (singletonLocal k) (fullCoLive k) := by
+  intro hReady
+  apply full_configuration_forbidden k
+  apply hReady.2
+  rw [mem_rawPhysicalCoverProduct_iff]
+  exact ⟨fullCoverPlan k, fullCoverPlan_valid k⟩
+
+/-- The safe and unsafe realizations agree on the complete observation of
+every controller set through arity `k`. -/
+theorem projection_collision (k : Nat) :
+    coLiveProjection k (boundedCoLive k) =
+      coLiveProjection k (fullCoLive k) := by
+  ext active
+  rw [mem_coLiveProjection_iff_of_downwardClosed
+      k (boundedCoLive k) (boundedCoLive_downwardClosed k) active,
+    mem_coLiveProjection_iff_of_downwardClosed
+      k (fullCoLive k) (fullCoLive_downwardClosed k) active]
+  simp [boundedCoLive, fullCoLive]
+
+/-- For every `k`, no checker using only co-liveness observations of arity at
+most `k` can be exact on all downward-closed realizations: `U(k,k+1)` gives a
+safe realization and an indistinguishable unsafe one whose sole new maximal
+configuration has size `k+1`. -/
+theorem no_lower_arity_observation_checker_exact
+    (k : Nat)
+    (check : Finset (Finset (Fin (k + 1))) →
+      Finset (Finset (Fin (k + 1))) →
+      ControllerAccess (Fin (k + 1)) (Fin (k + 1)) →
+      LocalControllerFamilies (Fin (k + 1)) (Fin (k + 1)) →
+      CoLiveFamily (Fin (k + 1)) → Bool) :
+    ¬ExactThroughObservation (coLiveProjection k) check :=
+  no_exact_checker_of_observation_collision
+    (coLiveProjection k) check (rankFamily k) (rankFamily k)
+    (completeAccess k) (singletonLocal k) (boundedCoLive k) (fullCoLive k)
+    (projection_collision k) (bounded_realization_ready k)
+    (full_realization_not_ready k)
+
+/-- The arbitrary-`k` lower bound still holds when exactness is required only
+for downward-closed local families and downward-closed co-liveness families. -/
+theorem no_lower_arity_downwardClosed_observation_checker_exact
+    (k : Nat)
+    (check : Finset (Finset (Fin (k + 1))) →
+      Finset (Finset (Fin (k + 1))) →
+      ControllerAccess (Fin (k + 1)) (Fin (k + 1)) →
+      LocalControllerFamilies (Fin (k + 1)) (Fin (k + 1)) →
+      CoLiveFamily (Fin (k + 1)) → Bool) :
+    ¬ExactThroughDownwardClosedObservation (coLiveProjection k) check :=
+  no_exact_downwardClosed_checker_of_observation_collision
+    (coLiveProjection k) check (rankFamily k) (rankFamily k)
+    (completeAccess k) (singletonLocal k) (boundedCoLive k) (fullCoLive k)
+    (singletonLocal_downwardClosed k)
+    (boundedCoLive_downwardClosed k) (fullCoLive_downwardClosed k)
+    (projection_collision k) (bounded_realization_ready k)
+    (full_realization_not_ready k)
+
+end ArbitraryArity
 
 end Fixtures
 
