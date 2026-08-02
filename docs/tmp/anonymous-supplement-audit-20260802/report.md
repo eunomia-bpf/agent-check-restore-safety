@@ -4,9 +4,9 @@
 
 The prior twelve-file command omitted the Lean development and bounded scaling
 driver while the paper claimed both evidence layers.  The replacement uses an
-explicit 52-file manifest containing:
+explicit 53-file manifest containing:
 
-- the compiler, independent verifier, 55 private-data-free tests, and one JSON
+- the compiler, independent verifier, 62 private-data-free tests, and one JSON
   fixture;
 - the bounded scaling driver, but not the historical result JSON or timings;
 - every Lean source required by the library, pinned Lake/Lean metadata, and the
@@ -26,8 +26,8 @@ format, and the gzip header are normalized.
 
 Two builds after the final included-source edits were byte-identical:
 
-- files: 52;
-- SHA-256: `5477114622433074a9a2b9f53de77f3907cb1a63f9fbdd0e5879eaa0453763bf`.
+- files: 53;
+- SHA-256: `5831db580b41c6194b0a696da38a2196dc46b80f1d6cad4e4aa09357e8782718`.
 
 The digest is diagnostic rather than frozen because any included source edit
 correctly changes it.
@@ -36,7 +36,7 @@ correctly changes it.
 
 From a fresh temporary extraction:
 
-- `python3 -m unittest -v`: 55/55 pass;
+- `python3 -m unittest -v`: 62/62 pass;
 - `python3 bench_history_admission_scaling.py --output /tmp/...`: pass and
   regenerate the deterministic counts/fail-closed fields.
 
