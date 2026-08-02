@@ -1,88 +1,76 @@
 \section{Evaluation}
 \label{sec:validation}
 
-Our evaluation assigns different claims to four evidence layers.
-Lean checks the mathematical results; an executable cross-check tests the
-compiler; litmus manifests exercise distinctions that simpler policies miss;
-and public plus private traces characterize workload shape and adapter
-observability.
+We ask whether the theorems are machine-checked (VQ1), two implementations
+agree with the finite semantics (VQ2), litmus cases expose lower-order blind
+spots (VQ3), and real trajectories carry the required adapter evidence (VQ4).
 No observational trace is labeled safe or unsafe, and no trace statistic is
 used to establish either inclusion involving $\mathsf{Actual}$.
 
-\subsection{Mechanized theorem spine}
+\subsection{VQ1: Mechanized theorem spine}
 
-The Lean~4 development covers four linked layers.
-The typed-history module derives may and required families for all six
-operators, proves $\mathsf{Required}\subseteq\mathsf{Candidate}$, and checks
-the four semantic outcomes.
-The durable-prefix module proves that the admitted residual is prefix-safe and
-greatest within the fixed supplied candidate.
-The controller-cover module formalizes overlapping cell/controller access,
-local families, co-liveness, and the raw physical product.
-It proves the readiness and obstruction equivalences, transports an admitted
-prefix certificate to an actual subfamily under the explicit refinement
-premises, and constructs the older functional partition as a canonical special
-case.
-The operational commitment module supplies append-only receipt, phase
-monotonicity, retry binding, and exact fresh-event accounting.
+Lean~4 links typed-family generation for all six operators, greatest
+fixed-prefix admission, overlapping controller-cover readiness and
+obstructions, runtime-refinement transport, and the append-only commitment
+substrate.  It also recovers the older functional partition as a canonical
+special case.
 
-The audit scans all project Lean sources for placeholders and project axioms,
-checks a frozen paper-theorem list, builds the library, prints every listed
-kernel dependency, rejects dependencies outside
-\texttt{propext}, \texttt{Quot.sound}, and
-\texttt{Classical.choice}, and replays the root with a fresh kernel checker.
-The U(2,3) fixture is part of this replay: every pair of three cells is
-admitted, the triple is a minimal nonface, and two controllers with admitted
-proper local pieces physically realize that forbidden triple.
+The audit rejects placeholders, project axioms, and dependencies beyond
+\texttt{propext}, \texttt{Quot.sound}, and \texttt{Classical.choice}.  A
+two-controller $U(2,3)$ realization checks correlation-cut extraction; a
+separate arbitrary-$k$ singleton-controller construction checks both the
+contract-indexed upper bound and its $U(k,k{+}1)$ lower bound
+(\cref{thm:observation-arity}).
 
 This proves a finite manifest-relative theorem.
 It does not prove that a Claude or Codex adapter reports complete contracts,
 that its declared controller product contains every actual behavior, or that
 an external effect executes exactly once.
 
-\subsection{Compiler--verifier cross-check}
+\subsection{VQ2: Compiler--verifier cross-check}
 
 The dependency-free Python artifact contains two semantic implementations.
-The compiler uses symbolic cell sets; the verifier does not import it and
-reconstructs the request with integer bit masks.  The artifact suite has 55
-tests: 31 focus on history admission, and 24 exercise the supporting authority
-continuity layer.  The focused tests cover all operators and outcomes,
-readiness grades, both identity normalizations, every failure class, malformed
-evidence, resource caps, determinism, and tampering.  The end-to-end positive
-seal still sets $\mathsf{effect\_authorizes}=\mathsf{false}$.
+The compiler uses symbolic cell sets; the independent verifier reconstructs
+the request with bit masks.  Both expand the supplied full downward-closed
+$\Gamma$, enforce support-induced access, retain its exact/overapproximate
+coverage attestation, and independently compute
+\texttt{required\_coliveness\_arity}; neither consumes a prior seal.  Of 55
+tests, 31 cover history-admission operators, outcomes, readiness grades, both
+identity normalizations, failure classes, malformed evidence, caps,
+determinism, and tampering.  Every positive seal sets
+$\mathsf{effect\_authorizes}=\mathsf{false}$.
 
 An exhaustive oracle enumerates all 19 downward-closed families over three
 cells.  Across every full-support candidate, every required subfamily, and
 every physical family, it checks 2,166 refinement instances.
-The compiler's five deployment grades agree with direct set differences in
+The compiler's five controller-realization grades agree with direct set differences in
 every instance, and the independent verifier accepts every untampered result.
 This enumeration checks the finite algorithm and its independent
 reimplementation; it is not a proof that the JSON parser refines Lean.
 
-A separate bounded characterization exercises the production CLIs on
-threshold families through 12 cells.  Their configuration/nonface counts are
+A bounded CLI characterization exercises threshold families through 12 cells.
+Configuration/nonface counts are
 $11/4$, $42/15$, $163/56$, $638/210$, and $2{,}510/792$ for
 $4,6,8,10,12$ cells.  With six cells and one through four overlapping co-live
-controllers, the final physical family stays at 64 configurations while the
-analytically reconstructed pair-expansion iterations rise from 64 to 70,592.
-Both implementations reject 13 source cells, and a five-controller instance
-whose uncapped expansion would make 202,688 iterations stops at iteration
-200,001.  These synthetic counts demonstrate bounded completion and the two
-exercised fail-closed limits; they are neither latency nor deployability
-evidence, and the other declared limits remain untested.
+controllers, the physical family stays at 64 configurations while
+pair-expansion iterations rise from 64 to 70,592.  Both tools reject 13 source
+cells; a five-controller case needing 202,688 iterations stops at 200,001.
+These are deterministic bounded-completion and two-limit fail-closed checks,
+not latency or deployability evidence; timings are not archived.
 
-\subsection{Distinguishing litmus manifests}
+\subsection{VQ3: Distinguishing litmus manifests}
 
-Four litmus manifests separate the failure classes.  A prefix-spent restored
-cell exposed by a stale controller yields \textsc{OutsideSupport}; one locally
-unsafe controller yields \textsc{LocalOverpermission}; three locally safe
-one-cell controllers that compose the U(2,3) triple yield a higher-order
-\textsc{GateCut}; and cloned controller anchors that product-compose one
-exclusive gate yield \textsc{GateClone}.  Aliasing handles to one cell does
-not repair controller cloning.  Conversely, multiple controllers are harmless
-for a full powerset future, so the rule does not require one global monitor.
+Four in-memory cases exercise the witness taxonomy: a prefix-spent restored
+cell yields \textsc{OutsideSupport}; one unsafe controller yields
+\textsc{LocalOverpermission}; locally safe controllers whose union is the
+forbidden $U(2,3)$ triple yield \textsc{CorrelationCut}, subtyped by declared
+origins as \textsc{GateCut} or \textsc{GateClone}.  Folding true aliases to one
+cell removes that correlation violation but still assumes atomic redemption;
+multiple controllers remain safe for a full powerset future.  The unary
+outside-support case reports required arity one; the $U(2,3)$ case reports
+three, matching \cref{eq:required-coliveness-arity}.
 
-\subsection{Public workload evidence}
+\subsection{VQ4a: Public workload evidence}
 
 TraceLab collects real Claude Code and Codex workload telemetry and reports
 long autonomous loops and heterogeneous tool behavior
@@ -95,7 +83,7 @@ controller identity and co-liveness, or a correlated leaf future contract.
 The missing fields make history-admission prevalence unidentifiable; they do
 not imply that failures are rare.
 
-\subsection{The paper-formation lineage}
+\subsection{VQ4b: The paper-formation lineage}
 
 We also analyze the paper-formation trajectory as one author-operated
 longitudinal case.  A fixed-cutoff recursive lineage contains over 80 rollout

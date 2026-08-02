@@ -17,15 +17,15 @@ triple.  Each commitment is fresh, and three controllers may each expose only
 one locally admitted singleton; nevertheless, a parallel Fork or live Restore
 can make all three controllers co-live and thereby realize
 $\{a,b,c\}$.  Per-effect authorization succeeds, every pairwise conflict check
-succeeds, and no authority cell is spent twice, yet the resulting configuration
+succeeds, and no redemption cell is spent twice, yet the resulting configuration
 violates the original contract.  Replaying an already durable cell after
 Restore is the simpler unary instance of the same missing admission boundary.
 
 The problem exists because security state is not one workspace snapshot.
 One decision has an immutable durable receipt prefix and a correlated family of
 prospective commitments; it also has a controller layout describing which
-local choices can run together, while remote writes and disclosures remain in
-external reality.  Whole-workspace rollback cannot undo an escaped effect,
+local choices can become durable during one controller epoch, while remote
+writes and disclosures remain in external reality.  Whole-workspace rollback cannot undo an escaped effect,
 must not rewind the receipt prefix, and implements the wrong semantics when
 Fork, live Restore, or join Merge deliberately retains several descendants.
 Nor can the complete future execution graph be named in advance: the runtime
@@ -51,8 +51,12 @@ cells}, the units at which one fresh durable commitment is consumed.  The
 second maps gate uses to authoritative \emph{controller instances}, the units
 whose joint state preserves correlations among several cells.  Conflating the
 two misses the example above: atomic redemption can be correct for every cell
-while distinct controllers product-compose a forbidden configuration.  This
-leads to the central refinement chain
+while distinct controllers product-compose a forbidden configuration.  A
+downward-closed family $\Gamma$ records which controllers may remain
+authoritative during one co-durable epoch.  Write
+$\mathsf{Actual}$ for configurations the installed runtime can make durable and
+$\mathsf{RawPhysical}$ for the manifest-induced controller product.  This leads
+to the central refinement chain
 \[
   \mathsf{Required}\subseteq\mathsf{Actual}
   \subseteq\mathsf{RawPhysical}\subseteq\mathsf{Admitted},
@@ -62,26 +66,30 @@ prefix derives the admitted future, the manifest derives the raw controller
 product, and a concrete runtime must refine that manifest.
 
 We present a theory-guided \emph{history-admission compiler} for this boundary.
-Six typed Fork/Restore/Merge operators derive candidate and required
-downward-closed families; durable-prefix filtering computes the greatest safe
-residual inside that candidate; and a relational controller-cover analysis
-checks required coverage and physical overpermission.  The theory dictates the
-compiler's finite intermediate representation and its positive and negative
-certificates: an independent verifier reconstructs the decision and reports
-support escape, local overpermission, a correlation GateCut, or missing
-required behavior.  The tool is deliberately not a checkpoint engine or an
-effect authorizer.  It assumes truthful runtime manifests and leaves complete
-mediation, controller installation, and the two inclusions involving
-$\mathsf{Actual}$ as explicit integration obligations.
+Six typed Fork/Restore/Merge operators derive candidate and required families;
+durable-prefix filtering computes the greatest prefix-compatible admitted
+future; and relational controller-cover analysis checks required coverage and
+physical overpermission.  The compiler emits a certificate or typed negative
+witness, and an independent verifier recomputes the decision and accepts only
+a canonical match.  Lean checks a contract-indexed co-liveness observation
+arity sufficient for exact readiness and an arbitrary-$k$ family making every
+smaller arity insufficient in the worst case.  The prototype expands full
+declared $\Gamma$, records its coverage attestation and required arity; 31
+focused tests (55 across the complete artifact) and a 2,166-case oracle
+cross-check the executable semantics.  Public and private trajectories expose
+the workload and missing adapter fields, but provide no safety labels.
+The tool is neither a checkpoint engine nor an effect authorizer: truthful
+manifests, complete mediation, controller installation, and both inclusions
+involving $\mathsf{Actual}$ remain integration obligations.
 
-\paragraph{Contributions.}
+\noindent\textbf{Contributions.}
 This paper makes three contributions.
 \nopagebreak[4]
 
 \begin{enumerate}[leftmargin=*,itemsep=2pt]
   \item A typed security model for history-transforming computation.  It derives
   correlated may/required futures for choice and parallel Fork, replacing and
-  live Restore, and select and join Merge; computes the greatest continuation
+  live Restore, and select and join Merge; computes the greatest admitted future
   compatible with an immutable receipt prefix; and supports compositional
   inheritance over an online graph
   (\cref{sec:model,sec:semantics,sec:results}).
@@ -89,14 +97,17 @@ This paper makes three contributions.
   \item A controller-realization theory that separates cell identity from
   controller identity.  It gives an exact manifest-readiness and obstruction
   criterion for overlapping controller access, extracts honest minimal
-  GateCuts including a higher-order $U(2,3)$ case, recovers functional
-  partitions as a canonical special case, and transports prefix safety under
+  correlation-cut witnesses, computes a sufficient contract-indexed
+  co-liveness observation arity, and proves that bound worst-case tight for
+  every arity.  It recovers
+  functional partitions as a special case and transports prefix safety under
   explicit runtime refinement premises (\cref{sec:results}).
 
   \item A small compiler and independent verifier whose certificate and witness
   schema follows the proof decomposition.  Lean~4 checks the theorem spine;
-  55 executable tests and an exhaustive 2,166-instance oracle cross-check the
-  implementation; public TraceLab and the private paper-formation lineage
+  31 focused compiler/verifier tests (55 across the complete artifact) and an
+  exhaustive 2,166-instance oracle cross-check the implementation; public
+  TraceLab and the private paper-formation lineage
   characterize workload and adapter observability without supplying safety
   labels (\cref{sec:algorithm,sec:validation}).
 \end{enumerate}

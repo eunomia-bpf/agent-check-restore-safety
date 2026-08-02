@@ -31,12 +31,13 @@ contract by itself.
 The distinction matters because one execution graph need not be specified in
 advance.  A runtime need only describe the proposed edge and the behavior its
 arms may and must retain.  Admission derives the edge's correlated future from
-that typed operation.  Successive edges can reuse a structural certificate
+that typed operation.  The proof relation composes structural certificates
 while the durable past is unchanged; a newly committed receipt reopens
-admission.  Thus the theory handles a dynamically growing graph without
-pretending to predict the agent's complete future plan.
+admission.  The prototype recomputes each request and only reports reuse
+eligibility---it does not consume a prior seal.  Thus the theory handles a
+dynamically growing graph without predicting the agent's complete future plan.
 
-\subsection{Why whole-workspace rollback is not a security rule}
+\subsection{Workspace-rollback boundary}
 
 The security state is not one snapshot.  The five boundary views in
 \cref{tab:planes} have different writers and recovery rules.
@@ -130,11 +131,9 @@ a Fork, Restore, or Merge edge.  A trusted adapter supplies (1) the typed
 operator and complete per-arm may/required contracts; (2) explicit cell alias
 and authority-lineage evidence; (3) the authenticated append-only receipt
 frontier; and (4) controller access, local-family, and co-liveness evidence.
-The compiler derives the candidate and required future, computes the greatest
-prefix-compatible residual, and checks the declared controller product.  An
-independent verifier reconstructs the finite decision.  The output is a
-structural admission seal or a replayable counterexample, not permission to
-execute a tool.
+The compiler and independent verifier implement the finite decision in
+\cref{sec:algorithm}.  Their output is a history-admission seal or a replayable
+counterexample, not permission to execute a tool.
 
 Agent lifecycle events and pre-tool hooks are prospective adapter surfaces
 ~\cite{codexappserver,codexhooks,claudesessions,claudehooks}.  Their existence
@@ -164,7 +163,7 @@ contracts and identity evidence; these facts cannot be inferred reliably from
 natural-language intent or a filesystem diff.
 
 For one fixed authority family and durable receipt prefix, the semantic goal
-is to retain exactly the greatest safe subfamily of the typed candidate while
+is to retain exactly the greatest admitted future inside the typed candidate while
 preserving all declared required configurations when possible.  The deployment
 goal is to ensure that the manifest's raw controller product covers the
 required family and stays inside that admitted subfamily.  Under the additional
