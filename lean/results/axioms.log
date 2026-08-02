@@ -721,6 +721,460 @@ AuthorityContinuity.ConfigurationCellQuotient.Fixtures.parallel_capacity_one_cou
 'AuthorityContinuity.ConfigurationCellQuotient.Fixtures.parallel_capacity_one_counterexample' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
+AuthorityContinuity.CoordinationDecomposition.cut_minimalNonface_witness.{uU, uB} {U : Type uU} {B : Type uB}
+  [Fintype U] [DecidableEq U] [Fintype B] [DecidableEq B] (source : Finset (Finset U)) (blockOf : U → B) {K : Finset U}
+  (hK : CoordinationDecomposition.MinimalNonface source K) (hCut : ¬CoordinationDecomposition.WithinBlock blockOf K) :
+  K ∈ CoordinationDecomposition.localProduct source blockOf ∧ K ∉ source
+'AuthorityContinuity.CoordinationDecomposition.cut_minimalNonface_witness' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.CoordinationDecomposition.exactFactorization_iff_minimalNonfaces_withinBlocks.{uU, uB} {U : Type uU}
+  {B : Type uB} [Fintype U] [DecidableEq U] [Fintype B] [DecidableEq B] (source : Finset (Finset U)) (blockOf : U → B)
+  (wf : ConfigurationCellQuotient.SourceFamilyWellFormed source) :
+  CoordinationDecomposition.ExactFactorization source blockOf ↔
+    ∀ (K : Finset U),
+      CoordinationDecomposition.MinimalNonface source K → CoordinationDecomposition.WithinBlock blockOf K
+'AuthorityContinuity.CoordinationDecomposition.exactFactorization_iff_minimalNonfaces_withinBlocks' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.CoordinationDecomposition.exactFactorization_iff_constant_on_mustCoordinate.{uU, uB} {U : Type uU}
+  {B : Type uB} [Fintype U] [DecidableEq U] [Fintype B] [DecidableEq B] (source : Finset (Finset U)) (blockOf : U → B)
+  (wf : ConfigurationCellQuotient.SourceFamilyWellFormed source) :
+  CoordinationDecomposition.ExactFactorization source blockOf ↔
+    ∀ (u v : U), CoordinationDecomposition.MustCoordinate source u v → blockOf u = blockOf v
+'AuthorityContinuity.CoordinationDecomposition.exactFactorization_iff_constant_on_mustCoordinate' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.CoordinationDecomposition.cut_minimalNonface_additive_witness.{uU, uB} {U : Type uU} {B : Type uB}
+  [Fintype U] [DecidableEq U] [Fintype B] [DecidableEq B] (source : Finset (Finset U)) (blockOf : U → B)
+  (wf : ConfigurationCellQuotient.SourceFamilyWellFormed source) {K : Finset U}
+  (hK : CoordinationDecomposition.MinimalNonface source K) (hCut : ¬CoordinationDecomposition.WithinBlock blockOf K) :
+  ∃ w,
+    ConfigurationCellQuotient.SourceSafe source w (K.card - 1) ∧
+      ¬ConfigurationCellQuotient.TargetSafe (CoordinationDecomposition.localProduct source blockOf) id w (K.card - 1)
+'AuthorityContinuity.CoordinationDecomposition.cut_minimalNonface_additive_witness' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.CoordinationDecomposition.Fixtures.every_pair_allowed (u v : Fin 3) :
+  {u, v} ∈ CoordinationDecomposition.Fixtures.rankTwoFamily
+'AuthorityContinuity.CoordinationDecomposition.Fixtures.every_pair_allowed' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.CoordinationDecomposition.Fixtures.splitBlock_admits_forbidden_triple :
+  CoordinationDecomposition.Fixtures.triple ∈
+      CoordinationDecomposition.localProduct CoordinationDecomposition.Fixtures.rankTwoFamily
+        CoordinationDecomposition.Fixtures.splitBlock ∧
+    CoordinationDecomposition.Fixtures.triple ∉ CoordinationDecomposition.Fixtures.rankTwoFamily
+'AuthorityContinuity.CoordinationDecomposition.Fixtures.splitBlock_admits_forbidden_triple' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.CoordinationDecomposition.Fixtures.rankTwoFamily_not_exactly_factorized :
+  ¬CoordinationDecomposition.ExactFactorization CoordinationDecomposition.Fixtures.rankTwoFamily
+      CoordinationDecomposition.Fixtures.splitBlock
+'AuthorityContinuity.CoordinationDecomposition.Fixtures.rankTwoFamily_not_exactly_factorized' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.CoordinationDecomposition.Fixtures.rankTwoFamily_additive_counterexample :
+  ∃ w,
+    ConfigurationCellQuotient.SourceSafe CoordinationDecomposition.Fixtures.rankTwoFamily w
+        (CoordinationDecomposition.Fixtures.triple.card - 1) ∧
+      ¬ConfigurationCellQuotient.TargetSafe
+          (CoordinationDecomposition.localProduct CoordinationDecomposition.Fixtures.rankTwoFamily
+            CoordinationDecomposition.Fixtures.splitBlock)
+          id w (CoordinationDecomposition.Fixtures.triple.card - 1)
+'AuthorityContinuity.CoordinationDecomposition.Fixtures.rankTwoFamily_additive_counterexample' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.DurablePrefixTransport.universalPrefixTransport_iff_prefixConfigMorphism.{uU, uD} {U : Type uU}
+  {D : Type uD} [Fintype U] [DecidableEq U] [Fintype D] [DecidableEq D] (source : Finset (Finset U))
+  (durable : Finset U) (target : Finset (Finset D)) (ell : D → U)
+  (sourceWF : ConfigurationCellQuotient.SourceFamilyWellFormed source) (targetEmpty : ∅ ∈ target) :
+  DurablePrefixTransport.UniversalPrefixTransport source durable target ell ↔
+    DurablePrefixTransport.PrefixConfigMorphism source durable target ell
+'AuthorityContinuity.DurablePrefixTransport.universalPrefixTransport_iff_prefixConfigMorphism' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.DurablePrefixTransport.required_subset_safeFuture_iff_exists_admitted.{uU, uD} {U : Type uU}
+  {D : Type uD} [Fintype U] [DecidableEq U] [Fintype D] [DecidableEq D] (source : Finset (Finset U))
+  (durable : Finset U) (candidate required : Finset (Finset D)) (ell : D → U) (hDurable : durable ∈ source) :
+  required ⊆ DurablePrefixTransport.safeFuture source durable candidate ell ↔
+    ∃ admitted,
+      required ⊆ admitted ∧
+        admitted ⊆ candidate ∧ DurablePrefixTransport.PrefixConfigMorphism source durable admitted ell
+'AuthorityContinuity.DurablePrefixTransport.required_subset_safeFuture_iff_exists_admitted' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.DurablePrefixTransport.safeFuture_wellFormed.{uU, uD} {U : Type uU} {D : Type uD} [Fintype U]
+  [DecidableEq U] [Fintype D] [DecidableEq D] (source : Finset (Finset U)) (durable : Finset U)
+  (candidate : Finset (Finset D)) (ell : D → U) (sourceWF : ConfigurationCellQuotient.SourceFamilyWellFormed source)
+  (candidateWF : ConfigurationCellQuotient.SourceFamilyWellFormed candidate) (hDurable : durable ∈ source) :
+  ConfigurationCellQuotient.SourceFamilyWellFormed (DurablePrefixTransport.safeFuture source durable candidate ell)
+'AuthorityContinuity.DurablePrefixTransport.safeFuture_wellFormed' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.DurablePrefixTransport.safeFuture_exactFactorization_iff_mustCoordinate.{uU, uD, u_1} {U : Type uU}
+  {D : Type uD} [Fintype U] [DecidableEq U] [Fintype D] [DecidableEq D] (source : Finset (Finset U))
+  (durable : Finset U) (candidate : Finset (Finset D)) (ell : D → U) {B : Type u_1} [Fintype B] [DecidableEq B]
+  (blockOf : D → B) (sourceWF : ConfigurationCellQuotient.SourceFamilyWellFormed source)
+  (candidateWF : ConfigurationCellQuotient.SourceFamilyWellFormed candidate) (hDurable : durable ∈ source) :
+  CoordinationDecomposition.ExactFactorization (DurablePrefixTransport.safeFuture source durable candidate ell)
+      blockOf ↔
+    ∀ (d₁ d₂ : D),
+      CoordinationDecomposition.MustCoordinate (DurablePrefixTransport.safeFuture source durable candidate ell) d₁ d₂ →
+        blockOf d₁ = blockOf d₂
+'AuthorityContinuity.DurablePrefixTransport.safeFuture_exactFactorization_iff_mustCoordinate' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.DurablePrefixTransport.committedAtoms_mono_of_ledgerMonotone.{uA, uC, uE, uO, uG, uR}
+  {Atom : Type uA} {Cell : Type uC} {Epoch : Type uE} {Operation : Type uO} {Digest : Type uG} {Receipt : Type uR}
+  [DecidableEq Atom] [Fintype Receipt] [DecidableEq Receipt]
+  {S T : RedemptionCommitment.State Atom Cell Epoch Operation Digest Receipt}
+  (hLedger : RedemptionCommitment.LedgerMonotone S T) :
+  DurablePrefixTransport.committedAtoms S ⊆ DurablePrefixTransport.committedAtoms T
+'AuthorityContinuity.DurablePrefixTransport.committedAtoms_mono_of_ledgerMonotone' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.DurablePrefixTransport.durable_atom_in_future_forbids_universal_reuse.{uU, uD} {U : Type uU}
+  {D : Type uD} [Fintype U] [DecidableEq U] [Fintype D] [DecidableEq D] (source : Finset (Finset U))
+  (durable : Finset U) (target : Finset (Finset D)) (ell : D → U) {C : Finset D} (hC : C ∈ target) {d : D} (hd : d ∈ C)
+  (hDurable : ell d ∈ durable) : ¬DurablePrefixTransport.UniversalPrefixTransport source durable target ell
+'AuthorityContinuity.DurablePrefixTransport.durable_atom_in_future_forbids_universal_reuse' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.DurablePrefixTransport.Fixtures.snapshot_only_restored_future_transports :
+  ConfigurationCellQuotient.UniversalAdditiveTransport ConfigurationCellQuotient.Fixtures.unitSource
+    DurablePrefixTransport.Fixtures.restoredFuture ConfigurationCellQuotient.Fixtures.collapseLineage
+'AuthorityContinuity.DurablePrefixTransport.Fixtures.snapshot_only_restored_future_transports' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.DurablePrefixTransport.Fixtures.durable_receipt_blocks_restored_future :
+  ¬DurablePrefixTransport.UniversalPrefixTransport ConfigurationCellQuotient.Fixtures.unitSource
+      DurablePrefixTransport.Fixtures.durableAfterFirst DurablePrefixTransport.Fixtures.restoredFuture
+      ConfigurationCellQuotient.Fixtures.collapseLineage
+'AuthorityContinuity.DurablePrefixTransport.Fixtures.durable_receipt_blocks_restored_future' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.DurablePrefixTransport.Fixtures.distinct_atom_future_remains_transportable :
+  DurablePrefixTransport.UniversalPrefixTransport DurablePrefixTransport.Fixtures.boolSource {false}
+    DurablePrefixTransport.Fixtures.freshOtherFuture id
+'AuthorityContinuity.DurablePrefixTransport.Fixtures.distinct_atom_future_remains_transportable' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.familyTensor_wellFormed.{uD} {D : Type uD} [Fintype D] [DecidableEq D]
+  (left right : Finset (Finset D)) (leftWF : ConfigurationCellQuotient.SourceFamilyWellFormed left)
+  (rightWF : ConfigurationCellQuotient.SourceFamilyWellFormed right) :
+  ConfigurationCellQuotient.SourceFamilyWellFormed (TypedHistoryAdmission.familyTensor left right)
+'AuthorityContinuity.TypedHistoryAdmission.familyTensor_wellFormed' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.HistoryOp.required_subset_candidate.{uD} {D : Type uD} [Fintype D]
+  [DecidableEq D] (op : TypedHistoryAdmission.HistoryOp D) (hValid : op.Valid) : op.required ⊆ op.candidate
+'AuthorityContinuity.TypedHistoryAdmission.HistoryOp.required_subset_candidate' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.configMorphism_comp.{uS, uD, uE} {S : Type uS} {D : Type uD} {E : Type uE}
+  [Fintype S] [DecidableEq S] [Fintype D] [DecidableEq D] [Fintype E] [DecidableEq E] (source : Finset (Finset S))
+  (middle : Finset (Finset D)) (target : Finset (Finset E)) (rho₀₁ : D → S) (rho₁₂ : E → D)
+  (h₀₁ : ConfigurationCellQuotient.ConfigMorphism source middle rho₀₁)
+  (h₁₂ : ConfigurationCellQuotient.ConfigMorphism middle target rho₁₂) :
+  ConfigurationCellQuotient.ConfigMorphism source target (rho₀₁ ∘ rho₁₂)
+'AuthorityContinuity.TypedHistoryAdmission.configMorphism_comp' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.StructuralRefinement.transports_prefixConfigMorphism.{uU, uS, uD, uV}
+  {U : Type uU} {S : Type uS} {D : Type uD} [Fintype U] [DecidableEq U] [Fintype S] [DecidableEq S] [Fintype D]
+  [DecidableEq D] {Version : Type uV} [Preorder Version] {authority : Finset (Finset U)}
+  {old : TypedHistoryAdmission.AdmittedEnvelope authority S Version} {target : Finset (Finset D)}
+  {targetLineage : D → U} {targetVersion : Version}
+  (refinement : TypedHistoryAdmission.StructuralRefinement old target targetLineage targetVersion) :
+  DurablePrefixTransport.PrefixConfigMorphism authority old.durable target targetLineage
+'AuthorityContinuity.TypedHistoryAdmission.StructuralRefinement.transports_prefixConfigMorphism' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.StructuralRefinement.trans.{uU, uS, uD, uE, uV} {U : Type uU} {S : Type uS}
+  {D : Type uD} {E : Type uE} [Fintype U] [DecidableEq U] [Fintype S] [DecidableEq S] [Fintype D] [DecidableEq D]
+  [Fintype E] [DecidableEq E] {Version : Type uV} [Preorder Version] {authority : Finset (Finset U)}
+  {old : TypedHistoryAdmission.AdmittedEnvelope authority S Version} {middle : Finset (Finset D)}
+  {middleLineage : D → U} {middleVersion : Version}
+  (first : TypedHistoryAdmission.StructuralRefinement old middle middleLineage middleVersion)
+  {target : Finset (Finset E)} {targetLineage : E → U} {targetVersion : Version}
+  (second : TypedHistoryAdmission.StructuralRefinement first.transportEnvelope target targetLineage targetVersion) :
+  TypedHistoryAdmission.StructuralRefinement old target targetLineage targetVersion
+'AuthorityContinuity.TypedHistoryAdmission.StructuralRefinement.trans' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.LeaseSurvival.targetLease_valid.{uU, uS, uD, uV} {U : Type uU} {S : Type uS}
+  {D : Type uD} [Fintype U] [DecidableEq U] [Fintype S] [DecidableEq S] [Fintype D] [DecidableEq D] {Version : Type uV}
+  [Preorder Version] {authority : Finset (Finset U)} {old : TypedHistoryAdmission.AdmittedEnvelope authority S Version}
+  {target : Finset (Finset D)} {targetLineage : D → U} {targetVersion : Version}
+  {refinement : TypedHistoryAdmission.StructuralRefinement old target targetLineage targetVersion}
+  {lease : TypedHistoryAdmission.Lease S Version} (survival : TypedHistoryAdmission.LeaseSurvival refinement lease) :
+  TypedHistoryAdmission.Lease.Valid refinement.transportEnvelope survival.targetLease
+'AuthorityContinuity.TypedHistoryAdmission.LeaseSurvival.targetLease_valid' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.LeaseSurvival.targetLease_atom_not_durable.{uU, uS, uD, uV} {U : Type uU}
+  {S : Type uS} {D : Type uD} [Fintype U] [DecidableEq U] [Fintype S] [DecidableEq S] [Fintype D] [DecidableEq D]
+  {Version : Type uV} [Preorder Version] {authority : Finset (Finset U)}
+  {old : TypedHistoryAdmission.AdmittedEnvelope authority S Version} {target : Finset (Finset D)}
+  {targetLineage : D → U} {targetVersion : Version}
+  {refinement : TypedHistoryAdmission.StructuralRefinement old target targetLineage targetVersion}
+  {lease : TypedHistoryAdmission.Lease S Version} (survival : TypedHistoryAdmission.LeaseSurvival refinement lease) :
+  lease.atom ∉ old.durable
+'AuthorityContinuity.TypedHistoryAdmission.LeaseSurvival.targetLease_atom_not_durable' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.op_fullReadmit_iff_candidate_eq_admittedFuture.{uU, uD} {U : Type uU}
+  {D : Type uD} [Fintype U] [DecidableEq U] [Fintype D] [DecidableEq D] (authority : Finset (Finset U))
+  (durable : Finset U) (op : TypedHistoryAdmission.HistoryOp D) (lineage : D → U) (hDurable : durable ∈ authority) :
+  op.FullReadmit authority durable lineage ↔
+    op.candidate = TypedHistoryAdmission.HistoryOp.admittedFuture authority durable op lineage
+'AuthorityContinuity.TypedHistoryAdmission.op_fullReadmit_iff_candidate_eq_admittedFuture' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.op_fullReadmit_preserves_required.{uU, uD} {U : Type uU} {D : Type uD}
+  [Fintype U] [DecidableEq U] [Fintype D] [DecidableEq D] (authority : Finset (Finset U)) (durable : Finset U)
+  (op : TypedHistoryAdmission.HistoryOp D) (lineage : D → U) (opValid : op.Valid) (hDurable : durable ∈ authority)
+  (hFull : op.FullReadmit authority durable lineage) :
+  op.required ⊆ TypedHistoryAdmission.HistoryOp.admittedFuture authority durable op lineage
+'AuthorityContinuity.TypedHistoryAdmission.op_fullReadmit_preserves_required' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.op_no_admitted_iff_exists_required_witness.{uU, uD} {U : Type uU}
+  {D : Type uD} [Fintype U] [DecidableEq U] [Fintype D] [DecidableEq D] (authority : Finset (Finset U))
+  (durable : Finset U) (op : TypedHistoryAdmission.HistoryOp D) (lineage : D → U) (hDurable : durable ∈ authority) :
+  (¬∃ admitted,
+        op.required ⊆ admitted ∧
+          admitted ⊆ op.candidate ∧ DurablePrefixTransport.PrefixConfigMorphism authority durable admitted lineage) ↔
+    ∃ C ∈ op.required, C ∉ TypedHistoryAdmission.HistoryOp.admittedFuture authority durable op lineage
+'AuthorityContinuity.TypedHistoryAdmission.op_no_admitted_iff_exists_required_witness' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.op_admission_trichotomy.{uU, uD} {U : Type uU} {D : Type uD} [Fintype U]
+  [DecidableEq U] [Fintype D] [DecidableEq D] (authority : Finset (Finset U)) (durable : Finset U)
+  (op : TypedHistoryAdmission.HistoryOp D) (lineage : D → U) (opValid : op.Valid) (hDurable : durable ∈ authority) :
+  (op.FullReadmit authority durable lineage ∨
+      op.NeedsMechanism authority durable lineage ∨ op.PruningReject authority durable lineage) ∧
+    (op.FullReadmit authority durable lineage →
+        ¬op.NeedsMechanism authority durable lineage ∧ ¬op.PruningReject authority durable lineage) ∧
+      (op.NeedsMechanism authority durable lineage →
+          ¬op.FullReadmit authority durable lineage ∧ ¬op.PruningReject authority durable lineage) ∧
+        (op.PruningReject authority durable lineage →
+          ¬op.FullReadmit authority durable lineage ∧ ¬op.NeedsMechanism authority durable lineage)
+'AuthorityContinuity.TypedHistoryAdmission.op_admission_trichotomy' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.op_admission_classes_pairwise.{uU, uD} {U : Type uU} {D : Type uD} [Fintype U]
+  [DecidableEq U] [Fintype D] [DecidableEq D] (authority : Finset (Finset U)) (durable : Finset U)
+  (op : TypedHistoryAdmission.HistoryOp D) (lineage : D → U) (opValid : op.Valid) (hDurable : durable ∈ authority) :
+  (op.FullReadmit authority durable lineage →
+      ¬op.NeedsMechanism authority durable lineage ∧ ¬op.PruningReject authority durable lineage) ∧
+    (op.NeedsMechanism authority durable lineage →
+        ¬op.FullReadmit authority durable lineage ∧ ¬op.PruningReject authority durable lineage) ∧
+      (op.PruningReject authority durable lineage →
+        ¬op.FullReadmit authority durable lineage ∧ ¬op.NeedsMechanism authority durable lineage)
+'AuthorityContinuity.TypedHistoryAdmission.op_admission_classes_pairwise' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.classifyAdmission_sound.{uU, uS, uD, uV} {U : Type uU} {S : Type uS}
+  {D : Type uD} [Fintype U] [DecidableEq U] [Fintype S] [DecidableEq S] [Fintype D] [DecidableEq D] {Version : Type uV}
+  [Preorder Version] {authority : Finset (Finset U)} (old : TypedHistoryAdmission.AdmittedEnvelope authority S Version)
+  (op : TypedHistoryAdmission.HistoryOp D) (lineage : D → U) (targetVersion : Version) (opValid : op.Valid) :
+  match TypedHistoryAdmission.HistoryOp.classifyAdmission old op lineage targetVersion with
+  | TypedHistoryAdmission.AdmissionClass.inherit =>
+    TypedHistoryAdmission.HistoryOp.CanInherit old op lineage targetVersion ∧
+      op.required ⊆ TypedHistoryAdmission.HistoryOp.admittedFuture authority old.durable op lineage
+  | TypedHistoryAdmission.AdmissionClass.readmitOK =>
+    ¬TypedHistoryAdmission.HistoryOp.CanInherit old op lineage targetVersion ∧
+      op.FullReadmit authority old.durable lineage ∧
+        op.required ⊆ TypedHistoryAdmission.HistoryOp.admittedFuture authority old.durable op lineage
+  | TypedHistoryAdmission.AdmissionClass.needsMechanism => op.NeedsMechanism authority old.durable lineage
+  | TypedHistoryAdmission.AdmissionClass.reject => op.PruningReject authority old.durable lineage
+'AuthorityContinuity.TypedHistoryAdmission.classifyAdmission_sound' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.op_admittedFuture_exactFactorization_iff_mustCoordinate.{uU, uD, u_1}
+  {U : Type uU} {D : Type uD} [Fintype U] [DecidableEq U] [Fintype D] [DecidableEq D] (authority : Finset (Finset U))
+  (durable : Finset U) (op : TypedHistoryAdmission.HistoryOp D) (lineage : D → U) {B : Type u_1} [Fintype B]
+  [DecidableEq B] (blockOf : D → B) (authorityWF : ConfigurationCellQuotient.SourceFamilyWellFormed authority)
+  (opValid : op.Valid) (hDurable : durable ∈ authority) :
+  CoordinationDecomposition.ExactFactorization
+      (TypedHistoryAdmission.HistoryOp.admittedFuture authority durable op lineage) blockOf ↔
+    ∀ (d₁ d₂ : D),
+      CoordinationDecomposition.MustCoordinate
+          (TypedHistoryAdmission.HistoryOp.admittedFuture authority durable op lineage) d₁ d₂ →
+        blockOf d₁ = blockOf d₂
+'AuthorityContinuity.TypedHistoryAdmission.op_admittedFuture_exactFactorization_iff_mustCoordinate' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.Fixtures.choice_certificate_inherits :
+  DurablePrefixTransport.PrefixConfigMorphism TypedHistoryAdmission.Fixtures.exclusiveFamily ∅
+    TypedHistoryAdmission.Fixtures.choiceOp.candidate id
+'AuthorityContinuity.TypedHistoryAdmission.Fixtures.choice_certificate_inherits' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.Fixtures.parallel_has_no_structural_refinement :
+  ¬Nonempty
+      (TypedHistoryAdmission.StructuralRefinement TypedHistoryAdmission.Fixtures.exclusiveEnvelope
+        TypedHistoryAdmission.Fixtures.parallelOp.candidate id ())
+'AuthorityContinuity.TypedHistoryAdmission.Fixtures.parallel_has_no_structural_refinement' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.Fixtures.SharedLease.alternatives_share_surviving_lease :
+  TypedHistoryAdmission.Fixtures.SharedLease.leftSurvival.targetLease.atom =
+      TypedHistoryAdmission.Fixtures.SharedLease.rightSurvival.targetLease.atom ∧
+    TypedHistoryAdmission.Fixtures.SharedLease.leftSurvival.targetLease.issuedVersion =
+        TypedHistoryAdmission.Fixtures.SharedLease.rightSurvival.targetLease.issuedVersion ∧
+      TypedHistoryAdmission.Fixtures.SharedLease.leftSurvival.targetLease.cell ≠
+        TypedHistoryAdmission.Fixtures.SharedLease.rightSurvival.targetLease.cell
+'AuthorityContinuity.TypedHistoryAdmission.Fixtures.SharedLease.alternatives_share_surviving_lease' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.Fixtures.SharedLease.choice_split_controllers_not_exact :
+  ¬CoordinationDecomposition.ExactFactorization TypedHistoryAdmission.Fixtures.choiceOp.candidate id
+'AuthorityContinuity.TypedHistoryAdmission.Fixtures.SharedLease.choice_split_controllers_not_exact' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.Fixtures.SharedLease.choice_shared_controller_exact :
+  CoordinationDecomposition.ExactFactorization TypedHistoryAdmission.Fixtures.choiceOp.candidate fun x => ()
+'AuthorityContinuity.TypedHistoryAdmission.Fixtures.SharedLease.choice_shared_controller_exact' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.Fixtures.SharedLease.parallel_has_no_shared_lease_refinement :
+  ¬Nonempty
+      (TypedHistoryAdmission.StructuralRefinement TypedHistoryAdmission.Fixtures.SharedLease.oldEnvelope
+        TypedHistoryAdmission.Fixtures.parallelOp.candidate ConfigurationCellQuotient.Fixtures.collapseLineage 1)
+'AuthorityContinuity.TypedHistoryAdmission.Fixtures.SharedLease.parallel_has_no_shared_lease_refinement' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TypedHistoryAdmission.Fixtures.SharedLease.parallel_shared_lease_has_no_pruning_repair :
+  ¬∃ admitted,
+      TypedHistoryAdmission.Fixtures.parallelOp.required ⊆ admitted ∧
+        admitted ⊆ TypedHistoryAdmission.Fixtures.parallelOp.candidate ∧
+          DurablePrefixTransport.PrefixConfigMorphism ConfigurationCellQuotient.Fixtures.unitSource ∅ admitted
+            ConfigurationCellQuotient.Fixtures.collapseLineage
+'AuthorityContinuity.TypedHistoryAdmission.Fixtures.SharedLease.parallel_shared_lease_has_no_pruning_repair' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.not_deploymentReady_iff_overpermission_or_missingRequired.{uU, uG}
+  {U : Type uU} {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G]
+  (required admitted : Finset (Finset U)) (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G) (coLive : ControllerCoverAdmission.CoLiveFamily G) :
+  ¬ControllerCoverAdmission.DeploymentReady required admitted access families coLive ↔
+    ControllerCoverAdmission.Overpermission admitted access families coLive ∨
+      ControllerCoverAdmission.MissingRequired required access families coLive
+'AuthorityContinuity.ControllerCoverAdmission.not_deploymentReady_iff_overpermission_or_missingRequired' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.actual_prefixConfigMorphism_of_deploymentReady.{uU, uG, uA} {U : Type uU}
+  {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G] {A : Type uA} [Fintype A] [DecidableEq A]
+  (authority : Finset (Finset A)) (durable : Finset A) (required admitted actual : Finset (Finset U)) (lineage : U → A)
+  (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G) (coLive : ControllerCoverAdmission.CoLiveFamily G)
+  (hReady : ControllerCoverAdmission.DeploymentReady required admitted access families coLive)
+  (hActual : required ⊆ actual ∧ actual ⊆ ControllerCoverAdmission.rawPhysicalCoverProduct access families coLive)
+  (hAdmitted : DurablePrefixTransport.PrefixConfigMorphism authority durable admitted lineage) :
+  DurablePrefixTransport.PrefixConfigMorphism authority durable actual lineage
+'AuthorityContinuity.ControllerCoverAdmission.actual_prefixConfigMorphism_of_deploymentReady' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.functionalPartition_deploymentReady_iff_mustCoordinate.{uU, uG}
+  {U : Type uU} {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G]
+  (required admitted : Finset (Finset U)) (blockOf : U → G) (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G) (coLive : ControllerCoverAdmission.CoLiveFamily G)
+  (wf : ConfigurationCellQuotient.SourceFamilyWellFormed admitted)
+  (hRefines : ControllerCoverAdmission.FunctionalPartitionRefinement admitted blockOf access families coLive) :
+  ControllerCoverAdmission.DeploymentReady required admitted access families coLive ↔
+    required ⊆ admitted ∧ ∀ (u v : U), CoordinationDecomposition.MustCoordinate admitted u v → blockOf u = blockOf v
+'AuthorityContinuity.ControllerCoverAdmission.functionalPartition_deploymentReady_iff_mustCoordinate' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.rawPhysical_partition_eq_localProduct.{uU, uG} {U : Type uU} {G : Type uG}
+  [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G] (admitted : Finset (Finset U)) (blockOf : U → G)
+  (wf : ConfigurationCellQuotient.SourceFamilyWellFormed admitted) :
+  ControllerCoverAdmission.rawPhysicalCoverProduct (ControllerCoverAdmission.partitionAccess blockOf)
+      (ControllerCoverAdmission.partitionLocalFamilies admitted blockOf) ControllerCoverAdmission.partitionCoLive =
+    CoordinationDecomposition.localProduct admitted blockOf
+'AuthorityContinuity.ControllerCoverAdmission.rawPhysical_partition_eq_localProduct' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.canonicalPartition_deploymentReady_iff_mustCoordinate.{uU, uG}
+  {U : Type uU} {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G]
+  (required admitted : Finset (Finset U)) (blockOf : U → G)
+  (wf : ConfigurationCellQuotient.SourceFamilyWellFormed admitted) :
+  ControllerCoverAdmission.DeploymentReady required admitted (ControllerCoverAdmission.partitionAccess blockOf)
+      (ControllerCoverAdmission.partitionLocalFamilies admitted blockOf) ControllerCoverAdmission.partitionCoLive ↔
+    required ⊆ admitted ∧ ∀ (u v : U), CoordinationDecomposition.MustCoordinate admitted u v → blockOf u = blockOf v
+'AuthorityContinuity.ControllerCoverAdmission.canonicalPartition_deploymentReady_iff_mustCoordinate' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.forbidden_valid_cover_cases.{uU, uG} {U : Type uU} {G : Type uG}
+  [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G] (admitted : Finset (Finset U))
+  {access : ControllerCoverAdmission.ControllerAccess U G}
+  {families : ControllerCoverAdmission.LocalControllerFamilies U G} {coLive : ControllerCoverAdmission.CoLiveFamily G}
+  {C : Finset U} {plan : ControllerCoverAdmission.CoverPlan U G} (_hValid : plan.Valid access families coLive C)
+  (hForbidden : C ∉ admitted) :
+  ControllerCoverAdmission.OutsideSupport admitted C ∨
+    ControllerCoverAdmission.LocalOverpermission admitted plan C ∨
+      ControllerCoverAdmission.CorrelationCut admitted plan C
+'AuthorityContinuity.ControllerCoverAdmission.forbidden_valid_cover_cases' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.rawPhysical_subset_admitted_iff_avoids_obstructions.{uU, uG} {U : Type uU}
+  {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G] (admitted : Finset (Finset U))
+  (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G) (coLive : ControllerCoverAdmission.CoLiveFamily G)
+  (hDown : ControllerCoverAdmission.LocalFamiliesDownwardClosed families) :
+  ControllerCoverAdmission.rawPhysicalCoverProduct access families coLive ⊆ admitted ↔
+    ControllerCoverAdmission.AvoidsOutsideSupport admitted access families coLive ∧
+      ControllerCoverAdmission.AvoidsMinimalNonfaces admitted access families coLive
+'AuthorityContinuity.ControllerCoverAdmission.rawPhysical_subset_admitted_iff_avoids_obstructions' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.deploymentReady_iff_required_coverage_and_avoids_obstructions.{uU, uG}
+  {U : Type uU} {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G]
+  (required admitted : Finset (Finset U)) (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G) (coLive : ControllerCoverAdmission.CoLiveFamily G)
+  (hDown : ControllerCoverAdmission.LocalFamiliesDownwardClosed families) :
+  ControllerCoverAdmission.DeploymentReady required admitted access families coLive ↔
+    required ⊆ ControllerCoverAdmission.rawPhysicalCoverProduct access families coLive ∧
+      ControllerCoverAdmission.AvoidsOutsideSupport admitted access families coLive ∧
+        ControllerCoverAdmission.AvoidsMinimalNonfaces admitted access families coLive
+'AuthorityContinuity.ControllerCoverAdmission.deploymentReady_iff_required_coverage_and_avoids_obstructions' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.physical_overpermission_has_gateCutWitness.{uU, uG} {U : Type uU}
+  {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G] (admitted : Finset (Finset U))
+  (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G) (coLive : ControllerCoverAdmission.CoLiveFamily G)
+  (hDown : ControllerCoverAdmission.LocalFamiliesDownwardClosed families)
+  (hSound : ControllerCoverAdmission.LocalFamiliesSound admitted access families) {C : Finset U}
+  (hPhysical : C ∈ ControllerCoverAdmission.physicalCoverProduct admitted access families coLive)
+  (hForbidden : C ∉ admitted) : ∃ K ⊆ C, ControllerCoverAdmission.GateCutWitness admitted access families coLive K
+'AuthorityContinuity.ControllerCoverAdmission.physical_overpermission_has_gateCutWitness' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.gateCut_uses_distinct_contributing_controllers.{uU, uG} {U : Type uU}
+  {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G] (admitted : Finset (Finset U))
+  {access : ControllerCoverAdmission.ControllerAccess U G}
+  {families : ControllerCoverAdmission.LocalControllerFamilies U G} {coLive : ControllerCoverAdmission.CoLiveFamily G}
+  {K : Finset U} {plan : ControllerCoverAdmission.CoverPlan U G}
+  (wf : ConfigurationCellQuotient.SourceFamilyWellFormed admitted)
+  (hSound : ControllerCoverAdmission.LocalFamiliesSound admitted access families)
+  (hMinimal : CoordinationDecomposition.MinimalNonface admitted K) (hValid : plan.Valid access families coLive K) :
+  ∃ g1 g2, g1 ∈ plan.active ∧ g2 ∈ plan.active ∧ g1 ≠ g2 ∧ (plan.piece g1).Nonempty ∧ (plan.piece g2).Nonempty
+'AuthorityContinuity.ControllerCoverAdmission.gateCut_uses_distinct_contributing_controllers' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.Fixtures.split_controllers_admit_forbidden_triple :
+  CoordinationDecomposition.Fixtures.triple ∈
+      ControllerCoverAdmission.physicalCoverProduct CoordinationDecomposition.Fixtures.rankTwoFamily
+        ControllerCoverAdmission.Fixtures.sharedAccess ControllerCoverAdmission.Fixtures.splitLocal
+        ControllerCoverAdmission.Fixtures.splitCoLive ∧
+    CoordinationDecomposition.Fixtures.triple ∉ CoordinationDecomposition.Fixtures.rankTwoFamily
+'AuthorityContinuity.ControllerCoverAdmission.Fixtures.split_controllers_admit_forbidden_triple' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
 AuthorityContinuity.RedemptionCommitment.fresh_preserves_safe.{u_1, u_2, u_3, u_4, u_5, u_6} {Atom : Type u_2}
   {Cell : Type u_3} {Epoch : Type u_4} {Operation : Type u_5} {Receipt : Type u_6} [DecidableEq Atom] [DecidableEq Cell]
   [DecidableEq Epoch] [DecidableEq Operation] [DecidableEq Receipt] {Digest : Type u_1}

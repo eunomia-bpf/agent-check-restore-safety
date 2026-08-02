@@ -64,9 +64,19 @@ overapproximation; the result records this precision explicitly.
 The implementation mirrors the Lean definitions `familyChoice`,
 `familyTensor`, `safeFuture`, `StructuralRefinement`, and
 `classifyAdmission_sound`.  Minimal nonfaces and coordination components mirror
-the exact partition result.  The access-relation controller check is a finite
-executable extension used to expose cloned-gate product expansion; it is not
-yet a mechanized generalization of the partition theorem.
+the exact partition result.  `ControllerCoverAdmission.lean` mechanizes the
+overlapping access-relation extension: raw and support-restricted controller
+products, the exact obstruction criterion, the three failure causes,
+runtime-family refinement, and reduction to the older functional partition
+through a proved canonical adapter.  The executable `GateClone` subtype still
+uses manifest origin metadata; Lean mechanizes the underlying locally sound
+`GateCut`, not clone provenance.
+
+This is a theorem-to-implementation crosswalk, not a verified extraction.  The
+Lean development does not prove that the Python parser implements a formal
+`ManifestWF` predicate or that both programs compute definitionally identical
+families.  Compiler/verifier agreement, strict parser tests, the exhaustive
+small-family oracle, and proof replay are separate evidence layers.
 
 Cell identity, lineage/lease transport, and controller identity are three
 separate checks.  An alias requires the same stable cell anchor, authority atom,
@@ -81,12 +91,15 @@ represent it as one authoritative controller or supply a stronger joint
 contract; co-liveness alone is not an exploit proof.  `GateClone` and `GateCut`
 are precise witnesses under this independent-product abstraction.
 
-Unsafe products are split into three theorem-backed causes. `OutsideSupport`
-means a controller exposes a cell absent from admitted support;
+For the deterministic product cover carried by a reported witness, unsafe
+products are split into three theorem-backed causes. `OutsideSupport` means a
+controller exposes a cell absent from admitted support;
 `LocalOverpermission` means one controller alone exposes an admitted minimal
 nonface; and `CorrelationCut` means every chosen local configuration is
 admitted but their union is not.  Only the last class is emitted as a
-`GateClone` or `GateCut`.
+`GateClone` or `GateCut`.  Different valid covers of the same bad physical
+configuration may expose different causes; the tool does not claim a globally
+unique root cause.
 
 The model-level check is `Required <= Physical <= Admitted`.  If `Actual` is
 the runtime family, deployment correctness additionally requires

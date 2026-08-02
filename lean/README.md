@@ -52,9 +52,17 @@ builds the library, executes all `#print axioms` commands in
 | `trace_preserves_wf_ac` | The reflexive-transitive closure of `Step` preserves well-formedness and AC. |
 | `effect_coverage` | Finite stable operation IDs injectively bound to durable claims, with aggregate actual demand bounded per claim, consume no more than total durable demand. |
 | `concrete_trace_authority_safety` | Under explicit mediation and forward-simulation premises, actual protected effects plus any currently permitted conditional bundle fit within capacity. |
+| `classifyAdmission_sound` | The typed Fork/Restore/Merge classifier returns only inheritance, full readmission, pruning repair, or rejection justified by its semantic predicates. |
+| `deploymentReady_iff_required_coverage_and_avoids_obstructions` | Raw controller-product readiness is exactly required coverage plus avoidance of support escape and realizable minimal nonfaces. |
+| `forbidden_valid_cover_cases` | Every forbidden controller cover is honestly classified as outside-support, local overpermission, or a locally admitted correlation cut. |
+| `actual_prefixConfigMorphism_of_deploymentReady` | Under `Required <= Actual <= RawPhysical`, manifest readiness transports the admitted durable-prefix certificate to the actual runtime family. |
+| `rawPhysical_partition_eq_localProduct` / `canonicalPartition_deploymentReady_iff_mustCoordinate` | The canonical one-controller-per-cell adapter is a proved instance of the relational model, and its readiness criterion reduces to `MustCoordinate`. |
+| `split_controllers_admit_forbidden_triple` | A finite U(2,3) fixture exposes a higher-order GateCut that every pairwise check misses. |
 
-The names and logical roles above are frozen by the approved RQ3 experiment
-plan.  Reserve and direct-admission Merge expose executable target-AC checks.
+The legacy lifecycle names and logical roles above are frozen by the approved
+RQ3 experiment plan; the history-admission and controller-cover rows freeze the
+new compiler-facing theory layer.  Reserve and direct-admission Merge expose
+executable target-AC checks.
 Restriction, Prepare, ticket cases, and the four canonical Fork/Restore cases
 derive their targets without target AC/WF premises.  Canonical checkers inspect
 only source-local freshness, transfer, and owner facts; the exact target

@@ -5,6 +5,7 @@ import AuthorityContinuity.ConfigurationCellQuotient
 import AuthorityContinuity.CoordinationDecomposition
 import AuthorityContinuity.DurablePrefixTransport
 import AuthorityContinuity.TypedHistoryAdmission
+import AuthorityContinuity.ControllerCoverAdmission
 import AuthorityContinuity.RedemptionCommitment
 import AuthorityContinuity.RedemptionDomainFrontier
 
@@ -49,12 +50,25 @@ occurrences require distinct identities even when physically co-located, and
 intentional aliases must be declared by an adapter.  Concrete lease
 authentication, arm-contract derivation, identity normalization, and
 runtime-family realization remain adapter obligations.
+The controller-cover module then checks the deployment relation over arbitrary
+overlapping cell-to-controller access, controller-local families, and declared
+co-liveness.  Its readiness criterion uses the raw physical product and is
+equivalent to required coverage plus avoidance of support escape and admitted
+minimal nonfaces.  Unsafe products are separated into outside-support, local
+overpermission, and locally sound correlation-cut causes.  Given the explicit
+runtime refinement `Required <= Actual <= RawPhysical`, readiness transports
+the durable-prefix certificate to the actual runtime family.  The older
+functional-partition model is a proved canonical instance whose raw controller
+product equals `localProduct`; its readiness theorem therefore reduces to
+`MustCoordinate`.  Arbitrary overlapping covers do not have a claimed unique
+finest decomposition.
 The operational commitment core separately derives unit-atom conservation,
 ledger/phase monotonicity, and exact fresh-event accounting for
 Prepare/Replay/Retry/Crash/Settle.  Fork/Restore/Merge preservation remains a
 separate topology-refinement obligation and is not claimed by this replay root.
 
 `AuthorityContinuity.Audit` prints the kernel dependencies of every
-paper-facing theorem.  Boundary I/II and concrete product-runtime refinement
-are deliberately outside this root's mechanized scope.
+paper-facing theorem.  Boundary I/II and establishing concrete
+product-runtime refinement for an unmodified runtime are deliberately outside
+this root's mechanized scope.
 -/

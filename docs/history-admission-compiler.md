@@ -103,7 +103,8 @@ Physical = Admitted                  exact fidelity
 ```
 
 A strict middle inclusion is a safe implementation that omits only optional
-behavior.  An over-permission witness is classified before it is named.  A
+behavior.  The deterministic cover attached to an over-permission witness is
+classified before it is named.  A
 physical cell outside `support(Admitted)` yields `OutsideSupport`, not a fake
 minimal nonface.  Within support, a chosen local controller configuration that
 is already forbidden yields `LocalOverpermission`.  Only when every local
@@ -113,6 +114,11 @@ distinct-origin subcases.  The certificate restricts the chosen local
 configurations to an inclusion-minimal controller cover of the actual minimal
 nonface.  `Required - Physical` is a missing behavior error rather than a
 security over-permission.
+
+The three labels are mutually exclusive for that chosen cover under their
+priority definition; they are not claimed to be a globally unique cause of a
+manifest.  Another valid cover of the same physical configuration may expose a
+different defect.
 
 This remains a manifest-relative result.  For an actual runtime family
 `Actual`, the deployable refinement obligation is
@@ -126,11 +132,21 @@ relations involving `Actual`; complete mediation, runtime soundness against
 the declared product, and required-behavior coverage remain external adapter
 obligations.
 
+Nor is the Python implementation extracted from Lean.  The proof formalizes
+the finite controller-cover specification; the compiler and independent
+verifier reimplement it and are checked by strict-input tests, cross-checks,
+and exhaustive small-model enumeration.  A verified parser/refinement theorem
+from JSON manifests to the Lean model remains future work.
+
 The connected components of the minimal-nonface hypergraph give the finest
 functional controller partition that preserves every correlation.  A runtime
-can use these components as a coordination-placement plan.  The more general
-access-relation theorem, where one cell is reachable through several gates, is
-the next mechanization target.
+can use these components as a coordination-placement plan.  The relational
+controller-cover theorem now generalizes the safety check to overlapping
+access, arbitrary local families, and explicit co-liveness.  It deliberately
+does not claim a unique finest cover in that general setting.  It recovers the
+functional `MustCoordinate` result through a canonical partition adapter for
+which Lean proves that the raw relational product equals the older
+`localProduct`.
 
 ## What the compiler synthesizes
 
@@ -218,13 +234,19 @@ The high-value theorem sequence is:
 1. typed family generation and required-subset validity for all six operators;
 2. durable-prefix safe residual is downward closed and greatest;
 3. structural refinement implies full readmission and composes over a graph;
-4. `Required <= Physical <= SafeFuture` is necessary and sufficient for
+4. `Required <= RawPhysical <= Admitted` is necessary and sufficient for
    structural deployment readiness under the manifest abstraction;
-5. any physical over-permission contains a minimal nonface product witness;
-6. the functional controller partition theorem is a special case of the
-   controller-access cover theorem; and
-7. minimal nonfaces synthesize a finest coordination placement or a pruning
-   obligation.
+5. raw product safety is equivalent to avoiding support escape and every
+   physically realizable admitted minimal nonface;
+6. a forbidden valid cover is exactly one of `OutsideSupport`,
+   `LocalOverpermission`, or `CorrelationCut`, with a true GateCut requiring
+   locally admitted pieces;
+7. `Required <= Actual <= RawPhysical` transports the admitted prefix
+   certificate to the actual runtime family; and
+8. a canonical functional adapter has raw product exactly equal to
+   `localProduct`, so the relational theorem reduces to the existing unique
+   finest functional coordination partition.  No unique finest arbitrary
+   overlapping cover is claimed.
 
 Experiments are supporting evidence, not the paper's center:
 

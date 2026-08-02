@@ -114,6 +114,17 @@ frozen_constants=(
   choice_shared_controller_exact
   parallel_has_no_shared_lease_refinement
   parallel_shared_lease_has_no_pruning_repair
+  not_deploymentReady_iff_overpermission_or_missingRequired
+  actual_prefixConfigMorphism_of_deploymentReady
+  functionalPartition_deploymentReady_iff_mustCoordinate
+  rawPhysical_partition_eq_localProduct
+  canonicalPartition_deploymentReady_iff_mustCoordinate
+  forbidden_valid_cover_cases
+  rawPhysical_subset_admitted_iff_avoids_obstructions
+  deploymentReady_iff_required_coverage_and_avoids_obstructions
+  physical_overpermission_has_gateCutWitness
+  gateCut_uses_distinct_contributing_controllers
+  split_controllers_admit_forbidden_triple
   fresh_preserves_safe
   step_preserves_phaseWF
   step_phase_mono
@@ -189,7 +200,7 @@ fi
 
 for name in "${frozen_constants[@]}"; do
   if ! rg --quiet --glob '*.lean' \
-      "^[[:space:]]*(theorem|lemma)[[:space:]]+${name}([^[:alnum:]_]|$)" \
+      "^[[:space:]]*(theorem|lemma)[[:space:]]+([[:alnum:]_]+\\.)*${name}([^[:alnum:]_]|$)" \
       AuthorityContinuity; then
     echo "audit: frozen theorem is missing: $name" >&2
     exit 1
@@ -198,7 +209,7 @@ done
 
 for name in "${frozen_controls[@]}"; do
   if ! rg --quiet --glob '*.lean' \
-      "^[[:space:]]*(theorem|lemma)[[:space:]]+${name}([^[:alnum:]_]|$)" \
+      "^[[:space:]]*(theorem|lemma)[[:space:]]+([[:alnum:]_]+\\.)*${name}([^[:alnum:]_]|$)" \
       AuthorityContinuity; then
     echo "audit: frozen executable control is missing: $name" >&2
     exit 1
