@@ -72,6 +72,7 @@ The central claim fails if closest work already gives an equivalent compatibilit
 | 2026-08-02 | A one-use origin token must have at most one current claim occurrence. | Consumable credentials show that copied representations are safe behind one atomic ratifier.  The repaired model also gives the opposite temporal witness: one restored occurrence can create two fresh commitments through cloned cells.  Winskel-style configuration morphisms already own configuration preservation and local injectivity, while escrow owns global rights conservation. | Separate `history handle -> semantic redemption cell -> source authority atom -> durable commitment`.  Handle aliases may collapse to one cell; different cells may share one atom only across trusted mutually exclusive complete histories; durable commitments remain a fixed prefix after Prepare. | Reopens the central representation, demotes occurrence linearity and scalar escrow to strict profiles, and makes typed agent operator refinement plus the missing-observation lower bound the prospective contribution.  The classical morphism iff is only a completeness bridge. |
 | 2026-08-02 | The inability to pre-enumerate a dynamically Forked/Restored/Merged agent graph, or the difference between its control and external-effect graphs, may itself distinguish agents from traditional systems. | Process calculi, dynamic-causality and reversible event structures, graph rewriting, adaptive workflows, and rollback recovery already cover online topology, changing dependencies, rollback, and distinct output histories.  A same-prefix exclusive/parallel pair shows that the actual issue is future-contract information at independent authority materialization.  A stronger counterexample shows that copying an exclusive choice gate twice product-composes `{a}` from one copy with `{b}` from the other even when both copies resolve their leaf handles to the same cells. | Do not enumerate a future graph.  Maintain a versioned, authority-relevant future contract whose configuration family conservatively covers real co-durable completions.  A shared Fork must alias the authoritative choice/fence controller, not merely its leaf cells.  Computation may fork without authority; independently redeemable authority requires an exact contract for completeness, shared ratification, deferred delegation, or worst-case rejection. | Removes another broad novelty claim.  Adds contract-relative arbitrary-extension soundness, no-silent-topology-expansion, a gate-cloning witness, and a precisely scoped observation lower bound to the typed runtime contribution. |
 | 2026-08-02 | A useful tool might simply choose `Copy/Share/Split/Persist/Revalidate/Reject` for each checkpointed resource. | Plan 9 `rfork` already exposes per-resource share/copy/new flags; *Secure the Clones* verifies declared maximum-sharing clone policies; PORTICO compiles explicit agent contracts to epoch capabilities.  The newly mechanized minimal-nonface theorem instead shows that controller correlation and redemption-cell identity are independent obligations, and that multiway constraints can be invisible to every pairwise check. | Make the artifact a semantic-first, witness-carrying compiler.  For fixed candidate semantics under complete observation and controllable pruning, compute the greatest pointwise-safe subfamily; derive the least common-coordination equivalence under maximal asynchronous recombination and its finest exact partition; separately repair lineage collisions and preserve durable commitments; only then lower to runtime actions.  Return a Pareto frontier when share/split implementations are incomparable. | Rejects clone-policy code generation as the contribution.  The prospective novelty is a typed Fork/Restore/Merge synthesis theorem jointly transporting future correlation, linear redemption, and durable commitment, plus refinement-certified lease reuse and minimal counterexamples. |
+| 2026-08-02 | Union/tensor generation plus an exhaustive three-case `Or` is already an exact typed admission theorem. | Hostile formal review found two hidden premises.  Without `required ⊆ candidate`, full admission and required rejection overlap.  Without normalized commitment-occurrence identities, set union silently collapses two independent cross-arm obligations that happen to reuse one name. | A valid typed contract yields a proved pairwise-exclusive trichotomy.  The compiler exposes four proof obligations—`Inherit`, `ReadmitOK`, `NeedsMechanism`, and pruning-only `Reject`—and treats arm tagging/intentional aliases as explicit adapter evidence.  Structural inheritance composes without enumerating the future graph, but it fixes the durable prefix; receipt growth forces readmission. | Closes the first typed theorem layer, prevents a malformed-contract/vacuity claim, and turns identity normalization into a checked compiler boundary.  It also narrows “lease survival” to structural lease-binding transport; authentication, revocation, expiry, and effect-digest validity remain runtime obligations. |
 
 ## Hypothesis Frontier
 
@@ -87,8 +88,9 @@ The central claim fails if closest work already gives an equivalent compatibilit
 | H8 | H7 | Correlated authority admits an exact architectural classification: it can be decentralized into independent branch capabilities iff \(\mathcal R=\operatorname{Box}(H)\); escape batches can be serialized in every owner order iff every promoted owner has final support. | A nonrectangular residual enforced soundly and single-branch-completely without coordination, or an absent-final-support batch whose every owner-group order remains enabled. | Paper proofs are short and noncircular; v4 checks 730 factorization cases (296 rectangular, 434 nonrectangular), positive/negative serial orders, real fresh-Reserve snapshot states, and only WF headline states. | leading | Mechanize both iff results and implement the factorization/owner-support decision path in one mandatory tool proxy. | Demote if prior work gives the same online capability-factorization and cleanup-serializability results for dynamic lifecycle authority. |
 | H9 | H8 | A sound proof checker plus the closed Reserve/Struct/Merge/Prepare/ticket/Revoke rules preserves authority continuity and stable-ID effect coverage. | An admitted target violates AC or claim partition, a topology rule loses durable history, or crash/retry/revoke rebinds an operation or undercharges its aggregate outcome. | Lean machine-checks computed exact choice/parallel Fork and replacing/live Restore, source-local transfer and fiber conservation, two distinct Merge modes, all prior lifecycle rules, full trace induction, stable bindings, and conditional effect coverage. A fixed Codex adapter matches 89/89 P3 decisions and 20/20 P3 replays; the four-policy suite separately matches all 44 raw callbacks. The concrete theorem still assumes product-wide mediation and truthful arbitrary sinks. | leading support: abstract theorem plus bounded concrete witness | Generalize identifier allocation and close topology-activation crash atomicity before claiming a larger refinement. | Reopen on any counterexample to a checked premise or mismatch in the retained composite audit. |
 | H10 | H9 | Ordinary agent traces are observationally insufficient for sound-and-complete authority-continuity admission; a compact trusted authority/effect event algebra may make the abstract checker replayable online. | Standard trace fields distinguish both the replace/live and retry/new-operation witnesses, the proposed extension still leaves different decisions observationally identical, no proposed event class is individually necessary, or event replay cannot reconstruct the checker state and decision. | Primary-source audit finds that available schemas omit some combination of topology, grant/claim lineage, durable effect phase, and receipts. In the frozen suite, O0 and O1 each retain exactly three mixed-label fibers (topology, lineage, phase), while O2 retains none and independently replays all 20 P3 chains. This is fixed-suite evidence, not a general irredundancy or minimality theorem. | supporting extension, bounded evidence | Prove a componentwise necessity/quotient result or keep observability as validation rather than a headline theorem. | Demote if the event bundle is merely a copy of checker state, cannot be collected at dispatch, or a standard schema supplies an equivalent trusted quotient. |
-| H11 | H9,H10 | A typed agent lifecycle safely transports unit-normalized bounded authority exactly through a configuration-indexed semantic-cell quotient, while rollback-local clone availability forces a double-commitment history unless the runtime shares a linearizer, durably fences the joint future, or allocates distinct authority atoms. | The operational cell model must assume per-cell uniqueness; the source/target families are chosen circularly; a fourth mechanism preserves isolated availability and capacity; typed Fork/Restore/Merge do not compose; or closest work already gives the same runtime refinement. | Independent review falsified universal occurrence linearity and global scalar conservation.  It accepted the revision-2 experiment only with complete co-redeemability, durable commitment identity, and operational Prepare.  The configuration-morphism iff is correct but classical and elementary. | active leading candidate; theorem run in progress | Mechanize the quotient bridge, operational commitment LTS, typed operator RTC, clone/restore lower bounds, and commitment-before-Dispatch; then test three missing-observation pairs at the real callback seam. | Demote if only the classical morphism/escrow lemmas survive, if semantic cell identity cannot be refined by a trusted runtime boundary, or if product-composable clones avoid the lower bound under the stated assumptions. |
-| H12 | H11 | A versioned co-durability contract is the sufficient statistic for authority safety over an unknown future agent graph: an overapproximation gives arbitrary-extension soundness, exactness permits structural completeness, and topology expansion must be admitted before reachability.  Shared Fork aliases one authoritative contract/gate instance; cloning that gate is a product expansion even when leaf-cell resolution is unchanged. | A prefix-only checker can remain both sound and complete while immediately issuing independently redeemable authority in the exclusive/parallel indistinguishable pair; two cloned choice gates cannot jointly realize configurations absent from one gate; silent contract expansion preserves all outstanding certificates; or the result reduces to an uninstantiated generic contract theorem with no agent operator refinement. | Dynamic graph growth and distinct rollback/output histories are established.  The exclusive-versus-parallel same-prefix construction supports a relative lower bound, but delayed delegation and shared ratification are explicit escape mechanisms.  The two-gate product witness isolates controller identity from cell identity. | active subclaim of H11; traditional boundary audited | Define the contract LTS, authoritative gate identity, and contract-hash binding; mechanize the gate-clone/product witness, arbitrary compliant extensions, and no-silent-expansion; instantiate the observation pairs at the real callback seam. | Demote to motivation if typed operators cannot construct the contract independently of safety, if gate identity adds no decision power beyond cell identity, or if the theorem says no more than generic assume-guarantee refinement. |
+| H11 | H9,H10 | A typed agent lifecycle safely transports unit-normalized bounded authority exactly through a configuration-indexed semantic-cell quotient, while rollback-local clone availability forces a double-commitment history unless the runtime shares a linearizer, durably fences the joint future, or allocates distinct authority atoms. | The operational cell model must assume per-cell uniqueness; the source/target families are chosen circularly; a fourth mechanism preserves isolated availability and capacity; typed Fork/Restore/Merge do not compose; or closest work already gives the same runtime refinement. | Lean now checks the cell/atom quotient bridge, operational commitment LTS, durable-prefix transport, exact coordination decomposition, six typed operators, compositional structural refinement, and the choice-versus-parallel no-pruning separation.  Hostile review forced valid-contract and normalized-occurrence premises into the interface. | active leading candidate; theorem spine mechanized, concrete refinement open | Connect the checked layers in one witness compiler, formalize fail-closed identity/alias validation, and test generated certificates at the real callback seam. | Demote if the integrated compiler only restates configuration morphisms/escrow, if semantic occurrence identity cannot be refined by a trusted runtime boundary, or if product-composable clones avoid the lower bound under the stated assumptions. |
+| H12 | H11 | A versioned co-durability contract is the sufficient statistic for authority safety over an unknown future agent graph: an overapproximation gives arbitrary-extension soundness, exactness permits structural completeness, and topology expansion must be admitted before reachability.  Shared Fork aliases one authoritative contract/gate instance; cloning that gate is a product expansion even when leaf-cell resolution is unchanged. | A prefix-only checker can remain both sound and complete while immediately issuing independently redeemable authority in the exclusive/parallel indistinguishable pair; two cloned choice gates cannot jointly realize configurations absent from one gate; silent contract expansion preserves all outstanding certificates; or the result reduces to an uninstantiated generic contract theorem with no agent operator refinement. | Structural refinements now compose edge by edge without enumerating the eventual graph; typed choice and parallel generate different complete futures from the same arm contracts; a fixed durable prefix transports, while the existing receipt-growth witness blocks stale snapshot reuse.  Arbitrary-extension and contract-hash enforcement remain unproved. | active subclaim of H11; typed local transport mechanized | Add contract-digest binding and no-silent-expansion at certificate installation, then instantiate the observation pair at the real callback seam. | Demote to motivation if gate identity adds no decision power beyond cell identity or if the remaining theorem says no more than generic assume-guarantee refinement. |
+| H13 | H11,H12 | A small proof-producing admission compiler is the nontrivial synthesis contribution: it derives operator-level co-durability, preserves or rechecks structural authority state, computes required coordination, and returns one independently verifiable outcome plus a compact obstruction. | Its result is only a per-resource clone-flag table; the verifier must trust the compiler; undeclared aliases or missing receipt fields can still yield acceptance; or no real runtime manifest can satisfy the premises. | The component algorithms and their exactness boundaries are mechanized separately, and the four semantic outcomes now have a single soundness theorem.  Compiler integration, certificate schema, minimal-witness policy, and runtime extraction are still open. | active decisive artifact hypothesis | Implement the deterministic offline compiler and independent verifier with exhaustive small-model mutation tests before writing an adapter. | Demote if integration adds no theorem-visible information beyond existing clone/capability compilers or if certificates cannot fail closed under incomplete manifests. |
 
 ## Claim Evolution
 
@@ -163,18 +165,36 @@ becomes reachable; a checkpoint cannot silently restore an older exclusivity
 promise.
 
 The planned artifact is not a checkpoint engine and does not choose clone flags
-from resource names.  It is a small witness-carrying compiler:
+from resource names.  It is a small offline witness-carrying compiler and an
+independent certificate verifier.  The theory fixes both its intermediate
+representation and its fail-closed result lattice:
 
 ```text
 runtime manifest + typed history operation + Future_Gamma
-  + cell/atom lineage + outstanding leases + durable receipts
+  + normalized occurrence cells / explicit aliases
+  + cell/atom lineage + outstanding lease bindings + durable receipts
     -> greatest pointwise-safe subfamily (in the fixed fully observed scope)
     -> least common-coordination equivalence under localProduct
        / finest exact partition
-    -> cell alias, reissue, or re-admission obligations
-    -> receipt/lease refinement obligations
-    -> backend actions + proof certificate, or minimal counterexample
+    -> structural lineage and durable-prefix transport check
+    -> Inherit | ReadmitOK | NeedsMechanism | Reject
+    -> backend obligations + independently checkable certificate
+       or a minimal collision / forbidden-union / prefix-replay witness
 ```
+
+`Inherit` requires a version-monotone configuration refinement whose lineage
+square commutes and whose durable prefix is unchanged.  `ReadmitOK` means the
+old structural certificate cannot be reused but the entire generated candidate
+passes the current prefix check.  `NeedsMechanism` means every declared
+required behavior survives only after installing the synthesized pruning and
+coordination fence.  `Reject` is exact only for the fixed frontier, lineage,
+generated contract, and pruning-only repair scope; reissuing cells, changing
+lineage, or acquiring authority is a new request.  These are semantic admission
+classes, not deployment readiness.  A runtime may execute a protected effect
+only when the verifier accepts an `Inherit` or `ReadmitOK` certificate *and*
+independently verifies that the concrete controller partition realizes the
+derived coordination contract.  A missing/cut gate is a nonauthorizing
+deployment obligation even when the full semantic family is safe.
 
 The first synthesis layer is now mechanized.  Minimal nonfaces induce the
 least common-coordination equivalence under maximal asynchronous `localProduct`;
@@ -183,9 +203,7 @@ This is a logical coordination domain, not a physical co-location mandate: a
 shared durable controller, lock, or consensus protocol may realize it.  A cut constraint generates an additive policy
 witness, and the `U_{2,3}` fixture proves that every pair can be legal while a
 three-way combination still requires one coordination component.  This layer
-is credited as classical combinatorial machinery.  The paper-level theorem
-must still derive the candidate and required families from a typed
-Fork/Restore/Merge step rather than accepting them as arbitrary input.
+is credited as classical combinatorial machinery rather than headline novelty.
 
 The second synthesis layer is also mechanized for a fixed, fully observed
 candidate family.  A durable prefix `P` is extracted from immutable receipt
@@ -200,25 +218,47 @@ source policy is equivalent to this pointed configuration morphism.  Filtering
 by these conditions yields the greatest safe subfamily in this fixed scope; a
 separate theorem requires every behavior supplied as `required` to survive.
 This prevents silent pruning relative to that input but is genuinely
-non-vacuous only after the typed generator proves the required family complete
-and meaningful.  The resulting downset composes with the first
+non-vacuous only when the adapter supplies complete, meaningful leaf
+contracts.  The resulting downset composes with the first
 layer to derive its least required coordination relation.  A receipt for one
 atom blocks snapshot-only resurrection of that atom, while a distinct-atom
 future remains structurally transportable.  The latter shows only that this
-invariant does not force blanket invalidation; it is not yet a lease/version
-refinement theorem.  These results prove authorization-commitment transport,
-not remote exactly-once execution, exact concrete reachability, or correctness
-of an as-yet-unwritten typed family generator.
+invariant does not force blanket invalidation.
 
-**Current RQs.** (1) prove the policy-independent cell-quotient bridge while
-crediting classical configuration morphisms; (2) derive commitment
-conservation and a clone/restore lower bound from an operational LTS; (3) prove
-typed Fork/Restore/Merge and arbitrary compliant-extension refinement,
-retaining the earlier co-durable plan and occurrence-linear/escrow profiles as
-corollaries; (4) prove no-silent-contract-expansion and the precisely scoped
-future-contract lower bound at independent authority materialization; and (5)
-prove which of co-redeemability, semantic cell identity, durable commitment
-history, and contract version a sound-and-permissive adapter must observe.
+The third synthesis layer is now mechanized.  Six typed constructors distinguish
+exclusive Fork from parallel Fork, replacing Restore from live-original
+Restore, and select Merge from join Merge.  They derive the operator-level
+may/required family by choice or tensor composition, preserve well-formedness,
+and prove `required ⊆ candidate`.  A valid operation at a fixed durable frontier
+has an exhaustive and pairwise-exclusive classification: full readmission,
+required-preserving proper pruning, or pruning-only rejection.  A four-way
+classifier splits full admission into structural `Inherit` and `ReadmitOK` and
+has one soundness theorem for all outputs.  Versioned structural refinements
+compose, so a dynamic execution graph is checked edge by edge rather than
+pre-enumerated.  The same old structural lease binding can transport to two
+mutually exclusive target cells, while changing only the operator to parallel
+makes the joint required future inadmissible and leaves no pruning repair.
+
+The type `D` denotes globally normalized semantic commitment occurrences, not
+physical resources or controllers.  Independent arm occurrences must be
+distinct (normally arm-tagged); reuse of one identity declares one intentionally
+shared obligation.  The compiler must reject undeclared cross-arm aliasing.
+The typed constructors derive only operator-level composition from leaf
+may/required contracts; they do not infer those contracts, cell normalization,
+lineage, receipt aggregation, or concrete runtime reachability.  Lease results
+prove structural binding transport only—not token authentication, revocation,
+expiry, signature validity, effect-digest binding, remote exactly-once, or sink
+settlement.
+
+**Current RQs.** (1) finish the policy-independent cell/commitment LTS while
+crediting classical configuration morphisms; (2) connect the now-mechanized
+typed operator, structural refinement, prefix filter, and coordination layers
+through one proof-producing compiler; (3) prove no-silent-contract-expansion
+and the precisely scoped future-contract lower bound at independent authority
+materialization; (4) prove which of co-redeemability, semantic cell identity,
+durable commitment history, contract version, and alias declaration a
+sound-and-permissive adapter must observe; and (5) validate one concrete
+Claude/Codex manifest extractor and certificate-verification seam.
 Existing Codex and private paper-formation traces remain bounded
 correspondence and observability evidence, not product-wide refinement or
 safety prevalence.

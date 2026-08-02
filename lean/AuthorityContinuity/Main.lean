@@ -4,6 +4,7 @@ import AuthorityContinuity.TokenWeightedAccounting
 import AuthorityContinuity.ConfigurationCellQuotient
 import AuthorityContinuity.CoordinationDecomposition
 import AuthorityContinuity.DurablePrefixTransport
+import AuthorityContinuity.TypedHistoryAdmission
 import AuthorityContinuity.RedemptionCommitment
 import AuthorityContinuity.RedemptionDomainFrontier
 
@@ -36,6 +37,18 @@ receipt history.  It characterizes prefix-sensitive transport, computes the
 greatest safe pruning of a fixed future family, checks whether typed required
 behaviors survive that pruning, and derives the finest exact controller
 partition for the admitted future.
+The typed-admission module derives may/required futures from six
+Fork/Restore/Merge constructors, proves choice/tensor preservation, and
+classifies each valid fixed-frontier operation into mutually exclusive full
+readmission, pruning-only mechanism repair, or rejection.  Its four-way
+compiler interface further separates structural certificate inheritance from
+full rechecking.  Structural refinements compose over online operation chains
+and transport only the structural part of a versioned lease binding.  Cells
+are globally normalized semantic commitment occurrences: independent arm
+occurrences require distinct identities even when physically co-located, and
+intentional aliases must be declared by an adapter.  Concrete lease
+authentication, arm-contract derivation, identity normalization, and
+runtime-family realization remain adapter obligations.
 The operational commitment core separately derives unit-atom conservation,
 ledger/phase monotonicity, and exact fresh-event accounting for
 Prepare/Replay/Retry/Crash/Settle.  Fork/Restore/Merge preservation remains a

@@ -94,6 +94,26 @@ frozen_constants=(
   snapshot_only_restored_future_transports
   durable_receipt_blocks_restored_future
   distinct_atom_future_remains_transportable
+  familyTensor_wellFormed
+  required_subset_candidate
+  configMorphism_comp
+  transports_prefixConfigMorphism
+  targetLease_valid
+  targetLease_atom_not_durable
+  op_fullReadmit_iff_candidate_eq_admittedFuture
+  op_fullReadmit_preserves_required
+  op_no_admitted_iff_exists_required_witness
+  op_admission_trichotomy
+  op_admission_classes_pairwise
+  classifyAdmission_sound
+  op_admittedFuture_exactFactorization_iff_mustCoordinate
+  choice_certificate_inherits
+  parallel_has_no_structural_refinement
+  alternatives_share_surviving_lease
+  choice_split_controllers_not_exact
+  choice_shared_controller_exact
+  parallel_has_no_shared_lease_refinement
+  parallel_shared_lease_has_no_pruning_repair
   fresh_preserves_safe
   step_preserves_phaseWF
   step_phase_mono

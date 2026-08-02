@@ -5,6 +5,7 @@ import AuthorityContinuity.TokenWeightedAccounting
 import AuthorityContinuity.ConfigurationCellQuotient
 import AuthorityContinuity.CoordinationDecomposition
 import AuthorityContinuity.DurablePrefixTransport
+import AuthorityContinuity.TypedHistoryAdmission
 import AuthorityContinuity.RedemptionCommitment
 import AuthorityContinuity.RedemptionDomainFrontier
 
@@ -306,6 +307,71 @@ namespace AuthorityContinuity
 
 #check DurablePrefixTransport.Fixtures.distinct_atom_future_remains_transportable
 #print axioms DurablePrefixTransport.Fixtures.distinct_atom_future_remains_transportable
+
+/-! Typed history operators and refinement-certified binding transport. -/
+
+#check TypedHistoryAdmission.familyTensor_wellFormed
+#print axioms TypedHistoryAdmission.familyTensor_wellFormed
+
+#check TypedHistoryAdmission.HistoryOp.required_subset_candidate
+#print axioms TypedHistoryAdmission.HistoryOp.required_subset_candidate
+
+#check TypedHistoryAdmission.configMorphism_comp
+#print axioms TypedHistoryAdmission.configMorphism_comp
+
+#check TypedHistoryAdmission.StructuralRefinement.transports_prefixConfigMorphism
+#print axioms TypedHistoryAdmission.StructuralRefinement.transports_prefixConfigMorphism
+
+#check TypedHistoryAdmission.StructuralRefinement.trans
+#print axioms TypedHistoryAdmission.StructuralRefinement.trans
+
+#check TypedHistoryAdmission.LeaseSurvival.targetLease_valid
+#print axioms TypedHistoryAdmission.LeaseSurvival.targetLease_valid
+
+#check TypedHistoryAdmission.LeaseSurvival.targetLease_atom_not_durable
+#print axioms TypedHistoryAdmission.LeaseSurvival.targetLease_atom_not_durable
+
+#check TypedHistoryAdmission.op_fullReadmit_iff_candidate_eq_admittedFuture
+#print axioms TypedHistoryAdmission.op_fullReadmit_iff_candidate_eq_admittedFuture
+
+#check TypedHistoryAdmission.op_fullReadmit_preserves_required
+#print axioms TypedHistoryAdmission.op_fullReadmit_preserves_required
+
+#check TypedHistoryAdmission.op_no_admitted_iff_exists_required_witness
+#print axioms TypedHistoryAdmission.op_no_admitted_iff_exists_required_witness
+
+#check TypedHistoryAdmission.op_admission_trichotomy
+#print axioms TypedHistoryAdmission.op_admission_trichotomy
+
+#check TypedHistoryAdmission.op_admission_classes_pairwise
+#print axioms TypedHistoryAdmission.op_admission_classes_pairwise
+
+#check TypedHistoryAdmission.classifyAdmission_sound
+#print axioms TypedHistoryAdmission.classifyAdmission_sound
+
+#check TypedHistoryAdmission.op_admittedFuture_exactFactorization_iff_mustCoordinate
+#print axioms TypedHistoryAdmission.op_admittedFuture_exactFactorization_iff_mustCoordinate
+
+#check TypedHistoryAdmission.Fixtures.choice_certificate_inherits
+#print axioms TypedHistoryAdmission.Fixtures.choice_certificate_inherits
+
+#check TypedHistoryAdmission.Fixtures.parallel_has_no_structural_refinement
+#print axioms TypedHistoryAdmission.Fixtures.parallel_has_no_structural_refinement
+
+#check TypedHistoryAdmission.Fixtures.SharedLease.alternatives_share_surviving_lease
+#print axioms TypedHistoryAdmission.Fixtures.SharedLease.alternatives_share_surviving_lease
+
+#check TypedHistoryAdmission.Fixtures.SharedLease.choice_split_controllers_not_exact
+#print axioms TypedHistoryAdmission.Fixtures.SharedLease.choice_split_controllers_not_exact
+
+#check TypedHistoryAdmission.Fixtures.SharedLease.choice_shared_controller_exact
+#print axioms TypedHistoryAdmission.Fixtures.SharedLease.choice_shared_controller_exact
+
+#check TypedHistoryAdmission.Fixtures.SharedLease.parallel_has_no_shared_lease_refinement
+#print axioms TypedHistoryAdmission.Fixtures.SharedLease.parallel_has_no_shared_lease_refinement
+
+#check TypedHistoryAdmission.Fixtures.SharedLease.parallel_shared_lease_has_no_pruning_repair
+#print axioms TypedHistoryAdmission.Fixtures.SharedLease.parallel_shared_lease_has_no_pruning_repair
 
 /-! Operational commitment core; topology-changing operators are separate. -/
 

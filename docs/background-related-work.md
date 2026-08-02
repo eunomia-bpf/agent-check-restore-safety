@@ -160,23 +160,30 @@ reused through a contract refinement instead of being uniformly invalidated.
 
 The remaining claim must consequently be narrower and stronger:
 
-> Given a typed history transformation, an exact future-outcome contract,
-> authority lineage, and durable receipts, synthesize the greatest pointwise-
-> safe subfamily of a fixed candidate semantics under complete observation and
-> controllable pruning, derive its finest exact factorizing partition, and
-> compile it to runtime state actions with either a refinement certificate or
-> a minimal counterexample.
+> Given a typed history transformation, complete leaf may/required contracts,
+> normalized commitment-occurrence identities, authority lineage, and durable
+> receipts, derive the operator-level co-durability family; synthesize its
+> greatest pointwise-safe subfamily under complete observation and controllable
+> pruning; derive its finest exact factorizing partition; and return
+> `Inherit`, `ReadmitOK`, `NeedsMechanism`, or pruning-only `Reject` with an
+> independently checkable certificate or obstruction.
 
 This is not a new name for authorization continuity.  It is a proposed
 decision procedure for transporting *correlated* authority and commitment
-state through a concrete Fork/Restore/Merge operation.  A refinement-aware
-lease may remain usable when a checked configuration morphism and durable
-receipt relation justify it; otherwise the compiler must exhibit the
+state through a concrete Fork/Restore/Merge operation.  The mechanized typed
+layer derives choice versus joint composition for six operators, proves a
+pairwise-exclusive fixed-frontier trichotomy, and composes structural
+refinements over an online operation chain.  It does not infer leaf contracts,
+cell identities, aliases, lineage, or receipt aggregation.  The structural
+binding of a lease may transport when a checked configuration morphism and
+unchanged durable prefix justify it; this is not a proof of token
+authentication, revocation, expiry, signature, or effect-digest validity.
+Otherwise the compiler must exhibit the
 colliding lineage, newly admitted forbidden configuration, missing or
 nonmonotone commitment evidence, or incompatible lease binding that prevents
 reuse.  Whether this
-full theorem package is absent from prior work remains the central novelty
-question, and no priority wording is justified yet.
+integrated proof-producing compiler is absent from prior work remains the
+central novelty question, and no priority wording is justified yet.
 
 ### 3.5 Concurrency structures and resource algebra
 
@@ -419,10 +426,11 @@ insufficiency, not that every ordinary trace lacks every component.
 | A per-component `Copy/Share/Split/Persist` clone plan. | Established systems mechanism | Plan 9 `rfork`, *Secure the Clones*, capability systems, and program logics already support declared resource-wise copy/share disciplines. |
 | Authority over co-durable descendant sets. | Promising semantic contribution | No equivalent agent lifecycle contract was found; event structures and linear resource logics provide substrates and strong conservation precedents. |
 | Minimal-nonface decomposition of a downward-closed outcome contract. | Classical substrate | Simplicial joins, minimal nonfaces, hypergraph components, and relation factorization supply the static mathematics. The decomposition is useful but cannot be sold as new mathematics. |
-| Typed Fork/Restore/Merge synthesis of gate coordination, cell aliasing, and durable-receipt refinement. | New leading candidate, acceptance-blocked | The inspected closest work treats these dimensions separately. Value requires one operational theorem, a checked compiler, and separating examples showing why each dimension is necessary. |
-| Refinement-certified lease reuse across a history transformation. | New leading candidate, acceptance-blocked | Unlike uniform epoch invalidation, reuse is permitted exactly when a checked contract/lineage/receipt morphism preserves the grant. Necessity, compositionality, and nontrivial reuse must be proved. |
+| Typed Fork/Restore/Merge synthesis of gate coordination, cell identity, and durable-prefix refinement. | Leading theorem spine mechanized; integration-blocked | Six constructors now derive choice/tensor may/required families, valid contracts yield a proved exclusive trichotomy, structural refinements compose, and choice/parallel fixtures separate shared gate and co-durable lineage behavior.  Leaf contracts, normalized occurrence identities/aliases, and concrete-family realization remain explicit adapter premises; a checked end-to-end compiler is still required. |
+| Refinement-certified structural lease-binding transport across a history transformation. | Mechanized supporting result; full lease claim rejected | A version-monotone commuting refinement transports cell/atom binding and allows one old binding to name mutually exclusive alternatives.  It deliberately does not establish issuer/root/scope/digest/expiry/signature validity, revocation, or that a runtime token is reusable unchanged. |
 | Durable-prefix transport plus greatest fixed-family safe pruning. | Mechanized supporting layer | For all additive policies, pointed transport is equivalent to local injectivity, prefix disjointness, and source-family preservation; filtering computes the greatest safe subfamily of one fixed fully observed candidate under controllable pruning. It does not prove sink exactly-once, lease refinement, or completeness of the candidate/required generator. |
 | Greatest pointwise-safe subfamily plus finest exact factorizing partition. | Mechanized supporting synthesis, not headline mathematics | Existence is limited to fixed candidate semantics, complete observation, controllable pruning, and maximal asynchronous `localProduct` recombination. Generic supremal control and static factorization are classical; novelty can survive only in the typed dynamic operator, authority cells, commitments, proof-producing lowering, and completeness boundary. |
+| Four-way proof-obligation classifier (`Inherit`/`ReadmitOK`/`NeedsMechanism`/`Reject`). | Semantic skeleton mechanized; executable compiler open | One Lean soundness theorem gives each enum result its fixed-frontier meaning and the valid-contract trichotomy is pairwise exclusive.  The current Lean definition is noncomputable and emits no witnesses; novelty depends on an executable independent-verifier design, minimal obstructions, fail-closed manifests, and a real adapter. |
 | Snapshot-local sound-and-maximally-permissive impossibility. | Supporting corollary | It is one nonconstant observation fiber of the more general residual-profile precision theorem; generic partial-observation impossibility is classical. |
 | Headroom full abstraction and correlated residual controller. | Leading, closest-work sensitive | Gives a closed form for the minimal one-step Reserve behavior, proves per-branch summaries are not update-closed, and gives an update-closed residual derivative for joint Reserve. |
 | Residual rectangularity iff an exact Cartesian product of branch-local budgets. | Leading, closest-work sensitive | For fixed-topology batch Reserve, converts correlation into a necessary-and-sufficient runtime test: noncommunicating product-local soundness and one-branch completeness coexist exactly when the residual equals the product of its projections. |
