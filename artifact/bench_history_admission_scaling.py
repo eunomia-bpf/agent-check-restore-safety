@@ -309,6 +309,10 @@ def _run_passing_case(
         )
         if result["coordination"]["status"] != "exact":
             raise RuntimeError(f"{label}: expected exact coordination")
+        if result["co_liveness_repair"]["status"] != "not_needed":
+            raise RuntimeError(
+                f"{label}: exact controller product unexpectedly needs repair"
+            )
         verified = _run(
             [
                 sys.executable,

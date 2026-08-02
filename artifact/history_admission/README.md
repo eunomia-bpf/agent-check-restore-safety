@@ -22,7 +22,10 @@ compiler then:
 6. checks the implementation relation
    `Required <= RawPhysical <= Admitted`, distinguishing exact realization from a
    safe restriction that omits only optional behavior; and
-7. emits a structural certificate or a compact prefix, lineage, forbidden
+7. derives the canonical greatest co-liveness-only safe restriction as a
+   non-authorizing repair proposal, including declared-product required
+   coverage and any missing required configurations; and
+8. emits a structural certificate or a compact prefix, lineage, forbidden
    union, gate-cut, or gate-clone witness.
 
 Semantic admission and deployment readiness are intentionally separate.
@@ -39,11 +42,11 @@ mediation, controller freshness, atomic redemption, and refinement between the
 declared controller product and the runtime's actual behavior.  `Reject` is
 always diagnostic.
 
-Request, result, and verification schemas are version 2.  Request version 2
-makes `operation.controller_future_coverage` mandatory.  Result version 2
-echoes it as `controllers.co_live_coverage`, replaces the ambiguous deployment
-`fence` field with `restriction`, and allows a verified `NeedsMechanism` result
-to seal a manifest that already supplies the required safe restriction.
+The request schema is version 2; result and verification schemas are version
+3.  Request version 2 makes `operation.controller_future_coverage` mandatory.
+Result version 3 retains the version-2 coverage/readiness fields and adds the
+canonical `co_liveness_repair` proposal described below.  The verifier schema
+is bumped because it now authenticates that additional result surface.
 
 ## Quick start
 
@@ -118,6 +121,50 @@ The Lean development proves that complete projections through `r*` preserve
 readiness (under fixed access, fixed downward-closed local families, and
 downward-closed co-liveness), as well as an arbitrary-arity lower bound; the
 executable deliberately retains the simpler full-family interface.
+
+## Canonical co-liveness-only repair
+
+For each non-`Reject` decision, `co_liveness_repair` filters the declared full
+co-liveness family without changing any controller's local permission family.
+Writing `E_i` for controller `i`'s downward-closed local family and `A` for
+`Admitted`, it computes
+
+```text
+Gamma* = { C in Gamma | tensor(i in C, E_i) <= A }.
+```
+
+The parser constructs every `E_i` from at least one maximum, so each local
+family is nonempty and contains the empty configuration.  Therefore, whenever
+`H <= C`, every product choice for `H` is also a product choice for `C`: the
+controllers in `C - H` choose empty.  Hence
+`Product(H) <= Product(C)`.  Together with downward closure of declared
+`Gamma`, this makes `Gamma*` hereditary and the unique greatest subfamily of
+declared `Gamma` whose controller product respects `A`; it is the executable
+counterpart of the Lean powerset `SafeGroup` filter.  The result emits its
+canonical `restriction_maxima`.  It also obtains the physical product under
+`Gamma*` from the same globally capped product pass, reports
+`required_coverage.covered_maxima`, and lists every exact `missing_required`
+configuration rather than taking the downward closure of that generally
+non-downward-closed difference.
+
+The status is `not_needed` when the declared Gamma is already safe and covers
+the required family, `feasible` when a strict Gamma restriction is safe and
+still covers every required configuration, and `infeasible` when no
+co-liveness-only restriction can retain declared-product required coverage.
+Only `feasible` sets `installation_required` to true.  A local overpermission
+can therefore be diagnosed as infeasible: preventing controllers from being
+co-live cannot repair a forbidden choice made by one controller while still
+retaining behavior that needs that controller.
+
+This object is an offline proposal, not an installed policy.  It always sets
+`effect_authorizes` to false and does not alter the submitted manifest,
+`deployment.readiness`, `history_admission.structurally_eligible`, or the
+verifier's seal kind.  The runtime must install the restriction and submit a
+new manifest before it can affect readiness.  With `sound_overapprox`, the
+proposal safely filters the declared upper bound, but its required-coverage
+claim remains explicitly scoped to `declared_controller_product`; it cannot
+prove `Required <= Actual`.  `Reject` has no `Admitted` family and therefore
+reports `co_liveness_repair: null`.
 
 ## Proof crosswalk and scope
 

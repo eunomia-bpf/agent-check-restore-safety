@@ -291,12 +291,17 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
         second_use["id"] = "gate-use:choice-alias"
         request["operation"]["gate_uses"].append(second_use)
         result = compile_base(request)
+        self.assertEqual("history-admission.result.v3", result["schema"])
         self.assertEqual("Inherit", result["semantic_admission"]["class"])
         self.assertEqual("Ready", result["deployment"]["readiness"])
         self.assertTrue(result["history_admission"]["structurally_eligible"])
         self.assertFalse(result["history_admission"]["effect_authorizes"])
         self.assertEqual("exact", result["controllers"]["co_live_coverage"])
         self.assertEqual(2, result["coordination"]["required_coliveness_arity"])
+        self.assertEqual("not_needed", result["co_liveness_repair"]["status"])
+        self.assertFalse(
+            result["co_liveness_repair"]["installation_required"]
+        )
         self.assertEqual(
             ["gate-use:choice", "gate-use:choice-alias"],
             result["controllers"]["normalized"]["controller:choice"]["gate_uses"],
@@ -347,6 +352,14 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
         self.assertEqual(
             "sound_overapprox", result["controllers"]["co_live_coverage"]
         )
+        self.assertEqual(
+            "sound_overapprox",
+            result["co_liveness_repair"]["declared_coverage"],
+        )
+        self.assertEqual(
+            "declared_controller_product",
+            result["co_liveness_repair"]["required_coverage"]["scope"],
+        )
         self.assertIn(
             "controller_coliveness_coverage_attestation",
             result["history_admission"]["external_obligations"],
@@ -379,6 +392,7 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
         result = compile_base(request)
         self.assertEqual("Reject", result["semantic_admission"]["class"])
         self.assertIsNone(result["coordination"]["required_coliveness_arity"])
+        self.assertIsNone(result["co_liveness_repair"])
         reasons = result["semantic_admission"]["rejection_witness"]["reasons"]
         self.assertIn("ForbiddenUnion", {reason["kind"] for reason in reasons})
 
@@ -706,6 +720,23 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
             ["occ:checkpoint:a", "occ:checkpoint:b", "occ:checkpoint:c"],
             witness["minimal_nonface"],
         )
+        repair = result["co_liveness_repair"]
+        self.assertEqual("infeasible", repair["status"])
+        self.assertEqual([[]], repair["restriction_maxima"])
+        self.assertFalse(repair["required_coverage"]["covered"])
+        self.assertEqual(
+            [
+                ["occ:checkpoint:a"],
+                ["occ:checkpoint:b"],
+                ["occ:checkpoint:c"],
+                ["occ:checkpoint:a", "occ:checkpoint:b"],
+                ["occ:checkpoint:a", "occ:checkpoint:c"],
+                ["occ:checkpoint:b", "occ:checkpoint:c"],
+            ],
+            repair["required_coverage"]["missing_required"],
+        )
+        self.assertFalse(repair["installation_required"])
+        self.assertFalse(repair["effect_authorizes"])
 
     def test_pruned_cell_is_reported_outside_admitted_support(self) -> None:
         request = base_request()
@@ -741,16 +772,40 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
             result["coordination"]["components"],
         )
         self.assertEqual("GateCut", result["coordination"]["witness"]["kind"])
+        repair = result["co_liveness_repair"]
+        self.assertEqual("feasible", repair["status"])
+        self.assertEqual(
+            [
+                ["controller:a", "controller:b"],
+                ["controller:a", "controller:c"],
+                ["controller:b", "controller:c"],
+            ],
+            repair["restriction_maxima"],
+        )
+        self.assertTrue(repair["required_coverage"]["covered"])
+        self.assertEqual([], repair["required_coverage"]["missing_required"])
+        self.assertTrue(repair["installation_required"])
+        self.assertFalse(repair["effect_authorizes"])
+        repair_seal = verify_result(request, result)
+        self.assertFalse(repair_seal["structurally_admits"])
+        self.assertEqual("diagnostic", repair_seal["seal_kind"])
 
-        pairwise_only = higher_order_request()
-        pairwise_only["operation"]["controller_future_maxima"] = [
-            ["controller:a", "controller:b"],
-            ["controller:a", "controller:c"],
-            ["controller:b", "controller:c"],
+        pairwise_only = deepcopy(request)
+        pairwise_only["operation"]["controller_future_maxima"] = repair[
+            "restriction_maxima"
         ]
         pairwise_result = compile_request(pairwise_only)
         self.assertEqual("Ready", pairwise_result["deployment"]["readiness"])
         self.assertEqual("exact", pairwise_result["coordination"]["status"])
+        self.assertEqual(
+            "not_needed", pairwise_result["co_liveness_repair"]["status"]
+        )
+        self.assertFalse(
+            pairwise_result["co_liveness_repair"]["installation_required"]
+        )
+        self.assertTrue(
+            verify_result(pairwise_only, pairwise_result)["structurally_admits"]
+        )
         self.assertEqual(
             3, pairwise_result["coordination"]["required_coliveness_arity"]
         )
@@ -916,6 +971,7 @@ class HistoryAdmissionVerifierTests(unittest.TestCase):
         completed = self._run_cli(request, compile_base(request))
         self.assertEqual(0, completed.returncode, completed.stderr)
         seal = verify_result(request, compile_base(request))
+        self.assertEqual("history-admission.verification.v3", seal["schema"])
         self.assertTrue(seal["valid"])
         self.assertTrue(seal["structurally_admits"])
         self.assertFalse(seal["effect_authorizes"])
@@ -941,6 +997,13 @@ class HistoryAdmissionVerifierTests(unittest.TestCase):
         result = compile_base(request)
         result["coordination"]["required_coliveness_arity"] = 1
         completed = self._run_cli(request, result)
+        self.assertEqual(3, completed.returncode)
+
+        result = compile_request(higher_order_request())
+        result["co_liveness_repair"]["restriction_maxima"] = [
+            ["controller:a", "controller:b", "controller:c"]
+        ]
+        completed = self._run_cli(higher_order_request(), result)
         self.assertEqual(3, completed.returncode)
 
     def test_verifier_source_does_not_import_compiler(self) -> None:

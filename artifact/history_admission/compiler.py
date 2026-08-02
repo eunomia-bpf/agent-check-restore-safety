@@ -1094,12 +1094,17 @@ def _coordination_components(family: Family) -> list[list[str]]:
     return sorted((sorted(group) for group in groups.values()), key=lambda g: (g[0], len(g)))
 
 
-def _physical_controller_family(
+def _controller_product_analysis(
     controllers: Mapping[str, Controller],
     controller_future: Family,
-) -> tuple[Family, dict[Config, dict[str, Any]]]:
+    admitted: Family,
+) -> tuple[Family, dict[Config, dict[str, Any]], Family, Family]:
+    """Enumerate the declared product and its greatest safe co-live filter once."""
+
     physical: set[Config] = set()
     witnesses: dict[Config, dict[str, Any]] = {}
+    safe_controller_future: set[Config] = set()
+    safe_physical: set[Config] = set()
     product_states = 0
     for controller_config in _sorted_configs(controller_future):
         partial: dict[Config, dict[str, Config]] = {frozenset(): {}}
@@ -1118,6 +1123,11 @@ def _physical_controller_family(
                     combined = accumulated | local
                     next_partial.setdefault(combined, {**choices, anchor: local})
             partial = next_partial
+        controller_product = frozenset(partial)
+        controller_safe = controller_product <= admitted
+        if controller_safe:
+            safe_controller_future.add(controller_config)
+            safe_physical.update(controller_product)
         for config, choices in partial.items():
             physical.add(config)
             witnesses.setdefault(
@@ -1134,7 +1144,71 @@ def _physical_controller_family(
                 raise SchemaError(
                     "physical controller family exceeds finite configuration cap"
                 )
-    return frozenset(physical), witnesses
+    return (
+        frozenset(physical),
+        witnesses,
+        frozenset(safe_controller_future),
+        frozenset(safe_physical),
+    )
+
+
+def _coliveness_repair(
+    parsed: ParsedRequest,
+    required: Family,
+    repaired_future: Family,
+    repaired_physical: Family,
+) -> dict[str, Any]:
+    """Return the canonical co-liveness-only repair proposal.
+
+    For every declared co-live controller configuration C, its independent
+    local product is checked against Admitted.  Parsed local families are
+    nonempty and contain the empty configuration.  Thus, for H contained in C,
+    Product(H) is contained in Product(C) by assigning empty choices to the
+    removed controllers.  The safe configurations therefore form the unique
+    greatest downward-closed subset of declared Gamma whose physical product
+    respects Admitted.  This is a proposal only: it neither mutates the
+    submitted manifest nor changes deployment readiness.
+    """
+
+    if frozenset() not in repaired_future:
+        raise SchemaError(
+            "internal error: empty controller configuration is not repair-safe"
+        )
+    if any(
+        subset not in repaired_future
+        for config in repaired_future
+        for subset in _powerset(tuple(config))
+    ):
+        raise SchemaError(
+            "internal error: canonical co-liveness repair is not downward closed"
+        )
+
+    covered_required = required & repaired_physical
+    missing_required = required - repaired_physical
+    changes_coliveness = repaired_future != parsed.controller_future
+    if missing_required:
+        status = "infeasible"
+    elif changes_coliveness:
+        status = "feasible"
+    else:
+        status = "not_needed"
+
+    return {
+        "kind": "co_liveness_only",
+        "status": status,
+        "restriction_maxima": _maxima(repaired_future),
+        "declared_coverage": parsed.controller_future_coverage,
+        "required_coverage": {
+            "scope": "declared_controller_product",
+            "covered": not missing_required,
+            "covered_maxima": _maxima(frozenset(covered_required)),
+            "missing_required": [
+                sorted(config) for config in _sorted_configs(missing_required)
+            ],
+        },
+        "installation_required": status == "feasible",
+        "effect_authorizes": False,
+    }
 
 
 def _minimal_covering_controllers(
@@ -1160,6 +1234,8 @@ def _coordination_result(
     parsed: ParsedRequest,
     admitted: Family | None,
     required: Family,
+    physical: Family | None,
+    product_witnesses: Mapping[Config, dict[str, Any]] | None,
 ) -> dict[str, Any]:
     if admitted is None:
         return {
@@ -1173,9 +1249,8 @@ def _coordination_result(
             "components": [],
             "witness": None,
         }
-    physical, product_witnesses = _physical_controller_family(
-        parsed.controllers, parsed.controller_future
-    )
+    if physical is None or product_witnesses is None:
+        raise SchemaError("internal error: missing controller product analysis")
     nonfaces = _minimal_nonfaces(admitted)
     components = _coordination_components(admitted)
     extra = physical - admitted
@@ -1396,7 +1471,30 @@ def compile_request(document: Any) -> dict[str, Any]:
             "reasons": obstructions[rejected_required],
         }
 
-    coordination = _coordination_result(parsed, admitted, required)
+    if admitted is None:
+        coordination = _coordination_result(
+            parsed, admitted, required, None, None
+        )
+        coliveness_repair = None
+    else:
+        (
+            physical,
+            product_witnesses,
+            repaired_future,
+            repaired_physical,
+        ) = _controller_product_analysis(
+            parsed.controllers, parsed.controller_future, admitted
+        )
+        coordination = _coordination_result(
+            parsed,
+            admitted,
+            required,
+            physical,
+            product_witnesses,
+        )
+        coliveness_repair = _coliveness_repair(
+            parsed, required, repaired_future, repaired_physical
+        )
     coordination["required_coliveness_arity"] = (
         None
         if admitted is None
@@ -1511,6 +1609,7 @@ def compile_request(document: Any) -> dict[str, Any]:
             "co_live_coverage": parsed.controller_future_coverage,
         },
         "coordination": coordination,
+        "co_liveness_repair": coliveness_repair,
         "deployment": {
             "restriction": (
                 "manifest_supplied"

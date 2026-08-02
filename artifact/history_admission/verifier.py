@@ -1255,14 +1255,20 @@ def _components(family: MaskFamily, names: Sequence[str]) -> list[list[str]]:
     return sorted(components, key=lambda component: (component[0], len(component)))
 
 
-def _controller_product(
+def _controller_product_analysis(
     model: _RequestModel,
-) -> tuple[MaskFamily, dict[Mask, dict[str, Any]]]:
+    controller_future: MaskFamily,
+    admitted: MaskFamily,
+) -> tuple[MaskFamily, dict[Mask, dict[str, Any]], MaskFamily, MaskFamily]:
+    """Independently enumerate raw and greatest safe controller products once."""
+
     physical: set[Mask] = set()
     witnesses: dict[Mask, dict[str, Any]] = {}
+    safe_controller_future: set[Mask] = set()
+    safe_physical: set[Mask] = set()
     product_states = 0
     for controller_mask in _ordered_masks(
-        model.controller_future, model.controller_names
+        controller_future, model.controller_names
     ):
         live = _mask_members(controller_mask, model.controller_names)
         partial: dict[Mask, dict[str, Mask]] = {0: {}}
@@ -1285,6 +1291,11 @@ def _controller_product(
                     if combined not in next_partial:
                         next_partial[combined] = {**choices, anchor: local}
             partial = next_partial
+        controller_product = frozenset(partial)
+        controller_safe = not (controller_product - admitted)
+        if controller_safe:
+            safe_controller_future.add(controller_mask)
+            safe_physical.update(controller_product)
         for config, choices in partial.items():
             physical.add(config)
             if config not in witnesses:
@@ -1299,7 +1310,70 @@ def _controller_product(
                 raise SchemaError(
                     "physical controller family exceeds finite configuration cap"
                 )
-    return frozenset(physical), witnesses
+    return (
+        frozenset(physical),
+        witnesses,
+        frozenset(safe_controller_future),
+        frozenset(safe_physical),
+    )
+
+
+def _coliveness_repair(
+    model: _RequestModel,
+    required: MaskFamily,
+    repaired_future: MaskFamily,
+    repaired_physical: MaskFamily,
+) -> dict[str, Any]:
+    """Independently reconstruct the canonical hereditary-safe proposal.
+
+    Every parsed local family contains zero, so submasks of a safe controller
+    mask stay safe by assigning zero to each removed controller.
+    """
+
+    if 0 not in repaired_future:
+        raise SchemaError(
+            "internal error: empty controller configuration is not repair-safe"
+        )
+    if any(
+        submask not in repaired_future
+        for controller_mask in repaired_future
+        for submask in _submasks(controller_mask)
+    ):
+        raise SchemaError(
+            "internal error: canonical co-liveness repair is not downward closed"
+        )
+
+    covered_required = required & repaired_physical
+    missing_required = required - repaired_physical
+    changes_coliveness = repaired_future != model.controller_future
+    if missing_required:
+        status = "infeasible"
+    elif changes_coliveness:
+        status = "feasible"
+    else:
+        status = "not_needed"
+
+    return {
+        "kind": "co_liveness_only",
+        "status": status,
+        "restriction_maxima": _maxima(
+            repaired_future, model.controller_names
+        ),
+        "declared_coverage": model.controller_future_coverage,
+        "required_coverage": {
+            "scope": "declared_controller_product",
+            "covered": not missing_required,
+            "covered_maxima": _maxima(
+                frozenset(covered_required), model.target_names
+            ),
+            "missing_required": [
+                _mask_members(mask, model.target_names)
+                for mask in _ordered_masks(missing_required, model.target_names)
+            ],
+        },
+        "installation_required": status == "feasible",
+        "effect_authorizes": False,
+    }
 
 
 def _minimal_covering_controllers(
@@ -1334,6 +1408,8 @@ def _coordination(
     model: _RequestModel,
     admitted: MaskFamily | None,
     required: MaskFamily,
+    physical: MaskFamily | None,
+    product_witnesses: Mapping[Mask, dict[str, Any]] | None,
 ) -> dict[str, Any]:
     if admitted is None:
         return {
@@ -1347,8 +1423,8 @@ def _coordination(
             "components": [],
             "witness": None,
         }
-
-    physical, product_witnesses = _controller_product(model)
+    if physical is None or product_witnesses is None:
+        raise SchemaError("internal error: missing controller product analysis")
     nonfaces = _minimal_nonfaces(admitted, model.target_names)
     components = _components(admitted, model.target_names)
     extra = physical - admitted
@@ -1594,7 +1670,30 @@ def _expected_result(document: Any) -> dict[str, Any]:
             "reasons": obstructions[rejected],
         }
 
-    coordination = _coordination(model, admitted, required)
+    if admitted is None:
+        coordination = _coordination(
+            model, admitted, required, None, None
+        )
+        coliveness_repair = None
+    else:
+        (
+            physical,
+            product_witnesses,
+            repaired_future,
+            repaired_physical,
+        ) = _controller_product_analysis(
+            model, model.controller_future, admitted
+        )
+        coordination = _coordination(
+            model,
+            admitted,
+            required,
+            physical,
+            product_witnesses,
+        )
+        coliveness_repair = _coliveness_repair(
+            model, required, repaired_future, repaired_physical
+        )
     coordination["required_coliveness_arity"] = (
         None
         if admitted is None
@@ -1721,6 +1820,7 @@ def _expected_result(document: Any) -> dict[str, Any]:
             "co_live_coverage": model.controller_future_coverage,
         },
         "coordination": coordination,
+        "co_liveness_repair": coliveness_repair,
         "deployment": {
             "restriction": (
                 "manifest_supplied"
