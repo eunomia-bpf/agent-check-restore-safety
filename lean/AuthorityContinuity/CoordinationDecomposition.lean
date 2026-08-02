@@ -222,7 +222,8 @@ theorem respectsMustCoordinate_of_respectsDirectCoupling
   | trans _ _ _ _ _ ih₁ ih₂ => exact ih₁.trans ih₂
 
 /-- `MustCoordinate` is the least equivalence relation containing every direct
-co-location requirement.  Its classes induce the finest exact block partition,
+common-coordination requirement under `localProduct`.  Its classes induce the
+finest exact block partition,
 unique up to block-label renaming: an exact labelling must be constant on those
 classes, and any such labelling factorizes the source exactly. -/
 theorem exactFactorization_iff_constant_on_mustCoordinate

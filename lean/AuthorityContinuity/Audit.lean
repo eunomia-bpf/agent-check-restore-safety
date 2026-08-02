@@ -4,6 +4,7 @@ import AuthorityContinuity.PlanTokenStrengthening
 import AuthorityContinuity.TokenWeightedAccounting
 import AuthorityContinuity.ConfigurationCellQuotient
 import AuthorityContinuity.CoordinationDecomposition
+import AuthorityContinuity.DurablePrefixTransport
 import AuthorityContinuity.RedemptionCommitment
 import AuthorityContinuity.RedemptionDomainFrontier
 
@@ -276,6 +277,35 @@ namespace AuthorityContinuity
 
 #check CoordinationDecomposition.Fixtures.rankTwoFamily_additive_counterexample
 #print axioms CoordinationDecomposition.Fixtures.rankTwoFamily_additive_counterexample
+
+/-! Durable-prefix transport and greatest safe future synthesis. -/
+
+#check DurablePrefixTransport.universalPrefixTransport_iff_prefixConfigMorphism
+#print axioms DurablePrefixTransport.universalPrefixTransport_iff_prefixConfigMorphism
+
+#check DurablePrefixTransport.required_subset_safeFuture_iff_exists_admitted
+#print axioms DurablePrefixTransport.required_subset_safeFuture_iff_exists_admitted
+
+#check DurablePrefixTransport.safeFuture_wellFormed
+#print axioms DurablePrefixTransport.safeFuture_wellFormed
+
+#check DurablePrefixTransport.safeFuture_exactFactorization_iff_mustCoordinate
+#print axioms DurablePrefixTransport.safeFuture_exactFactorization_iff_mustCoordinate
+
+#check DurablePrefixTransport.committedAtoms_mono_of_ledgerMonotone
+#print axioms DurablePrefixTransport.committedAtoms_mono_of_ledgerMonotone
+
+#check DurablePrefixTransport.durable_atom_in_future_forbids_universal_reuse
+#print axioms DurablePrefixTransport.durable_atom_in_future_forbids_universal_reuse
+
+#check DurablePrefixTransport.Fixtures.snapshot_only_restored_future_transports
+#print axioms DurablePrefixTransport.Fixtures.snapshot_only_restored_future_transports
+
+#check DurablePrefixTransport.Fixtures.durable_receipt_blocks_restored_future
+#print axioms DurablePrefixTransport.Fixtures.durable_receipt_blocks_restored_future
+
+#check DurablePrefixTransport.Fixtures.distinct_atom_future_remains_transportable
+#print axioms DurablePrefixTransport.Fixtures.distinct_atom_future_remains_transportable
 
 /-! Operational commitment core; topology-changing operators are separate. -/
 

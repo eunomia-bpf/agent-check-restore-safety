@@ -77,6 +77,23 @@ frozen_constants=(
   two_handles_one_cell
   exclusive_shared_lineage_transports
   parallel_capacity_one_counterexample
+  cut_minimalNonface_witness
+  exactFactorization_iff_minimalNonfaces_withinBlocks
+  exactFactorization_iff_constant_on_mustCoordinate
+  cut_minimalNonface_additive_witness
+  every_pair_allowed
+  splitBlock_admits_forbidden_triple
+  rankTwoFamily_not_exactly_factorized
+  rankTwoFamily_additive_counterexample
+  universalPrefixTransport_iff_prefixConfigMorphism
+  required_subset_safeFuture_iff_exists_admitted
+  safeFuture_wellFormed
+  safeFuture_exactFactorization_iff_mustCoordinate
+  committedAtoms_mono_of_ledgerMonotone
+  durable_atom_in_future_forbids_universal_reuse
+  snapshot_only_restored_future_transports
+  durable_receipt_blocks_restored_future
+  distinct_atom_future_remains_transportable
   fresh_preserves_safe
   step_preserves_phaseWF
   step_phase_mono

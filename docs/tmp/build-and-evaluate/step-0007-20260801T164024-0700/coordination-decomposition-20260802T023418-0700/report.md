@@ -42,8 +42,10 @@ not necessarily a reachable exploit.
 4. Equivalently, exact factorization holds iff the labelling is constant on
    `MustCoordinate`.
 5. `MustCoordinate` is the least equivalence relation containing the direct
-   co-location requirements. Its classes therefore induce the finest exact
-   block partition, unique up to block-label renaming.
+   common-coordination requirements under `localProduct`. Its classes therefore
+   induce the finest exact block partition, unique up to block-label renaming.
+   This is not a physical co-location lower bound: one block may be implemented
+   by a shared durable controller, distributed lock, or consensus protocol.
 6. Every cut minimal nonface yields an explicit natural-number additive policy:
    the source is safe at capacity `|K|-1`, while the independently recombined
    target is unsafe.

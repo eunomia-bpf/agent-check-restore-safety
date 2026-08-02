@@ -71,7 +71,7 @@ The central claim fails if closest work already gives an equivalent compatibilit
 | 2026-08-01 | Two exact boundaries plus prose lifecycle rules are enough for a CSF theory submission. | Independent PC review scored the draft 5/10: the two boundaries were judged valuable, but the claimed transition induction had no closed rule set; the grammar omitted checkpoint/retry/crash, structural steps could discard prepared tickets, and injective transfer conflicted with splitting. | A theorem about an agent lifecycle must quantify over a least generated transition relation. Every topology, admission, seal, attempt, recovery, settlement, and revocation step needs a checked premise and explicit target update. | Replaces prose semantics with a closed certificate-checked LTS, scopes capability claims to Cartesian budget products, makes serial-or-seal choices precise, and extends the artifact to v5 lifecycle traces. |
 | 2026-08-02 | A one-use origin token must have at most one current claim occurrence. | Consumable credentials show that copied representations are safe behind one atomic ratifier.  The repaired model also gives the opposite temporal witness: one restored occurrence can create two fresh commitments through cloned cells.  Winskel-style configuration morphisms already own configuration preservation and local injectivity, while escrow owns global rights conservation. | Separate `history handle -> semantic redemption cell -> source authority atom -> durable commitment`.  Handle aliases may collapse to one cell; different cells may share one atom only across trusted mutually exclusive complete histories; durable commitments remain a fixed prefix after Prepare. | Reopens the central representation, demotes occurrence linearity and scalar escrow to strict profiles, and makes typed agent operator refinement plus the missing-observation lower bound the prospective contribution.  The classical morphism iff is only a completeness bridge. |
 | 2026-08-02 | The inability to pre-enumerate a dynamically Forked/Restored/Merged agent graph, or the difference between its control and external-effect graphs, may itself distinguish agents from traditional systems. | Process calculi, dynamic-causality and reversible event structures, graph rewriting, adaptive workflows, and rollback recovery already cover online topology, changing dependencies, rollback, and distinct output histories.  A same-prefix exclusive/parallel pair shows that the actual issue is future-contract information at independent authority materialization.  A stronger counterexample shows that copying an exclusive choice gate twice product-composes `{a}` from one copy with `{b}` from the other even when both copies resolve their leaf handles to the same cells. | Do not enumerate a future graph.  Maintain a versioned, authority-relevant future contract whose configuration family conservatively covers real co-durable completions.  A shared Fork must alias the authoritative choice/fence controller, not merely its leaf cells.  Computation may fork without authority; independently redeemable authority requires an exact contract for completeness, shared ratification, deferred delegation, or worst-case rejection. | Removes another broad novelty claim.  Adds contract-relative arbitrary-extension soundness, no-silent-topology-expansion, a gate-cloning witness, and a precisely scoped observation lower bound to the typed runtime contribution. |
-| 2026-08-02 | A useful tool might simply choose `Copy/Share/Split/Persist/Revalidate/Reject` for each checkpointed resource. | Plan 9 `rfork` already exposes per-resource share/copy/new flags; *Secure the Clones* verifies declared maximum-sharing clone policies; PORTICO compiles explicit agent contracts to epoch capabilities.  The newly mechanized minimal-nonface theorem instead shows that controller correlation and redemption-cell identity are independent obligations, and that multiway constraints can be invisible to every pairwise check. | Make the artifact a semantic-first, witness-carrying compiler.  For fixed candidate semantics under complete observation and controllable pruning, compute the greatest pointwise-safe subfamily; derive the least required co-location equivalence and its finest exact partition; separately repair lineage collisions and preserve durable commitments; only then lower to runtime actions.  Return a Pareto frontier when share/split implementations are incomparable. | Rejects clone-policy code generation as the contribution.  The prospective novelty is a typed Fork/Restore/Merge synthesis theorem jointly transporting future correlation, linear redemption, and durable commitment, plus refinement-certified lease reuse and minimal counterexamples. |
+| 2026-08-02 | A useful tool might simply choose `Copy/Share/Split/Persist/Revalidate/Reject` for each checkpointed resource. | Plan 9 `rfork` already exposes per-resource share/copy/new flags; *Secure the Clones* verifies declared maximum-sharing clone policies; PORTICO compiles explicit agent contracts to epoch capabilities.  The newly mechanized minimal-nonface theorem instead shows that controller correlation and redemption-cell identity are independent obligations, and that multiway constraints can be invisible to every pairwise check. | Make the artifact a semantic-first, witness-carrying compiler.  For fixed candidate semantics under complete observation and controllable pruning, compute the greatest pointwise-safe subfamily; derive the least common-coordination equivalence under maximal asynchronous recombination and its finest exact partition; separately repair lineage collisions and preserve durable commitments; only then lower to runtime actions.  Return a Pareto frontier when share/split implementations are incomparable. | Rejects clone-policy code generation as the contribution.  The prospective novelty is a typed Fork/Restore/Merge synthesis theorem jointly transporting future correlation, linear redemption, and durable commitment, plus refinement-certified lease reuse and minimal counterexamples. |
 
 ## Hypothesis Frontier
 
@@ -169,20 +169,46 @@ from resource names.  It is a small witness-carrying compiler:
 runtime manifest + typed history operation + Future_Gamma
   + cell/atom lineage + outstanding leases + durable receipts
     -> greatest pointwise-safe subfamily (in the fixed fully observed scope)
-    -> least required co-location equivalence / finest exact partition
+    -> least common-coordination equivalence under localProduct
+       / finest exact partition
     -> cell alias, reissue, or re-admission obligations
     -> receipt/lease refinement obligations
     -> backend actions + proof certificate, or minimal counterexample
 ```
 
 The first synthesis layer is now mechanized.  Minimal nonfaces induce the
-least co-location equivalence; its classes are the finest exact controller
-partition up to label renaming.  A cut constraint generates an additive policy
+least common-coordination equivalence under maximal asynchronous `localProduct`;
+its classes are the finest exact controller partition up to label renaming.
+This is a logical coordination domain, not a physical co-location mandate: a
+shared durable controller, lock, or consensus protocol may realize it.  A cut constraint generates an additive policy
 witness, and the `U_{2,3}` fixture proves that every pair can be legal while a
 three-way combination still requires one coordination component.  This layer
 is credited as classical combinatorial machinery.  The paper-level theorem
-must still compose it operationally with local-injective cell transport and
-monotone receipts for a typed Fork/Restore/Merge step.
+must still derive the candidate and required families from a typed
+Fork/Restore/Merge step rather than accepting them as arbitrary input.
+
+The second synthesis layer is also mechanized for a fixed, fully observed
+candidate family.  A durable prefix `P` is extracted from immutable receipt
+bindings only behind a checked safe-ledger gate (where atom identity names an
+indivisible unit and includes authority root/issuer, scope, and version/nonce
+or unit index), plus a separate proof that the prefix belongs to the source
+family.  A future
+configuration `C` survives exactly when its lineage map is
+locally injective, its image is disjoint from `P`, and `P ∪ image(C)` was
+admitted by the source contract.  Universal preservation of every additive
+source policy is equivalent to this pointed configuration morphism.  Filtering
+by these conditions yields the greatest safe subfamily in this fixed scope; a
+separate theorem requires every behavior supplied as `required` to survive.
+This prevents silent pruning relative to that input but is genuinely
+non-vacuous only after the typed generator proves the required family complete
+and meaningful.  The resulting downset composes with the first
+layer to derive its least required coordination relation.  A receipt for one
+atom blocks snapshot-only resurrection of that atom, while a distinct-atom
+future remains structurally transportable.  The latter shows only that this
+invariant does not force blanket invalidation; it is not yet a lease/version
+refinement theorem.  These results prove authorization-commitment transport,
+not remote exactly-once execution, exact concrete reachability, or correctness
+of an as-yet-unwritten typed family generator.
 
 **Current RQs.** (1) prove the policy-independent cell-quotient bridge while
 crediting classical configuration morphisms; (2) derive commitment

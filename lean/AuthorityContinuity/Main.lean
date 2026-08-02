@@ -3,6 +3,7 @@ import AuthorityContinuity.PlanTokenStrengthening
 import AuthorityContinuity.TokenWeightedAccounting
 import AuthorityContinuity.ConfigurationCellQuotient
 import AuthorityContinuity.CoordinationDecomposition
+import AuthorityContinuity.DurablePrefixTransport
 import AuthorityContinuity.RedemptionCommitment
 import AuthorityContinuity.RedemptionDomainFrontier
 
@@ -25,10 +26,16 @@ finite additive certificate while deliberately making no novelty claim for
 local injectivity or configuration preservation themselves.
 The exact coordination module characterizes candidate controller partitions by
 minimal nonfaces and identifies their connected-component closure as the
-least required co-location equivalence, whose classes give the finest exact
-partition up to block-label renaming.  Its static combinatorics are
+least common-coordination equivalence under maximal asynchronous `localProduct`
+recombination, whose classes give the finest exact partition up to block-label
+renaming.  Physical co-location is not implied.  Its static combinatorics are
 classical supporting machinery; the checked output is intended to drive a
 later typed Fork/Restore/Merge compiler.
+The durable-prefix module composes that spatial decomposition with immutable
+receipt history.  It characterizes prefix-sensitive transport, computes the
+greatest safe pruning of a fixed future family, checks whether typed required
+behaviors survive that pruning, and derives the finest exact controller
+partition for the admitted future.
 The operational commitment core separately derives unit-atom conservation,
 ledger/phase monotonicity, and exact fresh-event accounting for
 Prepare/Replay/Retry/Crash/Settle.  Fork/Restore/Merge preservation remains a
