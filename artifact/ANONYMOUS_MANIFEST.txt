@@ -18,6 +18,7 @@ lean/AuthorityContinuity/ControllerCoverAdmission.lean
 lean/AuthorityContinuity/CoordinationDecomposition.lean
 lean/AuthorityContinuity/DurablePrefixTransport.lean
 lean/AuthorityContinuity/FullPlanInvariant.lean
+lean/AuthorityContinuity/IdentityQuotientSeparation.lean
 lean/AuthorityContinuity/Lifecycle.lean
 lean/AuthorityContinuity/Main.lean
 lean/AuthorityContinuity/Merge.lean

@@ -6,6 +6,7 @@ import AuthorityContinuity.CoordinationDecomposition
 import AuthorityContinuity.DurablePrefixTransport
 import AuthorityContinuity.TypedHistoryAdmission
 import AuthorityContinuity.ControllerCoverAdmission
+import AuthorityContinuity.IdentityQuotientSeparation
 import AuthorityContinuity.RedemptionCommitment
 import AuthorityContinuity.RedemptionDomainFrontier
 
