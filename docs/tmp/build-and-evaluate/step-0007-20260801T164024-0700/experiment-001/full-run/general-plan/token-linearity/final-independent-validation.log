@@ -1,0 +1,122 @@
+Final independent Lean-strengthening validation, including incremental repair
+(sanitized)
+Date: 2026-08-01 (America/Vancouver)
+
+Privacy / mutation boundary
+- Read only repository formal sources and prior aggregate/review reports.
+- Did not read private agent traces.
+- Did not edit any repository Lean or paper source.
+- Review-only Lean witnesses were created outside the repository and removed
+  after validation.
+- No Git operation was run.
+
+1. Authoritative audit
+Command (toolchain prefix elided):
+  cd lean && scripts/audit.sh
+Result: PASS, exit 0.
+
+Observed stages:
+- project placeholder scan: PASS
+- project axiom/constant declaration scan: PASS
+- frozen theorem/control inventory: PASS
+- full AuthorityContinuity build: PASS (8504 jobs)
+- Audit.lean dependency replay: PASS
+- sorryAx rejection: PASS (no hit)
+- dependency whitelist: PASS
+- fresh leanchecker replay of AuthorityContinuity.Main: PASS
+- terminal message:
+  audit: all frozen theorems and controls present; source and kernel replay
+  checks passed
+
+Audit summary:
+- paired #check/#print-axioms entries in Audit.lean: 71
+- dependency-result lines in the audit log: 71
+- frozen theorem entries in audit.sh: 65
+- unique permitted dependencies observed:
+  Classical.choice
+  Quot.sound
+  propext
+
+2. Prior independent attack replay
+Command:
+  lake env lean <review-only IndependentAudit.lean>
+Result: PASS, exit 0.
+
+Reconfirmed:
+- valid-transfer durable-origin defense
+- invalid token source repaired by a target-only Restriction gate
+- prior FullPlan/token separation boundary
+- only propext, Quot.sound, and Classical.choice dependencies
+
+3. Fresh review-only attack suite
+Command:
+  lake env lean <temporary FinalAttack.lean>
+Result: PASS, exit 0 (non-semantic linter warnings only).
+
+Kernel-checked obligations/witnesses:
+- generic computed-transfer non-amplification iff target current-linearity
+- total-rho-drop local acceptance and empty target fiber
+- malformed origin-drift transfer changes origin but is rejected by the real
+  transfer checker
+- target-only Restriction repair from an invalid token source
+- two contradictory external token specs both satisfy their own algebraic
+  weighted partition on the same ledger
+- an admitted canonical TokenPositiveStep starts Safe and WitnessCoherent,
+  reaches UnifiedProjection, but does not preserve CurrentWitnessCoherent when
+  the surviving child demand decreases from 1 to 0
+
+All printed review-witness dependencies were within:
+  Classical.choice
+  Quot.sound
+  propext
+
+4. Paper-facing audit inventory closure
+Result: PASS.
+
+Audit.lean now checks and prints, and audit.sh now freezes:
+- TokenState.checkLinear_sound
+- LinearValid.token_trichotomy
+- checkTransferTokenNonAmplifying_complete
+- ZeroDemandRegression.zero_demand_parallelFork_rejected
+- token_positive_trace_projects_actual
+- token_positive_trace_version_mono
+
+The final inventory also includes duplicated_token_fiber_cardinality and the
+new generic transport theorem.  A separate static replay confirmed every one
+of the 65 frozen theorem names is declared and has a dependency record.  All
+71 Audit.lean checks are paired with #print axioms commands.
+
+5. Independent generic-theorem replay
+Command:
+  lake env lean <temporary IncrementalAudit.lean>
+Result: PASS, exit 0.
+
+The review independently reproved
+afterTransfer_nonAmplifying_iff_target_current_linear using only
+afterTransfer_currentFiber_eq and the definition of
+TransferTokenNonAmplifying; it did not invoke the newly added generic theorem.
+The replay depends only on:
+  propext
+  Quot.sound
+
+The authoritative generic theorem and its canonical, simulation-Merge, and
+direct-Merge corollaries all elaborated and printed only permitted kernel
+dependencies.
+
+6. Paper wording check
+- Generic iff is stated for any transported/reclassified target with the
+  actual-rho computed child batch, and only claims current-fiber cardinality.
+- Weighted results are called token-spec promise/disposition projections, not
+  reachable actual current/bound demand.
+- WitnessCoherent is explicitly optional, one-state, not derived from safety,
+  not trace-preserved, and not connected to old claim-indexed rows.
+- One optional editorial nit remains: "Weighted demand" in the security-goal
+  paragraph could be changed to "token-spec promised weights" for maximum
+  clarity; surrounding definitions already disambiguate it.
+
+Overall validation status
+- Core theorem correctness under stated premises: PASS.
+- Complete paper-facing theorem inventory: PASS.
+- Generic theorem and three corollaries: PASS.
+- Paper claim alignment on token-spec promise/WitnessCoherent: PASS.
+- Final verdict: ACCEPT under stated fixed-plan-epoch premises and non-goals.

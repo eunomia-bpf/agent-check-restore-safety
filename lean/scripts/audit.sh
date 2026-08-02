@@ -33,6 +33,44 @@ frozen_constants=(
   effect_coverage
   concrete_trace_authority_safety
   fresh_fragment_parallel_preflight
+  checkLinear_sound
+  LinearValid.token_trichotomy
+  checkTransferTokenNonAmplifying_sound
+  checkTransferTokenNonAmplifying_complete
+  afterTransfer_nonAmplifying_iff_target_current_linear
+  canonical_nonAmplifying_iff_target_current_linear
+  simulationMerge_nonAmplifying_iff_target_current_linear
+  directMerge_nonAmplifying_iff_target_current_linear
+  bound_durable_origin_afterTransfer
+  afterTransfer_preserves_linearity_source
+  checkCanonicalTokenDefended_eq_tokenPlan
+  checkSimulationMergeTokenDefended_eq_tokenPlan
+  checkDirectMergeTokenDefended_eq_tokenPlan
+  checkedCanonicalDefended_token_step
+  checkedSimulationMergeDefended_token_step
+  checkedDirectMergeDefended_token_step
+  prepare_preserves_linearity_source
+  restriction_preserves_linearity_source
+  revoke_preserves_linearity_source
+  tokenPositiveStep_preserves_linearity_source_decomposed
+  token_positive_trace_preserves_source_decomposed
+  tokenPositiveStep_preserves_existing_operation_token
+  prepare_binding_new_or_preserved
+  token_positive_trace_preserves_existing_operation_token
+  within_plan_epoch_initial_tokens_fixed
+  token_positive_trace_projects_actual
+  token_positive_trace_version_mono
+  zero_demand_parallelFork_rejected
+  duplicated_token_fiber_cardinality
+  weighted_partition_exact
+  cardinality_partition
+  zero_weight_token_visible
+  tokenSafe_unifiedProjection
+  unifiedProjection_initial_same_epoch
+  trace_preserves_unifiedProjection
+  trace_initial_token_same_epoch
+  current_witness_matches_spec
+  binding_witness_matches_spec
 )
 
 # Named executable controls are elaborated through `AuthorityContinuity.Main`.

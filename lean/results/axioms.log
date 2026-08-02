@@ -256,3 +256,424 @@ AuthorityContinuity.TopologyExamples.fresh_fragment_parallel_preflight :
 'AuthorityContinuity.TopologyExamples.fresh_fragment_parallel_preflight' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
+AuthorityContinuity.PlanTokenLinearity.TokenState.checkLinear_sound.{uC, uI, uB, uG, uO, uS, uT} {Coord : Type uC}
+  {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS} {Token : Type uT}
+  [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch] [LinearOrder Branch]
+  [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot] [Fintype Token]
+  [LinearOrder Token] (S : PlanTokenLinearity.TokenState) (h : S.checkLinear = true) : S.LinearValid
+'AuthorityContinuity.PlanTokenLinearity.TokenState.checkLinear_sound' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenLinearity.TokenState.LinearValid.token_trichotomy.{uC, uI, uB, uG, uO, uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] {S : PlanTokenLinearity.TokenState} (h : S.LinearValid) {t : Token}
+  (ht : t ∈ S.ledger.initial) :
+  S.ledger.disposition t = PlanTokenLinearity.TokenDisposition.remaining ∧
+      (S.currentFiber t).card = 1 ∧ (S.bindingFiber t).card = 0 ∨
+    S.ledger.disposition t = PlanTokenLinearity.TokenDisposition.prepared ∧
+        (S.currentFiber t).card = 0 ∧ (S.bindingFiber t).card = 1 ∨
+      S.ledger.disposition t = PlanTokenLinearity.TokenDisposition.withdrawn ∧
+        (S.currentFiber t).card = 0 ∧ (S.bindingFiber t).card = 0
+'AuthorityContinuity.PlanTokenLinearity.TokenState.LinearValid.token_trichotomy' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.checkTransferTokenNonAmplifying_sound.{uC, uI, uB, uG, uO, uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] (S : PlanTokenLinearity.TokenState) (tr : Transfer Claim Branch)
+  (h : PlanTokenStrengthening.checkTransferTokenNonAmplifying S tr = true) :
+  PlanTokenStrengthening.TransferTokenNonAmplifying S tr
+'AuthorityContinuity.PlanTokenStrengthening.checkTransferTokenNonAmplifying_sound' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.checkTransferTokenNonAmplifying_complete.{uC, uI, uB, uG, uO, uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] (S : PlanTokenLinearity.TokenState) (tr : Transfer Claim Branch)
+  (h : PlanTokenStrengthening.TransferTokenNonAmplifying S tr) :
+  PlanTokenStrengthening.checkTransferTokenNonAmplifying S tr = true
+'AuthorityContinuity.PlanTokenStrengthening.checkTransferTokenNonAmplifying_complete' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.afterTransfer_nonAmplifying_iff_target_current_linear.{uC, uI, uB, uG, uO,
+    uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] (S : PlanTokenLinearity.TokenState) (tr : Transfer Claim Branch)
+  (controller' : PlanInvariant.PlanData.InvariantState)
+  (hRemaining : controller'.plan.remaining = Plan.childBatch tr S.controller.plan.remaining) :
+  PlanTokenStrengthening.TransferTokenNonAmplifying S tr ↔
+    ∀ t ∈ (PlanTokenLinearity.TokenLedger.afterTransfer controller' S.ledger tr).initial,
+      ({ controller := controller',
+                ledger := PlanTokenLinearity.TokenLedger.afterTransfer controller' S.ledger tr }.currentFiber
+            t).card ≤
+        1
+'AuthorityContinuity.PlanTokenStrengthening.afterTransfer_nonAmplifying_iff_target_current_linear' depends on axioms: [propext,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.canonical_nonAmplifying_iff_target_current_linear.{uC, uI, uB, uG, uO, uS,
+    uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] (S : PlanTokenLinearity.TokenState) (tr : Transfer Claim Branch)
+  (op : CanonicalOp Branch) :
+  PlanTokenStrengthening.TransferTokenNonAmplifying S tr ↔
+    ∀ t ∈ (PlanTokenLinearity.advanceCanonical S tr op).ledger.initial,
+      ((PlanTokenLinearity.advanceCanonical S tr op).currentFiber t).card ≤ 1
+'AuthorityContinuity.PlanTokenStrengthening.canonical_nonAmplifying_iff_target_current_linear' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.simulationMerge_nonAmplifying_iff_target_current_linear.{uC, uI, uB, uG, uO,
+    uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] (S : PlanTokenLinearity.TokenState) (d : MergeDescriptor Claim Branch) :
+  PlanTokenStrengthening.TransferTokenNonAmplifying S d.transfer ↔
+    ∀ t ∈ (PlanTokenLinearity.advanceSimulationMergeToken S d).ledger.initial,
+      ((PlanTokenLinearity.advanceSimulationMergeToken S d).currentFiber t).card ≤ 1
+'AuthorityContinuity.PlanTokenStrengthening.simulationMerge_nonAmplifying_iff_target_current_linear' depends on axioms: [propext,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.directMerge_nonAmplifying_iff_target_current_linear.{uC, uI, uB, uG, uO, uS,
+    uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] (S : PlanTokenLinearity.TokenState) (d : MergeDescriptor Claim Branch) :
+  PlanTokenStrengthening.TransferTokenNonAmplifying S d.transfer ↔
+    ∀ t ∈ (PlanTokenLinearity.advanceDirectMergeToken S d).ledger.initial,
+      ((PlanTokenLinearity.advanceDirectMergeToken S d).currentFiber t).card ≤ 1
+'AuthorityContinuity.PlanTokenStrengthening.directMerge_nonAmplifying_iff_target_current_linear' depends on axioms: [propext,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.bound_durable_origin_afterTransfer.{uC, uI, uB, uG, uO, uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] (A : LifecycleState Coord Claim Branch Grant Operation)
+  (controller' : PlanInvariant.PlanData.InvariantState) (ledger : PlanTokenLinearity.TokenLedger Claim Token)
+  (tr : Transfer Claim Branch) (hWF : A.LWF) (hCore : Transfer.CoreValid A tr) {e : Operation} {c : Claim}
+  (hop : A.opClaim e = some c) :
+  (PlanTokenLinearity.TokenLedger.afterTransfer controller' ledger tr).origin c = ledger.origin c
+'AuthorityContinuity.PlanTokenStrengthening.bound_durable_origin_afterTransfer' depends on axioms: [propext, Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.afterTransfer_preserves_linearity_source.{uC, uI, uB, uG, uO, uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] (S : PlanTokenLinearity.TokenState)
+  (controller' : PlanInvariant.PlanData.InvariantState) (tr : Transfer Claim Branch)
+  (hRemaining : controller'.plan.remaining = Plan.childBatch tr S.controller.plan.remaining)
+  (hOpClaim : controller'.lifecycle.opClaim = S.controller.lifecycle.opClaim) (hWF : S.controller.lifecycle.LWF)
+  (hCore : Transfer.CoreValid S.controller.lifecycle tr) (hSource : S.LinearValid)
+  (hNonAmplifying : PlanTokenStrengthening.TransferTokenNonAmplifying S tr) :
+  { controller := controller',
+      ledger := PlanTokenLinearity.TokenLedger.afterTransfer controller' S.ledger tr }.LinearValid
+'AuthorityContinuity.PlanTokenStrengthening.afterTransfer_preserves_linearity_source' depends on axioms: [propext,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.checkCanonicalTokenDefended_eq_tokenPlan.{uC, uI, uB, uG, uO, uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] (S : PlanTokenLinearity.TokenState) (tr : Transfer Claim Branch)
+  (op : CanonicalOp Branch) (offered : ℕ) :
+  PlanTokenStrengthening.checkCanonicalTokenDefended S tr op offered =
+    PlanTokenLinearity.checkCanonicalTokenPlan S tr op offered
+'AuthorityContinuity.PlanTokenStrengthening.checkCanonicalTokenDefended_eq_tokenPlan' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.checkSimulationMergeTokenDefended_eq_tokenPlan.{uC, uI, uB, uG, uO, uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] (S : PlanTokenLinearity.TokenState) (d : MergeDescriptor Claim Branch)
+  (project : Finset Branch → Finset Branch) (offered : ℕ) :
+  PlanTokenStrengthening.checkSimulationMergeTokenDefended S d project offered =
+    PlanTokenLinearity.checkSimulationMergeTokenPlan S d project offered
+'AuthorityContinuity.PlanTokenStrengthening.checkSimulationMergeTokenDefended_eq_tokenPlan' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.checkDirectMergeTokenDefended_eq_tokenPlan.{uC, uI, uB, uG, uO, uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] (S : PlanTokenLinearity.TokenState) (d : MergeDescriptor Claim Branch)
+  (offered : ℕ) :
+  PlanTokenStrengthening.checkDirectMergeTokenDefended S d offered =
+    PlanTokenLinearity.checkDirectMergeTokenPlan S d offered
+'AuthorityContinuity.PlanTokenStrengthening.checkDirectMergeTokenDefended_eq_tokenPlan' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.checkedCanonicalDefended_token_step.{uC, uI, uB, uG, uO, uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] (S : PlanTokenLinearity.TokenState) (tr : Transfer Claim Branch)
+  (op : CanonicalOp Branch) (offered : ℕ) (hSafe : PlanInvariant.PlanData.Safe S.controller)
+  (h : PlanTokenStrengthening.checkCanonicalTokenDefended S tr op offered = true) :
+  PlanTokenLinearity.TokenPositiveStep S LifecycleState.Label.tau (PlanTokenLinearity.advanceCanonical S tr op)
+'AuthorityContinuity.PlanTokenStrengthening.checkedCanonicalDefended_token_step' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.checkedSimulationMergeDefended_token_step.{uC, uI, uB, uG, uO, uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] (S : PlanTokenLinearity.TokenState) (d : MergeDescriptor Claim Branch)
+  (project : Finset Branch → Finset Branch) (offered : ℕ) (hSafe : PlanInvariant.PlanData.Safe S.controller)
+  (h : PlanTokenStrengthening.checkSimulationMergeTokenDefended S d project offered = true) :
+  PlanTokenLinearity.TokenPositiveStep S LifecycleState.Label.tau (PlanTokenLinearity.advanceSimulationMergeToken S d)
+'AuthorityContinuity.PlanTokenStrengthening.checkedSimulationMergeDefended_token_step' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.checkedDirectMergeDefended_token_step.{uC, uI, uB, uG, uO, uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] (S : PlanTokenLinearity.TokenState) (d : MergeDescriptor Claim Branch)
+  (offered : ℕ) (hSafe : PlanInvariant.PlanData.Safe S.controller)
+  (h : PlanTokenStrengthening.checkDirectMergeTokenDefended S d offered = true) :
+  PlanTokenLinearity.TokenPositiveStep S LifecycleState.Label.tau (PlanTokenLinearity.advanceDirectMergeToken S d)
+'AuthorityContinuity.PlanTokenStrengthening.checkedDirectMergeDefended_token_step' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.prepare_preserves_linearity_source.{uC, uI, uB, uG, uO, uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] (S : PlanTokenLinearity.TokenState) (assignment : Operation → Option Claim)
+  (hSource : S.LinearValid)
+  (hAssignment :
+    Plan.AssignmentValid S.controller.lifecycle
+      (PlanInvariant.PlanData.headGroup S.controller.lifecycle S.controller.plan) assignment) :
+  (PlanTokenLinearity.advancePrepare S assignment).LinearValid
+'AuthorityContinuity.PlanTokenStrengthening.prepare_preserves_linearity_source' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.restriction_preserves_linearity_source.{uC, uI, uB, uG, uO, uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] (S : PlanTokenLinearity.TokenState) (owners : Finset Branch) (keep : Finset Claim)
+  (hSource : S.LinearValid) : (PlanTokenLinearity.advanceRestrictionToken S owners keep).LinearValid
+'AuthorityContinuity.PlanTokenStrengthening.restriction_preserves_linearity_source' depends on axioms: [propext,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.revoke_preserves_linearity_source.{uC, uI, uB, uG, uO, uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] (S : PlanTokenLinearity.TokenState) (g : Grant) (hSource : S.LinearValid) :
+  (PlanTokenLinearity.advanceRevokeToken S g).LinearValid
+'AuthorityContinuity.PlanTokenStrengthening.revoke_preserves_linearity_source' depends on axioms: [propext, Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.tokenPositiveStep_preserves_linearity_source_decomposed.{uC, uI, uB, uG, uO,
+    uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] {S S' : PlanTokenLinearity.TokenState}
+  {eta : LifecycleState.Label Operation Claim} (h : PlanTokenLinearity.TokenPositiveStep S eta S')
+  (hSource : S.LinearValid) : S'.LinearValid
+'AuthorityContinuity.PlanTokenStrengthening.tokenPositiveStep_preserves_linearity_source_decomposed' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.token_positive_trace_preserves_source_decomposed.{uC, uI, uB, uG, uO, uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] {S S' : PlanTokenLinearity.TokenState}
+  (hTrace : PlanTokenLinearity.TokenPositiveTrace S S') (hSafe : PlanTokenLinearity.TokenSafe S) :
+  PlanTokenLinearity.TokenSafe S'
+'AuthorityContinuity.PlanTokenStrengthening.token_positive_trace_preserves_source_decomposed' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.tokenPositiveStep_preserves_existing_operation_token.{uC, uI, uB, uG, uO, uS,
+    uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] {S S' : PlanTokenLinearity.TokenState}
+  {eta : LifecycleState.Label Operation Claim} (h : PlanTokenLinearity.TokenPositiveStep S eta S')
+  (hSafe : PlanTokenLinearity.TokenSafe S) {e : Operation} {c : Claim} {t : Token}
+  (hBound : PlanTokenStrengthening.OperationTokenBound S e c t) : PlanTokenStrengthening.OperationTokenBound S' e c t
+'AuthorityContinuity.PlanTokenStrengthening.tokenPositiveStep_preserves_existing_operation_token' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.prepare_binding_new_or_preserved.{uC, uI, uB, uG, uO, uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] (S : PlanTokenLinearity.TokenState) (assignment : Operation → Option Claim)
+  {e : Operation} {c : Claim}
+  (h : (PlanTokenLinearity.advancePrepare S assignment).controller.lifecycle.opClaim e = some c) :
+  assignment e = some c ∨ assignment e = none ∧ S.controller.lifecycle.opClaim e = some c
+'AuthorityContinuity.PlanTokenStrengthening.prepare_binding_new_or_preserved' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.token_positive_trace_preserves_existing_operation_token.{uC, uI, uB, uG, uO,
+    uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] {S S' : PlanTokenLinearity.TokenState}
+  (hTrace : PlanTokenLinearity.TokenPositiveTrace S S') (hSafe : PlanTokenLinearity.TokenSafe S) {e : Operation}
+  {c : Claim} {t : Token} (hBound : PlanTokenStrengthening.OperationTokenBound S e c t) :
+  PlanTokenStrengthening.OperationTokenBound S' e c t
+'AuthorityContinuity.PlanTokenStrengthening.token_positive_trace_preserves_existing_operation_token' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenStrengthening.within_plan_epoch_initial_tokens_fixed.{uC, uI, uB, uG, uO, uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] {S S' : PlanTokenLinearity.TokenState}
+  (hTrace : PlanTokenLinearity.TokenPositiveTrace S S') : S.ledger.initial = S'.ledger.initial
+'AuthorityContinuity.PlanTokenStrengthening.within_plan_epoch_initial_tokens_fixed' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenLinearity.token_positive_trace_projects_actual.{uC, uI, uB, uG, uO, uS, uT}
+  {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS}
+  {Token : Type uT} [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch]
+  [LinearOrder Branch] [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  [Fintype Token] [LinearOrder Token] {S S' : PlanTokenLinearity.TokenState}
+  (hTrace : PlanTokenLinearity.TokenPositiveTrace S S') : AbstractTrace S.controller.lifecycle S'.controller.lifecycle
+'AuthorityContinuity.PlanTokenLinearity.token_positive_trace_projects_actual' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenLinearity.token_positive_trace_version_mono.{uC, uI, uB, uG, uO, uS, uT} {Coord : Type uC}
+  {Claim : Type uI} {Branch : Type uB} {Grant : Type uG} {Operation : Type uO} {Slot : Type uS} {Token : Type uT}
+  [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch] [LinearOrder Branch]
+  [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot] [Fintype Token]
+  [LinearOrder Token] {S S' : PlanTokenLinearity.TokenState} (hTrace : PlanTokenLinearity.TokenPositiveTrace S S') :
+  S.controller.plan.version ≤ S'.controller.plan.version
+'AuthorityContinuity.PlanTokenLinearity.token_positive_trace_version_mono' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenLinearity.ZeroDemandRegression.zero_demand_parallelFork_rejected :
+  PlanInvariant.PlanData.checkCanonicalPlan PlanTokenLinearity.ZeroDemandRegression.source
+        PlanTokenLinearity.ZeroDemandRegression.plan PlanTokenLinearity.ZeroDemandRegression.split
+        PlanTokenLinearity.ZeroDemandRegression.fork 0 =
+      true ∧
+    PlanTokenLinearity.checkCanonicalTokenPlan PlanTokenLinearity.ZeroDemandRegression.state
+        PlanTokenLinearity.ZeroDemandRegression.split PlanTokenLinearity.ZeroDemandRegression.fork 0 =
+      false
+'AuthorityContinuity.PlanTokenLinearity.ZeroDemandRegression.zero_demand_parallelFork_rejected' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.PlanTokenLinearity.ZeroDemandRegression.duplicated_token_fiber_cardinality :
+  ((PlanTokenLinearity.advanceCanonical PlanTokenLinearity.ZeroDemandRegression.state
+            PlanTokenLinearity.ZeroDemandRegression.split PlanTokenLinearity.ZeroDemandRegression.fork).currentFiber
+        0).card =
+    2
+'AuthorityContinuity.PlanTokenLinearity.ZeroDemandRegression.duplicated_token_fiber_cardinality' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TokenWeightedAccounting.PlanEpochSpec.weighted_partition_exact.{uE, uN, uC, uI, uB, uG, uO, uS}
+  {Epoch : Type uE} {Serial : Type uN} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG}
+  {Operation : Type uO} {Slot : Type uS} [Fintype Epoch] [LinearOrder Epoch] [Fintype Serial] [LinearOrder Serial]
+  [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch] [LinearOrder Branch]
+  [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  (spec : TokenWeightedAccounting.PlanEpochSpec) (S : PlanTokenLinearity.TokenState) (s : Slot) (k : Coord) :
+  spec.B S s k + spec.E S s k + spec.W S s k = spec.P S s k
+'AuthorityContinuity.TokenWeightedAccounting.PlanEpochSpec.weighted_partition_exact' depends on axioms: [propext,
+ Quot.sound]
+AuthorityContinuity.TokenWeightedAccounting.PlanEpochSpec.cardinality_partition.{uE, uN, uC, uI, uB, uG, uO, uS}
+  {Epoch : Type uE} {Serial : Type uN} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG}
+  {Operation : Type uO} {Slot : Type uS} [Fintype Epoch] [LinearOrder Epoch] [Fintype Serial] [LinearOrder Serial]
+  [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch] [LinearOrder Branch]
+  [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  (S : PlanTokenLinearity.TokenState) :
+  (TokenWeightedAccounting.PlanEpochSpec.remainingTokens S).card +
+        (TokenWeightedAccounting.PlanEpochSpec.preparedTokens S).card +
+      (TokenWeightedAccounting.PlanEpochSpec.withdrawnTokens S).card =
+    S.ledger.initial.card
+'AuthorityContinuity.TokenWeightedAccounting.PlanEpochSpec.cardinality_partition' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TokenWeightedAccounting.PlanEpochSpec.zero_weight_token_visible.{uE, uN, uC, uI, uB, uG, uO, uS}
+  {Epoch : Type uE} {Serial : Type uN} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG}
+  {Operation : Type uO} {Slot : Type uS} [Fintype Epoch] [LinearOrder Epoch] [Fintype Serial] [LinearOrder Serial]
+  [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch] [LinearOrder Branch]
+  [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  (spec : TokenWeightedAccounting.PlanEpochSpec) (S : PlanTokenLinearity.TokenState)
+  {t : TokenWeightedAccounting.EToken} (ht : t ∈ S.ledger.initial) (_zero : ∀ (k : Coord), spec.weight t k = 0) :
+  t ∈ TokenWeightedAccounting.PlanEpochSpec.remainingTokens S ∨
+    t ∈ TokenWeightedAccounting.PlanEpochSpec.preparedTokens S ∨
+      t ∈ TokenWeightedAccounting.PlanEpochSpec.withdrawnTokens S
+'AuthorityContinuity.TokenWeightedAccounting.PlanEpochSpec.zero_weight_token_visible' depends on axioms: [propext,
+ Quot.sound]
+AuthorityContinuity.TokenWeightedAccounting.tokenSafe_unifiedProjection.{uE, uN, uC, uI, uB, uG, uO, uS}
+  {Epoch : Type uE} {Serial : Type uN} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG}
+  {Operation : Type uO} {Slot : Type uS} [Fintype Epoch] [LinearOrder Epoch] [Fintype Serial] [LinearOrder Serial]
+  [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch] [LinearOrder Branch]
+  [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  (spec : TokenWeightedAccounting.PlanEpochSpec) {S : PlanTokenLinearity.TokenState}
+  (hSafe : PlanTokenLinearity.TokenSafe S) (hInstalled : S.ledger.initial = spec.initial) :
+  TokenWeightedAccounting.UnifiedProjection spec S
+'AuthorityContinuity.TokenWeightedAccounting.tokenSafe_unifiedProjection' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TokenWeightedAccounting.unifiedProjection_initial_same_epoch.{uE, uN, uC, uI, uB, uG, uO, uS}
+  {Epoch : Type uE} {Serial : Type uN} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG}
+  {Operation : Type uO} {Slot : Type uS} [Fintype Epoch] [LinearOrder Epoch] [Fintype Serial] [LinearOrder Serial]
+  [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch] [LinearOrder Branch]
+  [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  {spec : TokenWeightedAccounting.PlanEpochSpec} {S : PlanTokenLinearity.TokenState}
+  (h : TokenWeightedAccounting.UnifiedProjection spec S) {t : TokenWeightedAccounting.EToken}
+  (ht : t ∈ S.ledger.initial) : t.epoch = spec.epoch
+'AuthorityContinuity.TokenWeightedAccounting.unifiedProjection_initial_same_epoch' depends on axioms: [propext,
+ Quot.sound]
+AuthorityContinuity.TokenWeightedAccounting.trace_preserves_unifiedProjection.{uE, uN, uC, uI, uB, uG, uO, uS}
+  {Epoch : Type uE} {Serial : Type uN} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG}
+  {Operation : Type uO} {Slot : Type uS} [Fintype Epoch] [LinearOrder Epoch] [Fintype Serial] [LinearOrder Serial]
+  [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch] [LinearOrder Branch]
+  [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  (spec : TokenWeightedAccounting.PlanEpochSpec) {S S' : PlanTokenLinearity.TokenState}
+  (hTrace : PlanTokenLinearity.TokenPositiveTrace S S')
+  (hStart : TokenWeightedAccounting.TrustedPlanEpochStart spec S) :
+  PlanTokenLinearity.TokenSafe S' ∧ TokenWeightedAccounting.UnifiedProjection spec S'
+'AuthorityContinuity.TokenWeightedAccounting.trace_preserves_unifiedProjection' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TokenWeightedAccounting.trace_initial_token_same_epoch.{uE, uN, uC, uI, uB, uG, uO, uS}
+  {Epoch : Type uE} {Serial : Type uN} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG}
+  {Operation : Type uO} {Slot : Type uS} [Fintype Epoch] [LinearOrder Epoch] [Fintype Serial] [LinearOrder Serial]
+  [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch] [LinearOrder Branch]
+  [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  (spec : TokenWeightedAccounting.PlanEpochSpec) {S S' : PlanTokenLinearity.TokenState}
+  (hTrace : PlanTokenLinearity.TokenPositiveTrace S S') (hStart : TokenWeightedAccounting.TrustedPlanEpochStart spec S)
+  {t : TokenWeightedAccounting.EToken} (ht : t ∈ S'.ledger.initial) : t.epoch = spec.epoch
+'AuthorityContinuity.TokenWeightedAccounting.trace_initial_token_same_epoch' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TokenWeightedAccounting.current_witness_matches_spec.{uE, uN, uC, uI, uB, uG, uO, uS}
+  {Epoch : Type uE} {Serial : Type uN} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG}
+  {Operation : Type uO} {Slot : Type uS} [Fintype Epoch] [LinearOrder Epoch] [Fintype Serial] [LinearOrder Serial]
+  [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch] [LinearOrder Branch]
+  [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  {spec : TokenWeightedAccounting.PlanEpochSpec} {S : PlanTokenLinearity.TokenState}
+  (h : TokenWeightedAccounting.CurrentWitnessCoherent spec S) {t : TokenWeightedAccounting.EToken} {c : Claim}
+  (hc : c ∈ S.currentFiber t) :
+  (∀ (k : Coord), S.controller.lifecycle.auth.demand c k = spec.weight t k) ∧
+    S.controller.plan.rootSlot c = some (spec.root t)
+'AuthorityContinuity.TokenWeightedAccounting.current_witness_matches_spec' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.TokenWeightedAccounting.binding_witness_matches_spec.{uE, uN, uC, uI, uB, uG, uO, uS}
+  {Epoch : Type uE} {Serial : Type uN} {Coord : Type uC} {Claim : Type uI} {Branch : Type uB} {Grant : Type uG}
+  {Operation : Type uO} {Slot : Type uS} [Fintype Epoch] [LinearOrder Epoch] [Fintype Serial] [LinearOrder Serial]
+  [Fintype Coord] [DecidableEq Coord] [Fintype Claim] [LinearOrder Claim] [Fintype Branch] [LinearOrder Branch]
+  [DecidableEq Grant] [Fintype Operation] [DecidableEq Operation] [Fintype Slot] [LinearOrder Slot]
+  {spec : TokenWeightedAccounting.PlanEpochSpec} {S : PlanTokenLinearity.TokenState}
+  (h : TokenWeightedAccounting.WitnessCoherent spec S) {t : TokenWeightedAccounting.EToken} {e : Operation}
+  (he : e ∈ S.bindingFiber t) :
+  ∃ c,
+    S.controller.lifecycle.opClaim e = some c ∧
+      S.ledger.origin c = some t ∧
+        (∀ (k : Coord), S.controller.lifecycle.auth.demand c k = spec.weight t k) ∧
+          S.controller.plan.rootSlot c = some (spec.root t)
+'AuthorityContinuity.TokenWeightedAccounting.binding_witness_matches_spec' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
