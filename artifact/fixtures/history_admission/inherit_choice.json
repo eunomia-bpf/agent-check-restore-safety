@@ -1,0 +1,162 @@
+{
+  "authority": {
+    "allowed_maxima": [
+      [
+        "grant:G:0",
+        "grant:G:1"
+      ]
+    ],
+    "atoms": [
+      "grant:G:0",
+      "grant:G:1"
+    ],
+    "id": "grant:G"
+  },
+  "ledger": [
+    {
+      "atom": "grant:G:0",
+      "authority": "grant:G",
+      "cell_anchor": "receipt-cell:0",
+      "effect_digest": "sha256:effect-0",
+      "epoch": "epoch:0",
+      "operation": "send:0",
+      "phase": "prepared",
+      "receipt": "receipt:0"
+    }
+  ],
+  "operation": {
+    "aliases": [],
+    "controller_future_maxima": [
+      [
+        "controller:choice"
+      ]
+    ],
+    "gate_uses": [
+      {
+        "controller_anchor": "controller:choice",
+        "controller_version": 1,
+        "gate_origin": "gate-origin:choice",
+        "id": "gate-use:choice",
+        "local_maxima": [
+          [
+            {
+              "local_id": "left-effect",
+              "role": "left"
+            }
+          ],
+          [
+            {
+              "local_id": "right-effect",
+              "role": "right"
+            }
+          ]
+        ],
+        "members": [
+          {
+            "local_id": "left-effect",
+            "role": "left"
+          },
+          {
+            "local_id": "right-effect",
+            "role": "right"
+          }
+        ]
+      }
+    ],
+    "kind": "ForkChoice",
+    "left": {
+      "cells": [
+        {
+          "atom": "grant:G:1",
+          "cell_anchor": "target-cell:left",
+          "commitment_key": "effect:left",
+          "effect_binding_digest": "sha256:target-effect-left",
+          "lease": "lease:old-left",
+          "local_id": "left-effect",
+          "parent": "old-left"
+        }
+      ],
+      "coverage": "exact",
+      "may_maxima": [
+        [
+          "left-effect"
+        ]
+      ],
+      "required_maxima": [
+        [
+          "left-effect"
+        ]
+      ]
+    },
+    "right": {
+      "cells": [
+        {
+          "atom": "grant:G:1",
+          "cell_anchor": "target-cell:right",
+          "commitment_key": "effect:right",
+          "effect_binding_digest": "sha256:target-effect-right",
+          "lease": "lease:old-left",
+          "local_id": "right-effect",
+          "parent": "old-left"
+        }
+      ],
+      "coverage": "exact",
+      "may_maxima": [
+        [
+          "right-effect"
+        ]
+      ],
+      "required_maxima": [
+        [
+          "right-effect"
+        ]
+      ]
+    },
+    "target_version": 2
+  },
+  "request_id": "fixture:inherit-choice",
+  "schema": "history-admission.request.v1",
+  "source": {
+    "cells": [
+      {
+        "atom": "grant:G:1",
+        "cell_anchor": "old-cell:left",
+        "id": "old-left"
+      },
+      {
+        "atom": "grant:G:1",
+        "cell_anchor": "old-cell:right",
+        "id": "old-right"
+      }
+    ],
+    "future_maxima": [
+      [
+        "old-left"
+      ],
+      [
+        "old-right"
+      ]
+    ],
+    "leases": [
+      {
+        "atom": "grant:G:1",
+        "cell": "old-left",
+        "id": "lease:old-left",
+        "issued_version": 1
+      }
+    ],
+    "receipt_frontier": [
+      {
+        "atom": "grant:G:0",
+        "authority": "grant:G",
+        "cell_anchor": "receipt-cell:0",
+        "effect_digest": "sha256:effect-0",
+        "epoch": "epoch:0",
+        "operation": "send:0",
+        "phase": "prepared",
+        "receipt": "receipt:0"
+      }
+    ],
+    "version": 1
+  }
+}

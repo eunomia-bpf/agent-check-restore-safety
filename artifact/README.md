@@ -28,11 +28,28 @@ one, re-enter contract support, or be reused as a supposedly fresh descendant.
 The artifact does not implement lifecycle Reserve, Select/Abort, generic
 Merge certificates, or the complete paper LTS.
 
+The `history_admission/` package is a second, small artifact driven by the
+new typed-history theory.  An untrusted compiler derives normalized semantic
+cells, typed Fork/Restore/Merge futures, the greatest durable-prefix-safe
+residual, and controller-realization witnesses.  A separate bit-mask verifier
+reconstructs the result without importing the compiler.  It checks the more
+general implementation relation `Required <= Physical <= Admitted`, so an
+implementation may safely omit optional behavior without being confused with
+a GateClone over-approximation.  Its seal certifies structural history
+admission only; it deliberately does not authorize an external effect.
+
 Run the unit tests and deterministic exhaustive explorer from this directory:
 
 ```sh
 python3 -m unittest -v
 python3 explore.py
+python3 -m history_admission.compiler \
+  fixtures/history_admission/inherit_choice.json \
+  --output /tmp/history-admission-result.json
+python3 -m history_admission.verifier \
+  fixtures/history_admission/inherit_choice.json \
+  /tmp/history-admission-result.json \
+  --output /tmp/history-admission-seal.json
 ```
 
 To save the canonical machine-readable report:
@@ -141,9 +158,14 @@ allowlist only:
 tar --sort=name --owner=0 --group=0 --numeric-owner \
   -czf /tmp/authority-continuity-artifact.tar.gz \
   README.md authority_continuity.py explore.py \
-  test_authority_continuity.py results/exhaustive.json
+  test_authority_continuity.py results/exhaustive.json \
+  history_admission/README.md history_admission/__init__.py \
+  history_admission/schema.py history_admission/compiler.py \
+  history_admission/verifier.py \
+  fixtures/history_admission/inherit_choice.json \
+  test_history_admission.py
 tar -tzf /tmp/authority-continuity-artifact.tar.gz
 ```
 
-The archive must contain exactly those five files and no `.git`, `docs`, cache,
-bytecode, absolute path, or user metadata.
+The archive must contain exactly those twelve files and no `.git`, `docs`,
+cache, bytecode, absolute path, or user metadata.
