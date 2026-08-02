@@ -1,0 +1,7 @@
+0987a3e9f45d6c44410cda31cf3bc9bbc6df52992772354d17a466612454594c  adapter/plan_pilot.py
+c3b12c53ed3dd607b12f6f44395437cbbde0f82f678f8f4dca13b07b1fb3e176  adapter/plan_replay.py
+b661719f221deec795d3d3439cc135cdeab69d92cf16ac7f4bc94d3a6ca41edb  adapter/plan_pilot_runner.py
+1e23806eac59c35a17ccc4c67f8a4317f53d2aef9b58dba75708b9c2052f292d  adapter/test_plan_pilot.py
+949e1fac5e466980a212ab954b1f341f1c37273e18dddc4c3047d370438c24ea  docs/tmp/build-and-evaluate/step-0007-20260801T164024-0700/experiment-001/full-run/plan-adapter-pilot/aggregate.json
+f42753b37596b11f82d6a1214ec5765097f674b811d844baec0f712fe8d32077  docs/tmp/build-and-evaluate/step-0007-20260801T164024-0700/experiment-001/full-run/plan-adapter-pilot/repair_adversarial_tests.py
+3aa69b6f78514cc088192fe412b129d1dc9822be86214bb8ba08988dea79c405  docs/tmp/build-and-evaluate/step-0007-20260801T164024-0700/experiment-001/full-run/plan-adapter-pilot/repair-report.md

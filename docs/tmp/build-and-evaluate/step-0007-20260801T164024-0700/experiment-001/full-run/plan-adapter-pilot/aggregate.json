@@ -1,0 +1,1 @@
+{"baselines":{"global_version":{"false_invalidation":5,"safe_replan":2,"safe_reuse":0,"unsafe_reuse":0},"per_object":{"false_invalidation":3,"safe_replan":0,"safe_reuse":2,"unsafe_reuse":2},"semantic_transport":{"false_invalidation":0,"safe_replan":2,"safe_reuse":5,"unsafe_reuse":0}},"cases":7,"oracle_safe_semantic_reuse_cases":5,"schema":"plan-adapter-pilot.aggregate.v2"}
