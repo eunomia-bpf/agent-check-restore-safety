@@ -1035,9 +1035,14 @@ noncomputable def partitionLocalFamilies
     LocalControllerFamilies U G :=
   inducedLocalFamilies admitted (partitionAccess blockOf)
 
-/-- The canonical partition adapter runs all block controllers together. -/
+/-- The canonical partition adapter may run any subset of block controllers;
+an omitted controller contributes the empty local choice. -/
 def partitionCoLive : CoLiveFamily G :=
-  {(Finset.univ : Finset G)}
+  (Finset.univ : Finset G).powerset
+
+theorem partitionCoLive_downwardClosed :
+    CoLiveDownwardClosed (partitionCoLive (G := G)) := by
+  simp [CoLiveDownwardClosed, partitionCoLive]
 
 /-- The canonical cover plan chooses the block restriction of `C` at each
 controller. -/
@@ -1122,8 +1127,6 @@ theorem rawPhysical_partition_eq_localProduct
         (partitionLocalFamilies admitted blockOf)
         partitionCoLive C).1 hRaw
     rcases hValid with ⟨hActiveMem, hPlanLocal, hAccess, hUnion⟩
-    have hActive : plan.active = (Finset.univ : Finset G) := by
-      simpa [partitionCoLive] using hActiveMem
     have hPieceAdmitted : ∀ g ∈ plan.active, plan.piece g ∈ admitted := by
       intro g hg
       exact ((mem_partitionLocalFamilies_iff
@@ -1138,21 +1141,36 @@ theorem rawPhysical_partition_eq_localProduct
     simp only [localProduct, Finset.mem_filter, Finset.mem_powerset]
     refine ⟨hSupport, ?_⟩
     intro g
-    have hgActive : g ∈ plan.active := by
-      rw [hActive]
-      exact Finset.mem_univ g
-    have hPartSubset : blockPart blockOf g C ⊆ plan.piece g := by
-      intro u huPart
-      have huC := (Finset.mem_filter.mp huPart).1
-      have hBlock := (Finset.mem_filter.mp huPart).2
-      have huUnion : u ∈ plan.active.biUnion plan.piece := by
-        rw [hUnion]
-        exact huC
-      obtain ⟨g', hg', huPiece⟩ := Finset.mem_biUnion.mp huUnion
-      have hAssigned : blockOf u = g' := hAccess g' hg' u huPiece
-      have hEq : g' = g := hAssigned.symm.trans hBlock
-      simpa [hEq] using huPiece
-    exact wf.downwardClosed (hPieceAdmitted g hgActive) hPartSubset
+    by_cases hgActive : g ∈ plan.active
+    · have hPartSubset : blockPart blockOf g C ⊆ plan.piece g := by
+        intro u huPart
+        have huC := (Finset.mem_filter.mp huPart).1
+        have hBlock := (Finset.mem_filter.mp huPart).2
+        have huUnion : u ∈ plan.active.biUnion plan.piece := by
+          rw [hUnion]
+          exact huC
+        obtain ⟨g', hg', huPiece⟩ := Finset.mem_biUnion.mp huUnion
+        have hAssigned : blockOf u = g' := hAccess g' hg' u huPiece
+        have hEq : g' = g := hAssigned.symm.trans hBlock
+        simpa [hEq] using huPiece
+      exact wf.downwardClosed (hPieceAdmitted g hgActive) hPartSubset
+    · have hPartEmpty : blockPart blockOf g C = ∅ := by
+        ext u
+        constructor
+        · intro huPart
+          exfalso
+          have huC := (Finset.mem_filter.mp huPart).1
+          have hBlock := (Finset.mem_filter.mp huPart).2
+          have huUnion : u ∈ plan.active.biUnion plan.piece := by
+            rw [hUnion]
+            exact huC
+          obtain ⟨g', hg', huPiece⟩ := Finset.mem_biUnion.mp huUnion
+          have hAssigned : blockOf u = g' := hAccess g' hg' u huPiece
+          have hEq : g' = g := hAssigned.symm.trans hBlock
+          exact hgActive (hEq ▸ hg')
+        · intro huEmpty
+          simp at huEmpty
+      simpa [hPartEmpty] using wf.empty_mem
   · intro C hLocal
     rw [mem_rawPhysicalCoverProduct_iff]
     exact ⟨partitionCoverPlan blockOf C,
