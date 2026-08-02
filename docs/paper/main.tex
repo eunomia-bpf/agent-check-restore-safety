@@ -49,40 +49,33 @@
 \maketitle
 
 \begin{abstract}
-Agent runtimes increasingly fork, restore, and merge execution histories while
-protected tool effects and receipts outlive any restorable workspace.
-A history edge can leave every prospective effect individually fresh while
-changing which sets of effects may become durable together, so locally correct
-gates can compose a globally forbidden outcome.
-The root cause is that security state includes a fixed durable past, a
-correlated future, and a controller layout that can outlive or recombine the
-restored workspace.
-Rollback protocols, per-effect commit checks, linear capabilities, and
-history-sensitive monitors each address part of this boundary but do not by
-themselves decide a topology-changing edge and its controller realization.
-We observe that a sound boundary must normalize copied handles into semantic
-redemption cells independently from gate uses into authoritative controller
-instances, then admit each topology-changing edge against both the durable
-prefix and the product of controllers that may remain live.
-We formalize six typed Fork/Restore/Merge operators that derive candidate and
-required future families, compute the greatest prefix-compatible admitted
-family, and check the manifest relation
-$\mathsf{Required}\subseteq\mathsf{RawPhysical}
-\subseteq\mathsf{Admitted}$.
-We prove a four-way semantic classifier, compositional certificate inheritance,
-an exact minimal-obstruction criterion, a contract-indexed sufficient
-co-liveness observation arity, and an arbitrary-$k$ family proving that bound
-worst-case tight.
-A small compiler and independent verifier expand full declared $\Gamma$, retain
-its coverage attestation, report the required arity, and propose the greatest
-downward-closed restriction of submitted $\Gamma$ whose fixed-access/local-family
-product is admitted, without treating that restriction as installed; Lean~4 checks
-the theorem spine, 31 focused compiler/verifier tests (55 across the complete
-artifact) cover the executable distinctions, and an exhaustive oracle agrees
-on all 2,166 three-cell refinement instances.
-Public and private Claude/Codex trajectories characterize the need for online
-adapters and their telemetry gaps, but neither traces nor a verified
-history-admission seal is treated as effect authorization.
+Agent runtimes fork, restore, and merge execution histories while protected
+tool effects and receipts outlive any restorable workspace.  Such an edge can
+leave each prospective effect fresh yet change which sets may become durable
+together, so locally correct gates can compose a forbidden outcome.  Rollback,
+per-effect checks, linear capabilities, and history monitors address parts of
+this boundary but do not decide a topology-changing edge and its controller
+realization.
+We define \emph{history admission}.  Three family constructors instantiate six
+Fork/Restore/Merge labels, derive candidate and required futures, and
+filter them against an immutable receipt prefix.  Controller covers then
+check $\mathsf{Required}\subseteq\mathsf{RawPhysical}
+\subseteq\mathsf{Admitted}$.  Exact admission distinguishes copied handles
+from authoritative controller instances: a mechanized two-by-two construction
+fixes all other raw fields and shows that erasing either identity normalization
+conflates ready and nonready worlds.
+We prove a contract-indexed exact evidence boundary: after normalization, the
+complete co-liveness projection through arity $r$ determines readiness.
+Fixed-manifest collisions make each raw identity relation nonerasable, while an
+arbitrary-$k$ cover rules out uniformly lower projection arity in the worst case.
+Greatest prefix admission, obstruction extraction, and pruning make the result
+constructive.  A small compiler
+accepts full exact evidence, its attested exact $r$-projection, or a diagnostic
+upper bound, and an independent verifier recomputes the result.  Lean~4 checks
+the theorem spine, 38 focused tests (62 total) cover the executables, and an
+oracle agrees on all 2,166 three-cell refinement instances.  Claude/Codex
+trajectories expose adapter telemetry gaps but provide neither safety labels
+nor effect authorization.
 \end{abstract}
 
 \input{sections/introduction}

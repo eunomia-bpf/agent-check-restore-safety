@@ -1056,6 +1056,102 @@ AuthorityContinuity.TypedHistoryAdmission.Fixtures.SharedLease.parallel_shared_l
 'AuthorityContinuity.TypedHistoryAdmission.Fixtures.SharedLease.parallel_shared_lease_has_no_pruning_repair' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.rawPhysicalCoverProduct_mono_coLive.{uU, uG} {U : Type uU} {G : Type uG}
+  [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G] (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G)
+  {left right : ControllerCoverAdmission.CoLiveFamily G} (hSubset : left ⊆ right) :
+  ControllerCoverAdmission.rawPhysicalCoverProduct access families left ⊆
+    ControllerCoverAdmission.rawPhysicalCoverProduct access families right
+'AuthorityContinuity.ControllerCoverAdmission.rawPhysicalCoverProduct_mono_coLive' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.safeGroup_of_subset.{uU, uG} {U : Type uU} {G : Type uG} [Fintype U]
+  [DecidableEq U] [Fintype G] [DecidableEq G] (admitted : Finset (Finset U))
+  (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G) {active smaller : Finset G}
+  (hSafe : ControllerCoverAdmission.SafeGroup admitted access families active) (hSubset : smaller ⊆ active) :
+  ControllerCoverAdmission.SafeGroup admitted access families smaller
+'AuthorityContinuity.ControllerCoverAdmission.safeGroup_of_subset' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.hereditarySafeCoLiveRestriction_subset.{uU, uG} {U : Type uU} {G : Type uG}
+  [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G] (admitted : Finset (Finset U))
+  (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G) (coLive : ControllerCoverAdmission.CoLiveFamily G) :
+  ControllerCoverAdmission.hereditarySafeCoLiveRestriction admitted access families coLive ⊆ coLive
+'AuthorityContinuity.ControllerCoverAdmission.hereditarySafeCoLiveRestriction_subset' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.hereditarySafeCoLiveRestriction_downwardClosed.{uU, uG} {U : Type uU}
+  {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G] (admitted : Finset (Finset U))
+  (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G) (coLive : ControllerCoverAdmission.CoLiveFamily G)
+  (hDown : ControllerCoverAdmission.CoLiveDownwardClosed coLive) :
+  ControllerCoverAdmission.CoLiveDownwardClosed
+    (ControllerCoverAdmission.hereditarySafeCoLiveRestriction admitted access families coLive)
+'AuthorityContinuity.ControllerCoverAdmission.hereditarySafeCoLiveRestriction_downwardClosed' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.hereditarySafeCoLiveRestriction_rawPhysical_safe.{uU, uG} {U : Type uU}
+  {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G] (admitted : Finset (Finset U))
+  (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G) (coLive : ControllerCoverAdmission.CoLiveFamily G) :
+  ControllerCoverAdmission.rawPhysicalCoverProduct access families
+      (ControllerCoverAdmission.hereditarySafeCoLiveRestriction admitted access families coLive) ⊆
+    admitted
+'AuthorityContinuity.ControllerCoverAdmission.hereditarySafeCoLiveRestriction_rawPhysical_safe' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.hereditarySafeCoLiveRestriction_greatest.{uU, uG} {U : Type uU}
+  {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G] (admitted : Finset (Finset U))
+  (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G)
+  (coLive delta : ControllerCoverAdmission.CoLiveFamily G)
+  (hDeltaDown : ControllerCoverAdmission.CoLiveDownwardClosed delta) (hDeltaSubset : delta ⊆ coLive)
+  (hDeltaSafe : ControllerCoverAdmission.rawPhysicalCoverProduct access families delta ⊆ admitted) :
+  delta ⊆ ControllerCoverAdmission.hereditarySafeCoLiveRestriction admitted access families coLive
+'AuthorityContinuity.ControllerCoverAdmission.hereditarySafeCoLiveRestriction_greatest' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.required_subset_hereditarySafeCoLiveRestriction_iff_exists_deploymentReady.{uU,
+    uG}
+  {U : Type uU} {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G]
+  (required admitted : Finset (Finset U)) (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G) (coLive : ControllerCoverAdmission.CoLiveFamily G)
+  (hCoLiveDown : ControllerCoverAdmission.CoLiveDownwardClosed coLive) :
+  required ⊆
+      ControllerCoverAdmission.rawPhysicalCoverProduct access families
+        (ControllerCoverAdmission.hereditarySafeCoLiveRestriction admitted access families coLive) ↔
+    ∃ delta,
+      ControllerCoverAdmission.CoLiveDownwardClosed delta ∧
+        delta ⊆ coLive ∧ ControllerCoverAdmission.DeploymentReady required admitted access families delta
+'AuthorityContinuity.ControllerCoverAdmission.required_subset_hereditarySafeCoLiveRestriction_iff_exists_deploymentReady' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.prefixThenControllerRepair_rawPhysical_safe.{uU, uG, uS} {U : Type uU}
+  {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G] {A : Type uS} [Fintype A] [DecidableEq A]
+  (source : Finset (Finset A)) (durable : Finset A) (candidate : Finset (Finset U)) (ell : U → A)
+  (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G) (coLive : ControllerCoverAdmission.CoLiveFamily G) :
+  ControllerCoverAdmission.rawPhysicalCoverProduct access families
+      (ControllerCoverAdmission.prefixThenControllerRepair source durable candidate ell access families coLive) ⊆
+    DurablePrefixTransport.safeFuture source durable candidate ell
+'AuthorityContinuity.ControllerCoverAdmission.prefixThenControllerRepair_rawPhysical_safe' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.prefixThenControllerRepair_greatest.{uU, uG, uS} {U : Type uU}
+  {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G] {A : Type uS} [Fintype A] [DecidableEq A]
+  (source : Finset (Finset A)) (durable : Finset A) (candidate admitted : Finset (Finset U)) (ell : U → A)
+  (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G)
+  (coLive delta : ControllerCoverAdmission.CoLiveFamily G) (hAdmittedSubset : admitted ⊆ candidate)
+  (hPrefixSafe : DurablePrefixTransport.PrefixConfigMorphism source durable admitted ell)
+  (hDeltaDown : ControllerCoverAdmission.CoLiveDownwardClosed delta) (hDeltaSubset : delta ⊆ coLive)
+  (hDeltaPhysical : ControllerCoverAdmission.rawPhysicalCoverProduct access families delta ⊆ admitted) :
+  delta ⊆ ControllerCoverAdmission.prefixThenControllerRepair source durable candidate ell access families coLive
+'AuthorityContinuity.ControllerCoverAdmission.prefixThenControllerRepair_greatest' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
 AuthorityContinuity.ControllerCoverAdmission.not_deploymentReady_iff_overpermission_or_missingRequired.{uU, uG}
   {U : Type uU} {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G]
   (required admitted : Finset (Finset U)) (access : ControllerCoverAdmission.ControllerAccess U G)
@@ -1096,6 +1192,43 @@ AuthorityContinuity.ControllerCoverAdmission.rawPhysical_partition_eq_localProdu
       (ControllerCoverAdmission.partitionLocalFamilies admitted blockOf) ControllerCoverAdmission.partitionCoLive =
     CoordinationDecomposition.localProduct admitted blockOf
 'AuthorityContinuity.ControllerCoverAdmission.rawPhysical_partition_eq_localProduct' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.partitionCoLive_downwardClosed.{uG} {G : Type uG} [Fintype G]
+  [DecidableEq G] : ControllerCoverAdmission.CoLiveDownwardClosed ControllerCoverAdmission.partitionCoLive
+'AuthorityContinuity.ControllerCoverAdmission.partitionCoLive_downwardClosed' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.IdentityQuotientSeparation.Fixtures.identityQuotient_worlds_wellStructured :
+  IdentityQuotientSeparation.Fixtures.WellStructured IdentityQuotientSeparation.Fixtures.sharedCellOf
+      IdentityQuotientSeparation.Fixtures.sharedControllerOf ∧
+    IdentityQuotientSeparation.Fixtures.WellStructured IdentityQuotientSeparation.Fixtures.sharedCellOf
+        IdentityQuotientSeparation.Fixtures.distinctControllerOf ∧
+      IdentityQuotientSeparation.Fixtures.WellStructured IdentityQuotientSeparation.Fixtures.distinctCellOf
+          IdentityQuotientSeparation.Fixtures.sharedControllerOf ∧
+        IdentityQuotientSeparation.Fixtures.WellStructured IdentityQuotientSeparation.Fixtures.distinctCellOf
+          IdentityQuotientSeparation.Fixtures.distinctControllerOf
+'AuthorityContinuity.IdentityQuotientSeparation.Fixtures.identityQuotient_worlds_wellStructured' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.IdentityQuotientSeparation.Fixtures.identityQuotients_independently_necessary :
+  (IdentityQuotientSeparation.Fixtures.eraseCellQuotient IdentityQuotientSeparation.Fixtures.sharedCellOf
+          IdentityQuotientSeparation.Fixtures.distinctControllerOf =
+        IdentityQuotientSeparation.Fixtures.eraseCellQuotient IdentityQuotientSeparation.Fixtures.distinctCellOf
+          IdentityQuotientSeparation.Fixtures.distinctControllerOf ∧
+      IdentityQuotientSeparation.Fixtures.Ready IdentityQuotientSeparation.Fixtures.sharedCellOf
+          IdentityQuotientSeparation.Fixtures.distinctControllerOf ∧
+        ¬IdentityQuotientSeparation.Fixtures.Ready IdentityQuotientSeparation.Fixtures.distinctCellOf
+            IdentityQuotientSeparation.Fixtures.distinctControllerOf) ∧
+    IdentityQuotientSeparation.Fixtures.eraseControllerQuotient IdentityQuotientSeparation.Fixtures.distinctCellOf
+          IdentityQuotientSeparation.Fixtures.sharedControllerOf =
+        IdentityQuotientSeparation.Fixtures.eraseControllerQuotient IdentityQuotientSeparation.Fixtures.distinctCellOf
+          IdentityQuotientSeparation.Fixtures.distinctControllerOf ∧
+      IdentityQuotientSeparation.Fixtures.Ready IdentityQuotientSeparation.Fixtures.distinctCellOf
+          IdentityQuotientSeparation.Fixtures.sharedControllerOf ∧
+        ¬IdentityQuotientSeparation.Fixtures.Ready IdentityQuotientSeparation.Fixtures.distinctCellOf
+            IdentityQuotientSeparation.Fixtures.distinctControllerOf
+'AuthorityContinuity.IdentityQuotientSeparation.Fixtures.identityQuotients_independently_necessary' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
 AuthorityContinuity.ControllerCoverAdmission.canonicalPartition_deploymentReady_iff_mustCoordinate.{uU, uG}
@@ -1192,6 +1325,99 @@ AuthorityContinuity.ControllerCoverAdmission.no_exact_checker_of_observation_col
 'AuthorityContinuity.ControllerCoverAdmission.no_exact_checker_of_observation_collision' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.rawPhysicalCoverProduct_has_card_bounded_plan.{uU, uG} {U : Type uU}
+  {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G]
+  (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G) (coLive : ControllerCoverAdmission.CoLiveFamily G)
+  (hCoLiveDown : ControllerCoverAdmission.CoLiveDownwardClosed coLive) {C : Finset U}
+  (hRaw : C ∈ ControllerCoverAdmission.rawPhysicalCoverProduct access families coLive) :
+  ∃ plan, plan.Valid access families coLive C ∧ plan.active.card ≤ C.card
+'AuthorityContinuity.ControllerCoverAdmission.rawPhysicalCoverProduct_has_card_bounded_plan' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.contractObservationArity_is_bound.{uU} {U : Type uU} [Fintype U]
+  [DecidableEq U] (required admitted : Finset (Finset U)) :
+  ControllerCoverAdmission.ContractObservationBound required admitted
+    (ControllerCoverAdmission.contractObservationArity required admitted)
+'AuthorityContinuity.ControllerCoverAdmission.contractObservationArity_is_bound' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.deploymentReady_iff_of_contract_observation.{uU, uG} {U : Type uU}
+  {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G] (arity : ℕ)
+  (required admitted : Finset (Finset U)) (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G)
+  (left right : ControllerCoverAdmission.CoLiveFamily G)
+  (hFamiliesDown : ControllerCoverAdmission.LocalFamiliesDownwardClosed families)
+  (hLeftDown : ControllerCoverAdmission.CoLiveDownwardClosed left)
+  (hRightDown : ControllerCoverAdmission.CoLiveDownwardClosed right)
+  (hProjection :
+    ControllerCoverAdmission.coLiveProjection arity left = ControllerCoverAdmission.coLiveProjection arity right)
+  (hBound : ControllerCoverAdmission.ContractObservationBound required admitted arity) :
+  ControllerCoverAdmission.DeploymentReady required admitted access families left ↔
+    ControllerCoverAdmission.DeploymentReady required admitted access families right
+'AuthorityContinuity.ControllerCoverAdmission.deploymentReady_iff_of_contract_observation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.deploymentReady_iff_of_contractObservationArity_projection_eq.{uU, uG}
+  {U : Type uU} {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G]
+  (required admitted : Finset (Finset U)) (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G)
+  (left right : ControllerCoverAdmission.CoLiveFamily G)
+  (hFamiliesDown : ControllerCoverAdmission.LocalFamiliesDownwardClosed families)
+  (hLeftDown : ControllerCoverAdmission.CoLiveDownwardClosed left)
+  (hRightDown : ControllerCoverAdmission.CoLiveDownwardClosed right)
+  (hProjection :
+    ControllerCoverAdmission.coLiveProjection (ControllerCoverAdmission.contractObservationArity required admitted)
+        left =
+      ControllerCoverAdmission.coLiveProjection (ControllerCoverAdmission.contractObservationArity required admitted)
+        right) :
+  ControllerCoverAdmission.DeploymentReady required admitted access families left ↔
+    ControllerCoverAdmission.DeploymentReady required admitted access families right
+'AuthorityContinuity.ControllerCoverAdmission.deploymentReady_iff_of_contractObservationArity_projection_eq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.coLiveProjection_downwardClosed.{uG} {G : Type uG} [Fintype G]
+  [DecidableEq G] (arity : ℕ) (coLive : ControllerCoverAdmission.CoLiveFamily G) :
+  ControllerCoverAdmission.CoLiveDownwardClosed (ControllerCoverAdmission.coLiveProjection arity coLive)
+'AuthorityContinuity.ControllerCoverAdmission.coLiveProjection_downwardClosed' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.coLiveProjection_idempotent.{uG} {G : Type uG} [Fintype G] [DecidableEq G]
+  (arity : ℕ) (coLive : ControllerCoverAdmission.CoLiveFamily G) :
+  ControllerCoverAdmission.coLiveProjection arity (ControllerCoverAdmission.coLiveProjection arity coLive) =
+    ControllerCoverAdmission.coLiveProjection arity coLive
+'AuthorityContinuity.ControllerCoverAdmission.coLiveProjection_idempotent' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.deploymentReady_iff_contractProjection.{uU, uG} {U : Type uU} {G : Type uG}
+  [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G] (required admitted : Finset (Finset U))
+  (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G) (coLive : ControllerCoverAdmission.CoLiveFamily G)
+  (hFamiliesDown : ControllerCoverAdmission.LocalFamiliesDownwardClosed families)
+  (hCoLiveDown : ControllerCoverAdmission.CoLiveDownwardClosed coLive) :
+  ControllerCoverAdmission.DeploymentReady required admitted access families
+      (ControllerCoverAdmission.coLiveProjection (ControllerCoverAdmission.contractObservationArity required admitted)
+        coLive) ↔
+    ControllerCoverAdmission.DeploymentReady required admitted access families coLive
+'AuthorityContinuity.ControllerCoverAdmission.deploymentReady_iff_contractProjection' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.deploymentReady_iff_of_attested_exact_projection.{uU, uG} {U : Type uU}
+  {G : Type uG} [Fintype U] [DecidableEq U] [Fintype G] [DecidableEq G] (required admitted : Finset (Finset U))
+  (access : ControllerCoverAdmission.ControllerAccess U G)
+  (families : ControllerCoverAdmission.LocalControllerFamilies U G)
+  (submitted hidden : ControllerCoverAdmission.CoLiveFamily G)
+  (hFamiliesDown : ControllerCoverAdmission.LocalFamiliesDownwardClosed families)
+  (hHiddenDown : ControllerCoverAdmission.CoLiveDownwardClosed hidden)
+  (hExact :
+    submitted =
+      ControllerCoverAdmission.coLiveProjection (ControllerCoverAdmission.contractObservationArity required admitted)
+        hidden) :
+  ControllerCoverAdmission.DeploymentReady required admitted access families submitted ↔
+    ControllerCoverAdmission.DeploymentReady required admitted access families hidden
+'AuthorityContinuity.ControllerCoverAdmission.deploymentReady_iff_of_attested_exact_projection' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
 AuthorityContinuity.ControllerCoverAdmission.Fixtures.pairwise_realization_ready :
   ControllerCoverAdmission.DeploymentReady CoordinationDecomposition.Fixtures.rankTwoFamily
     CoordinationDecomposition.Fixtures.rankTwoFamily ControllerCoverAdmission.Fixtures.completeAccess3
@@ -1245,6 +1471,65 @@ AuthorityContinuity.ControllerCoverAdmission.Fixtures.no_pairwise_observation_ch
             ControllerCoverAdmission.CoLiveFamily (Fin 3) → Bool) :
   ¬ControllerCoverAdmission.ExactThroughObservation (ControllerCoverAdmission.coLiveProjection 2) check
 'AuthorityContinuity.ControllerCoverAdmission.Fixtures.no_pairwise_observation_checker_exact' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.Fixtures.ArbitraryArity.bounded_realization_ready (k : ℕ) :
+  ControllerCoverAdmission.DeploymentReady (ControllerCoverAdmission.Fixtures.ArbitraryArity.rankFamily k)
+    (ControllerCoverAdmission.Fixtures.ArbitraryArity.rankFamily k)
+    (ControllerCoverAdmission.Fixtures.ArbitraryArity.completeAccess k)
+    (ControllerCoverAdmission.Fixtures.ArbitraryArity.singletonLocal k)
+    (ControllerCoverAdmission.Fixtures.ArbitraryArity.boundedCoLive k)
+'AuthorityContinuity.ControllerCoverAdmission.Fixtures.ArbitraryArity.bounded_realization_ready' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.Fixtures.ArbitraryArity.full_realization_not_ready (k : ℕ) :
+  ¬ControllerCoverAdmission.DeploymentReady (ControllerCoverAdmission.Fixtures.ArbitraryArity.rankFamily k)
+      (ControllerCoverAdmission.Fixtures.ArbitraryArity.rankFamily k)
+      (ControllerCoverAdmission.Fixtures.ArbitraryArity.completeAccess k)
+      (ControllerCoverAdmission.Fixtures.ArbitraryArity.singletonLocal k)
+      (ControllerCoverAdmission.Fixtures.ArbitraryArity.fullCoLive k)
+'AuthorityContinuity.ControllerCoverAdmission.Fixtures.ArbitraryArity.full_realization_not_ready' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.Fixtures.ArbitraryArity.full_configuration_minimalNonface (k : ℕ)
+  (hk : 1 ≤ k) :
+  CoordinationDecomposition.MinimalNonface (ControllerCoverAdmission.Fixtures.ArbitraryArity.rankFamily k) Finset.univ
+'AuthorityContinuity.ControllerCoverAdmission.Fixtures.ArbitraryArity.full_configuration_minimalNonface' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.Fixtures.ArbitraryArity.full_configuration_correlationCutWitness (k : ℕ)
+  (hk : 1 ≤ k) :
+  ControllerCoverAdmission.CorrelationCutWitness (ControllerCoverAdmission.Fixtures.ArbitraryArity.rankFamily k)
+    (ControllerCoverAdmission.Fixtures.ArbitraryArity.completeAccess k)
+    (ControllerCoverAdmission.Fixtures.ArbitraryArity.singletonLocal k)
+    (ControllerCoverAdmission.Fixtures.ArbitraryArity.fullCoLive k) Finset.univ
+'AuthorityContinuity.ControllerCoverAdmission.Fixtures.ArbitraryArity.full_configuration_correlationCutWitness' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.Fixtures.ArbitraryArity.contractObservationArity_rankFamily (k : ℕ)
+  (hk : 1 ≤ k) :
+  ControllerCoverAdmission.contractObservationArity (ControllerCoverAdmission.Fixtures.ArbitraryArity.rankFamily k)
+      (ControllerCoverAdmission.Fixtures.ArbitraryArity.rankFamily k) =
+    k + 1
+'AuthorityContinuity.ControllerCoverAdmission.Fixtures.ArbitraryArity.contractObservationArity_rankFamily' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.Fixtures.ArbitraryArity.projection_collision (k : ℕ) :
+  ControllerCoverAdmission.coLiveProjection k (ControllerCoverAdmission.Fixtures.ArbitraryArity.boundedCoLive k) =
+    ControllerCoverAdmission.coLiveProjection k (ControllerCoverAdmission.Fixtures.ArbitraryArity.fullCoLive k)
+'AuthorityContinuity.ControllerCoverAdmission.Fixtures.ArbitraryArity.projection_collision' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.ControllerCoverAdmission.Fixtures.ArbitraryArity.no_lower_arity_downwardClosed_observation_checker_exact
+  (k : ℕ)
+  (check :
+    Finset (Finset (Fin (k + 1))) →
+      Finset (Finset (Fin (k + 1))) →
+        ControllerCoverAdmission.ControllerAccess (Fin (k + 1)) (Fin (k + 1)) →
+          ControllerCoverAdmission.LocalControllerFamilies (Fin (k + 1)) (Fin (k + 1)) →
+            ControllerCoverAdmission.CoLiveFamily (Fin (k + 1)) → Bool) :
+  ¬ControllerCoverAdmission.ExactThroughDownwardClosedObservation (ControllerCoverAdmission.coLiveProjection k) check
+'AuthorityContinuity.ControllerCoverAdmission.Fixtures.ArbitraryArity.no_lower_arity_downwardClosed_observation_checker_exact' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
 AuthorityContinuity.RedemptionCommitment.fresh_preserves_safe.{u_1, u_2, u_3, u_4, u_5, u_6} {Atom : Type u_2}

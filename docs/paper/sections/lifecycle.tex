@@ -96,21 +96,12 @@ inside the restored workspace.
 
 \subsection{Two independent identities}
 
-Two normalization questions are easy to conflate.  First, do two target
-handles reach the same atomic \emph{redemption cell}?  A restored history may
-reconstruct a fresh textual handle for the same logical commitment; explicit
-alias and lineage evidence must map both handles to one cell and the same
-source authority atom.  If that atom already appears in the durable receipt
-prefix, admission excludes a fresh redemption even when the workspace no
-longer contains the old call.
-
-Second, do two gate uses share the authoritative \emph{controller instance}
-that enforces correlations across cells?  This identity is independent of cell
-identity.  Several handles may correctly share one redemption cell but pass
-through distinct controller replicas.  Conversely, distinct cells may need a
-joint controller even though none is an alias of another.  Atomic redemption
-solves duplicate use of one cell; it does not by itself preserve a global
-constraint over several fresh cells.
+Handle identity asks whether names share one atomic redemption cell; gate-use
+identity asks whether executions share the controller state preserving
+correlation.  Neither determines the other: aliases may pass through replicas,
+while distinct cells may rely on one joint controller.  Atomic redemption
+addresses the first case, not arbitrary correlations
+(\cref{prop:identity-erasure}).
 
 Consider three distinct cells $a,b,c$ under a contract that permits every
 singleton and every pair, but forbids $\{a,b,c\}$.  Each cell is fresh and each

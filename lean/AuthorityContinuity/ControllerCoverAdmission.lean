@@ -607,6 +607,39 @@ theorem mem_coLiveProjection_iff_of_downwardClosed
     exact ⟨Finset.subset_univ active, hCard, active, hActive,
       Finset.Subset.rfl⟩
 
+/-- Complete bounded projection is itself downward closed, independently of
+whether the hidden family is downward closed. -/
+theorem coLiveProjection_downwardClosed
+    (arity : Nat) (coLive : CoLiveFamily G) :
+    CoLiveDownwardClosed (coLiveProjection arity coLive) := by
+  intro active hActive smaller hSubset
+  rw [coLiveProjection] at hActive ⊢
+  simp only [Finset.mem_filter, Finset.mem_powerset] at hActive ⊢
+  rcases hActive with
+    ⟨_hUniv, hCard, larger, hLarger, hActiveSubset⟩
+  exact ⟨Finset.subset_univ smaller,
+    (Finset.card_le_card hSubset).trans hCard,
+    larger, hLarger, hSubset.trans hActiveSubset⟩
+
+/-- Projecting a complete bounded projection again at the same arity changes
+nothing. -/
+theorem coLiveProjection_idempotent
+    (arity : Nat) (coLive : CoLiveFamily G) :
+    coLiveProjection arity (coLiveProjection arity coLive) =
+      coLiveProjection arity coLive := by
+  ext active
+  rw [mem_coLiveProjection_iff_of_downwardClosed
+    arity (coLiveProjection arity coLive)
+    (coLiveProjection_downwardClosed arity coLive) active]
+  constructor
+  · exact And.right
+  · intro hActive
+    have hShape := hActive
+    rw [coLiveProjection] at hShape
+    have hCard : active.card ≤ arity :=
+      (Finset.mem_filter.mp hShape).2.1
+    exact ⟨hCard, hActive⟩
+
 /-- Equal complete arity projections of two downward-closed co-liveness
 families imply agreement on every controller set within the arity bound. -/
 theorem coLive_membership_iff_of_projection_eq
@@ -930,6 +963,44 @@ theorem deploymentReady_iff_of_contractObservationArity_projection_eq
     (contractObservationArity required admitted) required admitted
     access families left right hFamiliesDown hLeftDown hRightDown hProjection
     (contractObservationArity_is_bound required admitted)
+
+/-- Tool-facing corollary: evaluating the complete contract-indexed projection
+itself gives exactly the hidden downward-closed family's readiness bit. -/
+theorem deploymentReady_iff_contractProjection
+    (required admitted : Finset (Finset U))
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (coLive : CoLiveFamily G)
+    (hFamiliesDown : LocalFamiliesDownwardClosed families)
+    (hCoLiveDown : CoLiveDownwardClosed coLive) :
+    DeploymentReady required admitted access families
+        (coLiveProjection (contractObservationArity required admitted) coLive) ↔
+      DeploymentReady required admitted access families coLive :=
+  deploymentReady_iff_of_contractObservationArity_projection_eq
+    required admitted access families
+    (coLiveProjection (contractObservationArity required admitted) coLive)
+    coLive hFamiliesDown
+    (coLiveProjection_downwardClosed
+      (contractObservationArity required admitted) coLive)
+    hCoLiveDown
+    (coLiveProjection_idempotent
+      (contractObservationArity required admitted) coLive)
+
+/-- Adapter-facing form: exactness of submitted `P` is an explicit premise. -/
+theorem deploymentReady_iff_of_attested_exact_projection
+    (required admitted : Finset (Finset U))
+    (access : ControllerAccess U G)
+    (families : LocalControllerFamilies U G)
+    (submitted hidden : CoLiveFamily G)
+    (hFamiliesDown : LocalFamiliesDownwardClosed families)
+    (hHiddenDown : CoLiveDownwardClosed hidden)
+    (hExact : submitted =
+      coLiveProjection (contractObservationArity required admitted) hidden) :
+    DeploymentReady required admitted access families submitted ↔
+      DeploymentReady required admitted access families hidden := by
+  subst submitted
+  exact deploymentReady_iff_contractProjection
+    required admitted access families hidden hFamiliesDown hHiddenDown
 
 /-- Readiness fails for at least one of two semantic reasons: the physical
 implementation adds behavior, it cannot realize a required behavior, or both

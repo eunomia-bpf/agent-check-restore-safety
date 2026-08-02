@@ -200,8 +200,10 @@ nonfaces and coordination components mirror the exact partition result.
 `ControllerCoverAdmission.lean` mechanizes the
 overlapping access-relation extension: raw and support-restricted controller
 products, the exact obstruction criterion, the three failure causes,
-runtime-family refinement, and reduction to the older functional partition
-through a proved canonical adapter.  The executable `GateClone` subtype still
+runtime-family refinement, exact evaluation of an attested contract-indexed
+projection (`deploymentReady_iff_of_attested_exact_projection`), and reduction
+to the older functional partition through a proved canonical adapter.  The
+executable `GateClone` subtype still
 uses manifest origin metadata; Lean mechanizes the underlying locally sound
 `CorrelationCut`, not origin provenance.
 
@@ -217,6 +219,10 @@ commitment key, and effect-binding digest; conflicting parent or lease claims
 do not invalidate that identity proof, but disable structural inheritance and
 force readmission or revalidation.  Conversely, two gate uses may reach the
 same aliased cell while still naming distinct controller anchors.
+Gate uses that share one controller anchor must agree on origin, version, and
+normalized local family.  Thus the executable implements a strict normalization
+subclass; unlike the general model-level adapter used by the two-by-two identity
+fixture, it does not union disagreeing local families under one anchor.
 
 The raw-physical-family calculation treats controller anchors declared co-live as
 independently product-composable.  A runtime with a hidden shared ratifier must

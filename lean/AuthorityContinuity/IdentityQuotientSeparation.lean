@@ -91,39 +91,39 @@ without changing the raw manifest. -/
 
 theorem normalizedFuture_shared :
     normalizedFuture sharedCellOf = ({false} : Finset Bool).powerset := by
-  native_decide
+  decide
 
 theorem normalizedFuture_distinct :
     normalizedFuture distinctCellOf = rawHandleFuture := by
-  native_decide
+  decide
 
 theorem normalizedCoLive_shared :
     normalizedCoLive sharedControllerOf = ({false} : Finset Bool).powerset := by
-  native_decide
+  decide
 
 theorem normalizedCoLive_distinct :
     normalizedCoLive distinctControllerOf = rawGateCoLive := by
-  native_decide
+  decide
 
 theorem normalizedLocal_shared_shared (controller : Bool) :
     normalizedLocal sharedCellOf sharedControllerOf controller =
       if controller = false then ({false} : Finset Bool).powerset else ∅ := by
-  cases controller <;> native_decide
+  cases controller <;> decide
 
 theorem normalizedLocal_shared_distinct (controller : Bool) :
     normalizedLocal sharedCellOf distinctControllerOf controller =
       ({false} : Finset Bool).powerset := by
-  cases controller <;> native_decide
+  cases controller <;> decide
 
 theorem normalizedLocal_distinct_shared (controller : Bool) :
     normalizedLocal distinctCellOf sharedControllerOf controller =
       if controller = false then rawHandleFuture else ∅ := by
-  cases controller <;> native_decide
+  cases controller <;> decide
 
 theorem normalizedLocal_distinct_distinct (controller : Bool) :
     normalizedLocal distinctCellOf distinctControllerOf controller =
       ({controller} : Finset Bool).powerset := by
-  cases controller <;> native_decide
+  cases controller <;> decide
 
 theorem normalizedAccess_shared_shared (cell controller : Bool) :
     normalizedAccess sharedCellOf sharedControllerOf cell controller ↔
@@ -315,7 +315,7 @@ theorem normalizedLocal_distinct_distinct_sound :
   · rw [normalizedFuture_distinct]
     apply rawHandleFuture_wellFormed.downwardClosed
       (C := ({controller} : Finset Bool))
-    · cases controller <;> native_decide
+    · cases controller <;> decide
     · exact hSubset
   · intro cell hCell
     rw [normalizedAccess_distinct_distinct]
@@ -543,7 +543,7 @@ theorem distinctCells_distinctControllers_rejected :
     simp
   have hPairAdmitted := hReady.2 hPairRaw
   rw [normalizedFuture_distinct] at hPairAdmitted
-  exact (by native_decide :
+  exact (by decide :
     ({false, true} : Finset Bool) ∉ rawHandleFuture) hPairAdmitted
 
 theorem identityQuotient_decision_matrix :

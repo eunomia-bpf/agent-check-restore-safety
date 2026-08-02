@@ -1,40 +1,29 @@
 \section{Introduction}
 \label{sec:introduction}
 
-Modern agent runtimes increasingly transform their own execution histories.
-They fork alternatives for search, retain parallel descendants, restore saved
-sessions, and merge results while the execution graph is still being
-discovered.  Codex and Claude expose session or thread branching, and emerging
-agent substrates make checkpointing and speculative execution first-class
-operations~\cite{codexappserver,claudesessions,wang2026fork,wu2026crab}.
-Unlike a conventional restart, these operations may intentionally keep several
-continuations alive while tools mutate services outside any copied workspace.
+Agent runtimes fork alternatives, retain parallel descendants, restore saved
+sessions, and merge results while discovering the execution graph online.
+Codex, Claude, and emerging substrates expose these operations
+~\cite{codexappserver,claudesessions,wang2026fork,wu2026crab}.  Unlike restart,
+they may keep several continuations live while tools mutate external services.
 
-However, individually safe continuations can become unsafe when a history edge
-changes which outcomes may coexist.  Suppose three prospective commitments
-$a,b,c$ are governed by a contract that permits every pair but forbids the
-triple.  Each commitment is fresh, and three controllers may each expose only
-one locally admitted singleton; nevertheless, a parallel Fork or live Restore
-can make all three controllers co-live and thereby realize
-$\{a,b,c\}$.  Per-effect authorization succeeds, every pairwise conflict check
-succeeds, and no redemption cell is spent twice, yet the resulting configuration
-violates the original contract.  Replaying an already durable cell after
-Restore is the simpler unary instance of the same missing admission boundary.
+Individually safe continuations can become unsafe when an edge changes which
+outcomes may coexist.  Suppose a contract permits every pair of fresh
+commitments $a,b,c$ but forbids the triple.  Three locally safe controllers can
+realize $\{a,b,c\}$ after parallel Fork or live Restore: per-effect and pairwise
+checks pass and no cell is spent twice, yet the contract fails.  Replaying an
+already durable cell after Restore is the unary instance.
 
-The problem exists because security state is not one workspace snapshot.
-One decision has an immutable durable receipt prefix and a correlated family of
-prospective commitments; it also has a controller layout describing which
-local choices can become durable during one controller epoch, while remote
-writes and disclosures remain in external reality.  Whole-workspace rollback cannot undo an escaped effect,
-must not rewind the receipt prefix, and implements the wrong semantics when
-Fork, live Restore, or join Merge deliberately retains several descendants.
-Nor can the complete future execution graph be named in advance: the runtime
-must certify each topology-changing edge from its current contracts and then
-compose those local certificates.
+Security state is therefore not one workspace snapshot: it includes an
+immutable receipt prefix, a correlated future, a controller layout, and escaped
+external effects.  Whole-workspace rollback cannot undo remote reality, must
+not rewind receipts, and implements the wrong semantics when several
+descendants should survive.  Because the graph is not known in advance, the
+runtime must certify current edges and compose their certificates.
 
 Existing mechanisms each cover only part of this boundary.  Rollback recovery,
 state continuity, and ACRFence preserve or check the past but do not derive the
-co-durable future of six distinct history operators
+co-durable future of a typed choice, product, or replacement edge
 ~\cite{elnozahy2002rollback,parno2011memoir,zheng2026acrfence}.
 Consumable capabilities, revocable agent capabilities, and commit-time
 authorization can protect one use or one effect witness, but several valid
@@ -45,13 +34,13 @@ over observed causal predicates~\cite{palumbo2026forge}; they do not themselves
 derive a counterfactual future family for a proposed Fork/Restore/Merge or
 verify that independently live controllers realize only that family.
 
-We observe that a sound history boundary requires two independent
-normalizations.  The first maps copied handles to semantic \emph{redemption
-cells}, the units at which one fresh durable commitment is consumed.  The
-second maps gate uses to authoritative \emph{controller instances}, the units
-whose joint state preserves correlations among several cells.  Conflating the
-two misses the example above: atomic redemption can be correct for every cell
-while distinct controllers product-compose a forbidden configuration.  A
+Exact structural admission cannot in general erase either of two identity
+relations.
+$q_{\mathrm{cell}}$ maps copied handles to atomic redemption cells;
+$q_{\mathrm{ctrl}}$ maps gate uses to authoritative controller instances.  A
+mechanized two-by-two construction fixes every other raw field and shows that
+erasing either map while retaining the other conflates ready and nonready
+worlds (\cref{prop:identity-erasure}).  A
 downward-closed family $\Gamma$ records which controllers may remain
 authoritative during one co-durable epoch.  Write
 $\mathsf{Actual}$ for configurations the installed runtime can make durable and
@@ -65,24 +54,16 @@ where the typed history operation derives the required behavior, the durable
 prefix derives the admitted future, the manifest derives the raw controller
 product, and a concrete runtime must refine that manifest.
 
-We present a theory-guided \emph{history-admission compiler} for this boundary.
-Six typed Fork/Restore/Merge operators derive candidate and required families;
-durable-prefix filtering computes the greatest prefix-compatible admitted
-future; and relational controller-cover analysis checks required coverage and
-physical overpermission.  The compiler emits a certificate or typed negative
-witness, and an independent verifier recomputes the decision and accepts only
-a canonical match.  Lean checks a contract-indexed co-liveness observation
-arity sufficient for exact readiness and an arbitrary-$k$ family making every
-smaller arity insufficient in the worst case.  A constructive corollary returns
-the greatest downward-closed pruning of submitted $\Gamma$ whose fixed-$E,L$
-product is admitted and decides whether it preserves $\mathsf{Required}$.
-The prototype records full $\Gamma$, its coverage attestation, the arity, and
-this non-installed proposal; 31 focused tests (55 total) and a 2,166-case
-oracle cross-check its semantics.  Public and private trajectories expose the
-workload and missing adapter fields, but provide no safety labels.
-The tool is neither a checkpoint engine nor an effect authorizer: truthful
-manifests, complete mediation, controller installation, and both inclusions
-involving $\mathsf{Actual}$ remain integration obligations.
+Our theory-guided \emph{history-admission compiler} derives typed futures,
+filters them against receipts, and checks controller-cover realization.  It
+emits a certificate or typed witness; an independent verifier recomputes the
+canonical result.  The contract derives an arity $r$: exact readiness needs
+only $\Pi_{\leq r}(\Gamma)$, while an arbitrary-$k$ cover family makes smaller
+arity insufficient in general.  The prototype accepts full $\Gamma$, its exact
+$r$-projection, or a diagnostic upper bound.  Its 38 focused tests (62 total)
+and 2,166-case oracle cross-check the semantics; trajectories characterize
+adapter gaps, not safety.  Truthful manifests, mediation, installation, and
+$\mathsf{Actual}$ refinement remain runtime obligations.
 
 \noindent\textbf{Contributions.}
 This paper makes three contributions.
@@ -96,17 +77,17 @@ This paper makes three contributions.
   inheritance over an online graph
   (\cref{sec:model,sec:semantics,sec:results}).
 
-  \item A controller-realization theory that separates cell identity from
-  controller identity.  For overlapping access it characterizes readiness and
-  obstructions, yields the greatest submitted-$\Gamma$ pruning at fixed $E,L$,
-  extracts minimal correlation cuts, and gives a sufficient contract-indexed
-  observation arity with an arbitrary-arity tightness family.  It recovers
-  functional partitions as a special case and transports prefix safety under
-  explicit runtime refinement premises (\cref{sec:results}).
+  \item An exact-evidence theorem for controller realization.  At fixed $E,L$,
+  the contract-derived $r$-projection of $\Gamma$ decides readiness exactly;
+  an arbitrary-$k$ well-formed cover rules out every uniformly lower-arity
+  projection.  Fixed-manifest collisions independently rule out erasing cell-
+  or controller-identity information.  Obstruction extraction and fixed-$E,L$
+  pruning provide constructive witnesses and repairs
+  (\cref{sec:results}).
 
   \item A small compiler and independent verifier whose certificate and witness
   schema follows the proof decomposition.  Lean~4 checks the theorem spine;
-  31 focused compiler/verifier tests (55 across the complete artifact) and an
+  38 focused compiler/verifier tests (62 across the complete artifact) and an
   exhaustive 2,166-instance oracle cross-check the implementation; public
   TraceLab and the private paper-formation lineage
   characterize workload and adapter observability without supplying safety

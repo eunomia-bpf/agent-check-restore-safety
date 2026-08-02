@@ -9,13 +9,16 @@ used to establish either inclusion involving $\mathsf{Actual}$.
 
 \subsection{VQ1: Mechanized theorem spine}
 
-Lean~4 links typed-family generation for all six operators, greatest
+Lean~4 links the three family constructors underlying the six runtime operation
+labels, greatest
 fixed-prefix admission, overlapping controller-cover readiness and
-obstructions, the two-level greatest-pruning corollary, runtime-refinement
-transport, and the append-only commitment substrate.  It also recovers the older
-functional partition as a canonical special case.
+obstructions, the independent-identity erasure proposition, exact projection,
+runtime-refinement transport, and the append-only commitment substrate.  It
+also checks the fixed-$E,L$ pruning corollary and recovers the older functional
+partition as a canonical special case.
 
-The audit rejects placeholders, project axioms, and dependencies beyond
+For symbolic theorems, the audit rejects placeholders, project axioms, and
+dependencies beyond
 \texttt{propext}, \texttt{Quot.sound}, and \texttt{Classical.choice}.  A
 two-controller $U(2,3)$ realization checks correlation-cut extraction; a
 separate arbitrary-$k$ singleton-controller construction checks both the
@@ -31,14 +34,12 @@ an external effect executes exactly once.
 
 The dependency-free Python artifact contains two semantic implementations.
 The compiler uses symbolic cell sets; the independent verifier reconstructs
-the request with bit masks.  Both expand the supplied full downward-closed
-$\Gamma$, enforce support-induced access, retain its exact/overapproximate
-coverage attestation, and independently compute its greatest co-liveness
-pruning and \texttt{required\_coliveness\_arity}; neither consumes a prior seal.  Of 55
-tests, 31 cover history-admission operators, outcomes, readiness grades, both
-identity normalizations, failure classes, malformed evidence, caps,
-determinism, and tampering.  Every positive seal sets
-$\mathsf{effect\_authorizes}=\mathsf{false}$.
+the request with bit masks.  Both implement request schema~v3 and
+result/verification schema~v4, derive $r$, enforce projection shape, and
+distinguish full exact, exact-projection, and diagnostic sound-upper evidence.
+Of 62 tests, 38 exercise history operators, evidence modes, readiness grades,
+repairs, malformed inputs, caps, determinism, and tampering.  Every positive
+seal sets $\mathsf{effect\_authorizes}=\mathsf{false}$.
 
 An exhaustive oracle enumerates all 19 downward-closed families over three
 cells.  Across every full-support candidate, every required subfamily, and
@@ -49,14 +50,14 @@ This enumeration checks the finite algorithm and its independent
 reimplementation; it is not a proof that the JSON parser refines Lean.
 
 A bounded CLI characterization exercises threshold families through 12 cells.
-Configuration/nonface counts are
-$11/4$, $42/15$, $163/56$, $638/210$, and $2{,}510/792$ for
-$4,6,8,10,12$ cells.  With six cells and one through four overlapping co-live
-controllers, the physical family stays at 64 configurations while
-pair-expansion iterations rise from 64 to 70,592.  Both tools reject 13 source
-cells; a five-controller case needing 202,688 iterations stops at 200,001.
-These are deterministic bounded-completion and two-limit fail-closed checks,
-not latency or deployability evidence; timings are not archived.
+With six cells and one through four controllers, full-family pair expansion
+rises from 64 to 70,592 iterations.  On a six-cell contract with $r=1$, exact
+projection executes only 128--640 iterations for two through ten controllers;
+analytically expanding the corresponding full families requires
+4,288--16,846,784 and crosses the 200,000 cap at five controllers.  Both
+projection and ordinary outputs are independently verified.  These are
+deterministic loop counts and fail-closed checks, not latency or deployability
+evidence.
 
 \subsection{VQ3: Distinguishing litmus manifests}
 

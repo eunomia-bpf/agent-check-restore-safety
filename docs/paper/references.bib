@@ -433,12 +433,27 @@
   doi     = {10.1109/TAC.2014.2341891}
 }
 
+% VERIFIED: 2026-08-02
+% REAL: yes
+% PDF: reference/closest-work/2019-cai-relative-coobservability.pdf
+% ABSTRACT: Defines relative coobservability for decentralized supervisory control, proves union closure, and computes the supremal relatively coobservable sublanguage.
+% USED_FOR: Establishes prior supremal decentralized synthesis under partial observation and distinguishes coobservability from controller co-liveness.
+@article{cai2019coobservability,
+  author  = {Kai Cai and Renyuan Zhang and W. M. Wonham},
+  title   = {Relative Coobservability for Decentralised Supervisory Control of Discrete-Event Systems},
+  journal = {International Journal of Control},
+  volume  = {92},
+  number  = {7},
+  pages   = {1481--1489},
+  year    = {2019},
+  doi     = {10.1080/00207179.2017.1397754}
+}
+
 % VERIFIED: 2026-07-31
 % REAL: yes
 % PDF: not available
 % ABSTRACT: Develops nonblocking supervisory control over hierarchical state-tree structures using predicates and symbolic representations such as BDDs.
 % USED_FOR: Establishes hierarchical AND/OR state organization and symbolic supervisor synthesis as prior work.
-% STATUS: unused in current manuscript
 @article{ma2006sts,
   author  = {Chuan Ma and W. Murray Wonham},
   title   = {Nonblocking Supervisory Control of State Tree Structures},
@@ -455,7 +470,6 @@
 % PDF: not available
 % ABSTRACT: Applies supervisory control theory to communicating transaction processes and derives executable propositional guards for controlled interaction behavior.
 % USED_FOR: Establishes compilation of supervisory policies into guarded transaction workflows as prior work.
-% STATUS: unused in current manuscript
 @article{feng2007ctp,
   author  = {Lei Feng and W. Murray Wonham and P. S. Thiagarajan},
   title   = {Designing Communicating Transaction Processes by Supervisory Control Theory},
@@ -501,7 +515,6 @@
 % PDF: not available
 % ABSTRACT: Documents Codex lifecycle and tool hooks, including PreToolUse blocking or rewriting for covered local tools and explicit exclusions for hosted or opted-out paths.
 % USED_FOR: Grounds pre-tool interception while documenting that hooks alone do not prove complete mediation.
-% STATUS: unused in current manuscript
 @misc{codexhooks,
   author       = {{OpenAI}},
   title        = {Hooks},
@@ -544,7 +557,6 @@
 % PDF: not available
 % ABSTRACT: Documents Claude Code pre/post-tool, subagent, session, and worktree lifecycle hooks, including denial or modification before covered tool use.
 % USED_FOR: Grounds prospective lifecycle observation and pre-tool enforcement surfaces without claiming complete mediation.
-% STATUS: unused in current manuscript
 @misc{claudehooks,
   author       = {{Anthropic}},
   title        = {Hooks Reference},
@@ -656,6 +668,7 @@
 
 % VERIFIED: 2026-08-02
 % REAL: yes
+% PDF: reference/foundations/2014-bailis-coordination-avoidance.pdf
 % ABSTRACT: Defines invariant confluence as a necessary and sufficient condition for coordination-free execution of fixed database operations under an application invariant.
 % USED_FOR: Establishes exact coordination-avoidance analysis as prior work.
 @article{bailis2014coordination,
@@ -671,6 +684,7 @@
 
 % VERIFIED: 2026-08-02
 % REAL: yes
+% PDF: not available
 % ABSTRACT: Characterizes security policies enforceable by execution monitors and introduces security automata for specifying them.
 % USED_FOR: Establishes execution-monitor and security-automata foundations.
 @article{schneider2000enforceable,
@@ -686,6 +700,7 @@
 
 % VERIFIED: 2026-08-02
 % REAL: yes
+% PDF: not available
 % ABSTRACT: Introduces proof-carrying code, in which an untrusted producer supplies a safety proof that a host validates against its policy before execution.
 % USED_FOR: Establishes the untrusted producer and small checker trust pattern.
 @inproceedings{necula1997pcc,
@@ -744,6 +759,22 @@
 
 % VERIFIED: 2026-08-02
 % REAL: yes
+% PDF: reference/closest-work/2010-emtander-chordal-hypergraphs.pdf
+% ABSTRACT: Studies generalized chordal hypergraphs and d-flag complexes characterized by uniform minimal nonfaces.
+% USED_FOR: Establishes the classical simplicial-complex substrate behind skeleton and boundary-versus-simplex constructions.
+@article{emtander2010hypergraphs,
+  author  = {Eric Emtander},
+  title   = {A Class of Hypergraphs That Generalizes Chordal Graphs},
+  journal = {Mathematica Scandinavica},
+  volume  = {106},
+  number  = {1},
+  pages   = {50--66},
+  year    = {2010},
+  doi     = {10.7146/math.scand.a-15124}
+}
+
+% VERIFIED: 2026-08-02
+% REAL: yes
 % PDF: reference/closest-work/decentralized-supervisory-control.pdf
 % ABSTRACT: Constructs controllable and coobservable sublanguages for decentralized supervisors by extending local observations through communication and gives conditions for matching centralized control.
 % USED_FOR: Closest mature theory of several local controllers enforcing a shared global specification; distinguished from deriving the specification and finite evidence boundary of one typed history edge.
@@ -774,6 +805,38 @@
   year    = {2017},
   doi     = {10.1109/TAC.2016.2644867},
   url     = {https://doi.org/10.1109/TAC.2016.2644867}
+}
+
+% VERIFIED: 2026-08-02
+% REAL: yes
+% PDF: reference/closest-work/2019-bonakdarpour-program-repair-hyperproperties.pdf
+% ABSTRACT: Repairs finite-state programs for HyperLTL specifications by removing transitions while preserving enough behavior for the quantified property.
+% USED_FOR: Establishes transition-deletion repair for hyperproperties as prior generic repair machinery.
+@inproceedings{bonakdarpour2019repair,
+  author    = {Borzoo Bonakdarpour and Bernd Finkbeiner},
+  title     = {Program Repair for Hyperproperties},
+  booktitle = {Automated Technology for Verification and Analysis},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {11781},
+  pages     = {423--441},
+  publisher = {Springer},
+  year      = {2019},
+  doi       = {10.1007/978-3-030-31784-3_25}
+}
+
+% VERIFIED: 2026-08-02
+% REAL: yes
+% PDF: reference/closest-work/2020-bonakdarpour-controller-synthesis-hyperproperties.pdf
+% ABSTRACT: Synthesizes controllers for HyperLTL specifications by restricting controllable transitions while retaining uncontrollable environment behavior.
+% USED_FOR: Establishes controller synthesis for hyperproperties and distinguishes it from contract-derived history-edge readiness.
+@inproceedings{bonakdarpour2020controller,
+  author    = {Borzoo Bonakdarpour and Bernd Finkbeiner},
+  title     = {Controller Synthesis for Hyperproperties},
+  booktitle = {2020 IEEE 33rd Computer Security Foundations Symposium (CSF)},
+  pages     = {366--379},
+  publisher = {IEEE},
+  year      = {2020},
+  doi       = {10.1109/CSF49147.2020.00033}
 }
 
 % VERIFIED: 2026-08-02

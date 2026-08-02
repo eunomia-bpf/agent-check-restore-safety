@@ -1,10 +1,12 @@
 \section{Admission and Refinement Results}
 \label{sec:results}
 
-The results form a refinement chain rather than one monolithic safety theorem.
-A typed operation generates a correlated future; the durable prefix filters
-that future; a controller manifest overapproximates what can be physically
-combined; and a runtime must refine that manifest:
+The theorem spine establishes one exact evidence boundary.  A typed edge and
+durable prefix derive $(\mathcal R,\mathcal F)$; at fixed $E,L$, the complete
+$r(\mathcal R,\mathcal F)$-projection of $\Gamma$ decides readiness exactly.
+Collision constructions show that no uniformly lower arity suffices and that
+an exact checker cannot generally erase either identity relation.  If a ready
+manifest is refined by the runtime, prefix safety transports along
 \[
 \begin{gathered}
   op\longmapsto(\mathsf{Candidate},\mathsf{Required})
@@ -34,7 +36,8 @@ contracts remain alternatives or may become durable jointly.
 
 \begin{theorem}[Typed-family generation]
 \label{thm:typed-generation}
-For every valid instance of the six operators in \cref{sec:semantics}, both
+For every valid instance of the six runtime labels---two choice, three tensor,
+and one replacement---in \cref{sec:semantics}, both
 $\mathsf{Candidate}_{op}$ and $\mathsf{Required}_{op}$ are nonempty,
 contain $\varnothing$, and are downward closed.  Moreover,
 \[
@@ -145,8 +148,30 @@ snapshot-only parent map still exists.
 \subsection{Exact controller-readiness boundary}
 
 Semantic admission does not imply that independently live controllers preserve
-the admitted correlations.  The next result characterizes the additional
-manifest-level condition.
+the admitted correlations.  First, both identity maps carry independently
+necessary information for an exact decision.
+
+\begin{proposition}[Independent identity erasures]
+\label{prop:identity-erasure}
+There is a fixed two-handle, two-gate raw manifest $M$ and collapsing/identity
+maps $q_{\mathrm{cell}}^{=},q_{\mathrm{cell}}^{\ne}$ and
+$q_{\mathrm{ctrl}}^{=},q_{\mathrm{ctrl}}^{\ne}$ such that all four normalized
+worlds are well structured and, for $x,y\in\{=,\ne\}$,
+\[
+  \mathsf{Ready}_{M}(q_{\mathrm{cell}}^{x},q_{\mathrm{ctrl}}^{y})
+  \quad\Longleftrightarrow\quad x={=}\ \lor\ y={=}.
+\]
+An observation retaining $M$ and either quotient while erasing the other thus
+equates a ready world with the nonready $(\ne,\ne)$ world.  Hence no exact
+structural-readiness decider on this manifest class factors through either
+erasure.
+\end{proposition}
+This is information irredundancy, not uniqueness of representation: a
+fail-closed checker may reject both worlds, and equivalent evidence may replace
+either literal map.  The result is manifest-relative and assumes atomic
+redemption.  Its model-level fixture unions gate-use families folded to one
+controller; the prototype accepts the stricter subclass whose same-anchor uses
+already agree on normalized $L_g$.
 
 Let $\mathsf{MNF}(\mathcal F)$ denote the minimal nonfaces of a downward-closed
 family $\mathcal F$: forbidden configurations on its support whose every proper
@@ -220,7 +245,9 @@ With $\mathcal F=\mathsf{Admitted}_{op}$,
 \cref{thm:greatest-residual} makes these two filters greatest among repairs
 that first prune the candidate prefix-safely and then prune submitted $\Gamma$
 at fixed $E,L$.  Losing required behavior therefore proves this restricted
-repair space infeasible.
+repair space infeasible.  When the executable receives only
+$P=\Pi_{\leq r}(\Gamma)$, the claim is relative to $P$, not hidden full
+$\Gamma$.
 
 \subsection{Honest negative evidence and higher-order correlation cuts}
 
@@ -283,12 +310,15 @@ $\mathcal F=\mathsf{Admitted}_{op}$, define the contract-only bound
 \end{equation}
 with empty maximum zero; the indicator retains unary support escape.
 
-\begin{theorem}[Contract-indexed sufficiency and worst-case tightness]
+\begin{theorem}[Exact projected admission and worst-case arity lower bound]
 \label{thm:observation-arity}
 Fix $E,L$ with every $L_g$ downward closed.  Two downward-closed epoch
 families $\Gamma_1,\Gamma_2$ with equal
 $\Pi_{\leq r(\mathcal R,\mathcal F)}$ have the same readiness decision.
-Conversely, for every $k\geq1$, two realizations of
+Consequently, taking $P=\Pi_{\leq r(\mathcal R,\mathcal F)}(\Gamma)$, evaluating
+$(E,L,P)$ yields the same readiness Boolean as $(E,L,\Gamma)$ without
+enumerating higher-order members; optional full-family fidelity may remain
+unknown.  Conversely, for every $k\geq1$, two realizations of
 $U(k,k{+}1)=\{X\subseteq\{d_0,\ldots,d_k\}:|X|\leq k\}$ share controller
 identities, complete access, locally sound singleton families, and
 $\Pi_{\leq k}$, yet only the realization excluding joint liveness of all
@@ -299,8 +329,23 @@ exact on all downward-closed realizations.
 For sufficiency, any cover of $C$ compresses to at most $|C|$ controllers;
 local closure then shrinks overpermission to a minimal nonface or an
 outside-support singleton.  The lower construction contrasts controller sets
-of size at most $k$ with the full powerset.  Pairwise projection is its $k=2$
-instance~\cite{wang2024hypergraph}; concrete $E,L$ may permit less evidence.
+of size at most $k$ with the full powerset.  This skeleton distinction is
+classical~\cite{emtander2010hypergraphs,wang2024hypergraph}; the result here
+lifts it through fixed-$E,L$ cover realizability and required coverage.
+Concrete $E,L$ may permit less evidence.
+
+\begin{corollary}[Contract-indexed evidence boundary]
+\label{cor:evidence-boundary}
+For downward-closed local and epoch families, the normalized view
+$(\mathcal R,\mathcal F,E,L,\Pi_{\leq r(\mathcal R,\mathcal F)}(\Gamma))$
+determines the exact structural-readiness Boolean.  Across the model class,
+\cref{prop:identity-erasure} shows the raw-to-normalized step cannot generally
+erase either quotient relation; \cref{thm:observation-arity} gives the
+worst-case arity separation.
+This is not a unique or pointwise-minimal representation: equivalent identity
+evidence may replace either map, restricted $E,L$ may permit lower arity, and a
+fail-closed checker may reject with less information.
+\end{corollary}
 
 \subsection{Runtime-refinement certificate transport}
 

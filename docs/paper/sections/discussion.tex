@@ -2,34 +2,27 @@
 \label{sec:discussion}
 
 \paragraph{Scope}
-Snapshots cannot retract external effects or receipts, and total rollback is
-wrong when histories remain live.  The model covers workflows, deployments,
-notebooks, search, and RL; agents make the graph online around external tools.
-Edge certificates compose until receipt growth forces readmission.  Hermetic
-choose-one rollouts can defer authority; parallel external commits and durable
-joins require admission at their history edge.
+Snapshots cannot retract effects or receipts, and total rollback is wrong while
+histories remain live.  Edge certificates compose until receipt growth;
+choose-one rollouts may defer authority, but parallel commits and durable joins
+require edge admission.
 
 \paragraph{Assumptions and nonclaims}
-Atomic redemption protects a cell; joint control protects correlations.
-$\mathsf{RawPhysical}$ composes declared controllers: hidden coordination can
-reject safely, whereas an unmodeled bypass is unsound.  $\Gamma$ binds one
-co-durable epoch; receipt or controller-version change forces readmission.
-Lean proves the finite manifest theorem, while Python recomputes full $\Gamma$
-under attested coverage.  Its repair is greatest only among downward-closed
-restrictions of submitted $\Gamma$ at fixed $E,L$; it must be installed and
-resubmitted, and says nothing about $\mathsf{Actual}$.  Truthful evidence,
-mediation, freshness, and redemption remain runtime obligations.  The
-contract-only arity is worst-case tight, though concrete structure may lower
-it.  The seal authorizes no effect and proves neither exactly-once execution
-nor safe learning.
+Atomic redemption protects cells; joint control protects correlations.
+$\mathsf{RawPhysical}$ composes declared controllers: hidden coordination may
+reject, whereas an unmodeled bypass is unsound.  $\Gamma$ binds one epoch;
+receipt or controller-version changes force readmission.
+Projection readiness assumes exact projection, hidden downward closure, and
+fixed $E,L$; sound upper bounds never seal.  Repair is greatest only relative
+to submitted evidence and must be installed and resubmitted.  Truthful evidence,
+runtime refinement, mediation, freshness, and redemption remain external
+obligations.
+The seal authorizes no effect and proves neither exactly-once nor safe learning.
 
 \section{Conclusion}
 
-History admission derives the correlated future of Fork, Restore, or Merge,
-conditions it on the durable past, normalizes redemption cells separately from
-controllers, prunes submitted co-liveness, and derives a sufficient observation
-arity with an arbitrary-$k$ tightness family.  It seals only when
-$\mathsf{Required}\subseteq\mathsf{RawPhysical}
-\subseteq\mathsf{Admitted}$; sound runtime use additionally requires
+History admission gives Fork, Restore, and Merge a receipt-conditioned future
+and an exact structural evidence boundary.  Its seal transports only if
 $\mathsf{Required}\subseteq\mathsf{Actual}
-\subseteq\mathsf{RawPhysical}$.
+\subseteq\mathsf{Raw}(E,L,\Gamma)$; readiness supplies
+$\mathsf{Raw}(E,L,\Gamma)\subseteq\mathsf{Admitted}$.

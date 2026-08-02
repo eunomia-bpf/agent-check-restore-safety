@@ -128,6 +128,8 @@ frozen_constants=(
   functionalPartition_deploymentReady_iff_mustCoordinate
   rawPhysical_partition_eq_localProduct
   canonicalPartition_deploymentReady_iff_mustCoordinate
+  identityQuotient_worlds_wellStructured
+  identityQuotients_independently_necessary
   forbidden_valid_cover_cases
   rawPhysical_subset_admitted_iff_avoids_obstructions
   deploymentReady_iff_required_coverage_and_avoids_obstructions
@@ -139,6 +141,10 @@ frozen_constants=(
   contractObservationArity_is_bound
   deploymentReady_iff_of_contract_observation
   deploymentReady_iff_of_contractObservationArity_projection_eq
+  coLiveProjection_downwardClosed
+  coLiveProjection_idempotent
+  deploymentReady_iff_contractProjection
+  deploymentReady_iff_of_attested_exact_projection
   pairwise_raw_eq_rankTwo
   pairwise_realization_ready
   triple_realization_not_ready
@@ -265,8 +271,19 @@ if rg --quiet 'sorryAx' "$audit_log"; then
 fi
 
 mapfile -t reported_axioms < <(
-  sed -nE 's/.*depends on axioms: \[([^]]*)\].*/\1/p' "$audit_log" |
-    tr ',' '\n' |
+  awk '
+    /depends on axioms: \[/ {
+      collecting = 1
+      sub(/^.*depends on axioms: \[/, "")
+    }
+    collecting {
+      finished = index($0, "]") > 0
+      sub(/\].*$/, "")
+      gsub(/,/, "\n")
+      print
+      if (finished) collecting = 0
+    }
+  ' "$audit_log" |
     sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' |
     sed '/^$/d' |
     sort -u

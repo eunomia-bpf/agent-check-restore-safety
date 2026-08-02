@@ -12,15 +12,15 @@ correlated future admissible when a typed operation retains or joins
 continuations; we propose no snapshot, rollback, or output-commit protocol.
 
 \paragraph{Configurations, conflict, and minimal obstructions}
-Event structures already represent causality, conflict, and valid
-configurations, while BI, fork/join separation logics, and workflow models
-account for resource composition~\cite{winskel1987event,pym2004bi,
-moine2024dislog,meyer2018workflow}; graph projections can also lose
-higher-order structure~\cite{wang2024hypergraph}.  Here a typed edge generates
-candidate/required families, receipts filter the candidate, and an independent
-controller product is checked against the result.  Minimal nonfaces become
-deployment counterexamples only after excluding outside-support and locally
-forbidden choices.
+Event structures represent causality, conflict, and configurations; BI,
+fork/join separation logics, and workflows account for resource composition
+~\cite{winskel1987event,pym2004bi,moine2024dislog,meyer2018workflow}.
+Downward-closed families are simplicial complexes: uniform minimal nonfaces
+yield classical $d$-flag complexes, and low-order projections can lose
+higher-order structure~\cite{emtander2010hypergraphs,wang2024hypergraph}.
+Here typed edges and receipts derive the family before controller-product
+checking; minimal nonfaces are deployment witnesses only after excluding
+support escape and local overpermission.
 
 \paragraph{Capabilities, linear resources, and consumable authority}
 Consumable credentials combine linear authorization with durable ratification
@@ -45,19 +45,20 @@ fixed-prefix edge realization between required and admitted futures, not a
 universal coordination criterion or unique finest cover.
 
 \paragraph{Supervisory enforcement and certifying compilation}
-Supervisory control synthesizes legal behavior under controllability and
-observation assumptions, including partial/relative observation and structured
-processes
-~\cite{ramadge1987supervisory,cieslak1988partial,cai2015relative,ma2006sts,feng2007ctp}.
-Decentralized control studies local controllers jointly enforcing a
-specification~\cite{komenda2017decentralized}; security automata and runtime
-hyperproperty enforcement mediate trace and cross-trace policies
-~\cite{schneider2000enforceable,coenen2022hyperproperties}.  Range control
-already combines upper legal and lower required languages with maximally
-permissive synthesis~\cite{yin2017range}.  Our corollary only prunes submitted
-$\Gamma$ at fixed $E,L$ after the edge and prefix derive its bounds; the
-combined boundary and observation theorem are not general supervisor or
-hyperproperty synthesis.
+Supervisory and decentralized control synthesize legal behavior under
+controllability and observation assumptions
+~\cite{ramadge1987supervisory,cieslak1988partial,cai2015relative,
+ma2006sts,feng2007ctp,komenda2017decentralized}.  Relative coobservability
+yields a computable supremal sublanguage under partial observation
+~\cite{cai2019coobservability}.  HyperLTL repair deletes transitions to find a
+satisfying Kripke substructure; its controller variant retains uncontrollable
+transitions~\cite{bonakdarpour2019repair,bonakdarpour2020controller}.
+Runtime enforcement mediates cross-trace policies
+~\cite{schneider2000enforceable,coenen2022hyperproperties}, and range control
+already optimizes between required and legal languages~\cite{yin2017range}.
+Here co-liveness means joint controller availability, not coobservability:
+typed edges and receipts derive one finite bound, while fixed-$E,L$
+$\Gamma$ pruning is only a supporting corollary.
 
 \paragraph{Agent checkpoint and branching substrates}
 ACRFence identifies replay and authority resurrection after restore
@@ -73,13 +74,14 @@ FORGE monitors Datalog policies over causal history under an observation
 contract~\cite{palumbo2026forge}.  We instead generate one correlated family
 from a typed edge, filter it by receipts, and check its controller product.
 
-Hu and Wang show that locally benign agent fragments may assemble into harm
-that no local-view monitor detects~\cite{hu2026localmonitors}.  Our lower bound
-distinguishes two $U(k,k{+}1)$ co-liveness families with equal arity-$k$
-projections.  Unlike $k$-safety's trace witnesses and self-composition
-~\cite{clarkson2008hyperproperties}, it observes controller sets and includes
-fixed-$E,L$ realizability and required coverage; cover compression supplies the
-upper bound.
+Hu and Wang show that locally benign agent fragments may compose into harm
+missed by local monitors~\cite{hu2026localmonitors}.  For downward-closed
+$\Gamma$, $\Pi_{\leq k}(\Gamma)$ is its $(k{-}1)$-skeleton; the
+$U(k,k{+}1)$ construction is the classical boundary/full-simplex distinction
+~\cite{emtander2010hypergraphs}.  Our result lifts it through fixed-$E,L$
+cover realizability and required coverage; unlike
+$k$-safety~\cite{clarkson2008hyperproperties}, it observes controller sets
+rather than traces.
 
 Earned Authority fixes an effect ceiling across agent mutation
 ~\cite{zhang2026earned}, while PORTICO compiles task contracts into epoch-bound
@@ -95,12 +97,10 @@ may still be forbidden together, while our seal neither authorizes one effect
 nor prevents pre-commit disclosure.
 
 \paragraph{Combined claim boundary}
-The novelty is the combined decision boundary: typed edges generate futures,
-receipts select the greatest admitted subfamily, independent cell/controller
-normalizations induce a product, and a checker emits evidence, a greatest
-co-liveness-only proposal, or a typed failure using the
-untrusted-producer/small-checker pattern~\cite{necula1997pcc}.  The
-contract-indexed upper and arbitrary-arity lower bounds characterize truncated
-co-liveness evidence.  Under
+The novel claim is not set filtering, supremal pruning, or skeleton collision
+alone.  A typed edge and durable prefix derive $(\mathcal R,\mathcal F)$ and
+therefore $r$; independent identity evidence and fixed-$E,L$ cover semantics
+lift the complete $r$-skeleton to an exact readiness decision.  The checker
+uses the untrusted-producer/small-checker pattern~\cite{necula1997pcc}; under
 $\mathsf{Required}\subseteq\mathsf{Actual}
 \subseteq\mathsf{RawPhysical}$, the certificate transports to runtime behavior.
