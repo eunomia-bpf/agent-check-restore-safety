@@ -7,34 +7,30 @@ commit as the boundary at which effects escape recoverable computation
 ~\cite{elnozahy2002rollback}.  Memoir, ROTE, and LCM protect continuity or
 detect rollback and forks
 ~\cite{parno2011memoir,matetic2017rote,brandenburger2017lcm}; Rebound makes
-authorized rollback append-only~\cite{burke2026rebound}.  We likewise forbid
-rewinding security history, but ask what correlated future remains admissible
-when a typed operation retains or joins continuations.  We propose no snapshot,
-rollback, or output-commit protocol.
+authorized rollback append-only~\cite{burke2026rebound}.  We derive the
+correlated future admissible when a typed operation retains or joins
+continuations; we propose no snapshot, rollback, or output-commit protocol.
 
 \paragraph{Configurations, conflict, and minimal obstructions}
 Event structures already represent causality, conflict, and valid
 configurations, while BI, fork/join separation logics, and workflow models
 account for resource composition~\cite{winskel1987event,pym2004bi,
 moine2024dislog,meyer2018workflow}; graph projections can also lose
-higher-order structure~\cite{wang2024hypergraph}.  We claim no novelty for
-these facts.  We place them at a security boundary: a typed edge generates
-candidate and required families, receipts filter the candidate, and an
-independent controller product is checked against the admitted family.
-Minimal nonfaces become deployment counterexamples only after excluding
-outside-support and locally forbidden choices.
+higher-order structure~\cite{wang2024hypergraph}.  Here a typed edge generates
+candidate/required families, receipts filter the candidate, and an independent
+controller product is checked against the result.  Minimal nonfaces become
+deployment counterexamples only after excluding outside-support and locally
+forbidden choices.
 
 \paragraph{Capabilities, linear resources, and consumable authority}
 Consumable credentials combine linear authorization with durable ratification
 so copied proof material cannot productively reuse bounded authority
 ~\cite{bowers2007consumable}.  Capability calculi, resource-aware session
-types, and capability architectures likewise reason about splitting,
-transferring, bounding, delegating, and revoking resources
-~\cite{terauchi2006capability,das2018resource,yu2023capstone}.  Such mechanisms
-can implement one redemption cell and prevent alias double-spend; we claim none
-of those primitives.  They do not exclude a forbidden union of distinct fresh
-cells.  Because cell and controller identities transform independently, our
-cover theorem checks the remaining higher-order correlation.
+types, and architectures also split, bound, delegate, and revoke resources
+~\cite{terauchi2006capability,das2018resource,yu2023capstone}.  They can
+implement one redemption cell and prevent alias double-spend.  Our cover
+theorem instead checks forbidden unions of distinct fresh cells after cell and
+controller identities transform independently.
 
 \paragraph{Transactions, coordination, and invariant confluence}
 Transactional outboxes and stable idempotency keys couple local intent with
@@ -42,85 +38,69 @@ eventual delivery and deduplicate retries
 ~\cite{aws2026outbox,aws2026idempotency}.  Atomix stages and settles agent tool
 effects across resource frontiers, while Cordon constructs semantic
 transactions over task lineage, state, effects, and delegated authority
-~\cite{mohammadi2026atomix,chen2026cordon}.  They are implementation substrates,
-not the admission theorem.  Invariant confluence and Complete CALM characterize
-when coordination is unnecessary~\cite{bailis2014coordination,
-hellerstein2026completecalm}.  We permit coordination and decide whether one
-typed edge at a fixed durable prefix has a controller realization between its
-required and admitted futures; we claim no universal coordination criterion or
-unique finest cover.
+~\cite{mohammadi2026atomix,chen2026cordon}.  Invariant confluence and Complete
+CALM characterize when coordination is unnecessary
+~\cite{bailis2014coordination,hellerstein2026completecalm}.  We decide one
+fixed-prefix edge realization between required and admitted futures, not a
+universal coordination criterion or unique finest cover.
 
 \paragraph{Supervisory enforcement and certifying compilation}
 Supervisory control synthesizes legal behavior under controllability and
 observation assumptions, including partial/relative observation and structured
 processes
 ~\cite{ramadge1987supervisory,cieslak1988partial,cai2015relative,ma2006sts,feng2007ctp}.
-Decentralized control is the closest mature account of local controllers
-jointly enforcing a specification~\cite{komenda2017decentralized}; security
-automata and runtime hyperproperty enforcement mediate trace and cross-trace
-policies~\cite{schneider2000enforceable,coenen2022hyperproperties}.  They start
-with a plant/specification or policy and study synthesis/enforcement.  We derive
-$\mathsf{Required}$ and $\mathsf{Admitted}$ for one online typed edge and the
-finite co-liveness evidence its manifest needs.  We claim neither a supervisor
-nor a general hyperproperty enforcer.
-
-The artifact follows an untrusted-producer/small-checker pattern
-~\cite{necula1997pcc}, but Python is not extracted from Lean and its seal does
-not establish $\mathsf{Actual}\subseteq\mathsf{RawPhysical}$.
+Decentralized control studies local controllers jointly enforcing a
+specification~\cite{komenda2017decentralized}; security automata and runtime
+hyperproperty enforcement mediate trace and cross-trace policies
+~\cite{schneider2000enforceable,coenen2022hyperproperties}.  Range control
+already combines upper legal and lower required languages with maximally
+permissive synthesis~\cite{yin2017range}.  Our corollary only prunes submitted
+$\Gamma$ at fixed $E,L$ after the edge and prefix derive its bounds; the
+combined boundary and observation theorem are not general supervisor or
+hyperproperty synthesis.
 
 \paragraph{Agent checkpoint and branching substrates}
-ACRFence identifies action replay and authority resurrection after agent
-restore and proposes a branch-tagged replay-or-fork check at the tool boundary
-~\cite{zheng2026acrfence}.  DART checks when a local checkpoint remains
-semantically recoverable after downstream commitments~\cite{yang2026dart}.
-Crab, Fork--Explore--Commit, and Agent libOS provide restore, branching, and
-checkpoint substrates~\cite{wu2026crab,wang2026fork,zhang2026agentlibos}.  We
-instead type six Fork/Restore/Merge edges and check their future against receipts
-and controller realization; we claim neither checkpoint fidelity nor an
-unmodified runtime adapter.
+ACRFence identifies replay and authority resurrection after restore
+~\cite{zheng2026acrfence}; DART checks checkpoint recoverability after
+downstream commitments~\cite{yang2026dart}.
+Crab, Fork--Explore--Commit, and Agent libOS provide branching/checkpoint
+substrates~\cite{wu2026crab,wang2026fork,zhang2026agentlibos}.  We type six
+history edges and check commitments against receipts/controllers; we claim
+neither checkpoint fidelity nor an unmodified adapter.
 
 \paragraph{History-sensitive agent policy and evolving authority}
-FORGE specifies Datalog policies over history predicates maintained by an
-observability service with an assume/guarantee contract, and a reference
-monitor consults those predicates at policy-relevant actions
-~\cite{palumbo2026forge}.  It treats general causal history and observation;
-we generate one correlated family from a typed edge, filter it by receipts, and
-check a co-live controller product.  We claim no policy language or monitor
-theorem.
+FORGE monitors Datalog policies over causal history under an observation
+contract~\cite{palumbo2026forge}.  We instead generate one correlated family
+from a typed edge, filter it by receipts, and check its controller product.
 
 Hu and Wang show that locally benign agent fragments may assemble into harm
-that no monitor on the local view can detect~\cite{hu2026localmonitors}.  We do
-not claim that general insight.  Our deterministic lower bound says that, for
-every $k$, arity-$k$ metadata cannot distinguish two $U(k,k{+}1)$ controller
-families with different decisions; the contract computes a sufficient arity.
+that no local-view monitor detects~\cite{hu2026localmonitors}.  Our lower bound
+distinguishes two $U(k,k{+}1)$ co-liveness families with equal arity-$k$
+projections.  Unlike $k$-safety's trace witnesses and self-composition
+~\cite{clarkson2008hyperproperties}, it observes controller sets and includes
+fixed-$E,L$ realizability and required coverage; cover compression supplies the
+upper bound.
 
-Earned Authority fixes a transition envelope and effect ceiling when a grant
-is issued, distinguishes requested from realized effects, and conditions
-authorization continuity on evidence supplied during later agent mutation
-~\cite{zhang2026earned}.  We neither replace nor strengthen that ceiling; we
-ask which configurations survive a typed edge and whether controller layout
-can exceed them.  PORTICO compiles task contracts into epoch-bound capabilities
-withdrawn when their episode closes~\cite{santos2026lingering}.  Those handles
-can implement local cells; we address correlations among still-valid cells,
-not episode closure.
+Earned Authority fixes an effect ceiling across agent mutation
+~\cite{zhang2026earned}, while PORTICO compiles task contracts into epoch-bound
+capabilities~\cite{santos2026lingering}.  We ask which correlations survive a
+typed edge and whether controller composition exceeds them.
 
 \paragraph{Commit authorization and external effects}
-Commit-Time Authorization checks whether one effect witness remains fresh,
-causally prior, target-bound, and eligible when the effect commits
-~\cite{santos2026committime}.  Ghost Tool Calls shows that an abandoned
-speculative call may disclose intent at issue time, before any later commit
-decision~\cite{mohammadi2026ghost}.  Atomix and Cordon address transactional
-grouping, staging, recovery, and settlement of agent tool effects
-~\cite{mohammadi2026atomix,chen2026cordon}.  These boundaries are orthogonal:
-fresh, individually valid effects may still be forbidden together.  Our seal
-neither authorizes one effect nor prevents issue-time disclosure.
+Commit-Time Authorization checks one effect witness at commit
+~\cite{santos2026committime}; Ghost Tool Calls studies issue-time disclosure
+~\cite{mohammadi2026ghost}; Atomix and Cordon provide transactional effect
+handling~\cite{mohammadi2026atomix,chen2026cordon}.  Fresh individual effects
+may still be forbidden together, while our seal neither authorizes one effect
+nor prevents pre-commit disclosure.
 
 \paragraph{Combined claim boundary}
-The novelty is their decision boundary: a typed edge generates required and
-candidate futures; receipts select the greatest admitted future; independent
-cell/controller normalizations induce a relational product; and a checker emits
-positive evidence or a typed minimal failure.  A contract-indexed upper bound
-and arbitrary-arity lower family locate when truncated co-liveness evidence is
-incomplete.  Under
+The novelty is the combined decision boundary: typed edges generate futures,
+receipts select the greatest admitted subfamily, independent cell/controller
+normalizations induce a product, and a checker emits evidence, a greatest
+co-liveness-only proposal, or a typed failure using the
+untrusted-producer/small-checker pattern~\cite{necula1997pcc}.  The
+contract-indexed upper and arbitrary-arity lower bounds characterize truncated
+co-liveness evidence.  Under
 $\mathsf{Required}\subseteq\mathsf{Actual}
 \subseteq\mathsf{RawPhysical}$, the certificate transports to runtime behavior.

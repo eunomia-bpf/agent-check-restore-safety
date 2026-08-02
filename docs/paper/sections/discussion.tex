@@ -3,33 +3,32 @@
 
 \paragraph{Scope}
 Snapshots cannot retract external effects or receipts, and total rollback is
-wrong when histories remain live.  The problem extends to workflows,
-deployments, notebooks, search, and RL; agents make it routine by constructing
-the graph online around external tools.  Edge-local certificates compose until
-receipt growth forces readmission.  Choose-one hermetic rollouts can defer
-protected authority until winner selection; rollouts that commit externally
-in parallel or join durable effects require admission at the corresponding
-history edge.
+wrong when histories remain live.  The model covers workflows, deployments,
+notebooks, search, and RL; agents make the graph online around external tools.
+Edge certificates compose until receipt growth forces readmission.  Hermetic
+choose-one rollouts can defer authority; parallel external commits and durable
+joins require admission at their history edge.
 
 \paragraph{Assumptions and nonclaims}
 Atomic redemption protects a cell; joint control protects correlations.
-$\mathsf{RawPhysical}$ composes declared controllers, so hidden coordination may
-reject safely whereas an unmodeled bypass is unsound.  $\Gamma$ binds one
-co-durable epoch: receipt growth or controller/version change requires a new
-decision.  Lean proves the finite manifest theorem; unverified Python
-recomputes full $\Gamma$, consumes no prior seal, and treats coverage as
-attested.  Truthful evidence, mediation, freshness, and redemption remain
-runtime obligations.  The contract-only arity is worst-case tight, though
-concrete $E,L$ or proved structure may lower it.  The seal neither authorizes
-effects nor proves exactly-once, liveness, reward correctness, or safe learning.
+$\mathsf{RawPhysical}$ composes declared controllers: hidden coordination can
+reject safely, whereas an unmodeled bypass is unsound.  $\Gamma$ binds one
+co-durable epoch; receipt or controller-version change forces readmission.
+Lean proves the finite manifest theorem, while Python recomputes full $\Gamma$
+under attested coverage.  Its repair is greatest only among downward-closed
+restrictions of submitted $\Gamma$ at fixed $E,L$; it must be installed and
+resubmitted, and says nothing about $\mathsf{Actual}$.  Truthful evidence,
+mediation, freshness, and redemption remain runtime obligations.  The
+contract-only arity is worst-case tight, though concrete structure may lower
+it.  The seal authorizes no effect and proves neither exactly-once execution
+nor safe learning.
 
 \section{Conclusion}
 
 History admission derives the correlated future of Fork, Restore, or Merge,
 conditions it on the durable past, normalizes redemption cells separately from
-controllers, and computes the co-liveness observation arity sufficient for its
-contract; an arbitrary-$k$ family shows this bound worst-case tight.  It issues
-a history-admission seal only when
+controllers, prunes submitted co-liveness, and derives a sufficient observation
+arity with an arbitrary-$k$ tightness family.  It seals only when
 $\mathsf{Required}\subseteq\mathsf{RawPhysical}
 \subseteq\mathsf{Admitted}$; sound runtime use additionally requires
 $\mathsf{Required}\subseteq\mathsf{Actual}

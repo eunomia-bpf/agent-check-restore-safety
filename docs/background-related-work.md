@@ -336,6 +336,30 @@ Two structured-control results are especially close. Ma and Wonham's state-tree 
 - supervisor synthesis under partial observation;
 - translating a safety policy into guarded workflow execution.
 
+Yin and Lafortune's range-control problem is a still closer warning for the new
+repair output.  It takes a legal upper-bound language and a required lower-bound
+language and synthesizes a maximally permissive safe supervisor containing the
+lower bound.  Thus a greatest or locally maximal solution between
+`Required` and `Admitted` is not itself a novelty claim.  Our closed-form
+`Gamma*` is useful only as a constructive corollary in a more specific chain:
+the typed online history edge and durable prefix first derive those two
+correlated families; independent cell and controller quotients induce the
+physical product; and fixed access/local families permit the checker to prune
+the submitted co-liveness manifest and report whether that restricted repair
+space preserves required behavior.  The observation-arity upper/lower theorem,
+not generic maximally permissive synthesis, remains the controller-theory
+headline.
+
+Clarkson and Schneider's hyperproperties supply a second arity comparison.
+Their `k`-safety bounds the number of finite traces in a bad observation and
+reduces verification to a `k`-fold self-composition.  Our arity does not count
+traces or hyperproperty quantifiers: it counts controller co-liveness sets
+needed to preserve a readiness decision that also depends on fixed access,
+local-family cover realizability, and required coverage.  The upper bound comes
+from compressing a physical cover; the lower bound is indistinguishability of
+two co-liveness manifests.  Wording must remain “contract-only sufficient and
+family-wise worst-case tight,” not “minimal telemetry.”
+
 The useful connection is instead a scope test and a source of proof machinery. A snapshot-only hook is a partially observing controller. A durable claim certificate refines its observation. General partial-observation synthesis may lack a unique most-permissive policy, so the paper must not make that claim for arbitrary hidden lifecycle events.
 
 The surviving specialization is an *online authority-support transformer* for a dynamically created agent history. Its plant is not a fixed workflow known before synthesis: branch epochs, effect bindings, typed claims, and merge projections are created during execution. Escape changes a claim from branch-conditional support to durable support, and the effect gate must linearize accounting before an external observation. The candidate new results are therefore limited to this semantics: an exact criterion for compiling correlated residuals into independent capabilities; a cleanup-aware iff criterion for promotion serialization; non-closure of pure choice/parallel contracts under authority promotion; and an exact threshold repair with lineage transport. Freezing is an explicit no-silent-policy-expansion rule, not a generic AC necessity. Classical supervisory control remains the encompassing control-theoretic framework.
@@ -430,6 +454,7 @@ insufficiency, not that every ordinary trace lacks every component.
 | Refinement-certified structural lease-binding transport across a history transformation. | Mechanized supporting result; full lease claim rejected | A version-monotone commuting refinement transports cell/atom binding and allows one old binding to name mutually exclusive alternatives.  It deliberately does not establish issuer/root/scope/digest/expiry/signature validity, revocation, or that a runtime token is reusable unchanged. |
 | Durable-prefix transport plus greatest fixed-family safe pruning. | Mechanized supporting layer | For all additive policies, pointed transport is equivalent to local injectivity, prefix disjointness, and source-family preservation; filtering computes the greatest safe subfamily of one fixed fully observed candidate under controllable pruning. It does not prove sink exactly-once, lease refinement, or completeness of the candidate/required generator. |
 | Greatest pointwise-safe subfamily plus finest exact factorizing partition. | Mechanized supporting synthesis, not headline mathematics | Existence is limited to fixed candidate semantics, complete observation, controllable pruning, and maximal asynchronous `localProduct` recombination. Generic supremal control and static factorization are classical; novelty can survive only in the typed dynamic operator, authority cells, commitments, proof-producing lowering, and completeness boundary. |
+| Greatest hereditary-safe pruning of a submitted co-liveness family. | Mechanized constructive corollary, not headline mathematics | Under fixed access/local families it is the greatest downward-closed Gamma restriction whose declared product is admitted, and it preserves Required iff any such pruning can. Range control already occupies maximally permissive synthesis between lower and upper behavior bounds; value here is the typed-history derivation, two identity quotients, independently checked proposal, and composition with the observation theorem. |
 | Four-way proof-obligation classifier (`Inherit`/`ReadmitOK`/`NeedsMechanism`/`Reject`). | Semantic skeleton mechanized; executable compiler open | One Lean soundness theorem gives each enum result its fixed-frontier meaning and the valid-contract trichotomy is pairwise exclusive.  The current Lean definition is noncomputable and emits no witnesses; novelty depends on an executable independent-verifier design, minimal obstructions, fail-closed manifests, and a real adapter. |
 | Snapshot-local sound-and-maximally-permissive impossibility. | Supporting corollary | It is one nonconstant observation fiber of the more general residual-profile precision theorem; generic partial-observation impossibility is classical. |
 | Headroom full abstraction and correlated residual controller. | Leading, closest-work sensitive | Gives a closed form for the minimal one-step Reserve behavior, proves per-branch summaries are not update-closed, and gives an update-closed residual derivative for joint Reserve. |
@@ -464,6 +489,17 @@ The following full texts are present locally and validated as PDFs:
 - `reference/foundations/`: Winskel event structures, the Capability Calculus, resource-aware session types, and workflow concurrency-threshold analysis.
 - `reference/supervisory-control/`: partial-observation supervisory control and relative observability; full-text browser copies were also inspected for state-tree structures and guarded communicating transaction processes.
 - `reference/csf-theory/`: capability-machine security, FLAQR, Cracking the Stateful Nut, Robust Safety for Move, Formalizing Stack Safety, modal-logic security properties, Relative Security, secure synthesis, FSLH, Nonmalleable Progress Leakage, Cryptographic Choreographies, and unified attack-tree metrics.
+
+The latest closest-work check also downloaded and inspected:
+
+- `docs/reference/closest-work/2017-yin-range-control.pdf`, SHA-256
+  `d0c94b47187cf9fa105d0485126307fce969ec4a4565b5b97e0d0086d6015d25`;
+- `docs/reference/closest-work/2008-clarkson-hyperproperties.pdf`, SHA-256
+  `0bb61b8aaac20ccc14fcd1d9178f1f89409d334b136b98b8a274ef985b37a31c`.
+
+The first is the primary author copy of IEEE TAC 2017, DOI
+`10.1109/TAC.2016.2644867`; the second is the Cornell primary copy of the CSF
+2008 paper, DOI `10.1109/CSF.2008.7`.
 
 The 2026-08-02 closest-work update added and validated these primary-source
 PDFs (the repository intentionally ignores PDF bytes):

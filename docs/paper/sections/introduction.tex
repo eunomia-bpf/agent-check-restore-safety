@@ -73,11 +73,13 @@ physical overpermission.  The compiler emits a certificate or typed negative
 witness, and an independent verifier recomputes the decision and accepts only
 a canonical match.  Lean checks a contract-indexed co-liveness observation
 arity sufficient for exact readiness and an arbitrary-$k$ family making every
-smaller arity insufficient in the worst case.  The prototype expands full
-declared $\Gamma$, records its coverage attestation and required arity; 31
-focused tests (55 across the complete artifact) and a 2,166-case oracle
-cross-check the executable semantics.  Public and private trajectories expose
-the workload and missing adapter fields, but provide no safety labels.
+smaller arity insufficient in the worst case.  A constructive corollary returns
+the greatest downward-closed pruning of submitted $\Gamma$ whose fixed-$E,L$
+product is admitted and decides whether it preserves $\mathsf{Required}$.
+The prototype records full $\Gamma$, its coverage attestation, the arity, and
+this non-installed proposal; 31 focused tests (55 total) and a 2,166-case
+oracle cross-check its semantics.  Public and private trajectories expose the
+workload and missing adapter fields, but provide no safety labels.
 The tool is neither a checkpoint engine nor an effect authorizer: truthful
 manifests, complete mediation, controller installation, and both inclusions
 involving $\mathsf{Actual}$ remain integration obligations.
@@ -95,11 +97,10 @@ This paper makes three contributions.
   (\cref{sec:model,sec:semantics,sec:results}).
 
   \item A controller-realization theory that separates cell identity from
-  controller identity.  It gives an exact manifest-readiness and obstruction
-  criterion for overlapping controller access, extracts honest minimal
-  correlation-cut witnesses, computes a sufficient contract-indexed
-  co-liveness observation arity, and proves that bound worst-case tight for
-  every arity.  It recovers
+  controller identity.  For overlapping access it characterizes readiness and
+  obstructions, yields the greatest submitted-$\Gamma$ pruning at fixed $E,L$,
+  extracts minimal correlation cuts, and gives a sufficient contract-indexed
+  observation arity with an arbitrary-arity tightness family.  It recovers
   functional partitions as a special case and transports prefix safety under
   explicit runtime refinement premises (\cref{sec:results}).
 

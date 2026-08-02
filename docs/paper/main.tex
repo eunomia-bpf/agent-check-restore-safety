@@ -74,8 +74,10 @@ an exact minimal-obstruction criterion, a contract-indexed sufficient
 co-liveness observation arity, and an arbitrary-$k$ family proving that bound
 worst-case tight.
 A small compiler and independent verifier expand full declared $\Gamma$, retain
-its coverage attestation, and report the required arity; Lean~4 checks the
-theorem spine, 31 focused compiler/verifier tests (55 across the complete
+its coverage attestation, report the required arity, and propose the greatest
+downward-closed restriction of submitted $\Gamma$ whose fixed-access/local-family
+product is admitted, without treating that restriction as installed; Lean~4 checks
+the theorem spine, 31 focused compiler/verifier tests (55 across the complete
 artifact) cover the executable distinctions, and an exhaustive oracle agrees
 on all 2,166 three-cell refinement instances.
 Public and private Claude/Codex trajectories characterize the need for online

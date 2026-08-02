@@ -80,16 +80,24 @@ The compiler follows the proof decomposition.
   \]
   and emits a positive certificate or a compact negative witness.  It also
   reports \texttt{required\_coliveness\_arity}, the contract-only value in
-  \cref{eq:required-coliveness-arity}.
+  \cref{eq:required-coliveness-arity}.  In the same globally capped product
+  pass, it computes $\Gamma^{\star}_{\mathsf{Admitted}}$ from
+  \cref{eq:principal-coliveness-repair} and whether its raw product covers
+  $\mathsf{Required}$.
 \end{enumerate}
 
-The coverage labels are adapter attestations.  The parser checks their form,
-and a declared sound overapproximation yields a conservative decision, but
-neither executable proves that the supplied full $\Gamma$ covers the runtime's
-co-durable epoch.  The seal therefore retains
-\texttt{controller\_coliveness\_coverage\_attestation} as an external
-obligation; the reported arity diagnoses how much exact co-liveness evidence
-would suffice, rather than certifying that the evidence was collected.
+Every parsed $L_g$ contains the empty configuration, so the executable may
+test $\bigotimes_{g\in G}L_g\subseteq\mathsf{Admitted}$ directly; removed
+controllers choose empty, matching hereditary group safety.  The same pass
+reports repair maxima, exact missing required configurations, and status
+\texttt{not\_needed}, \texttt{feasible}, or \texttt{infeasible}.  A feasible
+proposal changes neither the current decision nor its seal: the runtime must
+install it and resubmit.
+
+Coverage remains an unchecked adapter attestation.  The reported arity says
+which exact projection would suffice, not that it was collected; under
+\texttt{sound\_overapprox}, repair coverage concerns only the declared product,
+not $\mathsf{Actual}$.
 
 The semantic and deployment axes remain separate.
 The semantic result is \textsc{Inherit}, \textsc{ReadmitOK},
