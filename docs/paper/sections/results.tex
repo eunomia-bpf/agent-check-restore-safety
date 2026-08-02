@@ -5,28 +5,29 @@ The paper's main claim is the following evidence theorem.  Subsequent results
 derive its inputs from a typed history edge, prove sufficiency, and construct
 the two independent lower bounds.
 
-\begin{theorem}[Sufficient view and worst-case evidence lower bounds]
+\begin{theorem}[Exact manifest-relative view and uniform lower bounds]
 \label{cor:evidence-boundary}
-Let a valid typed Agent history edge and durable receipt prefix derive the
-required and admitted families $(\mathcal R,\mathcal F)$.  For
-downward-closed controller-local and epoch families, exact structural
-readiness is determined by
-\[
-  (\mathcal R,\mathcal F,E,L,
-    \Pi_{\leq r(\mathcal R,\mathcal F)}(\Gamma)),
-\]
-after copied handles are normalized to redemption cells and gate uses to
-authoritative controllers.  Across the model class:
+Let a valid typed history edge and durable receipt prefix derive finite
+normalized families $(\mathcal R,\mathcal F)$, and fix access $E$ and
+downward-closed local families $L$.  Then:
 \begin{enumerate}[leftmargin=*,itemsep=1pt]
-  \item erasing either identity relation while retaining the other can
-  conflate a ready and nonready world; and
-  \item for every $k\geq1$, arity-$k$ co-liveness evidence can conflate a ready
-  and nonready world whose contract requires arity $k+1$.
+  \item for any downward-closed $\Gamma_1,\Gamma_2$, equality of
+  $\Pi_{\leq r(\mathcal R,\mathcal F)}(\Gamma_1)$ and
+  $\Pi_{\leq r(\mathcal R,\mathcal F)}(\Gamma_2)$ implies identical
+  structural-readiness Booleans;
+  \item at the raw-manifest stage, erasing either the handle-to-cell or the
+  gate-use-to-controller quotient admits a pair with the same raw fields and
+  retained quotient but opposite readiness decisions; and
+  \item for every $k\geq1$, there is a fixed normalized
+  $(\mathcal R,\mathcal F,E,L)$ and two epoch families with the same
+  $\Pi_{\leq k}$ but opposite decisions, where
+  $r(\mathcal R,\mathcal F)=k+1$.
 \end{enumerate}
-The view determines the exact Boolean; the identity components are
-independently nonerasable on the stated manifest class, and the arity bound is
-uniformly tight in the worst case.  The view is not claimed to be a unique or
-pointwise-minimal encoding.
+Thus $(\mathcal R,\mathcal F,E,L,\Pi_{\leq r}(\Gamma))$ determines the exact
+manifest-relative Boolean after normalization; the identity results state
+what cannot uniformly be erased before that normalized view is derived.  This
+is neither a runtime-safety theorem without refinement nor a claim that the
+view is a unique or pointwise-minimal encoding.
 \end{theorem}
 
 If a ready manifest is faithfully realized by the runtime, its certificate
@@ -109,66 +110,6 @@ Thus the admitted future is greatest in the fixed-candidate, fixed-prefix,
 fixed-lineage, pruning-only space; its downward-closed family retains
 correlations rather than assuming a rectangular numeric capacity policy.
 
-\begin{theorem}[Four-way semantic classification]
-\label{thm:semantic-classifier}
-Given a valid typed operation and an old admitted envelope, the classifier has
-the following sound interpretation:
-\begin{description}[leftmargin=*,style=nextline]
-  \item[$\mathsf{Inherit}$]
-    A structural refinement transports the old certificate.
-  \item[$\mathsf{ReadmitOK}$]
-    No such refinement is supplied, but
-    $\mathsf{Candidate}_{op}=\mathsf{Admitted}_{op}$.
-  \item[$\mathsf{NeedsMechanism}$]
-    $\mathsf{Required}_{op}\subseteq\mathsf{Admitted}_{op}
-    \subsetneq\mathsf{Candidate}_{op}$.
-  \item[$\mathsf{Reject}$]
-    No $\mathcal H$ between $\mathsf{Required}_{op}$ and
-    $\mathsf{Candidate}_{op}$ satisfies
-    $\mathsf{PCM}(\mathcal A,D,\mathcal H,\ell)$.
-\end{description}
-The three underlying semantic classes---complete admission, mechanism-needed
-pruning, and pruning rejection---are exhaustive and pairwise exclusive;
-$\mathsf{Inherit}$ and $\mathsf{ReadmitOK}$ split complete admission according
-to certificate provenance.  In the rejection case, some configuration in
-$\mathsf{Required}_{op}\setminus\mathsf{Admitted}_{op}$ is a witness.
-\end{theorem}
-
-In particular, $\mathsf{NeedsMechanism}$ is not permissive by itself: it says
-the required contract is preservable only under a restriction.  A submitted
-manifest that proves the deployment sandwich supplies such a restriction and
-may receive a structural seal; installation remains an external obligation.
-
-\subsection{Local composition of structural inheritance}
-
-Full filtering is unnecessary when a target is structurally related to an
-already admitted envelope at the same receipt frontier.  The certificate must
-account for every target configuration rather than merely each cell in
-isolation.
-
-\begin{theorem}[Structural transport and composition]
-\label{thm:structural-transport}
-Let $p$ map target cells into the cells of an admitted envelope.  If $p$ is
-injective on every target configuration, maps every such configuration into
-the old future, commutes with lineage, and advances the envelope version, then
-\[
-  \mathsf{PCM}(\mathcal A,D,\mathsf{Candidate}_{op},\ell)
-\]
-is transported from the old certificate.  If a second refinement satisfies
-the same obligations into the first target, the two refinements compose,
-including version order, configuration injectivity, and the lineage square.
-\end{theorem}
-
-This theorem supports an execution graph that is discovered online: each
-Fork, Restore, or Merge edge can carry a local refinement, and a path
-certificate is obtained by composition without declaring the eventual graph
-in advance.
-It deliberately preserves $D$ definitionally.  If a new receipt grows the
-frontier to $D'$, the theorem supplies no certificate for $D'$; admission must
-be rerun.  In particular, configurations containing a restored cell whose
-lineage atom has entered the new durable prefix are removed even when its
-snapshot-only parent map still exists.
-
 \subsection{Exact controller-readiness boundary}
 
 Semantic admission does not imply that independently live controllers preserve
@@ -190,6 +131,15 @@ equates a ready world with the nonready $(\ne,\ne)$ world.  Hence no exact
 structural-readiness decider on this manifest class factors through either
 erasure.
 \end{proposition}
+The fixture is concrete.  Its raw future permits either of two handles but
+not their pair; raw gate use $j_i$ may choose nothing or its matching handle,
+and every subset of the two uses is co-live.  If the handles alias, the
+normalized future and product are the powerset of one cell, regardless of
+controller identity.  If the gate uses share one controller, their
+union-normalized local family retains the two alternatives, regardless of
+cell identity.  Only when both handles and controllers are distinct does the
+physical product contain the forbidden pair.  The four decisions are
+therefore ready, ready, ready, and nonready.
 This is information irredundancy, not uniqueness of representation: a
 fail-closed checker may reject both worlds, and equivalent evidence may replace
 either literal map.  The result is manifest-relative and assumes atomic
@@ -350,10 +300,22 @@ $k{+}1$ controllers is ready.  Here $r(U,U)=k{+}1$, so no arity-$k$ checker is
 exact on all downward-closed realizations.
 \end{theorem}
 
-For sufficiency, any cover of $C$ compresses to at most $|C|$ controllers;
-local closure then shrinks overpermission to a minimal nonface or an
-outside-support singleton.  The lower construction contrasts controller sets
-of size at most $k$ with the full powerset.  This skeleton distinction is
+For sufficiency, fix one cover of a configuration $C$.  Choose at most one
+contributing controller for each cell of $C$ and restrict every selected local
+piece to the cells assigned to it; downward closure yields a cover with at
+most $|C|$ controllers.  Hence coverage of each $C\in\mathcal R$ is determined
+through arity $|C|$.  If a physical $C$ is not in $\mathcal F$, finiteness and
+downward closure expose either one cell outside
+$\operatorname{supp}(\mathcal F)$ or a minimal nonface $K\subseteq C$.
+Restricting and compressing the same cover yields a witness using at most one
+or $|K|$ controllers, respectively.  These are exactly the three maxima in
+\cref{eq:required-coliveness-arity}.
+
+For the lower construction, use $k+1$ cells and $k+1$ controllers, with
+identity access and singleton local families.  The epoch family
+$U(k,k+1)$ and the full powerset have identical $k$-projections; their raw
+products are respectively $U(k,k+1)$ and the full powerset, so only the former
+is ready for $\mathcal R=\mathcal F=U(k,k+1)$.  The skeleton distinction is
 classical~\cite{emtander2010hypergraphs,wang2024hypergraph}; the result here
 lifts it through fixed-$E,L$ cover realizability and required coverage.
 Concrete $E,L$ may permit less evidence.

@@ -3,9 +3,9 @@
 
 \paragraph{Scope}
 Snapshots cannot retract effects or receipts, and total rollback is wrong while
-histories remain live.  Edge certificates compose until receipt growth;
-choose-one rollouts may defer authority, but parallel commits and durable joins
-require edge admission.
+histories remain live.  Each edge decision fixes one receipt frontier; growth
+forces readmission.  Choose-one rollouts may defer authority, but parallel
+commits and durable joins require edge admission.
 
 \paragraph{Assumptions and nonclaims}
 Atomic redemption protects cells; joint control protects correlations.
@@ -18,6 +18,15 @@ to submitted evidence and must be installed and resubmitted.  Truthful evidence,
 runtime refinement, mediation, freshness, and redemption remain external
 obligations.
 The seal authorizes no effect and proves neither exactly-once nor safe learning.
+
+\paragraph{Expressiveness}
+The model covers finite, unordered, downward-closed safety contracts over
+unit-normalized prospective commitments.  Temporal order, causal enablement,
+nonmonotone obligations, and an atomic multi-effect bundle are not represented
+directly; an adapter must encode the relevant unit as a cell or use a richer
+semantics.  Unknown future calls are covered only when they redeem a
+predeclared authority slot.  A new slot, controller version, or contract
+requires readmission rather than optimistic extension of an old seal.
 
 \section{Conclusion}
 

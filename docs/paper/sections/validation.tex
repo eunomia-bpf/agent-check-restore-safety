@@ -2,10 +2,10 @@
 \label{sec:validation}
 
 We ask whether the theorems are machine-checked (VQ1), two implementations
-agree with the finite semantics (VQ2), litmus cases expose lower-order blind
-spots (VQ3), and public traces carry the required adapter evidence (VQ4).
-No observational trace is labeled safe or unsafe, and no trace statistic is
-used to establish either inclusion involving $\mathsf{Actual}$.
+agree with the finite semantics (VQ2), and litmus cases expose lower-order
+blind spots (VQ3).  These questions test internal consistency and bounded
+execution, not adapter feasibility or either inclusion involving
+$\mathsf{Actual}$.
 
 \subsection{VQ1: Mechanized theorem spine}
 
@@ -74,16 +74,3 @@ three, matching \cref{eq:required-coliveness-arity}.  Both implementations
 propose the three controller pairs while leaving the original result
 diagnostic; resubmitting that restriction seals.  Local overpermission instead
 makes co-liveness-only repair infeasible.
-
-\subsection{VQ4: Public trace-schema evidence}
-
-TraceLab collects real Claude Code and Codex workload telemetry and reports
-long autonomous loops and heterogeneous tool behavior
-~\cite{zhu2026tracelab}.
-We verified its v0.0.2 release of 8,058 sessions and 743,819 normalized tool
-calls against the published artifact digest~\cite{tracelab2026release}.
-Its normalized schema provides ordinary call/result correlation but not the
-joint typed history edge, durable receipt prefix, cell-alias evidence,
-controller identity and co-liveness, or a correlated leaf future contract.
-The missing fields make history-admission prevalence unidentifiable; they do
-not imply that failures are rare.

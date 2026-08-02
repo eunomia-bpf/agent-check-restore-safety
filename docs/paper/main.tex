@@ -41,9 +41,9 @@
 \newcommand{\Dispatch}{\ensuremath{\mathsf{Dispatch}}\xspace}
 \newcommand{\Retry}{\ensuremath{\mathsf{Retry}}\xspace}
 
-\title{History Admission: Safe Fork, Restore, and Merge under Durable Authority}
+\title{History Admission: Structural Readiness for Fork, Restore, and Merge}
 
-\author{\IEEEauthorblockN{Anonymous Authors}}
+\author{}
 
 \begin{document}
 \maketitle
@@ -56,8 +56,9 @@ effects can violate a contract that permits every pair but forbids their
 union.  Per-effect authorization, linear capabilities, and rollback protection
 do not decide this joint-outcome question.
 
-We define \emph{history admission}: before installing a typed history edge, a
-runtime must show
+Within a finite model of unordered, downward-closed future effects, we define
+\emph{history admission}.  Before installing a typed history edge, its
+submitted manifest must show
 \[
   \mathsf{Required}\subseteq\mathsf{RawPhysical}
   \subseteq\mathsf{Admitted}.
@@ -66,22 +67,22 @@ The left inclusion preserves the behavior promised by the edge; the right
 prevents its independently live controllers from realizing a future excluded
 by the authority contract and immutable receipt prefix.
 
-Our central result gives a sufficient structural view and matching
-component-wise worst-case lower bounds.  Two identity relations are
-independently nonerasable:
-copied handles must be normalized to redemption cells, and gate uses to
-authoritative controllers.  After this normalization, the complete
-co-liveness projection through a contract-derived arity $r$ determines
-readiness; for every lower uniform bound, a well-formed cover gives identical
-lower-order evidence but the opposite decision.  Thus the contract, rather than a fixed pairwise rule, determines the
-worst-case necessary uniform observation depth.
+Our central result characterizes an exact manifest-relative decision.  For
+fixed normalized contracts, access, and local controller families, any two
+downward-closed co-liveness families with the same projection through a
+contract-derived arity $r$ have the same readiness Boolean.  For every
+uniformly smaller arity, a well-formed pair has the same visible projection
+and opposite decisions.  Before normalization, a separate two-by-two
+construction shows that copied-handle identity and authoritative-controller
+identity are independently nonerasable.  Thus the contract, rather than a
+fixed pairwise rule, determines the worst-case observation depth.
 
-A certifying compiler derives the futures of Fork/Restore/Merge, emits an
-admission seal or counterexample, and is checked by an independent verifier.
-Lean~4 mechanizes the theorem spine.  The executables pass 62 tests, and an
-independent oracle agrees on all 2,166 bounded refinement instances.  A public
-trace-schema study confirms that ordinary Agent telemetry omits the required
-identities and co-liveness; it is not used as a safety oracle.
+An untrusted compiler derives Fork/Restore/Merge futures and emits a decision
+or counterexample; an independent verifier recomputes it, and Lean~4
+mechanizes the theorem spine.  The result is exact for the submitted finite
+manifest.  Transferring it to an installed runtime additionally requires
+authenticated evidence, complete mediation, and explicit runtime-refinement
+obligations; the compiler does not prove those facts.
 \end{abstract}
 
 \input{sections/introduction}

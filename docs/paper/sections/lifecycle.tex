@@ -29,13 +29,14 @@ Merge.  A pure Checkpoint records reconstructable state and changes no future
 contract by itself.
 
 The distinction matters because one execution graph need not be specified in
-advance.  A runtime need only describe the proposed edge and the behavior its
-arms may and must retain.  Admission derives the edge's correlated future from
-that typed operation.  The proof relation composes structural certificates
-while the durable past is unchanged; a newly committed receipt reopens
-admission.  The prototype recomputes each request and only reports reuse
-eligibility---it does not consume a prior seal.  Thus the theory handles a
-dynamically growing graph without predicting the agent's complete future plan.
+advance.  A runtime describes the proposed edge and a finite contract for the
+protected authority slots its arms may and must retain; it need not predict
+the natural-language call graph.  A later call needing a new cell or behavior
+outside that contract is not covered by the seal and triggers a new admission
+decision.  Every later edge is checked against the then-current receipt
+frontier; a newly committed receipt likewise reopens admission.  This is how
+the finite model handles a dynamically growing graph without claiming to
+classify unmodeled future calls.
 
 \subsection{Workspace-rollback boundary}
 
@@ -108,10 +109,16 @@ Let
 \[
  U(2,3)=\{X\subseteq\{a,b,c\}\mid |X|\leq2\}.
 \]
-Suppose a valid typed edge and empty receipt prefix derive the objects in
-\cref{tab:worked-instance}.  Each gate $g_x$ has the locally sound choice
-$L_{g_x}=\{\varnothing,\{x\}\}$.  If all three gates may remain live,
-their product contains the forbidden triple and admission rejects.  Restricting
+Consider a deployment-planning checkpoint $K$ with three one-shot rollout
+cells $a,b,c$.  Its complete leaf contract is
+$M_K=2^{\{a,b,c\}}$ and $R_K=U(2,3)$: any subset may be requested, while the
+edge promises to retain every at-most-two outcome.  Take the exact typed edge
+$\mathsf{RestoreReplace}(K)$, an empty receipt prefix, identity lineage, and
+source authority family $U(2,3)$.  The operator rule and prefix filter now
+derive the first three rows of \cref{tab:worked-instance}.  Each deployment
+gate $g_x$ has the locally sound choice
+$L_{g_x}=\{\varnothing,\{x\}\}$.  If all three gates may remain live, their
+product contains the forbidden triple and admission rejects.  Restricting
 co-liveness to at most two gates yields exactly $U(2,3)$ and admission accepts.
 
 \begin{table}[t]
@@ -159,6 +166,30 @@ The compiler and independent verifier implement the finite decision in
 \cref{sec:algorithm}.  Their output is a history-admission seal or a replayable
 counterexample, not permission to execute a tool.
 
+\begin{table}[t]
+  \centering
+  \caption{Proof boundary for a positive decision.}
+  \label{tab:proof-boundary}
+  \small
+  \begin{tabular}{@{}p{0.22\columnwidth}p{0.69\columnwidth}@{}}
+    \toprule
+    Layer & Status \\
+    \midrule
+    Attested input
+      & Typed leaf contracts, two identity quotients, lineage/frontier, and
+        controller access, local behavior, and exact co-liveness evidence \\
+    Recomputed
+      & $\mathsf{Candidate}$, $\mathsf{Required}$,
+        $\mathsf{Admitted}$, $r$, $\mathsf{RawPhysical}$, and the structural
+        readiness Boolean \\
+    External proof
+      & Input authenticity/completeness, mediation and installation, and
+        $\mathsf{Required}\subseteq\mathsf{Actual}\subseteq
+        \mathsf{RawPhysical}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
 Agent lifecycle events and pre-tool hooks are prospective adapter surfaces
 ~\cite{codexappserver,codexhooks,claudesessions,claudehooks}.  Their existence
 does not prove that every relevant effect is mediated, that two handles are
@@ -173,6 +204,14 @@ The first inclusion prevents the adapter from obtaining safety by deleting
 mandatory behavior; the second requires the declared controller product to
 overapproximate every configuration the installed runtime can actually make
 durable.  The offline compiler checks neither fact by observing a transcript.
+
+Exact projected co-liveness has three distinct operational paths.  A verifier
+can receive full $\Gamma$ and compute its projection; a runtime can install
+the projected hereditary family itself as the complete epoch policy and
+resubmit it; or a trusted adapter can attest that a compressed input is exactly
+$\Pi_{\leq r}(\Gamma)$ for a hidden family.  Only the last path leaves
+projection completeness as an external fact.  The schema distinguishes these
+paths and never upgrades a mere upper bound to a positive decision.
 
 \subsection{Adversary, trusted base, and goal}
 

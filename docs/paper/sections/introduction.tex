@@ -80,18 +80,32 @@ $\mathsf{Required}\subseteq\mathsf{Actual}\subseteq
 Deciding \cref{eq:intro-readiness} requires structural evidence that common
 call traces erase.  First, copied handles must be normalized to semantic
 redemption cells; second, gate uses must be normalized to authoritative
-controller instances.  A mechanized two-by-two construction holds every other
-field fixed and shows that erasing either relation conflates a ready and
-nonready world.  After both normalizations, a downward-closed co-liveness
-family $\Gamma$ records which controllers may remain authoritative together.
-The contract derives an arity $r$, and the complete projection
-$\Pi_{\leq r}(\Gamma)$ determines the exact readiness Boolean.  For every
-uniformly smaller bound, a well-formed cover has identical visible projection
-but the opposite decision.  This is a worst-case bound across contracts and
-realizations, not a pointwise-minimal or unique encoding for fixed $E,L$.
+controller instances.  At this raw-manifest stage, a mechanized two-by-two
+construction holds the other quotient and every raw field fixed and shows that
+erasing either relation conflates a ready and nonready world.  After both
+normalizations, fix the derived families $(\mathcal R,\mathcal F)$, access
+$E$, and local families $L$.  If two downward-closed co-liveness families have
+the same $\Pi_{\leq r(\mathcal R,\mathcal F)}$, they have the same readiness
+Boolean.  For every $k$, a pair with contract arity $k+1$ has the same
+$k$-projection and opposite decisions.  The bound is uniform across contracts
+and realizations, not pointwise minimal for fixed $E,L$.
+
+\paragraph{Delta from the closest foundations}
+The individual ingredients are established: event/configuration structures
+represent correlated families, simplicial skeletons can hide a higher-order
+nonface, supervisory and range control synthesize behavior between legal and
+required languages, capabilities implement one consumable cell, and
+proof-carrying code separates witness production from checking.  None by
+itself gives this reduction: a typed history edge and immutable receipts
+derive $(\mathcal R,\mathcal F)$; two independently attested identity
+quotients produce a cell/controller cover; and the contract then fixes the
+co-liveness projection sufficient for its exact readiness Boolean.  Our
+novelty claim is this security composition and its two observation lower
+bounds, not a new skeleton theorem, language-union rule, or checker trust
+pattern.
 
 \paragraph{Construction and validation}
-A certifying compiler implements this decision for typed choice/parallel Fork,
+An untrusted compiler implements this decision for typed choice/parallel Fork,
 replacing/live Restore, and select/join Merge.  It emits a seal or a minimal
 obstruction; an independent verifier recomputes the result.  Greatest
 fixed-prefix admission and safe co-liveness pruning are constructive
@@ -100,9 +114,9 @@ spine.  The implementation passes 62 tests, and an independent oracle agrees
 on all 2,166 bounded refinement instances.  The compiler uses the stricter
 input subclass in which gate uses folded to one controller already agree on
 their normalized local family; the identity lower bound is mechanized for the
-more general union-normalized model.  A public trace-schema study
-demonstrates missing observations but provides neither authorization nor
-safety labels.
+more general union-normalized model.  All positive results remain conditional
+on the adapter/runtime obligations made explicit in
+\cref{tab:proof-boundary}.
 
 \noindent\textbf{Contributions.}
 \begin{enumerate}[leftmargin=*,itemsep=2pt]
@@ -112,7 +126,7 @@ safety labels.
   \item We prove and mechanize a sufficient contract-indexed structural view:
   two identity relations that are independently nonerasable on a fixed
   manifest class, plus a co-liveness projection with a tight uniform
-  worst-case arity bound.  A certifying compiler, independent verifier, oracle,
-  and trace-schema study validate the result and expose its attestation
-  assumptions.
+  worst-case arity bound.  A compiler, independent verifier, and oracle
+  validate the finite decision and expose rather than discharge its
+  attestation assumptions.
 \end{enumerate}

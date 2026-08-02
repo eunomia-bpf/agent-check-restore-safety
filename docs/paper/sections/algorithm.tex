@@ -1,4 +1,4 @@
-\section{Certifying History-Admission Compiler}
+\section{Compiler and Independent Verifier}
 \label{sec:algorithm}
 
 The theory suggests a small tool rather than a replacement agent runtime.
@@ -44,6 +44,11 @@ These fields are attestations, not facts inferred from a transcript.
 The adapter remains responsible for their authenticity and completeness.
 In particular, a natural-language task does not establish a cell alias,
 controller identity, or a complete leaf future contract.
+The exact identity-erasure fixture uses the theory's union-normalized
+same-controller semantics and is therefore a model lower bound, not a test of
+the executable's stricter same-anchor agreement rule.  The executable still
+instantiates the normalized readiness and projection theorems on its accepted
+subclass; it does not claim to demonstrate that lower bound experimentally.
 
 \subsection{Compilation pipeline}
 
@@ -63,11 +68,10 @@ The compiler follows the proof decomposition.
   fixed candidate; the compiler also records prefix-replay, lineage-collision,
   or forbidden-union reasons for removed configurations.
 
-  \item It recomputes whether the source envelope is structurally inheritable.
-  This requires an unchanged durable prefix and a commuting, collision-free
-  parent map into the source future.  The prototype does not consume a prior
-  verification seal or implement certificate-chain reuse; \textsc{Inherit}
-  reports eligibility inside the canonical recomputation.
+  \item It rejects if required behavior was removed by prefix filtering.
+  Otherwise, equality of candidate and admitted families means full semantic
+  admission; a strict inclusion means that a controller restriction is
+  necessary, not that one has already been installed.
 
   \item Independently, it normalizes gate uses by controller anchor and derives
   $r=r(\mathsf{Required},\mathsf{Admitted})$.  Projection mode rejects every
@@ -96,18 +100,14 @@ diagnostic and never installable.  No proposal changes the current decision or
 seal.
 
 The semantic and deployment axes remain separate.
-The semantic result is \textsc{Inherit}, \textsc{ReadmitOK},
-\textsc{NeedsMechanism}, or \textsc{Reject}.
 Under exact full evidence, the controller realization is exact, a safe
 restriction, unsafe, incomplete, or both unsafe and incomplete.  Exact
 projection preserves the readiness Boolean; optional-fidelity and failure-cause
 fields remain scoped to submitted $P$.  A sound upper bound reports
 \textsc{RequiresExactCoverage} iff its declared product covers
 $\mathsf{Required}$; otherwise it reports a definite coordination failure.
-Thus \textsc{NeedsMechanism} is a
-semantic pruning result, not an automatic rejection: if the current manifest
-already satisfies the sandwich, the tool returns \textsc{ReadyWithRestriction}
-and a structural seal.  Controller installation remains an external obligation.
+If the current exact manifest satisfies the sandwich, the tool returns a
+structural seal; controller installation remains an external obligation.
 
 \subsection{Constructive negative evidence}
 

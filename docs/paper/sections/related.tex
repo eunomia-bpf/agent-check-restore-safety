@@ -99,16 +99,10 @@ handling~\cite{mohammadi2026atomix,chen2026cordon}.  Fresh individual effects
 may still be forbidden together, while our seal neither authorizes one effect
 nor prevents pre-commit disclosure.
 
-\paragraph{Combined claim boundary}
-The mathematical ingredients---configuration families, minimal nonfaces,
-greatest pruning, skeleton separation, and small checking---are established.
-Our contribution is their security composition at one history edge: its typed
-semantics and durable prefix derive $(\mathcal R,\mathcal F)$ and therefore
-$r$; independently attested cell/controller identities and fixed-$E,L$ cover
-semantics lift the complete $r$-skeleton to an exact readiness Boolean.  The
-lower bounds state precisely which parts this composition cannot uniformly
-erase; they do not claim a new skeleton theorem or unique encoding.  The
-checker uses the untrusted-producer/small-checker pattern~\cite{necula1997pcc};
-under
+\paragraph{Proof-carrying checking}
+The compiler/verifier split uses the established
+untrusted-producer/small-checker pattern~\cite{necula1997pcc}.  Our theorem
+concerns the manifest information needed for the readiness Boolean, not a new
+checker trust pattern; transport to runtime behavior still requires
 $\mathsf{Required}\subseteq\mathsf{Actual}
-\subseteq\mathsf{RawPhysical}$, the certificate transports to runtime behavior.
+\subseteq\mathsf{RawPhysical}$.
