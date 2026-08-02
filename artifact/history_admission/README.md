@@ -34,14 +34,16 @@ structurally eligible only when the independently verified manifest sandwich
 holds.  The verifier emits a
 `history_admission` seal, not an effect-authorization credential.  It always
 sets `effect_authorizes` to false and lists the runtime obligations that remain,
-including manifest authenticity, complete mediation, controller freshness,
-atomic redemption, and refinement between the declared controller product and
-the runtime's actual behavior.  `Reject` is always diagnostic.
+including manifest authenticity, co-liveness coverage attestation, complete
+mediation, controller freshness, atomic redemption, and refinement between the
+declared controller product and the runtime's actual behavior.  `Reject` is
+always diagnostic.
 
-Result and verification schemas are version 2.  Version 2 replaces the
-ambiguous deployment `fence` field with `restriction` and allows a verified
-`NeedsMechanism` result to seal a manifest that already supplies the required
-safe restriction.
+Request, result, and verification schemas are version 2.  Request version 2
+makes `operation.controller_future_coverage` mandatory.  Result version 2
+echoes it as `controllers.co_live_coverage`, replaces the ambiguous deployment
+`fence` field with `restriction`, and allows a verified `NeedsMechanism` result
+to seal a manifest that already supplies the required safe restriction.
 
 ## Quick start
 
@@ -67,12 +69,65 @@ malformed input or an invalid certificate exits nonzero.  An arm marked
 `sound_overapprox` yields a conservative result relative to that declared
 overapproximation; the result records this precision explicitly.
 
+## Co-liveness contract and observation arity
+
+`operation.controller_future_maxima` is the maximal-configuration syntax for
+the controller co-liveness family Gamma.  The parser takes its downward
+closure, so the resulting family is nonempty, contains the empty
+configuration, and is downward closed.  Here co-live means that the named
+controllers can contribute to one co-durable configuration during the same
+fixed-prefix admission epoch.  It is not limited to simultaneous processes:
+sequential contributors before a mandatory receipt-frontier recheck belong in
+the same contract.  Receipt-frontier growth starts a new decision.
+
+`controller_future_coverage` is an adapter attestation, not a fact inferred by
+the compiler or verifier.  `exact` says the submitted family is the complete
+runtime co-liveness family for that epoch.  `sound_overapprox` says it contains
+every actually co-live controller set, while allowing extra sets.  A truthful
+overapproximation preserves the upper safety check but may conservatively
+request coordination or reject; it does not establish that every required
+future is implementable.  The latter remains the separate
+`runtime_required_coverage` obligation.  In either mode, the parser checks only
+the enum value.  The runtime adapter must establish the attestation and the
+`Actual <= RawPhysical` relation.
+
+In particular, a list of pairwise projections is not a complete Gamma for a
+runtime in which three controllers may contribute before the next prefix
+recheck.  Such a runtime may not label that projection `exact`; nor is the
+projection a sound overapproximation.  The prototype consumes the full
+declared Gamma (or a sound overapproximation of it) when constructing
+`RawPhysical`.
+
+For every non-`Reject` decision, the result also reports
+`coordination.required_coliveness_arity`:
+
+```text
+r* = max(max{|x| : x in Required},
+         max{|m| : m is a minimal nonface of Admitted},
+         1 if a target cell is outside support(Admitted), else 0).
+```
+
+This contract-derived number is an engineering diagnostic: it bounds the size
+of controller groups whose nonempty local contributions may be relevant to a
+required configuration or an admitted-family obstruction.  For example, the
+`U(2,3)` fixture reports `r*=3`, even though every pair is admitted, because
+its only minimal nonface is the triple.  `Reject` reports `null` because there
+is no admitted deployment family.  The current prototype neither uses `r*` to
+truncate Gamma nor accepts an `r*`-wise projection in place of full coverage.
+The Lean development proves that complete projections through `r*` preserve
+readiness (under fixed access, fixed downward-closed local families, and
+downward-closed co-liveness), as well as an arbitrary-arity lower bound; the
+executable deliberately retains the simpler full-family interface.
+
 ## Proof crosswalk and scope
 
 The implementation mirrors the Lean definitions `familyChoice`,
 `familyTensor`, `safeFuture`, `StructuralRefinement`, and
-`classifyAdmission_sound`.  Minimal nonfaces and coordination components mirror
-the exact partition result.  `ControllerCoverAdmission.lean` mechanizes the
+`classifyAdmission_sound`.  The prototype recomputes the canonical decision on
+every request and reports structural-inheritance eligibility; it does not take
+a prior verification seal or implement certificate-chain reuse.  Minimal
+nonfaces and coordination components mirror the exact partition result.
+`ControllerCoverAdmission.lean` mechanizes the
 overlapping access-relation extension: raw and support-restricted controller
 products, the exact obstruction criterion, the three failure causes,
 runtime-family refinement, and reduction to the older functional partition

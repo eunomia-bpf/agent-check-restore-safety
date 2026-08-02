@@ -38,6 +38,17 @@ implementation may safely omit optional behavior without being confused with
 a GateClone over-approximation.  Its seal certifies structural history
 admission only; it deliberately does not authorize an external effect.
 
+The history-admission request schema is version 2.  It requires the adapter to
+label the declared controller co-liveness family as `exact` or a
+`sound_overapprox`; this label is an external coverage attestation, not a fact
+the parser can establish.  Results echo that label and report
+`coordination.required_coliveness_arity` (`r*`), a contract-derived diagnostic
+for the largest sandwich-relevant required configuration or obstruction.  The
+prototype still consumes the full declared co-liveness family Gamma (or a
+sound overapproximation): neither a pairwise projection nor an `r*`-wise
+projection is accepted as a substitute for full coverage.  See
+`history_admission/README.md` for the fixed-prefix semantics and boundary.
+
 Run the unit tests and deterministic exhaustive explorer from this directory:
 
 ```sh

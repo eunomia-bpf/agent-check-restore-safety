@@ -73,7 +73,7 @@ def higher_order_request() -> dict:
         for name in ("a", "b", "c")
     }
     return {
-        "schema": "history-admission.request.v1",
+        "schema": "history-admission.request.v2",
         "request_id": "fixture:higher-order-u23",
         "authority": {
             "id": "grant:H",
@@ -142,6 +142,7 @@ def higher_order_request() -> dict:
             "controller_future_maxima": [
                 ["controller:a", "controller:b", "controller:c"]
             ],
+            "controller_future_coverage": "exact",
         },
     }
 
@@ -230,7 +231,7 @@ def refinement_oracle_request(
         ]
         controller_future = [["controller:oracle"]]
     return {
-        "schema": "history-admission.request.v1",
+        "schema": "history-admission.request.v2",
         "request_id": "oracle:refinement",
         "authority": {
             "id": "grant:oracle",
@@ -278,17 +279,28 @@ def refinement_oracle_request(
             },
             "gate_uses": gate_uses,
             "controller_future_maxima": controller_future,
+            "controller_future_coverage": "exact",
         },
     }
 
 
 class HistoryAdmissionCompilerTests(unittest.TestCase):
     def test_choice_inherits_with_shared_logical_gate(self) -> None:
-        result = compile_base()
+        request = base_request()
+        second_use = deepcopy(request["operation"]["gate_uses"][0])
+        second_use["id"] = "gate-use:choice-alias"
+        request["operation"]["gate_uses"].append(second_use)
+        result = compile_base(request)
         self.assertEqual("Inherit", result["semantic_admission"]["class"])
         self.assertEqual("Ready", result["deployment"]["readiness"])
         self.assertTrue(result["history_admission"]["structurally_eligible"])
         self.assertFalse(result["history_admission"]["effect_authorizes"])
+        self.assertEqual("exact", result["controllers"]["co_live_coverage"])
+        self.assertEqual(2, result["coordination"]["required_coliveness_arity"])
+        self.assertEqual(
+            ["gate-use:choice", "gate-use:choice-alias"],
+            result["controllers"]["normalized"]["controller:choice"]["gate_uses"],
+        )
         self.assertEqual(
             ["occ:left:left-effect", "occ:right:right-effect"],
             result["leases"][0]["target_cells"],
@@ -322,6 +334,7 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
     def test_sound_overapprox_is_reported_as_conservative(self) -> None:
         request = base_request()
         request["operation"]["left"]["coverage"] = "sound_overapprox"
+        request["operation"]["controller_future_coverage"] = "sound_overapprox"
         result = compile_base(request)
         self.assertEqual("Inherit", result["semantic_admission"]["class"])
         self.assertEqual(
@@ -330,6 +343,13 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
         self.assertEqual(
             {"left": "sound_overapprox", "right": "exact"},
             result["operator"]["coverage_by_role"],
+        )
+        self.assertEqual(
+            "sound_overapprox", result["controllers"]["co_live_coverage"]
+        )
+        self.assertIn(
+            "controller_coliveness_coverage_attestation",
+            result["history_admission"]["external_obligations"],
         )
 
     def test_optional_unsafe_parallel_future_accepts_manifest_restriction(self) -> None:
@@ -343,6 +363,10 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
         self.assertEqual("manifest_supplied", result["deployment"]["restriction"])
         self.assertTrue(result["history_admission"]["structurally_eligible"])
         self.assertTrue(verify_result(request, result)["structurally_admits"])
+        self.assertIn(
+            "fresh_authority_issuance",
+            result["history_admission"]["external_obligations"],
+        )
         self.assertEqual(
             "OptionalConfigurationPruned",
             result["semantic_admission"]["pruning_witness"]["kind"],
@@ -354,6 +378,7 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
         request["operation"]["kind"] = "ForkParallel"
         result = compile_base(request)
         self.assertEqual("Reject", result["semantic_admission"]["class"])
+        self.assertIsNone(result["coordination"]["required_coliveness_arity"])
         reasons = result["semantic_admission"]["rejection_witness"]["reasons"]
         self.assertIn("ForbiddenUnion", {reason["kind"] for reason in reasons})
 
@@ -695,14 +720,18 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
         self.assertEqual("OutsideSupport", witness["kind"])
         self.assertEqual("OutsideSupport", witness["failure_class"])
         self.assertNotIn("minimal_nonface", witness)
+        self.assertEqual(1, result["coordination"]["required_coliveness_arity"])
         self.assertEqual(
             ["occ:right:right-effect"], witness["outside_support_cells"]
         )
 
     def test_higher_order_constraint_requires_joint_coordination(self) -> None:
-        result = compile_request(higher_order_request())
+        request = higher_order_request()
+        result = compile_request(request)
         self.assertEqual("Inherit", result["semantic_admission"]["class"])
         self.assertEqual("NeedsCoordination", result["deployment"]["readiness"])
+        self.assertEqual("exact", result["controllers"]["co_live_coverage"])
+        self.assertEqual(3, result["coordination"]["required_coliveness_arity"])
         self.assertEqual(
             [["occ:checkpoint:a", "occ:checkpoint:b", "occ:checkpoint:c"]],
             result["coordination"]["minimal_nonfaces"],
@@ -712,6 +741,19 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
             result["coordination"]["components"],
         )
         self.assertEqual("GateCut", result["coordination"]["witness"]["kind"])
+
+        pairwise_only = higher_order_request()
+        pairwise_only["operation"]["controller_future_maxima"] = [
+            ["controller:a", "controller:b"],
+            ["controller:a", "controller:c"],
+            ["controller:b", "controller:c"],
+        ]
+        pairwise_result = compile_request(pairwise_only)
+        self.assertEqual("Ready", pairwise_result["deployment"]["readiness"])
+        self.assertEqual("exact", pairwise_result["coordination"]["status"])
+        self.assertEqual(
+            3, pairwise_result["coordination"]["required_coliveness_arity"]
+        )
 
     def test_all_six_typed_operators_follow_choice_tensor_semantics(self) -> None:
         expected = {
@@ -763,11 +805,26 @@ class HistoryAdmissionCompilerTests(unittest.TestCase):
         with self.assertRaisesRegex(SchemaError, "rebound source receipt"):
             compile_base(request)
 
-    def test_strict_json_rejects_duplicate_keys_and_floats(self) -> None:
+    def test_request_v2_and_strict_json_fail_closed(self) -> None:
         with self.assertRaisesRegex(SchemaError, "duplicate JSON object key"):
             loads_json('{"schema":"a","schema":"b"}')
         with self.assertRaisesRegex(SchemaError, "floating-point"):
             loads_json('{"value":1.0}')
+
+        request = base_request()
+        request["schema"] = "history-admission.request.v1"
+        with self.assertRaisesRegex(SchemaError, "history-admission.request.v2"):
+            compile_base(request)
+
+        request = base_request()
+        del request["operation"]["controller_future_coverage"]
+        with self.assertRaisesRegex(SchemaError, "controller_future_coverage"):
+            compile_base(request)
+
+        request = base_request()
+        request["operation"]["controller_future_coverage"] = "pairwise"
+        with self.assertRaisesRegex(SchemaError, "exact or sound_overapprox"):
+            compile_base(request)
 
     def test_raw_manifest_caps_fail_closed(self) -> None:
         request = base_request()
@@ -873,6 +930,16 @@ class HistoryAdmissionVerifierTests(unittest.TestCase):
         request = base_request()
         result = compile_base(request)
         result["semantic_admission"]["class"] = "ReadmitOK"
+        completed = self._run_cli(request, result)
+        self.assertEqual(3, completed.returncode)
+
+        result = compile_base(request)
+        result["controllers"]["co_live_coverage"] = "sound_overapprox"
+        completed = self._run_cli(request, result)
+        self.assertEqual(3, completed.returncode)
+
+        result = compile_base(request)
+        result["coordination"]["required_coliveness_arity"] = 1
         completed = self._run_cli(request, result)
         self.assertEqual(3, completed.returncode)
 

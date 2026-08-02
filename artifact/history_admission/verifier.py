@@ -174,6 +174,7 @@ class _RequestModel:
     controller_names: tuple[str, ...]
     controllers: dict[str, _ControllerRow]
     controller_future: MaskFamily
+    controller_future_coverage: str
 
 
 def _indices(names: Sequence[str]) -> dict[str, int]:
@@ -872,6 +873,7 @@ def _parse_request(document: Any) -> _RequestModel:
             "aliases",
             "gate_uses",
             "controller_future_maxima",
+            "controller_future_coverage",
             *roles,
         },
         (),
@@ -880,6 +882,15 @@ def _parse_request(document: Any) -> _RequestModel:
     target_version = expect_nonnegative_int(
         operation["target_version"], "$.operation.target_version"
     )
+    controller_future_coverage = expect_string(
+        operation["controller_future_coverage"],
+        "$.operation.controller_future_coverage",
+    )
+    if controller_future_coverage not in {"exact", "sound_overapprox"}:
+        raise SchemaError(
+            "$.operation.controller_future_coverage must be exact or "
+            "sound_overapprox"
+        )
 
     occurrences: dict[OccurrenceRef, _OccurrenceRow] = {}
     role_coverage: dict[str, str] = {}
@@ -1031,6 +1042,7 @@ def _parse_request(document: Any) -> _RequestModel:
         controller_names=controller_names,
         controllers=controllers,
         controller_future=controller_future,
+        controller_future_coverage=controller_future_coverage,
     )
 
 
@@ -1194,6 +1206,22 @@ def _minimal_nonfaces(family: MaskFamily, names: Sequence[str]) -> list[Mask]:
             if all(candidate ^ (1 << index) in family for index in member_indices):
                 result.append(candidate)
     return _ordered_masks(result, names)
+
+
+def _required_coliveness_arity(
+    required: MaskFamily, admitted: MaskFamily, cell_count: int
+) -> int:
+    """Independently compute the contract-only observation upper bound."""
+
+    required_arity = max((mask.bit_count() for mask in required), default=0)
+    names = tuple(str(index) for index in range(cell_count))
+    obstruction_arity = max(
+        (mask.bit_count() for mask in _minimal_nonfaces(admitted, names)),
+        default=0,
+    )
+    universe = (1 << cell_count) - 1
+    outside_arity = 1 if universe & ~_support(admitted) else 0
+    return max(required_arity, obstruction_arity, outside_arity)
 
 
 def _components(family: MaskFamily, names: Sequence[str]) -> list[list[str]]:
@@ -1567,6 +1595,13 @@ def _expected_result(document: Any) -> dict[str, Any]:
         }
 
     coordination = _coordination(model, admitted, required)
+    coordination["required_coliveness_arity"] = (
+        None
+        if admitted is None
+        else _required_coliveness_arity(
+            required, admitted, len(model.target_names)
+        )
+    )
     restriction_required = semantic_class == "NeedsMechanism"
     controllers_exact = coordination["status"] in {"exact", "safe_restriction"}
     if semantic_class == "Reject":
@@ -1583,12 +1618,13 @@ def _expected_result(document: Any) -> dict[str, Any]:
     external_obligations = [
         "atomic_redemption",
         "complete_mediation",
+        "controller_coliveness_coverage_attestation",
         "controller_installation_and_freshness",
         "manifest_ledger_and_receipt_authenticity",
         "runtime_required_coverage",
         "runtime_soundness_against_declared_physical_family",
     ]
-    if semantic_class == "ReadmitOK":
+    if semantic_class in {"ReadmitOK", "NeedsMechanism"}:
         external_obligations.append("fresh_authority_issuance")
 
     normalized_cells_output = {
@@ -1682,6 +1718,7 @@ def _expected_result(document: Any) -> dict[str, Any]:
             "co_live_maxima": _maxima(
                 model.controller_future, model.controller_names
             ),
+            "co_live_coverage": model.controller_future_coverage,
         },
         "coordination": coordination,
         "deployment": {

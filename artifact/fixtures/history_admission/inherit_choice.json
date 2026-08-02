@@ -26,6 +26,7 @@
   ],
   "operation": {
     "aliases": [],
+    "controller_future_coverage": "exact",
     "controller_future_maxima": [
       [
         "controller:choice"
@@ -115,7 +116,7 @@
     "target_version": 2
   },
   "request_id": "fixture:inherit-choice",
-  "schema": "history-admission.request.v1",
+  "schema": "history-admission.request.v2",
   "source": {
     "cells": [
       {

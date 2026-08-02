@@ -13,7 +13,7 @@ import unicodedata
 from typing import Any, Iterable, Mapping
 
 
-REQUEST_SCHEMA = "history-admission.request.v1"
+REQUEST_SCHEMA = "history-admission.request.v2"
 RESULT_SCHEMA = "history-admission.result.v2"
 VERIFICATION_SCHEMA = "history-admission.verification.v2"
 

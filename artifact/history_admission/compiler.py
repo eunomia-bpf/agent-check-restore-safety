@@ -157,6 +157,7 @@ class ParsedRequest:
     alias_groups: tuple[dict[str, Any], ...]
     controllers: dict[str, Controller]
     controller_future: Family
+    controller_future_coverage: str
 
 
 def _powerset(items: Sequence[str]) -> Iterator[Config]:
@@ -613,12 +614,22 @@ def _parse_request(document: Any) -> ParsedRequest:
         "aliases",
         "gate_uses",
         "controller_future_maxima",
+        "controller_future_coverage",
         *roles,
     }
     expect_exact_keys(operation_obj, operation_required, (), "$.operation")
     target_version = expect_nonnegative_int(
         operation_obj["target_version"], "$.operation.target_version"
     )
+    controller_future_coverage = expect_string(
+        operation_obj["controller_future_coverage"],
+        "$.operation.controller_future_coverage",
+    )
+    if controller_future_coverage not in {"exact", "sound_overapprox"}:
+        raise SchemaError(
+            "$.operation.controller_future_coverage must be exact or "
+            "sound_overapprox"
+        )
 
     occurrences: dict[OccurrenceRef, Occurrence] = {}
     role_coverage: dict[str, str] = {}
@@ -752,6 +763,7 @@ def _parse_request(document: Any) -> ParsedRequest:
         alias_groups=alias_groups,
         controllers=controllers[0],
         controller_future=controller_future,
+        controller_future_coverage=controller_future_coverage,
     )
 
 
@@ -1042,6 +1054,19 @@ def _minimal_nonfaces(family: Family) -> list[Config]:
         if all(candidate - {cell} in family for cell in candidate):
             result.append(candidate)
     return _sorted_configs(result)
+
+
+def _required_coliveness_arity(
+    required: Family, admitted: Family, universe: Iterable[str]
+) -> int:
+    """Compute the contract-only co-liveness observation upper bound."""
+
+    required_arity = max((len(config) for config in required), default=0)
+    obstruction_arity = max(
+        (len(config) for config in _minimal_nonfaces(admitted)), default=0
+    )
+    outside_arity = 1 if set(universe) - _support(admitted) else 0
+    return max(required_arity, obstruction_arity, outside_arity)
 
 
 def _coordination_components(family: Family) -> list[list[str]]:
@@ -1372,6 +1397,13 @@ def compile_request(document: Any) -> dict[str, Any]:
         }
 
     coordination = _coordination_result(parsed, admitted, required)
+    coordination["required_coliveness_arity"] = (
+        None
+        if admitted is None
+        else _required_coliveness_arity(
+            required, admitted, parsed.normalized_cells
+        )
+    )
     restriction_required = semantic_class == "NeedsMechanism"
     coordination_ready = coordination["status"] in {"exact", "safe_restriction"}
     if semantic_class == "Reject":
@@ -1388,12 +1420,13 @@ def compile_request(document: Any) -> dict[str, Any]:
     external_obligations = [
         "atomic_redemption",
         "complete_mediation",
+        "controller_coliveness_coverage_attestation",
         "controller_installation_and_freshness",
         "manifest_ledger_and_receipt_authenticity",
         "runtime_required_coverage",
         "runtime_soundness_against_declared_physical_family",
     ]
-    if semantic_class == "ReadmitOK":
+    if semantic_class in {"ReadmitOK", "NeedsMechanism"}:
         external_obligations.append("fresh_authority_issuance")
 
     normalized_cells_output = {
@@ -1475,6 +1508,7 @@ def compile_request(document: Any) -> dict[str, Any]:
         "controllers": {
             "normalized": controller_output,
             "co_live_maxima": _maxima(parsed.controller_future),
+            "co_live_coverage": parsed.controller_future_coverage,
         },
         "coordination": coordination,
         "deployment": {

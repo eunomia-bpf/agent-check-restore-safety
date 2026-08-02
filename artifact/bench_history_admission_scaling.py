@@ -112,7 +112,7 @@ def _request(
             }
         )
     return {
-        "schema": "history-admission.request.v1",
+        "schema": "history-admission.request.v2",
         "request_id": request_id,
         "authority": {
             "id": "grant:scale",
@@ -145,6 +145,7 @@ def _request(
             },
             "gate_uses": gate_uses,
             "controller_future_maxima": [controller_anchors],
+            "controller_future_coverage": "exact",
         },
     }
 
