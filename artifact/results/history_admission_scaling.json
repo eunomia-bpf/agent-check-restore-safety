@@ -1,8 +1,8 @@
 {
   "caps": {
+    "controller_product_pair_expansion_iteration_limit": 200000,
     "controllers": 10,
     "expanded_configurations": 4096,
-    "controller_product_pair_expansion_iteration_limit": 200000,
     "source_cells": 12,
     "target_cells": 12
   },
@@ -10,17 +10,17 @@
     {
       "analytically_reconstructed_full_pair_expansion_iterations": 11,
       "compiler": {
-        "max_wall_ms": 50.488365,
-        "median_wall_ms": 50.151094,
-        "min_wall_ms": 49.319294,
-        "p25_wall_ms": 49.838706,
-        "p75_wall_ms": 50.365266,
+        "max_wall_ms": 50.738054,
+        "median_wall_ms": 50.145304,
+        "min_wall_ms": 49.532803,
+        "p25_wall_ms": 50.044914,
+        "p75_wall_ms": 50.636156,
         "raw_wall_ms": [
-          50.488365,
-          49.838706,
-          50.151094,
-          49.319294,
-          50.365266
+          50.636156,
+          50.738054,
+          49.532803,
+          50.044914,
+          50.145304
         ],
         "repetitions": 5
       },
@@ -30,24 +30,24 @@
       "minimal_nonfaces": 4,
       "observed_minimal_nonfaces": 4,
       "physical_configurations": 11,
-      "request_bytes": 6111,
-      "result_bytes": 10352,
-      "result_sha256": "e8092fe0aca10879d56dfd3f505a397a9b9de0d14826ff27dd60b1940812a01b",
-      "seal_sha256": "988fa4009458916922fc8887c209a01e2aa3aedfa0a18290bbc9a3f8a360ae26",
+      "request_bytes": 6154,
+      "result_bytes": 11488,
+      "result_sha256": "6e2d9c0ad7b0e387a6763190213a9bafd09520dfeec1441801063e8c54705a73",
+      "seal_sha256": "45763a1bc6348476ce7edb29c93b2f506ec7f378d02e0dd36f3caac367142ed9",
       "semantic_cells": 4,
       "status": "completed",
       "verifier": {
-        "max_wall_ms": 51.11167,
-        "median_wall_ms": 50.879559,
-        "min_wall_ms": 49.333414,
-        "p25_wall_ms": 50.410645,
-        "p75_wall_ms": 50.891382,
+        "max_wall_ms": 52.069608,
+        "median_wall_ms": 51.014012,
+        "min_wall_ms": 50.118154,
+        "p25_wall_ms": 50.309939,
+        "p75_wall_ms": 51.42417,
         "raw_wall_ms": [
-          50.410645,
-          49.333414,
-          50.891382,
-          50.879559,
-          51.11167
+          51.42417,
+          52.069608,
+          50.309939,
+          51.014012,
+          50.118154
         ],
         "repetitions": 5
       }
@@ -55,17 +55,17 @@
     {
       "analytically_reconstructed_full_pair_expansion_iterations": 42,
       "compiler": {
-        "max_wall_ms": 54.486676,
-        "median_wall_ms": 52.186504,
-        "min_wall_ms": 51.431128,
-        "p25_wall_ms": 51.983653,
-        "p75_wall_ms": 53.513734,
+        "max_wall_ms": 52.081537,
+        "median_wall_ms": 51.179701,
+        "min_wall_ms": 50.517365,
+        "p25_wall_ms": 50.709892,
+        "p75_wall_ms": 52.001705,
         "raw_wall_ms": [
-          51.983653,
-          51.431128,
-          53.513734,
-          52.186504,
-          54.486676
+          51.179701,
+          52.001705,
+          52.081537,
+          50.517365,
+          50.709892
         ],
         "repetitions": 5
       },
@@ -75,24 +75,24 @@
       "minimal_nonfaces": 15,
       "observed_minimal_nonfaces": 15,
       "physical_configurations": 42,
-      "request_bytes": 18045,
-      "result_bytes": 29320,
-      "result_sha256": "9f7a5a47d3b9cf170872b12b624b523de0f1376ce1d9f36e692db3a2bc3eff20",
-      "seal_sha256": "969c4a2d5e67f049ba1fb432149031bfa44c566ef47b17a70ea6938571a89d5c",
+      "request_bytes": 18088,
+      "result_bytes": 32560,
+      "result_sha256": "52401700176ffff355b24222ccf67a19b5933a7a3be1db9418690d3df265f9ea",
+      "seal_sha256": "45bd3bca16b85c3cf8f5de834c4a50547805749d90dd4c553a484a07fb4d66eb",
       "semantic_cells": 6,
       "status": "completed",
       "verifier": {
-        "max_wall_ms": 54.77343,
-        "median_wall_ms": 53.855692,
-        "min_wall_ms": 52.815911,
-        "p25_wall_ms": 53.756143,
-        "p75_wall_ms": 54.090876,
+        "max_wall_ms": 53.767801,
+        "median_wall_ms": 52.931188,
+        "min_wall_ms": 52.227513,
+        "p25_wall_ms": 52.321644,
+        "p75_wall_ms": 53.591822,
         "raw_wall_ms": [
-          52.815911,
-          54.090876,
-          54.77343,
-          53.756143,
-          53.855692
+          53.591822,
+          52.321644,
+          52.227513,
+          52.931188,
+          53.767801
         ],
         "repetitions": 5
       }
@@ -100,17 +100,17 @@
     {
       "analytically_reconstructed_full_pair_expansion_iterations": 163,
       "compiler": {
-        "max_wall_ms": 74.98111,
-        "median_wall_ms": 65.166319,
-        "min_wall_ms": 55.16076,
-        "p25_wall_ms": 62.93587,
-        "p75_wall_ms": 66.804515,
+        "max_wall_ms": 65.948855,
+        "median_wall_ms": 61.71497,
+        "min_wall_ms": 59.511629,
+        "p25_wall_ms": 61.566407,
+        "p75_wall_ms": 63.801671,
         "raw_wall_ms": [
-          66.804515,
-          62.93587,
-          74.98111,
-          55.16076,
-          65.166319
+          59.511629,
+          61.566407,
+          63.801671,
+          61.71497,
+          65.948855
         ],
         "repetitions": 5
       },
@@ -120,24 +120,24 @@
       "minimal_nonfaces": 56,
       "observed_minimal_nonfaces": 56,
       "physical_configurations": 163,
-      "request_bytes": 67319,
-      "result_bytes": 109220,
-      "result_sha256": "5dae177310f7840ff2be92f2fbd415aaf0722dce0f221a6047ab28d5df7e8e06",
-      "seal_sha256": "55c516095ed15dc7188be37f1dc57eba12346ccb9eec7b81f5e47dfd5afc46ea",
+      "request_bytes": 67362,
+      "result_bytes": 121820,
+      "result_sha256": "1cf209064e1fe65066250aea9474630fed643c6c3ec95cccc2a0fdffef6d6a81",
+      "seal_sha256": "af38ac269bb35ab22631e766e2ab65fd8266f639ce443daa57f5460c1f342043",
       "semantic_cells": 8,
       "status": "completed",
       "verifier": {
-        "max_wall_ms": 82.165606,
-        "median_wall_ms": 74.273238,
-        "min_wall_ms": 61.6731,
-        "p25_wall_ms": 74.230655,
-        "p75_wall_ms": 78.934131,
+        "max_wall_ms": 70.88532,
+        "median_wall_ms": 69.146683,
+        "min_wall_ms": 68.451511,
+        "p25_wall_ms": 69.111777,
+        "p75_wall_ms": 69.994846,
         "raw_wall_ms": [
-          74.273238,
-          82.165606,
-          78.934131,
-          61.6731,
-          74.230655
+          69.146683,
+          68.451511,
+          69.111777,
+          69.994846,
+          70.88532
         ],
         "repetitions": 5
       }
@@ -145,17 +145,17 @@
     {
       "analytically_reconstructed_full_pair_expansion_iterations": 638,
       "compiler": {
-        "max_wall_ms": 140.943784,
-        "median_wall_ms": 139.473513,
-        "min_wall_ms": 137.809955,
-        "p25_wall_ms": 138.112484,
-        "p75_wall_ms": 139.774105,
+        "max_wall_ms": 146.261304,
+        "median_wall_ms": 145.57036,
+        "min_wall_ms": 143.325029,
+        "p25_wall_ms": 144.697535,
+        "p75_wall_ms": 145.823994,
         "raw_wall_ms": [
-          139.473513,
-          137.809955,
-          139.774105,
-          140.943784,
-          138.112484
+          145.823994,
+          144.697535,
+          146.261304,
+          145.57036,
+          143.325029
         ],
         "repetitions": 5
       },
@@ -165,24 +165,24 @@
       "minimal_nonfaces": 210,
       "observed_minimal_nonfaces": 210,
       "physical_configurations": 638,
-      "request_bytes": 278986,
-      "result_bytes": 454361,
-      "result_sha256": "3041e24a4c0b5aca3ab07f868a8f5f25c465f8a44eb1eeb757f44993fb4b2209",
-      "seal_sha256": "68f1dec860a2ff70abaf3b87b6685cbcb1a97846f68f9a0d42cf0b185caae03c",
+      "request_bytes": 279029,
+      "result_bytes": 507841,
+      "result_sha256": "97a0d384494c465110fee573a7d910b9b99f73ed4b1144872ec6f3fecc7ca39f",
+      "seal_sha256": "5bf14872e6689759b66f181f6d291f01c9946dc948283087c80f895c08be620c",
       "semantic_cells": 10,
       "status": "completed",
       "verifier": {
-        "max_wall_ms": 228.511112,
-        "median_wall_ms": 224.668305,
-        "min_wall_ms": 223.844918,
-        "p25_wall_ms": 224.538803,
-        "p75_wall_ms": 228.333733,
+        "max_wall_ms": 239.544401,
+        "median_wall_ms": 237.251793,
+        "min_wall_ms": 234.368281,
+        "p25_wall_ms": 234.958093,
+        "p75_wall_ms": 237.474004,
         "raw_wall_ms": [
-          224.538803,
-          223.844918,
-          228.333733,
-          224.668305,
-          228.511112
+          239.544401,
+          237.474004,
+          237.251793,
+          234.368281,
+          234.958093
         ],
         "repetitions": 5
       }
@@ -190,17 +190,17 @@
     {
       "analytically_reconstructed_full_pair_expansion_iterations": 2510,
       "compiler": {
-        "max_wall_ms": 1104.042484,
-        "median_wall_ms": 1094.182112,
-        "min_wall_ms": 1075.577782,
-        "p25_wall_ms": 1083.951516,
-        "p75_wall_ms": 1096.22702,
+        "max_wall_ms": 1170.399481,
+        "median_wall_ms": 1163.956798,
+        "min_wall_ms": 1161.848929,
+        "p25_wall_ms": 1162.913291,
+        "p75_wall_ms": 1168.476709,
         "raw_wall_ms": [
-          1096.22702,
-          1104.042484,
-          1094.182112,
-          1075.577782,
-          1083.951516
+          1170.399481,
+          1163.956798,
+          1162.913291,
+          1168.476709,
+          1161.848929
         ],
         "repetitions": 5
       },
@@ -210,24 +210,24 @@
       "minimal_nonfaces": 792,
       "observed_minimal_nonfaces": 792,
       "physical_configurations": 2510,
-      "request_bytes": 1188580,
-      "result_bytes": 1940181,
-      "result_sha256": "6f111243a2bc162a3ba46ff95d0ada9db71bb8e62b6a96384edb70ad1b7d4d2e",
-      "seal_sha256": "c584fc9045b0ebe7186fb173165efac0cbf5fd216b261d7b63d8b0c540468a1a",
+      "request_bytes": 1188623,
+      "result_bytes": 2169893,
+      "result_sha256": "9a3244267c86594047462c1b60325d3a8cbe2dfe0d53ca4b14480e766fc86830",
+      "seal_sha256": "43ee06a72ae14e08e6d0b1f971d0413f8a09f96d5c274e44f379d97ab869904b",
       "semantic_cells": 12,
       "status": "completed",
       "verifier": {
-        "max_wall_ms": 2362.037377,
-        "median_wall_ms": 2328.203733,
-        "min_wall_ms": 2301.280107,
-        "p25_wall_ms": 2314.052182,
-        "p75_wall_ms": 2341.88623,
+        "max_wall_ms": 2567.040342,
+        "median_wall_ms": 2495.971192,
+        "min_wall_ms": 2483.673662,
+        "p25_wall_ms": 2489.289047,
+        "p75_wall_ms": 2498.849035,
         "raw_wall_ms": [
-          2362.037377,
-          2328.203733,
-          2301.280107,
-          2341.88623,
-          2314.052182
+          2567.040342,
+          2495.971192,
+          2489.289047,
+          2483.673662,
+          2498.849035
         ],
         "repetitions": 5
       }
@@ -237,17 +237,17 @@
     {
       "analytically_reconstructed_full_pair_expansion_iterations": 64,
       "compiler": {
-        "max_wall_ms": 51.981107,
-        "median_wall_ms": 51.302083,
-        "min_wall_ms": 50.859446,
-        "p25_wall_ms": 51.049892,
-        "p75_wall_ms": 51.624336,
+        "max_wall_ms": 51.876019,
+        "median_wall_ms": 50.906839,
+        "min_wall_ms": 49.91663,
+        "p25_wall_ms": 50.561689,
+        "p75_wall_ms": 51.716727,
         "raw_wall_ms": [
-          51.981107,
-          51.049892,
-          51.302083,
-          50.859446,
-          51.624336
+          51.876019,
+          50.561689,
+          49.91663,
+          50.906839,
+          51.716727
         ],
         "repetitions": 5
       },
@@ -257,24 +257,24 @@
       "minimal_nonfaces": 0,
       "observed_minimal_nonfaces": 0,
       "physical_configurations": 64,
-      "request_bytes": 5589,
-      "result_bytes": 8920,
-      "result_sha256": "1939d679dacb5f9ef01bad803a6c9b867985a27be7275d38ac2655eded79f622",
-      "seal_sha256": "25fffe4eccd985707e9a739e11b881bd1d7b09393909b54da2da67fc6d6600a3",
+      "request_bytes": 5632,
+      "result_bytes": 9728,
+      "result_sha256": "1f7da0602ea33ac9e7cdd018000f42534d99df2b19baa72a30ae01f7fcedf6b9",
+      "seal_sha256": "3ec6e523e2ab3227c8d8e3098613853cd4ca1053163960a832c3d8130e8445f7",
       "semantic_cells": 6,
       "status": "completed",
       "verifier": {
-        "max_wall_ms": 54.03057,
-        "median_wall_ms": 53.159766,
-        "min_wall_ms": 52.607266,
-        "p25_wall_ms": 52.658375,
-        "p75_wall_ms": 53.253901,
+        "max_wall_ms": 54.546661,
+        "median_wall_ms": 52.584126,
+        "min_wall_ms": 50.564289,
+        "p25_wall_ms": 50.873714,
+        "p75_wall_ms": 53.516869,
         "raw_wall_ms": [
-          52.607266,
-          54.03057,
-          52.658375,
-          53.253901,
-          53.159766
+          53.516869,
+          52.584126,
+          54.546661,
+          50.873714,
+          50.564289
         ],
         "repetitions": 5
       }
@@ -282,17 +282,17 @@
     {
       "analytically_reconstructed_full_pair_expansion_iterations": 4288,
       "compiler": {
-        "max_wall_ms": 57.64519,
-        "median_wall_ms": 54.626813,
-        "min_wall_ms": 53.411942,
-        "p25_wall_ms": 53.642797,
-        "p75_wall_ms": 56.035831,
+        "max_wall_ms": 54.368738,
+        "median_wall_ms": 53.662669,
+        "min_wall_ms": 53.038808,
+        "p25_wall_ms": 53.289773,
+        "p75_wall_ms": 54.331814,
         "raw_wall_ms": [
-          54.626813,
-          57.64519,
-          56.035831,
-          53.411942,
-          53.642797
+          54.331814,
+          53.038808,
+          53.289773,
+          54.368738,
+          53.662669
         ],
         "repetitions": 5
       },
@@ -302,24 +302,24 @@
       "minimal_nonfaces": 0,
       "observed_minimal_nonfaces": 0,
       "physical_configurations": 64,
-      "request_bytes": 7034,
-      "result_bytes": 9399,
-      "result_sha256": "8c7572d6958f3ed4d77f84d2c5b98190e45127827378c8a1b52f83bc65ecd472",
-      "seal_sha256": "4bb9d41b56e91bf9da3a913ceedd4b4704c59e2c3929f203431293d59556a293",
+      "request_bytes": 7077,
+      "result_bytes": 10232,
+      "result_sha256": "478981d5176d619b659438581957e343fbda09371e2234f1dd382d77f681693d",
+      "seal_sha256": "81f1022f462c8db9570562dc5d36990899d339c8a0c5694a70b260f41db22221",
       "semantic_cells": 6,
       "status": "completed",
       "verifier": {
-        "max_wall_ms": 56.208743,
-        "median_wall_ms": 54.652775,
-        "min_wall_ms": 52.837817,
-        "p25_wall_ms": 53.942145,
-        "p75_wall_ms": 55.761802,
+        "max_wall_ms": 56.717552,
+        "median_wall_ms": 55.308694,
+        "min_wall_ms": 53.009881,
+        "p25_wall_ms": 54.358196,
+        "p75_wall_ms": 56.629982,
         "raw_wall_ms": [
-          55.761802,
-          56.208743,
-          53.942145,
-          52.837817,
-          54.652775
+          56.717552,
+          54.358196,
+          55.308694,
+          53.009881,
+          56.629982
         ],
         "repetitions": 5
       }
@@ -327,17 +327,17 @@
     {
       "analytically_reconstructed_full_pair_expansion_iterations": 20928,
       "compiler": {
-        "max_wall_ms": 63.901862,
-        "median_wall_ms": 63.377596,
-        "min_wall_ms": 62.959974,
-        "p25_wall_ms": 63.336401,
-        "p75_wall_ms": 63.583058,
+        "max_wall_ms": 66.190876,
+        "median_wall_ms": 63.165317,
+        "min_wall_ms": 62.468638,
+        "p25_wall_ms": 63.012375,
+        "p75_wall_ms": 64.958212,
         "raw_wall_ms": [
-          63.377596,
-          62.959974,
-          63.583058,
-          63.901862,
-          63.336401
+          64.958212,
+          66.190876,
+          63.165317,
+          63.012375,
+          62.468638
         ],
         "repetitions": 5
       },
@@ -347,24 +347,24 @@
       "minimal_nonfaces": 0,
       "observed_minimal_nonfaces": 0,
       "physical_configurations": 64,
-      "request_bytes": 8479,
-      "result_bytes": 9878,
-      "result_sha256": "ccb2bbb4a839f5c9b041257d298c8cac78628db2e3d4896fa79c0791478bbb8f",
-      "seal_sha256": "bca3e3b103160ecab61ecd5bc87c5c286eb97e3be2a7e5a8a11e9918e02cef30",
+      "request_bytes": 8522,
+      "result_bytes": 10736,
+      "result_sha256": "a500aef800f865908d268c5adac0146acd7529eebc569d161ec232413a0c4e71",
+      "seal_sha256": "d530941b44906c4f0f5ee0150b1e9d63ef2a351ee2504a5dc28d1201fe822900",
       "semantic_cells": 6,
       "status": "completed",
       "verifier": {
-        "max_wall_ms": 63.374095,
-        "median_wall_ms": 63.181787,
-        "min_wall_ms": 62.627592,
-        "p25_wall_ms": 63.099099,
-        "p75_wall_ms": 63.226969,
+        "max_wall_ms": 66.225734,
+        "median_wall_ms": 63.814556,
+        "min_wall_ms": 63.080578,
+        "p25_wall_ms": 63.377555,
+        "p75_wall_ms": 65.367803,
         "raw_wall_ms": [
-          63.226969,
-          63.181787,
-          63.374095,
-          63.099099,
-          62.627592
+          66.225734,
+          63.814556,
+          63.377555,
+          65.367803,
+          63.080578
         ],
         "repetitions": 5
       }
@@ -372,17 +372,17 @@
     {
       "analytically_reconstructed_full_pair_expansion_iterations": 70592,
       "compiler": {
-        "max_wall_ms": 92.523481,
-        "median_wall_ms": 92.004664,
-        "min_wall_ms": 91.30323,
-        "p25_wall_ms": 91.852479,
-        "p75_wall_ms": 92.048197,
+        "max_wall_ms": 93.814572,
+        "median_wall_ms": 92.286364,
+        "min_wall_ms": 91.939323,
+        "p25_wall_ms": 92.221715,
+        "p75_wall_ms": 92.330555,
         "raw_wall_ms": [
-          92.048197,
-          91.852479,
-          91.30323,
-          92.523481,
-          92.004664
+          91.939323,
+          92.330555,
+          93.814572,
+          92.286364,
+          92.221715
         ],
         "repetitions": 5
       },
@@ -392,24 +392,24 @@
       "minimal_nonfaces": 0,
       "observed_minimal_nonfaces": 0,
       "physical_configurations": 64,
-      "request_bytes": 9924,
-      "result_bytes": 10357,
-      "result_sha256": "5f10ebb4a598c92a469bbdd718d32fc1e9c14689f6e8554adc0061d5d23eba5c",
-      "seal_sha256": "36ae7902f4ab385764cebebe972bda315426f92eea88d4908ff4d75b44e3ff11",
+      "request_bytes": 9967,
+      "result_bytes": 11240,
+      "result_sha256": "5b4da52f8fcb3a5620366264777eb789de45c86451c52901ea9d7f1e020587bd",
+      "seal_sha256": "ce8b9eb9bed16038e3bafcd06cb115e2f0a8f1b47e43865cbacb9e691c818105",
       "semantic_cells": 6,
       "status": "completed",
       "verifier": {
-        "max_wall_ms": 90.437317,
-        "median_wall_ms": 89.592009,
-        "min_wall_ms": 89.279241,
-        "p25_wall_ms": 89.548066,
-        "p75_wall_ms": 89.802397,
+        "max_wall_ms": 91.688266,
+        "median_wall_ms": 90.44003,
+        "min_wall_ms": 89.221049,
+        "p25_wall_ms": 89.369826,
+        "p75_wall_ms": 91.041568,
         "raw_wall_ms": [
-          89.592009,
-          89.802397,
-          89.548066,
-          89.279241,
-          90.437317
+          91.688266,
+          89.221049,
+          89.369826,
+          91.041568,
+          90.44003
         ],
         "repetitions": 5
       }
@@ -430,13 +430,13 @@
     "processor": "x86_64",
     "python": "3.12.3 (main, Jun 19 2026, 12:46:00) [GCC 13.3.0]",
     "pythonhashseed": "0 for timed child processes",
-    "repository_commit": "0ed19b32307ed78b245909406909ffb34436fcaf",
+    "repository_commit": "158a8801156953977580fa383aaa08a8ea97be25",
     "repository_dirty": true,
-    "historical_run_source_sha256": {
-      "benchmark_runner": "3de1de713ba8f8cbd44d031f1a1d2aaae459f7b0d14a6140e5f19ec01bba81bd",
-      "compiler": "0d57f410099f4799e7bc9d32b5339bac21fdf3e48a3c278dd47c4d13026a76ff",
-      "schema": "2c4a245eeac8e7f178a911176b3de28ab28c3e013b22cfdbe7086941727f9ec2",
-      "verifier": "ead60debc3ee76fe9159c0eaffdb50596bc9fd7ec49c2a478b49914d8aecc16f"
+    "source_sha256": {
+      "benchmark_runner": "fab5827a81aea2ebe31c1957d090f6fc539a474ba9ba64236d13a42ac5f970d7",
+      "compiler": "ed7437fb5bc00dff51018224dd78236023a68c1f393924befa51c4ce7ce32590",
+      "schema": "733050450f89ff702be8e17cc7a4b060930d31c9ecad227207baccaf4aac27ae",
+      "verifier": "59a8ff211923cee1c000316074be24c842d93a8f415119fe919e110707225afc"
     }
   },
   "expected_failures": [
@@ -446,7 +446,7 @@
         "returncode": 2,
         "stderr": "history-admission compiler: source must declare between 1 and 12 cells\n",
         "stdout": "",
-        "wall_ms": 101.403321
+        "wall_ms": 101.730996
       },
       "controllers": 1,
       "expanded_family_configurations": 4096,
@@ -454,14 +454,14 @@
       "label": "cells-13-cap",
       "minimal_nonfaces": 1716,
       "physical_configurations": 4096,
-      "request_bytes": 2201323,
+      "request_bytes": 2201366,
       "semantic_cells": 13,
       "status": "rejected_as_planned",
       "verifier": {
         "returncode": 2,
         "stderr": "history-admission verifier: malformed request: source must declare between 1 and 12 cells\n",
         "stdout": "",
-        "wall_ms": 84.140089
+        "wall_ms": 84.287306
       }
     },
     {
@@ -471,7 +471,7 @@
         "returncode": 2,
         "stderr": "history-admission compiler: controller product exceeds 200000 states\n",
         "stdout": "",
-        "wall_ms": 166.892023
+        "wall_ms": 164.117127
       },
       "controllers": 5,
       "expanded_family_configurations": 64,
@@ -480,14 +480,14 @@
       "label": "controllers-5-pair-expansion-cap",
       "minimal_nonfaces": 0,
       "physical_configurations": 64,
-      "request_bytes": 11369,
+      "request_bytes": 11412,
       "semantic_cells": 6,
       "status": "rejected_as_planned",
       "verifier": {
         "returncode": 2,
         "stderr": "history-admission verifier: malformed request: controller product exceeds 200000 states\n",
         "stdout": "",
-        "wall_ms": 154.265934
+        "wall_ms": 155.152745
       }
     }
   ],
@@ -497,10 +497,9 @@
     "Wall time includes Python startup and JSON I/O and is machine-specific.",
     "Pair-expansion iteration counts are analytically derived from the deterministic workload and source loop, not exported production telemetry.",
     "Only the source-cell and controller-product iteration limits are exercised; target-cell, controller-count, and expanded-configuration limits are not tested.",
-    "Per-case requests, results, and seals used a temporary directory and were not archived; a clean pinned rerun is required to audit historical timings independently.",
+    "Per-case requests, results, and seals use a temporary directory and are not archived; a clean pinned rerun is required to audit historical timings independently.",
     "The sweep does not justify extrapolation past the declared caps."
   ],
-  "post_run_metadata_note": "Independent review narrowed cap and pair-expansion labels after the timed run; timing samples and semantic observations are unchanged.",
   "repetitions": 5,
   "role": "supporting",
   "timing_scope": "fresh-process end-to-end CLI wall time; deterministic request generation and file creation excluded"
