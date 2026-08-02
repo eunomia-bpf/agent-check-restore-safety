@@ -1,401 +1,433 @@
-\section{Admission and Refinement Results}
+\section{The Agent History-Admission Theorem}
 \label{sec:results}
 
-The theorem spine establishes one exact evidence boundary.  A typed edge and
-durable prefix derive $(\mathcal R,\mathcal F)$; at fixed $E,L$, the complete
-$r(\mathcal R,\mathcal F)$-projection of $\Gamma$ decides readiness exactly.
-Collision constructions show that no uniformly lower arity suffices and that
-an exact checker cannot generally erase either identity relation.  If a ready
-manifest is refined by the runtime, prefix safety transports along
+This section gives one characterization of when the reference monitor for an
+Agent history edge can be compiled into a post-edge controller epoch.  The
+older family, obstruction, refinement, and evidence results appear as lemmas
+supporting that characterization rather than as independent contribution
+claims.
+
+Fix a valid typed edge $e$, authority family $\mathcal A$, durable frontier
+$D\in\mathcal A$, and lineage $\ell$.  Write
+$\mathsf{Cand}_e$, $\mathsf{Req}_e$, and $\mathsf{Adm}_e(D)$ for its candidate,
+required, and admitted endpoint families.  For a distinct-cell trace $\sigma$,
+let $\operatorname{cells}(\sigma)$ be its endpoint set.  The operational global
+monitor $\mathsf{GM}_e(D)$ starts at $\varnothing$ and admits a fresh cell $d$
+exactly when the extended endpoint belongs to $\mathsf{Adm}_e(D)$.  For a
+normalized controller manifest, define
 \[
-\begin{gathered}
-  op\longmapsto(\mathsf{Candidate},\mathsf{Required})
-    \longmapsto\mathsf{Admitted},\\[-2pt]
-  \mathsf{Required}\subseteq\mathsf{Actual}
-    \subseteq\mathsf{RawPhysical}\subseteq\mathsf{Admitted}.
-\end{gathered}
+\begin{aligned}
+\mathsf{Phys}(E,L,\Gamma)=
+ \{\sigma\mid{}&\sigma\text{ contains distinct cells and}\\[-2pt]
+ &\operatorname{cells}(\sigma)\in
+   \mathsf{RawPhysical}(E,L,\Gamma)\}.
+\end{aligned}
 \]
-All results below are mechanized for finite carrier types.  For compactness,
-write
+Thus $\mathsf{GM}_e(D)$ is the serialized reference semantics, whereas
+$\mathsf{Phys}$ is the language of controllers allowed to commit without a
+call to that monitor at every effect.
+
+\subsection{Family lemmas used by the characterization}
+
+\begin{lemma}[Typed generation]
+\label{thm:typed-generation}
+For every valid instance of the six edge relations in
+\cref{sec:semantics}, $\mathsf{Cand}_e$ and $\mathsf{Req}_e$ are nonempty,
+contain $\varnothing$, and are downward closed, with
+\[
+  \mathsf{Req}_e\subseteq\mathsf{Cand}_e.
+\]
+\end{lemma}
+
+The proof is structural.  Choice is family union; parallel or live composition
+is tensor; replacement selects the checkpoint contract.  The result checks
+composition of supplied leaf contracts, not their truth about a runtime.
+
+For compactness, write
 \[
 \begin{aligned}
   \mathsf{PCM}(\mathcal A,D,\mathcal F,\ell)
-  \quad\Longleftrightarrow\quad{}&D\in\mathcal A\\[-2pt]
-  &{}\land \forall X\in\mathcal F.\ \mathsf{PrefixOK}(X).
+  \quad\Longleftrightarrow\quad{}&
+  D\in\mathcal A\\[-2pt]
+  &{}\land\forall X\in\mathcal F.\ \mathsf{PrefixOK}_D(X).
 \end{aligned}
 \]
-This is the family-level prefix configuration morphism used by the Lean
-development.  Its premises are statements about the supplied finite model,
-not proofs that an adapter has described a real runtime completely.
 
-\subsection{Typed generation and greatest admitted future}
-
-The first result rules out caller-chosen target families that already encode
-the desired conclusion.  The operation type determines whether its two arm
-contracts remain alternatives or may become durable jointly.
-
-\begin{theorem}[Typed-family generation]
-\label{thm:typed-generation}
-For every valid instance of the six runtime labels---two choice, three tensor,
-and one replacement---in \cref{sec:semantics}, both
-$\mathsf{Candidate}_{op}$ and $\mathsf{Required}_{op}$ are nonempty,
-contain $\varnothing$, and are downward closed.  Moreover,
-\[
-  \mathsf{Required}_{op}\subseteq\mathsf{Candidate}_{op}.
-\]
-\end{theorem}
-
-The proof is by the operator grammar.  Union preserves well-formed exclusive
-choice.  Tensor preserves downward closure by restricting each arm witness to
-the desired subconfiguration.  The required-subset result then follows from
-monotonicity of union and tensor.  It does not validate the adapter-supplied
-leaf contracts; their validity is a premise.
-
-\begin{theorem}[Greatest fixed-prefix admitted future]
+\begin{lemma}[Greatest fixed-frontier monitor family]
 \label{thm:greatest-residual}
-Assume $D\in\mathcal A$ and fix $op$, $D$, $\ell$, and
-$\mathsf{Candidate}_{op}$.  The family $\mathsf{Admitted}_{op}$ from
-\cref{eq:admitted-future} satisfies
-\begin{align*}
-  &\mathsf{PCM}(\mathcal A,D,\mathsf{Admitted}_{op},\ell),\\[-2pt]
-  &\mathsf{Admitted}_{op}\subseteq\mathsf{Candidate}_{op}.
-\end{align*}
-For every $\mathcal H\subseteq\mathsf{Candidate}_{op}$,
+The family $\mathsf{Adm}_e(D)$ in \cref{eq:admitted-future} satisfies
+\[
+\mathsf{PCM}(\mathcal A,D,\mathsf{Adm}_e(D),\ell)
+\quad\text{and}\quad
+\mathsf{Adm}_e(D)\subseteq\mathsf{Cand}_e.
+\]
+For every $\mathcal H\subseteq\mathsf{Cand}_e$,
 \[
   \mathsf{PCM}(\mathcal A,D,\mathcal H,\ell)
-  \quad\Longrightarrow\quad
-  \mathcal H\subseteq\mathsf{Admitted}_{op}.
+  \Longrightarrow \mathcal H\subseteq\mathsf{Adm}_e(D).
 \]
 Consequently,
-\[
+\begin{equation}
+\label{eq:required-preservable-result}
 \begin{aligned}
-  &\mathsf{Required}_{op}\subseteq\mathsf{Admitted}_{op}\\[-2pt]
-  &\quad\Longleftrightarrow\quad
-    \exists\mathcal H.\quad
-    \mathsf{Required}_{op}\subseteq\mathcal H\\[-2pt]
-  &\hspace{26mm}{}\land
-    \mathcal H\subseteq\mathsf{Candidate}_{op}\\[-2pt]
-  &\hspace{26mm}{}\land
-    \mathsf{PCM}(\mathcal A,D,\mathcal H,\ell).
+\mathsf{Req}_e\subseteq\mathsf{Adm}_e(D)
+\quad\Longleftrightarrow\quad
+\exists\mathcal H.\quad&
+\mathsf{Req}_e\subseteq\mathcal H
+\subseteq\mathsf{Cand}_e\\[-2pt]
+&{}\land\mathsf{PCM}(\mathcal A,D,\mathcal H,\ell).
 \end{aligned}
-\]
+\end{equation}
+\end{lemma}
+
+This is a greatest-language fact only inside the fixed candidate, authority
+family, frontier, and lineage.  It is classical pruning machinery specialized
+to the family derived by the Agent edge.
+
+\subsection{Exact monitor compilation}
+
+History admissibility asks for two properties simultaneously.  It is
+\emph{monitor-sound} when
+$\mathsf{Phys}(E,L,\Gamma)\subseteq
+\mathsf{Traces}(\mathsf{GM}_e(D))$.  It is
+\emph{required-transparent} when every $X\in\mathsf{Req}_e$ is the endpoint of
+some trace in $\mathsf{Phys}(E,L,\Gamma)$.  The second condition matters even
+when a global monitor would eventually reject every unsafe commit: an Agent
+edge that promises a join but is certain to fail only at its final required
+effect is not a transparent compilation.
+
+Let
+\begin{equation}
+\label{eq:required-coliveness-arity}
+\begin{aligned}
+r_e=\max\{&
+ \max_{X\in\mathsf{Req}_e}|X|,
+ \max_{K\in\mathsf{MNF}(\mathsf{Adm}_e(D))}|K|,\\[-2pt]
+&\mathbf 1[
+ \operatorname{supp}(\mathsf{Adm}_e(D))\ne\mathcal D]\},
+\end{aligned}
+\end{equation}
+where an empty maximum is zero.  The final term retains unary
+outside-support evidence.
+
+\begin{theorem}[Agent History-Admission / Monitor-Compilation]
+\label{thm:agent-history-admission}
+Assume exact normalized cell and controller identities, a truthful complete
+manifest, and downward-closed controller-local and co-liveness families.
+Then:
+\begin{enumerate}[leftmargin=*,itemsep=2pt]
+  \item the reference monitor has exactly the admitted language,
+  \begin{equation}
+  \label{eq:global-monitor-language}
+  \begin{aligned}
+  \mathsf{Traces}(\mathsf{GM}_e(D))
+  =\{\sigma\mid{}&
+    \sigma\text{ is distinct-cell},\\[-2pt]
+    &\operatorname{cells}(\sigma)\in\mathsf{Adm}_e(D)\}.
+  \end{aligned}
+  \end{equation}
+
+  \item monitor soundness and required transparency have the exact endpoint
+  characterization
+  \begin{equation}
+  \label{eq:history-admission-equivalence}
+  \boxed{
+  \begin{aligned}
+  &\mathsf{HistoryAdmissible}_D(e;E,L,\Gamma)\\
+  &\quad\Longleftrightarrow\
+   \mathsf{DeploymentReady}_D(e;E,L,\Gamma)\\
+  &\quad\Longleftrightarrow\
+   \mathsf{Req}_e
+   \subseteq\mathsf{RawPhysical}(E,L,\Gamma)
+   \subseteq\mathsf{Adm}_e(D)\\
+  &\quad\Longleftrightarrow\
+  \mathsf{HA}\!\left(
+    e,\mathcal A,D,q_{\rm cell},\ell,q_{\rm ctrl},\right.\\[-2pt]
+  &\hspace{24mm}\left.
+    E,L,\Pi_{\le r_e}(\Gamma)
+  \right)=\mathsf{accept};
+  \end{aligned}}
+  \end{equation}
+  here $\mathsf{HA}$ is the finite structural checker and the last equivalence
+  assumes an attested exact $r_e$-projection of the same installed $\Gamma$;
+  and
+
+  \item if a mediated runtime establishes
+  $\mathsf{Req}_e\subseteq\mathsf{Actual}$ and
+  $\mathsf{ActualTrace}\subseteq\mathsf{Phys}(E,L,\Gamma)$,
+  an accepted seal transports both conclusions to the runtime:
+  every actual trace belongs to
+  $\mathsf{Traces}(\mathsf{GM}_e(D))$ and every required endpoint remains
+  realizable.
+\end{enumerate}
 \end{theorem}
 
-Thus the admitted future is greatest in the fixed-candidate, fixed-prefix,
-fixed-lineage, pruning-only space; its downward-closed family retains
-correlations rather than assuming a rectangular numeric capacity policy.
+\begin{proof}
+For \cref{eq:global-monitor-language}, the monitor guard maintains membership
+in $\mathsf{Adm}_e(D)$ after every step.  Conversely, take any
+$X\in\mathsf{Adm}_e(D)$.  Downward closure places every prefix set of every
+enumeration of $X$ in the same family, so the monitor accepts that enumeration.
+This proves language equality, not merely monitor soundness.
 
-\begin{theorem}[Four-way semantic classification]
-\label{thm:semantic-classifier}
-Given a valid typed operation and an old admitted envelope, the classifier has
-the following sound interpretation:
-\begin{description}[leftmargin=*,style=nextline]
-  \item[$\mathsf{Inherit}$]
-    A structural refinement transports the old certificate.
-  \item[$\mathsf{ReadmitOK}$]
-    No such refinement is supplied, but
-    $\mathsf{Candidate}_{op}=\mathsf{Admitted}_{op}$.
-  \item[$\mathsf{NeedsMechanism}$]
-    $\mathsf{Required}_{op}\subseteq\mathsf{Admitted}_{op}
-    \subsetneq\mathsf{Candidate}_{op}$.
-  \item[$\mathsf{Reject}$]
-    No $\mathcal H$ between $\mathsf{Required}_{op}$ and
-    $\mathsf{Candidate}_{op}$ satisfies
-    $\mathsf{PCM}(\mathcal A,D,\mathcal H,\ell)$.
-\end{description}
-The three underlying semantic classes---complete admission, mechanism-needed
-pruning, and pruning rejection---are exhaustive and pairwise exclusive;
-$\mathsf{Inherit}$ and $\mathsf{ReadmitOK}$ split complete admission according
-to certificate provenance.  In the rejection case, some configuration in
-$\mathsf{Required}_{op}\setminus\mathsf{Admitted}_{op}$ is a witness.
-\end{theorem}
+The endpoints of $\mathsf{Phys}(E,L,\Gamma)$ are exactly
+$\mathsf{RawPhysical}(E,L,\Gamma)$ by the cover semantics.  Substituting the
+reference-language equality into the two definitions of history admissibility
+therefore yields the sandwich in
+\cref{eq:history-admission-equivalence}.  The contract bound $r_e$ preserves
+both required coverage and every safety obstruction at fixed $E,L$, giving
+the checker equivalence.  The runtime clause is inclusion composition.
+\end{proof}
 
-In particular, $\mathsf{NeedsMechanism}$ is not permissive by itself: it says
-the required contract is preservable only under a restriction.  A submitted
-manifest that proves the deployment sandwich supplies such a restriction and
-may receive a structural seal; installation remains an external obligation.
+The global monitor is intentionally the strongest baseline: under complete
+serialized mediation it prevents replay and forbidden unions without knowing
+the future Agent graph.  The theorem does not say history admission is
+necessary for such a monitor to be safe.  It says exactly when that monitor can
+be replaced for one edge by the submitted controller epoch without either
+expanding its language or silently losing required behavior.
 
-\subsection{Local composition of structural inheritance}
+\subsection{Necessity and the coordination consequence}
 
-Full filtering is unnecessary when a target is structurally related to an
-already admitted envelope at the same receipt frontier.  The certificate must
-account for every target configuration rather than merely each cell in
-isolation.
+The sandwich yields a sharp three-way boundary.  If
+$\mathsf{Req}_e\nsubseteq\mathsf{Adm}_e(D)$, then even the global monitor
+cannot preserve the fixed edge contract; by
+\cref{eq:required-preservable-result}, no pruning-only compilation can repair
+it.  If the required family survives but the physical language escapes
+$\mathsf{Adm}_e(D)$, the detached epoch must restrict joint commitment,
+coordinate through a shared monitor or reservation point, or be rejected.  If
+the physical language is safe but misses $\mathsf{Req}_e$, accepting it would
+change the meaning of the typed edge.
 
-\begin{theorem}[Structural transport and composition]
-\label{thm:structural-transport}
-Let $p$ map target cells into the cells of an admitted envelope.  If $p$ is
-injective on every target configuration, maps every such configuration into
-the old future, commutes with lineage, and advances the envelope version, then
-\[
-  \mathsf{PCM}(\mathcal A,D,\mathsf{Candidate}_{op},\ell)
-\]
-is transported from the old certificate.  If a second refinement satisfies
-the same obligations into the first target, the two refinements compose,
-including version order, configuration injectivity, and the lineage square.
-\end{theorem}
+These alternatives can be decided constructively.  For
+$\mathcal R=\mathsf{Req}_e$, $\mathcal F=\mathsf{Adm}_e(D)$, and
+$\mathcal P=\mathsf{RawPhysical}(E,L,\Gamma)$, let
+$\mathsf{MNF}(\mathcal F)$ be the minimal nonfaces of $\mathcal F$.
 
-This theorem supports an execution graph that is discovered online: each
-Fork, Restore, or Merge edge can carry a local refinement, and a path
-certificate is obtained by composition without declaring the eventual graph
-in advance.
-It deliberately preserves $D$ definitionally.  If a new receipt grows the
-frontier to $D'$, the theorem supplies no certificate for $D'$; admission must
-be rerun.  In particular, configurations containing a restored cell whose
-lineage atom has entered the new durable prefix are removed even when its
-snapshot-only parent map still exists.
-
-\subsection{Exact controller-readiness boundary}
-
-Semantic admission does not imply that independently live controllers preserve
-the admitted correlations.  First, both identity maps carry independently
-necessary information for an exact decision.
-
-\begin{proposition}[Independent identity erasures]
-\label{prop:identity-erasure}
-There is a fixed two-handle, two-gate raw manifest $M$ and collapsing/identity
-maps $q_{\mathrm{cell}}^{=},q_{\mathrm{cell}}^{\ne}$ and
-$q_{\mathrm{ctrl}}^{=},q_{\mathrm{ctrl}}^{\ne}$ such that all four normalized
-worlds are well structured and, for $x,y\in\{=,\ne\}$,
-\[
-  \mathsf{Ready}_{M}(q_{\mathrm{cell}}^{x},q_{\mathrm{ctrl}}^{y})
-  \quad\Longleftrightarrow\quad x={=}\ \lor\ y={=}.
-\]
-An observation retaining $M$ and either quotient while erasing the other thus
-equates a ready world with the nonready $(\ne,\ne)$ world.  Hence no exact
-structural-readiness decider on this manifest class factors through either
-erasure.
-\end{proposition}
-This is information irredundancy, not uniqueness of representation: a
-fail-closed checker may reject both worlds, and equivalent evidence may replace
-either literal map.  The result is manifest-relative and assumes atomic
-redemption.  Its model-level fixture unions gate-use families folded to one
-controller; the prototype accepts the stricter subclass whose same-anchor uses
-already agree on normalized $L_g$.
-
-Let $\mathsf{MNF}(\mathcal F)$ denote the minimal nonfaces of a downward-closed
-family $\mathcal F$: forbidden configurations on its support whose every proper
-subset belongs to $\mathcal F$.
-In this subsection, abbreviate $\mathcal R=\mathsf{Required}_{op}$,
-$\mathcal F=\mathsf{Admitted}_{op}$, and
-$\mathcal P=\mathsf{RawPhysical}$.  Write $\mathsf{NoEscape}$ when every
-$C\in\mathcal P$ is contained in $\operatorname{supp}(\mathcal F)$, and
-$\mathsf{NoMNF}$ when no $K\in\mathsf{MNF}(\mathcal F)$ belongs to
-$\mathcal P$.
-
-\begin{theorem}[Deployment readiness by complete obstructions]
+\begin{lemma}[Complete physical obstructions]
 \label{thm:deployment-obstructions}
-If every controller-local family $L_g$ is downward closed, then
+If every $L_g$ is downward closed, then
 \[
 \begin{aligned}
-  \mathsf{DeploymentReady}\quad\Longleftrightarrow\quad{}&
-  \mathcal R\subseteq\mathcal P\\[-2pt]
-  &{}\land\mathsf{NoEscape}\land\mathsf{NoMNF}.
+\mathcal R\subseteq\mathcal P\subseteq\mathcal F
+\Longleftrightarrow{}&
+\mathcal R\subseteq\mathcal P\\[-2pt]
+&{}\land\bigl(\forall C\in\mathcal P.\
+  C\subseteq\operatorname{supp}(\mathcal F)\bigr)\\[-2pt]
+&{}\land\bigl(\forall K\in\mathsf{MNF}(\mathcal F).\
+  K\notin\mathcal P\bigr).
 \end{aligned}
 \]
-Without the downward-closure premise, readiness still has the exact failure
-decomposition
+Without local downward closure, failure still has the exact decomposition
 \[
-\begin{aligned}
-  \neg\mathsf{DeploymentReady}\quad\Longleftrightarrow\quad{}&
-  \mathcal P\setminus\mathcal F\neq\varnothing\\[-2pt]
-  &{}\lor\ \mathcal R\setminus\mathcal P\neq\varnothing.
-\end{aligned}
+\neg(\mathcal R\subseteq\mathcal P\subseteq\mathcal F)
+\Longleftrightarrow
+(\mathcal P\setminus\mathcal F\ne\varnothing)
+\lor(\mathcal R\setminus\mathcal P\ne\varnothing).
 \]
-Both differences may be nonempty simultaneously.
-\end{theorem}
+The two differences may both be nonempty.
+\end{lemma}
 
-The first obstruction prevents the raw product from escaping the modeled
-support; the second is complete for correlations of arbitrary arity, not only
-pairwise conflicts.  For the canonical functional cell-to-controller adapter,
-this also recovers the older partition criterion: required behavior is
-admitted and controller blocks are constant on the equivalence closure
-generated by co-membership in a minimal nonface.  It asserts no unique finest
-layout for arbitrary overlapping access relations.
+The support notation in the first display abbreviates that every
+$C\in\mathcal P$ is contained in $\operatorname{supp}(\mathcal F)$.  Minimal
+nonfaces are complete only after excluding this support escape.  They are
+classical configuration-structure obstructions
+~\cite{vanglabbeek2009configuration,winskel1987event}, not a new combinatorial
+object introduced here.
 
-\paragraph{Greatest co-liveness pruning}
 For fixed $E,L$, write
 $\mathsf{Raw}(\Delta)=\mathsf{RawPhysical}(E,L,\Delta)$ and define
 \begin{equation}
 \label{eq:principal-coliveness-repair}
-  \Gamma^{\star}_{\mathcal F}
-  =\{G\in\Gamma\mid\mathsf{Raw}(2^G)\subseteq\mathcal F\}.
+\Gamma^\star_{\mathcal F}
+=\{G\in\Gamma\mid \mathsf{Raw}(2^G)\subseteq\mathcal F\}.
 \end{equation}
-The powerset makes group safety survive controller removal.
 
-\begin{proposition}[Greatest co-liveness pruning]
+\begin{lemma}[Greatest co-liveness compilation]
 \label{prop:principal-coliveness-repair}
-If $\Gamma$ is downward closed, so is
-$\Gamma^{\star}_{\mathcal F}\subseteq\Gamma$, and
-$\mathsf{Raw}(\Gamma^{\star}_{\mathcal F})\subseteq\mathcal F$.
-Every downward-closed $\Delta\subseteq\Gamma$ with
-$\mathsf{Raw}(\Delta)\subseteq\mathcal F$ satisfies
-$\Delta\subseteq\Gamma^{\star}_{\mathcal F}$.  Moreover,
+If $\Gamma$ is downward closed, then
+$\Gamma^\star_{\mathcal F}$ is its greatest downward-closed restriction whose
+physical language is contained in $\mathcal F$.  Moreover,
 \[
 \begin{aligned}
- \mathcal R\subseteq\mathsf{Raw}(\Gamma^{\star}_{\mathcal F})
- \quad\Longleftrightarrow\quad
- \exists\Delta\subseteq\Gamma.\;&\Delta\text{ is downward closed}\\[-2pt]
- &{}\land\mathcal R\subseteq\mathsf{Raw}(\Delta)\subseteq\mathcal F.
+&\mathcal R\subseteq\mathsf{Raw}(\Gamma^\star_{\mathcal F})\\
+&\quad\Longleftrightarrow
+\exists\Delta\subseteq\Gamma.\quad
+\Delta\text{ downward closed}\\[-2pt]
+&\hspace{31mm}{}\land\
+\mathcal R\subseteq\mathsf{Raw}(\Delta)\subseteq\mathcal F.
 \end{aligned}
 \]
+\end{lemma}
+
+Thus failure on $\Gamma^\star_{\mathcal F}$ is a necessity result within the
+declared repair space: no restriction of controller co-liveness alone can
+compile the monitor transparently at fixed $E,L$.  A runtime must instead add
+a shared serialization/reservation mechanism, change the controller
+realization, change the edge contract under new authorization, or reject the
+edge.  Merely dropping a required outcome is not history admission.  This is a
+specialized range-control consequence, not a claim that all coordination
+problems reduce to our model.
+
+For diagnostics, a fixed bad cover is classified as support escape, local
+overpermission, or a correlation cut in which every local piece is admitted
+but their union is not.  The cases are exclusive for that cover, not globally
+unique across all covers.  Under local downward closure and local soundness, a
+support-contained overpermission contains a physically realizable minimal
+nonface; a genuine correlation cut has at least two active controllers.
+These extraction lemmas explain a failed compilation but do not add a second
+security property.
+
+\subsection{Composition across Agent edges and receipt growth}
+
+\begin{lemma}[Edge and frontier evolution]
+\label{thm:structural-transport}
+At a fixed durable frontier $D$, a version-monotone structural edge refinement
+that is injective on each target configuration, maps every target
+configuration into the old admitted family, and commutes with lineage
+transports the old prefix certificate.  Such refinements compose, including
+version order, configuration injectivity, and the lineage square.
+
+A seal is bound to $D$.  When a fresh \Prepare{} grows the ledger frontier to
+$D'\supsetneq D$, that seal cannot authorize a subsequent edge: admission must
+be recomputed against $D'$.  If the candidate and lineage are unchanged, then
+$\mathsf{Adm}_e(D')\subseteq\mathsf{Adm}_e(D)$.
+\end{lemma}
+
+The fixed-frontier composition supports an execution graph discovered online;
+it does not require the complete Agent plan in advance.  The frontier rule is
+security-relevant rather than a cache invalidation convention: a restored cell
+whose lineage atom enters $D'$ is removed even when a snapshot parent map still
+exists.
+
+Operationally, a version-bound installation must linearize the proof step.  It
+checks that the edge source version, $D$, contracts, identities, and manifest
+still match the seal; closes the old epoch; and only then publishes the new
+controllers.  A concurrent \Prepare{} or version change makes the comparison
+fail.  Conditional on this atomic edge cut, the old and new epochs cannot both
+prepare effects across the proof boundary.  This installation bridge is not
+implemented by the offline compiler and is not part of the Lean development.
+
+\begin{lemma}[Runtime certificate transport]
+\label{thm:runtime-transport}
+If the manifest satisfies the history-admission sandwich and the runtime
+establishes
+$\mathsf{Req}_e\subseteq\mathsf{Actual}
+\subseteq\mathsf{RawPhysical}$, then
+\[
+\mathsf{Req}_e\subseteq\mathsf{Actual}\subseteq\mathsf{Adm}_e(D)
+\quad\text{and}\quad
+\mathsf{PCM}(\mathcal A,D,\mathsf{Actual},\ell).
+\]
+\end{lemma}
+
+This conclusion is conditional on truthful manifests, complete mediation, and
+the two inclusions involving $\mathsf{Actual}$; the compiler proves none of
+those premises.
+
+\subsection{Tight evidence for an exact verdict}
+
+The exact checker does not require a full listing of arbitrarily large
+controller sets.  At fixed $E,L$, the contract determines how much co-liveness
+evidence is sufficient.
+
+\begin{lemma}[Exact projection and worst-case lower bound]
+\label{thm:observation-arity}
+Two downward-closed co-liveness families with equal
+$\Pi_{\le r_e}$ have the same history-admission verdict.  Conversely, for
+every $k\ge1$, the family
+\[
+U(k,k{+}1)=
+\{X\subseteq\{d_0,\ldots,d_k\}\mid |X|\le k\}
+\]
+has a safe and an unsafe controller realization with identical access,
+controller-local families, identities, and $\Pi_{\le k}$ observations.
+Only the unsafe realization permits all $k{+}1$ controllers jointly.  Hence no
+arity-$k$ checker is exact over all downward-closed realizations; here
+$r_e=k{+}1$.
+\end{lemma}
+
+The boundary/full-simplex collision is classical
+~\cite{vanglabbeek2009configuration,emtander2010hypergraphs,
+wang2024hypergraph}.  The mechanized result lifts it through controller-cover
+realizability and required coverage.
+
+\begin{proposition}[Independent identity erasures]
+\label{prop:identity-erasure}
+There is one fixed two-handle, two-gate raw manifest whose four normalized
+worlds satisfy
+\[
+\mathsf{Ready}_M(q_{\mathrm{cell}}^x,q_{\mathrm{ctrl}}^y)
+\Longleftrightarrow x={=}\lor y={=},
+\qquad x,y\in\{=,\ne\}.
+\]
+Keeping the raw manifest and either quotient while erasing the other therefore
+equates a ready world with the nonready $(\ne,\ne)$ world.
 \end{proposition}
 
-With $\mathcal F=\mathsf{Admitted}_{op}$,
-\cref{thm:greatest-residual} makes these two filters greatest among repairs
-that first prune the candidate prefix-safely and then prune submitted $\Gamma$
-at fixed $E,L$.  Losing required behavior therefore proves this restricted
-repair space infeasible.  When the executable receives only
-$P=\Pi_{\leq r}(\Gamma)$, the claim is relative to $P$, not hidden full
-$\Gamma$.
-
-\subsection{Honest negative evidence and higher-order correlation cuts}
-
-The set differences above explain whether readiness fails, but a controller
-repair needs a mechanism-level witness.  Such a witness must not call every
-forbidden union a coordination failure.
-
-\begin{theorem}[Cover-level failure classification]
-\label{thm:cover-triage}
-Fix one valid cover plan $(G_0,(X_g)_{g\in G_0})$ whose union
-$C=\bigcup_{g\in G_0}X_g$ is not admitted.  Exactly one of the following holds
-for this plan:
-\begin{description}[leftmargin=*,style=nextline]
-  \item[$\mathsf{OutsideSupport}$]
-    $C\nsubseteq\operatorname{supp}(\mathsf{Admitted}_{op})$;
-  \item[$\mathsf{LocalOverpermission}$]
-    $C$ stays on the admitted support, but some $X_g$ is not admitted;
-  \item[$\mathsf{CorrelationCut}$]
-    $C$ stays on the admitted support and every $X_g$ is admitted, but their
-    co-live union is not.
-\end{description}
-\end{theorem}
-
-The cases are exhaustive and pairwise exclusive only after fixing the cover
-plan.  A bad physical configuration may have several covers, so the theorem
-does not claim one globally unique cause.  Only the third case attributes the
-failure to controller correlation.  The compiler uses declared origin metadata
-to subtype it as $\mathsf{GateClone}$ for one origin or $\mathsf{GateCut}$ for
-several; Lean establishes only the underlying $\mathsf{CorrelationCut}$, not
-provenance truth.
-
-\begin{theorem}[Physical correlation-cut extraction]
-\label{thm:correlation-cut-extraction}
-Assume the local families are downward closed and locally sound: each declared
-local choice is accessible through its controller and belongs to
-$\mathsf{Admitted}_{op}$.  Every support-contained physical overpermission
-$C$ contains a configuration $K\subseteq C$ such that:
-\begin{enumerate}[leftmargin=*,itemsep=1pt]
-  \item $K$ is a minimal nonface of $\mathsf{Admitted}_{op}$;
-  \item $K$ is realized by a valid restriction of the same physical cover; and
-  \item every restricted controller-local piece is admitted.
-\end{enumerate}
-For a well-formed admitted family, such a correlation-cut witness necessarily has at least two
-distinct active controllers with nonempty contributions.
-\end{theorem}
-
-\subsection{Contract-indexed observation bound}
-
-Let $\Pi_{\leq k}(\Gamma)$ contain every controller set of size at most $k$
-that is contained in some member of $\Gamma$.  For
-$\mathcal R=\mathsf{Required}_{op}$ and
-$\mathcal F=\mathsf{Admitted}_{op}$, define the contract-only bound
-\begin{equation}
-\label{eq:required-coliveness-arity}
-\begin{aligned}
- r(\mathcal R,\mathcal F)=\max\{&\max_{C\in\mathcal R}|C|,
- \max_{K\in\mathsf{MNF}(\mathcal F)}|K|,\\[-2pt]
- &\mathbf 1[\operatorname{supp}(\mathcal F)\ne\mathcal D]\},
-\end{aligned}
-\end{equation}
-with empty maximum zero; the indicator retains unary support escape.
-
-\begin{theorem}[Exact projected admission and worst-case arity lower bound]
-\label{thm:observation-arity}
-Fix $E,L$ with every $L_g$ downward closed.  Two downward-closed epoch
-families $\Gamma_1,\Gamma_2$ with equal
-$\Pi_{\leq r(\mathcal R,\mathcal F)}$ have the same readiness decision.
-Consequently, taking $P=\Pi_{\leq r(\mathcal R,\mathcal F)}(\Gamma)$, evaluating
-$(E,L,P)$ yields the same readiness Boolean as $(E,L,\Gamma)$ without
-enumerating higher-order members; optional full-family fidelity may remain
-unknown.  Conversely, for every $k\geq1$, two realizations of
-$U(k,k{+}1)=\{X\subseteq\{d_0,\ldots,d_k\}:|X|\leq k\}$ share controller
-identities, complete access, locally sound singleton families, and
-$\Pi_{\leq k}$, yet only the realization excluding joint liveness of all
-$k{+}1$ controllers is ready.  Here $r(U,U)=k{+}1$, so no arity-$k$ checker is
-exact on all downward-closed realizations.
-\end{theorem}
-
-For sufficiency, any cover of $C$ compresses to at most $|C|$ controllers;
-local closure then shrinks overpermission to a minimal nonface or an
-outside-support singleton.  The lower construction contrasts controller sets
-of size at most $k$ with the full powerset.  This skeleton distinction is
-classical~\cite{emtander2010hypergraphs,wang2024hypergraph}; the result here
-lifts it through fixed-$E,L$ cover realizability and required coverage.
-Concrete $E,L$ may permit less evidence.
-
-\begin{corollary}[Contract-indexed evidence boundary]
+Together with two further mechanized collisions, this yields the complete
+evidence claim:
+\begin{corollary}[Worst-case tight history-admission evidence]
 \label{cor:evidence-boundary}
-For downward-closed local and epoch families, the normalized view
-$(\mathcal R,\mathcal F,E,L,\Pi_{\leq r(\mathcal R,\mathcal F)}(\Gamma))$
-determines the exact structural-readiness Boolean.  Across the model class,
-\cref{prop:identity-erasure} shows the raw-to-normalized step cannot generally
-erase either quotient relation; \cref{thm:observation-arity} gives the
-worst-case arity separation.
-This is not a unique or pointwise-minimal representation: equivalent identity
-evidence may replace either map, restricted $E,L$ may permit lower arity, and a
-fail-closed checker may reject with less information.
+The tuple
+\[
+(e,\mathcal A,D,q_{\rm cell},\ell,q_{\rm ctrl},
+E,L,\Pi_{\le r_e}(\Gamma))
+\]
+is sufficient for the exact structural verdict.  In the model class, no exact
+verdict can uniformly erase any of the following semantic distinctions:
+\begin{enumerate}[leftmargin=*,itemsep=1pt]
+  \item \emph{edge mode}: identical arms under choice Fork are admissible,
+  whereas parallel Fork requires their forbidden joint future;
+  \item \emph{durable frontier}: the same restored cell is fresh at $D$ and
+  stale after a receipt for its lineage atom grows the frontier;
+  \item \emph{cell identity}: aliases of one atomic redemption cell and two
+  independently redeemable cells can have opposite verdicts;
+  \item \emph{controller identity}: one shared controller and two independently
+  live controllers can have opposite verdicts; and
+  \item \emph{co-liveness arity}: the $U(k,k{+}1)$ collision rules out every
+  uniformly smaller projection bound.
+\end{enumerate}
 \end{corollary}
 
-\subsection{Runtime-refinement certificate transport}
+The claim is semantic irredundancy, not uniqueness of representation:
+equivalent evidence may encode a distinction differently, concrete $E,L$ can
+lower the required arity, and a fail-closed checker can reject with less
+information.
 
-The compiler checks $\mathsf{RawPhysical}$, not an unobserved runtime family.
-The final theorem therefore keeps the deployment assumptions explicit.
+\subsection{Mechanized and paper-level proof boundary}
 
-\begin{theorem}[Runtime prefix-certificate transport]
-\label{thm:runtime-transport}
-Suppose the manifest is deployment-ready, the admitted family has a durable
-prefix certificate, and the runtime establishes
-\[
-  \mathsf{Required}_{op}\subseteq\mathsf{Actual}
-  \subseteq\mathsf{RawPhysical}.
-\]
-Then
-\[
-  \mathsf{Required}_{op}\subseteq\mathsf{Actual}
-  \subseteq\mathsf{Admitted}_{op}
-\]
-and
-\[
-  \mathsf{PCM}(\mathcal A,D,\mathsf{Actual},\ell).
-\]
-\end{theorem}
+\begin{table}[t]
+\centering
+\caption{Proof boundary of the unified theorem.}
+\label{tab:proof-boundary}
+\small
+\begin{tabular}{@{}
+>{\raggedright\arraybackslash}p{0.35\columnwidth}
+>{\raggedright\arraybackslash}p{0.20\columnwidth}
+>{\raggedright\arraybackslash}p{0.35\columnwidth}@{}}
+\toprule
+Component & Evidence & Boundary \\
+\midrule
+Typed families, greatest fixed-prefix admission, classifier
+& Lean~4 & Finite supplied contracts \\
+Structural refinement, prefix transport, receipt monotonicity
+& Lean~4 & Fixed-frontier model \\
+Controller sandwich, obstructions, pruning, identities, arity
+& Lean~4 & Exact normalized manifest \\
+Global-monitor language equality and theorem assembly
+& Paper proof & Not yet mechanized \\
+Version-bound atomic edge cut and $\mathsf{Actual}$ refinements
+& Runtime premise & Not implemented or inferred \\
+Python compiler/verifier correspondence
+& Tests and oracle & No extraction/refinement proof \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-The proof is inclusion composition followed by monotonicity of the target
-family in $\mathsf{PCM}$.  Its importance is the boundary: the theory tells a
-runtime exactly which two refinement obligations suffice, but the compiler
-does not prove truthful manifests, complete mediation, or either inclusion
-involving $\mathsf{Actual}$.
-
-\subsection{A limited durable-commitment substrate}
-
-The remaining question is why $D$ can be treated as a monotone prefix.  We use
-a separate operational model for that fact rather than placing
-Fork/Restore/Merge inside the receipt protocol.
-
-\begin{theorem}[Monotone commitment core]
-\label{thm:commitment-core}
-Starting from a safe commitment state, every closed step---fresh \Prepare{},
-Replay, Retry, Crash, or Settle---preserves the commitment invariant.
-The receipt ledger is append-only, and external phase either stutters or moves
-from prepared to settled.  A fresh \Prepare{} adds exactly one committed
-receipt; every other label adds zero.  Hence, over a finite trace, committed
-receipt cardinality grows by exactly the number of fresh labels, and the set of
-qualified atoms named by the ledger is monotone.
-\end{theorem}
-
-This is enough to supply successive durable frontiers to admission.  Its scope
-is intentionally smaller than the end-to-end agent claim: Crash is an atomic
-controller stutter, topology-changing history operations require the separate
-refinement results above, and no theorem here establishes exactly-once effects
-at an external sink.
+The append-only commitment model additionally proves that fresh \Prepare{}
+steps, and only those steps, grow the durable atom frontier; Replay, Retry,
+Crash, and Settle do not mint a second receipt.  This mechanized substrate
+justifies successive $D$ values.  It does not prove external exactly-once
+effects or the atomic installation bridge.  The central theorem is therefore
+an exact conditional statement: it specifies the evidence and refinement
+obligations a concrete Agent runtime must discharge rather than treating
+adapter attestations as proved facts.

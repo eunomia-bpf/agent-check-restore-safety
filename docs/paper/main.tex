@@ -41,41 +41,52 @@
 \newcommand{\Dispatch}{\ensuremath{\mathsf{Dispatch}}\xspace}
 \newcommand{\Retry}{\ensuremath{\mathsf{Retry}}\xspace}
 
-\title{History Admission: Safe Fork, Restore, and Merge under Durable Authority}
+\title{Agent History Admission: Exact Monitor Compilation for Fork, Restore,
+and Merge}
 
-\author{\IEEEauthorblockN{Anonymous Authors}}
+\author{}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-Agent runtimes fork, restore, and merge execution histories while protected
-tool effects and receipts outlive any restorable workspace.  Such an edge can
-leave each prospective effect fresh yet change which sets may become durable
-together, so locally correct gates can compose a forbidden outcome.  Rollback,
-per-effect checks, linear capabilities, and history monitors address parts of
-this boundary but do not decide a topology-changing edge and its controller
-realization.
-We define \emph{history admission}.  Three family constructors instantiate six
-Fork/Restore/Merge labels, derive candidate and required futures, and
-filter them against an immutable receipt prefix.  Controller covers then
-check $\mathsf{Required}\subseteq\mathsf{RawPhysical}
-\subseteq\mathsf{Admitted}$.  Exact admission distinguishes copied handles
-from authoritative controller instances: a mechanized two-by-two construction
-fixes all other raw fields and shows that erasing either identity normalization
-conflates ready and nonready worlds.
-We prove a contract-indexed exact evidence boundary: after normalization, the
-complete co-liveness projection through arity $r$ determines readiness.
-Fixed-manifest collisions make each raw identity relation nonerasable, while an
-arbitrary-$k$ cover rules out uniformly lower projection arity in the worst case.
-Greatest prefix admission, obstruction extraction, and pruning make the result
-constructive.  A small compiler
-accepts full exact evidence, its attested exact $r$-projection, or a diagnostic
-upper bound, and an independent verifier recomputes the result.  Lean~4 checks
-the theorem spine, 38 focused tests (62 total) cover the executables, and an
-oracle agrees on all 2,166 three-cell refinement instances.  Claude/Codex
-trajectories expose adapter telemetry gaps but provide neither safety labels
-nor effect authorization.
+Tool-using Agents increasingly fork alternatives, restore checkpoints, and
+merge descendants while their effects and authorization receipts outlive any
+restorable workspace.  A serialized atomic monitor can keep every commit safe,
+but it gives no advance guarantee that the controller topology created by a
+history edge can still realize the outcomes that edge promises.  It may accept
+two individually legal effects and discover only at a required join that the
+third is forbidden.  Calling the monitor at every effect also defeats detached
+or low-latency controllers.
+
+We introduce \emph{Agent history admission}: the property that a post-edge
+controller epoch both refines this strongest atomic monitor and preserves every
+declared required outcome that the monitor permits.  Six typed
+Fork/Restore/Merge relations derive candidate and required futures from the
+before/after Agent history; immutable receipts derive the monitor language;
+and a controller manifest derives the physical language.  Our main theorem is
+an exact characterization:
+\[
+  \mathsf{Required}\subseteq\mathsf{Physical}
+  \subseteq\mathsf{Admitted},
+\]
+where $\mathsf{Admitted}$ is exactly the endpoint family of the atomic
+monitor's trace language.
+Thus history admission is neither an extra safety check nor a composition
+slogan: it is the precise criterion for compiling serialized authorization
+into the controllers created by an Agent history edge without silently
+dropping required behavior.
+
+The characterization is constructive and worst-case tight.  A
+proof-producing compiler emits an independently checkable certificate, a
+coordination/pruning proposal, or a concrete obstruction.  Exact verdicts
+require, up to equivalent encodings, the edge mode, durable frontier,
+redemption-cell identity, controller identity, and contract-indexed
+co-liveness information; fixed-field collisions and an arbitrary-arity family
+establish the lower bounds.  Lean~4 mechanizes the typed-family,
+durable-prefix, controller-cover, and evidence-tightness components.  The
+compiler/verifier passes 38 focused tests (62 artifact tests total), and an
+independent oracle agrees on all 2,166 bounded refinement instances.
 \end{abstract}
 
 \input{sections/introduction}
@@ -88,13 +99,11 @@ nor effect authorization.
 \input{sections/related}
 \input{sections/discussion}
 
+\clearpage
 \section*{AI Use Acknowledgment}
 OpenAI Codex was used in all sections for initial prose drafting and rewriting, and in the executable artifact for code scaffolding and test generation.
 It was also used to assist with literature discovery, formal-model iteration, and counterexample search.
 The authors selected the research direction, checked the cited sources and mathematical arguments, and remain responsible for every claim, proof, result, and citation.
-
-\appendices
-\input{sections/appendix}
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}

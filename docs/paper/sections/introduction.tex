@@ -1,95 +1,154 @@
 \section{Introduction}
 \label{sec:introduction}
 
-Agent runtimes fork alternatives, retain parallel descendants, restore saved
-sessions, and merge results while discovering the execution graph online.
-Codex, Claude, and emerging substrates expose these operations
-~\cite{codexappserver,claudesessions,wang2026fork,wu2026crab}.  Unlike restart,
-they may keep several continuations live while tools mutate external services.
+Tool-using agents increasingly construct their execution graph while they
+work.  They fork alternatives, keep descendants live in parallel, restore
+saved sessions, and merge results, while tool calls mutate services outside
+any restorable workspace.  Codex, Claude, and emerging agent substrates
+already expose parts of this lifecycle
+~\cite{codexappserver,claudesessions,wang2026fork,wu2026crab}.  A security
+decision must therefore follow not only the agent's current state, but also
+which continuations an Agent history edge makes jointly durable.
 
-Individually safe continuations can become unsafe when an edge changes which
-outcomes may coexist.  Suppose a contract permits every pair of fresh
-commitments $a,b,c$ but forbids the triple.  Three locally safe controllers can
-realize $\{a,b,c\}$ after parallel Fork or live Restore: per-effect and pairwise
-checks pass and no cell is spent twice, yet the contract fails.  Replaying an
-already durable cell after Restore is the unary instance.
+An Agent history edge can be safe one commitment at a time yet unable to
+deliver the future that the edge promises.  Consider authority that permits
+every pair of fresh commitments $a,b,c$, but forbids their triple.  After $a$
+is durable, the current continuation requires $b$ and a saved continuation
+requires $c$; the agent requests $\mathsf{RestoreLive}(N,K)$ so that both
+continuations remain live.  A serialized monitor may accept either $b$ or $c$
+and reject the other, so it prevents the forbidden triple but discovers only
+after installing the edge that its required join cannot complete.  The
+ternary-conflict family itself is classical
+~\cite{vanglabbeek2009configuration}; the Agent-specific question is when a
+history edge promises to preserve it under detached authority.
 
-Security state is therefore not one workspace snapshot: it includes an
-immutable receipt prefix, a correlated future, a controller layout, and escaped
-external effects.  Whole-workspace rollback cannot undo remote reality, must
-not rewind receipts, and implements the wrong semantics when several
-descendants should survive.  Because the graph is not known in advance, the
-runtime must certify current edges and compose their certificates.
+The mismatch is between two kinds of quantification.  Commit authorization
+asks whether one next effect is safe relative to the durable prefix.
+An Agent history edge instead declares a family of possible and required
+future configurations, and Fork, Restore, or Merge changes whether its arms
+are alternatives or may commit together.  Installing the edge also creates a
+controller topology whose independently allowed local choices may realize a
+larger family than any one gate exposes.  A workspace snapshot records none of
+the durable receipt prefix, future correlation, or authoritative controller
+identity needed to relate these two views.
 
-Existing mechanisms each cover only part of this boundary.  Rollback recovery,
-state continuity, and ACRFence preserve or check the past but do not derive the
-co-durable future of a typed choice, product, or replacement edge
-~\cite{elnozahy2002rollback,parno2011memoir,zheng2026acrfence}.
-Consumable capabilities, revocable agent capabilities, and commit-time
-authorization can protect one use or one effect witness, but several valid
-cells may still form a forbidden union
+The strongest baseline is a single serialized atomic commit monitor.  Under
+complete mediation, it atomically checks each proposed commitment against the
+current durable prefix and advances that prefix only on success; this
+guarantees that no forbidden configuration becomes durable.  We do not claim
+stronger safety than that monitor.  Rollback and continuity mechanisms protect
+reconstructed past state
+~\cite{elnozahy2002rollback,parno2011memoir,zheng2026acrfence}, while
+consumable capabilities and commit-time authorization can realize the
+serialized boundary for individual commitments
 ~\cite{bowers2007consumable,santos2026lingering,santos2026committime}.
-General history-sensitive monitors such as FORGE can enforce declared policies
-over observed causal predicates~\cite{palumbo2026forge}; they do not themselves
-derive a counterfactual future family for a proposed Fork/Restore/Merge or
-verify that independently live controllers realize only that family.
+History-sensitive monitors can mediate richer declared policies
+~\cite{palumbo2026forge}.  What these mechanisms do not by themselves decide
+is whether a proposed Agent history edge can be installed in a particular
+controller topology without either exceeding that reference monitor or
+silently losing a future that the edge declares required.
 
-Exact structural admission cannot in general erase either of two identity
-relations.
-$q_{\mathrm{cell}}$ maps copied handles to atomic redemption cells;
-$q_{\mathrm{ctrl}}$ maps gate uses to authoritative controller instances.  A
-mechanized two-by-two construction fixes every other raw field and shows that
-erasing either map while retaining the other conflates ready and nonready
-worlds (\cref{prop:identity-erasure}).  A
-downward-closed family $\Gamma$ records which controllers may remain
-authoritative during one co-durable epoch.  Write
-$\mathsf{Actual}$ for configurations the installed runtime can make durable and
-$\mathsf{RawPhysical}$ for the manifest-induced controller product.  This leads
-to the central refinement chain
+We observe that an Agent history edge can be treated as a
+\emph{monitor-compilation request}.  Its type first derives correlated
+candidate and required futures; the durable prefix then selects exactly the
+candidate configurations that the serialized reference monitor could accept.
+The edge is implementable by a controller topology precisely when that
+topology realizes every required configuration and no configuration outside
+this admitted family:
 \[
-  \mathsf{Required}\subseteq\mathsf{Actual}
-  \subseteq\mathsf{RawPhysical}\subseteq\mathsf{Admitted},
+  \mathsf{Required}\subseteq\mathsf{RawPhysical}
+  \subseteq\mathsf{Admitted}.
 \]
-where the typed history operation derives the required behavior, the durable
-prefix derives the admitted future, the manifest derives the raw controller
-product, and a concrete runtime must refine that manifest.
+The right inclusion specializes the reference monitor's safety boundary into
+the installed topology, while the left inclusion prevents ``safe'' compilation
+by deleting mandatory Agent behavior.
 
-Our theory-guided \emph{history-admission compiler} derives typed futures,
-filters them against receipts, and checks controller-cover realization.  It
-emits a certificate or typed witness; an independent verifier recomputes the
-canonical result.  The contract derives an arity $r$: exact readiness needs
-only $\Pi_{\leq r}(\Gamma)$, while an arbitrary-$k$ cover family makes smaller
-arity insufficient in general.  The prototype accepts full $\Gamma$, its exact
-$r$-projection, or a diagnostic upper bound.  Its 38 focused tests (62 total)
-and 2,166-case oracle cross-check the semantics; trajectories characterize
-adapter gaps, not safety.  Truthful manifests, mediation, installation, and
-$\mathsf{Actual}$ refinement remain runtime obligations.
+Making this compilation exact requires evidence that is easy to conflate.
+Copied handles must be normalized by atomic redemption identity, whereas gate
+uses must be normalized independently by authoritative controller identity.
+Moreover, locally safe controllers can create a forbidden higher-order union,
+so exact compilation may need co-liveness evidence beyond pairs.  Finally,
+both receipts and controller versions evolve as the agent runs; a conclusion
+must be bound to one durable prefix and one co-durable epoch rather than reused
+after either changes.
+
+\begin{figure}[t]
+  \centering
+  \begin{tikzpicture}[
+      font=\scriptsize,
+      box/.style={draw,rounded corners=1.5pt,align=center,
+        minimum height=6mm,text width=0.25\columnwidth,inner sep=2pt},
+      result/.style={draw,rounded corners=1.5pt,align=center,
+        minimum height=7mm,text width=0.82\columnwidth,inner sep=2pt},
+      arr/.style={-{Latex[length=1.4mm]},thick}
+    ]
+    \node[box] (edge) {typed Agent edge\\$e$ + leaf contracts};
+    \node[box,right=2.5mm of edge] (past) {authority policy\\+ durable receipts};
+    \node[box,right=2.5mm of past] (ctrl) {controller epoch\\$(E,L,\Gamma)$};
+    \node[result,below=5mm of past] (criterion) {
+      $\mathsf{Req}_e\subseteq
+       \mathsf{RawPhysical}(E,L,\Gamma)\subseteq\mathsf{Adm}_e(D)$};
+    \draw[arr] (edge) -- (criterion);
+    \draw[arr] (past) -- (criterion);
+    \draw[arr] (ctrl) -- (criterion);
+  \end{tikzpicture}
+  \caption{One history-admission boundary.  The edge derives promised
+  behavior, the atomic monitor defines the safety reference, and the installed
+  epoch must lie exactly between them.}
+  \label{fig:one-boundary}
+\end{figure}
+
+We ask three questions.  \emph{RQ1:} when is a typed Agent edge exactly a
+monitor-sound and required-transparent specialization?  \emph{RQ2:} which
+edge, receipt, identity, and co-liveness evidence is sufficient and
+worst-case necessary for that decision?  \emph{RQ3:} can a small compiler
+decide the criterion and emit independently checkable positive or negative
+evidence?
+
+We present \emph{Agent history admission}, a finite decision procedure and
+proof system for this monitor-compilation property.  Six typed
+Fork/Restore/Merge operators derive the candidate and required futures, a
+greatest fixed-prefix filter derives $\mathsf{Admitted}$, and controller-cover
+semantics derives $\mathsf{RawPhysical}$.  The central result characterizes
+when the typed edge has a required-preserving realization beneath the
+serialized monitor and when its declared controller topology is such a
+realization; runtime refinement then transports the structural judgment to
+actual commitments.  The same result yields an exact contract-indexed
+co-liveness projection and worst-case lower bounds showing when smaller
+evidence, or either identity normalization, cannot decide compilation.
+
+Our prototype compiles a proposed edge and manifest to a structural seal or a
+replayable obstruction, and an independent verifier recomputes the finite
+judgment.  Lean~4 checks its typed-family, durable-prefix, controller-cover,
+and evidence-tightness components; the reference-monitor and installation
+bridges are stated separately.  Across 38 focused tests (62 for the complete
+artifact) and all 2,166 three-cell refinement instances, the two
+implementations agree with the direct finite semantics.  Truthful edge
+contracts and topology evidence, atomic installation, complete mediation, and
+runtime refinement remain explicit obligations.
 
 \noindent\textbf{Contributions.}
-This paper makes three contributions.
+This paper makes three contributions to one Agent history-admission property.
 \nopagebreak[4]
 
 \begin{enumerate}[leftmargin=*,itemsep=2pt]
-  \item A typed security model for history-transforming computation.  It derives
-  correlated may/required futures for choice and parallel Fork, replacing and
-  live Restore, and select and join Merge; computes the greatest admitted future
-  compatible with an immutable receipt prefix; and supports compositional
-  inheritance over an online graph
-  (\cref{sec:model,sec:semantics,sec:results}).
+  \item A reference semantics for Agent history edges that gives choice and
+  parallel Fork, replacing and live Restore, and select and join Merge
+  correlated may/required futures.  It defines exactly when the strongest
+  serialized commit monitor can preserve the required future at a fixed
+  durable prefix
+  (\cref{sec:model,sec:semantics}).
 
-  \item An exact-evidence theorem for controller realization.  At fixed $E,L$,
-  the contract-derived $r$-projection of $\Gamma$ decides readiness exactly;
-  an arbitrary-$k$ well-formed cover rules out every uniformly lower-arity
-  projection.  Fixed-manifest collisions independently rule out erasing cell-
-  or controller-identity information.  Obstruction extraction and fixed-$E,L$
-  pruning provide constructive witnesses and repairs
+  \item A monitor-compilation characterization for controller topologies.  It
+  connects required-future preservation and reference-monitor safety through
+  the refinement chain above, gives constructive obstructions and
+  fixed-manifest repair, and proves an exact evidence boundary for cell
+  identity, controller identity, and contract-indexed co-liveness
   (\cref{sec:results}).
 
-  \item A small compiler and independent verifier whose certificate and witness
-  schema follows the proof decomposition.  Lean~4 checks the theorem spine;
-  38 focused compiler/verifier tests (62 across the complete artifact) and an
-  exhaustive 2,166-instance oracle cross-check the implementation; public
-  TraceLab and the private paper-formation lineage
-  characterize workload and adapter observability without supplying safety
-  labels (\cref{sec:algorithm,sec:validation}).
+  \item A compiler, independent verifier, and mechanized finite components for
+  the characterization.  Tests, exhaustive three-cell cross-checking, litmus
+  manifests, and bounded projection measurements validate the finite decision
+  while keeping adapter and installation assumptions outside the seal
+  (\cref{sec:algorithm,sec:validation}).
 \end{enumerate}

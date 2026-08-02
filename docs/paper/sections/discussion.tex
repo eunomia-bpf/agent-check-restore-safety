@@ -1,28 +1,38 @@
 \section{Discussion and Limitations}
 \label{sec:discussion}
 
-\paragraph{Scope}
-Snapshots cannot retract effects or receipts, and total rollback is wrong while
-histories remain live.  Edge certificates compose until receipt growth;
-choose-one rollouts may defer authority, but parallel commits and durable joins
-require edge admission.
+\paragraph{When history admission matters}
+If every protected effect can synchronously consult one atomic service, the
+reference monitor is already safe and maximally permissive one commit at a
+time.  History admission is useful when a runtime wants to detach authority,
+avoid a global round trip, reserve a multi-effect outcome in advance, or
+promise that a parallel/join continuation remains executable.  A choose-one
+Agent may instead retain authority at its parent until selection.
 
-\paragraph{Assumptions and nonclaims}
-Atomic redemption protects cells; joint control protects correlations.
-$\mathsf{RawPhysical}$ composes declared controllers: hidden coordination may
-reject, whereas an unmodeled bypass is unsound.  $\Gamma$ binds one epoch;
-receipt or controller-version changes force readmission.
-Projection readiness assumes exact projection, hidden downward closure, and
-fixed $E,L$; sound upper bounds never seal.  Repair is greatest only relative
-to submitted evidence and must be installed and resubmitted.  Truthful evidence,
-runtime refinement, mediation, freshness, and redemption remain external
-obligations.
-The seal authorizes no effect and proves neither exactly-once nor safe learning.
+\paragraph{Trusted and effect boundary}
+Stable keys and installer-minted identifiers must determine the two
+quotients; the edge constructor must derive its target relation; and actual
+controllers must refine the manifest.  A production installer must bind the
+certificate atomically to the observed receipts and epoch, closing the old
+epoch.  The prototype establishes none of these facts.  External delivery
+additionally needs an outbox, idempotent/queryable sink, or conservative
+issue-time charging.  We prove neither exactly-once effects nor that an
+authorized Agent action is useful, truthful, confidential, or aligned.
+
+\paragraph{Finite representation}
+The compiler enumerates small families and fails closed at fixed caps.  Exact
+projection removes irrelevant high-arity behavior, but no uniformly
+low-order summary covers every policy.
+
+\paragraph{Ethics}
+The artifact uses synthetic manifests and finite models, recruits no users,
+and releases no private histories.  Certificates decline to authorize effects.
 
 \section{Conclusion}
 
-History admission gives Fork, Restore, and Merge a receipt-conditioned future
-and an exact structural evidence boundary.  Its seal transports only if
-$\mathsf{Required}\subseteq\mathsf{Actual}
-\subseteq\mathsf{Raw}(E,L,\Gamma)$; readiness supplies
-$\mathsf{Raw}(E,L,\Gamma)\subseteq\mathsf{Admitted}$.
+Agent history admission answers when Fork, Restore, or Merge may replace
+per-effect global-monitor calls with an installed controller epoch.  Exactly
+when the epoch contains every required endpoint and no trace outside the
+monitor language, it is both transparent and monitor-sound.  The same
+characterization exposes necessary coordination and the edge, receipt,
+identity, and co-liveness evidence an exact compiler cannot generally erase.
