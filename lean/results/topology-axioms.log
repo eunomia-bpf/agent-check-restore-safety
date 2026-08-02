@@ -721,6 +721,110 @@ AuthorityContinuity.ConfigurationCellQuotient.Fixtures.parallel_capacity_one_cou
 'AuthorityContinuity.ConfigurationCellQuotient.Fixtures.parallel_capacity_one_counterexample' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
+AuthorityContinuity.RedemptionCommitment.fresh_preserves_safe.{u_1, u_2, u_3, u_4, u_5, u_6} {Atom : Type u_2}
+  {Cell : Type u_3} {Epoch : Type u_4} {Operation : Type u_5} {Receipt : Type u_6} [DecidableEq Atom] [DecidableEq Cell]
+  [DecidableEq Epoch] [DecidableEq Operation] [DecidableEq Receipt] {Digest : Type u_1}
+  {S : RedemptionCommitment.State Atom Cell Epoch Operation Digest Receipt} {cell : Cell} {epoch : Epoch} {atom : Atom}
+  {operation : Operation} {digest : Digest} {receipt : Receipt} (hSafe : RedemptionCommitment.Safe S)
+  (ok : RedemptionCommitment.FreshOK S cell epoch atom operation receipt) :
+  RedemptionCommitment.Safe (RedemptionCommitment.afterFresh S cell epoch atom operation digest receipt)
+'AuthorityContinuity.RedemptionCommitment.fresh_preserves_safe' depends on axioms: [propext, Quot.sound]
+AuthorityContinuity.RedemptionCommitment.step_preserves_phaseWF.{u_1, u_2, u_3, u_4, u_5, u_6} {Atom : Type u_2}
+  {Cell : Type u_3} {Epoch : Type u_4} {Operation : Type u_5} {Receipt : Type u_6} [DecidableEq Atom] [DecidableEq Cell]
+  [DecidableEq Epoch] [DecidableEq Operation] [DecidableEq Receipt] {Digest : Type u_1}
+  {S S' : RedemptionCommitment.State Atom Cell Epoch Operation Digest Receipt}
+  {event : RedemptionCommitment.Event Cell Operation Digest Receipt} (step : RedemptionCommitment.Step S event S')
+  (hWF : RedemptionCommitment.PhaseWF S) : RedemptionCommitment.PhaseWF S'
+'AuthorityContinuity.RedemptionCommitment.step_preserves_phaseWF' depends on axioms: [propext, Quot.sound]
+AuthorityContinuity.RedemptionCommitment.step_phase_mono.{u_1, u_2, u_3, u_4, u_5, u_6} {Atom : Type u_2}
+  {Cell : Type u_3} {Epoch : Type u_4} {Operation : Type u_5} {Receipt : Type u_6} [DecidableEq Atom] [DecidableEq Cell]
+  [DecidableEq Epoch] [DecidableEq Operation] [DecidableEq Receipt] {Digest : Type u_1}
+  {S S' : RedemptionCommitment.State Atom Cell Epoch Operation Digest Receipt}
+  {event : RedemptionCommitment.Event Cell Operation Digest Receipt} (step : RedemptionCommitment.Step S event S') :
+  RedemptionCommitment.PhaseMonotone S S'
+'AuthorityContinuity.RedemptionCommitment.step_phase_mono' depends on axioms: [propext, Quot.sound]
+AuthorityContinuity.RedemptionCommitment.rtc_preserves_safe.{u_1, u_2, u_3, u_4, u_5, u_6} {Atom : Type u_2}
+  {Cell : Type u_3} {Epoch : Type u_4} {Operation : Type u_5} {Receipt : Type u_6} [DecidableEq Atom] [DecidableEq Cell]
+  [DecidableEq Epoch] [DecidableEq Operation] [DecidableEq Receipt] {Digest : Type u_1}
+  {S S' : RedemptionCommitment.State Atom Cell Epoch Operation Digest Receipt}
+  (trace : Relation.ReflTransGen RedemptionCommitment.ClosedStep S S') (hSafe : RedemptionCommitment.Safe S) :
+  RedemptionCommitment.Safe S'
+'AuthorityContinuity.RedemptionCommitment.rtc_preserves_safe' depends on axioms: [propext, Quot.sound]
+AuthorityContinuity.RedemptionCommitment.rtc_preserves_phaseWF.{u_1, u_2, u_3, u_4, u_5, u_6} {Atom : Type u_2}
+  {Cell : Type u_3} {Epoch : Type u_4} {Operation : Type u_5} {Receipt : Type u_6} [DecidableEq Atom] [DecidableEq Cell]
+  [DecidableEq Epoch] [DecidableEq Operation] [DecidableEq Receipt] {Digest : Type u_1}
+  {S S' : RedemptionCommitment.State Atom Cell Epoch Operation Digest Receipt}
+  (trace : Relation.ReflTransGen RedemptionCommitment.ClosedStep S S') (hWF : RedemptionCommitment.PhaseWF S) :
+  RedemptionCommitment.PhaseWF S'
+'AuthorityContinuity.RedemptionCommitment.rtc_preserves_phaseWF' depends on axioms: [propext, Quot.sound]
+AuthorityContinuity.RedemptionCommitment.rtc_phase_mono.{u_1, u_2, u_3, u_4, u_5, u_6} {Atom : Type u_2}
+  {Cell : Type u_3} {Epoch : Type u_4} {Operation : Type u_5} {Receipt : Type u_6} [DecidableEq Atom] [DecidableEq Cell]
+  [DecidableEq Epoch] [DecidableEq Operation] [DecidableEq Receipt] {Digest : Type u_1}
+  {S S' : RedemptionCommitment.State Atom Cell Epoch Operation Digest Receipt}
+  (trace : Relation.ReflTransGen RedemptionCommitment.ClosedStep S S') : RedemptionCommitment.PhaseMonotone S S'
+'AuthorityContinuity.RedemptionCommitment.rtc_phase_mono' depends on axioms: [propext, Quot.sound]
+AuthorityContinuity.RedemptionCommitment.rtc_ledger_mono.{u_1, u_2, u_3, u_4, u_5, u_6} {Atom : Type u_2}
+  {Cell : Type u_3} {Epoch : Type u_4} {Operation : Type u_5} {Receipt : Type u_6} [DecidableEq Atom] [DecidableEq Cell]
+  [DecidableEq Epoch] [DecidableEq Operation] [DecidableEq Receipt] {Digest : Type u_1}
+  {S S' : RedemptionCommitment.State Atom Cell Epoch Operation Digest Receipt}
+  (trace : Relation.ReflTransGen RedemptionCommitment.ClosedStep S S') : RedemptionCommitment.LedgerMonotone S S'
+'AuthorityContinuity.RedemptionCommitment.rtc_ledger_mono' depends on axioms: [propext, Quot.sound]
+AuthorityContinuity.RedemptionCommitment.committed_card_le_issued_card.{u_1, u_2, u_3, u_4, u_5, u_6}
+  {Receipt : Type u_6} {Atom : Type u_2} {Cell : Type u_3} {Epoch : Type u_4} {Operation : Type u_5} [Fintype Receipt]
+  [DecidableEq Receipt] [DecidableEq Atom] [DecidableEq Cell] [DecidableEq Epoch] [DecidableEq Operation]
+  {Digest : Type u_1} (S : RedemptionCommitment.State Atom Cell Epoch Operation Digest Receipt)
+  (hSafe : RedemptionCommitment.Safe S) : S.committedReceipts.card ≤ S.issued.card
+'AuthorityContinuity.RedemptionCommitment.committed_card_le_issued_card' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RedemptionCommitment.step_committed_card.{u_1, u_2, u_3, u_4, u_5, u_6} {Receipt : Type u_6}
+  {Atom : Type u_2} {Cell : Type u_3} {Epoch : Type u_4} {Operation : Type u_5} [Fintype Receipt] [DecidableEq Receipt]
+  [DecidableEq Atom] [DecidableEq Cell] [DecidableEq Epoch] [DecidableEq Operation] {Digest : Type u_1}
+  {S S' : RedemptionCommitment.State Atom Cell Epoch Operation Digest Receipt}
+  {event : RedemptionCommitment.Event Cell Operation Digest Receipt} (step : RedemptionCommitment.Step S event S') :
+  S'.committedReceipts.card = S.committedReceipts.card + event.freshUnits
+'AuthorityContinuity.RedemptionCommitment.step_committed_card' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RedemptionCommitment.Trace.committed_card_growth.{u_1, u_2, u_3, u_4, u_5, u_6} {Receipt : Type u_6}
+  {Atom : Type u_2} {Cell : Type u_3} {Epoch : Type u_4} {Operation : Type u_5} [Fintype Receipt] [DecidableEq Receipt]
+  [DecidableEq Atom] [DecidableEq Cell] [DecidableEq Epoch] [DecidableEq Operation] {Digest : Type u_1}
+  {S T : RedemptionCommitment.State Atom Cell Epoch Operation Digest Receipt}
+  {events : List (RedemptionCommitment.Event Cell Operation Digest Receipt)}
+  (trace : RedemptionCommitment.Trace S events T) :
+  T.committedReceipts.card = S.committedReceipts.card + RedemptionCommitment.freshCount events
+'AuthorityContinuity.RedemptionCommitment.Trace.committed_card_growth' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RedemptionCommitment.conflicting_digest_has_no_retry.{u_1, u_2, u_3, u_4, u_5, u_6}
+  {Atom : Type u_1} {Cell : Type u_2} {Epoch : Type u_3} {Operation : Type u_4} {Digest : Type u_5} {Receipt : Type u_6}
+  {S : RedemptionCommitment.State Atom Cell Epoch Operation Digest Receipt} {cell : Cell} {operation : Operation}
+  {receipt : Receipt} {digest₁ digest₂ : Digest} (hne : digest₁ ≠ digest₂)
+  (h : RedemptionCommitment.RetryOK S cell operation digest₁ receipt) :
+  ¬RedemptionCommitment.RetryOK S cell operation digest₂ receipt
+'AuthorityContinuity.RedemptionCommitment.conflicting_digest_has_no_retry' depends on axioms: [propext, Quot.sound]
+AuthorityContinuity.RedemptionCommitment.Fixtures.three_retries_trace :
+  RedemptionCommitment.Trace RedemptionCommitment.Fixtures.afterFirst
+    [RedemptionCommitment.Fixtures.retryEvent, RedemptionCommitment.Fixtures.retryEvent,
+      RedemptionCommitment.Fixtures.retryEvent]
+    RedemptionCommitment.Fixtures.afterFirst
+'AuthorityContinuity.RedemptionCommitment.Fixtures.three_retries_trace' depends on axioms: [propext, Quot.sound]
+AuthorityContinuity.RedemptionCommitment.Fixtures.cloned_private_cells_two_commitments :
+  RedemptionCommitment.Step RedemptionCommitment.Fixtures.duplicatedAtom
+      (RedemptionCommitment.Event.fresh false false false false) RedemptionCommitment.Fixtures.afterCloneFirst ∧
+    RedemptionCommitment.Step RedemptionCommitment.Fixtures.afterCloneFirst
+        (RedemptionCommitment.Event.fresh true false false true) RedemptionCommitment.Fixtures.afterCloneSecond ∧
+      RedemptionCommitment.State.committedReceipts RedemptionCommitment.Fixtures.afterCloneSecond = {false, true}
+'AuthorityContinuity.RedemptionCommitment.Fixtures.cloned_private_cells_two_commitments' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RedemptionCommitment.Fixtures.rollback_local_restore_yields_two_receipts :
+  RedemptionCommitment.Step RedemptionCommitment.Fixtures.rollbackRestored
+      (RedemptionCommitment.Event.fresh true false false true) RedemptionCommitment.Fixtures.afterRollbackFresh ∧
+    RedemptionCommitment.State.committedReceipts RedemptionCommitment.Fixtures.afterRollbackFresh = {false, true}
+'AuthorityContinuity.RedemptionCommitment.Fixtures.rollback_local_restore_yields_two_receipts' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
 AuthorityContinuity.RedemptionDomainFrontier.ResponseIdentity.retry_successes_share_one_commitment :
   (RedemptionDomainFrontier.distinctReceipts RedemptionDomainFrontier.ResponseIdentity.retryResponses).card = 1
 'AuthorityContinuity.RedemptionDomainFrontier.ResponseIdentity.retry_successes_share_one_commitment' depends on axioms: [propext,

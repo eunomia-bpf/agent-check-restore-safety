@@ -2,6 +2,7 @@ import AuthorityContinuity.Audit
 import AuthorityContinuity.PlanTokenStrengthening
 import AuthorityContinuity.TokenWeightedAccounting
 import AuthorityContinuity.ConfigurationCellQuotient
+import AuthorityContinuity.RedemptionCommitment
 import AuthorityContinuity.RedemptionDomainFrontier
 
 /-!
@@ -21,6 +22,10 @@ specialization, and three separating lifecycle examples.  The classical
 configuration-morphism bridge is replayed separately: it establishes the exact
 finite additive certificate while deliberately making no novelty claim for
 local injectivity or configuration preservation themselves.
+The operational commitment core separately derives unit-atom conservation,
+ledger/phase monotonicity, and exact fresh-event accounting for
+Prepare/Replay/Retry/Crash/Settle.  Fork/Restore/Merge preservation remains a
+separate topology-refinement obligation and is not claimed by this replay root.
 
 `AuthorityContinuity.Audit` prints the kernel dependencies of every
 paper-facing theorem.  Boundary I/II and concrete product-runtime refinement

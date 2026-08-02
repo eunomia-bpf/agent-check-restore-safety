@@ -109,6 +109,30 @@ Thus the useful statement is:
 > maximally permissive online runtime needs an exact authority-relevant future
 > contract, a shared durable linearizer, or deferred delegation.
 
+## Shared cells do not imply a shared choice contract
+
+Leaf-cell identity alone is insufficient.  Let one authoritative choice gate
+have the residual family
+
+```text
+F = {empty, {a}, {b}}
+```
+
+and let distinct cells `a` and `b` reuse one source atom under that durable
+exclusion.  If Fork merely creates two history aliases of the same gate,
+`Future` remains `F`.  If checkpoint instead clones the gate state into two
+independently advancing controllers, the joint family is the product under
+union.  One copy can choose `a` while the other chooses `b`, so the product
+contains `{a,b}` although each copy alone does not.
+
+Both executions can expose the same leaf-handle-to-cell map.  They differ in
+whether the choice/fence controller itself is shared.  Consequently a typed
+`SharedFork` must alias one authoritative contract instance and version, not
+only copy handles that resolve to the same redemption cells.  A cloned gate is
+a topology expansion requiring fresh admission, fencing, or authority.  This
+is a concrete reason why an Agent checkpoint cannot infer security semantics
+from workspace bytes or resource identity alone.
+
 ## Online preservation rule
 
 For durable prefix `P`, current/proposed state `S`, and contract `Gamma`, the

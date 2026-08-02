@@ -3,6 +3,7 @@ import AuthorityContinuity.TopologyExamples
 import AuthorityContinuity.PlanTokenStrengthening
 import AuthorityContinuity.TokenWeightedAccounting
 import AuthorityContinuity.ConfigurationCellQuotient
+import AuthorityContinuity.RedemptionCommitment
 import AuthorityContinuity.RedemptionDomainFrontier
 
 /-!
@@ -248,6 +249,50 @@ namespace AuthorityContinuity
 
 #check ConfigurationCellQuotient.Fixtures.parallel_capacity_one_counterexample
 #print axioms ConfigurationCellQuotient.Fixtures.parallel_capacity_one_counterexample
+
+/-! Operational commitment core; topology-changing operators are separate. -/
+
+#check RedemptionCommitment.fresh_preserves_safe
+#print axioms RedemptionCommitment.fresh_preserves_safe
+
+#check RedemptionCommitment.step_preserves_phaseWF
+#print axioms RedemptionCommitment.step_preserves_phaseWF
+
+#check RedemptionCommitment.step_phase_mono
+#print axioms RedemptionCommitment.step_phase_mono
+
+#check RedemptionCommitment.rtc_preserves_safe
+#print axioms RedemptionCommitment.rtc_preserves_safe
+
+#check RedemptionCommitment.rtc_preserves_phaseWF
+#print axioms RedemptionCommitment.rtc_preserves_phaseWF
+
+#check RedemptionCommitment.rtc_phase_mono
+#print axioms RedemptionCommitment.rtc_phase_mono
+
+#check RedemptionCommitment.rtc_ledger_mono
+#print axioms RedemptionCommitment.rtc_ledger_mono
+
+#check RedemptionCommitment.committed_card_le_issued_card
+#print axioms RedemptionCommitment.committed_card_le_issued_card
+
+#check RedemptionCommitment.step_committed_card
+#print axioms RedemptionCommitment.step_committed_card
+
+#check RedemptionCommitment.Trace.committed_card_growth
+#print axioms RedemptionCommitment.Trace.committed_card_growth
+
+#check RedemptionCommitment.conflicting_digest_has_no_retry
+#print axioms RedemptionCommitment.conflicting_digest_has_no_retry
+
+#check RedemptionCommitment.Fixtures.three_retries_trace
+#print axioms RedemptionCommitment.Fixtures.three_retries_trace
+
+#check RedemptionCommitment.Fixtures.cloned_private_cells_two_commitments
+#print axioms RedemptionCommitment.Fixtures.cloned_private_cells_two_commitments
+
+#check RedemptionCommitment.Fixtures.rollback_local_restore_yields_two_receipts
+#print axioms RedemptionCommitment.Fixtures.rollback_local_restore_yields_two_receipts
 
 /-! Operational and fixed-horizon redemption-domain frontier. -/
 

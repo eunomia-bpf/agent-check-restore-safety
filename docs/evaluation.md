@@ -587,6 +587,15 @@ retry identity was weaker than Replay, and label-erased RTC could not count
 fresh commitment events.  It is not accepted evidence until those issues are
 repaired.
 
+The revision repairs all four findings: Fresh now updates explicit
+cell/epoch-local spent state; ledger and external phase have a preserved
+well-formed domain and monotone phase order; Retry resolves
+`(cell, operation, digest)` to the existing receipt; and retained labeled
+traces satisfy exact committed-cardinality growth by fresh-event count.  A
+read-only follow-up returned **PASS for the scoped commitment core**.  The
+result still does not establish the source `Safe` invariant for any
+topology-changing operator and is not the central agent lifecycle theorem.
+
 The quotient module passed standalone elaboration, the integrated library
 build, the frozen axiom/declaration checks, and a fresh kernel replay of
 `AuthorityContinuity.Main` on 2026-08-02.  Its source SHA-256 is

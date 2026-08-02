@@ -77,6 +77,20 @@ frozen_constants=(
   two_handles_one_cell
   exclusive_shared_lineage_transports
   parallel_capacity_one_counterexample
+  fresh_preserves_safe
+  step_preserves_phaseWF
+  step_phase_mono
+  rtc_preserves_safe
+  rtc_preserves_phaseWF
+  rtc_phase_mono
+  rtc_ledger_mono
+  committed_card_le_issued_card
+  step_committed_card
+  committed_card_growth
+  conflicting_digest_has_no_retry
+  three_retries_trace
+  cloned_private_cells_two_commitments
+  rollback_local_restore_yields_two_receipts
   retry_successes_share_one_commitment
   same_operation_two_cells_create_two_commitments
   spent_mono
