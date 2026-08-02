@@ -249,6 +249,10 @@ audit is at
 
 ### Tests to retain
 
+The three synthetic regression tests in
+`test_extract_private_paper_traces.py` implement the core cases below without
+embedding any private trace content. They pass under Python 3.12.
+
 - Synthetic fixture with `local header -> copied parent -> task_started ->
   trigger -> child native events`; assert copied calls are not counted.
 - Variants for no-history forks, depth-2 forks, multiple copied session headers,
