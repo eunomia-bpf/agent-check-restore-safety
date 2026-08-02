@@ -66,6 +66,53 @@ Surviving distinction: those systems do not, in the inspected models, give the c
 
 Surviving distinction: anti-rollback normally rejects or detects histories that diverge from a valid linear continuity relation. Agent exploration intentionally creates alternatives and sometimes preserves several outcomes. The new problem is to authorize this non-linear lifecycle without treating every fork as an attack or every branch as independently funded. The non-rollbackable ledger is a premise and enforcement substrate, not the contribution.
 
+### 3.2a Shared redemption versus detached authority
+
+A hostile review exposed an important scope error in the current token-linear
+story.  Multiple aliases of one authorization are not inherently unsafe when
+all aliases redeem through one shared atomic service.  **Consumable
+Credentials** already starts from easily copied credentials and uses a named
+online ratifier to track and limit productive consumption.  A correct global
+CAS has the same shape.  Therefore claim-level current-fiber cardinality one is
+sufficient, but not necessary for every connected architecture.
+
+The opposite deployment profile is also established.  Escrow transactions and
+the **Bounded Counter CRDT** partition rights among replicas so each replica can
+act locally without violating a global bound; rights must be explicitly
+transferred, or an operation coordinates or fails.  With a one-unit resource,
+only one detached replica can hold the right.  **Invariant confluence** already
+provides the general necessary-and-sufficient framework for deciding when
+coordination-free database execution preserves an invariant.  Consequently,
+the paper must not claim discovery of the general alias/coordination tradeoff.
+
+The candidate agent-specific result is a typed specialization.  For one token,
+quotient live aliases by the atomic service that linearizes their redemption.
+The worst-case number of successful redemptions is the number of nonempty
+independent service domains: aliases behind one service are safe, while aliases
+spread across detached services require escrow, coordination, or distinct
+policy-approved tokens.  Fork, Restore, and Merge matter because they can
+dynamically preserve, split, replace, or recombine this service relation while
+copying executable intent.  The existing current-fiber invariant is the special
+case in which every current controller occurrence is independently preparable;
+it is not a universal necessity claim.
+
+The high-level rollback premise also predates agents.  Garfinkel and Rosenblum,
+*When Virtual Is Harder than Real* (HotOS 2005), explicitly describe execution
+changing from a line to a tree, document rollback reuse of security state, and
+recommend moving security-relevant state outside the guest or into storage
+independent of rollback.  They do not define one-use authority domains, typed
+intentional history operators, or a preservation/admission theorem.  The
+paper's novelty must begin after that architectural observation.
+
+Newly verified local sources:
+
+- `reference/closest-work/2005-garfinkel-when-virtual-harder-real.pdf`
+  (SHA-256 `c28fc4435a39a2618f46264c0450d9b93ed2c6f86ac3a7b78fd88b077f0a47cc`);
+- `reference/foundations/2014-bailis-coordination-avoidance.pdf`
+  (SHA-256 `5ec38019fe24187b985d1db2f36ba7717d191c46c2abb2b792d49f8df6f85cad`);
+- `reference/foundations/2015-balegas-bounded-counter.pdf`
+  (SHA-256 `2fdd8739f5c9033ba0620c20b09f3248d60296b6814bb1fe727fac43e9a3f49a`).
+
 ### 3.3 Transactions and external effects
 
 **Atomix** separates execution, sealing, progress/frontier checks, and settlement for agent tool effects. **Cordon** defines semantic transaction boundaries for composed tool flows. **DART** asks whether a local rollback remains semantically recoverable after downstream commitment. Classic output-commit, sagas, durable execution, idempotency, and transactional outboxes already cover much of staged versus escaped effect handling.
