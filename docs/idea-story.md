@@ -73,6 +73,7 @@ The central claim fails if closest work already gives an equivalent compatibilit
 | 2026-08-02 | The inability to pre-enumerate a dynamically Forked/Restored/Merged agent graph, or the difference between its control and external-effect graphs, may itself distinguish agents from traditional systems. | Process calculi, dynamic-causality and reversible event structures, graph rewriting, adaptive workflows, and rollback recovery already cover online topology, changing dependencies, rollback, and distinct output histories.  A same-prefix exclusive/parallel pair shows that the actual issue is future-contract information at independent authority materialization.  A stronger counterexample shows that copying an exclusive choice gate twice product-composes `{a}` from one copy with `{b}` from the other even when both copies resolve their leaf handles to the same cells. | Do not enumerate a future graph.  Maintain a versioned, authority-relevant future contract whose configuration family conservatively covers real co-durable completions.  A shared Fork must alias the authoritative choice/fence controller, not merely its leaf cells.  Computation may fork without authority; independently redeemable authority requires an exact contract for completeness, shared ratification, deferred delegation, or worst-case rejection. | Removes another broad novelty claim.  Adds contract-relative arbitrary-extension soundness, no-silent-topology-expansion, a gate-cloning witness, and a precisely scoped observation lower bound to the typed runtime contribution. |
 | 2026-08-02 | A useful tool might simply choose `Copy/Share/Split/Persist/Revalidate/Reject` for each checkpointed resource. | Plan 9 `rfork` already exposes per-resource share/copy/new flags; *Secure the Clones* verifies declared maximum-sharing clone policies; PORTICO compiles explicit agent contracts to epoch capabilities.  The newly mechanized minimal-nonface theorem instead shows that controller correlation and redemption-cell identity are independent obligations, and that multiway constraints can be invisible to every pairwise check. | Make the artifact a semantic-first, witness-carrying compiler.  For fixed candidate semantics under complete observation and controllable pruning, compute the greatest pointwise-safe subfamily; derive the least common-coordination equivalence under maximal asynchronous recombination and its finest exact partition; separately repair lineage collisions and preserve durable commitments; only then lower to runtime actions.  Return a Pareto frontier when share/split implementations are incomparable. | Rejects clone-policy code generation as the contribution.  The prospective novelty is a typed Fork/Restore/Merge synthesis theorem jointly transporting future correlation, linear redemption, and durable commitment, plus refinement-certified lease reuse and minimal counterexamples. |
 | 2026-08-02 | Union/tensor generation plus an exhaustive three-case `Or` is already an exact typed admission theorem. | Hostile formal review found two hidden premises.  Without `required ⊆ candidate`, full admission and required rejection overlap.  Without normalized commitment-occurrence identities, set union silently collapses two independent cross-arm obligations that happen to reuse one name. | A valid typed contract yields a proved pairwise-exclusive trichotomy.  The compiler exposes four proof obligations—`Inherit`, `ReadmitOK`, `NeedsMechanism`, and pruning-only `Reject`—and treats arm tagging/intentional aliases as explicit adapter evidence.  Structural inheritance composes without enumerating the future graph, but it fixes the durable prefix; receipt growth forces readmission. | Closes the first typed theorem layer, prevents a malformed-contract/vacuity claim, and turns identity normalization into a checked compiler boundary.  It also narrows “lease survival” to structural lease-binding transport; authentication, revocation, expiry, and effect-digest validity remain runtime obligations. |
+| 2026-08-02 | The contract-indexed evidence tuple and its several supporting theorems can be presented as one large contribution. | A strongest-baseline audit showed that a serialized atomic monitor already prevents replay, double redemption, and forbidden unions, so topology-aware admission is not necessary for safety alone.  Configuration families, range control, invariant confluence, anti-rollback, consumable credentials, and commit-time authorization already own the individual ingredients. | Treat the atomic monitor as the reference semantics.  History admission is the exact compilation criterion for specializing that monitor into the controller topology created by an Agent Fork, Restore, or Merge while preserving every declared required future. | Rebuilds the paper around one Agent History-Admission/Monitor-Compilation Theorem with safety, transparency, necessity, composition, and tight evidence clauses.  The old component theorems become lemmas; identity and arity results establish worst-case representation tightness; the tool becomes a proof-producing compiler rather than a collection of checks. |
 
 ## Hypothesis Frontier
 
@@ -137,7 +138,7 @@ The central claim fails if closest work already gives an equivalent compatibilit
 | 2026-08-02 | Readiness checking plus witnesses -> a checked greatest co-liveness pruning proposal. | The user asked for a theory-guided tool with larger, nontrivial novelty.  A greatest hereditary-safe restriction makes the checker constructive, but range-control literature shows that generic maximally permissive synthesis between lower and upper bounds is established. | Keep contract-indexed observation arity as the controller-theory headline; retain greatest pruning as a constructive corollary and theory-to-tool bridge, explicitly scoped to one submitted Gamma and fixed access/local families. | The Initial Narrative required useful enforcement without serializing exploration.  The previous narrative decided and diagnosed one manifest.  The chosen construction preserves every safe downward-closed co-liveness alternative in its scope and exactly decides whether pruning can retain required behavior, without claiming a new general synthesis theory. | Lean greatestness/feasibility theorems; independent compiler/verifier output; U(2,3) install-and-resubmit test; Yin--Lafortune range-control comparison. | Reopen if proof/tool semantics diverge, a closer typed-history construction appears, or no runtime can install the proposed restriction. |
 | 2026-08-02 | Several admission, obstruction, pruning, and projection theorems -> one two-stage, contract-indexed exact evidence boundary. | Final hostile review found no fatal mathematical error but warned that presenting elementary set filters and six surface labels as co-equal novelties hid the strongest result.  A direct Lean corollary was also missing for the tool's claim that evaluating the submitted complete projection itself matches hidden-Gamma readiness. | Treat `(raw manifest, q_cell, q_ctrl, Gamma) -> (R,F,E,L, Pi_{<=r} Gamma) -> Ready` as the theorem spine.  Fixed-manifest collisions make the two identity relations independently nonerasable for exact admission; an arbitrary-k cover makes every uniformly lower arity insufficient; the complete contract-indexed projection is sufficient.  Call this worst-case information irredundance, not a unique or pointwise-minimal encoding. | This enlarges the contribution by characterizing the exact runtime evidence interface rather than by adding a complex runtime or more operator syntax.  Choice/tensor/replacement, greatest filtering, obstruction extraction, and runtime transport remain constructive support. | Lean projection downward-closure/idempotence and adapter-facing exact-projection corollary; well-formed two-by-two quotient fixture; arbitrary-k U(k,k+1) lower bound; three-mode compiler/verifier. | Reopen if closest work derives the same typed-edge-and-prefix-indexed interface, if a fixed-E,L counterexample refutes projection sufficiency, or if an adapter cannot attest projection completeness. |
 
-## Current Frontier
+## Superseded Frontier Before the Atomic-Monitor Audit
 
 **Central claim under test.** The paper characterizes a two-stage exact evidence
 boundary for online history admission:
@@ -283,3 +284,101 @@ Claude/Codex manifest extractor and certificate-verification seam.
 Existing Codex and private paper-formation traces remain bounded
 correspondence and observability evidence, not product-wide refinement or
 safety prevalence.
+
+## Current Frontier: Phase-1 Rewrite Contract
+
+**One security property.**  A post-edge Agent epoch is *history-admissible*
+when it is both:
+
+1. **monitor-sound:** every durable effect history it can realize is accepted
+   by the strongest serialized atomic monitor for the same durable receipt
+   frontier; and
+2. **required-transparent:** every declared required outcome that the monitor
+   permits remains realizable after the edge.
+
+This deliberately makes the global monitor the reference semantics instead of
+claiming that history admission is necessary for safety in every architecture.
+The new question is when an Agent runtime may soundly preauthorize detached or
+independently live controllers without consulting that monitor at every
+effect, while retaining the behavior promised by Fork, Restore, or Merge.
+
+**One theorem.**  A typed Agent edge uniquely derives its candidate and required
+families from its before/after history relation and leaf contracts.  At durable
+frontier \(D\), let \(\mathsf{Adm}_e\) be the complete trace language of the
+atomic monitor, and let \(\mathsf{Phys}(E,L,\Gamma)\) be the complete durable
+language of the installed controller epoch.  Under a checked edge-cut
+refinement (the old epoch is closed, receipt growth races invalidate the seal,
+retained-cell lineage commutes, and the manifest exactly abstracts the new
+controllers), the Agent History-Admission Theorem proves
+
+\[
+\begin{aligned}
+&\text{monitor-sound and required-transparent}\\
+&\quad\Longleftrightarrow\
+  \mathsf{Required}_e
+  \subseteq \mathsf{Phys}(E,L,\Gamma)
+  \subseteq \mathsf{Adm}_e\\
+&\quad\Longleftrightarrow\
+  \mathsf{HA}\!\left(
+    e,\mathcal A,D,q_{\rm cell},\ell,q_{\rm ctrl},
+    E,L,\Pi_{\le r_e}(\Gamma)
+  \right)=\mathsf{accept}.
+\end{aligned}
+\]
+
+The proof first establishes the nontrivial reference-language equality
+\(\mathsf{Traces}(\mathsf{GlobalMonitor}_e(D))=\mathsf{Adm}_e\): downward
+closure makes every ordering of an admitted configuration pass every atomic
+prefix check, while ledger monotonicity makes every accepted execution remain
+inside the authority family.  It then connects the controller epoch to this
+language through the manifest semantics.  This gives four consequences of the
+same characterization:
+
+- **safety:** compiled controllers refine the atomic monitor;
+- **transparency:** required monitor-legal outcomes are retained;
+- **necessity:** a forbidden combination spanning independent commit domains
+  forces coordination/reservation, loss of some required behavior, or
+  rejection;
+- **tight representation:** edge mode, durable frontier, semantic-cell
+  identity, controller identity, and contract-indexed co-liveness information
+  cannot in general be erased while preserving exact verdicts.
+
+The theorem does not claim that its literal evidence tuple is the unique
+encoding.  It claims only that each semantic distinction, or equivalent
+information, is necessary in the worst case.  Minimal nonfaces, greatest safe
+pruning, range control, configuration morphisms, and the
+\(U(k,k+1)\) skeleton are credited as classical supporting machinery.
+
+**Agent specificity.**  The six labels are not aliases for three set
+constructors.  They are before/after history relations:
+choice Fork creates exclusive descendants, parallel Fork creates co-live
+descendants, replace Restore first closes the old continuation, live Restore
+retains it, select Merge keeps one outcome, and join Merge makes outcomes
+co-durable.  The edge relation derives the effect-family contract; the adapter
+may not simply assert the target family.  A version-bound installation seal
+linearizes between receipt observation and old-epoch closure.  Any concurrent
+Prepare grows the receipt frontier and makes the seal fail; a successful seal
+prevents the old epoch from preparing new effects.
+
+**Tool and evidence.**  The artifact remains deliberately small: a
+proof-producing offline compiler and independent verifier for the theorem's
+manifest-level criterion, plus Lean proofs for the typed-family, durable-prefix,
+controller-cover, identity-separation, and arity components.  The paper must
+enumerate exactly which bridge lemmas remain pen-and-paper.  Existing
+Claude/Codex traces are not security evaluation and should not occupy a main
+contribution; at most they motivate why runtime-native trusted fields are
+needed.
+
+**Paper research questions.**
+
+1. When is the controller epoch produced by an Agent Fork, Restore, or Merge
+   exactly a sound and required-transparent specialization of a serialized
+   atomic monitor?
+2. Which edge, receipt, identity, lineage, and co-liveness information is
+   sufficient—and worst-case necessary—to decide that question?
+3. Can a small proof-producing compiler decide the criterion, emit useful
+   obstructions or repairs, and have its result independently verified?
+
+**One-sentence claim.**  History admission is the exact, worst-case-tight
+compilation criterion for replacing a serialized durable-authority monitor by
+the controller topology created by an Agent Fork, Restore, or Merge edge.

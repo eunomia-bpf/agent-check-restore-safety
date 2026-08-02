@@ -439,10 +439,52 @@ call-tree parentage and order, SWE-chat links checkpoints to Git outcomes, and
 WebArena exposes some external requests/state. The defensible result is joint
 insufficiency, not that every ordinary trace lacks every component.
 
+### 3.8 The strongest baseline: a serialized atomic commit monitor
+
+The decisive baseline is not a snapshot-local checker or a collection of
+independent per-effect gates.  Give one trusted monitor the append-only durable
+set \(D\), semantic-cell redemption state, policy version, causal/branch
+eligibility, and atomic control over every protected release.  For an effect
+bundle \(X\), it checks freshness, lineage injectivity, effect and version
+binding, and
+
+\[
+  D\cap\ell[X]=\varnothing
+  \quad\land\quad
+  D\cup\ell[X]\in\mathcal A,
+\]
+
+then atomically appends the receipts before releasing the effect.  For a
+downward-closed authority family this monitor keeps every durable prefix safe
+and is maximally permissive for each realized next commit.  It rejects the
+third member of a forbidden triple, collapses copied handles through one
+ratifier, and blocks stale Restore redemption without knowing the future Agent
+graph.  Therefore topology-aware preadmission is not necessary for safety
+under complete serialized mediation.
+
+This baseline is supported rather than invented by the paper:
+*Consumable Credentials* already has atomic multi-credential ratification;
+Schneider's execution monitoring gives the classical history-based monitor
+boundary; FORGE checks causal policies at Agent actions; REBOUND serializes
+mediated state changes in one authoritative order; and Commit-Time
+Authorization binds authorization evidence to durability.  A correct paper
+must compare against this monitor, not a pairwise or snapshot-only strawman.
+
+The surviving problem is exact *monitor compilation*.  Agent Fork, Restore,
+and Merge create controller epochs in which branches may prepare effects
+without a call to the global service.  History admission should characterize
+exactly when that controller topology has the same safe trace language as the
+monitor over the relevant candidate family while retaining all declared
+required outcomes.  The static obstruction/factorization criterion is
+classical; the possible new result is its online derivation and preservation
+across six typed Agent edges, immutable receipts, semantic-cell lineage, and
+version-bound controller installation.
+
 ## 4. Current novelty verdict
 
 | Candidate claim | Status | Reason |
 |---|---|---|
+| Exact compilation of the atomic monitor into typed Agent edge controllers while preserving required futures. | Leading unified claim | No inspected source jointly derives the post-edge history family for Fork/Restore/Merge, proves the detached controller language refines the strongest atomic monitor, preserves declared required outcomes, composes the certificate across receipt growth, and gives worst-case-tight evidence lower bounds.  Static configuration and control ingredients must be credited. |
 | Non-rollbackable consumption state is necessary. | Established premise | Anti-rollback and consumable-credential work already owns it. |
 | Forking must not clone linear authority. | Established premise | Linear capabilities and resource logics already own it. |
 | Authorization continuity / an immutable effect ceiling for evolving agents. | Established adjacent claim | *Are You Still the Agent I Authorized?* explicitly formulates this property and a transition-envelope monitor. We must use or distinguish it, not rename it. |
