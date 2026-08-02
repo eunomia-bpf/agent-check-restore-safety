@@ -67,7 +67,10 @@ downstream commitments~\cite{yang2026dart}.
 Crab, Fork--Explore--Commit, and Agent libOS provide branching/checkpoint
 substrates~\cite{wu2026crab,wang2026fork,zhang2026agentlibos}.  We type six
 history edges and check commitments against receipts/controllers; we claim
-neither checkpoint fidelity nor an unmodified adapter.
+neither checkpoint fidelity nor an unmodified adapter.  The mathematics also
+applies to non-Agent history-transforming workflows; Agent runtimes motivate
+the online edge generation and incomplete telemetry boundary, not an
+LLM-specific combinatorial theorem.
 
 \paragraph{History-sensitive agent policy and evolving authority}
 FORGE monitors Datalog policies over causal history under an observation
@@ -97,10 +100,15 @@ may still be forbidden together, while our seal neither authorizes one effect
 nor prevents pre-commit disclosure.
 
 \paragraph{Combined claim boundary}
-The novel claim is not set filtering, supremal pruning, or skeleton collision
-alone.  A typed edge and durable prefix derive $(\mathcal R,\mathcal F)$ and
-therefore $r$; independent identity evidence and fixed-$E,L$ cover semantics
-lift the complete $r$-skeleton to an exact readiness decision.  The checker
-uses the untrusted-producer/small-checker pattern~\cite{necula1997pcc}; under
+The mathematical ingredients---configuration families, minimal nonfaces,
+greatest pruning, skeleton separation, and small checking---are established.
+Our contribution is their security composition at one history edge: its typed
+semantics and durable prefix derive $(\mathcal R,\mathcal F)$ and therefore
+$r$; independently attested cell/controller identities and fixed-$E,L$ cover
+semantics lift the complete $r$-skeleton to an exact readiness Boolean.  The
+lower bounds state precisely which parts this composition cannot uniformly
+erase; they do not claim a new skeleton theorem or unique encoding.  The
+checker uses the untrusted-producer/small-checker pattern~\cite{necula1997pcc};
+under
 $\mathsf{Required}\subseteq\mathsf{Actual}
 \subseteq\mathsf{RawPhysical}$, the certificate transports to runtime behavior.

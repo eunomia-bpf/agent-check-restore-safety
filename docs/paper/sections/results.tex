@@ -1,11 +1,11 @@
-\section{The Exact Evidence Boundary}
+\section{A Contract-Indexed Evidence Boundary}
 \label{sec:results}
 
 The paper's main claim is the following evidence theorem.  Subsequent results
 derive its inputs from a typed history edge, prove sufficiency, and construct
 the two independent lower bounds.
 
-\begin{theorem}[Contract-indexed exact evidence boundary]
+\begin{theorem}[Sufficient view and worst-case evidence lower bounds]
 \label{cor:evidence-boundary}
 Let a valid typed Agent history edge and durable receipt prefix derive the
 required and admitted families $(\mathcal R,\mathcal F)$.  For
@@ -23,9 +23,10 @@ authoritative controllers.  Across the model class:
   \item for every $k\geq1$, arity-$k$ co-liveness evidence can conflate a ready
   and nonready world whose contract requires arity $k+1$.
 \end{enumerate}
-The view is sufficient and its three components are independently
-nonerasable in the stated worst-case senses; it is not claimed to be a unique
-or pointwise-minimal encoding.
+The view determines the exact Boolean; the identity components are
+independently nonerasable on the stated manifest class, and the arity bound is
+uniformly tight in the worst case.  The view is not claimed to be a unique or
+pointwise-minimal encoding.
 \end{theorem}
 
 If a ready manifest is faithfully realized by the runtime, its certificate
@@ -392,26 +393,3 @@ family in $\mathsf{PCM}$.  Its importance is the boundary: the theory tells a
 runtime exactly which two refinement obligations suffice, but the compiler
 does not prove truthful manifests, complete mediation, or either inclusion
 involving $\mathsf{Actual}$.
-
-\subsection{A limited durable-commitment substrate}
-
-The remaining question is why $D$ can be treated as a monotone prefix.  We use
-a separate operational model for that fact rather than placing
-Fork/Restore/Merge inside the receipt protocol.
-
-\begin{theorem}[Monotone commitment core]
-\label{thm:commitment-core}
-Starting from a safe commitment state, every closed step---fresh \Prepare{},
-Replay, Retry, Crash, or Settle---preserves the commitment invariant.
-The receipt ledger is append-only, and external phase either stutters or moves
-from prepared to settled.  A fresh \Prepare{} adds exactly one committed
-receipt; every other label adds zero.  Hence, over a finite trace, committed
-receipt cardinality grows by exactly the number of fresh labels, and the set of
-qualified atoms named by the ledger is monotone.
-\end{theorem}
-
-This is enough to supply successive durable frontiers to admission.  Its scope
-is intentionally smaller than the end-to-end agent claim: Crash is an atomic
-controller stutter, topology-changing history operations require the separate
-refinement results above, and no theorem here establishes exactly-once effects
-at an external sink.

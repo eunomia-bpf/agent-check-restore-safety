@@ -40,13 +40,12 @@ realizes the forbidden durable outcome $\{a,b,c\}$.
   \label{fig:running-failure}
 \end{figure}
 
-This is the security effect specific to history-transforming agent execution:
-the operation does not merely reconstruct state or retry an action.  It changes
-the \emph{co-durability relation} among online-generated continuations without
-minting new authority.  The future graph is unavailable when the original
-authority is issued, and ordinary agent traces identify calls but not
-necessarily the redemption and controller identities that govern their joint
-outcomes.
+The failure is general to history-transforming computation, not unique to
+LLMs.  Agent runtimes create a particularly exposed instance: the operation
+changes the \emph{co-durability relation} among online-generated continuations
+without minting new authority, the future graph is unavailable when the
+original authority is issued, and ordinary Agent traces identify calls but not
+necessarily the redemption and controller identities governing joint outcomes.
 
 \paragraph{Why adjacent mechanisms do not decide the edge}
 Rollback recovery and state continuity protect the past
@@ -77,7 +76,7 @@ promised behavior.  The second rejects the forbidden triple in
 $\mathsf{Required}\subseteq\mathsf{Actual}\subseteq
 \mathsf{RawPhysical}$.
 
-\paragraph{Central result: an exact evidence boundary}
+\paragraph{Central result: a sufficient view with worst-case lower bounds}
 Deciding \cref{eq:intro-readiness} requires structural evidence that common
 call traces erase.  First, copied handles must be normalized to semantic
 redemption cells; second, gate uses must be normalized to authoritative
@@ -86,10 +85,10 @@ field fixed and shows that erasing either relation conflates a ready and
 nonready world.  After both normalizations, a downward-closed co-liveness
 family $\Gamma$ records which controllers may remain authoritative together.
 The contract derives an arity $r$, and the complete projection
-$\Pi_{\leq r}(\Gamma)$ determines readiness exactly.  For every uniformly
-smaller bound, a well-formed cover has identical visible projection but the
-opposite decision.  The result therefore identifies a contract-indexed
-observation depth, not a universal pairwise rule.
+$\Pi_{\leq r}(\Gamma)$ determines the exact readiness Boolean.  For every
+uniformly smaller bound, a well-formed cover has identical visible projection
+but the opposite decision.  This is a worst-case bound across contracts and
+realizations, not a pointwise-minimal or unique encoding for fixed $E,L$.
 
 \paragraph{Construction and validation}
 A certifying compiler implements this decision for typed choice/parallel Fork,
@@ -98,18 +97,22 @@ obstruction; an independent verifier recomputes the result.  Greatest
 fixed-prefix admission and safe co-liveness pruning are constructive
 corollaries, not separate headline claims.  Lean~4 mechanizes the theorem
 spine.  The implementation passes 62 tests, and an independent oracle agrees
-on all 2,166 bounded refinement instances.  A Codex adapter study locates the
-attestation boundary; trajectories demonstrate missing observations but
-provide neither authorization nor safety labels.
+on all 2,166 bounded refinement instances.  The compiler uses the stricter
+input subclass in which gate uses folded to one controller already agree on
+their normalized local family; the identity lower bound is mechanized for the
+more general union-normalized model.  A public trace-schema study
+demonstrates missing observations but provides neither authorization nor
+safety labels.
 
 \noindent\textbf{Contributions.}
 \begin{enumerate}[leftmargin=*,itemsep=2pt]
   \item We formulate history admission for online Agent Fork/Restore/Merge as
   \cref{eq:intro-readiness}, separating required behavior, durable-prefix
   authority, and physical controller composition.
-  \item We prove and mechanize its exact structural evidence boundary: two
-  independently nonerasable identity relations plus a sufficient and
-  worst-case necessary contract-indexed co-liveness projection.  A certifying
-  compiler, independent verifier, oracle, and runtime boundary study validate
-  the result and expose its explicit attestation assumptions.
+  \item We prove and mechanize a sufficient contract-indexed structural view:
+  two identity relations that are independently nonerasable on a fixed
+  manifest class, plus a co-liveness projection with a tight uniform
+  worst-case arity bound.  A certifying compiler, independent verifier, oracle,
+  and trace-schema study validate the result and expose its attestation
+  assumptions.
 \end{enumerate}

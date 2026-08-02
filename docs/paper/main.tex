@@ -66,8 +66,9 @@ The left inclusion preserves the behavior promised by the edge; the right
 prevents its independently live controllers from realizing a future excluded
 by the authority contract and immutable receipt prefix.
 
-Our central result characterizes the exact structural evidence needed to
-decide this condition.  Two identity relations are independently nonerasable:
+Our central result gives a sufficient structural view and matching
+component-wise worst-case lower bounds.  Two identity relations are
+independently nonerasable:
 copied handles must be normalized to redemption cells, and gate uses to
 authoritative controllers.  After this normalization, the complete
 co-liveness projection through a contract-derived arity $r$ determines
@@ -78,8 +79,8 @@ than a fixed pairwise rule, determines the necessary observation depth.
 A certifying compiler derives the futures of Fork/Restore/Merge, emits an
 admission seal or counterexample, and is checked by an independent verifier.
 Lean~4 mechanizes the theorem spine.  The executables pass 62 tests, and an
-independent oracle agrees on all 2,166 bounded refinement instances.  A Codex
-adapter study identifies where a concrete runtime must attest the required
+independent oracle agrees on all 2,166 bounded refinement instances.  A public
+trace-schema study confirms that ordinary Agent telemetry omits the required
 identities and co-liveness; it is not used as a safety oracle.
 \end{abstract}
 
@@ -97,9 +98,6 @@ identities and co-liveness; it is not used as a safety oracle.
 OpenAI Codex was used in all sections for initial prose drafting and rewriting, and in the executable artifact for code scaffolding and test generation.
 It was also used to assist with literature discovery, formal-model iteration, and counterexample search.
 The authors selected the research direction, checked the cited sources and mathematical arguments, and remain responsible for every claim, proof, result, and citation.
-
-\appendices
-\input{sections/appendix}
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}

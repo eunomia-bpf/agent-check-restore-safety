@@ -103,17 +103,50 @@ while distinct cells may rely on one joint controller.  Atomic redemption
 addresses the first case, not arbitrary correlations
 (\cref{prop:identity-erasure}).
 
-Consider three distinct cells $a,b,c$ under a contract that permits every
-singleton and every pair, but forbids $\{a,b,c\}$.  Each cell is fresh and each
-local singleton choice is admitted, so per-cell authorization and linear
-consumption both succeed.  If three co-live controllers can independently
-choose $a$, $b$, and $c$, their product realizes the forbidden triple.  The
-failure is a higher-order correlation cut: no individual gate is locally
-over-permissive, and no pairwise conflict exposes it.  A safe realization must
-instead coordinate the relevant controllers, restrict their co-liveness, or
-otherwise remove the triple before resubmission.  This example is the reason
-the model separately normalizes handle occurrences to cells and gate uses to
-controllers.
+\paragraph{Worked instance}
+Let
+\[
+ U(2,3)=\{X\subseteq\{a,b,c\}\mid |X|\leq2\}.
+\]
+Suppose a valid typed edge and empty receipt prefix derive the objects in
+\cref{tab:worked-instance}.  Each gate $g_x$ has the locally sound choice
+$L_{g_x}=\{\varnothing,\{x\}\}$.  If all three gates may remain live,
+their product contains the forbidden triple and admission rejects.  Restricting
+co-liveness to at most two gates yields exactly $U(2,3)$ and admission accepts.
+
+\begin{table}[t]
+  \centering
+  \caption{End-to-end calculation for the running instance.}
+  \label{tab:worked-instance}
+  \small
+  \begin{tabular}{@{}p{0.29\columnwidth}p{0.62\columnwidth}@{}}
+    \toprule
+    Object & Derived or submitted value \\
+    \midrule
+    Candidate
+      & $2^{\{a,b,c\}}$ \\
+    Required
+      & $U(2,3)$ \\
+    Admitted
+      & $U(2,3)$ (empty receipt prefix) \\
+    All gates co-live
+      & $\mathsf{RawPhysical}=2^{\{a,b,c\}}$: reject \\
+    At most two co-live
+      & $\mathsf{RawPhysical}=U(2,3)$: accept \\
+    Visible at arity 2
+      & both layouts expose the same pairs \\
+    Contract arity
+      & $r=3$: the triple distinguishes them \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Thus the full sandwich is computed, not inferred from individual calls.
+Arity two cannot distinguish the layouts, while arity three decides this
+contract.  Separately, copied names must first be folded to cells and gate uses
+to controllers: otherwise the checker does not know whether apparent
+independence is real.  This is why the raw manifest supplies both identity
+relations before the co-liveness projection.
 
 \subsection{Runtime integration contract}
 

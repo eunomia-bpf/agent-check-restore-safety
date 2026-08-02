@@ -3,19 +3,20 @@
 
 We ask whether the theorems are machine-checked (VQ1), two implementations
 agree with the finite semantics (VQ2), litmus cases expose lower-order blind
-spots (VQ3), and real trajectories carry the required adapter evidence (VQ4).
+spots (VQ3), and public traces carry the required adapter evidence (VQ4).
 No observational trace is labeled safe or unsafe, and no trace statistic is
 used to establish either inclusion involving $\mathsf{Actual}$.
 
 \subsection{VQ1: Mechanized theorem spine}
 
 Lean~4 links the three family constructors underlying the six runtime operation
-labels, greatest
-fixed-prefix admission, overlapping controller-cover readiness and
-obstructions, the independent-identity erasure proposition, exact projection,
-runtime-refinement transport, and the append-only commitment substrate.  It
-also checks the fixed-$E,L$ pruning corollary and recovers the older functional
-partition as a canonical special case.
+labels, greatest fixed-prefix admission, overlapping controller-cover
+readiness and obstructions, the independent-identity erasure proposition,
+exact projection, and runtime-refinement transport.  It also checks the
+fixed-$E,L$ pruning corollary and recovers the older functional partition as a
+canonical special case.  The artifact additionally mechanizes an append-only
+commitment substrate, but that supporting result is outside the paper's
+theorem spine.
 
 For symbolic theorems, the audit rejects placeholders, project axioms, and
 dependencies beyond
@@ -74,7 +75,7 @@ propose the three controller pairs while leaving the original result
 diagnostic; resubmitting that restriction seals.  Local overpermission instead
 makes co-liveness-only repair infeasible.
 
-\subsection{VQ4a: Public workload evidence}
+\subsection{VQ4: Public trace-schema evidence}
 
 TraceLab collects real Claude Code and Codex workload telemetry and reports
 long autonomous loops and heterogeneous tool behavior
@@ -86,26 +87,3 @@ joint typed history edge, durable receipt prefix, cell-alias evidence,
 controller identity and co-liveness, or a correlated leaf future contract.
 The missing fields make history-admission prevalence unidentifiable; they do
 not imply that failures are rare.
-
-\subsection{VQ4b: The paper-formation lineage}
-
-We also analyze the paper-formation trajectory as one author-operated
-longitudinal case.  A fixed-cutoff recursive lineage contains over 80 rollout
-files, roughly 39,000 native rows, and roughly 6,000 tool calls after excluding
-over 200,000 copied-prefix rows.  It exhibits branching, inherited history,
-compaction, aborted turns, lifecycle events, workspace mutation, and
-call/result correlation.  Yet it does not jointly expose complete leaf
-contracts, cell aliases, controller origin/co-liveness, effect binding, and
-durable receipt phase.  It therefore motivates adapter fields and parser
-tests, but cannot estimate unsafe-restore prevalence or validate admission.
-The source-grounded extraction and its limitations appear in
-\cref{app:private-trace}.
-
-\subsection{Privacy and ethics}
-
-The case recruited or manipulated no users, but histories may contain private
-workspace and incidental third-party text.  Extraction emits only path-free
-allowlisted aggregates and private keyed commitments; raw histories, prompts,
-commands, paths, stable identifiers, the key, and the anonymous private summary
-are not released.  We make no IRB approval or exemption claim; further
-minimization details appear in \cref{app:private-trace}.
