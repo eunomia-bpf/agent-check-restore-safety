@@ -1,6 +1,6 @@
 # Literature, Novelty, and CSF Fit
 
-**Status:** living claim-oriented audit, last updated 2026-08-01. A paper is listed here only after at least its abstract, introduction, claimed contributions, model, and evidence sections have been inspected. “Not found” means not found in the searched corpus, not a universal priority claim.
+**Status:** living claim-oriented audit, last updated 2026-08-02. A paper is listed here only after at least its abstract, introduction, claimed contributions, model, and evidence sections have been inspected. “Not found” means not found in the searched corpus, not a universal priority claim.
 
 ## 1. Venue contract: CSF 2027
 
@@ -133,6 +133,51 @@ These papers make an agent wrapper insufficient. In particular:
 
 The paper must therefore attribute the external-effect rollback problem and the two named attacks to ACRFence rather than claim their discovery. The direct separating history begins *before* any effect exists: two alternative continuations receive advance promises backed by one bounded grant, a live restore or merge changes their co-durability, and both later issue distinct authorized actions. A pairwise post-effect replay classifier has no aggregate authorization fact with which to decide that history. ACRFence is a prose-policy baseline, not an implementation/performance baseline.
 
+#### 3.4a Authorization continuity and contract-compiled capabilities
+
+Two papers posted immediately before this audit materially narrow the claim
+boundary.  [*Are You Still the Agent I Authorized? Earned Authority under a
+Fixed Ceiling for Evolving Agents*](https://arxiv.org/abs/2607.23586) explicitly
+names **authorization continuity**, models a transition envelope and immutable
+effect ceiling, and requires gated ascent, attenuation, no amplification, and a
+closure-sound monitor view across six mutation classes.  We therefore cannot
+claim the first formulation of authorization continuity, and a version or
+commit gate is not a headline result.  The inspected paper leaves concrete
+effect abstraction, monitorability, and operational cost as open limitations;
+it does not synthesize the sharing and authority transformations required by a
+Fork/Restore/Merge operation.
+
+[*Lingering Authority: Revocable Resource-and-Effect Capabilities for Coding
+Agents*](https://arxiv.org/abs/2606.22504) presents PORTICO.  It compiles an
+explicit task contract into initial capabilities, grant rules, closure
+predicates, and a global deny policy; epoch-bound handles prevent stale reuse.
+This occupies contract-to-capability code generation, epoch invalidation, and
+revocation for coding agents.  The paper explicitly excludes optimal contract
+compilation.  It does not infer an exact co-durability contract from a
+history-transforming operation, synthesize the finest exact factorizing
+partition needed to preserve that contract, or prove when an old grant can safely be
+reused through a contract refinement instead of being uniformly invalidated.
+
+The remaining claim must consequently be narrower and stronger:
+
+> Given a typed history transformation, an exact future-outcome contract,
+> authority lineage, and durable receipts, synthesize the greatest pointwise-
+> safe subfamily of a fixed candidate semantics under complete observation and
+> controllable pruning, derive its finest exact factorizing partition, and
+> compile it to runtime state actions with either a refinement certificate or
+> a minimal counterexample.
+
+This is not a new name for authorization continuity.  It is a proposed
+decision procedure for transporting *correlated* authority and commitment
+state through a concrete Fork/Restore/Merge operation.  A refinement-aware
+lease may remain usable when a checked configuration morphism and durable
+receipt relation justify it; otherwise the compiler must exhibit the
+colliding lineage, newly admitted forbidden configuration, missing or
+nonmonotone commitment evidence, or incompatible lease binding that prevents
+reuse.  Whether this
+full theorem package is absent from prior work remains the central novelty
+question, and no priority wording is justified yet.
+
 ### 3.5 Concurrency structures and resource algebra
 
 Winskel-style event structures already provide configurations, causality, conflict, and locally injective configuration-preserving maps. More directly, van Glabbeek and Plotkin's [configuration structures](https://arxiv.org/abs/0912.4023) model arbitrary permitted configuration families and explicitly encode ternary conflict: every pair may be permitted while the triple is forbidden. [Resource-Tracking Concurrent Games](https://link.springer.com/chapter/10.1007/978-3-030-17127-8_2) combines event-structure configurations with a resource algebra for sequential and parallel consumption. Process algebras, workflow nets, and resource analyses have long assigned resources to concurrent actions. Consequently:
@@ -157,6 +202,63 @@ The surviving candidate contribution is an action-class authorization boundary:
 > For fixed-topology batch Reserve, a checkpoint may omit a correlated residual admission profile. That profile factorizes into a Cartesian product of noncommunicating branch-local budgets exactly at a closed-form rectangularity boundary. Conditional-to-durable promotion can force higher-order policy, and final-owner support exactly characterizes when every owner-group order remains enabled under immediate cleanup.
 
 This remains publishable only if the paper shows that (i) common agent lifecycle APIs genuinely change co-durability, (ii) nearby authorization and transaction models accept a violating history or reject a safe useful one, and (iii) final-owner support is derived as a complete authority-specific guard rather than inherited as a generic concurrency result. Step 0006 found no literal prior theorem, but also found that generic independence, full-cube, disruption, and selected-order feasibility structure are established. Headline mechanization and an agent-specific versioned lifecycle refinement now remain the current CSF-theory blockers.
+
+#### 3.5a Clone policies, authoritative sharing, and exact decomposition
+
+A per-resource clone plan is established systems machinery.  Plan 9's
+[`rfork`](https://9p.io/sys/doc/9.html) takes a bit vector that independently
+shares, copies, or creates namespaces, environment groups, file-descriptor
+groups, memory, and note groups.  Jensen, Kirchner, and Pichardie's
+[*Secure the Clones*](https://lmcs.episciences.org/801) specifies the maximally
+allowed sharing between a mutable object and its clone, statically enforces the
+copy policy, mechanizes the proof in Coq, and evaluates a prototype on Java
+libraries.
+Iris authoritative resources and persistent, fractional, or monotone fragments,
+as well as linear/fractional capability systems, already provide rich logics
+for shared authority, split ownership, and durable knowledge.  Therefore a
+table whose only output is `Copy/Share/Split/Persist/Revalidate/Reject`, or a
+type described as “maximum safe sharing,” is not a sufficient novelty claim.
+
+The missed semantic distinction is between cloning a *controller* and cloning
+the cells on which it redeems authority.  Let a finite downward-closed family
+`F` describe outcomes that may become durable together.  If a choice gate with
+`F = {empty, {a}, {b}}` is cloned into two independently runnable gates, the
+product admits `{a,b}` even when every `a` handle resolves to one shared cell
+and every `b` handle resolves to one shared cell.  Conversely, sharing the
+choice gate while copying its cells can preserve the configuration family yet
+allow two independent redemptions.  Gate identity and cell identity are thus
+independent proof obligations.  This is precisely what a generic workspace
+copy API and a leaf-only capability checker fail to express.
+
+There is classical combinatorics underneath the proposed coordination
+analysis.  A finite downward-closed family is an abstract simplicial complex;
+its minimal forbidden configurations are its minimal nonfaces.  For a
+partition of the support, the family factorizes as the join/product of its
+block restrictions exactly when every minimal nonface lies within one block.
+Equivalently, the connected components of the minimal-nonface hypergraph give
+the unique finest factorizing partition.  If a proposed controller partition
+cuts a minimal nonface, locally allowed pieces can recombine into that globally
+forbidden outcome.  An indicator-weight policy supplies a concrete separating
+witness.  The rank-two family containing every subset of `{a,b,c}` of size at
+most two demonstrates why a pairwise conflict graph is incomplete: every pair
+is allowed, but the single three-way minimal nonface still requires joint
+coordination.
+
+Simplicial joins, Stanley--Reisner minimal nonfaces, hypergraph connectivity,
+relation factorization, and generic greatest-safe-control constructions are
+established mathematics.  The paper must credit them as proof substrates.
+The candidate contribution is their operational composition with two other
+dimensions that those static structures do not provide: (1) locally injective
+authority-lineage transport, which determines which copied redemption cells
+must be aliased or reissued, and (2) durable receipt/commitment refinement,
+which determines whether a previously issued lease remains sound after a live
+Fork/Restore/Merge transformation.  For fixed candidate semantics, complete
+observation, and controllable pruning, the proposed compiler should compute the
+greatest pointwise-safe subfamily first, its finest exact factorizing partition
+second, and only then lower that result to runtime mechanisms.  Because share
+and split implementations can be incomparable, it should return a Pareto
+frontier or apply an explicit cost policy rather than claim a unique “most
+permissive plan.”
 
 ### 3.6 Safe-order synthesis and atomic repair
 
@@ -311,7 +413,14 @@ insufficiency, not that every ordinary trace lacks every component.
 |---|---|---|
 | Non-rollbackable consumption state is necessary. | Established premise | Anti-rollback and consumable-credential work already owns it. |
 | Forking must not clone linear authority. | Established premise | Linear capabilities and resource logics already own it. |
+| Authorization continuity / an immutable effect ceiling for evolving agents. | Established adjacent claim | *Are You Still the Agent I Authorized?* explicitly formulates this property and a transition-envelope monitor. We must use or distinguish it, not rename it. |
+| Epoch-bound capability revocation and explicit contract-to-capability compilation. | Established adjacent mechanism | PORTICO compiles task contracts to capabilities and closure rules and rejects stale handles; generic epoch fencing is not our novelty. |
+| A per-component `Copy/Share/Split/Persist` clone plan. | Established systems mechanism | Plan 9 `rfork`, *Secure the Clones*, capability systems, and program logics already support declared resource-wise copy/share disciplines. |
 | Authority over co-durable descendant sets. | Promising semantic contribution | No equivalent agent lifecycle contract was found; event structures and linear resource logics provide substrates and strong conservation precedents. |
+| Minimal-nonface decomposition of a downward-closed outcome contract. | Classical substrate | Simplicial joins, minimal nonfaces, hypergraph components, and relation factorization supply the static mathematics. The decomposition is useful but cannot be sold as new mathematics. |
+| Typed Fork/Restore/Merge synthesis of gate coordination, cell aliasing, and durable-receipt refinement. | New leading candidate, acceptance-blocked | The inspected closest work treats these dimensions separately. Value requires one operational theorem, a checked compiler, and separating examples showing why each dimension is necessary. |
+| Refinement-certified lease reuse across a history transformation. | New leading candidate, acceptance-blocked | Unlike uniform epoch invalidation, reuse is permitted exactly when a checked contract/lineage/receipt morphism preserves the grant. Necessity, compositionality, and nontrivial reuse must be proved. |
+| Greatest pointwise-safe subfamily plus finest exact factorizing partition. | Promising synthesis contribution, closest-work sensitive | Existence here is limited to fixed candidate semantics, complete observation, and controllable pruning. Generic supremal control and static factorization are classical; novelty can survive only in the typed dynamic operator, authority cells, commitments, proof-producing lowering, and completeness boundary. |
 | Snapshot-local sound-and-maximally-permissive impossibility. | Supporting corollary | It is one nonconstant observation fiber of the more general residual-profile precision theorem; generic partial-observation impossibility is classical. |
 | Headroom full abstraction and correlated residual controller. | Leading, closest-work sensitive | Gives a closed form for the minimal one-step Reserve behavior, proves per-branch summaries are not update-closed, and gives an update-closed residual derivative for joint Reserve. |
 | Residual rectangularity iff an exact Cartesian product of branch-local budgets. | Leading, closest-work sensitive | For fixed-topology batch Reserve, converts correlation into a necessary-and-sufficient runtime test: noncommunicating product-local soundness and one-branch completeness coexist exactly when the residual equals the product of its projections. |
@@ -346,6 +455,22 @@ The following full texts are present locally and validated as PDFs:
 - `reference/supervisory-control/`: partial-observation supervisory control and relative observability; full-text browser copies were also inspected for state-tree structures and guarded communicating transaction processes.
 - `reference/csf-theory/`: capability-machine security, FLAQR, Cracking the Stateful Nut, Robust Safety for Move, Formalizing Stack Safety, modal-logic security properties, Relative Security, secure synthesis, FSLH, Nonmalleable Progress Leakage, Cryptographic Choreographies, and unified attack-tree metrics.
 
+The 2026-08-02 closest-work update added and validated these primary-source
+PDFs (the repository intentionally ignores PDF bytes):
+
+- `reference/closest-work/authorization-continuity-fixed-ceiling.pdf`,
+  SHA-256 `6c20cdb3a29f660a9f258ad2bbc6982482eb9953d3b141cfdb505837404b1ba3`;
+- `reference/closest-work/lingering-authority-portico.pdf`, SHA-256
+  `45efdfa3d5a16a712f964ae79dbc46df8ef843904da137ad4baeebf83b125f84`;
+- `reference/foundations/secure-the-clones.pdf`, SHA-256
+  `2bb4d8c5ac85ab034c81e2671448fad63e7686ca2944928e048436f232c8c91a`.
+
+The corresponding primary web anchors are the
+[authorization-continuity paper](https://arxiv.org/abs/2607.23586),
+[PORTICO](https://arxiv.org/abs/2606.22504), and
+[*Secure the Clones*](https://lmcs.episciences.org/801).  Plan 9's clone flags
+were checked against its primary [system manual](https://9p.io/sys/doc/9.html).
+
 Two IACR papers used only as venue-style context were readable from their primary web copies but blocked command-line PDF download: *Nominal State-Separating Proofs* (ePrint 2025/598) and *Computationally-Sound Symbolic Cryptography in Lean* (ePrint 2025/1700). They are not closest work for the scientific claim.
 
 Trajectory dataset cards and available schemas were inspected through their
@@ -367,6 +492,15 @@ The paper can honestly target CSF if it delivers:
 
 - one compact operational model with explicit trusted and rollbackable state;
 - a security property independent of the enforcement rules;
-- an exact lifecycle-admission theorem plus at least one non-definitional separation or lower bound;
-- a mechanized conservation proof and generated counterexamples for weakened rules;
-- a small deterministic monitor/explorer and limited real-runtime evidence.
+- an exact typed-operation theorem that jointly handles gate coordination,
+  authority-cell lineage, and durable commitments, plus at least one
+  non-definitional separation or lower bound;
+- a mechanized conservation/refinement proof and generated counterexamples for
+  weakened rules;
+- a small witness-carrying compiler that consumes a runtime manifest,
+  Fork/Restore/Merge contract, outstanding capabilities, and receipts, then
+  emits a safe semantic refinement, required coordination, concrete state
+  actions, and a proof certificate or minimal counterexample;
+- limited real-runtime evidence showing that Claude/Codex traces contain the
+  relevant operators and outward effects, and that ordinary workspace/checkpoint
+  telemetry omits the semantic fields required by the compiler.
