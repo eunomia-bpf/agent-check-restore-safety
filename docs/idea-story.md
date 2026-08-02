@@ -382,3 +382,125 @@ needed.
 **One-sentence claim.**  History admission is the exact, worst-case-tight
 compilation criterion for replacing a serialized durable-authority monitor by
 the controller topology created by an Agent Fork, Restore, or Merge edge.
+
+## Current Frontier: Causal Epoch Rewrite Contract
+
+The first monitor-compilation rewrite failed independent CSF review for one
+shared reason: its endpoint sandwich was largely definitional, its unordered
+families could not express approval-before-payment or merge causality, and its
+claimed controller and installation facts were external attestations.  The
+next rewrite therefore supersedes, rather than repairs, the preceding
+contract.
+
+**One new object.**  A raw protected action is
+\(\mathsf{use}(j,h)\), pairing a gate-use occurrence with a ledger-backed
+handle occurrence.  A bounded protected slice of Agent execution is generated
+by
+\[
+  P ::= \mathbf 0 \mid \mathsf{use}(j,h)
+      \mid P;P \mid P\oplus P \mid P\parallel P .
+\]
+Sequence records causal prerequisites, tagged choice records exclusive
+alternatives, and parallel is order-preserving shuffle.  The slice ends at the
+next history edge; unrestricted internal reasoning is outside the alphabet,
+and a newly materialized protected action triggers a new slice rather than
+requiring the complete Agent future to be predicted.
+
+The six Agent operations are distinct before/after cuts over this calculus:
+choice and parallel Fork use \(\oplus\) and \(\parallel\); replacing Restore
+atomically retires the current continuation before reinstating the checkpoint;
+live Restore shuffles both continuations; select Merge names the winning
+branch, retires the loser, and sequences the winner before the join
+continuation; join Merge sequences the join continuation after a shuffle of
+both inputs.  Thus Restore and Merge modes affect both the trace language and
+which source controller epochs the installer must fence.
+
+**Normalized causal reference.**  Authenticated ledger anchors induce the
+cell quotient; the first successful redemption emits one semantic cell and a
+retry or replay stutters.  Source controller anchors identify exactly the
+classes that installation must close.  The compiler does not accept a target
+controller quotient or a claimed \(E,L,\Gamma\): it mints the target epoch and
+binds every target gate use itself.
+
+Let \(\mathcal A\subseteq\mathcal U^*\) be a finite-state,
+prefix-closed durable-authority policy and let \(\delta\in\mathcal A\) be the
+authenticated receipt trace.  Normalizing a typed edge request \(R\) gives a
+prefix-closed plant language \(\mathsf{Plant}_R\) over fresh semantic cells and
+a lineage homomorphism \(\ell^*\).  Its exact reference future is
+\[
+  F_R=\{\sigma\in\mathsf{Plant}_R
+       \mid \delta\ell^*(\sigma)\in\mathcal A\}.
+\]
+This is the complete language of the strongest atomic monitor at the observed
+history cut.  It preserves order: a payment-before-approval trace, a losing
+choice arm after selection, or a join continuation before both prerequisites
+is absent even when it has the same endpoint set as a legal trace.
+
+**Canonical epoch.**  The compiler constructs the residual automaton of
+\(F_R\).  Its state after \(\sigma\) is the right residual
+\(F_R/\sigma=\{\rho\mid\sigma\rho\in F_R\}\), and it enables a fresh cell
+\(d\) exactly when \(\sigma d\in F_R\).  The target epoch is therefore a
+compiler-produced controller program, not a verdict about a caller-described
+manifest.  Classical residual/minimal-automaton facts are credited as
+machinery; the claimed contribution is the raw Agent-edge-to-installed-epoch
+correctness boundary.
+
+**One theorem.**  The *Canonical Causal Epoch Theorem* relates four views of
+one history cut:
+
+1. every promised partial-order outcome of the typed edge has a linearization
+   in \(F_R\);
+2. there exists a monitor-sound epoch preserving every such outcome;
+3. the canonical residual epoch exists and has fresh-trace language exactly
+   \(F_R\), not merely a language between supplied bounds; and
+4. after a successful version/frontier-bound installation, the kernel LTS is
+   a trace refinement of the reference monitor across arbitrary
+   Prepare/Install races and across successive Agent edges.
+
+The forward construction is the residual epoch.  The reverse direction uses a
+missing promised outcome as a complete impossibility witness.  Exact language
+equality makes the canonical epoch maximally transparent among monitor-sound
+epochs.  A commutative endpoint family is only the permutation-invariant
+corollary already covered by the existing Lean development.
+
+**Installation is semantics, not an assumption.**  The durable LTS contains:
+
+- `Prepare`, which requires an active epoch, a residual transition, and an
+  unspent ledger cell/authority atom, then atomically updates controller state
+  and appends the receipt;
+- `Install`, which compares the policy version, view version, exact receipt
+  trace, source-epoch set, and program hash, and in one linearized cut closes
+  every source controller class, mints and opens the target epoch, and binds
+  target gate uses; and
+- `Replay/Retry/Settle`, which may resolve old receipts but emits no fresh
+  authority event.
+
+If an old `Prepare` linearizes first, the receipt trace changes and the install
+CAS fails without state change.  If `Install` linearizes first, the old epoch
+has no fresh-Prepare transition.  This cut, plus induction over successful
+installs, is the nonclassical dynamic part of the theorem.  Linearizable,
+crash-stable ledger/CAS storage and complete mediation remain explicit TCB
+assumptions; old-epoch closure is no longer an unmodeled premise.
+
+**Promises without prophecy.**  A promise is a bounded protected outcome
+declared by the Agent operation/API, not a prediction of all future model
+behavior and not a fairness guarantee.  Understating it can weaken only the
+feature-preservation claim, not monitor safety; overstatement may reject the
+edge.  New protected actions require a new edge request.  Empty promises are
+reported as offering no transparency claim rather than used to manufacture a
+positive result.
+
+**Paper boundary.**  The new causal calculus, residual-epoch equality, and
+installer invariant receive self-contained paper proofs.  Existing Lean and
+Python evidence is described only as checking the unordered endpoint
+corollary; it does not mechanize the causal main theorem or a production
+installer.  The paper makes no claim of optimal controller sharding, real
+Codex/Claude complete mediation, physical exactly-once delivery, policy
+inference from natural language, or external sink rollback.
+
+**One-sentence claim.**  A Fork, Restore, or Merge can cross a live Agent
+history cut without retaining the global authority monitor exactly when its
+promised causal outcomes survive the durable-policy residual; the canonical
+residual epoch preserves the entire surviving monitor language, and a
+frontier-CAS installation makes that equivalence stable under stale-history
+and fresh-commit races.
