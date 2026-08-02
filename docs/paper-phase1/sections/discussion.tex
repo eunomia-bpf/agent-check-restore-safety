@@ -1,0 +1,28 @@
+\section{Discussion and Limitations}
+\label{sec:discussion}
+
+\paragraph{Scope}
+Snapshots cannot retract effects or receipts, and total rollback is wrong while
+histories remain live.  Edge certificates compose until receipt growth;
+choose-one rollouts may defer authority, but parallel commits and durable joins
+require edge admission.
+
+\paragraph{Assumptions and nonclaims}
+Atomic redemption protects cells; joint control protects correlations.
+$\mathsf{RawPhysical}$ composes declared controllers: hidden coordination may
+reject, whereas an unmodeled bypass is unsound.  $\Gamma$ binds one epoch;
+receipt or controller-version changes force readmission.
+Projection readiness assumes exact projection, hidden downward closure, and
+fixed $E,L$; sound upper bounds never seal.  Repair is greatest only relative
+to submitted evidence and must be installed and resubmitted.  Truthful evidence,
+runtime refinement, mediation, freshness, and redemption remain external
+obligations.
+The seal authorizes no effect and proves neither exactly-once nor safe learning.
+
+\section{Conclusion}
+
+History admission gives Fork, Restore, and Merge a receipt-conditioned future
+and an exact structural evidence boundary.  Its seal transports only if
+$\mathsf{Required}\subseteq\mathsf{Actual}
+\subseteq\mathsf{Raw}(E,L,\Gamma)$; readiness supplies
+$\mathsf{Raw}(E,L,\Gamma)\subseteq\mathsf{Admitted}$.

@@ -196,7 +196,6 @@ class CodexAppServer:
             "features.enable_mcp_apps=false",
             "features.plugins=false",
             "mcp_servers={}",
-            "mcp_servers.openaiDeveloperDocs.enabled=false",
         ]
         command = [self.codex_binary, "app-server", "--stdio"]
         for override in overrides:

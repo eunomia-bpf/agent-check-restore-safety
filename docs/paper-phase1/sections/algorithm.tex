@@ -1,0 +1,175 @@
+\section{Certifying History-Admission Compiler}
+\label{sec:algorithm}
+
+The theory suggests a small tool rather than a replacement agent runtime.
+Our artifact is an offline compiler for one proposed Fork, Restore, or Merge
+edge, paired with an independent verifier.
+It does not create checkpoints or execute tools.
+Instead, a runtime adapter supplies a finite manifest, and the compiler
+returns a structural decision, repair proposal, or scope-qualified diagnostic
+for the proposed edge and controller layout.
+
+\subsection{Manifest boundary}
+
+A request contains five kinds of evidence.
+First, an authority family and a source future contract describe which
+authority atoms and source cells may coexist.
+Second, a source receipt frontier and current append-only ledger identify the
+durable prefix.
+Third, each typed operator arm supplies normalized cell records and
+\emph{may}/\emph{required} maximal configurations; an arm is marked either
+exact or a sound overapproximation.
+A \texttt{sound\_overapprox} label is itself an attestation: the parser checks
+its form, but neither executable proves the claimed inclusion.
+Fourth, explicit alias records justify when occurrences from different arms
+refer to one redemption cell.
+An alias must preserve its stable cell anchor, authority atom, commitment key,
+and effect-binding digest.
+Parent and lease evidence is checked separately, because identity can remain
+valid even when inheritance or lease transport does not.
+Finally, each gate-use record attests an origin-gate identifier, an
+authoritative controller anchor, and a downward-closed local family.  Its
+member list must equal that family's normalized support.  Same-anchor uses
+must agree on origin, controller version, and normalized $L_g$; consequently
+the prototype implements a strict normalization subclass, not the union
+adapter used by \cref{prop:identity-erasure}.  Controller-future
+maxima encode a submitted family $\widehat\Gamma$ with one of three coverage
+labels: \texttt{exact} supplies full $\Gamma$;
+\texttt{exact\_projection\_through\_r} supplies
+$P=\Pi_{\leq r}(\Gamma)$; and \texttt{sound\_overapprox} supplies
+$\overline\Gamma\supseteq\Gamma$.  These relations are adapter attestations,
+not parser inferences.
+
+These fields are attestations, not facts inferred from a transcript.
+The adapter remains responsible for their authenticity and completeness.
+In particular, a natural-language task does not establish a cell alias,
+controller identity, or a complete leaf future contract.
+
+\subsection{Compilation pipeline}
+
+The compiler follows the proof decomposition.
+
+\begin{enumerate}[leftmargin=*,itemsep=2pt]
+  \item It arm-tags every target occurrence, then folds only alias classes
+  backed by explicit stable-cell evidence.  This computes
+  $q_{\mathrm{cell}}$ without conflating it with controller identity.
+
+  \item It applies the typed operator rule to the leaf families, producing
+  $\mathsf{Candidate}$ and $\mathsf{Required}$ and checking
+  $\mathsf{Required}\subseteq\mathsf{Candidate}$.
+
+  \item It filters the candidate against the current durable prefix and
+  normalized lineage.  The result is the greatest admitted family inside this
+  fixed candidate; the compiler also records prefix-replay, lineage-collision,
+  or forbidden-union reasons for removed configurations.
+
+  \item It recomputes whether the source envelope is structurally inheritable.
+  This requires an unchanged durable prefix and a commuting, collision-free
+  parent map into the source future.  The prototype does not consume a prior
+  verification seal or implement certificate-chain reuse; \textsc{Inherit}
+  reports eligibility inside the canonical recomputation.
+
+  \item Independently, it normalizes gate uses by controller anchor and derives
+  $r=r(\mathsf{Required},\mathsf{Admitted})$.  Projection mode rejects every
+  submitted controller set larger than $r$, then the compiler enumerates
+  \[
+    \mathsf{Raw}(\widehat\Gamma)
+      =\bigcup_{G\in\widehat\Gamma}\ \bigotimes_{g\in G} L_g,
+  \]
+  where $L_g$ is controller $g$'s local family after cell normalization.
+
+  \item With full \texttt{exact} evidence, it checks the deployment sandwich
+  directly.  With \texttt{exact\_projection\_through\_r}, it checks the same
+  predicate on $P$ and applies \cref{thm:observation-arity} to decide readiness
+  for hidden $\Gamma$ without reconstructing optional behavior.  A safe
+  \texttt{sound\_overapprox} product proves only upper safety: it cannot prove
+  hidden $\Gamma$ covers required behavior and therefore never yields
+  \textsc{Ready} or a structural seal.
+\end{enumerate}
+
+The same capped pass filters the submitted family to its hereditary-safe
+subfamily.  For full exact $\Gamma$, this is the greatest fixed-$E,L$ repair in
+\cref{prop:principal-coliveness-repair}.  For exact projection $P$, the claim
+is scoped only to $P$; a feasible result becomes a concrete full epoch policy
+only after installation and resubmission.  For a sound upper bound, it is
+diagnostic and never installable.  No proposal changes the current decision or
+seal.
+
+The semantic and deployment axes remain separate.
+The semantic result is \textsc{Inherit}, \textsc{ReadmitOK},
+\textsc{NeedsMechanism}, or \textsc{Reject}.
+Under exact full evidence, the controller realization is exact, a safe
+restriction, unsafe, incomplete, or both unsafe and incomplete.  Exact
+projection preserves the readiness Boolean; optional-fidelity and failure-cause
+fields remain scoped to submitted $P$.  A sound upper bound reports
+\textsc{RequiresExactCoverage} iff its declared product covers
+$\mathsf{Required}$; otherwise it reports a definite coordination failure.
+Thus \textsc{NeedsMechanism} is a
+semantic pruning result, not an automatic rejection: if the current manifest
+already satisfies the sandwich, the tool returns \textsc{ReadyWithRestriction}
+and a structural seal.  Controller installation remains an external obligation.
+
+\subsection{Constructive negative evidence}
+
+For an unsafe controller product, the compiler chooses a deterministic
+physical cover and classifies that cover before assigning a mechanism label.
+If the cover contains a cell outside
+$\operatorname{supp}(\mathsf{Admitted})$, it emits
+\textsc{OutsideSupport} and the exposed cell.
+Otherwise, if one selected local choice is already forbidden, it emits
+\textsc{LocalOverpermission} with a contained minimal nonface and the
+offending controller.
+Only when every selected local choice is admitted does the compiler emit
+\textsc{CorrelationCut}.
+It restricts the choices to an inclusion-minimal controller cover of a
+minimal nonface and labels the concrete subtype \textsc{GateClone} when all
+contributing anchors declare the same origin, or \textsc{GateCut} otherwise.
+These are origin-based diagnostic subtypes of \textsc{CorrelationCut}, not
+additional semantic failure classes.
+The three causes are exclusive for the selected cover; different covers of
+one bad physical configuration need not have a globally unique cause.
+
+Missing required behavior is dual evidence rather than an overpermission:
+the witness is in
+$\mathsf{Required}\setminus\mathsf{Raw}(\widehat\Gamma)$.
+When both differences are nonempty, the result retains the unsafe witness and
+reports the combined grade.  An overpermission found in a sound upper bound
+need not be actual; it is evidence only about the declared bound.
+
+\subsection{Independent verification and fail-closed limits}
+
+The compiler is an untrusted witness producer.
+The verifier does not import it: it parses the original request, independently
+reconstructs the finite semantics with a bit-mask representation, recomputes
+the complete expected result, and compares canonical JSON.
+It rejects duplicate keys, floating-point values, unknown fields, malformed
+receipt bindings, phase regressions, undeclared anchor reuse, inconsistent
+aliases, and inactive declared controllers.
+Canonical request and result digests bind a successful verification seal to
+the submitted family, its evidence mode, and each scope-qualified conclusion.
+The request schema is version~3 and result and verification schemas are
+version~4.  Verification recomputes the request and never structurally admits
+\texttt{sound\_overapprox}.
+
+The main exhaustive-analysis caps are 12 source cells, 12 normalized target
+cells, 10 controller anchors, 4,096 expanded configurations, and 200,000
+controller-product pair-expansion iterations.
+Exceeding a cap is a malformed request, not an optimistic answer.
+These limits make the artifact suitable for admission litmus cases and small
+runtime contracts; they are not a scalability claim.
+
+Even a valid positive result is only a \emph{history-admission} seal, and the
+verifier always emits $\mathsf{effect\_authorizes}=\mathsf{false}$.  In
+projection mode, $\mathsf{Raw}(P)$ is not claimed to upper-bound runtime
+behavior.  The adapter must attest exact projection, hidden-$\Gamma$ downward
+closure, and the same installed $E,L$; the runtime must establish
+\[
+  \mathsf{Required}\subseteq\mathsf{Actual}
+  \subseteq\mathsf{Raw}(E,L,\Gamma).
+\]
+Receipt authenticity, complete mediation, controller installation and
+freshness, atomic redemption, and lease revalidation remain external
+obligations.
+The Lean model specifies the finite decision but is not an extraction of the
+Python parser or verifier; proof replay, independent reimplementation, and
+exhaustive small-model cross-checks are distinct evidence layers.

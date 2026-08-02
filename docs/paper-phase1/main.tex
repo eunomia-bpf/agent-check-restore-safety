@@ -49,38 +49,33 @@
 \maketitle
 
 \begin{abstract}
-Agent runtimes may fork, restore, and merge histories without retracting
-durable receipts or external effects.  These operations change which future
-effects can become durable together: three fresh, individually authorized
-effects can violate a contract that permits every pair but forbids their
-union.  Per-effect authorization, linear capabilities, and rollback protection
-do not decide this joint-outcome question.
-
-We define \emph{history admission}: before installing a typed history edge, a
-runtime must show
-\[
-  \mathsf{Required}\subseteq\mathsf{RawPhysical}
-  \subseteq\mathsf{Admitted}.
-\]
-The left inclusion preserves the behavior promised by the edge; the right
-prevents its independently live controllers from realizing a future excluded
-by the authority contract and immutable receipt prefix.
-
-Our central result characterizes the exact structural evidence needed to
-decide this condition.  Two identity relations are independently nonerasable:
-copied handles must be normalized to redemption cells, and gate uses to
-authoritative controllers.  After this normalization, the complete
-co-liveness projection through a contract-derived arity $r$ determines
-readiness; for every lower uniform bound, a well-formed cover gives identical
-lower-order evidence but the opposite decision.  Thus the contract, rather
-than a fixed pairwise rule, determines the necessary observation depth.
-
-A certifying compiler derives the futures of Fork/Restore/Merge, emits an
-admission seal or counterexample, and is checked by an independent verifier.
-Lean~4 mechanizes the theorem spine.  The executables pass 62 tests, and an
-independent oracle agrees on all 2,166 bounded refinement instances.  A Codex
-adapter study identifies where a concrete runtime must attest the required
-identities and co-liveness; it is not used as a safety oracle.
+Agent runtimes fork, restore, and merge execution histories while protected
+tool effects and receipts outlive any restorable workspace.  Such an edge can
+leave each prospective effect fresh yet change which sets may become durable
+together, so locally correct gates can compose a forbidden outcome.  Rollback,
+per-effect checks, linear capabilities, and history monitors address parts of
+this boundary but do not decide a topology-changing edge and its controller
+realization.
+We define \emph{history admission}.  Three family constructors instantiate six
+Fork/Restore/Merge labels, derive candidate and required futures, and
+filter them against an immutable receipt prefix.  Controller covers then
+check $\mathsf{Required}\subseteq\mathsf{RawPhysical}
+\subseteq\mathsf{Admitted}$.  Exact admission distinguishes copied handles
+from authoritative controller instances: a mechanized two-by-two construction
+fixes all other raw fields and shows that erasing either identity normalization
+conflates ready and nonready worlds.
+We prove a contract-indexed exact evidence boundary: after normalization, the
+complete co-liveness projection through arity $r$ determines readiness.
+Fixed-manifest collisions make each raw identity relation nonerasable, while an
+arbitrary-$k$ cover rules out uniformly lower projection arity in the worst case.
+Greatest prefix admission, obstruction extraction, and pruning make the result
+constructive.  A small compiler
+accepts full exact evidence, its attested exact $r$-projection, or a diagnostic
+upper bound, and an independent verifier recomputes the result.  Lean~4 checks
+the theorem spine, 38 focused tests (62 total) cover the executables, and an
+oracle agrees on all 2,166 three-cell refinement instances.  Claude/Codex
+trajectories expose adapter telemetry gaps but provide neither safety labels
+nor effect authorization.
 \end{abstract}
 
 \input{sections/introduction}

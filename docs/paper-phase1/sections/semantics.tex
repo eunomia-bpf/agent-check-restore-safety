@@ -1,0 +1,183 @@
+\section{Typed History-Admission Semantics}
+\label{sec:semantics}
+
+A history transformation is admitted from its typed operation and contracts,
+not from a caller-proposed successor or a Boolean claim that the successor is
+safe.  The semantics first derives the correlated future promised by the
+operation, then checks that future against the immutable receipt prefix.  This
+separates three questions that a snapshot-only rule conflates: what the
+operation may do, what it must continue to support, and what remains authorized
+after earlier commitments have become durable.
+
+\subsection{Typed-operator future derivation}
+
+A future contract $K=(M_K,R_K)$ contains a downward-closed
+\emph{may} family and a downward-closed \emph{required} family over normalized
+semantic redemption cells, with
+$R_K\subseteq M_K$.
+The cells are atomic redemption identities, not controller names or copied
+workspace handles.  Define exclusive choice and joint durability by
+\begin{align*}
+  \mathsf{choice}(\mathcal F,\mathcal G)
+    &= \mathcal F\cup\mathcal G,\\
+  \mathsf{tensor}(\mathcal F,\mathcal G)
+    &= \{X\cup Y\mid X\in\mathcal F,\ Y\in\mathcal G\}.
+\end{align*}
+Choice retains either arm without introducing their union.  Tensor permits one
+configuration from each arm to become durable together.  If the same semantic
+cell occurs in both operands, set union counts it once; justifying such an
+alias, rather than assigning distinct arm-local cells, is an adapter
+obligation.
+
+The six typed history operators derive
+$\mathsf{Candidate}_{op}$ and $\mathsf{Required}_{op}$ as follows.  Here $N$
+is the current contract and $K$ a checkpoint contract.
+\begin{center}
+\small
+\begin{tabular}{@{}lcc@{}}
+  \toprule
+  Operation $op$ & $\mathsf{Candidate}_{op}$ & $\mathsf{Required}_{op}$ \\
+  \midrule
+  $\mathsf{ForkChoice}(L,R)$
+    & $\mathsf{choice}(M_L,M_R)$
+    & $\mathsf{choice}(R_L,R_R)$ \\
+  $\mathsf{ForkParallel}(L,R)$
+    & $\mathsf{tensor}(M_L,M_R)$
+    & $\mathsf{tensor}(R_L,R_R)$ \\
+  $\mathsf{RestoreReplace}(K)$
+    & $M_K$ & $R_K$ \\
+  $\mathsf{RestoreLive}(N,K)$
+    & $\mathsf{tensor}(M_N,M_K)$
+    & $\mathsf{tensor}(R_N,R_K)$ \\
+  $\mathsf{MergeSelect}(L,R)$
+    & $\mathsf{choice}(M_L,M_R)$
+    & $\mathsf{choice}(R_L,R_R)$ \\
+  $\mathsf{MergeJoin}(L,R)$
+    & $\mathsf{tensor}(M_L,M_R)$
+    & $\mathsf{tensor}(R_L,R_R)$ \\
+  \bottomrule
+\end{tabular}
+\end{center}
+A pure Checkpoint records reconstructable state and does not itself change a
+future contract.  For every valid typed operator, both derived families remain
+well formed and
+\[
+  \mathsf{Required}_{op}\subseteq\mathsf{Candidate}_{op}.
+\]
+This inclusion is a fidelity condition, not yet an authorization result: it
+prevents a repair from silently discarding behavior that the typed operation
+declared mandatory.
+
+\subsection{Fixed-prefix admission boundary}
+
+The model fixes the authority family $\mathcal A$, durable receipt prefix $D$,
+and cell lineage $\ell:\mathcal D\to\mathcal U$ for one decision.
+It defines per-configuration compatibility in
+\cref{eq:prefix-ok} and filters the generated candidate to
+$\mathsf{Admitted}_{op}$ in \cref{eq:admitted-future}.
+The admitted future is prefix-safe and greatest within this fixed
+candidate: every prefix-safe
+$\mathcal H\subseteq\mathsf{Candidate}_{op}$ is contained in
+$\mathsf{Admitted}_{op}$.  Consequently,
+\begin{equation}
+\begin{aligned}
+  &\mathsf{Required}_{op}\subseteq\mathsf{Admitted}_{op}\\
+  &\quad\Longleftrightarrow
+    \exists\mathcal H.\quad
+      \mathsf{Required}_{op}\subseteq\mathcal H
+      \subseteq\mathsf{Candidate}_{op}\\[-2pt]
+  &\hspace{38mm}{}\land
+      \forall X\in\mathcal H.\ \mathsf{PrefixOK}(X).
+\end{aligned}
+\label{eq:required-preservable}
+\end{equation}
+The result is maximal only within this fixed candidate, prefix, lineage, and
+pruning-only repair space; it does not authorize reissued atoms or a changed
+workload contract.
+
+\subsection{Structural inheritance and full readmission}
+
+An admitted envelope stores a version $v$, the fixed prefix $D$, an admitted
+old future $\mathcal F$, its lineage $\ell_0$, and a proof that every
+$X\in\mathcal F$ is prefix-compatible.
+A structural refinement of a typed target at version $v'$ supplies a parent
+map $p:\mathcal D_{op}\to\mathcal D_0$ such that $v\leq v'$, every target
+configuration maps injectively into a configuration of $\mathcal F$, and the
+lineage square commutes:
+\[
+  \ell(x)=\ell_0(p(x)).
+\]
+These obligations transport the old prefix certificate to the complete
+candidate $\mathsf{Candidate}_{op}$ without rechecking the authority family.
+They do not assert that a concrete runtime realizes that candidate.
+
+If no such parent map is available, the full-readmission path checks
+$\mathsf{Candidate}_{op}=\mathsf{Admitted}_{op}$ directly.  Structural
+inheritance is therefore a sufficient certificate-reuse path into full
+readmission, not a weaker safety class.  Refinements compose: version order is
+transitive, parent maps compose, their configuration morphisms compose, and
+the two lineage squares yield the commuting square for the endpoint.  A
+runtime may consequently certify a sequence of Fork/Restore/Merge edges at the
+same durable prefix by composing their edge refinements.
+
+\subsection{Four fixed-prefix outcomes}
+
+The classifier checks structural inheritance first, then complete
+readmission, then the admitted future.  For a valid typed operator
+it returns one of four outcomes:
+\paragraph{$\mathsf{Inherit}$}
+A version-monotone structural refinement transports the old certificate to
+the complete candidate.
+
+\paragraph{$\mathsf{ReadmitOK}$}
+Structural inheritance is unavailable, but the complete candidate passes the
+fixed-prefix check directly.
+
+\paragraph{$\mathsf{NeedsMechanism}$}
+The complete candidate fails fixed-prefix admission, while every required
+configuration survives in $\mathsf{Admitted}_{op}$.  This is not an accepted
+deployment by itself: the admitted future is not an enforcement mechanism.
+Deployment becomes structurally eligible only if the submitted controller
+manifest supplies a restriction satisfying
+$\mathsf{Required}\subseteq\mathsf{RawPhysical}\subseteq\mathsf{Admitted}$;
+installation and complete mediation remain external obligations.
+
+\paragraph{$\mathsf{Reject}$}
+No prefix-safe pruning between $\mathsf{Required}_{op}$ and
+$\mathsf{Candidate}_{op}$ exists for the fixed authority family, durable
+prefix, and lineage.  Reauthorization, fresh identities, or a changed contract
+constitutes a new admission problem.
+
+The first two outcomes partition complete admission according to whether an
+old certificate can be reused.  The latter two are separated exactly by
+\cref{eq:required-preservable}; required behavior cannot be relabeled as
+optional to obtain acceptance.  All four remain structural results rather
+than credentials for executing an external effect.
+
+\subsection{Receipt-frontier growth}
+
+The durable prefix is obtained from immutable receipt bindings.  Ledger
+monotonicity therefore gives $D\subseteq D'$ as execution commits additional
+atoms.  Structural transport deliberately preserves $D$ definitionally: it
+cannot turn a proof about $(\mathcal A,D)$ into one about
+$(\mathcal A,D')$.  Once the receipt prefix grows, the runtime must reconstruct
+the envelope and rerun prefix admission against $D'$ before applying further
+structural inheritance.
+
+This recheck is substantive rather than bookkeeping.  If a candidate cell
+maps to an atom newly present in $D'$, the disjointness conjunct in
+\cref{eq:prefix-ok} rules out policy-oblivious reuse even when a snapshot-only
+configuration morphism would still succeed.  A future using a distinct atom
+may remain admissible.  Thus prefix growth forces readmission, not automatic
+rejection; the new receipt determines which candidate configurations survive.
+
+\subsection{Operational commitment substrate}
+
+The prefix comes from a separate unit-normalized commitment semantics.  A
+fresh \Prepare{} atomically checks an open cell, a held unspent atom, an unbound
+stable key, and a fresh receipt; it consumes the hold, records the spent
+cell--epoch--atom triple and immutable bindings, and marks the receipt prepared.
+Replay and Retry resolve that binding and stutter; settlement advances only the
+external phase, and Crash is an atomic stutter.  The preserved invariant and
+monotone ledger show that only a fresh step adds a receipt, justifying $D$ as a
+monotone prefix.  They do not prove physical exactly-once execution at a sink.

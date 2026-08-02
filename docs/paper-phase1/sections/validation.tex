@@ -1,0 +1,111 @@
+\section{Evaluation}
+\label{sec:validation}
+
+We ask whether the theorems are machine-checked (VQ1), two implementations
+agree with the finite semantics (VQ2), litmus cases expose lower-order blind
+spots (VQ3), and real trajectories carry the required adapter evidence (VQ4).
+No observational trace is labeled safe or unsafe, and no trace statistic is
+used to establish either inclusion involving $\mathsf{Actual}$.
+
+\subsection{VQ1: Mechanized theorem spine}
+
+Lean~4 links the three family constructors underlying the six runtime operation
+labels, greatest
+fixed-prefix admission, overlapping controller-cover readiness and
+obstructions, the independent-identity erasure proposition, exact projection,
+runtime-refinement transport, and the append-only commitment substrate.  It
+also checks the fixed-$E,L$ pruning corollary and recovers the older functional
+partition as a canonical special case.
+
+For symbolic theorems, the audit rejects placeholders, project axioms, and
+dependencies beyond
+\texttt{propext}, \texttt{Quot.sound}, and \texttt{Classical.choice}.  A
+two-controller $U(2,3)$ realization checks correlation-cut extraction; a
+separate arbitrary-$k$ singleton-controller construction checks both the
+contract-indexed upper bound and its $U(k,k{+}1)$ lower bound
+(\cref{thm:observation-arity}).
+
+This proves a finite manifest-relative theorem.
+It does not prove that a Claude or Codex adapter reports complete contracts,
+that its declared controller product contains every actual behavior, or that
+an external effect executes exactly once.
+
+\subsection{VQ2: Compiler--verifier cross-check}
+
+The dependency-free Python artifact contains two semantic implementations.
+The compiler uses symbolic cell sets; the independent verifier reconstructs
+the request with bit masks.  Both implement request schema~v3 and
+result/verification schema~v4, derive $r$, enforce projection shape, and
+distinguish full exact, exact-projection, and diagnostic sound-upper evidence.
+Of 62 tests, 38 exercise history operators, evidence modes, readiness grades,
+repairs, malformed inputs, caps, determinism, and tampering.  Every positive
+seal sets $\mathsf{effect\_authorizes}=\mathsf{false}$.
+
+An exhaustive oracle enumerates all 19 downward-closed families over three
+cells.  Across every full-support candidate, every required subfamily, and
+every physical family, it checks 2,166 refinement instances.
+The compiler's five controller-realization grades agree with direct set differences in
+every instance, and the independent verifier accepts every untampered result.
+This enumeration checks the finite algorithm and its independent
+reimplementation; it is not a proof that the JSON parser refines Lean.
+
+A bounded CLI characterization exercises threshold families through 12 cells.
+With six cells and one through four controllers, full-family pair expansion
+rises from 64 to 70,592 iterations.  On a six-cell contract with $r=1$, exact
+projection executes only 128--640 iterations for two through ten controllers;
+analytically expanding the corresponding full families requires
+4,288--16,846,784 and crosses the 200,000 cap at five controllers.  Both
+projection and ordinary outputs are independently verified.  These are
+deterministic loop counts and fail-closed checks, not latency or deployability
+evidence.
+
+\subsection{VQ3: Distinguishing litmus manifests}
+
+Four in-memory cases exercise the witness taxonomy: a prefix-spent restored
+cell yields \textsc{OutsideSupport}; one unsafe controller yields
+\textsc{LocalOverpermission}; locally safe controllers whose union is the
+forbidden $U(2,3)$ triple yield \textsc{CorrelationCut}, subtyped by declared
+origins as \textsc{GateCut} or \textsc{GateClone}.  Folding true aliases to one
+cell removes that correlation violation but still assumes atomic redemption;
+multiple controllers remain safe for a full powerset future.  The unary
+outside-support case reports required arity one; the $U(2,3)$ case reports
+three, matching \cref{eq:required-coliveness-arity}.  Both implementations
+propose the three controller pairs while leaving the original result
+diagnostic; resubmitting that restriction seals.  Local overpermission instead
+makes co-liveness-only repair infeasible.
+
+\subsection{VQ4a: Public workload evidence}
+
+TraceLab collects real Claude Code and Codex workload telemetry and reports
+long autonomous loops and heterogeneous tool behavior
+~\cite{zhu2026tracelab}.
+We verified its v0.0.2 release of 8,058 sessions and 743,819 normalized tool
+calls against the published artifact digest~\cite{tracelab2026release}.
+Its normalized schema provides ordinary call/result correlation but not the
+joint typed history edge, durable receipt prefix, cell-alias evidence,
+controller identity and co-liveness, or a correlated leaf future contract.
+The missing fields make history-admission prevalence unidentifiable; they do
+not imply that failures are rare.
+
+\subsection{VQ4b: The paper-formation lineage}
+
+We also analyze the paper-formation trajectory as one author-operated
+longitudinal case.  A fixed-cutoff recursive lineage contains over 80 rollout
+files, roughly 39,000 native rows, and roughly 6,000 tool calls after excluding
+over 200,000 copied-prefix rows.  It exhibits branching, inherited history,
+compaction, aborted turns, lifecycle events, workspace mutation, and
+call/result correlation.  Yet it does not jointly expose complete leaf
+contracts, cell aliases, controller origin/co-liveness, effect binding, and
+durable receipt phase.  It therefore motivates adapter fields and parser
+tests, but cannot estimate unsafe-restore prevalence or validate admission.
+The source-grounded extraction and its limitations appear in
+\cref{app:private-trace}.
+
+\subsection{Privacy and ethics}
+
+The case recruited or manipulated no users, but histories may contain private
+workspace and incidental third-party text.  Extraction emits only path-free
+allowlisted aggregates and private keyed commitments; raw histories, prompts,
+commands, paths, stable identifiers, the key, and the anonymous private summary
+are not released.  We make no IRB approval or exemption claim; further
+minimization details appear in \cref{app:private-trace}.

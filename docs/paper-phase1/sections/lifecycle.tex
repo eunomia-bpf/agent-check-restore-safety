@@ -1,0 +1,170 @@
+\section{Problem and Security Boundary}
+\label{sec:lifecycle}
+
+\subsection{History-transforming computation}
+
+A checkpointed execution traditionally replaces its current continuation with
+one reconstructed from an earlier state.  The workload considered here is
+more general: a runtime may retain several descendants, replace one
+continuation while another remains live, or combine results from histories
+that were previously alternatives.  We call an execution with these operations
+a \emph{history-transforming computation}.  Speculative workflows, search and
+reinforcement-learning rollouts, deployment planners, and notebook branches
+all fit this class.  Tool-using agents make the class especially prominent
+because they construct the execution graph online while invoking services
+whose state is outside the reconstructed process.
+
+Current agent interfaces already expose fragments of this distinction.
+Codex documents thread creation, resume, fork lineage, and event streams, while
+Claude documents both resuming and forking saved sessions
+~\cite{codexappserver,claudesessions}.  Filesystem-oriented agent substrates
+add isolated worktrees or sandbox checkpoints
+~\cite{wang2026fork,wu2026crab}.  These are useful reconstruction mechanisms,
+but their names do not determine security semantics.  A fork may mean
+exclusive alternatives or co-durable parallel work; a restore may replace the
+current continuation or leave both versions live; and a merge may select one
+arm or retain commitments from both.  We therefore model six typed operators:
+choice and parallel Fork, replacing and live Restore, and select and join
+Merge.  A pure Checkpoint records reconstructable state and changes no future
+contract by itself.
+
+The distinction matters because one execution graph need not be specified in
+advance.  A runtime need only describe the proposed edge and the behavior its
+arms may and must retain.  Admission derives the edge's correlated future from
+that typed operation.  The proof relation composes structural certificates
+while the durable past is unchanged; a newly committed receipt reopens
+admission.  The prototype recomputes each request and only reports reuse
+eligibility---it does not consume a prior seal.  Thus the theory handles a
+dynamically growing graph without predicting the agent's complete future plan.
+
+\subsection{Workspace-rollback boundary}
+
+The security state is not one snapshot.  The five boundary views in
+\cref{tab:planes} have different writers and recovery rules.
+
+\begin{table}[t]
+  \centering
+  \caption{Evidence at a history-transformation boundary.}
+  \label{tab:planes}
+  \small
+  \begin{tabular}{@{}
+    >{\raggedright\arraybackslash}p{0.24\columnwidth}
+    >{\raggedright\arraybackslash}p{0.31\columnwidth}
+    >{\raggedright\arraybackslash}p{0.34\columnwidth}@{}}
+    \toprule
+    View & Examples & Recovery rule or obligation \\
+    \midrule
+    Reconstructable execution
+      & model context, files, processes, staged payloads
+      & may be copied, replaced, or merged by the typed operator \\
+    Durable past
+      & immutable receipt and authority-atom bindings
+      & append-only across restore; obtained from an authenticated ledger \\
+    Declared future
+      & cell lineage and per-arm may/required families
+      & transformed compositionally, then conditioned on the durable past \\
+    Controller realization
+      & gate access, local families, co-live controller sets
+      & must conservatively cover actual co-durable behavior \\
+    External reality
+      & remote writes, disclosures, messages, payments
+      & reconciled through stable bindings; not generally reversible \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Rolling back every local byte is insufficient in three different ways.
+First, an external effect may already have escaped the rollback domain.  A
+restored workspace can erase evidence of a message or remote write without
+undoing it; Claude's documented checkpoint boundary, for example, excludes
+Bash, external, and most subagent changes~\cite{claudecheckpoint}.  Second,
+rolling back the durable receipt ledger would revive authority already spent.
+The ledger must therefore advance independently of reconstructable state.
+Third, total rollback is often not the requested operation: live Restore and
+parallel Fork deliberately retain both descendants, while join Merge combines
+them.  Discarding every descendant would implement different semantics and
+could destroy unrelated completed work.
+
+The missing object is consequently not ``more workspace state.''  For a fixed
+durable prefix, admission must determine which sets of prospective semantic
+commitments may still become durable together.  This is a family of
+configurations rather than a vector of per-effect flags: admitting each effect
+separately does not imply that their union is authorized.  The controller
+layout is yet another object, because the state enforcing such a correlation
+may live behind tool gates, reference monitors, or remote services rather than
+inside the restored workspace.
+
+\subsection{Two independent identities}
+
+Handle identity asks whether names share one atomic redemption cell; gate-use
+identity asks whether executions share the controller state preserving
+correlation.  Neither determines the other: aliases may pass through replicas,
+while distinct cells may rely on one joint controller.  Atomic redemption
+addresses the first case, not arbitrary correlations
+(\cref{prop:identity-erasure}).
+
+Consider three distinct cells $a,b,c$ under a contract that permits every
+singleton and every pair, but forbids $\{a,b,c\}$.  Each cell is fresh and each
+local singleton choice is admitted, so per-cell authorization and linear
+consumption both succeed.  If three co-live controllers can independently
+choose $a$, $b$, and $c$, their product realizes the forbidden triple.  The
+failure is a higher-order correlation cut: no individual gate is locally
+over-permissive, and no pairwise conflict exposes it.  A safe realization must
+instead coordinate the relevant controllers, restrict their co-liveness, or
+otherwise remove the triple before resubmission.  This example is the reason
+the model separately normalizes handle occurrences to cells and gate uses to
+controllers.
+
+\subsection{Runtime integration contract}
+
+Our proposed tool sits at the control-plane boundary before a runtime installs
+a Fork, Restore, or Merge edge.  A trusted adapter supplies (1) the typed
+operator and complete per-arm may/required contracts; (2) explicit cell alias
+and authority-lineage evidence; (3) the authenticated append-only receipt
+frontier; and (4) controller access, local-family, and co-liveness evidence.
+The compiler and independent verifier implement the finite decision in
+\cref{sec:algorithm}.  Their output is a history-admission seal or a replayable
+counterexample, not permission to execute a tool.
+
+Agent lifecycle events and pre-tool hooks are prospective adapter surfaces
+~\cite{codexappserver,codexhooks,claudesessions,claudehooks}.  Their existence
+does not prove that every relevant effect is mediated, that two handles are
+true aliases, or that two gate uses share controller state.  A concrete
+integration must authenticate those facts and establish the runtime refinement
+obligations
+\[
+  \mathsf{Required}\subseteq\mathsf{Actual}
+  \subseteq\mathsf{RawPhysical}.
+\]
+The first inclusion prevents the adapter from obtaining safety by deleting
+mandatory behavior; the second requires the declared controller product to
+overapproximate every configuration the installed runtime can actually make
+durable.  The offline compiler checks neither fact by observing a transcript.
+
+\subsection{Adversary, trusted base, and goal}
+
+The adversary controls model output, copied or restored history, tool
+arguments, proposed handles, and stale reconstructable state.  It may request
+any documented history operation or retry after an ambiguous external
+outcome.  The trusted base consists of the policy and authority issuer, the
+lifecycle adapter for the admitted edge, the append-only receipt integrity
+root, and the controller instances mediating protected commitments.  The
+adapter must report the actual operation semantics and supply complete leaf
+contracts and identity evidence; these facts cannot be inferred reliably from
+natural-language intent or a filesystem diff.
+
+For one fixed authority family and durable receipt prefix, the semantic goal
+is to retain exactly the greatest admitted future inside the typed candidate while
+preserving all declared required configurations when possible.  The deployment
+goal is to ensure that the manifest's raw controller product covers the
+required family and stays inside that admitted subfamily.  Under the additional
+runtime refinements above, every actual co-durable configuration inherits the
+durable-prefix safety certificate.
+
+The result is conditional on truthful manifests, complete mediation,
+controller freshness, and atomic redemption.  It does not establish prompt
+integrity, infer policy from model text, validate a lease, guarantee useful
+task completion, prevent issue-time information leakage, or provide physical
+exactly-once execution at an external sink.  Ambiguous external outcomes still
+require authenticated status, sink idempotency, or explicitly authorized
+compensation.

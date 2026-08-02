@@ -1,0 +1,95 @@
+\section{Introduction}
+\label{sec:introduction}
+
+Agent runtimes fork alternatives, retain parallel descendants, restore saved
+sessions, and merge results while discovering the execution graph online.
+Codex, Claude, and emerging substrates expose these operations
+~\cite{codexappserver,claudesessions,wang2026fork,wu2026crab}.  Unlike restart,
+they may keep several continuations live while tools mutate external services.
+
+Individually safe continuations can become unsafe when an edge changes which
+outcomes may coexist.  Suppose a contract permits every pair of fresh
+commitments $a,b,c$ but forbids the triple.  Three locally safe controllers can
+realize $\{a,b,c\}$ after parallel Fork or live Restore: per-effect and pairwise
+checks pass and no cell is spent twice, yet the contract fails.  Replaying an
+already durable cell after Restore is the unary instance.
+
+Security state is therefore not one workspace snapshot: it includes an
+immutable receipt prefix, a correlated future, a controller layout, and escaped
+external effects.  Whole-workspace rollback cannot undo remote reality, must
+not rewind receipts, and implements the wrong semantics when several
+descendants should survive.  Because the graph is not known in advance, the
+runtime must certify current edges and compose their certificates.
+
+Existing mechanisms each cover only part of this boundary.  Rollback recovery,
+state continuity, and ACRFence preserve or check the past but do not derive the
+co-durable future of a typed choice, product, or replacement edge
+~\cite{elnozahy2002rollback,parno2011memoir,zheng2026acrfence}.
+Consumable capabilities, revocable agent capabilities, and commit-time
+authorization can protect one use or one effect witness, but several valid
+cells may still form a forbidden union
+~\cite{bowers2007consumable,santos2026lingering,santos2026committime}.
+General history-sensitive monitors such as FORGE can enforce declared policies
+over observed causal predicates~\cite{palumbo2026forge}; they do not themselves
+derive a counterfactual future family for a proposed Fork/Restore/Merge or
+verify that independently live controllers realize only that family.
+
+Exact structural admission cannot in general erase either of two identity
+relations.
+$q_{\mathrm{cell}}$ maps copied handles to atomic redemption cells;
+$q_{\mathrm{ctrl}}$ maps gate uses to authoritative controller instances.  A
+mechanized two-by-two construction fixes every other raw field and shows that
+erasing either map while retaining the other conflates ready and nonready
+worlds (\cref{prop:identity-erasure}).  A
+downward-closed family $\Gamma$ records which controllers may remain
+authoritative during one co-durable epoch.  Write
+$\mathsf{Actual}$ for configurations the installed runtime can make durable and
+$\mathsf{RawPhysical}$ for the manifest-induced controller product.  This leads
+to the central refinement chain
+\[
+  \mathsf{Required}\subseteq\mathsf{Actual}
+  \subseteq\mathsf{RawPhysical}\subseteq\mathsf{Admitted},
+\]
+where the typed history operation derives the required behavior, the durable
+prefix derives the admitted future, the manifest derives the raw controller
+product, and a concrete runtime must refine that manifest.
+
+Our theory-guided \emph{history-admission compiler} derives typed futures,
+filters them against receipts, and checks controller-cover realization.  It
+emits a certificate or typed witness; an independent verifier recomputes the
+canonical result.  The contract derives an arity $r$: exact readiness needs
+only $\Pi_{\leq r}(\Gamma)$, while an arbitrary-$k$ cover family makes smaller
+arity insufficient in general.  The prototype accepts full $\Gamma$, its exact
+$r$-projection, or a diagnostic upper bound.  Its 38 focused tests (62 total)
+and 2,166-case oracle cross-check the semantics; trajectories characterize
+adapter gaps, not safety.  Truthful manifests, mediation, installation, and
+$\mathsf{Actual}$ refinement remain runtime obligations.
+
+\noindent\textbf{Contributions.}
+This paper makes three contributions.
+\nopagebreak[4]
+
+\begin{enumerate}[leftmargin=*,itemsep=2pt]
+  \item A typed security model for history-transforming computation.  It derives
+  correlated may/required futures for choice and parallel Fork, replacing and
+  live Restore, and select and join Merge; computes the greatest admitted future
+  compatible with an immutable receipt prefix; and supports compositional
+  inheritance over an online graph
+  (\cref{sec:model,sec:semantics,sec:results}).
+
+  \item An exact-evidence theorem for controller realization.  At fixed $E,L$,
+  the contract-derived $r$-projection of $\Gamma$ decides readiness exactly;
+  an arbitrary-$k$ well-formed cover rules out every uniformly lower-arity
+  projection.  Fixed-manifest collisions independently rule out erasing cell-
+  or controller-identity information.  Obstruction extraction and fixed-$E,L$
+  pruning provide constructive witnesses and repairs
+  (\cref{sec:results}).
+
+  \item A small compiler and independent verifier whose certificate and witness
+  schema follows the proof decomposition.  Lean~4 checks the theorem spine;
+  38 focused compiler/verifier tests (62 across the complete artifact) and an
+  exhaustive 2,166-instance oracle cross-check the implementation; public
+  TraceLab and the private paper-formation lineage
+  characterize workload and adapter observability without supplying safety
+  labels (\cref{sec:algorithm,sec:validation}).
+\end{enumerate}

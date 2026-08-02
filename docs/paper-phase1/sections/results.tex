@@ -1,35 +1,12 @@
-\section{The Exact Evidence Boundary}
+\section{Admission and Refinement Results}
 \label{sec:results}
 
-The paper's main claim is the following evidence theorem.  Subsequent results
-derive its inputs from a typed history edge, prove sufficiency, and construct
-the two independent lower bounds.
-
-\begin{theorem}[Contract-indexed exact evidence boundary]
-\label{cor:evidence-boundary}
-Let a valid typed Agent history edge and durable receipt prefix derive the
-required and admitted families $(\mathcal R,\mathcal F)$.  For
-downward-closed controller-local and epoch families, exact structural
-readiness is determined by
-\[
-  (\mathcal R,\mathcal F,E,L,
-    \Pi_{\leq r(\mathcal R,\mathcal F)}(\Gamma)),
-\]
-after copied handles are normalized to redemption cells and gate uses to
-authoritative controllers.  Across the model class:
-\begin{enumerate}[leftmargin=*,itemsep=1pt]
-  \item erasing either identity relation while retaining the other can
-  conflate a ready and nonready world; and
-  \item for every $k\geq1$, arity-$k$ co-liveness evidence can conflate a ready
-  and nonready world whose contract requires arity $k+1$.
-\end{enumerate}
-The view is sufficient and its three components are independently
-nonerasable in the stated worst-case senses; it is not claimed to be a unique
-or pointwise-minimal encoding.
-\end{theorem}
-
-If a ready manifest is faithfully realized by the runtime, its certificate
-then transports along
+The theorem spine establishes one exact evidence boundary.  A typed edge and
+durable prefix derive $(\mathcal R,\mathcal F)$; at fixed $E,L$, the complete
+$r(\mathcal R,\mathcal F)$-projection of $\Gamma$ decides readiness exactly.
+Collision constructions show that no uniformly lower arity suffices and that
+an exact checker cannot generally erase either identity relation.  If a ready
+manifest is refined by the runtime, prefix safety transports along
 \[
 \begin{gathered}
   op\longmapsto(\mathsf{Candidate},\mathsf{Required})
@@ -357,11 +334,18 @@ classical~\cite{emtander2010hypergraphs,wang2024hypergraph}; the result here
 lifts it through fixed-$E,L$ cover realizability and required coverage.
 Concrete $E,L$ may permit less evidence.
 
-\Cref{cor:evidence-boundary} follows by combining
-\cref{prop:identity-erasure,thm:deployment-obstructions,thm:observation-arity}.
-Equivalent identity evidence may replace either
-literal map, restricted $E,L$ may permit lower arity, and a fail-closed checker
-may reject with less information.
+\begin{corollary}[Contract-indexed evidence boundary]
+\label{cor:evidence-boundary}
+For downward-closed local and epoch families, the normalized view
+$(\mathcal R,\mathcal F,E,L,\Pi_{\leq r(\mathcal R,\mathcal F)}(\Gamma))$
+determines the exact structural-readiness Boolean.  Across the model class,
+\cref{prop:identity-erasure} shows the raw-to-normalized step cannot generally
+erase either quotient relation; \cref{thm:observation-arity} gives the
+worst-case arity separation.
+This is not a unique or pointwise-minimal representation: equivalent identity
+evidence may replace either map, restricted $E,L$ may permit lower arity, and a
+fail-closed checker may reject with less information.
+\end{corollary}
 
 \subsection{Runtime-refinement certificate transport}
 
