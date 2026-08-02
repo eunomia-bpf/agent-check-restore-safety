@@ -27,7 +27,7 @@ lake build AuthorityContinuity
 `audit.sh` scans project Lean sources for proof placeholders and project
 axiom/constant declarations, checks that every frozen theorem is declared,
 builds the library, executes all `#print axioms` commands in
-`AuthorityContinuity/Audit.lean`, retains their raw output in
+`AuthorityContinuity/Audit.lean`, writes their raw output to generated
 `results/axioms.log`, rejects `sorryAx` and every dependency outside
 `propext`, `Quot.sound`, and `Classical.choice`, and finally replays
 `AuthorityContinuity.Main` with `leanchecker --fresh`.
@@ -58,6 +58,7 @@ builds the library, executes all `#print axioms` commands in
 | `actual_prefixConfigMorphism_of_deploymentReady` | Under `Required <= Actual <= RawPhysical`, manifest readiness transports the admitted durable-prefix certificate to the actual runtime family. |
 | `rawPhysical_partition_eq_localProduct` / `canonicalPartition_deploymentReady_iff_mustCoordinate` | The canonical one-controller-per-cell adapter is a proved instance of the relational model, and its readiness criterion reduces to `MustCoordinate`. |
 | `split_controllers_admit_forbidden_triple` | A finite U(2,3) fixture exposes a higher-order correlation cut that every pairwise check misses. |
+| `no_pairwise_observation_checker_exact` | Two downward-closed realizations agree on every input through complete pairwise co-liveness but require opposite readiness decisions. |
 
 The legacy lifecycle names and logical roles above are frozen by the approved
 RQ3 experiment plan; the history-admission and controller-cover rows freeze the

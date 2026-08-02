@@ -31,9 +31,9 @@ Merge certificates, or the complete paper LTS.
 The `history_admission/` package is a second, small artifact driven by the
 new typed-history theory.  An untrusted compiler derives normalized semantic
 cells, typed Fork/Restore/Merge futures, the greatest durable-prefix-safe
-residual, and controller-realization witnesses.  A separate bit-mask verifier
+admitted future, and controller-realization witnesses.  A separate bit-mask verifier
 reconstructs the result without importing the compiler.  It checks the more
-general implementation relation `Required <= Physical <= Admitted`, so an
+general implementation relation `Required <= RawPhysical <= Admitted`, so an
 implementation may safely omit optional behavior without being confused with
 a GateClone over-approximation.  Its seal certifies structural history
 admission only; it deliberately does not authorize an external effect.
@@ -151,21 +151,35 @@ artifact, not a valid derivative check.
 ## Anonymous supplemental package
 
 Do not submit the repository as the artifact: repository history and research
-notes are not anonymous.  Build the supplemental archive from this strict
-allowlist only:
+notes are not anonymous.  From the repository root, build the supplemental
+archive from the explicit file manifest:
 
 ```sh
-tar --sort=name --owner=0 --group=0 --numeric-owner \
-  -czf /tmp/authority-continuity-artifact.tar.gz \
-  README.md authority_continuity.py explore.py \
-  test_authority_continuity.py results/exhaustive.json \
-  history_admission/README.md history_admission/__init__.py \
-  history_admission/schema.py history_admission/compiler.py \
-  history_admission/verifier.py \
-  fixtures/history_admission/inherit_choice.json \
-  test_history_admission.py
-tar -tzf /tmp/authority-continuity-artifact.tar.gz
+python3 artifact/build_anonymous_supplement.py \
+  --output /tmp/history-admission-supplement.tar.gz
+tar -tzf /tmp/history-admission-supplement.tar.gz
 ```
 
-The archive must contain exactly those twelve files and no `.git`, `docs`,
-cache, bytecode, absolute path, or user metadata.
+`ANONYMOUS_MANIFEST.txt` lists every included file individually.  The builder
+rejects directories, symlinks, globs, missing entries, absolute user paths,
+repository commit identifiers, and repository author/committer identities.  It
+normalizes file order, timestamps, ownership, modes, and the gzip header.  The
+archive contains the compiler and independent verifier, private-data-free unit
+and litmus tests, the bounded scaling driver, and the complete Lean sources,
+pinned dependencies, and audit driver.  It intentionally excludes repository
+history, `docs`, downloaded references, private-trajectory code and output,
+historical scaling JSON and machine timings, Lean build output and logs, caches,
+and bytecode.
+
+To validate the extracted archive, use a fresh directory:
+
+```sh
+cd artifact
+python3 -m unittest -v
+python3 bench_history_admission_scaling.py --output /tmp/scaling.json
+
+cd ../lean
+lake exe cache get
+lake build AuthorityContinuity
+bash scripts/audit.sh
+```

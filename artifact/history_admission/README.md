@@ -20,7 +20,7 @@ compiler then:
 5. checks deployment readiness separately by recomputing which futures the
    declared co-live controllers can asynchronously realize; and
 6. checks the implementation relation
-   `Required <= Physical <= Admitted`, distinguishing exact realization from a
+   `Required <= RawPhysical <= Admitted`, distinguishing exact realization from a
    safe restriction that omits only optional behavior; and
 7. emits a structural certificate or a compact prefix, lineage, forbidden
    union, gate-cut, or gate-clone witness.
@@ -70,7 +70,7 @@ products, the exact obstruction criterion, the three failure causes,
 runtime-family refinement, and reduction to the older functional partition
 through a proved canonical adapter.  The executable `GateClone` subtype still
 uses manifest origin metadata; Lean mechanizes the underlying locally sound
-`GateCut`, not clone provenance.
+`CorrelationCut`, not origin provenance.
 
 This is a theorem-to-implementation crosswalk, not a verified extraction.  The
 Lean development does not prove that the Python parser implements a formal
@@ -85,7 +85,7 @@ do not invalidate that identity proof, but disable structural inheritance and
 force readmission or revalidation.  Conversely, two gate uses may reach the
 same aliased cell while still naming distinct controller anchors.
 
-The physical-family calculation treats controller anchors declared co-live as
+The raw-physical-family calculation treats controller anchors declared co-live as
 independently product-composable.  A runtime with a hidden shared ratifier must
 represent it as one authoritative controller or supply a stronger joint
 contract; co-liveness alone is not an exploit proof.  `GateClone` and `GateCut`
@@ -94,16 +94,16 @@ are precise witnesses under this independent-product abstraction.
 For the deterministic product cover carried by a reported witness, unsafe
 products are split into three theorem-backed causes. `OutsideSupport` means a
 controller exposes a cell absent from admitted support;
-`LocalOverpermission` means one controller alone exposes an admitted minimal
-nonface; and `CorrelationCut` means every chosen local configuration is
+`LocalOverpermission` means one controller alone exposes a minimal nonface of
+the admitted family; and `CorrelationCut` means every chosen local configuration is
 admitted but their union is not.  Only the last class is emitted as a
 `GateClone` or `GateCut`.  Different valid covers of the same bad physical
 configuration may expose different causes; the tool does not claim a globally
 unique root cause.
 
-The model-level check is `Required <= Physical <= Admitted`.  If `Actual` is
+The model-level check is `Required <= RawPhysical <= Admitted`.  If `Actual` is
 the runtime family, deployment correctness additionally requires
-`Required <= Actual <= Physical <= Admitted`.  The verifier cannot infer the
+`Required <= Actual <= RawPhysical <= Admitted`.  The verifier cannot infer the
 relations involving `Actual` from a manifest, so it records runtime soundness
 and required coverage as external obligations.
 
