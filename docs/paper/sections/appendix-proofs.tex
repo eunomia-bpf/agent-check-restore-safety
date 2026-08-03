@@ -80,6 +80,30 @@ The second combines that lemma with \cref{lem:compiled-language}.
 % 第二项陈述由该引理与 \cref{lem:compiled-language} 共同得到。
 \end{proof}
 
+\begin{proof}[Proof of \cref{lem:live-extension}]
+% \cref{lem:live-extension} 的证明
+\label{app:live-extension-proof}
+An authenticated extension is identity-on-frontier, preserves cell resolution and all indexed outcomes, and satisfies \(\mathcal A\subseteq\mathcal A^+\), so every old safe completion and coverage witness remains valid for the successor operator.
+% 经认证扩展在前沿上保持恒等，保留单元解析与全部带索引结果，并满足 \(\mathcal A\subseteq\mathcal A^+\)，因此每条旧的安全完成路径与覆盖见证对后继算子仍然有效。
+The current residual family is therefore post-fixed, and greatestness gives its inclusion in a nonempty successor fixed point.
+% 因而，当前残余族是后不动点，而最大性给出它包含于非空的后继不动点中。
+\end{proof}
+
+\subsection{Lean Theorem Map}
+% Lean 定理映射
+\label{app:lean-map}
+
+\path{RegistrationRefinement.checkRegistration_iff}, \path{RegistrationRefinement.compiled_cell_eq_iff_canonical_eq}, \path{RegistrationRefinement.compiled_mediation_exhaustive}, the three receipt theorems, and \path{RegistrationRefinement.compiled_admission_preserved} cover registration reflection and its link to admission.
+% \path{RegistrationRefinement.checkRegistration_iff}、\path{RegistrationRefinement.compiled_cell_eq_iff_canonical_eq}、\path{RegistrationRefinement.compiled_mediation_exhaustive}、三条回执定理与 \path{RegistrationRefinement.compiled_admission_preserved} 覆盖注册反射及其与准入的连接。
+\path{FiniteCore.compiler_eq_semantic} and the greatest-realization theorems cover the fixed point, while \path{HistoryStructure.deriveEdit_iff} covers all six structural derivations.
+% \path{FiniteCore.compiler_eq_semantic} 与最大实现定理覆盖不动点，而 \path{HistoryStructure.deriveEdit_iff} 覆盖全部六种结构推导。
+\path{CompilationBridge.compiler_admit_exists_secure_install} constructs a valid installed cut from admission, and its converse declarations recover admission from any valid install candidate.
+% \path{CompilationBridge.compiler_admit_exists_secure_install} 从准入构造有效安装切点，而其逆向声明从任意有效安装候选恢复准入。
+\path{OperationalSemantics.kernelTrace_preserves_agentSec}, \path{OperationalSemantics.live_extension_preserves_agentSec}, \path{OperationalSemantics.fresh_before_live_extension_stale}, \path{OperationalSemantics.alias_before_live_extension_stale}, and \path{OperationalSemantics.live_extension_before_old_use_denied} cover installed finite-prefix closure and the extension races.
+% \path{OperationalSemantics.kernelTrace_preserves_agentSec}、\path{OperationalSemantics.live_extension_preserves_agentSec}、\path{OperationalSemantics.fresh_before_live_extension_stale}、\path{OperationalSemantics.alias_before_live_extension_stale} 与 \path{OperationalSemantics.live_extension_before_old_use_denied} 覆盖安装后的有限前缀闭包与扩展竞态。
+The audit module imports these declarations and prints only the project-allowed axioms \texttt{propext}, \texttt{Classical.choice}, and \texttt{Quot.sound}.
+% 审计模块导入这些声明，并且只打印项目允许的公理 \texttt{propext}、\texttt{Classical.choice} 与 \texttt{Quot.sound}。
+
 \subsection{Normalized Evidence and Safe Projection}
 % 规范化证据与安全投影
 \label{app:evidence}
@@ -184,39 +208,97 @@ Exactness forces equal answer orbits, contradicting the premise.
 % 精确性迫使答案轨道相等，与前提矛盾。
 \end{proof}
 
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{@{}c >{\raggedright\arraybackslash}p{0.47\columnwidth}
+                  >{\raggedright\arraybackslash}p{0.34\columnwidth}@{}}
+\toprule
+Erased & Full-view pair & Exact answers\\
+\midrule
+\multicolumn{3}{@{}l}{\(u_R(\mathcal C):=\mathsf{RestoreReplace}(b,k,\sigma)\) with \(\mathcal C_k=\mathcal C\).}\\
+\(\mathbf P\) &
+\(q_{\mathbf P}=\mathsf{MergeSelect}(g,L,\sigma)\);
+\(T^0=x\oplus_g^{\rm open}y\), \(T^1=x\parallel_g y\); otherwise equal. &
+\(V^0\): realize; \(V^1\): reject mode.\\
+\(\mathbf I\) &
+\(q_{\mathbf I}=u_R(x\prec y)\);
+\(\Delta=\epsilon,\mathcal A=\Pref\{a\}\);
+\(q^0_{\rm cell}(x)=q^0_{\rm cell}(y)=d_0\);
+\(q^1_{\rm cell}(x)=d_0\ne d_1=q^1_{\rm cell}(y)\);
+\(\ell(d_0)=\ell(d_1)=a\). &
+\(\Fresh,\Alias\): admit;
+\(\Fresh,\Fresh\): reject \(aa\).\\
+\(\mathbf E\) &
+\(q_{\mathbf E}=u_R(x)\), \(q_{\rm cell}(x)=d\), \(\mathcal A=\Pref\{a\}\);
+same marginals \(\{p\},\{d,e\}\), \(\ell(d)=\ell(e)=a\);
+\(p\mapsto d\) in \(V^0\), \(p\mapsto e\) in \(V^1\). &
+\(\Alias(x,d)\): admit;
+\(\Fresh(x,d)\): reject \(aa\).\\
+\(\mathbf C\) &
+\(q_{\mathbf C}=\mathsf{Install}(u_0,Z_0)\), with \(Z_0\) minted at \(V^0\), is literal in both;
+name supplies agree off the epoch sort, while live epoch, ownership, and dependent seals differ. &
+\(V^0\): install; \(V^1\): reject stale cut.\\
+\bottomrule
+\end{tabular}
+\caption{Factor-erasure pairs with isomorphic retained views and opposite exact answers.}
+% 因子擦除对具有同构的保留视图和相反的精确答案。
+\label{tab:projection-pairs}
+\end{table}
+
 \subsection{Bootstrap States and Explicit Separation Pairs}
 % 引导状态与显式分离对
 \label{app:boot-pairs}
 
 We construct the finite lower-bound witnesses from one literal empty genesis \(\mathsf S_\emptyset\).
 % 我们从唯一的字面空起源状态 \(\mathsf S_\emptyset\) 构造有限下界见证。
-A registered slice \(R\) contains only finite contracts, schemas, policy, and authenticated occurrence, cell, invocation, lineage, scope, and label rows.
-% 已注册切片 \(R\) 只包含有限契约、模式、策略，以及经认证的发生项、单元、调用、谱系、作用域和标签行。
+A registered slice \(R\) compiled from a finite typed Agent workflow \(A\) contains only finite contracts, schemas, policy, and authenticated occurrence, cell, invocation, lineage, scope, and label rows.
+% 从有限类型化 Agent 工作流 \(A\) 编译得到的注册切片 \(R\) 只包含有限契约、模式、策略，以及经认证的发生项、单元、调用、谱系、作用域和标签行。
 It contains no receipt, cursor, outbox, epoch, certificate, result future, monitor state, or installed cut.
 % 它不包含回执、游标、发件箱、纪元、证书、结果期值、监控器状态或已安装切点。
-The pre-slice relation has exactly a registration step \(\mathsf S_\emptyset\xrightarrow{\mathsf{register}(R,n)}\mathsf{Reg}(R,n)\), where \(n\) is a fresh private namespace, followed by checked root installation.
-% 切片前关系恰好包含注册步骤 \(\mathsf S_\emptyset\xrightarrow{\mathsf{register}(R,n)}\mathsf{Reg}(R,n)\)，其中 \(n\) 是新鲜的私有命名空间，随后执行经检查的根安装。
+The pre-slice relation has a registration step \(\mathsf S_\emptyset\xrightarrow{\mathsf{register}(A,R,n)}\mathsf{Reg}(R,n)\) exactly when \(\mathsf{CheckReg}(A,R)\) accepts and \(n\) is a fresh private namespace, followed by checked root installation.
+% 当且仅当 \(\mathsf{CheckReg}(A,R)\) 接受且 \(n\) 是新鲜私有命名空间时，切片前关系才包含注册步骤 \(\mathsf S_\emptyset\xrightarrow{\mathsf{register}(A,R,n)}\mathsf{Reg}(R,n)\)，随后执行经检查的根安装。
 Root installation derives the initial cut and constructs empty receipt, cursor, and outbox state, generation zero, one active epoch, the canonical monitor, and authenticated live bindings.
 % 根安装推导初始切点，并构造空回执、空游标与空发件箱状态、零代、一个活跃纪元、规范监控器和经认证的活跃绑定。
+
+\begin{lemma}[Registration reflection]
+% 注册反射
+\label{lem:registration-reflection}
+For finite \(A,R\), \(\mathsf{CheckReg}(A,R)\) accepts iff \(A\sqsubseteq R\) satisfies \cref{def:registration-refinement}.
+% 对于有限的 \(A,R\)，当且仅当 \(A\sqsubseteq R\) 满足 \cref{def:registration-refinement} 时，\(\mathsf{CheckReg}(A,R)\) 才接受。
+On acceptance, source executions and registered executions correspond bijectively, and the correspondence preserves indexed outcomes, causal order, canonical invocation quotienting, receipt evolution, and the admission answer.
+% 接受时，源执行与注册执行双射对应，并且该对应保持带索引结果、因果次序、规范调用商、回执演化与准入答案。
+\end{lemma}
+\begin{proof}
+The finite checker directly decides the incidence, order, exact-retirement, cell-attestation, and boundary-mediation clauses.
+% 有限检查器直接判定关联、次序、精确退役、单元证明与边界中介条款。
+Canonical invocation equality induces exactly the registered cell quotient, and unique lowering maps each durably external source edge to one protected \Use while excluding a raw bypass.
+% 规范调用相等性恰好诱导注册单元商，而唯一降低映射将每条持久外部源边映射到一次受保护 \Use，并排除原始绕过路径。
+Induction over source prefixes and deterministic \(\Resolve\) proves matching \Fresh/\Alias receipt evolution; exact retirement makes compilation and pullback inverse on the surviving indexed outcomes.
+% 对源前缀和确定性 \(\Resolve\) 作归纳可证明相匹配的 \Fresh/\Alias 回执演化；精确退役使编译与回拉在保留的带索引结果上互为逆映射。
+The realization conditions and greatest-fixed-point operator are invariant under this bijection, which proves admission and greatest-monitor preservation.
+% 实现条件与最大不动点算子在该双射下保持不变，从而证明准入与最大监控器保持。
+\end{proof}
 
 \begin{lemma}[Natural bootstrap]
 % 自然引导
 \label{lem:app-boot}
-If \(R\)'s registered root contract and policy have a nonempty greatest realization, the registration and checked root-installation steps reach a finite state \(S_R\) with \(\mathsf{AgentSec}(S_R;c_R,\epsilon)\).
-% 若 \(R\) 的已注册根契约与策略具有非空的最大实现，则注册与经检查的根安装步骤会到达一个满足 \(\mathsf{AgentSec}(S_R;c_R,\epsilon)\) 的有限状态 \(S_R\)。
-The cut origin is the checked root derivation, while every later cut-changing transition records one of the six history derivations.
-% 该切点的来源是经检查的根推导，而此后每个改变切点的转移都记录六种历史推导之一。
+If \(\mathsf{CheckReg}(A,R)\) accepts and \(R\)'s registered root contract and policy have a nonempty greatest realization, registration and checked root installation reach a finite state \(S_R\) with \(\mathsf{AgentSec}(S_R;c_R,\epsilon)\).
+% 若 \(\mathsf{CheckReg}(A,R)\) 接受且 \(R\) 的已注册根契约与策略具有非空的最大实现，则注册与经检查的根安装会到达一个满足 \(\mathsf{AgentSec}(S_R;c_R,\epsilon)\) 的有限状态 \(S_R\)。
+The cut origin is the checked root derivation, while every later cut-changing transition records a six-edit derivation or an authenticated live extension.
+% 该切点的来源是经检查的根推导，而此后每个改变切点的转移都记录一种六类编辑推导或一次经认证的在线扩展。
 \end{lemma}
 
 \begin{proof}
-Registration contributes only \(R\) and \(n\), and deterministic allocation constructs every runtime identifier from them.
-% 注册只提供 \(R\) 和 \(n\)，而确定性分配据此构造每个运行时标识。
+Registration contributes only the checked \(R\) and \(n\), and deterministic allocation constructs every runtime identifier from them.
+% 注册只提供经检查的 \(R\) 和 \(n\)，而确定性分配据此构造每个运行时标识。
 The root judgment and checked lifts establish core/schema coherence, and the recomputed nonempty fixed point establishes promise coherence.
 % 根判定与经检查的提升建立核心/模式一致性，而重新计算的非空不动点建立承诺一致性。
 Empty runtime progress establishes execution coherence, the canonical program at \(q_\epsilon\) establishes monitor coherence, and the atomic phase/binding assignments establish epoch coherence.
 % 空运行时进度建立执行一致性，位于 \(q_\epsilon\) 的规范程序建立监控器一致性，而原子的阶段/绑定赋值建立纪元一致性。
-Only initial installation creates a root origin, and every successful later installation stores its checked edit derivation.
-% 只有初始安装会创建根来源，而此后每次成功安装都会存储其经检查的编辑推导。
+Only initial installation creates a root origin, and every successful later installation stores its checked structural-edit or live-extension derivation.
+% 只有初始安装会创建根来源，而此后每次成功安装都会存储其经检查的结构编辑或在线扩展推导。
 \end{proof}
 
 The following finite pairs use private names except for each displayed query and authority labels.
@@ -345,8 +427,8 @@ Write \(A_1,\ldots,A_5\) for the five clauses of \(\mathsf{AgentSec}\) in their 
 % 依照陈述顺序，用 \(A_1,\ldots,A_5\) 表示 \(\mathsf{AgentSec}\) 的五个条款。
 The following matrix is exhaustive for durable transitions inside an installed registered protected-call slice.
 % 下表穷尽一个已安装的已注册受保护调用切片内部的持久转移。
-A new registration is not an in-slice mutation: the system returns to the pre-slice registration phase and performs checked root admission before the listed rules apply.
-% 新注册并非切片内变更：系统先返回切片前注册阶段并执行经检查的根准入，随后才应用表中规则。
+Initial registration occurs before root admission; later additive schema and policy growth is the authenticated live-extension history edge listed below.
+% 初始注册发生在根准入之前；后续仅追加的模式与策略增长由下表所列的经认证在线扩展历史边完成。
 
 \begin{table*}[t]
 \centering
@@ -372,8 +454,8 @@ Apply \(\mathsf{HStep}\) to \((G,T)\); append \(\Alias(x,d)\) to global \(\chi\)
 \(A_3\): link names an earlier receipt and authority is unchanged.
 \(A_4\): canonical derivative.
 \(A_5\): remove exactly \(x\)'s binding.\\
-Successful history edge, all six modes &
-Install derived \(H^+\), checked monitor and certificate; close \(\eta^-\); activate \(\eta^+\); publish new bindings. &
+Successful history edge, six edits or live extension &
+Install derived \((\kappa^+,H^+,\mathcal A^+)\), checked monitor and certificate; close \(\eta^-\); activate \(\eta^+\); publish new bindings. &
 \((c_\delta^+,\epsilon)\) &
 \(A_1\): schema fidelity and lifts.
 \(A_2\): declarative--algorithmic bridge and checker.
@@ -459,8 +541,8 @@ If \(x\) lies at \(b\), \(\mathsf{HStep}\) appends \(a\) to \(b\)'s cursor, whil
 \]
 Thus the updated leaf and any later Save remain synchronized with \(G\).
 % 因此，更新后的叶节点以及此后的任何 Save 都与 \(G\) 保持同步。
-For a successful history edge, \cref{lem:history-derivation,lem:app-spec-bridge,lem:compiled-language,lem:cut-linearization} establish the third row for each of the six schema rows.
-% 对于成功历史边，\cref{lem:history-derivation,lem:app-spec-bridge,lem:compiled-language,lem:cut-linearization} 为六个模式行分别建立表中的第三行。
+For a successful history edge, \cref{lem:history-derivation,lem:live-extension,lem:app-spec-bridge,lem:compiled-language,lem:cut-linearization} establish the third row for all six schema rows and authenticated live extension.
+% 对于成功历史边，\cref{lem:history-derivation,lem:live-extension,lem:app-spec-bridge,lem:compiled-language,lem:cut-linearization} 为六个模式行与经认证在线扩展建立表中的第三行。
 Each remaining rule changes only the fields shown in the matrix, and its row checks every invariant clause whose fields change.
 % 其余每条规则只改变表中显示的字段，而对应行会检查字段发生变化的每个不变量条款。
 Thus every successor has the displayed witness and normalized update.
@@ -579,8 +661,8 @@ The ideal side takes its single atomic edge, and both successors normalize to th
 % 理想机一侧执行单个原子边，而两个后继都规范化为相同的 \(H^+\)、切点、空前缀、活跃纪元和目标绑定。
 Conversely, every successful compiled installation has passed the schema, fixed-point, seal, and cut checks, so \cref{lem:app-spec-bridge} enables the matching ideal edge.
 % 反之，每次成功的编译后安装都已通过模式、不动点、封印和切点检查，因此 \cref{lem:app-spec-bridge} 会启用匹配的理想边。
-This argument applies uniformly to all six structural rewrite modes.
-% 该论证一致地适用于全部六种结构重写模式。
+This argument applies uniformly to all six structural rewrite modes and authenticated live extension.
+% 该论证一致地适用于全部六种结构重写模式与经认证的在线扩展。
 
 \paragraph{Protected uses and concrete invocations}
 % 受保护使用与具体调用

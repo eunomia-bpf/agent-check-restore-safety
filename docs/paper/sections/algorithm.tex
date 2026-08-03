@@ -93,19 +93,21 @@ A byte implementation may use signatures or collision-resistant digests over \(\
 The compiled state for one policy domain is
 % 一个策略域的编译状态为
 \[
-S=(\kappa,H,\Delta,\mathsf{out},
+S=(\kappa,H,\Delta,\mathsf{out},\mathcal A,
     \mathsf{phase},\mathsf{bind},\mathsf{prog},\mathsf q,\mathsf{cert}),
 \]
 where \(\mathsf{phase}\) is a finite partial map with \(\mathsf{phase}(\eta)=\bot\) for an unallocated epoch and values \(\mathsf{inactive}\), \(\mathsf{active}\), or \(\mathsf{closed}\) otherwise.
 % 其中 \(\mathsf{phase}\) 是有限偏映射；未分配纪元满足 \(\mathsf{phase}(\eta)=\bot\)，否则其值为 \(\mathsf{inactive}\)、\(\mathsf{active}\) 或 \(\mathsf{closed}\)。
 Reserve \(u=\mathsf{Root}(R,n)\) for bootstrap only.
 % 保留 \(u=\mathsf{Root}(R,n)\) 仅用于引导。
+The root rule is enabled only when \(\mathsf{CheckReg}(A,R)\) accepts a finite typed Agent workflow \(A\) and registered slice \(R\).
+% 只有当 \(\mathsf{CheckReg}(A,R)\) 接受有限类型化 Agent 工作流 \(A\) 与注册切片 \(R\) 时，根规则才启用。
 The deterministic judgment \(\mathsf{Reg}(R,n)\vdash\mathsf{Root}\Downarrow(H_R^+,\mathcal C_R,\bot,\eta_R)\) constructs \(\mathsf{src}_R^-=(\kappa,H_R^-,\epsilon,\epsilon,\mathcal A)\) from registered slice \(R\) and private namespace \(n\), with empty progress, checkpoints, bindings, and epoch, sets \(\mathsf{Req}_{\mathsf{Root}}\) to \(R\)'s root outcomes, and defines \(\mathsf{Lift}_{\mathsf{Root}}(t,o)\Longleftrightarrow t=o\).
 % 确定性判定 \(\mathsf{Reg}(R,n)\vdash\mathsf{Root}\Downarrow(H_R^+,\mathcal C_R,\bot,\eta_R)\) 从已注册切片 \(R\) 和私有命名空间 \(n\) 构造 \(\mathsf{src}_R^-=(\kappa,H_R^-,\epsilon,\epsilon,\mathcal A)\)，其中进度、检查点、绑定和纪元均为空；它将 \(\mathsf{Req}_{\mathsf{Root}}\) 设为 \(R\) 的根结果，并定义 \(\mathsf{Lift}_{\mathsf{Root}}(t,o)\Longleftrightarrow t=o\)。
 The checked record \(\mathsf{cert}(\eta)=c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\) contains source cut \(\mathsf{src}_c=(\kappa,H_c,\Delta_c,\mathsf{out}_c,\mathcal A)\), pre-progress target \(H_c^+\), and ideal-cut projection \(\mathsf{icut}(c)=(H_c,u,W,\widehat B)\).
 % 经检查的记录 \(\mathsf{cert}(\eta)=c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\) 包含源切点 \(\mathsf{src}_c=(\kappa,H_c,\Delta_c,\mathsf{out}_c,\mathcal A)\)、受保护进展前目标 \(H_c^+\)，以及理想切点投影 \(\mathsf{icut}(c)=(H_c,u,W,\widehat B)\)。
-Its tagged origin is the root judgment exactly when \(u=\mathsf{Root}(R,n)\) and \(\mathsf{src}_c=\mathsf{src}_R^-\); otherwise \(u\) is one of the six edits and the origin is its checked history derivation.
-% 当且仅当 \(u=\mathsf{Root}(R,n)\) 且 \(\mathsf{src}_c=\mathsf{src}_R^-\) 时，其带标签来源为根判定；否则，\(u\) 是六种编辑之一，来源为其经检查历史推导。
+Its tagged origin is the checked root judgment exactly when \(u=\mathsf{Root}(R,n)\) and \(\mathsf{src}_c=\mathsf{src}_R^-\); otherwise it is the checked derivation of either one of the six structural edits or an authenticated live extension.
+% 当且仅当 \(u=\mathsf{Root}(R,n)\) 且 \(\mathsf{src}_c=\mathsf{src}_R^-\) 时，其带标签来源为经检查的根判定；否则，它是六种结构编辑之一或一次经认证在线扩展的经检查推导。
 Its indexed family is proof-only ghost state, while \(W^\dagger\), \(B^\dagger\), and the seal are checked enforcement data; \(\mathsf{Gen}(P,q)\) and \(\mathsf{Mark}(P,q)\) denote \(P\)'s generated and marked languages from \(q\).
 % 其带索引族是仅用于证明的幽灵状态，而 \(W^\dagger\)、\(B^\dagger\) 和封印是经检查的强制执行数据；\(\mathsf{Gen}(P,q)\) 和 \(\mathsf{Mark}(P,q)\) 表示 \(P\) 从 \(q\) 出发的生成语言和标记语言。
 
@@ -117,8 +119,8 @@ For \(c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\) and resolved \(r\), \(\mathsf{
 \begin{enumerate}[leftmargin=*,itemsep=1pt]
 \item \emph{Core and schema coherence.}
 % 核心与模式一致性。
-The current security core is well formed, \(c=\mathsf{cert}(\eta)\), and the tagged origin derives \((H_c^+,\mathcal C,\eta^-,\eta)\) by its corresponding root or six-edit judgment; each \(a\in\mathsf{Req}_u\) has a checked full-target \(\mathsf{Lift}_u\) witness.
-% 当前安全核心良构，\(c=\mathsf{cert}(\eta)\)，且带标签来源通过相应的根判定或六种编辑判定推导出 \((H_c^+,\mathcal C,\eta^-,\eta)\)；每个 \(a\in\mathsf{Req}_u\) 都有经检查的完整目标 \(\mathsf{Lift}_u\) 见证。
+The current security core is well formed, \(c=\mathsf{cert}(\eta)\), and the tagged origin derives \((H_c^+,\mathcal C,\eta^-,\eta)\) by its corresponding checked root, six-edit, or live-extension judgment; each \(a\in\mathsf{Req}_u\) has a checked full-target \(\mathsf{Lift}_u\) witness.
+% 当前安全核心良构，\(c=\mathsf{cert}(\eta)\)，且带标签来源通过相应的经检查根判定、六种编辑判定或在线扩展判定推导出 \((H_c^+,\mathcal C,\eta^-,\eta)\)；每个 \(a\in\mathsf{Req}_u\) 都有经检查的完整目标 \(\mathsf{Lift}_u\) 见证。
 \item \emph{Promise coherence.}
 % 承诺一致性。
 \(\widehat B=\widehat B^\dagger_{H_c,u}\ne\varnothing\), \(W=\Pref(\pi_2\widehat B)\), and the stored certificate passed \(\mathsf{Verify}_Z(W,\pi_2\widehat B,\widehat B)\) at its source cut.
@@ -147,10 +149,10 @@ Each target epoch deterministically minted at the current cut for a registered r
 % 在当前切点为注册请求确定性生成的每个目标纪元都未分配，或处于非活跃且未绑定状态。
 \end{enumerate}
 \end{definition}
-The full system starts from one empty genesis, registers only finite contracts, schemas, policy, and authenticated identity rows, and then performs checked root installation to construct empty receipt/cursor/outbox state, the first epoch, its certificate, and its monitor.
-% 完整系统从唯一的空起源状态开始，只注册有限契约、模式、策略和经认证的标识行，随后执行经检查的根安装，以构造空的回执/游标/发件箱状态、第一个纪元及其证书和监控器。
-Registration cannot supply any of these runtime fields, while every later cut is produced by one of the six history judgments.
-% 注册过程不能提供这些运行时字段，而此后的每个切点都由六种历史判定之一产生。
+The full system starts from one empty genesis, accepts a checked finite registration containing only contracts, schemas, policy, and authenticated identity rows, and then performs root installation to construct empty receipt/cursor/outbox state, the first epoch, its certificate, and its monitor.
+% 完整系统从唯一的空起源状态开始，接受一个只包含契约、模式、策略和经认证标识行的经检查有限注册，随后执行根安装，以构造空的回执/游标/发件箱状态、第一个纪元及其证书和监控器。
+Registration cannot supply runtime fields, while every later cut is produced by a six-edit derivation or an authenticated additive live extension.
+% 注册过程不能提供运行时字段，而此后的每个切点都由六种编辑推导之一或一次经认证的仅追加在线扩展产生。
 
 \paragraph{Atomic protected use}
 % 原子受保护使用
@@ -202,14 +204,10 @@ Here \(\Dispatch\) is the durable local outbox release, not evidence of exactly-
 
 \paragraph{Atomic installation}
 % 原子安装
-At commit, the kernel ignores caller-supplied target and epoch data and re-runs the current-history judgment below.
-% 提交时，内核忽略调用方提供的目标和纪元数据，并重新执行下列以当前历史为依据的判定。
-\[
-\Sigma_\zeta;H\vdash u\Downarrow
- (H',\mathcal C,\eta^-,\eta^+)
-\]
-\(\mathsf{ReCut}(S,u,Z)\) is undefined without this derivation and otherwise recomputes the right-hand side of \cref{eq:cut-seal} from the current state.
-% 若无此推导，则 \(\mathsf{ReCut}(S,u,Z)\) 未定义；否则，它根据当前状态重新计算 \cref{eq:cut-seal} 的右侧。
+At commit, the kernel ignores caller-supplied target and epoch data and re-runs \(\mathsf{Derive}(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\) from the current state.
+% 提交时，内核忽略调用方提供的目标和纪元数据，并根据当前状态重新执行 \(\mathsf{Derive}(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
+\(\mathsf{ReCut}(S,u,Z)\) is undefined without this root, six-edit, or live-extension derivation and otherwise recomputes the right-hand side of \cref{eq:cut-seal}.
+% 若无这一根推导、六种编辑推导或在线扩展推导，则 \(\mathsf{ReCut}(S,u,Z)\) 未定义；否则，它重新计算 \cref{eq:cut-seal} 的右侧。
 \(\mathsf{Verify}_Z(W,B,\widehat B)\) holds exactly when the trusted checker (1) recomputes \(\widehat B_0\) and every fixed-point iteration, (2) verifies all ranked removal causes and surviving coverage witnesses, (3) checks the stabilized \(\widehat B\ne\varnothing\), (4) reconstructs \(B=\pi_2\widehat B\) and \(W=\Pref(B)\), (5) establishes \(\mathsf{prog}_Z\cong\mathsf{Can}(W,B)\), and (6) verifies the program seal.
 % 当且仅当可信检查器执行以下操作时，\(\mathsf{Verify}_Z(W,B,\widehat B)\) 成立：(1) 重新计算 \(\widehat B_0\) 及每次不动点迭代；(2) 验证全部带秩的移除原因和幸存覆盖见证；(3) 检查稳定后的 \(\widehat B\ne\varnothing\)；(4) 重建 \(B=\pi_2\widehat B\) 与 \(W=\Pref(B)\)；(5) 建立 \(\mathsf{prog}_Z\cong\mathsf{Can}(W,B)\)；以及 (6) 验证程序封印。
 Installation requires
@@ -225,18 +223,19 @@ Installation requires
  \mathsf{phase}(\eta^+)\in\{\bot,\mathsf{inactive}\}.
 \end{gathered}
 \end{equation}
-If these premises hold, one domain transaction verifies that every target binding in \(H'\) names a new gate owned by \(\eta^+\) and every replacement triple in \(\mathcal H_u^+\) passes the handle check against \(\rho'\) and its registered cell.
-% 若这些前提成立，一个域事务便验证 \(H'\) 中的每个目标绑定均指向由 \(\eta^+\) 拥有的新门，并验证 \(\mathcal H_u^+\) 中的每个替换三元组均依据 \(\rho'\) 及其注册单元通过句柄检查。
-Let \(c^+=(\mathsf{src}_c,H',u,W^\dagger,\widehat B^\dagger,Z)\).
-% 令 \(c^+=(\mathsf{src}_c,H',u,W^\dagger,\widehat B^\dagger,Z)\)。
+If these premises hold, one domain transaction verifies that every target binding in \(H_u\) names a new gate owned by \(\eta^+\) and every replacement triple in \(\mathcal H_u^+\) passes the handle check against \(\rho_u\) and its registered cell.
+% 若这些前提成立，一个域事务便验证 \(H_u\) 中的每个目标绑定均指向由 \(\eta^+\) 拥有的新门，并验证 \(\mathcal H_u^+\) 中的每个替换三元组均依据 \(\rho_u\) 及其注册单元通过句柄检查。
+Let \(c^+=(\mathsf{src}_c,H_u,u,W^\dagger,\widehat B^\dagger,Z)\).
+% 令 \(c^+=(\mathsf{src}_c,H_u,u,W^\dagger,\widehat B^\dagger,Z)\)。
 It then applies
 % 随后应用
 \[
 \begin{aligned}
- H&:=H',&
+ \kappa&:=\kappa_u,& \mathcal A&:=\mathcal A_u,\\
+ H&:=H_u,&
  \mathsf{phase}(\eta^-)&:=\mathsf{closed},\\
  \mathsf{phase}(\eta^+)&:=\mathsf{active},&
- \mathsf{bind}|_{X_{\sem{T'}}}&:=\beta',\\
+ \mathsf{bind}|_{X_{\sem{H_u.T}}}&:=H_u.\beta,\\
  \mathsf{prog}(\eta^+)&:=\mathsf{prog}_Z,&
  \mathsf q(\eta^+)&:=q^0,\\
  \mathsf{cert}(\eta^+)&:=c^+.
@@ -281,8 +280,8 @@ Because \Fresh changes \((G,T,\Delta,\chi,\nu,\mathsf{out})\) while \Alias chang
 % 由于 \Fresh 修改 \((G,T,\Delta,\chi,\nu,\mathsf{out})\)，而 \Alias 修改 \((G,T,\chi,\nu)\)，任一种先行使用都会使认证 \(H\)、\(\Delta\) 和 \(\mathsf{out}\) 的 \(\mathsf{cut}_Z\) 失效。
 Installation first closes the old epoch, so \cref{eq:use-rule} rejects every old binding.
 % 安装先发生时会关闭旧纪元，因此 \cref{eq:use-rule} 拒绝每个旧绑定。
-Disjoint cells, receipt ledgers, and policies give the product case; persisting \(H'\), target bindings, \(q^0\), and the checked certificate restores the invariant.
-% 互不相交的单元、回执账本和策略构成乘积情形；持久化 \(H'\)、目标绑定、\(q^0\) 和经检查的证书会恢复该不变量。
+Disjoint cells, receipt ledgers, and policies give the product case; persisting \(H_u\), target bindings, \(q^0\), and the checked certificate restores the invariant.
+% 互不相交的单元、回执账本和策略构成乘积情形；持久化 \(H_u\)、目标绑定、\(q^0\) 和经检查的证书会恢复该不变量。
 \end{proof}
 
 \subsection{Decidability and trust}

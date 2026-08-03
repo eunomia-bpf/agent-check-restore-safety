@@ -8,14 +8,14 @@ For the authenticated receipt ledger \(\Delta\), write \(\mathsf{lab}(\Delta)\in
 % 对于经认证的回执账本 \(\Delta\)，用 \(\mathsf{lab}(\Delta)\in\mathcal A\) 表示其权限词，用 \(D_\Delta\) 表示其中已有回执的单元。
 Fix \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\) and write \(\mathsf{src}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\).
 % 固定 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并记 \(\mathsf{src}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\)。
-When defined, the tagged root-or-edit derivation is unique; below write \(\mathsf{Derive}(\Theta)=(H',\mathcal C_{H,u},\eta^-,\eta^+)\).
-% 带标签的根或编辑推导在有定义时是唯一的；下文将其记为 \(\mathsf{Derive}(\Theta)=(H',\mathcal C_{H,u},\eta^-,\eta^+)\)。
-For \(u=\mathsf{Root}(R,n)\), require \(\mathsf{src}(\Theta)=\mathsf{src}_R^-\) and \(\mathsf{Derive}(\Theta)=(H_R^+,\mathcal C_R,\bot,\eta_R)\), using the bootstrap judgment in \cref{sec:kernel}; otherwise use the unique six-edit judgment \(\Sigma_\zeta;H\vdash u\Downarrow(H',\mathcal C_{H,u},\eta^-,\eta^+)\).
-% 当 \(u=\mathsf{Root}(R,n)\) 时，要求 \(\mathsf{src}(\Theta)=\mathsf{src}_R^-\) 且 \(\mathsf{Derive}(\Theta)=(H_R^+,\mathcal C_R,\bot,\eta_R)\)，其中使用 \cref{sec:kernel} 的引导判定；否则使用唯一的六种编辑判定 \(\Sigma_\zeta;H\vdash u\Downarrow(H',\mathcal C_{H,u},\eta^-,\eta^+)\)。
-Let \(\rho'\) be the authenticated target registry in \(H'\) and \(O_{H,u}=O_{\mathcal C_{H,u}}\).
-% 令 \(\rho'\) 为 \(H'\) 中经认证的目标注册表，并令 \(O_{H,u}=O_{\mathcal C_{H,u}}\)。
-All languages below depend on \(\Theta\), the schema registry, and \(\rho'\), but are insensitive to \(\mathsf{out}\); the executable compiler still binds \(\mathsf{out}\) into the exact installation cut.
-% 下文所有语言均依赖于 \(\Theta\)、模式注册表和 \(\rho'\)，但对 \(\mathsf{out}\) 不敏感；可执行编译器仍会把 \(\mathsf{out}\) 绑定到精确安装切点中。
+When defined, the tagged root, structural-edit, or live-extension derivation is unique; write \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
+% 带标签的根、结构编辑或在线扩展推导在有定义时是唯一的；记为 \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
+Root derivation additionally requires that \(\mathsf{CheckReg}(A,R)\) accept; a structural edit has \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) and uses the unique six-edit judgment; and \(\mathsf{Extend}(\xi)\) uses the authenticated judgment in \cref{sec:model}.
+% 根推导还要求 \(\mathsf{CheckReg}(A,R)\) 接受；结构编辑满足 \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) 并使用唯一的六种编辑判定；而 \(\mathsf{Extend}(\xi)\) 使用 \cref{sec:model} 中的认证判定。
+Let \(\rho_u\) be the authenticated target registry in \(H_u\), let \(O_{H,u}=O_{\mathcal C_u}\), and use \(H'=H_u\) and \(\rho'=\rho_u\) where earlier notation is convenient.
+% 令 \(\rho_u\) 为 \(H_u\) 中经认证的目标注册表，令 \(O_{H,u}=O_{\mathcal C_u}\)，并在沿用先前记法更方便时使用 \(H'=H_u\) 和 \(\rho'=\rho_u\)。
+All languages below depend on \(\Theta\), the schema registry, \(\rho_u\), and target policy \(\mathcal A_u\), but are insensitive to \(\mathsf{out}\); the executable compiler still binds \(\mathsf{out}\) into the exact installation cut.
+% 下文所有语言均依赖于 \(\Theta\)、模式注册表、\(\rho_u\) 与目标策略 \(\mathcal A_u\)，但对 \(\mathsf{out}\) 不敏感；可执行编译器仍会把 \(\mathsf{out}\) 绑定到精确安装切点中。
 We write only \(H,u\) where the remaining parameters are fixed.
 % 当其余参数固定时，我们仅写作 \(H,u\)。
 
@@ -24,10 +24,10 @@ We write only \(H,u\) where the remaining parameters are fixed.
 
 Resolution never erases an occurrence retained by the derived contract.
 % 解析绝不会擦除派生契约所保留的发生项。
-Starting with \(R_0=D_\Delta\), the deterministic transducer \(\Resolve^{\rho'}_\Delta\) maps a raw word \(w=x_1\cdots x_n\) to a resolved word \(z_1\cdots z_n\).
-% 从 \(R_0=D_\Delta\) 开始，确定性转换器 \(\Resolve^{\rho'}_\Delta\) 将原始词 \(w=x_1\cdots x_n\) 映射为已解析词 \(z_1\cdots z_n\)。
-For \(d_i=q^{\rho'}_{\rm cell}(x_i)\),
-% 对于 \(d_i=q^{\rho'}_{\rm cell}(x_i)\)，定义 \(z_i\) 如下：
+Starting with \(R_0=D_\Delta\), the deterministic transducer \(\Resolve^{\rho_u}_\Delta\) maps a raw word \(w=x_1\cdots x_n\) to a resolved word \(z_1\cdots z_n\).
+% 从 \(R_0=D_\Delta\) 开始，确定性转换器 \(\Resolve^{\rho_u}_\Delta\) 将原始词 \(w=x_1\cdots x_n\) 映射为已解析词 \(z_1\cdots z_n\)。
+For \(d_i=q^{\rho_u}_{\rm cell}(x_i)\),
+% 对于 \(d_i=q^{\rho_u}_{\rm cell}(x_i)\)，定义 \(z_i\) 如下：
 \begin{equation}
 \label{eq:resolve}
  z_i=
@@ -41,7 +41,7 @@ For \(d_i=q^{\rho'}_{\rm cell}(x_i)\),
 The authority projection erases \Alias symbols and maps each \Fresh symbol to its cell's authority label.
 % 权限投影会擦除 \Alias 符号，并将每个 \Fresh 符号映射到其单元的权限标签。
 \[
- \mathsf{auth}(\Fresh(x,d))=\ell_{\rho'}(d),\qquad
+ \mathsf{auth}(\Fresh(x,d))=\ell_{\rho_u}(d),\qquad
  \mathsf{auth}(\Alias(x,d))=\epsilon .
 \]
 For resolved \(z\), \(\mathsf{raw}(z)\) drops the \Fresh/\Alias mode and cell but preserves ordered occurrence identifiers.
@@ -54,12 +54,12 @@ Restored occurrences sharing a cell remain distinct and may resolve differently.
 \begin{lemma}[Resolution]
 % 解析
 \label{lem:resolution}
-\(\Resolve^{\rho'}_\Delta\) is deterministic, length preserving, and prefix compatible.
-% \(\Resolve^{\rho'}_\Delta\) 是确定性的、保持长度的，并且与前缀兼容。
+\(\Resolve^{\rho_u}_\Delta\) is deterministic, length preserving, and prefix compatible.
+% \(\Resolve^{\rho_u}_\Delta\) 是确定性的、保持长度的，并且与前缀兼容。
 Its \Fresh projection contains each cell at most once outside \(D_\Delta\), while its occurrence projection is exactly the input word.
 % 在 \(D_\Delta\) 之外，其 \Fresh 投影至多包含每个单元一次，而其发生项投影恰好就是输入词。
-Moreover, if \(\Resolve^{\rho'}_\Delta(rv)=zv'\), then \(z=\Resolve^{\rho'}_\Delta(r)\) and \(v'=\Resolve^{\rho'}_{\Delta_z}(v)\), where \(\Delta_z\) extends \(\Delta\) by the \Fresh events of \(z\).
-% 此外，若 \(\Resolve^{\rho'}_\Delta(rv)=zv'\)，则 \(z=\Resolve^{\rho'}_\Delta(r)\) 且 \(v'=\Resolve^{\rho'}_{\Delta_z}(v)\)，其中 \(\Delta_z\) 通过加入 \(z\) 的 \Fresh 事件来扩展 \(\Delta\)。
+Moreover, if \(\Resolve^{\rho_u}_\Delta(rv)=zv'\), then \(z=\Resolve^{\rho_u}_\Delta(r)\) and \(v'=\Resolve^{\rho_u}_{\Delta_z}(v)\), where \(\Delta_z\) extends \(\Delta\) by the \Fresh events of \(z\).
+% 此外，若 \(\Resolve^{\rho_u}_\Delta(rv)=zv'\)，则 \(z=\Resolve^{\rho_u}_\Delta(r)\) 且 \(v'=\Resolve^{\rho_u}_{\Delta_z}(v)\)，其中 \(\Delta_z\) 通过加入 \(z\) 的 \Fresh 事件来扩展 \(\Delta\)。
 \end{lemma}
 \begin{proof}
 Induction on input length shows that the transducer emits one prefix-determined output symbol per input symbol and updates \(R_i\) only for \Fresh.
@@ -84,9 +84,9 @@ For each structurally derived outcome \(o\in O_{H,u}\), define its set of resolv
 \begin{equation}
 \label{eq:safe-completions}
 \begin{aligned}
- R_o(H,u)&=\{\Resolve^{\rho'}_\Delta(w)\mid w\in\Lin(p_o)\},\\
+ R_o(H,u)&=\{\Resolve^{\rho_u}_\Delta(w)\mid w\in\Lin(p_o)\},\\
  M_o(H,u)&=\{z\in R_o(H,u)\mid
-   \mathsf{lab}(\Delta)\mathsf{auth}(z)\in\mathcal A\}.
+   \mathsf{lab}(\Delta)\mathsf{auth}(z)\in\mathcal A_u\}.
 \end{aligned}
 \end{equation}
 Thus \(M_o\) contains the policy-safe resolved words for \(o\).
@@ -169,8 +169,8 @@ A generated language and indexed marked family \((L,\widehat B)\) realize \((H,u
 % \(\widehat B\) 非空；
  \item \emph{history fidelity:} \(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\) and \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\);
 % 历史忠实性：\(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\)，且 \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\)。
- \item \emph{policy safety:} \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A\) for every \(z\in L\);
-% 策略安全性：对每个 \(z\in L\)，均有 \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A\)。
+ \item \emph{policy safety:} \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A_u\) for every \(z\in L\);
+% 策略安全性：对每个 \(z\in L\)，均有 \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A_u\)。
  \item \emph{completion nonblocking:} \(L=\Pref(\pi_2\widehat B)\); and
 % 完成非阻塞性：\(L=\Pref(\pi_2\widehat B)\)；并且
  \item \emph{persistent outcome coverage:} for every \(z\in L\) and \(o\in\mathsf{Compat}(z)\), some \((o,b)\in\widehat B\) extends \(z\).
@@ -189,8 +189,8 @@ On admission, \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) is a realization, a
 \begin{proof}
 Fidelity, completion nonblocking, and safety place any realization's indexed marked family inside \(\widehat B_0\); persistent coverage makes it post-fixed, so monotonicity and finite Knaster--Tarski place it inside \(\widehat B^\dagger\), and projected prefixes give \(L\subseteq W^\dagger\).
 % 忠实性、完成非阻塞性和安全性使任意实现的带索引标记族包含于 \(\widehat B_0\)；持续覆盖使其成为后不动点，因此由单调性和有限 Knaster--Tarski 可知其包含于 \(\widehat B^\dagger\)，而投影前缀给出 \(L\subseteq W^\dagger\)。
-Conversely, \(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) supplies persistent coverage, \(\widehat B^\dagger\subseteq\widehat B_0\) supplies fidelity and safe marked words, prefix closure of \(\mathcal A\) supplies prefix safety, and \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) supplies nonblocking.
-% 反之，\(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) 提供持续覆盖，\(\widehat B^\dagger\subseteq\widehat B_0\) 提供忠实性和安全标记词，\(\mathcal A\) 的前缀闭合性提供前缀安全性，而 \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) 提供非阻塞性。
+Conversely, \(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) supplies persistent coverage, \(\widehat B^\dagger\subseteq\widehat B_0\) supplies fidelity and safe marked words, prefix closure of \(\mathcal A_u\) supplies prefix safety, and \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) supplies nonblocking.
+% 反之，\(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) 提供持续覆盖，\(\widehat B^\dagger\subseteq\widehat B_0\) 提供忠实性和安全标记词，\(\mathcal A_u\) 的前缀闭合性提供前缀安全性，而 \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) 提供非阻塞性。
 Hence the fixed point is a realization exactly when nonempty.
 % 因此，该不动点恰在非空时构成实现。
 \end{proof}
@@ -280,8 +280,8 @@ Thus an empty final family excludes every realization.
 The installation checker recomputes \(\widehat B_0\), the chain, causes, and survivor witnesses.
 % 安装检查器会重新计算 \(\widehat B_0\)、淘汰链、原因和幸存者见证。
 
-To preserve admission after each permitted prefix, fix \(H,u,\mathcal A\) after deriving \(\mathcal C\), and write \(W^\dagger(\mathcal C,\Delta)\) and \(\widehat B^\dagger(\mathcal C,\Delta)\) with those parameters suppressed.
-% 为在每个允许的前缀之后保持准入，先在派生 \(\mathcal C\) 后固定 \(H,u,\mathcal A\)，再将省略这些参数的记法写作 \(W^\dagger(\mathcal C,\Delta)\) 和 \(\widehat B^\dagger(\mathcal C,\Delta)\)。
+To preserve admission after each permitted prefix, fix \(H,u,\mathcal A_u\) after deriving \(\mathcal C\), and write \(W^\dagger(\mathcal C,\Delta)\) and \(\widehat B^\dagger(\mathcal C,\Delta)\) with those parameters suppressed.
+% 为在每个允许的前缀之后保持准入，先在派生 \(\mathcal C\) 后固定 \(H,u,\mathcal A_u\)，再将省略这些参数的记法写作 \(W^\dagger(\mathcal C,\Delta)\) 和 \(\widehat B^\dagger(\mathcal C,\Delta)\)。
 \begin{lemma}[Residual coherence]
 % 残余一致性
 \label{lem:residual-coherence}
@@ -334,6 +334,17 @@ Finally, \(\Pref(B)/z=\Pref(B/z)\) yields the generated-language equality.
 Thus every admitted prefix retains a safe completion for every residual outcome index still contract-compatible with that prefix.
 % 因此，每个已准入前缀都会为仍与该前缀契约兼容的每个残余结果索引保留一条安全完成路径。
 
+\begin{lemma}[Monotone live extension]
+% 单调在线扩展
+\label{lem:live-extension}
+For an authenticated \(\mathsf{Extend}(\xi)\), the current residual indexed realization is a post-fixed family for the extension instance and is therefore contained in \(\widehat B^\dagger_{H,\mathsf{Extend}(\xi)}\ne\varnothing\).
+% 对于经认证的 \(\mathsf{Extend}(\xi)\)，当前残余的带索引实现是扩展实例的一个后不动点族，因此包含于 \(\widehat B^\dagger_{H,\mathsf{Extend}(\xi)}\ne\varnothing\)。
+Consequently, a valid live extension cannot retire or strand a currently promised outcome.
+% 因此，有效的在线扩展不能退役或搁浅任何当前已承诺结果。
+\end{lemma}
+The proof is in \cref{app:live-extension-proof}.
+% 证明见 \cref{app:live-extension-proof}。
+
 \subsection{The ideal atomic history machine}
 % 理想原子历史机
 \label{sec:ideal}
@@ -345,10 +356,10 @@ Its durable state is \((\kappa,H,\Delta,\mathsf{out})\), current semantic cut \(
 
 \paragraph{History edge}
 % 历史边
-For the current pre-edge history \(H_0=H\), \(\mathsf{Edge}(u)\) is enabled exactly when the unique judgment \(\Sigma_\zeta;H_0\vdash u\Downarrow(H',\mathcal C,\eta^-,\eta^+)\) exists and \(\mathsf{Spec}(H_0,u)=(L^*,\widehat B^*)\) is defined.
-% 对于当前编辑前历史 \(H_0=H\)，当且仅当唯一判定 \(\Sigma_\zeta;H_0\vdash u\Downarrow(H',\mathcal C,\eta^-,\eta^+)\) 存在且 \(\mathsf{Spec}(H_0,u)=(L^*,\widehat B^*)\) 有定义时，\(\mathsf{Edge}(u)\) 才启用。
-One atomic transition persists version-advanced \(H'\), closes \(\eta^-\), activates \(\eta^+\), binds the schema-derived target gates, stores \(c:=(H_0,u,L^*,\widehat B^*)\), resets \(r:=\epsilon\), and returns \(\mathcal H_u^+\).
-% 一个原子转移持久化已推进版本的 \(H'\)、关闭 \(\eta^-\)、激活 \(\eta^+\)、绑定由模式派生的目标门、存储 \(c:=(H_0,u,L^*,\widehat B^*)\)、将 \(r\) 重置为 \(\epsilon\)，并返回 \(\mathcal H_u^+\)。
+For the current pre-edge history \(H_0=H\) and \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\), \(\mathsf{Edge}(u)\) is enabled exactly when \(\mathsf{Derive}(\Theta)\) exists and \(\mathsf{Spec}(H_0,u)=(L^*,\widehat B^*)\) is defined.
+% 对于当前编辑前历史 \(H_0=H\) 和 \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\)，当且仅当 \(\mathsf{Derive}(\Theta)\) 存在且 \(\mathsf{Spec}(H_0,u)=(L^*,\widehat B^*)\) 有定义时，\(\mathsf{Edge}(u)\) 才启用。
+One atomic transition persists \((\kappa_u,H_u,\mathcal A_u)\), closes \(\eta^-\), activates \(\eta^+\), binds the derived target gates, stores \(c:=(H_0,u,L^*,\widehat B^*)\), resets \(r:=\epsilon\), and returns \(\mathcal H_u^+\).
+% 一个原子转移持久化 \((\kappa_u,H_u,\mathcal A_u)\)、关闭 \(\eta^-\)、激活 \(\eta^+\)、绑定派生的目标门、存储 \(c:=(H_0,u,L^*,\widehat B^*)\)、将 \(r\) 重置为 \(\epsilon\)，并返回 \(\mathcal H_u^+\)。
 This rule is defined through \(\mathsf{Spec}\), rather than operationally invoking \(\mathsf{Admit}\), the fixed-point computation, \(\mathsf{Compile}\), or installation.
 % 该规则通过 \(\mathsf{Spec}\) 定义，而不会在操作上调用 \(\mathsf{Admit}\)、不动点计算、\(\mathsf{Compile}\) 或安装过程。
 

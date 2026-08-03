@@ -271,16 +271,26 @@ A recovered labeled transition system (LTS) state shows each transaction entirel
 % 恢复后的标号转移系统（LTS）状态根据事务的线性化点是否已经发生，将每项事务完整地呈现为未提交或已提交；任何事务都不会撕裂，而易失的编译器缓存不在模型中。
 Before a checked cut, the protected-call issuer may instantiate finitely many pre-authorized schema templates: for invocation \(m\), it computes \(m^\circ=\mathsf{canon}_\kappa(m)\), reuses only a cell certified for \(m^\circ\) or allocates a fresh cell, and signs \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{lineage})\) into the authenticated registry.
 % 在一个经检查的切点之前，受保护调用发行方可以实例化有限个预授权模式模板：对于调用 \(m\)，它计算 \(m^\circ=\mathsf{canon}_\kappa(m)\)，只复用已认证用于 \(m^\circ\) 的单元或分配新单元，并把 \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{lineage})\) 签入经认证的注册表。
-The resulting finite registry defines the admission's registered protected-call slice and, with its schema version, remains immutable; unmatched calls fail closed until a trusted schema update and new admission, so online growth is a sequence of finite checked cuts.
-% 由此得到的有限注册表定义该次准入的已注册受保护调用切片，并与其模式版本一起保持不可变；无法匹配的调用会以关闭方式失败，直至完成可信模式更新和新的准入，因此在线增长是一系列有限的经检查切点。
-A registered slice is \emph{adequate} for an Agent task when its schema enumerates every outcome that the platform promises to preserve, its registry mediates every protected external effect reachable in those outcomes, its occurrence--cell and canonical-invocation rows match the intended irreversible effects, and each receipt records the first durable local commit of its cell.
-% 当一个注册切片的模式枚举平台承诺保留的每个结果、注册表中介这些结果中可达的每个受保护外部效果、发生项--单元与规范调用记录符合预期的不可逆效果，并且每条回执记录其单元的首次持久本地提交时，该切片对于 Agent 任务是\emph{充分的}。
-This application-to-model refinement obligation belongs to the policy and protected-call issuers and may be discharged by a typed workflow compiler, a schema audit, or a separate platform refinement proof.
-% 这一从应用到模型的精化义务由策略发行方与受保护调用发行方承担，并可通过类型化工作流编译器、模式审计或独立的平台精化证明来履行。
-Under this obligation, \cref{thm:exact-history} is complete for mediated executions of the registered slice; structural or digest disagreement fails closed, and later schema growth proceeds through a new checked cut.
-% 在这一义务成立时，\cref{thm:exact-history} 对注册切片中受中介的执行是完备的；结构或摘要不一致会以关闭方式失败，而后续模式扩展通过新的经检查切点进行。
-The theory neither infers natural-language contracts nor equates a durable local commit with remote physical exactly-once execution.
-% 该理论既不推断自然语言契约，也不把持久本地提交等同于远端物理意义上的恰好一次执行。
+The resulting finite registry defines one registered protected-call slice \(R\), which remains immutable during a checked cut; unmatched calls fail closed.
+% 由此得到的有限注册表定义一个注册受保护调用切片 \(R\)，该切片在一个经检查的切点期间保持不可变；不匹配的调用以关闭方式失败。
+
+\begin{definition}[Checked registration refinement]
+% 经检查的注册精化
+\label{def:registration-refinement}
+A finite typed Agent workflow slice \(A\) declares its platform-promised outcomes, protected effect sites and causal orders, and a finite boundary whose edges are classified as internal or durably external.
+% 一个有限的类型化 Agent 工作流切片 \(A\) 声明平台承诺的结果、受保护效果位置及其因果顺序，以及一个将边分类为内部边或持久外部边的有限边界。
+The refinement \(A\sqsubseteq R\) relates every promised outcome and protected site to \(R\) and checks protected-issuer cell attestations against the current receipt cut.
+% 精化关系 \(A\sqsubseteq R\) 将每个承诺结果与受保护位置关联到 \(R\)，并依据当前回执切点检查受保护调用发行方的单元证明。
+\(\mathsf{CheckReg}(A,R)\) accepts exactly when outcome/site incidence and order are preserved; registered cell equality is the quotient induced by canonical invocation equality; every declared durably external site lowers to its unique protected \Use and the backend exposes no raw durable-effect instruction; and source and registered receipt evolution agree with \(\Resolve\) at every prefix.
+% \(\mathsf{CheckReg}(A,R)\) 当且仅当以下条件成立时接受：结果/位置关联关系与次序得到保持；注册单元相等关系恰为规范调用相等关系诱导的商；每个声明为持久外部的位置都降低为其唯一的受保护 \Use，且后端不暴露原始持久效果指令；源执行与注册执行的回执演化在每个前缀处都与 \(\Resolve\) 一致。
+No promised outcome or protected site may disappear during registration, and registration never removes a receipt.
+% 注册过程中不得丢失任何承诺结果或受保护位置，并且注册绝不移除回执。
+\end{definition}
+
+The registration-reflection clause of \cref{thm:exact-history} proves that the finite checker accepts exactly this refinement and that compilation and pullback give a bijection between source-slice and registered realizations.
+% \cref{thm:exact-history} 的注册反射条款证明，有限检查器恰好接受这一精化，并且编译与回拉会在源切片实现与注册实现之间给出一个双射。
+Thus adequacy is checked rather than supplied as a semantic oracle; the theory neither infers natural-language contracts nor equates a durable local commit with remote physical exactly-once execution.
+% 因而，充分性经过检查，而非作为语义预言机被提供；该理论既不推断自然语言契约，也不把持久本地提交等同于远端物理意义上的恰好一次执行。
 
 \subsection{Six structural rewrite rules}
 % 六条结构重写规则
@@ -516,5 +526,37 @@ Finally, \(\beta'\) and \(\mathcal H_u^+\) establish handoff totality at \(\eta^
 % 最后，\(\beta'\) 和 \(\mathcal H_u^+\) 在 \(\eta^+\) 上建立交接完备性。
 \end{proof}
 
-Thus the Agent supplies no semantic oracle: under the registered adequacy contract, Fork arms must project onto pending \(\mathcal C\), and Join reads both residuals before appending \(E_\sigma^J\).
-% 因此，Agent 不提供语义预言机：在已注册的充分性契约下，Fork 分支必须投影到待处理的 \(\mathcal C\)，而 Join 会在追加 \(E_\sigma^J\) 之前读取两个残余。
+\subsection{Authenticated live extension}
+% 经认证的在线扩展
+
+Online growth is a trusted control-plane edge, not a seventh structural rewrite.
+% 在线增长是一条可信控制面边，而不是第七种结构重写。
+The Agent may name only an immutable record \(\xi\) binding the exact predecessor schema, registry, and policy roots to finite disjoint additions \(D_\Sigma,D_\rho\) and a successor policy \(\mathcal A^+\).
+% Agent 只能指名一个不可变记录 \(\xi\)，该记录将精确的前驱模式、注册表和策略根绑定到有限且不交的新增集合 \(D_\Sigma,D_\rho\) 以及后继策略 \(\mathcal A^+\)。
+Both issuers authenticate \(\xi\); old schema identifiers, occurrence--cell/invocation rows, labels, scopes, lineages, receipts, and canonicalization rules retain exactly their meanings; new identifiers are fresh, finite, domain-scoped, foreign-key closed, and completion-observable; and the record contains no cursor, receipt, outbox, epoch, result, monitor, or installed certificate.
+% 两类发行方都认证 \(\xi\)；旧模式标识、发生项--单元/调用行、标签、作用域、谱系、回执与规范化规则都精确保留原义；新标识是新鲜、有限、域内、外键闭合且完成可观测的；该记录不包含游标、回执、发件箱、纪元、结果、监控器或已安装证书。
+The successor policy is regular and prefix closed and conservatively extends the old policy, \(\mathcal A\subseteq\mathcal A^+\).
+% 后继策略是正则且前缀闭合的，并保守扩展旧策略，即 \(\mathcal A\subseteq\mathcal A^+\)。
+
+For fresh \(\eta^+\), refresh every live gate and handle but leave the live frontier unchanged:
+% 对于新鲜的 \(\eta^+\)，刷新每个活跃门和句柄，但保持活跃前沿不变：
+\[
+\begin{aligned}
+ H_\xi^+
+   &= (\omega,G,T,K,\Sigma_{\zeta^+},\rho^+,\beta^+,
+       \chi,\nu+1,\eta^+),\\
+ \mathcal C_\xi&=\sem T,\qquad
+ \mathsf{Req}_\xi=O_{\sem T},\qquad
+ \mathsf{Lift}_\xi(t,o)\Longleftrightarrow t=o .
+\end{aligned}
+\]
+The checked judgment
+% 经检查的判定
+\[
+(\kappa,H,\mathcal A)\vdash\mathsf{Extend}(\xi)\Downarrow
+  (\kappa^+,H_\xi^+,\mathcal A^+,\mathcal C_\xi,\eta,\eta^+)
+\]
+preserves \(G,T,K,\chi,\Delta,\mathsf{out}\), every current outcome, occurrence, cell, lineage, and causal edge, and authorizes no retirement.
+% 保持 \(G,T,K,\chi,\Delta,\mathsf{out}\)、每个当前结果、发生项、单元、谱系与因果边，并且不授权任何退役。
+It appends one authenticated version edge and then uses the same admission compiler and atomic epoch installation as a structural edit.
+% 它追加一条经认证的版本边，随后使用与结构编辑相同的准入编译器和原子纪元安装。

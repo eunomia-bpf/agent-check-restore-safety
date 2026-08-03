@@ -2,9 +2,7 @@
 % 相关工作
 \label{sec:related}
 
-\paragraph{Theorem boundary}
-% 定理边界
-Agent systems provide versioned histories, checkpoint forks, staged effects, transactions, and recovery checks, but none derives an edit's preserved outcomes and effect identities and then returns its greatest monitor or an impossibility proof~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart}.
-% Agent 系统提供版本化历史、检查点分叉、分阶段效果、事务和恢复检查，但没有系统会推导编辑所保留的结果与效果标识，再返回其最大监控器或不可能性证明~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart}。
-Synthesis and enforcement assume supplied plants, histories, or policies, while rollback, fencing, and outboxes implement rather than decide an admitted edit; \cref{thm:exact-history} derives the missing instance and proves its exact epoch-mediated realization~\cite{malik2008generalised,finkbeiner2022live,abadi2003history,palumbo2026forge,elnozahy2002rollback,zheng2026acrfence,santos2026committime,aws2026outbox}.
-% 综合与执行机制假定已有被控对象、历史或策略，而回滚、隔离和发件箱只实现而不决定已接纳编辑；\cref{thm:exact-history} 推导缺失的实例，并证明其可由纪元中介机制精确实现~\cite{malik2008generalised,finkbeiner2022live,abadi2003history,palumbo2026forge,elnozahy2002rollback,zheng2026acrfence,santos2026committime,aws2026outbox}。
+Rebound, ACRFence, DART, and Atomix address rollback, fencing, restore admission, and settlement~\cite{burke2026rebound,zheng2026acrfence,yang2026dart,mohammadi2026atomix}, but none derives six-edit obligations from the outcome--occurrence--cell--receipt relation or returns greatest realizations or impossibility proofs.
+% Rebound、ACRFence、DART 与 Atomix 分别处理回滚、隔离、恢复准入与结算~\cite{burke2026rebound,zheng2026acrfence,yang2026dart,mohammadi2026atomix}，但它们都不从结果--发生项--单元--回执关系推导六种编辑义务，也不返回最大实现或不可能性证明。
+Prior synthesis and enforcement start from supplied control instances~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,aceto2018suppressions}; our theorem derives Agent-history obligations and spans checked admission to epoch realization.
+% 既有综合与执行从给定控制实例出发~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,aceto2018suppressions}；我们的定理从 Agent 历史推导义务，并贯通经检查准入到纪元实现。

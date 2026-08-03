@@ -67,6 +67,17 @@ If policy excludes \(rap_Rs\), then \(M_{o_R}=\varnothing\), and the Fork is rej
 Rejection returns the ranked elimination chain rather than letting the Agent weaken the target; \cref{sec:admission} gives the shared-prefix case where every outcome starts safe but no family remains prefix-robust.
 % 拒绝会返回带秩淘汰链，而不允许 Agent 弱化目标；\cref{sec:admission} 给出了共享前缀情形：每个结果开始时都安全，但没有任何完成族保持前缀鲁棒。
 
+\paragraph{Live growth without a reset}
+% 无需重置的在线增长
+While the same procurement history remains live, the Agent may name only a record \(\xi\) in which the protected-call and policy issuers authenticate new compensation schemas and policy words.
+% 在同一采购历史仍处于活跃状态时，Agent 只能指名一条记录 \(\xi\)，其中受保护调用发行方与策略发行方认证新的补偿模式和策略词。
+\(\mathsf{Extend}(\xi)\) is additive and identity-on-frontier: it preserves every current outcome, occurrence, cell, receipt, checkpoint, cursor, outbox item, and causal edge while appending fresh schema and registry rows.
+% \(\mathsf{Extend}(\xi)\) 仅做追加且在前沿上保持恒等：它保留每个当前结果、发生项、单元、回执、检查点、游标、发件箱条目与因果边，同时追加新的模式和注册表行。
+The old policy embeds in the successor policy, so the current residual fixed point remains post-fixed and no promised outcome can disappear.
+% 旧策略嵌入后继策略，因此当前残余不动点仍为后不动点，任何已承诺结果都不能消失。
+The controller recompiles the monitor and atomically rotates the domain epoch, after which a later edit may cite the new schema without bootstrap; the Agent cannot rebind an old invocation or weaken a live obligation.
+% 控制器重新编译监控器并原子轮换整个域的纪元，此后后续编辑可以引用新模式而无需引导；Agent 不能重新绑定旧调用或弱化活跃义务。
+
 \begin{figure*}[t]
   \centering
   \begin{tikzpicture}[

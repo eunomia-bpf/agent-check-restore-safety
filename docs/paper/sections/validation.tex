@@ -2,7 +2,7 @@
 % 可执行验证
 \label{sec:validation}
 
-Three Lean modules kernel-check finite compiler exactness/greatestness, six-edit derivation and well-formedness, and \(\mathsf{AgentSec}\) preservation for installed events, finite traces, and all three cut races; factor lower bounds and ideal-machine durable bisimulation remain mathematical proofs, while 81 tests exercise critical cases.
-% 三个 Lean 模块由内核检查有限编译器的精确性/最大性、六类编辑派生与良构性，以及已安装事件、有限轨迹和全部三类切点竞态中的 \(\mathsf{AgentSec}\) 保持；因子下界和理想机持久互模拟仍由数学证明给出，而 81 项测试运行关键案例。
-Across five fresh processes per point, median core times were \(53.47\) ms for 128 admitted outcomes, \(5.51\) ms for a rejected 128-outcome conflict, and \(50.35\) ms for 720 unordered completions; the bounded kernel rejects 129 outcomes or nine events before search, and the supplement records all raw decision-kernel---not Agent-runtime---measurements.
-% 每个数据点使用五个新进程时，128 个被接纳结果、128 个结果的拒绝冲突和 720 条无序完成路径的核心耗时中位数分别为 \(53.47\)、\(5.51\) 和 \(50.35\) ms；有界内核会在搜索前拒绝 129 个结果或九个事件，补充制品记录全部属于判定内核而非 Agent 运行时的原始测量。
+Five Lean modules pass direct \texttt{--trust=0} checking, with exact mapping in \cref{app:lean-map}; factor lower bounds, general pomset lifting, and durable bisimulation remain mathematical proofs.
+% 五个 Lean 模块通过直接 \texttt{--trust=0} 检查，精确映射见 \cref{app:lean-map}；因子下界、一般偏序事件集提升与持久互模拟仍由数学证明给出。
+Eighty-one tests exercise critical cases; five-process medians are \(53.47\), \(5.51\), and \(50.35\) ms for 128-outcome admission, 128-outcome rejection, and 720 completions, respectively; inputs above stated bounds are rejected before search, and these are decision-kernel rather than Agent-runtime measurements.
+% 八十一项测试运行关键案例；五进程耗时中位数分别为 \(53.47\)、\(5.51\) 与 \(50.35\) ms，对应 128 个结果的准入、128 个结果的拒绝与 720 条完成路径；超过既定边界的输入会在搜索前被拒绝，且这些数据属于判定内核而非 Agent 运行时测量。

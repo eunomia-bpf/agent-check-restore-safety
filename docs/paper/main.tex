@@ -46,14 +46,14 @@ Exact Admission for Fork, Restore, and Merge}
 \begin{abstract}
 Tool-using Agents can Fork, Restore, and Merge executions whose irreversible effects do not rewind.
 % 使用工具的 Agent 可以 Fork、Restore 和 Merge 执行，而其中的不可逆效果不会随历史倒转。
-The Agent Security-State Characterization Theorem proves that an authenticated edit has a policy-safe, history-faithful, completion-nonblocking realization exactly when the outcome-indexed completion family derived from Agent history has a nonempty greatest prefix-robust fixed point.
-% Agent 安全状态刻画定理证明，当且仅当从 Agent 历史推导出的结果索引完成族具有非空的前缀鲁棒最大不动点时，一次经认证的编辑才具有策略安全、历史忠实且完成非阻塞的实现。
-The same characterization constructs the greatest monitor or a finite impossibility certificate, proves the information distinctions every exact compiler must preserve, remains closed under arbitrary finite histories of the six edits and protected calls, and refines the compiled monitor to an ideal atomic Agent-history machine.
-% 同一刻画构造最大监控器或有限不可能性证书，证明每个精确编译器都必须保留的信息区分，在六种编辑与受保护调用组成的任意有限历史下保持闭合，并将编译后的监控器精化到理想原子 Agent 历史机。
-Existing Agent systems expose history operations, synthesis assumes its plant and obligations, and enforcement judges supplied histories or policies, whereas our theory derives outcomes, effect identities, receipts, and the exact cut before synthesis and atomic installation.
-% 现有 Agent 系统暴露历史操作，综合方法假定被控对象与义务已经给定，执行机制判断给定的历史或策略；相比之下，我们的理论在综合与原子安装之前推导结果、效果标识、回执和精确切点。
-Three kernel-checked Lean modules establish finite compiler exactness and greatestness, deterministic six-edit derivation, and installed-kernel invariant preservation across finite traces and cut races.
-% 三个经内核检查的 Lean 模块共同建立有限编译器的精确性与最大性、六种编辑的确定性派生，以及已安装内核在有限轨迹和切点竞态中的不变量保持。
+For a checked typed Agent workflow and an authenticated structural edit or live extension, the Agent Security-State Characterization Theorem proves that a policy-safe, history-faithful, completion-nonblocking realization exists exactly when the outcome-indexed completion family derived from Agent history has a nonempty greatest prefix-robust fixed point.
+% 对于一个经检查的类型化 Agent 工作流以及一次经认证的结构编辑或在线扩展，Agent 安全状态刻画定理证明，当且仅当从 Agent 历史推导出的结果索引完成族具有非空的前缀鲁棒最大不动点时，才存在策略安全、历史忠实且完成非阻塞的实现。
+The same theorem constructs the greatest monitor or a finite impossibility certificate, proves the information distinctions every exact compiler must preserve, remains closed under arbitrary finite histories of the six edits, protected calls, and additive schema/policy extensions, and refines the compiled monitor to an ideal atomic Agent-history machine.
+% 同一定理构造最大监控器或有限不可能性证书，证明每个精确编译器都必须保留的信息区分，在六种编辑、受保护调用以及仅追加的模式/策略扩展组成的任意有限历史下保持闭合，并将编译后的监控器精化到理想原子 Agent 历史机。
+Generalized nonblocking consumes a plant and conditional markings, live synthesis derives residual obligations from a supplied old specification and execution, and rollback systems realize supplied recovery decisions; our theory instead checks the typed Agent effect boundary, derives the exact admission instance, and carries the answer through atomic installation.
+% 广义非阻塞以被控对象和条件标记为输入，在线综合从给定的旧规范与执行中推导残余义务，而回滚系统实现给定的恢复决定；相比之下，我们的理论检查类型化的 Agent 效果边界，推导精确准入实例，并将判定贯穿到原子安装。
+Five kernel-checked Lean modules establish typed registration reflection, finite compiler exactness and greatestness, deterministic six-edit derivation, compiler-to-installation construction, and installed-kernel invariant preservation across finite traces, live extensions, and cut races.
+% 五个经内核检查的 Lean 模块共同建立类型化注册反射、有限编译器的精确性与最大性、六种编辑的确定性派生、从编译器到安装的构造，以及已安装内核在有限轨迹、在线扩展和切点竞态中的不变量保持。
 Eighty-one executable tests and a bounded scaling study exercise the critical examples and explicit compiler.
 % 八十一项可执行测试和一项有界扩展性研究运行关键案例与显式编译器。
 \end{abstract}
