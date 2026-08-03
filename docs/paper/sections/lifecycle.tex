@@ -46,8 +46,8 @@ The authority policy allows prefixes of \(rap_Ls\) and \(rap_Rs\), but no trace 
 % 准入计算
 Using the admission notation formalized in \cref{sec:admission}, write \(M_o\) for outcome \(o\)'s policy-safe resolved completions.
 % 使用 \cref{sec:admission} 中形式化的准入记法，以 \(M_o\) 表示结果 \(o\) 的策略安全已解析完成路径。
-At this cut each outcome has one causal linearization, resolving to
-% 在此切点，每个结果都有一种因果线性化，并解析为：
+At this cut, each outcome has exactly one causal linearization, and the two linearizations resolve to
+% 在此切点，每个结果恰有一条因果线性化路径，而这两条线性化路径解析为
 \[
 \begin{aligned}
  z_L&=\Fresh(x_L^p,d_L^p)\Fresh(x_L^s,d_s),\\
@@ -162,4 +162,4 @@ Workspace equality cannot recover which branch relation is live, and receipt equ
 Cell equality cannot determine the required obligation projection, while a caller-supplied target automaton cannot certify any of these facts.
 % 单元相等性无法确定所需的义务投影，而调用者提供的目标自动机也无法认证这些事实。
 \Cref{sec:model} instead derives the target through a trusted history judgment.
-% 相比之下，\Cref{sec:model} 通过可信历史判断推导目标。
+% 相比之下，\Cref{sec:model} 通过可信历史判定推导目标。

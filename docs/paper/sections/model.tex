@@ -13,7 +13,7 @@ Internal reasoning remains unrestricted.
 A protected call must name a current registered occurrence and present an authenticated handle.
 % 受保护调用必须指明一个当前已注册的发生项，并提供经过认证的句柄。
 A successful protected use is the monitor transition that may change durable state.
-% 一次成功的受保护使用即为可能改变持久状态的监控器转换。
+% 一次成功的受保护使用即为可能改变持久状态的监控器转移。
 
 \subsection{Causal-completion contracts}
 % 因果完成契约
@@ -23,15 +23,15 @@ A successful protected use is the monitor transition that may change durable sta
 We capitalize \emph{Agent} for the untrusted principal requesting history operations.
 % 我们将请求历史操作的不受信任主体称为 \emph{Agent}。
 A logical protected occurrence \(x\) is an invocation slot, and its protected \emph{use} is a monitor transition.
-% 一个逻辑受保护发生项 \(x\) 是一个调用槽，而它的受保护\emph{使用}是一次监控器转换。
-A semantic cell \(d\) is an irreversible authority-redemption identity whose first redemption creates a receipt.
-% 语义单元 \(d\) 是不可逆的权限兑付标识，其首次兑付会创建一条回执。
+% 一个逻辑受保护发生项 \(x\) 是一个调用槽，而它的受保护\emph{使用}是一次监控器转移。
+A semantic cell \(d\) is the irreversible effect and authority-redemption identity whose first redemption creates a receipt.
+% 语义单元 \(d\) 是不可逆的效果与权限兑付标识，其首次兑付会创建一条回执。
 A gate \(j\) is an epoch-bound monitor entry, and a handle \(h\) authenticates an occurrence's gate, cell, scope, and effect digest.
 % 门 \(j\) 是绑定到纪元的监控器入口，句柄 \(h\) 则认证发生项的门、单元、作用域和效果摘要。
 \emph{Lineage} is certified ancestry preserved by carry and clone.
 % \emph{谱系}是经认证的祖先关系，由携带和克隆操作保持。
 \(T,\Delta,\chi\) denote the live structural frontier, receipt ledger, and resolved-occurrence trace.
-% \(T,\Delta,\chi\) 分别表示活跃结构前沿、回执账本和已决发生项轨迹。
+% \(T,\Delta,\chi\) 分别表示活跃结构前沿、回执账本和已解析发生项轨迹。
 A \emph{history cut} atomically installs a derived edit and replaces the policy-domain epoch.
 % \emph{历史切点}以原子方式安装派生编辑，并替换策略域纪元。
 Registry \(\rho\) authenticates each occurrence's gate and handle and maps it to \(q_{\rm cell}(x)=d\) and authority label \(\ell(d)\).
@@ -60,8 +60,10 @@ This condition permits incomparable traces and different indices with the same t
 It fixes the interface boundary by requiring a registered logical occurrence to distinguish stopping from continuing at a shared prefix.
 % 它要求通过已注册的逻辑发生项区分在共享前缀处停止还是继续，从而确定接口边界。
 
-Contracts compose through three partial constructors, each defined only when its result remains completion-observable.
-% 契约通过三个偏构造器进行组合，每个构造器仅在其结果仍满足完成可观测性时才有定义。
+Contracts use the three partial constructors below.
+% 契约使用下列三个偏构造器。
+Each constructor requires occurrence-disjoint operands and is defined only when its result remains completion-observable.
+% 每个构造器都要求操作数的发生项互不相交，并且仅在结果仍满足完成可观测性时有定义。
 \begin{equation}
 \label{eq:contract-algebra}
 \begin{aligned}
@@ -77,27 +79,16 @@ Contracts compose through three partial constructors, each defined only when its
  p_{(o,v)}&=p_o\triangleright p_v.
 \end{aligned}
 \end{equation}
-Every binary constructor has occurrence-disjoint operands.
-% 每个二元构造器的操作数在发生项上互不相交。
-Before composing a newly registered or cloned operand, the history judgment deterministically renames its logical occurrence identifiers and extends \(\rho\), while preserving authenticated cell identities.
-% 在组合新注册或克隆的操作数之前，历史判定会确定性地重命名其逻辑发生项标识并扩展 \(\rho\)，同时保留经认证的单元标识。
-Existing carried operands are already disjoint by history well-formedness.
-% 根据历史良构性，现有的携带操作数已经互不相交。
-The parallel product \(\uplus\) adds no cross-order.
-% 并行乘积 \(\uplus\) 不添加跨操作数次序。
-The ordered product \(\triangleright\) places every event of \(p\) before every event of \(q\).
-% 有序乘积 \(\triangleright\) 将 \(p\) 的每个事件置于 \(q\) 的每个事件之前。
-The index set of \(\oplus\) is a tagged disjoint union, while those of \(\otimes\) and \(\triangleright\) are Cartesian products.
-% \(\oplus\) 的索引集是带标签的不交并，而 \(\otimes\) 和 \(\triangleright\) 的索引集是笛卡尔积。
-Thus choice preserves an outcome from each arm, parallel requires both arms but permits any causal linearization, and sequence adds a barrier.
-% 因此，选择会保留每个分支的一个结果；并行要求两个分支都存在但允许任意因果线性化；顺序则添加一道屏障。
-
-For a raw prefix \(w\), the residual \(\mathcal C/w\) retains every index \(o\) for which \(w\) is a linearization prefix of \(p_o\), and removes the occurrences in \(w\) with their incident order.
-% 对于原始前缀 \(w\)，残余 \(\mathcal C/w\) 保留所有使 \(w\) 成为 \(p_o\) 线性化前缀的索引 \(o\)，并移除 \(w\) 中的发生项及其关联次序。
-The residual is undefined when no index remains.
-% 当没有索引保留时，残余无定义。
-This derivative gives an operational meaning to ``remaining contract'' without erasing either outcome or occurrence identity.
-% 这一导数在不抹除结果标识或发生项标识的情况下，为“剩余契约”赋予操作语义。
+Before adding a registered or cloned operand, the history judgment deterministically renames its logical occurrences and extends \(\rho\) while retaining authenticated cell identities, and history well-formedness already makes carried operands disjoint.
+% 在加入已注册或克隆的操作数之前，历史判定会确定性地重命名其逻辑发生项并扩展 \(\rho\)，同时保留经认证的单元标识，而历史良构性已保证被携带操作数互不相交。
+In \cref{eq:contract-algebra}, \(\uplus\) adds no cross-order and \(\triangleright\) orders every event of \(p\) before every event of \(q\), while choice uses a tagged union of outcome indices and parallel and sequence use Cartesian products.
+% 在 \cref{eq:contract-algebra} 中，\(\uplus\) 不添加跨操作数次序，\(\triangleright\) 将 \(p\) 的每个事件置于 \(q\) 的每个事件之前，而选择使用带标签的结果索引不交并，并行和顺序则使用笛卡尔积。
+Consequently, choice retains each arm's full indexed family, parallel pairs outcomes while permitting every causal linearization, and sequence adds a barrier.
+% 因此，选择保留每个分支的完整带索引结果族，并行对结果配对并允许每种因果线性化，而顺序添加一道屏障。
+For raw prefix \(w\), \(\mathcal C/w\) retains each index whose pomset has a linearization prefixed by \(w\) and removes \(w\)'s occurrences and incident order, and it is undefined if none remains.
+% 对于原始前缀 \(w\)，\(\mathcal C/w\) 保留其偏序事件集存在以 \(w\) 为前缀的线性化的每个索引，并移除 \(w\) 中的发生项及其关联次序；若没有索引保留，则其无定义。
+This operational ``remaining contract'' preserves outcome and occurrence identity.
+% 这一“剩余契约”的操作定义会保留结果标识和发生项标识。
 
 \begin{lemma}[Observable completion]
 % 可观测完成
@@ -108,8 +99,8 @@ Every defined residual \(\mathcal C/w\) is completion-observable, and either eve
 \begin{proof}
 If a residual suffix \(v\) strictly prefixes \(v'\), then \(wv\) strictly prefixes \(wv'\) in \(\mathsf{CL}(\mathcal C)\).
 % 如果残余后缀 \(v\) 是 \(v'\) 的真前缀，那么在 \(\mathsf{CL}(\mathcal C)\) 中，\(wv\) 是 \(wv'\) 的真前缀。
-If one retained pomset is empty and another is not, choose its nonempty suffix \(v\).
-% 如果一个保留的偏序事件集为空而另一个不为空，则选择后者的非空后缀 \(v\)。
+If one retained pomset is empty and another is nonempty, choose a nonempty linearization \(v\) of the latter.
+% 如果一个保留的偏序事件集为空而另一个非空，则选择后者的一条非空线性化 \(v\)。
 Then \(w\) strictly prefixes \(wv\).
 % 此时 \(w\) 是 \(wv\) 的真前缀。
 Both contradict completion observability.
@@ -130,7 +121,7 @@ An Agent history state is
 \(G\) is a finite append-only provenance DAG.
 % \(G\) 是有限的仅追加溯源 DAG。
 Each continuation node \(b\) carries an immutable registered base contract \(\Gamma_b\) and branch-local resolved cursor \(\chi_b\).
-% 每个延续节点 \(b\) 携带一个不可变的已注册基础契约 \(\Gamma_b\) 和一个分支局部已决游标 \(\chi_b\)。
+% 每个延续节点 \(b\) 携带一个不可变的已注册基础契约 \(\Gamma_b\) 和一个分支局部已解析游标 \(\chi_b\)。
 The DAG's edges record typed Fork, Restore, and Merge operations.
 % 该 DAG 的边记录类型化的 Fork、Restore 和 Merge 操作。
 \(T\) is the live structural frontier.
@@ -144,8 +135,10 @@ The DAG's edges record typed Fork, Restore, and Merge operations.
 \]
 \(s\in\{\mathsf{open},L,R\}\) records an unresolved choice or the arm that made durable progress, and \(g\) groups exclusive or jointly live siblings.
 % \(s\in\{\mathsf{open},L,R\}\) 记录尚未解决的选择或已取得持久进展的分支，\(g\) 则将互斥或共同活跃的同级项分组。
-\(\sem{T}\) uses both open arms and only the selected arm afterward, \(\otimes\) for parallel and \(\mathsf{jbar}\), and \(\triangleright\) for sequence.
-% \(\sem{T}\) 对开放选择使用两个分支，此后仅使用选中分支；对并行和 \(\mathsf{jbar}\) 使用 \(\otimes\)，对顺序使用 \(\triangleright\)。
+\(\sem{T}\) uses both arms of an open choice and only the selected arm thereafter.
+% \(\sem{T}\) 对开放选择使用两个分支，此后仅使用选中的分支。
+It interprets parallel and \(\mathsf{jbar}\) with \(\otimes\), and sequence with \(\triangleright\).
+% 它用 \(\otimes\) 解释并行和 \(\mathsf{jbar}\)，并用 \(\triangleright\) 解释顺序。
 The unaddressed \(\mathsf{jbar}\) marks a joined group and prevents another Merge.
 % 未被寻址的 \(\mathsf{jbar}\) 标记一个已合并组，并阻止再次 Merge。
 
@@ -179,29 +172,17 @@ Write \(\mathcal C_k=\mathsf{contract}(K(k))\) for the residual contract stored 
 % \(\Sigma_\zeta\) 是带版本且不可变的类型化编辑模式注册表。
 \(\rho\) contains the authenticated occurrence-to-gate/cell, handle, lineage, scope, and effect-digest data.
 % \(\rho\) 包含经认证的发生项到门/单元的映射、句柄、谱系、作用域和效果摘要数据。
-For each live occurrence \(x\), binding \(\beta(x)=(j,\eta)\) names its gate \(j\) and the domain's current epoch.
-% 对于每个活跃发生项 \(x\)，绑定 \(\beta(x)=(j,\eta)\) 指明其门 \(j\) 及该域的当前纪元。
-Finally, \(\chi\) is the ordered append-only trace of durably \emph{resolved} logical occurrences, including \Fresh and \Alias bindings, and \(\nu\) is the history-view version.
-% 最后，\(\chi\) 是持久\emph{已决}逻辑发生项的有序仅追加轨迹，其中包括 \Fresh 和 \Alias 绑定；\(\nu\) 是历史视图版本。
-Resolution may still await remote settlement or return.
-% 解析仍可能等待远程结算或返回。
-The trace \(\chi\) records authorization and causal progress rather than physical completion.
-% 轨迹 \(\chi\) 记录授权和因果进展，而不是物理完成。
+For each live occurrence \(x\), binding \(\beta(x)=(j,\eta)\) names its gate and the domain's current epoch, while \(\chi\) is the ordered append-only trace of durably \emph{resolved} logical occurrences, including \Fresh and \Alias bindings, and \(\nu\) is the history-view version.
+% 对于每个活跃发生项 \(x\)，绑定 \(\beta(x)=(j,\eta)\) 指明其门和该域的当前纪元，而 \(\chi\) 是持久\emph{已解析}逻辑发生项的有序仅追加轨迹，包括 \Fresh 和 \Alias 绑定，\(\nu\) 则是历史视图版本。
+Because \(\chi\) records authorization and causal progress rather than physical completion, the corresponding external result may still await remote settlement or return.
+% 由于 \(\chi\) 记录授权和因果进展而非物理完成，相应的外部结果仍可能等待远程结算或返回。
 
-Checkpoint creation is explicit but is not a seventh history rewrite.
-% 检查点创建是显式操作，但并非第七种历史重写。
-\(\mathsf{Save}(k,b)\) requires new \(k\) and addressable \(b\).
-% \(\mathsf{Save}(k,b)\) 要求 \(k\) 为新标识且 \(b\) 可寻址。
-One trusted transaction adds \((\omega,b,\mathcal C_b,\chi_b,\rho|_{X_{\mathcal C_b}},\zeta)\) and its authenticated fingerprint to \(K\), then increments \(\nu\).
-% 一个可信事务会向 \(K\) 添加 \((\omega,b,\mathcal C_b,\chi_b,\rho|_{X_{\mathcal C_b}},\zeta)\) 及其认证指纹，然后递增 \(\nu\)。
-\(\mathcal C_b\) is \(b\)'s current residual.
-% \(\mathcal C_b\) 是 \(b\) 的当前残余。
-No frontier, receipt, binding, epoch, or authority changes.
-% 前沿、回执、绑定、纪元和权限均不改变。
-Both machines take this \(\tau\)-transition.
-% 两台机器都执行该 \(\tau\)-转换。
-Because the cut seal binds \(H\), a concurrent installation becomes stale.
-% 由于切点封印绑定 \(H\)，并发安装将变为过期。
+\(\mathsf{Save}(k,b)\) is an explicit checkpoint transition, not a seventh history rewrite, and requires fresh \(k\) and addressable \(b\).
+% \(\mathsf{Save}(k,b)\) 是显式检查点转移，而非第七种历史重写，并要求 \(k\) 为新标识且 \(b\) 可寻址。
+A trusted transaction appends \((\omega,b,\mathcal C_b,\chi_b,\rho|_{X_{\mathcal C_b}},\zeta)\) and its authenticated fingerprint to \(K\), where \(\mathcal C_b\) is \(b\)'s current residual, and advances \(\nu\) without changing the frontier, receipts, bindings, epochs, or authority.
+% 一个可信事务向 \(K\) 追加 \((\omega,b,\mathcal C_b,\chi_b,\rho|_{X_{\mathcal C_b}},\zeta)\) 及其认证指纹，其中 \(\mathcal C_b\) 是 \(b\) 的当前残余，并推进 \(\nu\) 而不改变前沿、回执、绑定、纪元或权限。
+Both machines take this \(\tau\)-transition, which makes a concurrent installation stale because the cut seal binds \(H\).
+% 两台机器都执行该 \(\tau\)-转移；由于切点封印绑定 \(H\)，该转移会使并发安装过期。
 Restore accepts only records created by this rule.
 % Restore 仅接受由此规则创建的记录。
 
@@ -220,7 +201,7 @@ Restore accepts only records created by this rule.
 Occurrence and gate identifiers are unique, while cell aliases agree on protected-call issuer, scope, digest, and lineage.
 % 发生项标识和门标识是唯一的，而单元别名在受保护调用发行方、作用域、摘要和谱系上保持一致。
 Resolved occurrences are downward closed in their pomset, consistent with every choice status, and absent from the residual frontier.
-% 已决发生项在其偏序事件集中向下闭合，与每个选择状态一致，并且不出现在残余前沿中。
+% 已解析发生项在其偏序事件集中向下闭合，与每个选择状态一致，并且不出现在残余前沿中。
 \item \emph{Live frontier.}
 % \emph{活跃前沿。}
 Every live gate has exactly one binding \((j,\eta)\) to the domain's single current epoch.
@@ -247,7 +228,7 @@ Outside \(H\), ledger state stores policy version \(\kappa\), monotone receipt l
 Receipt creation is append-only.
 % 回执创建仅可追加。
 Receipt phases and stable result futures advance on settlement.
-% 回执阶段和稳定结果 future（期值）会在结算时推进。
+% 回执阶段和稳定结果期值会在结算时推进。
 Each receipt binds its cell, the invocation that created it, and its authority label.
 % 每条回执都绑定其单元、创建它的调用及其权限标签。
 Each record in \(\chi\) points to its own \Fresh receipt or, for \Alias, an earlier receipt, making retry and \Alias-result lookup functions of \((\chi,\Delta)\).
@@ -257,8 +238,8 @@ Each record in \(\chi\) points to its own \Fresh receipt or, for \Alias, an earl
 Restore may reconstruct workspace payload but never restores \(\Delta\).
 % Restore 可以重建工作区载荷，但绝不会恢复 \(\Delta\)。
 
-A security state \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) is \emph{well formed} when \(H\) is well formed, \(\mathsf{lab}(\Delta)\in\mathcal A\), each cell has at most one \Fresh receipt, each \Fresh record names its unique receipt, each \Alias record names an earlier receipt, the receipt ledger, outbox, and policy are scoped to \(\omega\), and the outbox preserves \Fresh order.
-% 当 \(H\) 良构、\(\mathsf{lab}(\Delta)\in\mathcal A\)、每个单元至多有一条 \Fresh 回执、每条 \Fresh 记录指明其唯一回执、每条 \Alias 记录指明一条更早回执、回执账本、发件箱和策略均限定于 \(\omega\)，且发件箱保持 \Fresh 次序时，安全状态 \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) 是\emph{良构的}。
+A security core \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) is \emph{well formed} when \(H\) is well formed, \(\mathsf{lab}(\Delta)\in\mathcal A\), each cell has at most one \Fresh receipt, each \Fresh record names its unique receipt, each \Alias record names an earlier receipt, the receipt ledger, outbox, and policy are scoped to \(\omega\), and the outbox preserves \Fresh order.
+% 当 \(H\) 良构、\(\mathsf{lab}(\Delta)\in\mathcal A\)、每个单元至多有一条 \Fresh 回执、每条 \Fresh 记录指明其唯一回执、每条 \Alias 记录指明一条更早回执、回执账本、发件箱和策略均限定于 \(\omega\)，且发件箱保持 \Fresh 次序时，安全核心 \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) 是\emph{良构的}。
 This joint invariant is assumed below.
 % 下文假定这一联合不变量成立。
 
@@ -277,42 +258,38 @@ We introduce no storage protocol, infer no natural-language contract, and assume
 \subsection{Six structural rewrite rules}
 % 六条结构重写规则
 
-An untrusted request contains a mode, live object identifiers, and an edit schema identifier \(\sigma\), never a target contract.
-% 不受信任的请求包含模式、活跃对象标识和编辑模式标识 \(\sigma\)，但绝不包含目标契约。
-Registry \(\Sigma_\zeta\) binds \(\sigma\) to its operation kind, exact source and checkpoint fingerprints, introduced suffix contracts, and a lineage certificate.
-% 注册表 \(\Sigma_\zeta\) 将 \(\sigma\) 绑定到其操作种类、精确的源与检查点指纹、引入的后缀契约和谱系证书。
+An untrusted request supplies a mode, live object identifiers, and schema identifier \(\sigma\), never a target contract, while \(\Sigma_\zeta\) binds \(\sigma\) to the operation kind, exact source and checkpoint fingerprints, introduced suffix contracts, and a lineage certificate.
+% 不受信任的请求提供模式、活跃对象标识和模式标识 \(\sigma\)，但绝不提供目标契约，而 \(\Sigma_\zeta\) 将 \(\sigma\) 绑定到操作种类、精确的源与检查点指纹、引入的后缀契约和谱系证书。
 
-The certificate makes ``history-derived'' checkable.
-% 该证书使“由历史派生”成为可检查的性质。
-For indexed source \(\mathcal C\), one schema-designated carried or cloned target region \(\mathcal D\), and parent map \(\mu:X_{\mathcal D}\to X_{\mathcal C}\), write \(\mathcal C\preccurlyeq_\mu\mathcal D\) when \(\mu\) is a global bijection and some surjection \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\) satisfies, for every target outcome \(v\),
-% 对于带索引的源 \(\mathcal C\)、一个由模式指定的携带或克隆目标区域 \(\mathcal D\)，以及父映射 \(\mu:X_{\mathcal D}\to X_{\mathcal C}\)，若要记作 \(\mathcal C\preccurlyeq_\mu\mathcal D\)，则要求 \(\mu\) 是全局双射，且存在满射 \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\)，使下列条件对每个目标结果 \(v\) 成立：
+The certificate makes history derivation checkable.
+% 该证书使历史派生成为可检查的性质。
+For indexed source \(\mathcal C\), schema-designated carried or cloned target region \(\mathcal D\), and parent map \(\mu:X_{\mathcal D}\to X_{\mathcal C}\), write \(\mathcal C\preccurlyeq_\mu\mathcal D\) exactly when \(\mu\) is a global bijection, some surjection \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\) satisfies the conditions below for every target outcome \(v\), and \(\mu\) preserves cell identity and lineage.
+% 对于带索引的源 \(\mathcal C\)、由模式指定的携带或克隆目标区域 \(\mathcal D\) 以及父映射 \(\mu:X_{\mathcal D}\to X_{\mathcal C}\)，当且仅当 \(\mu\) 是全局双射、存在满射 \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\) 使下列条件对每个目标结果 \(v\) 成立，且 \(\mu\) 保持单元标识和谱系时，记作 \(\mathcal C\preccurlyeq_\mu\mathcal D\)。
 \[
 \begin{aligned}
  x\in X_{p_v}
    &\Longleftrightarrow \mu(x)\in X_{p_{\pi(v)}},\\
  x\prec_v y
-   &\Longleftrightarrow \mu(x)\prec_{\pi(v)}\mu(y),
+   &\Longleftrightarrow \mu(x)\prec_{\pi(v)}\mu(y).
 \end{aligned}
 \]
-and \(\mu\) preserves cell identity and lineage.
-% 并且 \(\mu\) 保持单元标识和谱系。
-The global bijection and incidence equivalence prevent a source occurrence shared across outcomes from being split into outcome-specific target occurrences.
-% 全局双射和关联等价可防止跨结果共享的源发生项被拆分为特定于结果的目标发生项。
+Global bijection and incidence equivalence prevent splitting a source occurrence shared across outcomes into outcome-specific target occurrences.
+% 全局双射和关联等价防止将跨结果共享的源发生项拆分为特定于结果的目标发生项。
 
-For a candidate target \(T'\), a rewrite certificate is a family \(\mathcal P_u=\{(\mathcal C_r,\mathcal D_r,\mu_r,\pi_r)\}_{r\in R_u}\) of these relations over disjoint target regions inside the replaced subtree.
-% 对于候选目标 \(T'\)，重写证书是在被替换子树内部互不相交的目标区域上，由这些关系组成的族 \(\mathcal P_u=\{(\mathcal C_r,\mathcal D_r,\mu_r,\pi_r)\}_{r\in R_u}\)。
-The exposed one-hole context is checked separately by an identity map that preserves its syntax, outcome indices, occurrences, cells, lineage, and order.
-% 已暴露的单孔上下文由一个保持其语法、结果索引、发生项、单元、谱系和次序的恒等映射单独检查。
-Let \(X_{\rm ctx}\) be the identity-preserved context occurrences and \(X_{\rm suf(u)}\) the occurrences in the schema-declared suffixes.
-% 令 \(X_{\rm ctx}\) 为由恒等映射保持的上下文发生项，\(X_{\rm suf(u)}\) 为模式声明后缀中的发生项。
-The installation checker's schema-verification phase verifies the disjoint cover
-% 安装检查器的模式验证阶段会验证如下不交覆盖：
+For candidate \(T'\), a rewrite certificate \(\mathcal P_u=\{(\mathcal C_r,\mathcal D_r,\mu_r,\pi_r)\}_{r\in R_u}\) contains these relations for disjoint target regions inside the replaced subtree.
+% 对于候选 \(T'\)，重写证书 \(\mathcal P_u=\{(\mathcal C_r,\mathcal D_r,\mu_r,\pi_r)\}_{r\in R_u}\) 包含被替换子树内互不相交目标区域上的这些关系。
+A separate identity map checks that the exposed one-hole context preserves syntax, outcome indices, occurrences, cells, lineage, and order.
+% 另一个恒等映射检查已暴露单孔上下文是否保持语法、结果索引、发生项、单元、谱系和次序。
+Writing \(X_{\rm ctx}\) for its occurrences and \(X_{\rm suf(u)}\) for schema-declared suffix occurrences, the checker verifies the following disjoint cover.
+% 将其发生项记为 \(X_{\rm ctx}\)，将模式声明后缀中的发生项记为 \(X_{\rm suf(u)}\)，检查器验证下列不交覆盖。
 \[
  X_{\sem{T'}}=X_{\rm ctx}\uplus
    \biguplus_{r\in R_u}X_{\mathcal D_r}\uplus X_{\rm suf(u)} .
 \]
-The row constructor and exposed-context syntax induce the following partial outcome projection \(\mathsf{pr}^u_r:O_{\sem{T'}}\rightharpoonup O_{\mathcal D_r}\): choice is defined only in the arm containing region \(r\), while product and sequence select the corresponding indexed component.
-% 行构造器和已暴露上下文语法诱导出如下部分结果投影 \(\mathsf{pr}^u_r:O_{\sem{T'}}\rightharpoonup O_{\mathcal D_r}\)：选择仅在包含区域 \(r\) 的分支上有定义，而乘积和顺序会选择对应的索引分量。
+The row constructor and exposed-context syntax induce \(\mathsf{pr}^u_r:O_{\sem{T'}}\rightharpoonup O_{\mathcal D_r}\).
+% 表行构造器和已暴露上下文语法诱导 \(\mathsf{pr}^u_r:O_{\sem{T'}}\rightharpoonup O_{\mathcal D_r}\)。
+For choice, this projection is defined only in the arm containing \(r\), while product and sequence select the corresponding indexed component.
+% 对于选择，该投影仅在包含 \(r\) 的分支上有定义，而乘积和顺序选择相应的带索引分量。
 Define
 % 定义
 \[
@@ -323,41 +300,45 @@ Define
    \mathsf{pr}^u_r(t)=v\ \land\ \pi_r(v)=o .
 \end{aligned}
 \]
-The same phase requires \(\forall(r,o)\in\mathsf{Obl}_u.\ \exists t\in O_{\sem{T'}}.\ \mathsf{Lift}_u(t,r,o)\).
-% 同一阶段要求 \(\forall(r,o)\in\mathsf{Obl}_u.\ \exists t\in O_{\sem{T'}}.\ \mathsf{Lift}_u(t,r,o)\)。
-Context alternatives bypassing the hole retain their full outcome index by identity.
-% 绕过该孔的上下文备选项通过恒等映射保留其完整结果索引。
-Hence every required regional source outcome has a full-target lift, no shared occurrence is split by outcome, and no inherited occurrence is mislabeled as a suffix.
-% 因此，每个必需的区域源结果都有一个完整目标提升，不会按结果拆分共享发生项，也不会将继承的发生项误标为后缀。
+Let \(O_{\rm byp}\) be source-context outcomes whose alternatives bypass the hole, and let \(\iota^u_{\rm ctx}:O_{\rm byp}\hookrightarrow O_{\sem{T'}}\) be the injection induced by context identity.
+% 令 \(O_{\rm byp}\) 为其备选路径绕过该孔的源上下文结果，并令 \(\iota^u_{\rm ctx}:O_{\rm byp}\hookrightarrow O_{\sem{T'}}\) 为上下文恒等映射诱导的单射。
+Define the single required-outcome set and its bypass lift by
+% 统一的必需结果集合及其绕过提升定义为
+\[
+\begin{aligned}
+ \mathsf{Req}_u&=\mathsf{Obl}_u
+   \uplus(\{\mathsf{ctx}\}\times O_{\rm byp}),\\
+ \mathsf{Lift}_u(t,(\mathsf{ctx},o))
+   &\Longleftrightarrow t=\iota^u_{\rm ctx}(o).
+\end{aligned}
+\]
+For regional \(a=(r,o)\in\mathsf{Obl}_u\), \(\mathsf{Lift}_u(t,a)\) denotes the relation above.
+% 对区域元素 \(a=(r,o)\in\mathsf{Obl}_u\)，\(\mathsf{Lift}_u(t,a)\) 表示上述关系。
+The checker also requires \(\forall a\in\mathsf{Req}_u.\ \exists t\in O_{\sem{T'}}.\ \mathsf{Lift}_u(t,a)\), ensuring a full-target lift for every required source outcome, no outcome-specific splitting of shared occurrences, and no inherited occurrence mislabeled as a suffix.
+% 检查器还要求 \(\forall a\in\mathsf{Req}_u.\ \exists t\in O_{\sem{T'}}.\ \mathsf{Lift}_u(t,a)\)，从而保证每个必需源结果都有完整目标提升、共享发生项不会按结果拆分，且继承发生项不会被误标为后缀。
 
-The schema-verification phase accepts
-% 模式验证阶段接受
+The schema-verification phase checks the following judgment.
+% 模式验证阶段检查以下判定。
 \[
 \Sigma_\zeta;H\vdash_{\rm edit}u\Rightarrow(T',\mathcal P_u)
 \]
-only when every named live object lies in \(\mathsf{addr}(T)\), every introduced object remains scoped to \(\omega\), the source fingerprint matches, the appropriate \(\mathcal P_u\), disjoint-cover, and \(\mathsf{Lift}_u\) obligations in \cref{tab:history-rules} hold, any retirement is authorized, and \(\sem{T'}\) is defined.
-% 但仅当每个具名活跃对象都位于 \(\mathsf{addr}(T)\) 中、每个引入的对象仍限定于 \(\omega\)、源指纹匹配、\cref{tab:history-rules} 中相应的 \(\mathcal P_u\)、不交覆盖和 \(\mathsf{Lift}_u\) 义务均成立、任何退役均获授权且 \(\sem{T'}\) 有定义时。
-Retirement is limited to the losing arm of a typed \(\mathsf{MergeSelect}\), or the current continuation of \(\mathsf{RestoreReplace}\) when it is complete or \(\sigma\) contains an explicit retirement certificate.
-% 退役仅限于类型化 \(\mathsf{MergeSelect}\) 的失败分支，或在当前延续已完成或 \(\sigma\) 包含显式退役证书时，限于 \(\mathsf{RestoreReplace}\) 的当前延续。
-These retirement conditions are checked edge facts, not Agent declarations.
-% 这些退役条件是经检查的边事实，而非 Agent 声明。
-A retirement certificate is a policy-issuer-authenticated immutable record at version \(\zeta\) binding \((\omega,\sigma)\), the exact source fingerprint, and the exact retired outcome indices and occurrence lineages.
-% 退役证书是版本 \(\zeta\) 下由策略发行方认证的不可变记录，它绑定 \((\omega,\sigma)\)、精确的源指纹以及精确的已退役结果索引和发生项谱系。
-It verifies that no occurrence outside that set disappears.
-% 它验证该集合之外没有发生项消失。
-For MergeSelect the certified set must equal the typed losing arm.
-% 对于 MergeSelect，经认证的集合必须等于类型化的失败分支。
-For RestoreReplace it must equal the current continuation.
-% 对于 RestoreReplace，它必须等于当前延续。
-Treating that explicitly authorized set as discharged is a trusted schema decision, not a theorem that the retirement was desirable.
+It holds exactly when every named live object belongs to \(\mathsf{addr}(T)\), every introduced object remains scoped to \(\omega\), the source fingerprint matches, the applicable \(\mathcal P_u\), disjoint-cover, and \(\mathsf{Lift}_u\) obligations in \cref{tab:history-rules} hold, any retirement is authorized, and \(\sem{T'}\) is defined.
+% 当且仅当每个具名活跃对象属于 \(\mathsf{addr}(T)\)、每个引入对象仍限定于 \(\omega\)、源指纹匹配、\cref{tab:history-rules} 中适用的 \(\mathcal P_u\)、不交覆盖和 \(\mathsf{Lift}_u\) 义务成立、任何退役均获授权且 \(\sem{T'}\) 有定义时，该判定才成立。
+Retirement is confined to a typed \(\mathsf{MergeSelect}\)'s losing arm or a \(\mathsf{RestoreReplace}\)'s current continuation when complete or covered by an explicit retirement certificate, and these are checked edge facts, not Agent declarations.
+% 退役仅限于类型化 \(\mathsf{MergeSelect}\) 的失败分支，或已完成或由显式退役证书覆盖的 \(\mathsf{RestoreReplace}\) 当前延续，而这些是经检查的边事实，并非 Agent 声明。
+Such a certificate is a policy-issuer-authenticated immutable record at version \(\zeta\) that binds \((\omega,\sigma)\), the exact source fingerprint, and exact retired outcome indices and occurrence lineages, and verifies that no other occurrence disappears.
+% 该证书是版本 \(\zeta\) 下由策略发行方认证的不可变记录，它绑定 \((\omega,\sigma)\)、精确源指纹以及精确的已退役结果索引和发生项谱系，并验证没有其他发生项消失。
+Its certified set must equal the typed losing arm for MergeSelect or the current continuation for RestoreReplace.
+% 对于 MergeSelect，其认证集合必须等于类型化失败分支；对于 RestoreReplace，则必须等于当前延续。
+Discharging that explicitly authorized set is a trusted schema decision, not a theorem that retirement was desirable.
 % 将该显式授权集合视为已履行义务是一项可信模式决策，而不是证明该退役值得执行的定理。
 
 Let \(\mathcal E[-]\) be a one-hole \emph{exposed} frontier context, so its hole has the addressability property above.
 % 令 \(\mathcal E[-]\) 为单孔的\emph{已暴露}前沿上下文，因此其孔具有上述可寻址性质。
 \(\mathsf{carry}\) is the identity on outcome and occurrence identifiers, pomset order, cells, lineage, base contracts, cursors, and nested choice status.
 % \(\mathsf{carry}\) 在结果标识、发生项标识、偏序事件集次序、单元、谱系、基础契约、游标和嵌套选择状态上均为恒等操作。
-\(\mathsf{clone}_r\) applies deterministic injective renamings to continuation, outcome, and occurrence identifiers; preserves pomset order and authenticated cell, scope, digest, and lineage data; and registers each cloned residual as a new base contract with an empty cursor.
-% \(\mathsf{clone}_r\) 对延续标识、结果标识和发生项标识施加确定性的单射重命名；保持偏序事件集次序以及经认证的单元、作用域、摘要和谱系数据；并将每个克隆残余注册为带空游标的新基础契约。
+\(\mathsf{clone}_r\) applies deterministic injective renamings to continuation, outcome, and occurrence identifiers, preserves pomset order and authenticated cell, scope, digest, and lineage data, and registers each cloned residual as a new base contract with an empty cursor.
+% \(\mathsf{clone}_r\) 对延续标识、结果标识和发生项标识施加确定性的单射重命名，保持偏序事件集次序以及经认证的单元、作用域、摘要和谱系数据，并将每个克隆残余注册为带空游标的新基础契约。
 Schema suffix leaves likewise start with their registered base contract and an empty cursor.
 % 模式后缀叶节点同样以其已注册基础契约和空游标为起点。
 The schema-derived contracts \(E_\sigma^L,E_\sigma^R,E_\sigma^J\) are suffixes, not replacements.
@@ -430,29 +411,19 @@ loser retired\\
 \end{tabular}
 \end{table*}
 
-The first \Fresh or \Alias occurrence in an open choice atomically sets its status.
-% 开放选择中的第一个 \Fresh 或 \Alias 发生项会以原子方式设置其状态。
-Later occurrences from the other arm are disabled.
-% 来自另一分支的后续发生项会被禁用。
-Hence \(\mathsf{MergeSelect}(g,w,\sigma)\) has no derivation after durable logical progress in the loser, even when that progress was receipt silent.
-% 因此，一旦失败分支取得持久逻辑进展，\(\mathsf{MergeSelect}(g,w,\sigma)\) 就没有可用推导，即使该进展未产生回执。
-In \(\mathsf{MergeJoin}\), replacing the addressable \(\parallel_g\) node by \(\mathsf{jbar}\) retires \(g\) in the same rewrite.
-% 在 \(\mathsf{MergeJoin}\) 中，以 \(\mathsf{jbar}\) 替换可寻址的 \(\parallel_g\) 节点，会在同一次重写中使 \(g\) 退役。
-The same pair therefore cannot be joined twice.
-% 因此，同一对分支不能被合并两次。
+In an open choice, the first \Fresh or \Alias atomically selects its arm and disables later occurrences from the other, so \(\mathsf{MergeSelect}(g,w,\sigma)\) has no derivation after any durable loser progress, including receipt-silent progress.
+% 在开放选择中，第一个 \Fresh 或 \Alias 会原子地选择其分支并禁用另一分支的后续发生项，因此失败分支取得任何持久进展后，\(\mathsf{MergeSelect}(g,w,\sigma)\) 都没有可用推导，包括未产生回执的进展。
+\(\mathsf{MergeJoin}\) replaces the addressable \(\parallel_g\) node with \(\mathsf{jbar}\), retiring \(g\) and preventing the same pair from being joined again.
+% \(\mathsf{MergeJoin}\) 以 \(\mathsf{jbar}\) 替换可寻址的 \(\parallel_g\) 节点，使 \(g\) 退役，并防止同一对分支再次合并。
 
-The model deliberately uses domain-wide handoff instead of selective owner analysis.
-% 该模型有意采用全域交接，而非选择性的所有者分析。
-Every live gate in \(H\) belongs to \(\eta^-=\eta\).
-% \(H\) 中的每个活跃门都属于 \(\eta^-=\eta\)。
-A table row, together with the following common update, is the complete rewrite rule.
-% 一个表格行连同下述公共更新共同构成完整的重写规则。
+The model uses domain-wide handoff rather than selective owner analysis, so every live gate in \(H\) belongs to \(\eta^-=\eta\).
+% 该模型采用全域交接而非选择性的所有者分析，因此 \(H\) 中的每个活跃门都属于 \(\eta^-=\eta\)。
+A table row plus the following common update is the complete rewrite rule.
+% 一个表格行与下列公共更新共同构成完整重写规则。
 Let \(e_u\) contain its typed edge and exactly the new target nodes prescribed by \(T'\).
 % 令 \(e_u\) 包含其类型化边，以及恰由 \(T'\) 指定的新目标节点。
-For each live target occurrence \(x\), the trusted protected-call issuer deterministically mints a new gate \(j_x^+\) and authenticated handle \(h_x^+\).
-% 对于每个活跃目标发生项 \(x\)，可信的受保护调用发行方会确定性地签发新门 \(j_x^+\) 和认证句柄 \(h_x^+\)。
-Registry \(\rho'\) preserves the row-certified cell, lineage, scope, and digest data, refreshes the live gate and handle fields, and retains historical records needed for \Retry.
-% 注册表 \(\rho'\) 保留由该行认证的单元、谱系、作用域和摘要数据，刷新活跃门及句柄字段，并保留 \Retry 所需的历史记录。
+For every live target occurrence \(x\), the trusted protected-call issuer deterministically mints \(j_x^+,h_x^+\), and \(\rho'\) preserves the row-certified cell, lineage, scope, digest, and historical records needed for \Retry while refreshing live gate and handle fields.
+% 对每个活跃目标发生项 \(x\)，可信的受保护调用发行方确定性地签发 \(j_x^+,h_x^+\)，而 \(\rho'\) 保留表行认证的单元、谱系、作用域、摘要以及 \Retry 所需的历史记录，同时刷新活跃门和句柄字段。
 Define
 % 定义
 \[
@@ -462,10 +433,10 @@ Define
  \beta'(x)&=(j_x^+,\eta^+).
 \end{aligned}
 \]
-The bundle is not live or available to a caller before installation.
-% 安装之前，该包尚未激活，调用方也无法使用它。
-The complete judgment is
-% 完整判定为
+The bundle is neither live nor caller-accessible before installation.
+% 安装前，该包既未激活，调用方也无法访问。
+The complete judgment is shown below.
+% 完整判定如下。
 \begin{equation}
 \label{eq:derived-cut}
 \begin{aligned}
@@ -476,20 +447,16 @@ The complete judgment is
  \mathcal C_{H,u}&=\sem{T'},\qquad \eta^-=\eta .
 \end{aligned}
 \end{equation}
-\(G\mathbin{\cdot}e_u\) retains retired nodes.
-% \(G\mathbin{\cdot}e_u\) 保留已退役节点。
-Thus an edit leaves \(K,\Sigma_\zeta,\chi\) unchanged, appends one typed provenance edge and its target nodes, refreshes every live gate and handle, and moves the entire policy domain to \(\eta^+\).
-% 因此，一次编辑会保持 \(K,\Sigma_\zeta,\chi\) 不变，追加一条类型化溯源边及其目标节点，刷新每个活跃门和句柄，并将整个策略域迁移到 \(\eta^+\)。
-Table constructors determine every new group mode.
-% 表中的构造器决定每个新组模式。
-Carried nested modes are unchanged.
-% 被携带的嵌套模式保持不变。
+Here \(G\mathbin{\cdot}e_u\) retains retired nodes.
+% 其中 \(G\mathbin{\cdot}e_u\) 保留已退役节点。
+Thus an edit preserves \(K,\Sigma_\zeta,\chi\), appends one typed provenance edge and its target nodes, refreshes every live gate and handle, and moves the domain to \(\eta^+\).
+% 因此，一次编辑保持 \(K,\Sigma_\zeta,\chi\)，追加一条类型化溯源边及其目标节点，刷新每个活跃门和句柄，并将整个域迁移到 \(\eta^+\)。
+Table constructors determine new group modes, while carried nested modes remain unchanged.
+% 表中构造器决定新组模式，而被携带的嵌套模式保持不变。
 A request naming a nonexistent checkpoint, wrong group mode, nonmember winner, mismatched schema fingerprint, retirement without schema authorization, or undefined composition has no derivation.
 % 如果请求指明不存在的检查点、错误的组模式、非成员胜者、不匹配的模式指纹、未经模式授权的退役或无定义的组合，则没有可用推导。
-Independent domains step by asynchronous product.
-% 独立域通过异步乘积推进。
-No theorem below claims within-domain partial fencing.
-% 下文没有任何定理声称域内存在部分隔离。
+Independent domains step by asynchronous product, and no theorem below claims within-domain partial fencing.
+% 独立域通过异步乘积推进，而下文没有定理声称域内存在部分隔离。
 
 \begin{lemma}[Schema fidelity and handoff totality]
 % 模式保真性与交接完备性
@@ -502,35 +469,25 @@ No pending source lineage disappears except through schema-authorized retirement
 % 除非通过模式授权的退役，否则不会有待处理的源谱系消失。
 The identity-preserved context and family \(\mathcal P_u\) preserve global occurrence sharing, cell, lineage, and causal order.
 % 由恒等映射保持的上下文和族 \(\mathcal P_u\) 会保持全局发生项共享、单元、谱系和因果次序。
-For every \((r,o)\in\mathsf{Obl}_u\), some full target outcome \(t\) satisfies \(\mathsf{Lift}_u(t,r,o)\).
-% 对每个 \((r,o)\in\mathsf{Obl}_u\)，都存在某个完整目标结果 \(t\) 满足 \(\mathsf{Lift}_u(t,r,o)\)。
-A context outcome bypassing the hole is preserved by identity.
-% 绕过该孔的上下文结果由恒等映射保持。
+For every \(a\in\mathsf{Req}_u\), some full target outcome \(t\) satisfies \(\mathsf{Lift}_u(t,a)\), including the identity lift of every bypassing context outcome.
+% 对每个 \(a\in\mathsf{Req}_u\)，都存在某个完整目标结果 \(t\) 满足 \(\mathsf{Lift}_u(t,a)\)，其中包括每个绕过上下文结果的恒等提升。
 Every live target gate is bound to \(\eta^+\), has one authenticated handle in \(\mathcal H_u^+\), and no target gate remains bound to \(\eta^-\).
 % 每个活跃目标门都绑定到 \(\eta^+\)，在 \(\mathcal H_u^+\) 中具有一个认证句柄，并且没有目标门仍绑定到 \(\eta^-\)。
 \end{lemma}
 \begin{proof}
-Unique object and schema identifiers select one row and record.
-% 唯一的对象标识和模式标识会选定一个表格行和一条记录。
-Context identity preserves everything outside the hole.
-% 上下文恒等映射会保持孔外的一切内容。
-The Fork rows certify both clones.
-% Fork 行会认证两个克隆。
-RestoreReplace certifies the checkpoint clone and source retirement, whereas RestoreLive certifies the carried source and checkpoint clone.
-% RestoreReplace 认证检查点克隆和源退役，而 RestoreLive 认证被携带的源和检查点克隆。
-MergeSelect certifies the winner and typed loser, and MergeJoin certifies both carried regions before its barrier.
+Unique object and schema identifiers select one row and record, while context identity preserves everything outside the hole.
+% 唯一的对象标识和模式标识选定一个表格行和一条记录，而上下文恒等映射保持孔外的一切内容。
+The Fork rows certify both clones; RestoreReplace certifies the checkpoint clone and source retirement, while RestoreLive certifies the carried source and checkpoint clone.
+% Fork 行认证两个克隆；RestoreReplace 认证检查点克隆和源退役，而 RestoreLive 认证被携带的源和检查点克隆。
+MergeSelect certifies the winner and typed loser, while MergeJoin certifies both carried regions before its barrier.
 % MergeSelect 认证胜者和类型化败者，而 MergeJoin 认证其屏障之前的两个携带区域。
-Clone and carry give the global bijections and incidence preservation.
-% 克隆和携带给出全局双射及关联保持。
-Constructor induction defines \(\mathsf{pr}^u_r\), proves the cover, and supplies every \(\mathsf{Lift}_u\) witness.
-% 构造器归纳定义 \(\mathsf{pr}^u_r\)、证明覆盖，并给出每个 \(\mathsf{Lift}_u\) 见证。
-The common poststate fixes all other fields.
-% 公共后状态固定所有其他字段。
-New identifiers, partial-constructor checks, and \cref{lem:observable-completion} preserve uniqueness, acyclicity, and contract well-formedness.
-% 新标识、偏构造器检查以及 \cref{lem:observable-completion} 会保持唯一性、无环性和契约良构性。
-The fields \(\beta'\) and \(\mathcal H_u^+\) establish handoff totality at \(\eta^+\).
-% 字段 \(\beta'\) 和 \(\mathcal H_u^+\) 在 \(\eta^+\) 上建立交接完备性。
+Clone and carry supply the global bijections and incidence preservation; constructor induction defines \(\mathsf{pr}^u_r\), proves the cover, and supplies every \(\mathsf{Lift}_u\) witness.
+% 克隆和携带给出全局双射与关联保持；构造器归纳定义 \(\mathsf{pr}^u_r\)、证明覆盖，并给出每个 \(\mathsf{Lift}_u\) 见证。
+The common poststate fixes all remaining fields, while new identifiers, partial-constructor checks, and \cref{lem:observable-completion} preserve uniqueness, acyclicity, and contract well-formedness.
+% 公共后状态固定所有其余字段，而新标识、偏构造器检查和 \cref{lem:observable-completion} 保持唯一性、无环性与契约良构性。
+Finally, \(\beta'\) and \(\mathcal H_u^+\) establish handoff totality at \(\eta^+\).
+% 最后，\(\beta'\) 和 \(\mathcal H_u^+\) 在 \(\eta^+\) 上建立交接完备性。
 \end{proof}
 
 Thus no caller supplies a semantic oracle: Fork arms must project onto pending \(\mathcal C\), and Join reads both residuals before appending \(E_\sigma^J\).
-% 因此，没有调用方会提供语义预言机：Fork 分支必须投影到待处理的 \(\mathcal C\)，而 Join 会在追加 \(E_\sigma^J\) 之前读取两个残余。
+% 因此，调用方不会提供语义预言机：Fork 分支必须投影到待处理的 \(\mathcal C\)，而 Join 会在追加 \(E_\sigma^J\) 之前读取两个残余。
