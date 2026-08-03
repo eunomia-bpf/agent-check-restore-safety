@@ -114,17 +114,52 @@ def initialHistory (slice : RegisteredSlice Outcome Label)
 def FullTargetLift (slice : RegisteredSlice Outcome Label) : Prop :=
   ∀ outcome ∈ slice.promised, (slice.linearizations outcome).Nonempty
 
+/-- The finite occurrence support whose identity rows can affect this
+registered slice.  Occurrences outside the base and promised linearizations
+are not part of the slice and need no registry row. -/
+def RegisteredSlice.InSupport
+    [DecidableEq Outcome]
+    (slice : RegisteredSlice Outcome Label) (occurrence : Occurrence) : Prop :=
+  occurrence ∈ slice.base ∨
+    ∃ outcome ∈ slice.promised,
+      ∃ word ∈ slice.linearizations outcome, occurrence ∈ word
+
 structure RegisteredSlice.Valid
     [DecidableEq Outcome] [DecidableEq Label]
     (slice : RegisteredSlice Outcome Label) : Prop where
   identityComplete :
-    ∀ occurrence, (occurrence, slice.cellOf occurrence) ∈
-      slice.authenticatedIdentityRows
+    ∀ occurrence, slice.InSupport occurrence →
+      (occurrence, slice.cellOf occurrence) ∈
+        slice.authenticatedIdentityRows
   schemaRegistered : slice.registeredSchemas.Nonempty
   fullTargetLift : FullTargetLift slice
   contractValid : ValidInstance (contractAt slice [])
   greatestNonempty :
     (greatestPostfixed (contractAt slice [])).Nonempty
+
+/-- Authenticated append-only control-plane growth.  The active contract's
+topology, resolution map, and labels retain exactly their old meanings.
+Schemas, identity rows, and policy words may only be added, and all three
+authenticated versions advance together. -/
+structure RegisteredSlice.StaticExtends
+    (source target : RegisteredSlice Outcome Label) : Prop where
+  base_eq : target.base = source.base
+  promised_eq : target.promised = source.promised
+  linearizations_eq : target.linearizations = source.linearizations
+  cellOf_eq : target.cellOf = source.cellOf
+  labelOf_eq : target.labelOf = source.labelOf
+  schemas_mono :
+    source.registeredSchemas ⊆ target.registeredSchemas
+  identityRows_mono :
+    source.authenticatedIdentityRows ⊆
+      target.authenticatedIdentityRows
+  authority_mono : source.authority ⊆ target.authority
+  schemaVersion_next :
+    target.schemaVersion = source.schemaVersion.next
+  viewVersion_next :
+    target.viewVersion = source.viewVersion.next
+  policyVersion_next :
+    target.policyVersion = source.policyVersion.next
 
 theorem initialHistory_wellFormed
     (slice : RegisteredSlice Outcome Label) (seed : NamespaceSeed) :
@@ -142,6 +177,15 @@ structure InitialDerivation
   target_eq : target = initialHistory slice seed
   registered : slice.Valid
 
+/-- A checked live extension is not a seventh structural edit.  Its history
+target is identity-on-frontier, while its registered slice is an authenticated
+static extension of the currently installed slice. -/
+structure LiveExtensionDerivation
+    (sourceSlice targetSlice : RegisteredSlice Outcome Label)
+    (source : History) (request : RequestId) (target : History) : Prop where
+  staticExtends : sourceSlice.StaticExtends targetSlice
+  target_eq : target = extensionHistory source
+
 inductive CutOrigin
     [DecidableEq Outcome] [DecidableEq Label]
     (slice : RegisteredSlice Outcome Label) (seed : NamespaceSeed) :
@@ -151,6 +195,10 @@ inductive CutOrigin
       CutOrigin slice seed none target
   | edit {source target request}
       (derivation : HistoryDerivation source request target) :
+      CutOrigin slice seed (some source) target
+  | extension {sourceSlice source target request}
+      (derivation :
+        LiveExtensionDerivation sourceSlice slice source request target) :
       CutOrigin slice seed (some source) target
 
 def EditRequest.requestId : EditRequest → RequestId
@@ -220,16 +268,20 @@ def rootSpecification
   targetWellFormed := initialHistory_wellFormed slice seed
   fullTargetLift := valid.fullTargetLift
 
-theorem nonRootCut_hasEditDerivation
+theorem nonRootCut_hasLiveDerivation
     [DecidableEq Outcome] [DecidableEq Label]
     (specification : CutSpecification (Outcome := Outcome) (Label := Label))
     {source : History} (nonRoot : specification.source = some source) :
-    ∃ request,
-      HistoryDerivation source request specification.target := by
+    (∃ request,
+      HistoryDerivation source request specification.target) ∨
+    (∃ sourceSlice request,
+      LiveExtensionDerivation sourceSlice specification.slice source request
+        specification.target) := by
   have origin := specification.origin
   rw [nonRoot] at origin
   cases origin with
-  | edit derivation => exact ⟨_, derivation⟩
+  | edit derivation => exact Or.inl ⟨_, derivation⟩
+  | extension derivation => exact Or.inr ⟨_, _, derivation⟩
 
 structure OutcomeLineageAndHandoff
     (source target : History) : Prop where
@@ -255,6 +307,23 @@ theorem historyDerivation_preserves_outcomes_lineage_and_handoff
   · exact congrArg (List.map fun item => item.event.cell) progress
   · intro item member
     simpa [progress] using member
+
+theorem liveExtensionDerivation_preserves_outcomes_lineage_and_handoff
+    {sourceSlice targetSlice : RegisteredSlice Outcome Label}
+    {source target : History} {request : RequestId}
+    (derivation :
+      LiveExtensionDerivation sourceSlice targetSlice source request target) :
+    OutcomeLineageAndHandoff source target := by
+  cases derivation with
+  | mk staticExtends target_eq =>
+      subst target
+      constructor
+      · rfl
+      · rfl
+      · rfl
+      · rfl
+      · intro progress member
+        exact member
 
 /-! ## Certificates, monitors, runtime rows, and AgentSec -/
 
@@ -426,9 +495,13 @@ def CheckedCutOrigin
     Nonempty
       (InitialDerivation specification.slice specification.seed
         specification.target)) ∨
-  ∃ source request,
+  (∃ source request,
+      specification.source = some source ∧
+        HistoryDerivation source request specification.target) ∨
+  ∃ sourceSlice source request,
     specification.source = some source ∧
-      HistoryDerivation source request specification.target
+      LiveExtensionDerivation sourceSlice specification.slice source request
+        specification.target
 
 theorem checkedCutOrigin_of_origin
     [DecidableEq Outcome] [DecidableEq Label]
@@ -437,14 +510,19 @@ theorem checkedCutOrigin_of_origin
     (origin : CutOrigin slice seed source target) :
     (source = none ∧
       Nonempty (InitialDerivation slice seed target)) ∨
-    ∃ history request,
+    (∃ history request,
+        source = some history ∧
+          HistoryDerivation history request target) ∨
+    ∃ sourceSlice history request,
       source = some history ∧
-        HistoryDerivation history request target := by
+        LiveExtensionDerivation sourceSlice slice history request target := by
   cases origin with
   | root derivation =>
       exact Or.inl ⟨rfl, ⟨derivation⟩⟩
   | edit derivation =>
-      exact Or.inr ⟨_, _, rfl, derivation⟩
+      exact Or.inr (Or.inl ⟨_, _, rfl, derivation⟩)
+  | extension derivation =>
+      exact Or.inr (Or.inr ⟨_, _, _, rfl, derivation⟩)
 
 theorem cutOrigin_checked
     [DecidableEq Outcome] [DecidableEq Label]
@@ -782,11 +860,77 @@ def InstallCandidate.ValidFor
       binding.epoch ≠ candidate.specification.allocation.epoch) ∧
     state.availability = .running
 
+/-- A separately typed live-extension candidate.  Keeping this distinct from
+`InstallCandidate` ensures the six structural edit constructors and their
+derivation relation remain unchanged. -/
+structure LiveExtensionCandidate
+    [DecidableEq Outcome] [DecidableEq Label] where
+  capturedHistory : History
+  parentEpoch : RuntimeName
+  request : RequestId
+  sourceSlice : RegisteredSlice Outcome Label
+  specification :
+    CutSpecification (Outcome := Outcome) (Label := Label)
+  request_eq : specification.request = request
+  source_eq : specification.source = some capturedHistory
+  derivation :
+    LiveExtensionDerivation sourceSlice specification.slice capturedHistory
+      request specification.target
+  origin_eq :
+    HEq specification.origin
+      (CutOrigin.extension (seed := specification.seed) derivation)
+
+def LiveExtensionCandidate.ValidFor
+    [DecidableEq Outcome] [DecidableEq Label]
+    (candidate :
+      LiveExtensionCandidate (Outcome := Outcome) (Label := Label))
+    (state : InstalledState (Outcome := Outcome) (Label := Label)) : Prop :=
+  candidate.capturedHistory = state.history ∧
+    candidate.parentEpoch = state.activeEpoch ∧
+    candidate.sourceSlice = state.specification.slice ∧
+    candidate.specification.seed = state.specification.seed ∧
+    candidate.specification.durableReceiptCells =
+      state.receipts.map (·.cell) ∧
+    candidate.specification.allocation.epoch ≠ state.activeEpoch ∧
+    candidate.specification.allocation.epoch ∉ state.activeEpochs ∧
+    candidate.specification.allocation.epoch ∉ state.closedEpochs ∧
+    (∀ binding ∈ state.bindings,
+      binding.epoch ≠ candidate.specification.allocation.epoch) ∧
+    state.availability = .running
+
 def installPost
     [DecidableEq Outcome] [DecidableEq Label]
     (state : InstalledState (Outcome := Outcome) (Label := Label))
     (candidate :
       InstallCandidate (Outcome := Outcome) (Label := Label)) :
+    InstalledState (Outcome := Outcome) (Label := Label) :=
+  let specification := candidate.specification
+  { state with
+    specification := specification
+    history := specification.target
+    trace := []
+    saveLog := []
+    authorityHistory := specification.contract.durablePrefix
+    certificate := certificateFor specification
+    program := canonicalMonitor specification
+    monitorState := []
+    activeEpoch := specification.allocation.epoch
+    activeEpochs := {specification.allocation.epoch}
+    closedEpochs := insert state.activeEpoch state.closedEpochs
+    bindings :=
+      canonicalBindings specification.target specification.allocation.epoch
+    handles := []
+    availability := .running
+  }
+
+/-- Live extension uses exactly the same atomic epoch replacement as a
+structural edit, but its specification has an extension origin and an
+identity-on-frontier target. -/
+def liveExtensionPost
+    [DecidableEq Outcome] [DecidableEq Label]
+    (state : InstalledState (Outcome := Outcome) (Label := Label))
+    (candidate :
+      LiveExtensionCandidate (Outcome := Outcome) (Label := Label)) :
     InstalledState (Outcome := Outcome) (Label := Label) :=
   let specification := candidate.specification
   { state with
@@ -1093,6 +1237,50 @@ theorem installPost_agentSec
     · intro handle member
       exact (by simpa [installPost] using member : False).elim
 
+theorem liveExtensionPost_agentSec
+    [DecidableEq Outcome] [DecidableEq Label]
+    {state : InstalledState (Outcome := Outcome) (Label := Label)}
+    {candidate :
+      LiveExtensionCandidate (Outcome := Outcome) (Label := Label)}
+    (secure : AgentSec state) (valid : candidate.ValidFor state) :
+    AgentSec (liveExtensionPost state candidate) := by
+  rcases secure with ⟨core, promise, execution, monitor, epoch⟩
+  rcases execution with
+    ⟨run, resolved, receiptCells, receiptNodup, prepared,
+      releasePrefix, settledPrefix, futures, authority, saves⟩
+  rcases valid with
+    ⟨captured, parent, sourceSlice, sameSeed, durable, newEpoch,
+      inactive, notClosed, unbound, running⟩
+  let specification := candidate.specification
+  have emptyLanguage :
+      [] ∈ specification.generatedLanguage := by
+    rw [specification.language_eq]
+    exact empty_mem_Wof_of_nonempty specification.contract
+      specification.realizationNonempty
+  constructor
+  · exact ⟨specification.targetWellFormed, rfl,
+      cutOrigin_checked specification, specification.fullTargetLift⟩
+  · exact ⟨specification.indexed_eq,
+      specification.realizationNonempty, specification.language_eq, rfl⟩
+  · refine ⟨.nil _, ?_, ?_, receiptNodup,
+      prepared, releasePrefix, settledPrefix, futures, ?_, ?_⟩
+    · simp [liveExtensionPost, resolveFrom, raw]
+    · change
+        state.receipts.map (·.cell) =
+          candidate.specification.durableReceiptCells ++ freshCells []
+      simpa [freshCells] using durable.symm
+    · simp [liveExtensionPost, authorityWord]
+    · simp [liveExtensionPost]
+  · exact ⟨⟨rfl, rfl, rfl⟩, rfl, emptyLanguage⟩
+  · refine ⟨rfl, ?_, rfl, canonicalBindings_authenticated _ _, ?_⟩
+    · change
+        candidate.specification.allocation.epoch ∉
+          insert state.activeEpoch state.closedEpochs
+      simp only [Finset.mem_insert, not_or]
+      exact ⟨newEpoch, notClosed⟩
+    · intro handle member
+      exact (by simpa [liveExtensionPost] using member : False).elim
+
 theorem dispatchPost_agentSec
     [DecidableEq Outcome] [DecidableEq Label]
     {state : InstalledState (Outcome := Outcome) (Label := Label)}
@@ -1207,6 +1395,9 @@ inductive KernelEvent
   | installMergeJoin
       (candidate :
         InstallCandidate (Outcome := Outcome) (Label := Label))
+  | installLiveExtension
+      (candidate :
+        LiveExtensionCandidate (Outcome := Outcome) (Label := Label))
   | save (checkpoint : Checkpoint)
   | preload
       (candidate :
@@ -1220,6 +1411,9 @@ inductive KernelEvent
   | failedOrStaleInstallation
       (candidate :
         InstallCandidate (Outcome := Outcome) (Label := Label))
+  | failedOrStaleLiveExtension
+      (candidate :
+        LiveExtensionCandidate (Outcome := Outcome) (Label := Label))
   | crash
   | recovery
 
@@ -1291,6 +1485,11 @@ inductive KernelStep
       (valid : candidate.ValidFor state) :
       KernelStep state (.installMergeJoin candidate)
         (installPost state candidate)
+  | installLiveExtension
+      {state candidate}
+      (valid : candidate.ValidFor state) :
+      KernelStep state (.installLiveExtension candidate)
+        (liveExtensionPost state candidate)
   | save {state checkpoint token}
       (authenticated : SaveGuard state token)
       (freshId : state.history.lookupCheckpoint checkpoint.id = none) :
@@ -1339,6 +1538,10 @@ inductive KernelStep
       (failed : ¬ candidate.ValidFor state) :
       KernelStep state (.failedOrStaleInstallation candidate)
         (failedInstallPost state)
+  | failedOrStaleLiveExtension {state candidate}
+      (failed : ¬ candidate.ValidFor state) :
+      KernelStep state (.failedOrStaleLiveExtension candidate)
+        (failedInstallPost state)
   | crash {state} (running : state.availability = .running) :
       KernelStep state .crash (crashPost state)
   | recovery {state} (recovering : state.availability = .recovering) :
@@ -1363,6 +1566,8 @@ theorem kernelStep_preserves_agentSec
   | installMergeSelect shape valid
   | installMergeJoin shape valid =>
       exact installPost_agentSec secure valid
+  | installLiveExtension valid =>
+      exact liveExtensionPost_agentSec secure valid
   | save authenticated freshId =>
       exact savePost_agentSec secure _
   | preload =>
@@ -1383,6 +1588,8 @@ theorem kernelStep_preserves_agentSec
   | settlement next freshResult receiptMatch =>
       exact settlementPost_agentSec secure _ _ next freshResult receiptMatch
   | failedOrStaleInstallation failed =>
+      apply metadataUpdate_agentSec secure
+  | failedOrStaleLiveExtension failed =>
       apply metadataUpdate_agentSec secure
   | crash running =>
       apply metadataUpdate_agentSec secure
@@ -1437,6 +1644,25 @@ theorem six_edits_closed
   | mergeJoin request target suffix =>
       exact ⟨.installMergeJoin candidate,
         .installMergeJoin shape valid⟩
+
+theorem live_extension_closed
+    [DecidableEq Outcome] [DecidableEq Label]
+    {state : InstalledState (Outcome := Outcome) (Label := Label)}
+    (candidate :
+      LiveExtensionCandidate (Outcome := Outcome) (Label := Label))
+    (valid : candidate.ValidFor state) :
+    KernelStep state (.installLiveExtension candidate)
+      (liveExtensionPost state candidate) :=
+  .installLiveExtension valid
+
+theorem live_extension_preserves_agentSec
+    [DecidableEq Outcome] [DecidableEq Label]
+    {state : InstalledState (Outcome := Outcome) (Label := Label)}
+    (candidate :
+      LiveExtensionCandidate (Outcome := Outcome) (Label := Label))
+    (secure : AgentSec state) (valid : candidate.ValidFor state) :
+    AgentSec (liveExtensionPost state candidate) :=
+  kernelStep_preserves_agentSec secure (.installLiveExtension valid)
 
 /-! ## Linearization races at use/install -/
 
@@ -1499,6 +1725,46 @@ theorem alias_before_install_stale
       apply hStep_changes_history historyStep
       simpa [aliasUsePost] using sourceEqualsPost
 
+theorem fresh_before_live_extension_stale
+    [DecidableEq Outcome] [DecidableEq Label]
+    {state post :
+      InstalledState (Outcome := Outcome) (Label := Label)}
+    {token : UseToken}
+    {candidate :
+      LiveExtensionCandidate (Outcome := Outcome) (Label := Label)}
+    (use : KernelStep state (.freshUse token) post)
+    (captured : candidate.capturedHistory = state.history) :
+    ¬ candidate.ValidFor post := by
+  intro validAfter
+  cases use with
+  | freshUse guard historyStep postWellFormed =>
+      have sourceEqualsPost :
+          state.history =
+            (freshUsePost state token _).history :=
+        captured.symm.trans validAfter.1
+      apply hStep_changes_history historyStep
+      simpa [freshUsePost] using sourceEqualsPost
+
+theorem alias_before_live_extension_stale
+    [DecidableEq Outcome] [DecidableEq Label]
+    {state post :
+      InstalledState (Outcome := Outcome) (Label := Label)}
+    {token : UseToken}
+    {candidate :
+      LiveExtensionCandidate (Outcome := Outcome) (Label := Label)}
+    (use : KernelStep state (.aliasUse token) post)
+    (captured : candidate.capturedHistory = state.history) :
+    ¬ candidate.ValidFor post := by
+  intro validAfter
+  cases use with
+  | aliasUse guard historyStep postWellFormed =>
+      have sourceEqualsPost :
+          state.history =
+            (aliasUsePost state token _).history :=
+        captured.symm.trans validAfter.1
+      apply hStep_changes_history historyStep
+      simpa [aliasUsePost] using sourceEqualsPost
+
 theorem install_before_old_use_denied
     [DecidableEq Outcome] [DecidableEq Label]
     {state : InstalledState (Outcome := Outcome) (Label := Label)}
@@ -1518,6 +1784,29 @@ theorem install_before_old_use_denied
     have tokenNew :
         token.epoch = candidate.specification.allocation.epoch := by
       simpa [UseGuard, installPost] using guard.2.1
+    apply freshEpoch
+    exact tokenNew.symm.trans oldEpoch
+  exact ⟨denied, .denialUse denied⟩
+
+theorem live_extension_before_old_use_denied
+    [DecidableEq Outcome] [DecidableEq Label]
+    {state : InstalledState (Outcome := Outcome) (Label := Label)}
+    {candidate :
+      LiveExtensionCandidate (Outcome := Outcome) (Label := Label)}
+    {token : UseToken}
+    (valid : candidate.ValidFor state)
+    (oldEpoch : token.epoch = state.activeEpoch) :
+    ¬ UseGuard (liveExtensionPost state candidate) token ∧
+      KernelStep (liveExtensionPost state candidate) (.denial token)
+        (denialPost (liveExtensionPost state candidate) token) := by
+  rcases valid with
+    ⟨captured, parent, sourceSlice, sameSeed, durable, freshEpoch,
+      inactive, notClosed, unbound, running⟩
+  have denied : ¬ UseGuard (liveExtensionPost state candidate) token := by
+    intro guard
+    have tokenNew :
+        token.epoch = candidate.specification.allocation.epoch := by
+      simpa [UseGuard, liveExtensionPost] using guard.2.1
     apply freshEpoch
     exact tokenNew.symm.trans oldEpoch
   exact ⟨denied, .denialUse denied⟩

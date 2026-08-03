@@ -376,6 +376,46 @@ def History.withFrontier (history : History) (frontier : Frontier) : History whe
   checkpoints := history.checkpoints
   progress := history.progress
 
+/-- A live schema/registry/policy extension is identity-on-frontier.  It
+advances the authenticated history view while retaining every checkpoint and
+every append-only progress record. -/
+def extensionHistory (history : History) : History where
+  version := history.version.next
+  frontier := history.frontier
+  checkpoints := history.checkpoints
+  progress := history.progress
+
+@[simp] theorem extensionHistory_version (history : History) :
+    (extensionHistory history).version = history.version.next := rfl
+
+@[simp] theorem extensionHistory_frontier (history : History) :
+    (extensionHistory history).frontier = history.frontier := rfl
+
+@[simp] theorem extensionHistory_checkpoints (history : History) :
+    (extensionHistory history).checkpoints = history.checkpoints := rfl
+
+@[simp] theorem extensionHistory_progress (history : History) :
+    (extensionHistory history).progress = history.progress := rfl
+
+theorem extensionHistory_wellFormed {history : History}
+    (wellFormed : history.WellFormed) :
+    (extensionHistory history).WellFormed := by
+  constructor
+  · intro branch member
+    have old := wellFormed.branchVersionBound branch member
+    simp only [extensionHistory, Version.next_value]
+    omega
+  · intro group member
+    have old := wellFormed.groupVersionBound group member
+    simp only [extensionHistory, Version.next_value]
+    omega
+  · intro progress member
+    have old := wellFormed.progressVersionBound progress member
+    simp only [extensionHistory, Version.next_value]
+    omega
+  · exact wellFormed.branchResiduals
+  · exact wellFormed.cursorFromGlobal
+
 def forkChoicePost (history : History) (request : RequestId)
     (source : Branch) (leftSuffix rightSuffix : List Occurrence) : History :=
   history.withFrontier <|
