@@ -4,26 +4,28 @@
 
 \paragraph{Contracts and progress}
 % 契约与进展
-Each admission covers a finite registered protected-call slice; \cref{thm:exact-history} keeps its security state closed after every finite prefix of arbitrarily long sequences, while unregistered calls fail closed.
-% 每次准入覆盖一个有限的已注册受保护调用切片；\cref{thm:exact-history} 使其安全状态在任意长序列的每个有限前缀之后保持闭合，而未注册调用以关闭方式失败。
-Prefix-free complete traces distinguish stopping from continuing.
-% 无前缀关系的完整轨迹区分停止与继续。
-Completion nonblocking preserves one safe completion per compatible outcome but guarantees neither fairness, task completion, nor later admission.
-% 完成非阻塞性为每个兼容结果保留一条安全完成路径，但不保证公平性、任务完成或后续准入。
+Each admission covers one finite registered slice; \cref{thm:exact-history} preserves that slice's security-state invariant after every finite prefix, and unregistered calls fail closed.
+% 每次准入覆盖一个有限的已注册切片；\cref{thm:exact-history} 在每个有限前缀后保持该切片的安全状态不变量，而未注册调用以关闭方式失败。
+Prefix-free completion traces distinguish stopping from continuing, while completion nonblocking preserves one safe completion per compatible outcome but guarantees neither fairness, task completion, nor later admission.
+% 无前缀关系的完成轨迹区分停止与继续；完成非阻塞性为每个兼容结果保留一条安全完成路径，但既不保证公平性、任务完成，也不保证后续准入。
 Policy governs authority, not prompt integrity, confidentiality, action quality, or alignment.
-% 策略治理权限，而不治理提示完整性、机密性、动作质量或对齐。
+% 策略治理权限，而非提示完整性、机密性、动作质量或对齐。
 
 \paragraph{Deployment}
 % 部署
-Deployment assumes complete mediation, crash-stable linearizable transactions, and one epoch per disjoint domain.
-% 部署假设完全中介、崩溃稳定的可线性化事务，以及每个互不相交的域拥有一个纪元。
-Remote exactly-once needs an idempotent or queryable sink; policy changes require re-admission.
-% 远程恰好一次执行需要幂等或可查询的接收端；策略变更需要重新准入。
-The artifact omits Agent-runtime integration, external effects, and full mechanization.
-% 该制品不包含 Agent 运行时集成、外部效果和完整机械化。
+Deployment requires complete mediation, crash-stable linearizable domain transactions, and one active epoch per policy domain.
+% 部署要求完全中介、崩溃稳定的可线性化域事务，以及每个策略域只有一个活跃纪元。
+Policy changes require re-admission; remote exactly-once needs an idempotent/queryable sink.
+% 策略变更需要重新准入；远程恰好一次执行需要幂等或可查询的接收端。
+The artifact omits runtime integration, external effects, and full mechanization.
+% 本制品不包含运行时集成、外部效果和完整机械化。
 
-\section{Conclusion}
+\paragraph{Ethics}
+% 伦理
+We use only synthetic local histories: no participants, user data, or deployment; extrapolation beyond registered, fully mediated slices is the main risk.
+% 我们仅使用本地合成历史：不涉及参与者、用户数据或部署；将结论外推到已注册且完全中介的切片之外是主要风险。
+
+\paragraph{Conclusion}
 % 结论
-
-Agent History Admission exactly compiles each edit into its greatest atomically installable safe monitor or proves realization impossible.
-% Agent 历史准入将每次编辑精确编译为可原子安装的最大安全监控器，或证明其无法实现。
+Agent History Admission yields each edit's greatest safe monitor or an impossibility proof.
+% Agent 历史准入为每次编辑给出其最大安全监控器或不可能性证明。

@@ -27,12 +27,10 @@ Admitting that prefix silently retracts an Agent promise.
 The failure cascades when removing that completion destroys coverage at an earlier prefix, so testing each outcome independently is unsound.
 % 当移除该完成路径会破坏更早前缀处的覆盖性时，失败便会级联，因此独立测试每个结果并不可靠。
 
-Prior theories already carry unfinished temporal obligations into a live replacement and retain duties or optional rights after every prefix~\cite{finkbeiner2022live,zhu2022duties}.
-% 既有理论已经能够把未完成的时序义务带入在线替换，并在每个前缀之后保留职责或可选权利~\cite{finkbeiner2022live,zhu2022duties}。
-They receive old and new formulas, a plant, and a linear trace or current state, while history monitors and commit-time authorization judge an existing history or one effect~\cite{abadi2003history,krukow2008history,palumbo2026forge,santos2026committime}.
-% 它们接收新旧公式、被控对象以及线性轨迹或当前状态，而历史监控器和提交时授权则判断既有历史或单个效果~\cite{abadi2003history,krukow2008history,palumbo2026forge,santos2026committime}。
-Agent history admission authenticates the topology-changing edit and derives its outcome identities, occurrence-to-cell incidence, receipt ledger, and history cut before applying such synthesis.
-% Agent 历史准入先认证改变拓扑的编辑，并推导其结果标识、发生项到单元的关联、回执账本和历史切点，随后才应用这类综合。
+Live synthesis carries supplied temporal obligations, while history monitors and commit-time authorization judge an existing history or one effect~\cite{finkbeiner2022live,zhu2022duties,abadi2003history,krukow2008history,palumbo2026forge,santos2026committime}.
+% 在线综合携带给定的时序义务，而历史监控器与提交时授权判断既有历史或单个效果~\cite{finkbeiner2022live,zhu2022duties,abadi2003history,krukow2008history,palumbo2026forge,santos2026committime}。
+Agent history admission instead authenticates a topology-changing edit and derives its outcomes, effect identities, receipt ledger, and cut before synthesis.
+% Agent 历史准入则在综合前认证改变拓扑的编辑，并推导其结果、效果标识、回执账本和切点。
 
 Our key observation is that exact Agent history editing requires one relational security state spanning promised causal completions, occurrence-to-cell effect identity, the append-only receipt ledger, and the history cut.
 % 我们的关键观察是，精确的 Agent 历史编辑需要一种关系化安全状态，它同时涵盖已承诺的因果完成、发生项到单元的效果标识关系、仅追加回执账本和历史切点。
@@ -43,8 +41,8 @@ For each proper factor projection, two finite registered histories expose the sa
 The relational state remains closed after every finite prefix of an arbitrarily long online sequence of trusted edits and protected calls, rather than applying only to one rewrite.
 % 对可信编辑和受保护调用组成的任意长在线序列，该关系状态在每个有限前缀之后仍保持闭合，而不只适用于一次重写。
 
-Once the trusted semantics has derived this Agent-specific state, conditional generalized nonblocking supplies the synthesis backend.
-% 可信语义推导出这一 Agent 特有状态之后，条件广义非阻塞提供综合后端。
+Once the trusted semantics has derived this Agent-specific state, conditional generalized nonblocking supplies the synthesis backend~\cite{malik2008generalised}.
+% 可信语义推导出这一 Agent 特有状态之后，条件广义非阻塞提供综合后端~\cite{malik2008generalised}。
 From the policy-safe resolved completions \(\widehat B_0\), the pruning operator \(\widehat\Phi\) removes any completion having a prefix without a surviving continuation for even one contract-compatible outcome.
 % 从策略安全的已解析完成路径 \(\widehat B_0\) 出发，裁剪算子 \(\widehat\Phi\) 会移除任何包含如下前缀的完成路径：哪怕仅对一个与契约兼容的结果，该前缀都没有仍然存活的后续路径。
 \[
@@ -59,39 +57,27 @@ When nonempty, it yields the greatest permitted behavior \(W^\dagger\), and when
 Ordinary marker nonblocking over traces alone loses both outcome compatibility and occurrence-to-cell effect identity (\cref{prop:outcome-necessary,thm:exact-history}).
 % 普通的纯轨迹标记非阻塞会丢失结果兼容性和发生项到单元的效果标识这两类信息（\cref{prop:outcome-necessary,thm:exact-history}）。
 
-The Agent names only live objects and an immutable schema.
-% Agent 仅指名活对象和不可变模式。
-A trusted judgment derives the target and preserves outcomes, occurrences, cells, lineage, and causal order except under schema-authorized retirement.
-% 可信判定推导目标，并保持结果、发生项、单元、谱系和因果顺序，除非模式授权将其退役。
-Resolution records \Fresh commitments and receipt-silent \Alias occurrences.
-% 解析过程记录 \Fresh 承诺以及不产生回执的 \Alias 发生项。
-Each cut replaces the whole policy domain's epoch, ordering old uses and target activation.
-% 每个切点都会替换整个策略域的纪元，并为旧使用与目标激活规定顺序。
+The Agent names only live objects and an immutable schema; a trusted judgment derives the target and preserves outcomes, occurrences, cells, lineage, and causal order except under schema-authorized retirement.
+% Agent 仅指名活对象和不可变模式；可信判定推导目标，并保持结果、发生项、单元、谱系和因果顺序，除非模式授权将其退役。
+Resolution distinguishes \Fresh commitments from receipt-silent \Alias progress, and each cut replaces the whole policy-domain epoch to order old uses against target activation.
+% 解析区分 \Fresh 承诺与不产生回执的 \Alias 进展，而每个切点都会替换整个策略域纪元，从而确定旧使用与目标激活的次序。
 
 \paragraph{Theory as a security compiler}
 % 作为安全编译器的理论
-The \emph{Agent Security-State Characterization Theorem} makes this state the basis of a security compiler rather than an application proof obligation.
-% \emph{Agent 安全状态刻画定理}使这一状态成为安全编译器的基础，而不是应用承担的证明义务。
-Platform developers register policy and schemas describing what an edit carries, clones, or retires.
-% 平台开发者注册策略和模式，用以描述一次编辑会携带、克隆或退役哪些内容。
-The Agent submits only \(u\).
-% Agent 仅提交 \(u\)。
-The installation checker re-derives the obligations, effect identities, receipt ledger, history cut, and nonblocking solution.
-% 安装检查器重新推导义务、效果标识、回执账本、历史切点和非阻塞解。
-On acceptance, the kernel atomically installs the canonical monitor \(\mathsf{Can}(W^\dagger,B^\dagger)\), minted gates, and authenticated replacement handles under one new epoch.
-% 接纳后，内核在一个新纪元下原子地安装规范监控器 \(\mathsf{Can}(W^\dagger,B^\dagger)\)、新铸造的门和经过认证的替换句柄。
-The monitor then authenticates the occurrence, gate, handle, cell, and epoch of every protected call and permits only transitions in the current program.
-% 随后，监控器认证每个受保护调用的发生项、门、句柄、单元和纪元，并且只允许当前程序中的转移。
-A valid \Retry only returns its stable result.
-% 有效的 \Retry 只返回其稳定结果。
-The Agent cannot discard obligations outside schema-authorized retirement or bypass admission.
-% Agent 无法丢弃模式授权退役范围之外的义务，也无法绕过准入。
+The \emph{Agent Security-State Characterization Theorem} makes this state a security-compiler contract rather than an application proof obligation.
+% \emph{Agent 安全状态刻画定理}使这一状态成为安全编译器契约，而不是应用承担的证明义务。
+Platform developers register policy and carry/clone/retire schemas; the Agent submits only \(u\), and the checker re-derives the obligations, effect identities, cut, and nonblocking solution.
+% 平台开发者注册策略以及携带/克隆/退役模式；Agent 仅提交 \(u\)，检查器则重新推导义务、效果标识、切点和非阻塞解。
+On acceptance, the kernel installs \(\mathsf{Can}(W^\dagger,B^\dagger)\), fresh gates, and replacement handles under one new epoch, after which every protected call must follow the installed program.
+% 接纳后，内核在一个新纪元下安装 \(\mathsf{Can}(W^\dagger,B^\dagger)\)、新门和替换句柄，此后每个受保护调用都必须遵循已安装程序。
+Thus the Agent can neither bypass admission nor discard obligations outside schema-authorized retirement.
+% 因而，Agent 既无法绕过准入，也无法丢弃模式授权退役范围之外的义务。
 
 \paragraph{Contribution}
 % 贡献
-We contribute one unified Agent History-Admission Theory whose central thesis is that history rewriting is exactly governable by the joined security state above.
+We contribute one unified Agent History Admission Theory whose central thesis is that history rewriting is exactly governable by the joined security state above.
 % 我们提出一套统一的 Agent 历史准入理论，其中心论点是，历史重写恰可由上述联合安全状态治理。
-Its characterization theorem proves exact synthesis or certified impossibility, factor-projection lower bounds, closure across successive edits, and weak bisimulation between the compiled monitor and an independent ideal Agent-history machine (\cref{sec:model,sec:admission,sec:kernel,sec:results}).
-% 其刻画定理证明精确综合或经认证的不可能性、因子投影下界、连续编辑下的闭包性，以及编译监控器与独立理想 Agent 历史机之间的弱互模拟（\cref{sec:model,sec:admission,sec:kernel,sec:results}）。
+Its characterization theorem proves exact compilation or certified impossibility, factor-projection lower bounds, closure across successive edits, and weak bisimulation between the compiled monitor and an independent ideal Agent-history machine (\cref{sec:model,sec:admission,sec:kernel,sec:results}).
+% 其刻画定理证明精确编译或经认证的不可能性、因子投影下界、连续编辑下的闭包性，以及编译监控器与独立理想 Agent 历史机之间的弱互模拟（\cref{sec:model,sec:admission,sec:kernel,sec:results}）。
 The artifact exercises the bounded decision kernel, examples that erase one identity relation at a time, and cut races (\cref{sec:validation}).
 % 该制品运行有界判定内核、每次擦除一种标识关系的案例和切点竞态（\cref{sec:validation}）。

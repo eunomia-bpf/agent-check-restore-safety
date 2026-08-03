@@ -6,16 +6,16 @@ Recall the authority-label alphabet \(\mathcal U\) and regular prefix-closed pol
 % 回顾权限标签字母表 \(\mathcal U\) 和正则前缀闭合策略 \(\mathcal A\subseteq\mathcal U^*\)。
 For the authenticated receipt ledger \(\Delta\), write \(\mathsf{lab}(\Delta)\in\mathcal A\) for its authority word and \(D_\Delta\) for its receipted cells.
 % 对于经认证的回执账本 \(\Delta\)，用 \(\mathsf{lab}(\Delta)\in\mathcal A\) 表示其权限词，用 \(D_\Delta\) 表示其中已有回执的单元。
-Fix the admission instance \(\Theta=(\kappa,H,\Delta,\mathcal A,u)\) and its unique schema derivation
-% 固定准入实例 \(\Theta=(\kappa,H,\Delta,\mathcal A,u)\) 及其唯一的模式推导如下：
-\[
- \Sigma_\zeta;H\vdash u\Downarrow
- (H',\mathcal C_{H,u},\eta^-,\eta^+).
-\]
+Fix \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\) and write \(\mathsf{src}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\).
+% 固定 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并记 \(\mathsf{src}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\)。
+When defined, the tagged root-or-edit derivation is unique; below write \(\mathsf{Derive}(\Theta)=(H',\mathcal C_{H,u},\eta^-,\eta^+)\).
+% 带标签的根或编辑推导在有定义时是唯一的；下文将其记为 \(\mathsf{Derive}(\Theta)=(H',\mathcal C_{H,u},\eta^-,\eta^+)\)。
+For \(u=\mathsf{Root}(R,n)\), require \(\mathsf{src}(\Theta)=\mathsf{src}_R^-\) and \(\mathsf{Derive}(\Theta)=(H_R^+,\mathcal C_R,\bot,\eta_R)\), using the bootstrap judgment in \cref{sec:kernel}; otherwise use the unique six-edit judgment \(\Sigma_\zeta;H\vdash u\Downarrow(H',\mathcal C_{H,u},\eta^-,\eta^+)\).
+% 当 \(u=\mathsf{Root}(R,n)\) 时，要求 \(\mathsf{src}(\Theta)=\mathsf{src}_R^-\) 且 \(\mathsf{Derive}(\Theta)=(H_R^+,\mathcal C_R,\bot,\eta_R)\)，其中使用 \cref{sec:kernel} 的引导判定；否则使用唯一的六种编辑判定 \(\Sigma_\zeta;H\vdash u\Downarrow(H',\mathcal C_{H,u},\eta^-,\eta^+)\)。
 Let \(\rho'\) be the authenticated target registry in \(H'\) and \(O_{H,u}=O_{\mathcal C_{H,u}}\).
 % 令 \(\rho'\) 为 \(H'\) 中经认证的目标注册表，并令 \(O_{H,u}=O_{\mathcal C_{H,u}}\)。
-All languages below depend on \(\Theta\), the schema registry, and \(\rho'\).
-% 下文所有语言均依赖于 \(\Theta\)、模式注册表和 \(\rho'\)。
+All languages below depend on \(\Theta\), the schema registry, and \(\rho'\), but are insensitive to \(\mathsf{out}\); the executable compiler still binds \(\mathsf{out}\) into the exact installation cut.
+% 下文所有语言均依赖于 \(\Theta\)、模式注册表和 \(\rho'\)，但对 \(\mathsf{out}\) 不敏感；可执行编译器仍会把 \(\mathsf{out}\) 绑定到精确安装切点中。
 We write only \(H,u\) where the remaining parameters are fixed.
 % 当其余参数固定时，我们仅写作 \(H,u\)。
 
@@ -141,9 +141,11 @@ The installation checker and seal retain the indexed witness \(\widehat B^\dagge
 \begin{definition}[Agent history admission]
 % Agent 历史准入
 \label{def:admission}
+If \(\mathsf{Derive}(\Theta)\) is undefined, then \(\mathsf{Admit}(\Theta)\) is false; otherwise
+% 若 \(\mathsf{Derive}(\Theta)\) 无定义，则 \(\mathsf{Admit}(\Theta)\) 为假；否则
 \begin{equation}
 \label{eq:admission}
-\mathsf{Admit}(H,u,\Delta,\mathcal A)
+\mathsf{Admit}(\Theta)
  \quad\Longleftrightarrow\quad
  \widehat B^\dagger_{H,u}\ne\varnothing .
 \end{equation}
@@ -354,8 +356,8 @@ This rule is defined through \(\mathsf{Spec}\), rather than operationally invoki
 % 受保护发生项
 For submitted invocation \(m\), an enabled current-frontier occurrence \(x\) passes the ideal guard exactly when its gate and authenticated handle bind cell \(d\) and \(\mathsf{canon}_\kappa(m)=\mathsf{inv}_\rho(d)\); current receipts then determine \(a\in\{\Fresh(x,d),\Alias(x,d)\}\).
 % 对于提交的调用 \(m\)，当且仅当已启用的当前前沿发生项 \(x\) 的门和认证句柄绑定单元 \(d\)，且 \(\mathsf{canon}_\kappa(m)=\mathsf{inv}_\rho(d)\) 时，它才通过理想守卫；随后，当前回执确定 \(a\in\{\Fresh(x,d),\Alias(x,d)\}\)。
-Exactly when \(ra\in L^*\), one atomic transition residualizes the frontier by \(x\), appends \(a\) to \(\chi\), advances \(\nu\), and sets \(r:=ra\).
-% 当且仅当 \(ra\in L^*\) 时，一个原子转移以 \(x\) 对前沿取残余，将 \(a\) 追加到 \(\chi\)，推进 \(\nu\)，并设置 \(r:=ra\)。
+Exactly when \(ra\in L^*\), one atomic transition applies \(\mathsf{HStep}((G,T),a)\), appends \(a\) to the global resolved-occurrence trace \(\chi\), advances \(\nu\), and sets \(r:=ra\).
+% 当且仅当 \(ra\in L^*\) 时，一个原子转移应用 \(\mathsf{HStep}((G,T),a)\)，将 \(a\) 追加到全局已解析发生项轨迹 \(\chi\)，推进 \(\nu\)，并设置 \(r:=ra\)。
 \Fresh also appends to \(\Delta\) an immutable receipt for \(d\) labeled \(\ell(d)\) and enqueues \((d,\mathsf{canon}_\kappa(m))\); \Alias changes neither field.
 % \Fresh 还向 \(\Delta\) 追加一条标签为 \(\ell(d)\) 且关于 \(d\) 的不可变回执，并将 \((d,\mathsf{canon}_\kappa(m))\) 入队；\Alias 不改变这两个字段。
 

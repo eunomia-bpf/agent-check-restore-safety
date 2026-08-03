@@ -42,10 +42,12 @@ A later Restore of \(k\) creates approval occurrence \(x_a'\) with \(q_{\rm cell
 The authority policy allows prefixes of \(rap_Ls\) and \(rap_Rs\), but no trace containing both payment labels or a payment before \(a\).
 % 权限策略允许 \(rap_Ls\) 和 \(rap_Rs\) 的前缀，但不允许同时包含两个付款标签的轨迹，也不允许在 \(a\) 之前出现付款的轨迹。
 
-\paragraph{The admission calculation}
-% 准入计算
-Using the admission notation formalized in \cref{sec:admission}, write \(M_o\) for outcome \(o\)'s policy-safe resolved completions.
-% 使用 \cref{sec:admission} 中形式化的准入记法，以 \(M_o\) 表示结果 \(o\) 的策略安全已解析完成路径。
+\paragraph{End-to-end security compilation}
+% 端到端安全编译
+The Agent submits only \(u=\mathsf{ForkChoice}(b,\sigma)\); the trusted controller snapshots \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\), where \(\mathsf{out}\) is the ordered durable dispatch outbox, and re-derives the target, outcome obligations, and effect identities from the authenticated history and registered schema.
+% Agent 仅提交 \(u=\mathsf{ForkChoice}(b,\sigma)\)；可信控制器快照 \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\)，其中 \(\mathsf{out}\) 是持久化且有序的派发发件箱，并从经认证历史和已注册模式重新推导目标、结果义务与效果标识。
+Write \(M_o\) for outcome \(o\)'s policy-safe resolved completions.
+% 以 \(M_o\) 表示结果 \(o\) 的策略安全已解析完成路径。
 At this cut, each outcome has exactly one causal linearization, and the two linearizations resolve to
 % 在此切点，每个结果恰有一条因果线性化路径，而这两条线性化路径解析为
 \[
@@ -56,12 +58,14 @@ At this cut, each outcome has exactly one causal linearization, and the two line
 \]
 Thus \(M_{o_L}=\{z_L\}\), \(M_{o_R}=\{z_R\}\), and \(\widehat B^\dagger=\{(o_L,z_L),(o_R,z_R)\}\), with \(W^\dagger\) their prefix closure.
 % 因此，\(M_{o_L}=\{z_L\}\)、\(M_{o_R}=\{z_R\}\)，且 \(\widehat B^\dagger=\{(o_L,z_L),(o_R,z_R)\}\)，其中 \(W^\dagger\) 是它们的前缀闭包。
-On acceptance, these prefixes become the generated behavior of the compiled monitor.
-% 准入后，这些前缀成为已编译监控器所生成的行为。
+Admission compiles \(\mathsf{Can}(W^\dagger,\pi_2\widehat B^\dagger)\), seals the exact source cut, and atomically installs the monitor and replacement handles at a fresh epoch.
+% 准入过程编译 \(\mathsf{Can}(W^\dagger,\pi_2\widehat B^\dagger)\)，封印精确源切点，并在新纪元中原子安装监控器和替换句柄。
+The installed monitor then admits only these prefixes and classifies each protected call as a new \Fresh effect, a receipt-reusing \Alias, or a denial.
+% 随后，已安装监控器只接纳这些前缀，并将每个受保护调用归类为新的 \Fresh 效果、复用回执的 \Alias 或拒绝。
 If policy excludes \(rap_Rs\), then \(M_{o_R}=\varnothing\), and the Fork is rejected because pruning supplier \(R\) would change its meaning.
 % 如果策略排除 \(rap_Rs\)，则 \(M_{o_R}=\varnothing\)，并且该 Fork 会被拒绝，因为剪除供应商 \(R\) 将改变其含义。
-\Cref{sec:admission} gives the shared-prefix case where every outcome starts safe but no family preserves every compatible outcome after every prefix.
-% \Cref{sec:admission} 给出了共享前缀情形：每个结果开始时都安全，但没有任何完成族能在每个前缀之后保留每个兼容结果。
+Rejection returns the ranked elimination chain rather than letting the Agent weaken the target; \cref{sec:admission} gives the shared-prefix case where every outcome starts safe but no family remains prefix-robust.
+% 拒绝会返回带秩淘汰链，而不允许 Agent 弱化目标；\cref{sec:admission} 给出了共享前缀情形：每个结果开始时都安全，但没有任何完成族保持前缀鲁棒。
 
 \begin{figure*}[t]
   \centering
@@ -98,9 +102,9 @@ If policy excludes \(rap_Rs\), then \(M_{o_R}=\varnothing\), and the Fork is rej
     \draw[arr] (bl) -- (jn);
     \draw[arr] (cl) -- (jn);
     \draw[stale] (bb) to[bend left=17]
-      node[below] {must lose authority} (ms);
+      node[below] {loser gates close} (ms);
 
-    \node[lab] at (0,0.65) {receipt-ledger authority word};
+    \node[lab] at (0,0.65) {receipt ledger and authority projection};
     \node[node] (r) at (0.65,0.65) {$r$};
     \node[node] (a) at (3.05,0.65) {$a$};
     \node[node] (pa) at (6.05,0.65) {$p_L$};
@@ -120,8 +124,8 @@ If policy excludes \(rap_Rs\), then \(M_{o_R}=\varnothing\), and the Fork is rej
     \draw[arr] (ef) -- node[above] {atomic swap} (ea);
     \draw[arr] (ea) -- node[above] {atomic swap} (ej);
   \end{tikzpicture}
-  \caption{An Agent has an editable logical history, an append-only receipt-ledger authority word, and one current policy-domain epoch.
-  % Agent 拥有一段可编辑的逻辑历史、一个仅追加的回执账本权限词，以及一个当前策略域纪元。
+  \caption{An Agent has an editable logical history, an append-only receipt ledger with an authority projection, and one current policy-domain epoch.
+  % Agent 拥有一段可编辑的逻辑历史、一个带权限投影的仅追加回执账本，以及一个当前策略域纪元。
   Restore clones logical occurrences but preserves authenticated cell identity.
   % Restore 会克隆逻辑发生项，但保留经过认证的单元标识。
   A history cut must therefore order both receipt-changing \Fresh events and receipt-silent \Alias events against a policy-domain epoch swap.}

@@ -2,18 +2,7 @@
 % 可执行验证
 \label{sec:validation}
 
-\paragraph{Decision kernel}
-% 判定内核
-The bounded validator implements the indexed fixed-point kernel without merging equal-trace outcomes and fails closed beyond the appendix bounds.
-% 有界验证器实现带索引的不动点内核，不合并同轨迹结果，并在超出附录界限时以关闭方式失败。
-It is neither the trusted checker nor a proof; these bounds do not constrain the theorem.
-% 它既不是可信检查器也不是证明；这些界限不约束该定理。
-
-\paragraph{Litmus tests}
-% 试金石测试
-All 81 tests pass, including from a clean extracted archive; 19 focused tests cover the \(2,1,0\) rejecting shared-prefix chain, distinct indices with identical traces, all six edits, shared and distinct cells, receipt-silent \Alias, and both use/install orderings.
-% 全部 81 个测试均通过，其中也包括从干净解压的归档中运行的测试；19 个重点测试覆盖 \(2,1,0\) 拒绝型共享前缀链、轨迹相同但索引不同的结果、全部六种编辑、共享与不同单元、不产生回执的 \Alias，以及使用/安装的两种次序。
-These tests exercise \cref{tab:projection-pairs}, and Lean checks auxiliary identity-erasure cases.
-% 这些测试运行 \cref{tab:projection-pairs} 中的机制，而 Lean 检查辅助的标识擦除案例。
-The appendix proves the theorem; neither artifact claims full mechanization.
-% 附录证明该定理；两种制品都不声称实现了完整机械化。
+The outcome-indexed bounded validator fails closed beyond its bounds; 81 tests cover shared-prefix rejection, six edits, identity erasures, \Alias, and use/install races.
+% 保持结果索引的有界验证器在超出其界限时以关闭方式失败；81 项测试覆盖共享前缀拒绝、六种编辑、标识擦除、\Alias 和使用/安装竞态。
+Kernel-checked Lean proves exact acceptance and greatestness for every finite registered resolver/fixed-point instance; six-edit closure, lower bounds, and durable bisimulation remain mathematical proofs.
+% 由内核检查的 Lean 证明每个有限已注册解析器/不动点实例满足精确接纳与最大性；六种编辑闭包、下界和持久弱互模拟仍由数学证明给出。

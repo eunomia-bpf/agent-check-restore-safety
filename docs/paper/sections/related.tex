@@ -2,32 +2,11 @@
 % 相关工作
 \label{sec:related}
 
-\paragraph{History-sensitive authorization}
-% 历史敏感授权
-History-based authorization, event-structure monitoring, FORGE, and suppression synthesis judge or constrain the next action from an existing history~\cite{abadi2003history,krukow2008history,palumbo2026forge,aceto2018suppressions}.
-% 基于历史的授权、事件结构监控、FORGE 和抑制综合根据既有历史判断或约束下一动作~\cite{abadi2003history,krukow2008history,palumbo2026forge,aceto2018suppressions}。
-We instead judge a topology-changing edit and preserve a safe completion for every compatible outcome after every admitted prefix, including receipt-silent \Alias.
-% 我们则判定改变拓扑的编辑，并在每个已准入前缀之后为每个兼容结果保留一条安全完成路径，其中包括不产生回执的 \Alias。
-
-\paragraph{Reversal and update}
-% 逆转与更新
-Reversible sessions, workflow inheritance, dynamic update, and REBOUND preserve or authorize supplied rollback or update structures~\cite{dezani2016checkpoints,mezzina2025checkpoint,vanderaalst2002inheritance,nahabedian2020dynamic,amram2022dynamic,bresolin2021static,burke2026rebound}, while Revisable by Design studies streaming Agent revision with irreversible actions~\cite{zhai2026revisable}.
-% 可逆会话、工作流继承、动态更新和 REBOUND 保持或授权给定的回滚或更新结构~\cite{dezani2016checkpoints,mezzina2025checkpoint,vanderaalst2002inheritance,nahabedian2020dynamic,amram2022dynamic,bresolin2021static,burke2026rebound}，而 Revisable by Design 研究带有不可逆动作的流式 Agent 修订~\cite{zhai2026revisable}。
-We instead derive promised outcomes, effect identities, and the history cut from authenticated branching Agent history, and prove that erasing any required factor or either named incidence relation can reverse the correct Fork/Restore/Merge decision.
-% 我们则从经认证的分支 Agent 历史中推导已承诺结果、效果标识和历史切点，并证明擦除任一必需因子或两个具名关联关系中的任一个，都可能反转正确的 Fork/Restore/Merge 判定。
-
-\paragraph{Automata and causality}
-% 自动机与因果性
-Security automata, supervisory control, generalized nonblocking, Live Synthesis, and Duties/Rights enforce prefixes or synthesize behavior once given a plant, temporal specification, linear history, and conditional obligations~\cite{schneider2000enforceable,ramadge1987supervisory,dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,zhu2022duties}.
-% 安全自动机、监督控制、广义非阻塞、Live Synthesis 和 Duties/Rights 在给定被控对象、时序规范、线性历史和条件义务后强制执行前缀或综合行为~\cite{schneider2000enforceable,ramadge1987supervisory,dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,zhu2022duties}。
-\Cref{thm:exact-history} derives and authenticates that complete instance from topology-changing Agent history and proves pre-synthesis observational lower bounds; derivatives and pomsets supply its recognizer and causal representation~\cite{brzozowski1964derivatives,winskel1987event,vanglabbeek2009configuration}.
-% \Cref{thm:exact-history} 从改变拓扑的 Agent 历史中推导并认证这一完整实例，并证明综合前的观测下界；导数和偏序事件集提供其识别器与因果表示~\cite{brzozowski1964derivatives,winskel1987event,vanglabbeek2009configuration}。
-
-\paragraph{Durable effects}
-% 持久效果
-Rollback security, checkpoint trees, and ACRFence address restored state or authority~\cite{elnozahy2002rollback,parno2011memoir,matetic2017rote,brandenburger2017lcm,garfinkel2005virtual,zheng2026acrfence}.
-% 回滚安全、检查点树和 ACRFence 处理被恢复的状态或权限~\cite{elnozahy2002rollback,parno2011memoir,matetic2017rote,brandenburger2017lcm,garfinkel2005virtual,zheng2026acrfence}。
-Recorded-result replay, credentials, commit checks, fencing, outboxes, and idempotency protect individual effects or one invocation under time travel~\cite{somogyi2003idempotent,bowers2007consumable,santos2026committime,santos2026lingering,aws2026outbox,aws2026idempotency}.
-% 结果记录重放、凭据、提交检查、隔离、发件箱和幂等性保护单个效果或时间旅行下的一次调用~\cite{somogyi2003idempotent,bowers2007consumable,santos2026committime,santos2026lingering,aws2026outbox,aws2026idempotency}。
-We characterize whole edits where copied or renamed Agent occurrences may share an invocation, while installation serializes receipt-changing \Fresh and receipt-silent \Alias progress with monitor activation.
-% 我们刻画完整编辑：被复制或重命名的 Agent 发生项可能共享一次调用，而安装过程将会改变回执的 \Fresh 进展和不产生回执的 \Alias 进展与监控器激活串行化。
+\paragraph{Closest boundaries}
+% 最接近的边界
+Shepherd, AgentGit, LangGraph, GoEX, SagaLLM, Atomix, Cordon, and DART provide reversible histories or actions, transactions, staged effects, and recovery checks~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart}.
+% Shepherd、AgentGit、LangGraph、GoEX、SagaLLM、Atomix、Cordon 与 DART 提供可逆历史或动作、事务、分阶段效果和恢复检查~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart}。
+History authorization and migration validate supplied actions or updates~\cite{abadi2003history,krukow2008history,palumbo2026forge,vanderaalst2002inheritance,bakshi2024history}; nonblocking and live synthesis assume plants, markings, and obligations~\cite{ramadge1987supervisory,fabian2000mutually,malik2008generalised,finkbeiner2022live,zhu2022duties}; rollback security, fencing, outboxes, and idempotency protect state or effects~\cite{elnozahy2002rollback,brandenburger2017lcm,zheng2026acrfence,santos2026committime,santos2026lingering,aws2026outbox,aws2026idempotency}.
+% 历史授权与迁移验证给定动作或更新~\cite{abadi2003history,krukow2008history,palumbo2026forge,vanderaalst2002inheritance,bakshi2024history}；非阻塞与在线综合假定已有被控对象、标记和义务~\cite{ramadge1987supervisory,fabian2000mutually,malik2008generalised,finkbeiner2022live,zhu2022duties}；回滚安全、隔离、发件箱和幂等性保护状态或效果~\cite{elnozahy2002rollback,brandenburger2017lcm,zheng2026acrfence,santos2026committime,santos2026lingering,aws2026outbox,aws2026idempotency}。
+From an authenticated edit, Agent History Admission derives outcomes, effect identities, and the exact cut; computes the greatest prefix-robust realization or its impossibility certificate; and atomically installs a \Fresh/\Alias-sensitive monitor.
+% Agent 历史准入从经认证编辑推导结果、效果标识和精确切点；计算最大的前缀鲁棒实现或其不可能性证书；并原子安装一个对 \Fresh/\Alias 敏感的监控器。

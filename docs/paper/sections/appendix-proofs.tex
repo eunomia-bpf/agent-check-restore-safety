@@ -13,8 +13,8 @@ Independent domains retain the product interpretation stated in the paper.
 % 声明式规范及其计算见证
 \label{app:spec-bridge}
 
-Fix a well-formed admission instance \(\Theta=(\kappa,H,\Delta,\mathcal A,u)\) for which the history judgment derives \(\delta=(H^+,\mathcal C,\eta^-,\eta^+)\).
-% 固定一个良构的准入实例 \(\Theta=(\kappa,H,\Delta,\mathcal A,u)\)，其历史判定派生出 \(\delta=(H^+,\mathcal C,\eta^-,\eta^+)\)。
+Fix a well-formed admission instance \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\) for which the history judgment derives \(\delta=(H^+,\mathcal C,\eta^-,\eta^+)\).
+% 固定一个良构的准入实例 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，其历史判定派生出 \(\delta=(H^+,\mathcal C,\eta^-,\eta^+)\)。
 All sets in this subsection are indexed sets, so two equal resolved words belonging to different outcomes remain different elements.
 % 本小节中的所有集合都是带索引集合，因此属于不同结果的两个相同已解析词仍是不同元素。
 Let \(\mathfrak R_\Theta\) be the finite set of indexed realizations from \cref{def:realization}, ordered componentwise by
@@ -174,72 +174,48 @@ This contradicts the two answers being different.
 % 引导状态与显式分离对
 \label{app:boot-pairs}
 
-We next remove any ambiguity about reachability of the finite lower-bound witnesses.
-% 接下来，我们消除关于有限下界见证可达性的任何歧义。
-A view \(V\) satisfies \(\mathsf{BootOK}(V)\) when it recomposes a well-formed source core \(\Theta_c=(\kappa,H_c,\Delta_c,\mathsf{out}_c,\mathcal A)\), a checked derivation \(\Sigma_\zeta;H_c\vdash u_c\Downarrow(H_c^+,\mathcal C_c,\eta_c^-,\eta_c)\), a nonempty \(\widehat B_c^\dagger\), and an artifact \(Z_c\) accepted by \(\mathsf{Verify}_{Z_c}\) and \(\mathsf{ReCut}\) at that source.
-% 当视图 \(V\) 可重组出良构源核心 \(\Theta_c=(\kappa,H_c,\Delta_c,\mathsf{out}_c,\mathcal A)\)、经检查的推导 \(\Sigma_\zeta;H_c\vdash u_c\Downarrow(H_c^+,\mathcal C_c,\eta_c^-,\eta_c)\)、非空的 \(\widehat B_c^\dagger\)，以及在该源处由 \(\mathsf{Verify}_{Z_c}\) 和 \(\mathsf{ReCut}\) 接纳的制品 \(Z_c\) 时，称 \(V\) 满足 \(\mathsf{BootOK}(V)\)。
-It also requires the receipt, outbox, registry, and epoch records in \(V\) to satisfy the source and target well-formedness checks.
-% 它还要求 \(V\) 中的回执、发件箱、注册表和纪元记录满足源与目标良构性检查。
+We construct the finite lower-bound witnesses from one literal empty genesis \(\mathsf S_\emptyset\).
+% 我们从唯一的字面空起源状态 \(\mathsf S_\emptyset\) 构造有限下界见证。
+A registered slice \(R\) contains only finite contracts, schemas, policy, and authenticated occurrence, cell, invocation, lineage, scope, and label rows.
+% 已注册切片 \(R\) 只包含有限契约、模式、策略，以及经认证的发生项、单元、调用、谱系、作用域和标签行。
+It contains no receipt, cursor, outbox, epoch, certificate, result future, monitor state, or installed cut.
+% 它不包含回执、游标、发件箱、纪元、证书、结果期值、监控器状态或已安装切点。
+The pre-slice relation has exactly a registration step \(\mathsf S_\emptyset\xrightarrow{\mathsf{register}(R,n)}\mathsf{Reg}(R,n)\), where \(n\) is a fresh private namespace, followed by checked root installation.
+% 切片前关系恰好包含注册步骤 \(\mathsf S_\emptyset\xrightarrow{\mathsf{register}(R,n)}\mathsf{Reg}(R,n)\)，其中 \(n\) 是新鲜的私有命名空间，随后执行经检查的根安装。
+Root installation derives the initial cut and constructs empty receipt, cursor, and outbox state, generation zero, one active epoch, the canonical monitor, and authenticated live bindings.
+% 根安装推导初始切点，并构造空回执、空游标与空发件箱状态、零代、一个活跃纪元、规范监控器和经认证的活跃绑定。
 
-For such a view, define \(\mathsf{Boot}(V)\) to be the complete compiled state
-% 对于这样的视图，将 \(\mathsf{Boot}(V)\) 定义为如下完整编译状态：
-\[
-\begin{aligned}
-S_V={}&(\kappa,H_c^+,\Delta_c,\mathsf{out}_c,
- \mathsf{phase}_V,\mathsf{bind}_V,\\
-&\mathsf{prog}_V,\mathsf q_V,\mathsf{cert}_V),\\
-\mathsf{phase}_V(\eta_c)&={\mathsf{active}},\\
-\mathsf{phase}_V(\eta_c^-)&={\mathsf{closed}},\\
-\mathsf{bind}_V|_{X_{\sem{H_c^+.T}}}&=H_c^+.\beta,\\
-\mathsf{prog}_V(\eta_c)&=\mathsf{Can}(W_c^\dagger,B_c^\dagger),\\
-\mathsf q_V(\eta_c)&=q_\epsilon,\\
-c_V={}&(\Theta_c,H_c^+,u_c,W_c^\dagger,
- \widehat B_c^\dagger,Z_c),\\
-\mathsf{cert}_V(\eta_c)&=c_V .
-\end{aligned}
-\]
-Every other deterministically minted candidate epoch recorded in \(V\) is inactive and unbound, every closed epoch remains closed, and every unallocated epoch has phase \(\bot\).
-% \(V\) 中记录的每个其他确定性生成候选纪元均处于非活跃且未绑定状态，每个已关闭纪元保持关闭，而每个未分配纪元的阶段为 \(\bot\)。
-No inactive epoch exposes a handle.
-% 非活跃纪元不暴露句柄。
-Let the compiled LTS initial set contain exactly these finite states, and let reachability be the reflexive transitive closure from that set.
-% 令编译后 LTS 的初始集合恰好包含这些有限状态，并把可达性定义为从该集合出发的自反传递闭包。
-
-\begin{lemma}[Valid bootstrap]
-% 有效引导
+\begin{lemma}[Natural bootstrap]
+% 自然引导
 \label{lem:app-boot}
-If \(\mathsf{BootOK}(V)\), then \(\mathsf{Boot}(V)\) is length-zero reachable and satisfies \(\mathsf{AgentSec}(\mathsf{Boot}(V);c_V,\epsilon)\).
-% 若 \(\mathsf{BootOK}(V)\)，则 \(\mathsf{Boot}(V)\) 可由长度为零的轨迹到达，并满足 \(\mathsf{AgentSec}(\mathsf{Boot}(V);c_V,\epsilon)\)。
-It is also exactly the poststate produced by applying the atomic installation update to its recorded source cut.
-% 它也恰好是对其记录的源切点应用原子安装更新所产生的后状态。
+If \(R\)'s registered root contract and policy have a nonempty greatest realization, the registration and checked root-installation steps reach a finite state \(S_R\) with \(\mathsf{AgentSec}(S_R;c_R,\epsilon)\).
+% 若 \(R\) 的已注册根契约与策略具有非空的最大实现，则注册与经检查的根安装步骤会到达一个满足 \(\mathsf{AgentSec}(S_R;c_R,\epsilon)\) 的有限状态 \(S_R\)。
+The cut origin is the checked root derivation, while every later cut-changing transition records one of the six history derivations.
+% 该切点的来源是经检查的根推导，而此后每个改变切点的转移都记录六种历史推导之一。
 \end{lemma}
 
 \begin{proof}
-Length-zero reachability follows from membership in the explicitly defined initial set.
-% 长度为零的可达性来自其属于显式定义的初始集合。
-The \(\mathsf{BootOK}\) derivation and checked lift witnesses establish core and schema coherence.
-% \(\mathsf{BootOK}\) 的推导和经检查的提升见证建立核心与模式一致性。
-The recomputed nonempty fixed point and accepted artifact establish promise coherence.
-% 重新计算的非空不动点与被接纳制品建立承诺一致性。
-Setting \(r=\epsilon\), retaining \((\Delta_c,\mathsf{out}_c)\), and installing \(H_c^+\) establish execution coherence.
-% 令 \(r=\epsilon\)、保留 \((\Delta_c,\mathsf{out}_c)\) 并安装 \(H_c^+\) 建立执行一致性。
-The canonical program at \(q_\epsilon\) establishes monitor coherence.
-% 位于 \(q_\epsilon\) 的规范程序建立监控器一致性。
-The explicit phase and binding assignments establish epoch coherence.
-% 显式的阶段与绑定赋值建立纪元一致性。
-These assignments are identical to the atomic installation rule, which proves the final statement.
-% 这些赋值与原子安装规则相同，从而证明最后一项陈述。
+Registration contributes only \(R\) and \(n\), and deterministic allocation constructs every runtime identifier from them.
+% 注册只提供 \(R\) 和 \(n\)，而确定性分配据此构造每个运行时标识。
+The root judgment and checked lifts establish core/schema coherence, and the recomputed nonempty fixed point establishes promise coherence.
+% 根判定与经检查的提升建立核心/模式一致性，而重新计算的非空不动点建立承诺一致性。
+Empty runtime progress establishes execution coherence, the canonical program at \(q_\epsilon\) establishes monitor coherence, and the atomic phase/binding assignments establish epoch coherence.
+% 空运行时进度建立执行一致性，位于 \(q_\epsilon\) 的规范程序建立监控器一致性，而原子的阶段/绑定赋值建立纪元一致性。
+Only initial installation creates a root origin, and every successful later installation stores its checked edit derivation.
+% 只有初始安装会创建根来源，而此后每次成功安装都会存储其经检查的编辑推导。
 \end{proof}
 
 The following finite pairs use private names except for each displayed query and authority labels.
 % 下列有限历史对除所显示的查询和权限标签外均使用私有名称。
-All omitted fields are identical up to the stated private renaming and dependency deletion, and each pair is completed with canonical one-symbol-safe \(\mathsf{BootOK}\) data from \cref{lem:app-boot}.
-% 所有省略字段在所述私有重命名与依赖删除意义下都相同，并且每一对都补全了 \cref{lem:app-boot} 中规范的单符号安全 \(\mathsf{BootOK}\) 数据。
+Each displayed state is reached from \(\mathsf S_\emptyset\) by the stated registration, root-installation, Save, protected-use, and edit steps; omitted fields are identical up to the stated private renaming and dependency deletion.
+% 每个显示状态都从 \(\mathsf S_\emptyset\) 经由所述注册、根安装、Save、受保护使用和编辑步骤到达；省略字段在所述私有重命名与依赖删除意义下相同。
 
 \paragraph{\(\mathbf P\): structural topology}
 % \(\mathbf P\)：结构拓扑
-Let \(X\) and \(Y\) be singleton contracts with distinct occurrences \(x\) and \(y\), common receipted cells, and a universal residual policy.
-% 令 \(X\) 和 \(Y\) 为具有不同发生项 \(x\) 与 \(y\)、公共已有回执单元和全称残余策略的单元素契约。
+Let \(X\) and \(Y\) be singleton contracts with distinct occurrences \(x\) and \(y\), common cells, and a universal residual policy.
+% 令 \(X\) 和 \(Y\) 为具有不同发生项 \(x\) 与 \(y\)、公共单元和全称残余策略的单元素契约。
+From the same registered singleton root, checked initial installation followed by \(\mathsf{ForkChoice}\) reaches \(V_{\mathbf P}^0\), while the corresponding \(\mathsf{ForkParallel}\) trace reaches \(V_{\mathbf P}^1\).
+% 从同一个已注册单元素根出发，经检查的初始安装随后执行 \(\mathsf{ForkChoice}\) 会到达 \(V_{\mathbf P}^0\)，而对应的 \(\mathsf{ForkParallel}\) 轨迹会到达 \(V_{\mathbf P}^1\)。
 The two views differ only in
 % 两个视图仅在下式中不同：
 \[
@@ -256,8 +232,10 @@ Deleting \(\mathbf P\) removes the constructor tag and every authenticator depen
 
 \paragraph{\(\mathbf I\): occurrence--cell incidence}
 % \(\mathbf I\)：发生项--单元关联
-Let the authenticated checkpoint contain the sequential target contract \(x\prec y\), let the current branch be complete and schema-certified for retirement, and query \(q_{\mathbf I}=u_R(x\prec y)\).
-% 令经认证检查点包含顺序目标契约 \(x\prec y\)，令当前分支已完成且由模式认证可退役，并查询 \(q_{\mathbf I}=u_R(x\prec y)\)。
+Let the authenticated checkpoint contain the sequential target contract \(x\prec y\), let the current branch be schema-certified for exact retirement, and query \(q_{\mathbf I}=u_R(x\prec y)\).
+% 令经认证检查点包含顺序目标契约 \(x\prec y\)，令当前分支由模式认证可被精确退役，并查询 \(q_{\mathbf I}=u_R(x\prec y)\)。
+Both traces install the registered \(x\prec y\) root and execute \(\mathsf{Save}(k,b)\) before progress; the registered \(\mathsf{RestoreReplace}\) schema then authorizes exact retirement of the current continuation.
+% 两条轨迹都安装已注册的 \(x\prec y\) 根，并在取得进展前执行 \(\mathsf{Save}(k,b)\)；随后，已注册的 \(\mathsf{RestoreReplace}\) 模式授权精确退役当前延续。
 Use two unreceipted cells \(d_0,d_1\), give both authority label \(a\), set \(\Delta=\epsilon\), and set \(\mathcal A=\Pref\{a\}\).
 % 使用两个无回执单元 \(d_0,d_1\)，令二者的权限标签均为 \(a\)，令 \(\Delta=\epsilon\)，并令 \(\mathcal A=\Pref\{a\}\)。
 Both views retain the same occurrence and cell marginals, but their incidence is
@@ -280,14 +258,16 @@ Erasing occurrence--cell incidence and its dependent handle digests makes the re
 % \(\mathbf E\)：回执--单元关联
 Let the authenticated checkpoint contain the singleton target contract \(x\), let \(q_{\rm cell}(x)=d\), and let \(d,e\) both have authority label \(a\).
 % 令经认证检查点包含单元素目标契约 \(x\)，令 \(q_{\rm cell}(x)=d\)，并令 \(d,e\) 的权限标签均为 \(a\)。
+Both traces install a two-step root \(c\prec x\), resolve \(c\) by \Fresh, and save the residual singleton \(x\); \(c\) maps to \(d\) in \(V_{\mathbf E}^0\) and to \(e\) in \(V_{\mathbf E}^1\).
+% 两条轨迹都安装两步根 \(c\prec x\)，通过 \Fresh 解析 \(c\)，并保存残余单元素 \(x\)；在 \(V_{\mathbf E}^0\) 中 \(c\) 映射到 \(d\)，而在 \(V_{\mathbf E}^1\) 中映射到 \(e\)。
 Both views contain one receipt \(p\), one private archived creator occurrence, the same receipt and creator marginals, the current authority word \(a\), and policy \(\mathcal A=\Pref\{a\}\).
 % 两个视图都包含一条回执 \(p\)、一个私有归档创建者发生项、相同的回执与创建者边际记录、当前权限词 \(a\)，以及策略 \(\mathcal A=\Pref\{a\}\)。
 In \(V_{\mathbf E}^0\), the receipt and its archived \Fresh creator bind \(p\) to \(d\), while in \(V_{\mathbf E}^1\) they bind \(p\) to \(e\).
 % 在 \(V_{\mathbf E}^0\) 中，回执及其归档 \Fresh 创建者把 \(p\) 绑定到 \(d\)，而在 \(V_{\mathbf E}^1\) 中，它们把 \(p\) 绑定到 \(e\)。
 The archived creator registry path is receipt-only and is therefore removed when \(\mathbf E\), or the receipt--cell relation and its reconstructing paths, is erased.
 % 归档创建者注册表路径仅供回执使用，因此当 \(\mathbf E\) 或回执--单元关系及其重建路径被擦除时，该路径也会被移除。
-Use the complete current branch and certified retirement conditions above and query \(q_{\mathbf E}=u_R(x)\).
-% 使用上述已完成当前分支与认证退役条件，并查询 \(q_{\mathbf E}=u_R(x)\)。
+Use the same schema-certified retirement condition and query \(q_{\mathbf E}=u_R(x)\).
+% 使用相同的模式认证退役条件，并查询 \(q_{\mathbf E}=u_R(x)\)。
 In \(V_{\mathbf E}^0\), \(x\) resolves as \(\Alias(x,d)\), so the final authority word remains \(a\) and the edit is admitted.
 % 在 \(V_{\mathbf E}^0\) 中，\(x\) 解析为 \(\Alias(x,d)\)，因此最终权限词仍为 \(a\)，编辑被接纳。
 In \(V_{\mathbf E}^1\), \(d\) is unreceipted and \(x\) resolves as \(\Fresh(x,d)\), so the final authority word is \(aa\) and the edit is rejected.
@@ -297,8 +277,10 @@ After dependency deletion, both \(\pi_{\{\mathbf P,\mathbf I,\mathbf C\}}\) and 
 
 \paragraph{\(\mathbf C\): history cut}
 % \(\mathbf C\)：历史切点
-Let \(V_{\mathbf C}^0\) and \(V_{\mathbf C}^1\) be independently valid bootstrap views with identical normalized \(\mathbf P,\mathbf I,\mathbf E\) relations but different private live epochs, view versions, gate ownership, and dependent seals and digests.
-% 令 \(V_{\mathbf C}^0\) 与 \(V_{\mathbf C}^1\) 为分别有效的引导视图，它们具有相同的规范化 \(\mathbf P,\mathbf I,\mathbf E\) 关系，但具有不同的私有活跃纪元、视图版本、门所有权以及依赖的封印和摘要。
+Let \(V_{\mathbf C}^0\) and \(V_{\mathbf C}^1\) arise from alternative registrations of the same public slice under fresh private namespaces, followed by deterministic checked root installation.
+% 令 \(V_{\mathbf C}^0\) 与 \(V_{\mathbf C}^1\) 由同一公开切片在不同新鲜私有命名空间下的备选注册产生，随后执行确定性的经检查根安装。
+They have identical normalized \(\mathbf P,\mathbf I,\mathbf E\) relations but different private live epochs, view versions, gate ownership, and dependent seals and digests.
+% 它们具有相同的规范化 \(\mathbf P,\mathbf I,\mathbf E\) 关系，但具有不同的私有活跃纪元、视图版本、门所有权以及依赖的封印和摘要。
 Let \(Z_0\) be emitted and sealed at \(V_{\mathbf C}^0\), and use the same query \(q_{\mathbf C}=\mathsf{Install}(u_0,Z_0)\) in both views.
 % 令 \(Z_0\) 在 \(V_{\mathbf C}^0\) 处生成并封印，并在两个视图中使用同一查询 \(q_{\mathbf C}=\mathsf{Install}(u_0,Z_0)\)。
 Recomputation at \(V_{\mathbf C}^0\) reproduces \(\mathsf{cut}_{Z_0}\), so installation succeeds.
@@ -311,8 +293,8 @@ Erasing \(\mathbf C\) also erases epoch-dependent handle and seal payloads, afte
 \begin{proposition}[Explicit factor and incidence lower bounds]
 % 显式因子与关联下界
 \label{prop:app-explicit-pairs}
-Every pair above consists of finite states reachable by a length-zero trace and satisfying \(\mathsf{AgentSec}\).
-% 上述每一对均由可经长度为零的轨迹到达且满足 \(\mathsf{AgentSec}\) 的有限状态组成。
+Every pair above consists of finite states reached from the common empty genesis and satisfying \(\mathsf{AgentSec}\).
+% 上述每一对均由从共同空起源状态到达且满足 \(\mathsf{AgentSec}\) 的有限状态组成。
 Each pair has isomorphic indicated projections and opposite exact answers to its common query.
 % 每一对都具有同构的指定投影，并对其共同查询给出相反的精确答案。
 Therefore every proper factor projection, \(\pi_{\neg oc}\), and \(\pi_{\neg rc}\) is inexact.
@@ -322,8 +304,8 @@ Every exact abstraction must distinguish all four pairs.
 \end{proposition}
 
 \begin{proof}
-\Cref{lem:app-boot} gives validity and length-zero reachability.
-% \Cref{lem:app-boot} 给出有效性与长度为零的可达性。
+\Cref{lem:app-boot} gives the common genesis and valid root installation, while the explicit traces above use only modeled Save, protected-use, and six-edit transitions.
+% \Cref{lem:app-boot} 给出共同起源状态和有效根安装，而上述显式轨迹只使用已建模的 Save、受保护使用和六种编辑转移。
 The displayed one-step schema and resolution calculations give the opposite answers.
 % 所显示的一步模式与解析计算给出相反答案。
 \Cref{lem:app-projection} and the specified private-name bijections give projection equality.
@@ -347,8 +329,8 @@ Write \(A_1,\ldots,A_5\) for the five clauses of \(\mathsf{AgentSec}\) in their 
 % 依照陈述顺序，用 \(A_1,\ldots,A_5\) 表示 \(\mathsf{AgentSec}\) 的五个条款。
 The following matrix is exhaustive for durable transitions inside an installed registered protected-call slice.
 % 下表穷尽一个已安装的已注册受保护调用切片内部的持久转移。
-A new registration is not an in-slice mutation: an issuer first creates a finite immutable registry at a new checked cut, after which the listed rules apply.
-% 新注册并非切片内变更：发行方先在新的经检查切点创建一个有限不可变注册表，随后才应用表中规则。
+A new registration is not an in-slice mutation: the system returns to the pre-slice registration phase and performs checked root admission before the listed rules apply.
+% 新注册并非切片内变更：系统先返回切片前注册阶段并执行经检查的根准入，随后才应用表中规则。
 
 \begin{table*}[t]
 \centering
@@ -359,7 +341,7 @@ A new registration is not an in-slice mutation: an issuer first creates a finite
 Event class & Durable update & Witness & Preservation argument\\
 \midrule
 \Fresh use &
-Residualize \(T\); append \(\Fresh(x,d)\) to \(\chi\); advance \(\nu,q\); append one receipt and canonical-invocation outbox item; remove live binding. &
+Apply \(\mathsf{HStep}\) to \((G,T)\); append \(\Fresh(x,d)\) to global \(\chi\); advance \(\nu,q\); append one receipt and canonical-invocation outbox item; remove live binding. &
 \((c,r\Fresh(x,d))\) &
 \(A_1\): registry and schema unchanged.
 \(A_2\): residual coherence.
@@ -367,7 +349,7 @@ Residualize \(T\); append \(\Fresh(x,d)\) to \(\chi\); advance \(\nu,q\); append
 \(A_4\): canonical derivative.
 \(A_5\): remove exactly \(x\)'s binding.\\
 \Alias use &
-Residualize \(T\); append \(\Alias(x,d)\) to \(\chi\); advance \(\nu,q\); add only the result-future link; remove live binding. &
+Apply \(\mathsf{HStep}\) to \((G,T)\); append \(\Alias(x,d)\) to global \(\chi\); advance \(\nu,q\); add only the result-future link; remove live binding. &
 \((c,r\Alias(x,d))\) &
 \(A_1\): authenticated cell retained.
 \(A_2\): residual coherence.
@@ -383,7 +365,7 @@ Install derived \(H^+\), checked monitor and certificate; close \(\eta^-\); acti
 \(A_4\): install at \(q_\epsilon\).
 \(A_5\): total domain handoff.\\
 \(\mathsf{Save}\) &
-Append authenticated checkpoint; advance \(\nu\). &
+Snapshot the current residual/cursor pair in an authenticated checkpoint; advance \(\nu\). &
 \((c,r)\) &
 \(A_1\): immutable well-typed extension.
 \(A_2,A_4,A_5\): unchanged.
@@ -451,6 +433,14 @@ This proves representative independence and functionality.
 
 For \Fresh and \Alias, \cref{lem:resolution,lem:residual-coherence,lem:compiled-language} establish the first two rows of the matrix.
 % 对于 \Fresh 与 \Alias，\cref{lem:resolution,lem:residual-coherence,lem:compiled-language} 建立表中的前两行。
+If \(x\) lies at \(b\), \(\mathsf{HStep}\) appends \(a\) to \(b\)'s cursor, while the same atomic protected-use update appends \(a\) to the global resolved-occurrence trace \(\chi\); residual associativity gives
+% 若 \(x\) 位于 \(b\)，\(\mathsf{HStep}\) 会把 \(a\) 追加到 \(b\) 的游标，而同一个原子受保护使用更新会把 \(a\) 追加到全局已解析发生项轨迹 \(\chi\)；残余结合律给出
+\[
+ (\Gamma_b/\mathsf{raw}(\chi_b))/x
+ =\Gamma_b/\mathsf{raw}(\chi_ba).
+\]
+Thus the updated leaf and any later Save remain synchronized with \(G\).
+% 因此，更新后的叶节点以及此后的任何 Save 都与 \(G\) 保持同步。
 For a successful history edge, \cref{lem:history-derivation,lem:app-spec-bridge,lem:compiled-language,lem:cut-linearization} establish the third row for each of the six schema rows.
 % 对于成功历史边，\cref{lem:history-derivation,lem:app-spec-bridge,lem:compiled-language,lem:cut-linearization} 为六个模式行分别建立表中的第三行。
 Each remaining rule changes only the fields shown in the matrix, and its row checks every invariant clause whose fields change.
@@ -523,8 +513,8 @@ D, & t\text{ has not linearized},\\
 \]
 No recovered image contains a strict subset of one modeled atomic update.
 % 任何恢复映像都不会包含某项建模原子更新的真子集。
-In particular, a \Fresh transaction cannot expose a receipt without its \(\chi\) record and outbox preparation, and installation cannot activate a new epoch without closing the old epoch and installing all target bindings.
-% 特别地，\Fresh 事务不可能在缺少其 \(\chi\) 记录和发件箱准备项时暴露回执，而安装不可能在未关闭旧纪元并安装全部目标绑定时激活新纪元。
+In particular, a \Fresh transaction cannot expose a receipt without its global-trace record, branch-local cursor record, and outbox preparation, and installation cannot activate a new epoch without closing the old epoch and installing all target bindings.
+% 特别地，\Fresh 事务不可能在缺少其全局轨迹记录、分支局部游标记录和发件箱准备项时暴露回执，而安装不可能在未关闭旧纪元并安装全部目标绑定时激活新纪元。
 
 \begin{lemma}[Recovered-state crash refinement]
 % 恢复状态崩溃精化
@@ -585,12 +575,12 @@ Both sides then inspect the same receipted-cell set \(D_\Delta\), so they choose
 By \cref{cor:app-exact-boundary,lem:compiled-language}, \(ra\) is enabled by the compiled derivative exactly when \(ra\in L^*\) in the ideal machine.
 % 根据 \cref{cor:app-exact-boundary,lem:compiled-language}，当且仅当理想机中 \(ra\in L^*\) 时，编译后导数才启用 \(ra\)。
 
-In the \Fresh case, both successors residualize by \(x\), append the same resolved symbol, advance \(\nu\), create the same cell-bound receipt, and prepare the same canonical invocation.
-% 在 \Fresh 情形中，两个后继都按 \(x\) 取残余、追加同一已解析符号、推进 \(\nu\)、创建同一单元绑定回执，并准备同一规范调用。
+In the \Fresh case, both successors apply the same paired residual, append the same symbol to the global trace and branch-local cursor, advance \(\nu\), create the same cell-bound receipt, and prepare the same canonical invocation.
+% 在 \Fresh 情形中，两个后继都应用相同的成对残余、把同一符号追加到全局轨迹与分支局部游标、推进 \(\nu\)、创建同一单元绑定回执，并准备同一规范调用。
 The compiled outbox stores \((d,\mathsf{inv}_\rho(d))\), never the caller buffer, while the ideal outbox stores \((d,m^\circ)\); the verified equality makes these records identical.
 % 编译后发件箱存储 \((d,\mathsf{inv}_\rho(d))\) 而绝不存储调用方缓冲区，理想发件箱存储 \((d,m^\circ)\)；经验证的等式使这两条记录相同。
-In the \Alias case, both successors residualize by \(x\), append the same receipt-silent symbol, and bind the occurrence to the same durable result future without changing \(\Delta\) or the outbox.
-% 在 \Alias 情形中，两个后继都按 \(x\) 取残余、追加同一不产生回执的符号，并把该发生项绑定到同一持久结果期值，而不改变 \(\Delta\) 或发件箱。
+In the \Alias case, both successors apply the same paired residual, append the same receipt-silent symbol to the global trace and branch-local cursor, and bind the occurrence to the same durable result future without changing \(\Delta\) or the outbox.
+% 在 \Alias 情形中，两个后继都应用相同的成对残余、把同一个不产生回执的符号追加到全局轨迹与分支局部游标，并把该发生项绑定到同一持久结果期值，而不改变 \(\Delta\) 或发件箱。
 In either case, \cref{lem:app-event-derivative} re-establishes \(\mathcal R\) with witness \((c,ra)\).
 % 在任一情形中，\cref{lem:app-event-derivative} 都以 \((c,ra)\) 为见证重新建立 \(\mathcal R\)。
 
@@ -603,10 +593,10 @@ Both machines emit \(\mathsf{deny}(x)\), preserve state, and remain related.
 % 使用--安装竞态
 Use and installation serialize on the same history and epoch records.
 % 使用与安装会在相同的历史和纪元记录上串行化。
-If a \Fresh use commits first, it changes \((\Delta,\chi,\nu)\), all of which are bound directly or through \(H\) by the cut seal, so the prepared installation becomes stale.
-% 如果 \Fresh 使用先提交，它会改变 \((\Delta,\chi,\nu)\)，这些字段都由切点封印直接绑定或通过 \(H\) 绑定，因此已准备安装会过期。
-If an \Alias use commits first, it changes \((\chi,\nu)\) even though \(\Delta\) is unchanged, so the prepared installation again becomes stale.
-% 如果 \Alias 使用先提交，即使 \(\Delta\) 不变，它仍会改变 \((\chi,\nu)\)，因此已准备安装同样会过期。
+If a \Fresh use commits first, it changes \((G,T,\Delta,\chi,\nu,\mathsf{out})\), all of which are bound directly or through \(H\) by the cut seal, so the prepared installation becomes stale.
+% 如果 \Fresh 使用先提交，它会改变 \((G,T,\Delta,\chi,\nu,\mathsf{out})\)，这些字段都由切点封印直接绑定或通过 \(H\) 绑定，因此已准备安装会过期。
+If an \Alias use commits first, it changes \((G,T,\chi,\nu)\) even though \(\Delta\) and the outbox are unchanged, so the prepared installation again becomes stale.
+% 如果 \Alias 使用先提交，即使 \(\Delta\) 和发件箱不变，它仍会改变 \((G,T,\chi,\nu)\)，因此已准备安装同样会过期。
 If installation commits first, it atomically closes \(\eta^-\), activates \(\eta^+\), refreshes every live gate and handle, and exposes replacement handles only after activation.
 % 如果安装先提交，它会原子关闭 \(\eta^-\)、激活 \(\eta^+\)、刷新每个活跃门与句柄，并且只在激活之后暴露替换句柄。
 The old \Fresh or \Alias use then fails the current-epoch guard and is denied without progress.

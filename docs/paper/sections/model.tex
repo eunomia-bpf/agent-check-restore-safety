@@ -118,12 +118,12 @@ An Agent history state is
 \end{equation}
 \(\omega\) is the policy-domain identity and \(\eta\) its single current policy-domain epoch.
 % \(\omega\) 是策略域标识，\(\eta\) 是该域唯一的当前策略域纪元。
-\(G\) is a finite append-only provenance DAG.
-% \(G\) 是有限的仅追加溯源 DAG。
-Each continuation node \(b\) carries an immutable registered base contract \(\Gamma_b\) and branch-local resolved cursor \(\chi_b\).
-% 每个延续节点 \(b\) 携带一个不可变的已注册基础契约 \(\Gamma_b\) 和一个分支局部已解析游标 \(\chi_b\)。
-The DAG's edges record typed Fork, Restore, and Merge operations.
-% 该 DAG 的边记录类型化的 Fork、Restore 和 Merge 操作。
+\(G\) is a finite append-only provenance store whose node identities, base contracts, and typed topology records never change.
+% \(G\) 是有限的仅追加溯源存储，其中的节点标识、基础契约和类型化拓扑记录永不改变。
+Each continuation node \(b\) carries an immutable registered base contract \(\Gamma_b\), while its branch-local resolved cursor \(\chi_b\) is the event projection of append-only progress records tagged by \(b\).
+% 每个延续节点 \(b\) 携带一个不可变的已注册基础契约 \(\Gamma_b\)，而其分支局部已解析游标 \(\chi_b\) 是带 \(b\) 标签的仅追加进度记录的事件投影。
+The immutable topology records form a DAG whose edges record typed Fork, Restore, and Merge operations.
+% 不可变拓扑记录形成一个 DAG，其边记录类型化的 Fork、Restore 和 Merge 操作。
 \(T\) is the live structural frontier.
 % \(T\) 是活跃结构前沿。
 \[
@@ -158,6 +158,19 @@ Joining removes \(g\) immediately but keeps its continuation behind a barrier un
 % Join 会立即移除 \(g\)，但在两个分支都完成之前，将其延续保持在屏障之后。
 An occurrence is enabled when minimal in some pomset of \(\sem{T}\), consistent with sequence exposure by observable completion.
 % 当一个发生项在 \(\sem{T}\) 的某个偏序事件集中为极小元时，它即被启用；这与完成可观测性所确定的顺序暴露一致。
+Occurrence disjointness and unique context decomposition give every enabled \(x\) a unique exposed leaf \(\mathsf{leaf}_T(x)=b\).
+% 发生项互不重叠以及上下文分解的唯一性，使每个已启用的 \(x\) 都具有唯一的已暴露叶节点 \(\mathsf{leaf}_T(x)=b\)。
+For \(a\in\{\Fresh(x,d),\Alias(x,d)\}\), define the paired history residual
+% 对于 \(a\in\{\Fresh(x,d),\Alias(x,d)\}\)，定义成对历史残余
+\[
+ \mathsf{HStep}((G,T),a)=
+ \bigl(G\mathbin{\|}(b,a),\,T/(x,a)\bigr),
+ \qquad b=\mathsf{leaf}_T(x),
+\]
+where \(G\mathbin{\|}(b,a)\) appends the progress record \((b,a)\), and \(T/(x,a)\) residualizes the leaf and records any choice selection without storing a second cursor.
+% 其中 \(G\mathbin{\|}(b,a)\) 追加进度记录 \((b,a)\)，而 \(T/(x,a)\) 对叶节点取残余并记录任何选择结果，但不存储第二份游标。
+Write \(\mathsf{HRes}((G,T),r)\) for iterating this paired residual over a resolved word \(r\).
+% 用 \(\mathsf{HRes}((G,T),r)\) 表示沿已解析词 \(r\) 迭代这一成对残余。
 
 \(\mathsf{addr}(T)\) follows the same recursion over branch and group identifiers.
 % \(\mathsf{addr}(T)\) 对分支标识和组标识采用相同的递归。
@@ -179,8 +192,10 @@ Because \(\chi\) records authorization and causal progress rather than physical 
 
 \(\mathsf{Save}(k,b)\) is an explicit checkpoint transition, not a seventh history rewrite, and requires fresh \(k\) and addressable \(b\).
 % \(\mathsf{Save}(k,b)\) 是显式检查点转移，而非第七种历史重写，并要求 \(k\) 为新标识且 \(b\) 可寻址。
-A trusted transaction appends \((\omega,b,\mathcal C_b,\chi_b,\rho|_{X_{\mathcal C_b}},\zeta)\) and its authenticated fingerprint to \(K\), where \(\mathcal C_b\) is \(b\)'s current residual, and advances \(\nu\) without changing the frontier, receipts, bindings, epochs, or authority.
-% 一个可信事务向 \(K\) 追加 \((\omega,b,\mathcal C_b,\chi_b,\rho|_{X_{\mathcal C_b}},\zeta)\) 及其认证指纹，其中 \(\mathcal C_b\) 是 \(b\) 的当前残余，并推进 \(\nu\) 而不改变前沿、回执、绑定、纪元或权限。
+A trusted transaction snapshots the current pair \((\mathcal C_b,\chi_b)\) by value and appends \((\omega,b,\mathcal C_b,\chi_b,\rho|_{X_{\mathcal C_b}},\zeta)\) and its authenticated fingerprint to \(K\).
+% 一个可信事务按值快照当前的 \((\mathcal C_b,\chi_b)\) 对，并向 \(K\) 追加 \((\omega,b,\mathcal C_b,\chi_b,\rho|_{X_{\mathcal C_b}},\zeta)\) 及其认证指纹。
+The checkpoint check requires \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\), and the transaction advances \(\nu\) without changing the frontier, receipts, bindings, epochs, or authority.
+% 检查点检查要求 \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\)，且该事务推进 \(\nu\) 而不改变前沿、回执、绑定、纪元或权限。
 Both machines take this \(\tau\)-transition, which makes a concurrent installation stale because installation authenticates \(H\).
 % 两台机器都执行该 \(\tau\)-转移；由于安装过程认证 \(H\)，该转移会使并发安装过期。
 Restore accepts only records created by this rule.
@@ -194,8 +209,8 @@ Restore accepts only records created by this rule.
 \begin{enumerate}[leftmargin=*,itemsep=0pt,topsep=1pt]
 \item \emph{Structure.}
 % \emph{结构。}
-\(G\) is acyclic; continuation and group identifiers are globally unique across the recorded DAG and live frontier; every addressable identifier has a unique context decomposition; every head of \(T\) is a live maximal node; and every checkpoint names an immutable node and contract in \(G\).
-% \(G\) 是无环的；延续标识和组标识在所记录的 DAG 与活跃前沿中全局唯一；每个可寻址标识都有唯一的上下文分解；\(T\) 的每个头节点都是活跃极大节点；并且每个检查点都指明 \(G\) 中一个不可变的节点和契约。
+\(G\) is acyclic; continuation and group identifiers are globally unique across the recorded DAG and live frontier; every addressable identifier has a unique context decomposition; every head of \(T\) is a live maximal node; and every checkpoint names an immutable node coordinate and a value-snapshotted residual/cursor pair derived from \(G\).
+% \(G\) 是无环的；延续标识和组标识在所记录的 DAG 与活跃前沿中全局唯一；每个可寻址标识都有唯一的上下文分解；\(T\) 的每个头节点都是活跃极大节点；并且每个检查点都指明一个不可变节点坐标以及从 \(G\) 派生并按值快照的残余/游标对。
 \item \emph{Identity and progress.}
 % \emph{标识与进展。}
 Occurrence and gate identifiers are unique, while occurrences mapped to the same cell agree on protected-call issuer, scope, canonical invocation, digest, and lineage.
@@ -341,8 +356,8 @@ Discharging that explicitly authorized set is a trusted schema decision, not a t
 
 Let \(\mathcal E[-]\) be a one-hole \emph{exposed} frontier context, so its hole has the addressability property above.
 % 令 \(\mathcal E[-]\) 为单孔的\emph{已暴露}前沿上下文，因此其孔具有上述可寻址性质。
-\(\mathsf{carry}\) is the identity on outcome and occurrence identifiers, pomset order, cells, lineage, base contracts, cursors, and nested choice status.
-% \(\mathsf{carry}\) 在结果标识、发生项标识、偏序事件集次序、单元、谱系、基础契约、游标和嵌套选择状态上均为恒等操作。
+\(\mathsf{carry}\) is the identity on continuation, outcome, and occurrence identifiers, pomset order, cells, lineage, base contracts, current branch cursors, and nested choice status.
+% \(\mathsf{carry}\) 在延续标识、结果标识、发生项标识、偏序事件集次序、单元、谱系、基础契约、当前分支游标和嵌套选择状态上均为恒等操作。
 \(\mathsf{clone}_r\) applies deterministic injective renamings to continuation, outcome, and occurrence identifiers, preserves pomset order and authenticated cell, scope, digest, and lineage data, and registers each cloned residual as a new base contract with an empty cursor.
 % \(\mathsf{clone}_r\) 对延续标识、结果标识和发生项标识施加确定性的单射重命名，保持偏序事件集次序以及经认证的单元、作用域、摘要和谱系数据，并将每个克隆残余注册为带空游标的新基础契约。
 Schema suffix leaves likewise start with their registered base contract and an empty cursor.
@@ -399,7 +414,7 @@ Checked obligation\\
 current retired\\
 \(\mathsf{RestoreLive}(b,k,\sigma)\) &
 \(\mathcal E[b{:}\mathcal C],\ k\in\operatorname{dom}K\) &
-\(\mathcal E[b'{:}\mathsf{carry}(\mathcal C)
+\(\mathcal E[b{:}\mathsf{carry}(\mathcal C)
  \parallel_g b_k{:}\mathsf{clone}_k(\mathcal C_k)]\) &
 \(\{\mathsf{Ca}(\mathcal C),\mathsf{Cl}_k(\mathcal C_k)\}\)\\
 \(\mathsf{MergeSelect}(g,w,\sigma)\) &
@@ -426,8 +441,8 @@ The model uses domain-wide handoff, never fencing only a selected subset of a do
 % 该模型采用全域交接，从不只隔离域内选定的一部分门，因此 \(H\) 中的每个活跃门都属于 \(\eta^-=\eta\)。
 A table row plus the following common update is the complete rewrite rule.
 % 一个表格行与下列公共更新共同构成完整重写规则。
-Let \(e_u\) contain its typed edge and exactly the new target nodes prescribed by \(T'\).
-% 令 \(e_u\) 包含其类型化边，以及恰由 \(T'\) 指定的新目标节点。
+Let \(e_u\) contain its typed edge and exactly the newly allocated clone, suffix, and group nodes prescribed by \(T'\); carried node identities remain unchanged.
+% 令 \(e_u\) 包含其类型化边，以及恰由 \(T'\) 指定的新分配克隆节点、后缀节点和组节点；被携带节点的标识保持不变。
 For every live target occurrence \(x\), the trusted protected-call issuer deterministically mints \(j_x^+,h_x^+\), and \(\rho'\) preserves the row-certified cell, lineage, scope, digest, and historical records needed for \Retry while refreshing live gate and handle fields.
 % 对每个活跃目标发生项 \(x\)，可信的受保护调用发行方确定性地签发 \(j_x^+,h_x^+\)，而 \(\rho'\) 保留表行认证的单元、谱系、作用域、摘要以及 \Retry 所需的历史记录，同时刷新活跃门和句柄字段。
 Define
@@ -453,8 +468,8 @@ The complete judgment is shown below.
  \mathcal C_{H,u}&=\sem{T'},\qquad \eta^-=\eta .
 \end{aligned}
 \end{equation}
-Here \(G\mathbin{\cdot}e_u\) retains retired nodes.
-% 其中 \(G\mathbin{\cdot}e_u\) 保留已退役节点。
+Here \(G\mathbin{\cdot}e_u\) retains every source progress record and retired or carried node, and initializes each new clone or suffix node with its residual base and no progress records.
+% 其中 \(G\mathbin{\cdot}e_u\) 保留源中的每条进度记录以及每个已退役或被携带节点，并以残余基础和空进度记录初始化每个新克隆节点或后缀节点。
 Thus an edit preserves \(K,\Sigma_\zeta,\chi\), appends one typed provenance edge and its target nodes, refreshes every live gate and handle, and moves the domain to \(\eta^+\).
 % 因此，一次编辑保持 \(K,\Sigma_\zeta,\chi\)，追加一条类型化溯源边及其目标节点，刷新每个活跃门和句柄，并将整个域迁移到 \(\eta^+\)。
 Table constructors determine new group modes, while carried nested modes remain unchanged.
@@ -489,8 +504,8 @@ MergeSelect certifies the winner and typed loser, while MergeJoin certifies both
 % MergeSelect 认证胜者和类型化败者，而 MergeJoin 认证其屏障之前的两个携带区域。
 Clone and carry supply the global bijections and occurrence--outcome membership preservation; constructor induction defines \(\mathsf{pr}^u_r\), proves the cover, and supplies every \(\mathsf{Lift}_u\) witness.
 % 克隆和携带给出全局双射与发生项--结果成员关系保持；构造器归纳定义 \(\mathsf{pr}^u_r\)、证明覆盖，并给出每个 \(\mathsf{Lift}_u\) 见证。
-The common poststate fixes all remaining fields, while new identifiers, partial-constructor checks, and \cref{lem:observable-completion} preserve uniqueness, acyclicity, and contract well-formedness.
-% 公共后状态固定所有其余字段，而新标识、偏构造器检查和 \cref{lem:observable-completion} 保持唯一性、无环性与契约良构性。
+The common poststate fixes all remaining fields and preserves or initializes branch cursors as specified above, while new identifiers, partial-constructor checks, and \cref{lem:observable-completion} preserve uniqueness, acyclicity, and contract well-formedness.
+% 公共后状态固定所有其余字段，并按上述规则保持或初始化分支游标；新标识、偏构造器检查和 \cref{lem:observable-completion} 则保持唯一性、无环性与契约良构性。
 Finally, \(\beta'\) and \(\mathcal H_u^+\) establish handoff totality at \(\eta^+\).
 % 最后，\(\beta'\) 和 \(\mathcal H_u^+\) 在 \(\eta^+\) 上建立交接完备性。
 \end{proof}
