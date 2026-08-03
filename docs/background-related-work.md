@@ -1,6 +1,6 @@
 # Literature, Novelty, and CSF Fit
 
-**Status:** living claim-oriented audit, last updated 2026-08-02. A paper is listed here only after at least its abstract, introduction, claimed contributions, model, and evidence sections have been inspected. “Not found” means not found in the searched corpus, not a universal priority claim.
+**Status:** living claim-oriented audit, last updated 2026-08-03. A paper is listed here only after at least its abstract, introduction, claimed contributions, model, and evidence sections have been inspected. “Not found” means not found in the searched corpus, not a universal priority claim.
 
 ## 1. Venue contract: CSF 2027
 
@@ -480,6 +480,80 @@ classical; the possible new result is its online derivation and preservation
 across six typed Agent edges, immutable receipts, semantic-cell lineage, and
 version-bound controller installation.
 
+### 3.9 Generalized nonblocking is a backend, not the theory
+
+The 2026-08-03 frozen-paper reviews converged on one same-claim threat.
+Stripped of project terminology, the current fixed point asks for the largest
+subautomaton in which every reachable state carrying an outcome colour can
+coreach a terminal state with that colour.  Malik and Leduc define exactly
+this \((\alpha,\omega)\)-nonblocking condition.  Their Proposition 3 proves
+closure under union and hence existence of a maximal generalized-nonblocking
+subautomaton.  Queiroz, Cury, and Wonham already use coloured markings to
+synthesize minimally restrictive supervisors preserving multiple tasks.
+Therefore the descending deletion algorithm, its greatestness, and a
+derivative automaton cannot be the paper's standalone mathematical novelty.
+They remain a suitable verified backend after the Agent-specific plant and
+markings have been derived.
+
+Three adjacent areas also rule out weaker fallback claims:
+
+- dynamic-controller-update work takes old/new controllers, their
+  specifications, a transition requirement, and state/environment mappings as
+  inputs, then gives sound-and-complete bridge synthesis and progress toward
+  update;
+- workflow migration supplies inheritance- or history-equivalence criteria
+  for mapping running instances while avoiding duplicated/skipped work,
+  deadlock, and livelock;
+- REBOUND already combines authenticated historical state, policy-authorized
+  rollback, an atomic crash-consistent reference monitor, and one
+  tamper-evident authoritative order, while runtime-enforcement work already
+  synthesizes correct suppression monitors from safety formulas.
+
+The larger surviving thesis is a security-state characterization for
+history-rewriting Agents.  The candidate state is the relational join of:
+
+1. the outcome-indexed causal futures that the current history still promises;
+2. the occurrence-to-semantic-cell relation that says which copied actions
+   share one irreversible effect identity;
+3. the authenticated receipt/result frontier that records what the external
+   world has already made irreversible; and
+4. the resolved logical cursor and cut version that record receipt-silent
+   progress and delimit current effect authority.
+
+The intended single theorem must establish all of the following, rather than
+merely rename their composition:
+
+- **sufficiency:** the exact safe-edit language and every next protected-use
+  decision factor through this relational state, so a canonical checker and
+  monitor can be constructed from it;
+- **family-wise irredundance:** for each relation above, two finite
+  well-formed histories agree on every retained field but require opposite
+  admission or race decisions when that relation is erased;
+- **successive-edit closure:** a checked Fork/Restore/Merge edge and every
+  admitted protected-use residual produce another state of the same form, so
+  the theorem applies to an unbounded online edit sequence even though each
+  registered slice is finite; and
+- **durable realization necessity:** an implementation that serializes an
+  edit only with receipt-changing progress is unsound because an alias can
+  advance the logical cursor without changing receipts; complete same-domain
+  fencing or an independently proved equivalent serialization condition is
+  required.
+
+This does not narrow the public thesis to generalized nonblocking.  It moves
+generalized nonblocking to its honest role as one algorithmic lemma inside a
+larger exact characterization of *which security state must exist before any
+generic synthesis algorithm can be sound*.  A coloured plant can encode that
+state once supplied; existing control theory does not derive the relational
+state from authenticated Agent history topology, copied effect identity,
+irreversible world facts, and a live edit cut.
+
+The decisive proof evidence is correspondingly small but stronger than another
+benchmark: one formal state interface, four projection countermodels, closure
+under all six edits and residual use, and a refinement proof for the cut.  A
+bounded executable checker is supporting validation.  Performance data is
+useful only to show that representative registered slices can be decided; it
+cannot repair a missing characterization theorem.
+
 ## 4. Current novelty verdict
 
 | Candidate claim | Status | Reason |
@@ -558,6 +632,34 @@ The corresponding primary web anchors are the
 [PORTICO](https://arxiv.org/abs/2606.22504), and
 [*Secure the Clones*](https://lmcs.episciences.org/801).  Plan 9's clone flags
 were checked against its primary [system manual](https://9p.io/sys/doc/9.html).
+
+The 2026-08-03 fixed-point and security-state audit added these primary or
+author-hosted full texts under `docs/reference/closest-work/` (PDF bytes remain
+git-ignored):
+
+- `2002-vanderaalst-workflow-inheritance.pdf`, SHA-256
+  `b307a687df2b5dd5409df8445dcf3bc67e531b53dea126d9a71be1fcbce86b80`;
+- `2008-malik-generalised-nonblocking.pdf`, SHA-256
+  `d5fcdad7c35d070e333491c5d58f1d11f25700373d1e1986cc9521fb1477945e`;
+- `2018-aceto-runtime-enforcement.pdf`, SHA-256
+  `51ca14a5d095da04941c6440280f2b01addd8bf0b0d7dcb17dedaec46ef1042c`;
+- `2020-nahabedian-dynamic-update.pdf`, SHA-256
+  `0379ce62a6fa034e7e87ff627deeb6908dd6aeefd36f413a5433622532e5f643`;
+- `2022-amram-dynamic-update-gr1.pdf`, SHA-256
+  `290270d2995019a9b337ac33731e751eea30c7a2b03c4d427ace17b5005625f4`;
+- `2024-bakshi-history-equivalence-migration.pdf`, SHA-256
+  `90eb08a9fcda8ef573ab67d63c5ee729bff7bb719687743dcce28a2a266e6303`;
+- `2026-burke-rebound.pdf`, SHA-256
+  `3a3c268094027aebcbae3f2f9677c20ef2356508370abbecdfb6101b14edbf78`.
+
+The multitasking paper was verified through DOI
+`10.1007/s10626-005-4058-y`, DBLP metadata, the authors' deposited abstract,
+and the surrounding open supervisory-control literature; the publisher did
+not expose a valid downloadable PDF to this environment.  That access limit
+does not weaken the same-claim judgment because the paper's coloured-marking,
+multiple-coreachability, and minimally restrictive synthesis claims are
+explicit in its primary metadata and are independently cited by Malik and
+Leduc.
 
 Two IACR papers used only as venue-style context were readable from their primary web copies but blocked command-line PDF download: *Nominal State-Separating Proofs* (ePrint 2025/598) and *Computationally-Sound Symbolic Cryptography in Lean* (ePrint 2025/1700). They are not closest work for the scientific claim.
 
