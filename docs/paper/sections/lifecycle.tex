@@ -6,8 +6,8 @@ reserves the budget, giving receipt log \(\Delta\) with
 \(\mathsf{lab}(\Delta)=r\), and saves checkpoint \(k\) before approval.
 Approval then commits as cell \(a\), so
 \(\mathsf{lab}(\Delta)=ra\).  The Agent requests a choice Fork between two
-suppliers.  Its protected completion contract has exactly two indexed
-outcomes:
+	suppliers.  Its protected completion contract has exactly two indexed
+	outcomes.
 \begin{equation}
 \label{eq:running-outcomes}
 \begin{split}
@@ -30,7 +30,9 @@ allows prefixes of \(rap_As\) and \(rap_Bs\), but no trace containing both
 payments or a payment before \(a\).
 
 \paragraph{The admission calculation}
-At this cut each outcome has one causal linearization, resolving to
+Using the admission notation formalized in \cref{sec:admission}, write \(M_o\)
+for outcome \(o\)'s policy-safe resolved completions.  At this cut each outcome
+has one causal linearization, resolving to
 \[
 \begin{aligned}
  z_A&=\Fresh(p_A,p_A)\Fresh(s_A,s),\\
@@ -39,10 +41,11 @@ At this cut each outcome has one causal linearization, resolving to
 \]
 Thus \(M_{o_A}=\{z_A\}\), \(M_{o_B}=\{z_B\}\), and
 \(\widehat B^\dagger=\{(o_A,z_A),(o_B,z_B)\}\), with \(W^\dagger\) their
-prefix closure.  If policy excludes \(rap_Bs\), then \(M_{o_B}=\varnothing\)
-and the Fork is rejected: pruning supplier \(B\) would change its meaning.
-\Cref{sec:admission} gives the shared-prefix case where every outcome starts
-safe but no prefix-robust family exists.
+prefix closure.  On acceptance, these prefixes become the generated behavior
+of the compiled monitor.  If policy excludes \(rap_Bs\), then
+\(M_{o_B}=\varnothing\), and the Fork is rejected because pruning supplier
+\(B\) would change its meaning.  \Cref{sec:admission} gives the shared-prefix
+case where every outcome starts safe but no prefix-robust family exists.
 
 \begin{figure*}[t]
   \centering
@@ -105,33 +108,32 @@ safe but no prefix-robust family exists.
   history, and one current policy-domain epoch.  Restore clones logical occurrences
   but preserves authenticated cell identity.  A history cut must therefore
   order both receipt-changing \Fresh events and receipt-silent \Alias events
-  against a domain-wide epoch swap.}
+  against a policy-domain epoch swap.}
   \label{fig:two-histories}
 \end{figure*}
 
 \paragraph{The fresh race}
 After the shared approval and before either payment, the Agent requests
-\(\mathsf{MergeSelect}(A)\).  If the old supplier-\(B\) controller commits
-\(p_B\) first, that occurrence durably selects \(B\) and changes the receipt
-prefix from \(ra\) to \(rap_B\); selecting \(A\) must therefore be
-re-derived and rejected.  If the Merge cut wins, it closes the current
+\(\mathsf{MergeSelect}(g,A,\sigma)\).  If an old supplier-\(B\) protected use
+commits \(p_B\) first, that occurrence durably selects \(B\) and changes the receipt
+prefix from \(ra\) to \(rap_B\).  Selecting \(A\) must therefore be re-derived
+and rejected.  If the Merge cut wins, it closes the current
 policy-domain epoch and rebinds every live gate before any later \(p_B\) can
-commit.  Publishing a new controller while an old domain epoch remains active
-permits both payments.
+commit.  Installing a new program while an old policy-domain epoch remains
+active permits both payments.
 
 \paragraph{The alias race}
 Now consider the live Restore in \cref{fig:two-histories}.  Cloning \(k\)
 creates a fresh logical approval occurrence \(a'\) and gate, but retains
 cell \(a\).  Because \(a\) is already receipted, executing \(a'\) is an
-\Alias: it advances the restored continuation past approval but leaves
+\Alias that advances the restored continuation past approval while leaving
 \(\Delta\) unchanged.  A concurrent join or replacement compiled before that
 progress is stale even though its receipt comparison still succeeds.  The cut
 must therefore compare a logical-occurrence frontier \(\chi\) in addition to
 the receipt frontier.
 
 The example exposes the whole problem.  Workspace equality cannot recover
-which branch relation is live; receipt equality cannot detect alias progress;
-cell equality cannot determine the required obligation projection; and a target
-automaton supplied by the Agent cannot certify any of these facts.
-\Cref{sec:model} replaces that supplied request with a trusted history
-derivation.
+which branch relation is live, and receipt equality cannot detect alias
+progress.  Cell equality cannot determine the required obligation projection,
+while a caller-supplied target automaton cannot certify any of these facts.
+\Cref{sec:model} instead derives the target through a trusted history judgment.

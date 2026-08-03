@@ -2,46 +2,41 @@
 \label{sec:validation}
 
 The main result is a pen-and-paper theorem.  The dependency-free artifact is
-a bounded bug finder, not a proof replacement or production Agent runtime.
+only a bounded bug finder.
 
 \paragraph{Executable core}
-The exact-admission API takes an already derived finite indexed-pomset
-contract.  It enumerates topological sorts, performs length-preserving
-fresh/alias resolution, checks the authority projection, iterates
-\(\widehat\Phi\) from \(\widehat B_0\), and records the full chain and one
-ranked cause per removal.  On acceptance it checks every
-survivor/prefix/compatible-outcome witness and constructs \(W^\dagger\)
-exactly from survivor prefixes.  Outcome indices remain distinct under equal
-trace projection, and contract construction rejects a complete trace that
-strictly prefixes another.  Search fails closed above 128 outcomes, eight
+The exact-admission API takes a derived finite indexed-pomset contract,
+enumerates its topological sorts, performs length-preserving fresh/alias
+resolution, checks authority projections, iterates \(\widehat\Phi\) from
+\(\widehat B_0\), and records the chain and ranked removal causes.  On
+acceptance, the checker verifies every
+survivor/prefix/outcome witness and constructs \(W^\dagger\) exactly.  Outcome
+indices remain distinct under equal trace projections, and contract
+construction enforces completion observability.  Search fails closed above 128 outcomes, eight
 occurrences per outcome, 50,000 linearizations per pomset, or 100,000 safe
-indexed completions; these are artifact caps, not theorem bounds.
+indexed completions.  These caps do not bound the theorem.
 
-A separate regression fixture derives contracts for all six edit forms from
-registered leaf, checkpoint, and join names and rechecks its local cut at
-installation.  It does not implement immutable edit schemas,
-\(\preccurlyeq_\mu\), authorized retirement, the domain-wide epoch, the marked
-controller, or weak bisimulation.  It also merges literally identical
-pomsets, uses cell IDs as policy labels, and omits the complete \Use rule.
-Those layers remain self-contained paper definitions and proofs; a production
-registry, mediator, and durable store are assumed TCB components.
+A separate fixture derives all six edits and rechecks its cut.  It omits
+immutable schemas, \(\preccurlyeq_\mu\), retirement, policy-domain epochs, the
+canonical program, weak bisimulation, and the complete \Use rule.  It merges
+identical pomsets and uses cell IDs as labels.  The paper defines and proves
+the omitted layers.  Both representation choices are fixture simplifications.
+Production assumes trusted registries, mediation, and durable storage.
 
 \paragraph{Litmus results}
-Nineteen focused tests cover the rejecting \(2,1,0\) chain for
-\(X\otimes(Y\oplus Z)\) under \(\Pref\{yx,xz\}\); distinct outcome ghosts with
-equal traces; exact survivor prefixes and completion observability; all six
-structural edits; same-cell copies, choice/merge consistency, and failed
-occurrence borrowing; receipt-silent alias progress; and both fresh--install
-and alias--install orders.  In each race, progress first stales the seal,
-whereas installation first closes the fixture-local controller.
-All 19 focused tests and all 81 repository artifact tests pass; the anonymous
-archive also reruns the focused suite after clean extraction.
+Nineteen focused tests cover (1) the rejecting \(2,1,0\) chain for
+\(X\otimes(Y\oplus Z)\) under \(\Pref\{yx,xz\}\), (2) distinct identical-trace
+indices, (3) survivor prefixes and completion observability, (4) all six edits
+with same-cell, choice/merge, and gate-borrowing cases, (5) receipt-silent
+alias progress, and (6) both fresh--install and alias--install orders.
+If progress occurs first, it invalidates the seal, whereas installation first
+closes the fixture's old program generation.  All 19 focused and 81 repository
+tests pass, including the focused suite after clean archive extraction.
 
 \paragraph{Falsifiability}
-The executable subset fails if resolution loses an occurrence, a survivor or
-removal lacks its required witness, \(W^\dagger\) is not the survivor-prefix
-language, or a stale local cut succeeds.  The theorem fails if refinement
-drops an obligation, the monitor language differs, an old epoch remains
-enabled, or the two LTSs differ observably.  The separate Lean endpoint model
-does not prove \cref{thm:exact-history}; stronger mechanization remains future
-work.
+The executable subset fails if resolution loses an occurrence, a fixed-point
+step lacks its witness, \(W^\dagger\) differs from the survivor-prefix
+language, or a stale cut succeeds.  The theorem fails if refinement drops an
+obligation, the monitor language differs, an old epoch remains enabled, or
+the LTSs differ observably.  The separate Lean endpoint model does not prove
+\cref{thm:exact-history}.  Stronger mechanization remains future work.
