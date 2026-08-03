@@ -248,6 +248,16 @@ def resolve(
         raise ModelError("raw linearization is not a permutation of the pomset")
     if tuple(raw_linearization) not in linearizations(pomset):
         raise ModelError("raw sequence violates the pomset order")
+    return _resolve_enumerated(pomset, raw_linearization, receipt_trace)
+
+
+def _resolve_enumerated(
+    pomset: Pomset,
+    raw_linearization: Sequence[str],
+    receipt_trace: Sequence[str],
+) -> ResolvedTrace:
+    """Resolve a linearization already produced by ``linearizations``."""
+
     seen = set(receipt_trace)
     by_id = pomset.by_id
     output: list[ResolvedEvent] = []
@@ -737,12 +747,27 @@ def _completion_key(
     return completion.outcome_index, _trace_key(completion.trace)
 
 
-def _is_trace_prefix(prefix: ResolvedTrace, trace: ResolvedTrace) -> bool:
-    return len(prefix) <= len(trace) and trace[: len(prefix)] == prefix
-
-
 def _raw(trace: ResolvedTrace) -> tuple[str, ...]:
     return tuple(event.logical_id for event in trace)
+
+
+def _prefix_witness_index(
+    completions: frozenset[IndexedCompletion],
+) -> tuple[
+    tuple[IndexedCompletion, ...],
+    dict[tuple[int, ResolvedTrace], IndexedCompletion],
+]:
+    """Index the first canonical completion for each outcome/prefix pair."""
+
+    ordered = tuple(sorted(completions, key=_completion_key))
+    witnesses: dict[tuple[int, ResolvedTrace], IndexedCompletion] = {}
+    for completion in ordered:
+        for length in range(len(completion.trace) + 1):
+            witnesses.setdefault(
+                (completion.outcome_index, completion.trace[:length]),
+                completion,
+            )
+    return ordered, witnesses
 
 
 def check_admission(state: HistoryState, contract: Contract) -> AdmissionResult:
@@ -762,10 +787,15 @@ def check_admission(state: HistoryState, contract: Contract) -> AdmissionResult:
     for outcome_index, pomset in enumerate(contract.outcomes):
         safe: list[ResolvedTrace] = []
         raw_prefixes: set[tuple[str, ...]] = {()}
-        for raw_linearization in linearizations(pomset):
+        raw_linearizations = linearizations(pomset)
+        for raw_linearization in raw_linearizations:
             for length in range(len(raw_linearization) + 1):
                 raw_prefixes.add(raw_linearization[:length])
-            resolved = resolve(pomset, raw_linearization, state.receipts)
+            resolved = _resolve_enumerated(
+                pomset,
+                raw_linearization,
+                state.receipts,
+            )
             if state.policy.allows((*state.receipts, *auth(resolved))):
                 safe.append(resolved)
                 candidates.add(IndexedCompletion(outcome_index, resolved))
@@ -779,13 +809,13 @@ def check_admission(state: HistoryState, contract: Contract) -> AdmissionResult:
         )
         raw_prefixes_by_outcome.append(frozenset(raw_prefixes))
 
+    outcomes_by_raw_prefix: dict[tuple[str, ...], list[int]] = {}
+    for outcome_index, raw_prefixes in enumerate(raw_prefixes_by_outcome):
+        for raw_prefix in raw_prefixes:
+            outcomes_by_raw_prefix.setdefault(raw_prefix, []).append(outcome_index)
+
     def compatible_outcomes(prefix: ResolvedTrace) -> tuple[int, ...]:
-        raw_prefix = _raw(prefix)
-        return tuple(
-            outcome_index
-            for outcome_index, prefixes in enumerate(raw_prefixes_by_outcome)
-            if raw_prefix in prefixes
-        )
+        return tuple(outcomes_by_raw_prefix.get(_raw(prefix), ()))
 
     current = frozenset(candidates)
     descending_chain: list[frozenset[IndexedCompletion]] = [current]
@@ -793,17 +823,13 @@ def check_admission(state: HistoryState, contract: Contract) -> AdmissionResult:
     rank = 1
     while current:
         removed: set[IndexedCompletion] = set()
-        for candidate in sorted(current, key=_completion_key):
+        ordered_current, prefix_witnesses = _prefix_witness_index(current)
+        for candidate in ordered_current:
             cause: PruningCause | None = None
             for length in range(len(candidate.trace) + 1):
                 prefix = candidate.trace[:length]
                 for outcome_index in compatible_outcomes(prefix):
-                    witness_exists = any(
-                        completion.outcome_index == outcome_index
-                        and _is_trace_prefix(prefix, completion.trace)
-                        for completion in current
-                    )
-                    if not witness_exists:
+                    if (outcome_index, prefix) not in prefix_witnesses:
                         cause = PruningCause(
                             rank,
                             candidate,
@@ -823,19 +849,12 @@ def check_admission(state: HistoryState, contract: Contract) -> AdmissionResult:
         rank += 1
 
     survivor_witnesses: list[SurvivorWitness] = []
-    for candidate in sorted(current, key=_completion_key):
+    ordered_current, prefix_witnesses = _prefix_witness_index(current)
+    for candidate in ordered_current:
         for length in range(len(candidate.trace) + 1):
             prefix = candidate.trace[:length]
             for outcome_index in compatible_outcomes(prefix):
-                completion = next(
-                    (
-                        item
-                        for item in sorted(current, key=_completion_key)
-                        if item.outcome_index == outcome_index
-                        and _is_trace_prefix(prefix, item.trace)
-                    ),
-                    None,
-                )
+                completion = prefix_witnesses.get((outcome_index, prefix))
                 if completion is None:  # pragma: no cover - internal invariant
                     raise AssertionError("stabilized set lacks a coverage witness")
                 survivor_witnesses.append(

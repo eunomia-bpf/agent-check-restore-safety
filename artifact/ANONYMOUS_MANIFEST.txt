@@ -5,6 +5,7 @@ artifact/authority_continuity.py
 artifact/test_authority_continuity.py
 artifact/exact_history_realization.py
 artifact/test_exact_history_realization.py
+artifact/bench_exact_history_realization.py
 artifact/bench_history_admission_scaling.py
 artifact/test_history_admission.py
 artifact/fixtures/history_admission/inherit_choice.json

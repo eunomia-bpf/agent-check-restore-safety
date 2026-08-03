@@ -92,6 +92,8 @@ Run the unit tests and deterministic exhaustive explorer from this directory:
 ```sh
 python3 -m unittest -v
 python3 -m unittest -v test_exact_history_realization
+python3 bench_exact_history_realization.py \
+  --output results/exact_history_realization_scaling.json
 python3 explore.py
 python3 -m history_admission.compiler \
   fixtures/history_admission/inherit_choice.json \

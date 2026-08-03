@@ -1,0 +1,581 @@
+{
+  "cap_rows": [
+    {
+      "diagnostic": "contract exceeds the 128-outcome cap",
+      "kind": "outcome_cap",
+      "max_peak_rss_kb": 21468,
+      "max_validation_elapsed_ms": 0.56233,
+      "median_peak_rss_kb": 21380,
+      "median_validation_elapsed_ms": 0.54536,
+      "raw_peak_rss_kb": [
+        21468,
+        21392,
+        21312,
+        21380,
+        21360
+      ],
+      "raw_validation_elapsed_ms": [
+        0.536479,
+        0.56098,
+        0.52026,
+        0.54536,
+        0.56233
+      ],
+      "repetitions": 5,
+      "size": 129,
+      "status": "rejected_as_planned"
+    },
+    {
+      "diagnostic": "pomset exceeds the 8-occurrence cap",
+      "kind": "occurrence_cap",
+      "max_peak_rss_kb": 21464,
+      "max_validation_elapsed_ms": 0.023711,
+      "median_peak_rss_kb": 21388,
+      "median_validation_elapsed_ms": 0.02344,
+      "raw_peak_rss_kb": [
+        21336,
+        21424,
+        21464,
+        21312,
+        21388
+      ],
+      "raw_validation_elapsed_ms": [
+        0.023711,
+        0.02344,
+        0.02173,
+        0.022651,
+        0.023511
+      ],
+      "repetitions": 5,
+      "size": 9,
+      "status": "rejected_as_planned"
+    }
+  ],
+  "caps": {
+    "indexed_safe_executions": 100000,
+    "linearizations_per_outcome": 50000,
+    "occurrences_per_outcome": 8,
+    "outcomes": 128
+  },
+  "correctness": {
+    "acceptance_rows_retained_all_expected_completions": true,
+    "all_semantic_counts_deterministic": true,
+    "exercised_occurrence_cap_failed_closed": true,
+    "exercised_outcome_cap_failed_closed": true,
+    "rejection_rows_produced_expected_ranked_chain": true
+  },
+  "environment": {
+    "cpu_model": "AMD EPYC 7R12 48-Core Processor",
+    "implementation": "CPython",
+    "logical_cpus": 16,
+    "machine": "x86_64",
+    "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.39",
+    "python": "3.12.3 (main, Jun 19 2026, 12:46:00) [GCC 13.3.0]",
+    "pythonhashseed": "0 for every measured child process",
+    "repository_commit": "e2f07877d105473e2b6072ba0351bad43aa526fc",
+    "repository_dirty": true,
+    "source_sha256": {
+      "benchmark_runner": "c0cc17e230d60fee21ebc1c01e066205935476656872ad06f1da2ff7d0087a21",
+      "exact_validator": "4285b8ee034d82058736a5064fe4b86f0a29f6dac68edf6f026d182e591ff2a2"
+    }
+  },
+  "experiment": "exact-history-realization-scaling-v1",
+  "limitations": [
+    "Synthetic finite contracts characterize the constructor, not real-Agent workload prevalence.",
+    "The benchmark does not include schema derivation, installation, dispatch, or protected-call mediation.",
+    "Wall time and peak RSS are machine-specific.",
+    "Explicit outcome and linearization enumeration remains bounded and may grow exponentially.",
+    "Only the outcome and per-outcome occurrence caps are exercised."
+  ],
+  "repetitions": 5,
+  "role": "supporting",
+  "success_rows": [
+    {
+      "admitted": true,
+      "candidate_completions": 2,
+      "descending_chain_sizes": [
+        2
+      ],
+      "kind": "shared_accept",
+      "language_prefixes": 4,
+      "max_core_elapsed_ms": 0.129962,
+      "max_peak_rss_kb": 21448,
+      "median_core_elapsed_ms": 0.114002,
+      "median_peak_rss_kb": 21380,
+      "min_core_elapsed_ms": 0.111322,
+      "outcomes": 2,
+      "pruning_causes": 0,
+      "raw_core_elapsed_ms": [
+        0.114002,
+        0.111702,
+        0.129962,
+        0.117002,
+        0.111322
+      ],
+      "raw_peak_rss_kb": [
+        21380,
+        21356,
+        21448,
+        21436,
+        21320
+      ],
+      "repetitions": 5,
+      "size": 2,
+      "surviving_indexed_completions": 2,
+      "survivor_witnesses": 10
+    },
+    {
+      "admitted": true,
+      "candidate_completions": 8,
+      "descending_chain_sizes": [
+        8
+      ],
+      "kind": "shared_accept",
+      "language_prefixes": 10,
+      "max_core_elapsed_ms": 0.573121,
+      "max_peak_rss_kb": 21472,
+      "median_core_elapsed_ms": 0.54249,
+      "median_peak_rss_kb": 21388,
+      "min_core_elapsed_ms": 0.514489,
+      "outcomes": 8,
+      "pruning_causes": 0,
+      "raw_core_elapsed_ms": [
+        0.573121,
+        0.54249,
+        0.52148,
+        0.514489,
+        0.54312
+      ],
+      "raw_peak_rss_kb": [
+        21388,
+        21368,
+        21392,
+        21472,
+        21384
+      ],
+      "repetitions": 5,
+      "size": 8,
+      "surviving_indexed_completions": 8,
+      "survivor_witnesses": 136
+    },
+    {
+      "admitted": true,
+      "candidate_completions": 32,
+      "descending_chain_sizes": [
+        32
+      ],
+      "kind": "shared_accept",
+      "language_prefixes": 34,
+      "max_core_elapsed_ms": 4.021083,
+      "max_peak_rss_kb": 21792,
+      "median_core_elapsed_ms": 3.925741,
+      "median_peak_rss_kb": 21704,
+      "min_core_elapsed_ms": 3.921572,
+      "outcomes": 32,
+      "pruning_causes": 0,
+      "raw_core_elapsed_ms": [
+        3.937302,
+        3.925741,
+        4.021083,
+        3.925411,
+        3.921572
+      ],
+      "raw_peak_rss_kb": [
+        21688,
+        21792,
+        21716,
+        21692,
+        21704
+      ],
+      "repetitions": 5,
+      "size": 32,
+      "surviving_indexed_completions": 32,
+      "survivor_witnesses": 2080
+    },
+    {
+      "admitted": true,
+      "candidate_completions": 64,
+      "descending_chain_sizes": [
+        64
+      ],
+      "kind": "shared_accept",
+      "language_prefixes": 66,
+      "max_core_elapsed_ms": 14.424814,
+      "max_peak_rss_kb": 22564,
+      "median_core_elapsed_ms": 14.281852,
+      "median_peak_rss_kb": 22472,
+      "min_core_elapsed_ms": 14.22859,
+      "outcomes": 64,
+      "pruning_causes": 0,
+      "raw_core_elapsed_ms": [
+        14.424814,
+        14.260801,
+        14.281852,
+        14.315452,
+        14.22859
+      ],
+      "raw_peak_rss_kb": [
+        22564,
+        22372,
+        22412,
+        22472,
+        22536
+      ],
+      "repetitions": 5,
+      "size": 64,
+      "surviving_indexed_completions": 64,
+      "survivor_witnesses": 8256
+    },
+    {
+      "admitted": true,
+      "candidate_completions": 128,
+      "descending_chain_sizes": [
+        128
+      ],
+      "kind": "shared_accept",
+      "language_prefixes": 130,
+      "max_core_elapsed_ms": 54.048649,
+      "max_peak_rss_kb": 25500,
+      "median_core_elapsed_ms": 53.474248,
+      "median_peak_rss_kb": 25368,
+      "min_core_elapsed_ms": 53.294354,
+      "outcomes": 128,
+      "pruning_causes": 0,
+      "raw_core_elapsed_ms": [
+        53.474248,
+        53.294354,
+        53.365766,
+        54.048649,
+        53.482768
+      ],
+      "raw_peak_rss_kb": [
+        25364,
+        25500,
+        25388,
+        25364,
+        25368
+      ],
+      "repetitions": 5,
+      "size": 128,
+      "surviving_indexed_completions": 128,
+      "survivor_witnesses": 32896
+    },
+    {
+      "admitted": false,
+      "candidate_completions": 2,
+      "descending_chain_sizes": [
+        2,
+        1,
+        0
+      ],
+      "kind": "shared_reject",
+      "language_prefixes": 0,
+      "max_core_elapsed_ms": 0.108182,
+      "max_peak_rss_kb": 21360,
+      "median_core_elapsed_ms": 0.106272,
+      "median_peak_rss_kb": 21336,
+      "min_core_elapsed_ms": 0.104602,
+      "outcomes": 2,
+      "pruning_causes": 2,
+      "raw_core_elapsed_ms": [
+        0.106272,
+        0.105242,
+        0.104602,
+        0.108182,
+        0.106842
+      ],
+      "raw_peak_rss_kb": [
+        21336,
+        21332,
+        21360,
+        21356,
+        21312
+      ],
+      "repetitions": 5,
+      "size": 2,
+      "surviving_indexed_completions": 0,
+      "survivor_witnesses": 0
+    },
+    {
+      "admitted": false,
+      "candidate_completions": 8,
+      "descending_chain_sizes": [
+        8,
+        1,
+        0
+      ],
+      "kind": "shared_reject",
+      "language_prefixes": 0,
+      "max_core_elapsed_ms": 0.389797,
+      "max_peak_rss_kb": 21508,
+      "median_core_elapsed_ms": 0.347056,
+      "median_peak_rss_kb": 21376,
+      "min_core_elapsed_ms": 0.345637,
+      "outcomes": 8,
+      "pruning_causes": 8,
+      "raw_core_elapsed_ms": [
+        0.346996,
+        0.347056,
+        0.345637,
+        0.359656,
+        0.389797
+      ],
+      "raw_peak_rss_kb": [
+        21356,
+        21376,
+        21508,
+        21388,
+        21304
+      ],
+      "repetitions": 5,
+      "size": 8,
+      "surviving_indexed_completions": 0,
+      "survivor_witnesses": 0
+    },
+    {
+      "admitted": false,
+      "candidate_completions": 32,
+      "descending_chain_sizes": [
+        32,
+        1,
+        0
+      ],
+      "kind": "shared_reject",
+      "language_prefixes": 0,
+      "max_core_elapsed_ms": 1.072519,
+      "max_peak_rss_kb": 21604,
+      "median_core_elapsed_ms": 1.018258,
+      "median_peak_rss_kb": 21564,
+      "min_core_elapsed_ms": 0.991958,
+      "outcomes": 32,
+      "pruning_causes": 32,
+      "raw_core_elapsed_ms": [
+        1.072519,
+        1.051669,
+        0.991958,
+        1.004548,
+        1.018258
+      ],
+      "raw_peak_rss_kb": [
+        21552,
+        21592,
+        21564,
+        21560,
+        21604
+      ],
+      "repetitions": 5,
+      "size": 32,
+      "surviving_indexed_completions": 0,
+      "survivor_witnesses": 0
+    },
+    {
+      "admitted": false,
+      "candidate_completions": 64,
+      "descending_chain_sizes": [
+        64,
+        1,
+        0
+      ],
+      "kind": "shared_reject",
+      "language_prefixes": 0,
+      "max_core_elapsed_ms": 2.112799,
+      "max_peak_rss_kb": 21640,
+      "median_core_elapsed_ms": 2.099509,
+      "median_peak_rss_kb": 21572,
+      "min_core_elapsed_ms": 2.093618,
+      "outcomes": 64,
+      "pruning_causes": 64,
+      "raw_core_elapsed_ms": [
+        2.108198,
+        2.099148,
+        2.099509,
+        2.093618,
+        2.112799
+      ],
+      "raw_peak_rss_kb": [
+        21572,
+        21560,
+        21640,
+        21556,
+        21584
+      ],
+      "repetitions": 5,
+      "size": 64,
+      "surviving_indexed_completions": 0,
+      "survivor_witnesses": 0
+    },
+    {
+      "admitted": false,
+      "candidate_completions": 128,
+      "descending_chain_sizes": [
+        128,
+        1,
+        0
+      ],
+      "kind": "shared_reject",
+      "language_prefixes": 0,
+      "max_core_elapsed_ms": 5.676743,
+      "max_peak_rss_kb": 21828,
+      "median_core_elapsed_ms": 5.509271,
+      "median_peak_rss_kb": 21764,
+      "min_core_elapsed_ms": 5.400809,
+      "outcomes": 128,
+      "pruning_causes": 128,
+      "raw_core_elapsed_ms": [
+        5.565152,
+        5.676743,
+        5.400809,
+        5.509271,
+        5.4625
+      ],
+      "raw_peak_rss_kb": [
+        21820,
+        21720,
+        21764,
+        21756,
+        21828
+      ],
+      "repetitions": 5,
+      "size": 128,
+      "surviving_indexed_completions": 0,
+      "survivor_witnesses": 0
+    },
+    {
+      "admitted": true,
+      "candidate_completions": 6,
+      "descending_chain_sizes": [
+        6
+      ],
+      "kind": "unordered",
+      "language_prefixes": 16,
+      "max_core_elapsed_ms": 0.412168,
+      "max_peak_rss_kb": 21456,
+      "median_core_elapsed_ms": 0.328176,
+      "median_peak_rss_kb": 21372,
+      "min_core_elapsed_ms": 0.322505,
+      "outcomes": 1,
+      "pruning_causes": 0,
+      "raw_core_elapsed_ms": [
+        0.412168,
+        0.324366,
+        0.322505,
+        0.328176,
+        0.360147
+      ],
+      "raw_peak_rss_kb": [
+        21300,
+        21348,
+        21372,
+        21456,
+        21448
+      ],
+      "repetitions": 5,
+      "size": 3,
+      "surviving_indexed_completions": 6,
+      "survivor_witnesses": 24
+    },
+    {
+      "admitted": true,
+      "candidate_completions": 24,
+      "descending_chain_sizes": [
+        24
+      ],
+      "kind": "unordered",
+      "language_prefixes": 65,
+      "max_core_elapsed_ms": 1.217212,
+      "max_peak_rss_kb": 21560,
+      "median_core_elapsed_ms": 1.197032,
+      "median_peak_rss_kb": 21432,
+      "min_core_elapsed_ms": 1.178542,
+      "outcomes": 1,
+      "pruning_causes": 0,
+      "raw_core_elapsed_ms": [
+        1.184542,
+        1.217212,
+        1.178542,
+        1.197032,
+        1.199542
+      ],
+      "raw_peak_rss_kb": [
+        21560,
+        21420,
+        21532,
+        21432,
+        21428
+      ],
+      "repetitions": 5,
+      "size": 4,
+      "surviving_indexed_completions": 24,
+      "survivor_witnesses": 120
+    },
+    {
+      "admitted": true,
+      "candidate_completions": 120,
+      "descending_chain_sizes": [
+        120
+      ],
+      "kind": "unordered",
+      "language_prefixes": 326,
+      "max_core_elapsed_ms": 7.609669,
+      "max_peak_rss_kb": 21992,
+      "median_core_elapsed_ms": 7.166501,
+      "median_peak_rss_kb": 21896,
+      "min_core_elapsed_ms": 7.048219,
+      "outcomes": 1,
+      "pruning_causes": 0,
+      "raw_core_elapsed_ms": [
+        7.609669,
+        7.048219,
+        7.166501,
+        7.195632,
+        7.138511
+      ],
+      "raw_peak_rss_kb": [
+        21896,
+        21888,
+        21992,
+        21892,
+        21920
+      ],
+      "repetitions": 5,
+      "size": 5,
+      "surviving_indexed_completions": 120,
+      "survivor_witnesses": 720
+    },
+    {
+      "admitted": true,
+      "candidate_completions": 720,
+      "descending_chain_sizes": [
+        720
+      ],
+      "kind": "unordered",
+      "language_prefixes": 1957,
+      "max_core_elapsed_ms": 50.878111,
+      "max_peak_rss_kb": 24948,
+      "median_core_elapsed_ms": 50.353021,
+      "median_peak_rss_kb": 24920,
+      "min_core_elapsed_ms": 50.245679,
+      "outcomes": 1,
+      "pruning_causes": 0,
+      "raw_core_elapsed_ms": [
+        50.878111,
+        50.353021,
+        50.463903,
+        50.245679,
+        50.29482
+      ],
+      "raw_peak_rss_kb": [
+        24920,
+        24948,
+        24856,
+        24940,
+        24864
+      ],
+      "repetitions": 5,
+      "size": 6,
+      "surviving_indexed_completions": 720,
+      "survivor_witnesses": 5040
+    }
+  ],
+  "timing_scope": "check_admission core only for success rows; deterministic workload construction excluded; every sample is a fresh Python process"
+}
