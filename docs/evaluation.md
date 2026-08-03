@@ -667,3 +667,58 @@ deployability claim follows.
 - Plan and reviews: `docs/tmp/history-admission-scaling-20260802/`.
 - Runner: `artifact/bench_history_admission_scaling.py`.
 - Raw result: `artifact/results/history_admission_scaling.json`.
+
+## 14. RQ4 central Agent security-state mechanization
+
+Paper-value role: **decisive formal experiment**. Four fresh CSF reviews agreed
+that the outcome-indexed history-admission idea is promising but that the
+paper's central characterization is not independently auditable from its
+current prose inventories, auxiliary Lean modules, and bounded Python tests.
+The new experiment therefore targets the complete current theorem rather than
+another runtime benchmark.
+
+The approved plan freezes four paper-matched Lean modules:
+
+1. `FiniteCore.lean` independently defines the declarative realization
+   semantics and the executable indexed greatest fixed point, then proves
+   `compilerAns_eq_semanticAns` and greatest-monitor/certificate obligations.
+2. `OperationalSemantics.lean` defines a single empty genesis, constrained
+   registration and initial installation, the five-clause `AgentSec`
+   invariant, all six history edits, the complete modeled event relation, and
+   arbitrary finite-prefix closure.
+3. `ReachableEvidence.lean` constructs every P/I/E/C and incidence-separation
+   world by an explicit trace from genesis and proves both erased-view
+   isomorphism and opposite declarative answers.
+4. `DurableRefinement.lean` defines independent ideal and kernel LTSs and proves
+   both directions of divergence-insensitive weak simulation before assembling
+   the full characterization.
+
+The non-circularity contract is load-bearing. `SemanticAns` may refer only to
+the declarative realization relation, while `CompilerAns` uses derivation and
+the executable fixed point. Kernel transitions have their own guards and
+updates rather than being ideal transitions with metadata. Lower bounds require
+both a reachable projection collision and opposite semantic answers.
+
+This plan deliberately diagnoses, rather than inherits, one defect in the
+frozen PDF: the appendix currently declares every `BootOK` post-installation
+state initial and therefore calls each lower-bound world length-zero reachable.
+The experiment instead requires one literal empty genesis followed by actual
+registration, installation, Save, use, and edit steps. A positive result would
+support a later minimal paper repair from bootstrap membership to natural
+reachability; it must not be described as directly proving the current
+length-zero wording.
+
+The real toolchain is installed and pinned at Lean 4.30.0, Lake 5.0.0, Mathlib
+v4.30.0, and Elan 4.2.3. The plan passed a fresh read-only experiment review
+with verdict **APPROVE**. Completion requires every frozen theorem to appear in
+the audit root, pass the placeholder/project-axiom scan, build from a clean
+state, and survive `lake env leanchecker --fresh AuthorityContinuity.Main`.
+The first gate is a real shared-prefix preflight reproducing the paper's
+two-outcome `[2,1,0]` pruning chain with independently computed semantic and
+compiler answers.
+
+- Approved plan:
+  `docs/tmp/research-experiment-design-20260803T160000Z/plan.md`.
+- Planned raw evidence:
+  `docs/tmp/research-experiment-design-20260803T160000Z/raw/`.
+- Current status: **approved; real preflight not yet run**.
