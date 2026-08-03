@@ -805,3 +805,106 @@ The safe theorem-level comparison is consequently:
 > exact cut may install.  It then compiles the resulting instance to its
 > greatest prefix-robust monitor or a finite impossibility certificate and
 > proves the monitor realizes the atomic history edit.
+
+## 10. Reversible-Agent and semantic-transaction closest work (2026-08-03)
+
+Four fresh CSF reviews independently identified a recent cluster that must be
+treated as closest work, not hidden behind generic rollback citations. All
+five leads were checked against primary sources:
+
+- Yu et al., *Shepherd: Enabling Programmable Meta-Agents via Reversible
+  Agentic Execution Traces*, [arXiv:2605.10913
+  v3](https://arxiv.org/abs/2605.10913), supplies typed tasks, effects, scopes,
+  reversible trace operations, and a Lean-mechanized trace algebra.
+- Chen et al., *Cordon: Semantic Transactions for Tool-Using LLM Agents*,
+  [arXiv:2606.17573](https://arxiv.org/abs/2606.17573), supplies task-level
+  semantic transactions, result lineage, staged effects, delegated authority,
+  an effect outbox, and recovery records. As of this audit it is an arXiv
+  preprint; the EuroSys 2027 manuscript header is not an acceptance record.
+- Yang et al., *DART: Semantic Recoverability for Structured Tool Agents*,
+  [arXiv:2605.23311](https://arxiv.org/abs/2605.23311), gives explicit
+  admissibility conditions for restoring one failed task instance in the
+  presence of committed downstream work.
+- Chang and Geng, *SagaLLM: Context Management, Validation, and Transaction
+  Guarantees for Multi-Agent LLM Planning*, [PVLDB
+  18(12)](https://www.vldb.org/pvldb/vol18/p4874-chang.pdf), supplies
+  Saga-style compensation, dependency tracking, persistent context, and
+  validation.
+- LangGraph's official [persistence
+  documentation](https://docs.langchain.com/oss/python/langgraph/persistence)
+  and [time-travel
+  documentation](https://docs.langchain.com/oss/python/langgraph/use-time-travel)
+  expose checkpoint replay and fork; they also state that replay re-executes
+  later nodes, including external requests.
+
+The corresponding verified local copies are:
+
+- `reference/closest-work/2026-yu-shepherd.pdf`, SHA-256
+  `6f33ed86837aa6df7a753c5917ca00c6ff190105ee66e6116f942250c3a00bd9`;
+- `reference/closest-work/2026-chen-cordon.pdf`, SHA-256
+  `4abfc0bd9941559b6eb0b15a268c91f67601f72539f85fbc19848b7801f7a713`;
+- `reference/closest-work/2026-yang-dart.pdf`, SHA-256
+  `8e57b882c47c9456edc88e4c012041d07e171415fb769ffb7e10f546b5a1e572`;
+- `reference/closest-work/2025-chang-sagallm.pdf`, SHA-256
+  `d7e4f525e2e9c9f847de273edd6bc1e8cbab6e277685dcd673949c0f148d9f97`.
+
+### 10.1 Security-state map
+
+The paper's \(\mathbf P/\mathbf I/\mathbf E/\mathbf C\) factors denote semantic
+distinctions, not four mandatory physical tables:
+
+| Work | \(\mathbf P\): promised completions | \(\mathbf I\): occurrence--cell identity | \(\mathbf E\): receipts/effects | \(\mathbf C\): exact cut |
+|---|---|---|---|---|
+| Shepherd | typed task/trace topology | typed event and trace IDs, but no copied-occurrence quotient to one semantic effect cell | effect tiers and audit records; irreversible effects materialize on emission | branch operations, but no receipt-and-logical-frontier epoch cut |
+| Cordon | scopes, intents, dependencies, and result lineage for one transaction | partial lineage and idempotency identity | strong effect outbox, release status, and recovery log | semantic-transaction commit/release boundary |
+| DART | producer/consumer and committed-conflict obligations around one failed instance | local task/checkpoint identity | effect policy and downstream commitment facts | local Restore stability and scope |
+| SagaLLM | workflow dependencies and validation constraints | transaction/log identity | Saga log and compensation state | persistent-context rollback boundary |
+| LangGraph | graph state and next-node metadata | thread/checkpoint/task/node IDs | pending writes, but replayed API requests may execute again | checkpoint replay/fork without a security cut over external effects |
+
+These works occupy different proper projections of the complete question.
+Shepherd is closest on history-edit mechanisms, Cordon on lineage and durable
+effect records, DART on the admissibility of Restore, SagaLLM on compensation,
+and LangGraph on deployed checkpoint replay. None of the checked models derives
+the full edit-specific state and then proves an iff characterization for typed
+Fork, Restore, and Merge.
+
+### 10.2 Opposite-answer boundary
+
+The decisive distinction is not another list of components. Two histories can
+have the same task graph, checkpoint, transaction status, dependency edges,
+labels, and visible receipt, yet differ in whether two restored logical
+occurrences denote one semantic effect cell or two. Under a one-redemption
+policy, `Fresh(x,d); Alias(y,d)` is admissible while
+`Fresh(x,d0); Fresh(y,d1)` is not. A second pair keeps occurrence--cell
+incidence fixed and changes only which cell the durable receipt names, again
+reversing admission. Ordinary task IDs, compensation classes, checkpoint IDs,
+and release bits do not determine these answers.
+
+Cordon's lineage/outbox machinery is a plausible realization substrate if
+augmented with registered history edits, promised alternative outcomes,
+semantic-cell aliases, and an exact receipt/logical-frontier cut. That does not
+collapse the contribution: the augmentation supplies precisely the security
+state that this paper derives and proves observationally necessary.
+
+The large surviving comparison is:
+
+> Existing Agent systems expose reversible traces, semantic transactions,
+> admissible local rollback, compensating workflows, or checkpoint replay.
+> Agent History Admission asks the end-to-end security question left open by
+> all five: from an authenticated branching Agent history and irreversible
+> receipts, what complete state determines whether a Fork/Restore/Merge
+> rewrite has any exact prefix-robust implementation? The theory derives that
+> state, constructs its greatest implementation or an impossibility
+> certificate, and refines an admitted edit to one durable atomic history cut.
+
+The novelty risk is medium-high because the area is moving quickly, but the
+larger thesis survives. The paper must not claim the first reversible Agent
+runtime, semantic transaction, rollback criterion, compensation mechanism,
+checkpoint replay, or greatest nonblocking controller. It can strongly claim
+the exact end-to-end security-state characterization, subject to making its
+records, reachability witnesses, and durable refinement independently
+auditable.
+
+Full claim-by-claim evidence, source hashes, search log, and update triggers
+are recorded in
+`docs/tmp/research-literature-novelty-20260803T160000Z/report.md`.
