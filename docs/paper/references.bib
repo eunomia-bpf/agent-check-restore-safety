@@ -221,11 +221,27 @@
   doi     = {10.1145/568522.568525}
 }
 
+% VERIFIED: 2026-08-03
+% REAL: yes
+% PDF: reference/closest-work/1985-strom-optimistic-recovery.pdf
+% ABSTRACT: Tracks causal dependencies for optimistic rollback recovery and buffers output to the external world until its producing state is committable.
+% USED_FOR: Primary output-commit boundary; assumes a fixed repeatable message-driven logical machine rather than deriving obligations for topology-changing Agent-history edits.
+@article{strom1985optimistic,
+  author  = {Robert E. Strom and Shaula Yemini},
+  title   = {Optimistic Recovery in Distributed Systems},
+  journal = {ACM Transactions on Computer Systems},
+  volume  = {3},
+  number  = {3},
+  pages   = {204--226},
+  year    = {1985},
+  doi     = {10.1145/3959.3962}
+}
+
 % VERIFIED: 2026-07-31
 % REAL: yes
 % PDF: reference/closest-work/acrfence.pdf
 % ABSTRACT: Defines semantic rollback attacks in agent checkpoint/restore, demonstrates Action Replay and Authority Resurrection, and proposes an effect-log replay-or-fork mitigation.
-% USED_FOR: Establishes replay and authority-resurrection failures after agent restore; the mitigation is not treated as implemented.
+% USED_FOR: Validates semantic replay and authority-resurrection failures and proposes, but does not implement, effect-log replay-or-fork fencing.
 @misc{zheng2026acrfence,
   author        = {Yusheng Zheng and Yiwei Yang and Wei Zhang and Andi Quinn},
   title         = {{ACRFence}: Preventing Semantic Rollback Attacks in Agent Checkpoint-Restore},
@@ -287,7 +303,7 @@
 % REAL: yes
 % PDF: reference/closest-work/atomix.pdf
 % ABSTRACT: Introduces progress-aware transactions that separate execute, seal, per-resource frontier checks, and settlement for tool effects with class-specific handling.
-% USED_FOR: Establishes practical staging and settlement boundaries that authority solvency complements.
+% USED_FOR: Closest practical transaction-settlement gate; transaction scope, effect class, and per-resource frontier progress are supplied by the integration rather than derived from an Agent-history edit.
 @misc{mohammadi2026atomix,
   author        = {Bardia Mohammadi and Nearchos Potamitis and Lars Klein and Akhil Arora and Laurent Bindschaedler},
   title         = {Atomix: Timely, Transactional Tool Use for Reliable Agentic Workflows},
@@ -317,7 +333,7 @@
 % REAL: yes
 % PDF: reference/closest-work/dart.pdf
 % ABSTRACT: Formalizes semantic recoverability and checks failed-instance localization, downstream commitments, checkpoint alignment, and admissible restore points before local rollback.
-% USED_FOR: Establishes that a locally available checkpoint may cease to be semantically recoverable after downstream commitment.
+% USED_FOR: Closest checkpoint-admissibility result for a failed instance with committed downstream consumers; it does not derive obligations for the complete edit family or a greatest indexed history realization.
 @misc{yang2026dart,
   author        = {Ke Yang and Panpan Li and Zonghan Wu and Kejin Xu and Huaxi Huang and Xiaoshui Huang},
   title         = {{DART}: Semantic Recoverability for Structured Tool Agents},
@@ -369,7 +385,10 @@
   booktitle = {2026 IEEE Symposium on Security and Privacy (SP)},
   publisher = {IEEE},
   year      = {2026},
-  url       = {https://sp2026.ieee-security.org/program.html},
+  eprint    = {2511.13641},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.CR},
+  url       = {https://arxiv.org/abs/2511.13641},
   note      = {Preprint first posted in 2025}
 }
 
@@ -436,8 +455,8 @@
 % VERIFIED: 2026-08-03
 % REAL: yes
 % PDF: reference/supervisory-control/malik2008-generalised-nonblocking.pdf
-% ABSTRACT: Defines conditional generalized nonblocking and reduces its verification to ordinary marker nonblocking through state augmentation.
-% USED_FOR: Establishes the exact control-theoretic correspondence and clarifies why an unaugmented trace-only supervisor is insufficient.
+% ABSTRACT: Defines (alpha,omega)-nonblocking for a supplied multicoloured automaton and reduces its verification to ordinary marker nonblocking through state augmentation.
+% USED_FOR: Establishes generalized nonblocking as the exact backend once the plant and conditional markings are supplied; it does not derive either from Agent history.
 @inproceedings{malik2008generalised,
   author    = {Robi Malik and Ryan Leduc},
   title     = {Generalised Nonblocking},
@@ -1063,9 +1082,11 @@
   title   = {Live Synthesis},
   journal = {Innovations in Systems and Software Engineering},
   volume  = {18},
+  number  = {3},
   pages   = {443--454},
   year    = {2022},
-  doi     = {10.1007/s11334-022-00447-5}
+  doi     = {10.1007/s11334-022-00447-5},
+  url     = {https://doi.org/10.1007/s11334-022-00447-5}
 }
 
 % VERIFIED: 2026-08-03

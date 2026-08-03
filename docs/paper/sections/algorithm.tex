@@ -38,26 +38,25 @@ The automaton is the paired-language derivative construction~\cite{brzozowski196
 % 该自动机是成对语言的导数构造~\cite{brzozowski1964derivatives}。
 \end{proof}
 
-\(\mathsf{Compile}(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\) runs the schema judgment, and failure reports the failed structural check.
-% \(\mathsf{Compile}(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\) 执行模式判定，失败时报告未通过的结构检查。
-Otherwise it computes \(\widehat B^\dagger_{H,u}\) by \cref{eq:robust-operator} and applies \cref{eq:admission}.
-% 否则，它依据 \cref{eq:robust-operator} 计算 \(\widehat B^\dagger_{H,u}\)，并应用 \cref{eq:admission}。
-An empty fixed point returns the complete chain and ranked causes.
-% 空不动点返回完整迭代链和带秩的原因。
-Success returns \(\widehat B^\dagger\), the complete chain and coverage witnesses, \(\mathsf{prog}_Z=\mathsf{Can}(W^\dagger,B^\dagger)\), and the artifact
-% 成功则返回 \(\widehat B^\dagger\)、完整迭代链与覆盖见证、\(\mathsf{prog}_Z=\mathsf{Can}(W^\dagger,B^\dagger)\)，以及制品
+For \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), let \(\gamma(\Theta)=\mathsf{Seal}_{\rm cut}(\mathsf{enc}(\mathsf{request},\omega,\zeta,\kappa,H,\Delta,\mathsf{out},\mathcal A,u))\) bind a verdict to its request cut.
+% 对于 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，令 \(\gamma(\Theta)=\mathsf{Seal}_{\rm cut}(\mathsf{enc}(\mathsf{request},\omega,\zeta,\kappa,H,\Delta,\mathsf{out},\mathcal A,u))\) 将判定绑定到其请求切点。
+\[
+\begin{aligned}
+\mathsf{Result}(\Theta)::={}&\mathsf{Invalid}([\gamma,C_{\rm str}]_{\cong})
+\mid\mathsf{Reject}([\gamma,C_{\rm fp}]_{\cong})\\
+&\mid\mathsf{Installable}(\delta,W^\dagger,\widehat B^\dagger,Z).
+\end{aligned}
+\]
+\(\mathsf{Compile}(\Theta)\) returns \(\mathsf{Invalid}\) with the canonical failed-check transcript if derivation is undefined, \(\mathsf{Reject}\) with the complete ranked empty-chain if \(\widehat B^\dagger=\varnothing\), and otherwise \(\mathsf{Installable}\) with the unique \(\delta\), coverage witnesses, \(\mathsf{prog}_Z=\mathsf{Can}(W^\dagger,B^\dagger)\), and
+% 若推导未定义，\(\mathsf{Compile}(\Theta)\) 返回带规范检查失败记录的 \(\mathsf{Invalid}\)；若 \(\widehat B^\dagger=\varnothing\)，则返回带完整带秩空链的 \(\mathsf{Reject}\)；否则返回带唯一 \(\delta\)、覆盖见证、\(\mathsf{prog}_Z=\mathsf{Can}(W^\dagger,B^\dagger)\) 以及下述内容的 \(\mathsf{Installable}\)
 \[
  Z=(\omega,\zeta,\kappa_Z,\mathsf{cut}_Z,u,
     H_{\mathsf{prog}},\eta^-,\eta^+),
 \]
 where \(\kappa_Z=\kappa\), \(H_c=H\) is the authenticated pre-installation history, and the history judgment mints \(\eta^+\).
 % 其中 \(\kappa_Z=\kappa\)，\(H_c=H\) 是经认证的安装前历史，而历史判定生成 \(\eta^+\)。
-Mathematical \(\mathsf{Compile}\) is total on finite inputs.
-% 数学 \(\mathsf{Compile}\) 在有限输入上全定义。
-The bounded wrapper may instead return \(\mathsf{ResourceLimit}(b,n)\), which installs nothing and proves neither admission nor impossibility.
-% 有界包装器可能改为返回 \(\mathsf{ResourceLimit}(b,n)\)，它不安装任何内容，也不证明准入或不可能性。
-Only a verified chain ending in \(\varnothing\) yields \(\mathsf{Impossible}(C_{\rm fp})\).
-% 只有以 \(\varnothing\) 结束的经验证链才产生 \(\mathsf{Impossible}(C_{\rm fp})\)。
+Canonical encoding order makes all three finite semantic results unique and equivariant; the bounded wrapper may instead return \(\mathsf{ResourceLimit}(b,n)\), which installs nothing and proves neither admission nor impossibility.
+% 规范编码顺序使三种有限语义结果均唯一且保持等变性；有界包装器可能改为返回 \(\mathsf{ResourceLimit}(b,n)\)，它不安装任何内容，也不证明准入或不可能性。
 
 Let \(\mathsf{enc}\) be canonical and length-delimited, with \(\kappa\) authenticating \(\mathcal A\).
 % 令 \(\mathsf{enc}\) 为规范且带长度分隔的编码，并由 \(\kappa\) 认证 \(\mathcal A\)。
@@ -106,8 +105,8 @@ where \(\mathsf{phase}\) is a finite partial map with \(\mathsf{phase}(\eta)=\bo
 % 其中 \(\mathsf{phase}\) 是有限偏映射；未分配纪元满足 \(\mathsf{phase}(\eta)=\bot\)，否则其值为 \(\mathsf{inactive}\)、\(\mathsf{active}\) 或 \(\mathsf{closed}\)。
 Reserve \(u=\mathsf{Root}(R,n)\) for bootstrap only.
 % 保留 \(u=\mathsf{Root}(R,n)\) 仅用于引导。
-The root rule is enabled only when \(\mathsf{CheckReg}(\mathcal W,R)\) accepts a finite typed Agent workflow \(\mathcal W\) and registered slice \(R\).
-% 只有当 \(\mathsf{CheckReg}(\mathcal W,R)\) 接受有限类型化 Agent 工作流 \(\mathcal W\) 与注册切片 \(R\) 时，根规则才启用。
+The root rule is enabled only when \(\mathsf{CheckReg}(\mathcal W,R)\) accepts a finite-state boundary-finite typed Agent workflow \(\mathcal W\) and finite registered slice \(R\).
+% 只有当 \(\mathsf{CheckReg}(\mathcal W,R)\) 接受有限状态且边界有限的类型化 Agent 工作流 \(\mathcal W\) 与有限注册切片 \(R\) 时，根规则才启用。
 The deterministic judgment \(\mathsf{Reg}(R,n)\vdash\mathsf{Root}\Downarrow(H_R^+,\mathcal C_R,\bot,\eta_R)\) constructs \(\mathsf{src}_R^-=(\kappa,H_R^-,\epsilon,\epsilon,\mathcal A)\) from registered slice \(R\) and private namespace \(n\), with empty progress, checkpoints, bindings, and epoch, sets \(\mathsf{Req}_{\mathsf{Root}}\) to \(R\)'s root outcomes, and defines \(\mathsf{Lift}_{\mathsf{Root}}(t,o)\Longleftrightarrow t=o\).
 % 确定性判定 \(\mathsf{Reg}(R,n)\vdash\mathsf{Root}\Downarrow(H_R^+,\mathcal C_R,\bot,\eta_R)\) 从已注册切片 \(R\) 和私有命名空间 \(n\) 构造 \(\mathsf{src}_R^-=(\kappa,H_R^-,\epsilon,\epsilon,\mathcal A)\)，其中进度、检查点、绑定和纪元均为空；它将 \(\mathsf{Req}_{\mathsf{Root}}\) 设为 \(R\) 的根结果，并定义 \(\mathsf{Lift}_{\mathsf{Root}}(t,o)\Longleftrightarrow t=o\)。
 The checked record \(\mathsf{cert}(\eta)=c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\) contains source cut \(\mathsf{src}_c=(\kappa,H_c,\Delta_c,\mathsf{out}_c,\mathcal A)\), pre-progress target \(H_c^+\), and ideal-cut projection \(\mathsf{icut}(c)=(H_c,u,W,\widehat B)\).
@@ -199,8 +198,10 @@ The paired update \(\mathsf{HStep}((G,T),a)\) also appends \(a\) to the unique l
 In addition, \Fresh appends the immutable labeled receipt and ordered outbox item \((d,\mathsf{inv}_\rho(d))\), never an unchecked caller buffer, while \Alias records the cell's durable-result-future link without changing \(\Delta\), and all other fields remain unchanged.
 % 此外，\Fresh 追加不可变的带标签回执和有序发件箱条目 \((d,\mathsf{inv}_\rho(d))\)，而绝不存储未经检查的调用方缓冲区；\Alias 记录该单元的持久结果期值链接且不改变 \(\Delta\)，其余字段保持不变。
 
-An already-resolved \(x\) is a \Retry exactly when \(\mathsf{VerifyRetry}(h,x,j,d,m^\circ,\chi,\Delta)\) authenticates the same canonical invocation through the \(\chi\)-to-receipt link, and success returns the stable result by a state-preserving \(\tau\)-transition.
-% 已解析的 \(x\) 当且仅当 \(\mathsf{VerifyRetry}(h,x,j,d,m^\circ,\chi,\Delta)\) 通过从 \(\chi\) 到回执的链接认证同一规范调用时才构成 \Retry，成功时通过保持状态的 \(\tau\)-转移返回稳定结果。
+An already-resolved \(x\) is a \Retry exactly when \(\mathsf{VerifyRetry}(h,x,j,d,m^\circ,\chi,\Delta)\) authenticates the same canonical invocation through the archived \(\chi\)-to-receipt link.
+% 已解析的 \(x\) 当且仅当 \(\mathsf{VerifyRetry}(h,x,j,d,m^\circ,\chi,\Delta)\) 通过归档的从 \(\chi\) 到回执的链接认证同一规范调用时才构成 \Retry。
+If the linked future contains stable value \(v\) under its authenticated reply token \(t\), success is the state-preserving observable transition \(S\xrightarrow{\mathsf{Return}(t,[v]_{\cong})}S\).
+% 若所链接的结果期值在其经认证的回复令牌 \(t\) 下包含稳定值 \(v\)，则成功是保持状态的可观测转移 \(S\xrightarrow{\mathsf{Return}(t,[v]_{\cong})}S\)。
 For unresolved \(x\), \cref{eq:use-rule} applies exactly when all premises hold, while a missing transition, bad handle, unbound occurrence, disabled branch, or closed epoch returns \(\mathsf{deny}(x)\) without changing state.
 % 对未解析的 \(x\)，当且仅当全部前提成立时才应用 \cref{eq:use-rule}，而缺失转移、错误句柄、未绑定发生项、禁用分支或已关闭纪元都会返回 \(\mathsf{deny}(x)\) 且不改变状态。
 \Dispatch releases exactly the stored canonical invocation in the oldest outbox item, settlement preserves \(\mathsf{AgentSec}\) and its authority projection, and crash is a state self-loop.
@@ -208,10 +209,14 @@ For unresolved \(x\), \cref{eq:use-rule} applies exactly when all premises hold,
 Here \(\Dispatch\) is the durable local outbox release, not evidence of exactly-once execution by a remote service.
 % 此处的 \(\Dispatch\) 是持久的本地发件箱释放，而不是远程服务恰好执行一次的证据。
 
-\paragraph{Atomic installation}
-% 原子安装
-At commit, the kernel ignores caller-supplied target and epoch data and re-runs \(\mathsf{Derive}(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\) from the current state.
-% 提交时，内核忽略调用方提供的目标和纪元数据，并根据当前状态重新执行 \(\mathsf{Derive}(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
+\paragraph{Atomic verdict and installation}
+% 原子判定与安装
+At its linearization point, the kernel ignores caller-supplied target and epoch data, sets \(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), and re-runs \(\mathsf{Derive}(\Theta_S(u))\) from the current state.
+% 在其线性化点，内核忽略调用方提供的目标与纪元数据，令 \(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并根据当前状态重新执行 \(\mathsf{Derive}(\Theta_S(u))\)。
+\(\mathsf{VerifyInv}\) accepts exactly a current \(\gamma\), undefined derivation, and canonical failed-check transcript, while \(\mathsf{VerifyRej}\) accepts exactly a current \(\gamma\), defined derivation, empty fixed point, and canonical elimination chain; their read-only transactions emit the corresponding \(\mathsf{Invalid}\) or \(\mathsf{Reject}\) label and preserve state.
+% \(\mathsf{VerifyInv}\) 恰好接受当前 \(\gamma\)、未定义推导与规范检查失败记录，而 \(\mathsf{VerifyRej}\) 恰好接受当前 \(\gamma\)、已定义推导、空不动点与规范淘汰链；它们的只读事务发出相应的 \(\mathsf{Invalid}\) 或 \(\mathsf{Reject}\) 标签并保持状态。
+For the positive case, write \(\mathsf{Derive}(\Theta_S(u))=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
+% 对于正面情形，记 \(\mathsf{Derive}(\Theta_S(u))=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
 \(\mathsf{ReCut}(S,u,Z)\) is undefined without this root, six-edit, or live-extension derivation and otherwise recomputes the right-hand side of \cref{eq:cut-seal}.
 % 若无这一根推导、六种编辑推导或在线扩展推导，则 \(\mathsf{ReCut}(S,u,Z)\) 未定义；否则，它重新计算 \cref{eq:cut-seal} 的右侧。
 \(\mathsf{Verify}_Z(W,B,\widehat B)\) holds exactly when the trusted checker (1) recomputes \(\widehat B_0\) and every fixed-point iteration, (2) verifies all ranked removal causes and surviving coverage witnesses, (3) checks the stabilized \(\widehat B\ne\varnothing\), (4) reconstructs \(B=\pi_2\widehat B\) and \(W=\Pref(B)\), (5) establishes \(\mathsf{prog}_Z\cong\mathsf{Can}(W,B)\), and (6) verifies the program seal.
@@ -229,10 +234,12 @@ Installation requires
  \mathsf{phase}(\eta^+)\in\{\bot,\mathsf{inactive}\}.
 \end{gathered}
 \end{equation}
+\(\mathsf{Ready}(S,u,Y)\) holds when \(Y=\mathsf{Installable}(\delta,W^\dagger,\widehat B^\dagger,Z)\), the current derivation is \(\delta\), and all state-dependent premises of \cref{eq:install-premise} hold in \(S\).
+% 当 \(Y=\mathsf{Installable}(\delta,W^\dagger,\widehat B^\dagger,Z)\)、当前推导为 \(\delta\) 且 \cref{eq:install-premise} 的全部状态相关前提在 \(S\) 中成立时，\(\mathsf{Ready}(S,u,Y)\) 成立。
 If these premises hold, one domain transaction verifies that every target binding in \(H_u\) names a new gate owned by \(\eta^+\) and every replacement triple in \(\mathcal H_u^+\) passes the handle check against \(\rho_u\) and its registered cell.
 % 若这些前提成立，一个域事务便验证 \(H_u\) 中的每个目标绑定均指向由 \(\eta^+\) 拥有的新门，并验证 \(\mathcal H_u^+\) 中的每个替换三元组均依据 \(\rho_u\) 及其注册单元通过句柄检查。
-Let \(c^+=(\mathsf{src}_c,H_u,u,W^\dagger,\widehat B^\dagger,Z)\).
-% 令 \(c^+=(\mathsf{src}_c,H_u,u,W^\dagger,\widehat B^\dagger,Z)\)。
+Let \(c^+=(\mathsf{src}(\Theta_S(u)),H_u,u,W^\dagger,\widehat B^\dagger,Z)\).
+% 令 \(c^+=(\mathsf{src}(\Theta_S(u)),H_u,u,W^\dagger,\widehat B^\dagger,Z)\)。
 It then applies
 % 随后应用
 \[
@@ -253,13 +260,13 @@ Old handles for unresolved occurrences fail the refreshed registry/gate check, w
 % 未解析发生项的旧句柄无法通过更新后的注册表/门检查，而同调用 \Retry 沿其已归档的从 \(\chi\) 到回执的链接。
 Success is observed as \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\), retaining the schema-determined reply bundle modulo private-name renaming.
 % 成功被观测为 \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\)，并在私有名称重命名取商意义下保留模式决定的回复包。
-Failure is a state-preserving internal stutter.
-% 失败是保持状态的内部停顿。
+A stale or malformed precomputed candidate emits no verdict, is discarded as an internal stutter, and must be recomputed against the current request cut before any visible response.
+% 过期或畸形的预计算候选不会发出判定，而是作为内部停顿被丢弃，并且必须针对当前请求切点重新计算后才能产生任何可见响应。
 
 \paragraph{Remaining rules}
 % 其余规则
-\(\mathsf{Preload}(\eta,Z)\) is a \(\tau\)-step that may allocate an unallocated epoch or change an inactive, unbound epoch, and it leaves the epoch inactive, while failed installation is a state-preserving \(\tau\)-step.
-% \(\mathsf{Preload}(\eta,Z)\) 是一个 \(\tau\) 步，它可以分配尚未分配的纪元或改变处于非活跃且未绑定状态的纪元，并使该纪元保持非活跃，而失败的安装是保持状态的 \(\tau\) 步。
+\(\mathsf{Preload}(\eta,Z)\) is a \(\tau\)-step that may allocate an unallocated epoch or change an inactive, unbound epoch, and it leaves the epoch inactive, while a stale or malformed candidate attempt is a state-preserving \(\tau\)-step.
+% \(\mathsf{Preload}(\eta,Z)\) 是一个 \(\tau\) 步，它可以分配尚未分配的纪元或改变处于非活跃且未绑定状态的纪元，并使该纪元保持非活跃，而过期或畸形的候选尝试是保持状态的 \(\tau\) 步。
 \(\mathsf{Save}\) takes the trusted checkpoint transition in \cref{sec:model}.
 % \(\mathsf{Save}\) 执行 \cref{sec:model} 中的可信检查点转移。
 Authenticated retry, bundle retrieval, and result delivery emit \(\mathsf{Return}(t,[v]_{\cong})\) without changing the security core, while settlement emits \(\mathsf{Settle}(d,[v]_{\cong})\) and monotonically fills the corresponding durable result future.
@@ -268,16 +275,16 @@ Crash is a security-state self-loop.
 % 崩溃是安全状态自环。
 \(\Dispatch(d)\) is enabled only for the outbox head and marks exactly that entry released.
 % \(\Dispatch(d)\) 仅对发件箱头部启用，并且仅将该条目标记为已释放。
-The compiled LTS is the least relation generated by \cref{eq:use-rule} and the installation, denial, preload, Save, retry/retrieval/delivery, \(\Dispatch\), settlement, failed-installation, and crash rules above.
-% 编译后 LTS 是由 \cref{eq:use-rule} 与上述安装、拒绝、预加载、Save、重试/取回/交付、\(\Dispatch\)、结算、失败安装和崩溃规则生成的最小关系。
+The compiled LTS is the least relation generated by \cref{eq:use-rule} and the visible \(\mathsf{Invalid}/\mathsf{Reject}/\mathsf{Edge}\), denial, preload, Save, retry/retrieval/delivery, \(\Dispatch\), settlement, stale-candidate, and crash rules above.
+% 编译后 LTS 是由 \cref{eq:use-rule} 与上述可见 \(\mathsf{Invalid}/\mathsf{Reject}/\mathsf{Edge}\)、使用拒绝、预加载、Save、重试/取回/交付、\(\Dispatch\)、结算、过期候选与崩溃规则生成的最小关系。
 Pure \(\mathsf{Compile}\) is meta-level.
 % 纯 \(\mathsf{Compile}\) 位于元层。
 
 \begin{lemma}[History-cut linearization]
 % 历史切点线性化
 \label{lem:cut-linearization}
-In every reachable well-formed compiled state, a successful \Install and a protected use in the same policy domain have a unique order.
-% 在每个可达的良构编译状态中，同一策略域内的一次成功 \Install 与一次受保护使用具有唯一顺序。
+In every reachable well-formed compiled state, a visible admission verdict and a protected use in the same policy domain have a unique order and decision cut.
+% 在每个可达的良构编译状态中，同一策略域内的一项可见准入判定与一次受保护使用具有唯一顺序和决策切点。
 If the use commits first, that seal cannot install.
 % 若该使用先提交，则该封印无法安装。
 If \Install commits first, the old use cannot resolve \Fresh or \Alias.
@@ -286,22 +293,14 @@ Steps in independent domains commute by product semantics.
 % 独立域中的步骤依据乘积语义可交换。
 \end{lemma}
 \begin{proof}
-Use and installation serialize on the same history and epoch records.
-% 使用与安装在相同的历史和纪元记录上串行化。
-Because \Fresh changes \((G,T,\Delta,\chi,\nu,\mathsf{out})\) while \Alias changes \((G,T,\chi,\nu)\), either prior use invalidates \(\mathsf{cut}_Z\), which authenticates \(H\), \(\Delta\), and \(\mathsf{out}\).
-% 由于 \Fresh 修改 \((G,T,\Delta,\chi,\nu,\mathsf{out})\)，而 \Alias 修改 \((G,T,\chi,\nu)\)，任一种先行使用都会使认证 \(H\)、\(\Delta\) 和 \(\mathsf{out}\) 的 \(\mathsf{cut}_Z\) 失效。
-Installation first closes the old epoch, so \cref{eq:use-rule} rejects every old binding.
-% 安装先发生时会关闭旧纪元，因此 \cref{eq:use-rule} 拒绝每个旧绑定。
-Disjoint cells, receipt ledgers, and policies give the product case; persisting \(H_u\), target bindings, \(q^0\), and the checked certificate restores the invariant.
-% 互不相交的单元、回执账本和策略构成乘积情形；持久化 \(H_u\)、目标绑定、\(q^0\) 和经检查的证书会恢复该不变量。
+Prior \Fresh/\Alias invalidates every old cut seal, while prior installation closes the old epoch; disjoint-domain steps commute, and the persisted target and certificate restore the invariant.
+% 先发生的 \Fresh/\Alias 会使每个旧切点封印失效，而先发生的安装会关闭旧纪元；互不相交域中的步骤可交换，持久目标与证书则恢复不变量。
 \end{proof}
 
 \subsection{Decidability and trust}
 % 可判定性与信任
 
-The finite installation checker enumerates indexed linearizations or their asynchronous product with the policy automaton for at most \(|\widehat B_0|\) strict-removal rounds.
-% 有限的安装检查器枚举带索引的线性化或它们与策略自动机的异步乘积，至多进行 \(|\widehat B_0|\) 轮严格移除。
-It terminates, but parallel pomsets can make it exponential rather than polynomial.
-% 该检查器必然终止，但并行偏序事件集可能使其复杂度呈指数级而非多项式级。
-The TCB comprises registries, the receipt ledger, atomic rules, the policy and protected-call issuers, certificate verification, and complete mediation; search, minimization, and preloading remain untrusted because \(\mathsf{Verify}_Z\) and \Install independently re-establish the invariants.
-% TCB 包括注册表、回执账本、原子规则、策略发行方与受保护调用发行方、证书验证以及完全中介；搜索、最小化和预加载仍不受信任，因为 \(\mathsf{Verify}_Z\) 和 \Install 会各自重新建立这些不变量。
+\Cref{prop:app-output-complexity} proves an output-sensitive \(O(D+n\Lambda+|\Gamma|+L\log(2+L))\)-time, \(O(D+\Lambda+|\Gamma|)\)-space bound; exponential growth occurs only in explicitly emitted linearizations and obligations.
+% \Cref{prop:app-output-complexity} 证明一种输出敏感的 \(O(D+n\Lambda+|\Gamma|+L\log(2+L))\) 时间、\(O(D+\Lambda+|\Gamma|)\) 空间界；指数增长只出现在显式输出的线性化与义务中。
+The TCB is the registries, ledger, atomic rules, policy/call issuers, certificate verifier, and complete mediation; independently rechecked search, minimization, and preloading are untrusted.
+% TCB 包括注册表、账本、原子规则、策略/调用发行方、证书验证器与完全中介；会被独立复检的搜索、最小化与预加载不受信任。

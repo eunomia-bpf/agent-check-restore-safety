@@ -28,8 +28,8 @@ Registration derives cells from canonical invocations, and the checker rejects a
 % 注册过程从规范调用推导单元，而检查器会拒绝遗漏承诺结果、未受中介的持久边或不一致的回执绑定。
 At Restore, the trusted controller snapshots \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\), re-derives every schema-preserved outcome and occurrence--cell identity, and computes the greatest prefix-robust fixed point.
 % 在 Restore 时，可信控制器快照 \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\)，重新推导模式所保留的每个结果及发生项--单元标识关系，并计算前缀鲁棒最大不动点。
-Its uncapped semantic result is either \(\mathsf{Install}(\mathsf{Can}(W^\dagger,B^\dagger),\eta^+)\) or \(\mathsf{Reject}(\mathit{certificate})\).
-% 它的无上限语义结果要么是 \(\mathsf{Install}(\mathsf{Can}(W^\dagger,B^\dagger),\eta^+)\)，要么是 \(\mathsf{Reject}(\mathit{certificate})\)。
+Its uncapped semantic result is a cut-bound \(\mathsf{Invalid}(C_{\rm str})\), \(\mathsf{Reject}(C_{\rm fp})\), or \(\mathsf{Install}(\mathsf{Can}(W^\dagger,B^\dagger),\eta^+)\).
+% 它的无上限语义结果是绑定切点的 \(\mathsf{Invalid}(C_{\rm str})\)、\(\mathsf{Reject}(C_{\rm fp})\) 或 \(\mathsf{Install}(\mathsf{Can}(W^\dagger,B^\dagger),\eta^+)\)。
 After installation, every protected call is classified as \Fresh, \Alias, or denied, and the restored approval becomes a receipt-reusing \Alias rather than a second local outbox preparation.
 % 安装之后，每个受保护调用都被分类为 \Fresh、\Alias 或拒绝，而恢复后的审批成为复用回执的 \Alias，而非第二次本地发件箱准备。
 A verified empty fixed point rejects the Restore with a ranked elimination certificate, and the Agent can neither weaken the derived target nor bypass the installed monitor.
@@ -37,18 +37,12 @@ A verified empty fixed point rejects the Restore with a ranked elimination certi
 \Cref{sec:lifecycle} carries this exact history through Fork, Merge, both cut races, and the later Restore.
 % \Cref{sec:lifecycle} 沿用这段完全相同的历史，依次展开 Fork、Merge、两类切点竞态和随后的 Restore。
 
-Closest Agent systems provide branching, versioned histories, staged effects, transactions, or recovery checks, but none characterizes exactly which topology-changing edits preserve every promised outcome or constructs the greatest enforcing monitor~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart}.
-% 最接近的 Agent 系统提供分支、版本化历史、分阶段效果、事务或恢复检查，但没有系统精确刻画哪些改变拓扑的编辑会保留每个已承诺结果，也没有构造最大的执行监控器~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart}。
-Generalized nonblocking and multitasking control synthesize maximal behavior once the plant and conditional task markings are supplied.
-% 广义非阻塞与多任务控制在被控对象和条件任务标记给定后综合最大行为。
-Live synthesis derives unfinished obligations from a supplied old specification and execution, while suppression enforcement synthesizes correct monitors from a supplied formula~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,aceto2018suppressions}.
-% 在线综合从给定的旧规范和执行中推导未完成义务，而抑制式执行从给定公式综合正确监控器~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,aceto2018suppressions}。
+Closest Agent systems provide branching, staged effects, transactions, or recovery checks, while control and synthesis construct behavior from a supplied plant, marking, old specification, or formula~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart,dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,aceto2018suppressions}.
+% 最接近的 Agent 系统提供分支、分阶段效果、事务或恢复检查，而控制与综合方法从给定的被控对象、标记、旧规范或公式构造行为~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart,dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,aceto2018suppressions}。
 Our theorem begins at the checked typed Agent workflow and ends at the installed history edge: authenticated history determines outcomes, occurrence--cell/receipt state, and the exact cut consumed by synthesis, and an epoch transaction realizes the answer.
 % 我们的定理始于经检查的类型化 Agent 工作流，止于已安装的历史边：经认证历史决定综合所需的结果、发生项--单元/回执状态与精确切点，而纪元事务实现该判定。
-For every projection omitting one of the four semantic factors, two finite registered histories have the same retained view but require opposite admission or installation decisions.
-% 对于每个遗漏四个语义因子之一的投影，都存在两条有限注册历史具有相同的保留视图，却要求相反的准入或安装判定。
-The same holds for either incidence erasure proved in the appendix.
-% 附录证明的两种关联擦除也具有同样性质。
+For every projection omitting one of the four semantic factors, and for either incidence erasure, two finite registered histories have the same retained view but require opposite admission or installation decisions.
+% 对于每个遗漏四个语义因子之一的投影以及任一种关联擦除，都存在两条有限注册历史具有相同的保留视图，却要求相反的准入或安装判定。
 The full state remains closed across successive edits, protected calls, and authenticated live schema/policy extensions rather than characterizing only one rewrite.
 % 完整状态在连续编辑、受保护调用以及经认证的在线模式/策略扩展之间保持闭合，而非只刻画一次重写。
 

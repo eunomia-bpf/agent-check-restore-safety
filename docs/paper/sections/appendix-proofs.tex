@@ -80,6 +80,46 @@ The second combines that lemma with \cref{lem:compiled-language}.
 % 第二项陈述由该引理与 \cref{lem:compiled-language} 共同得到。
 \end{proof}
 
+\begin{proposition}[Output-sensitive compilation]
+% 输出敏感编译
+\label{prop:app-output-complexity}
+Fix the unit-cost symbolic-checker model with constant-time finite-map lookup and policy-automaton transitions.
+% 固定单位代价的符号检查器模型，其中有限映射查询与策略自动机转移均为常数时间。
+Let
+\[
+\begin{aligned}
+D&=\lvert\Theta\rvert_{\rm chk},&
+n&=\max_o\lvert X_{p_o}\rvert,\\
+\Lambda&=\sum_o\sum_{w\in\Lin(p_o)}(\lvert w\rvert+1),&
+K&=\lvert\widehat B_0\rvert,\\
+L&=\sum_{(o,b)\in\widehat B_0}(\lvert b\rvert+1).
+\end{aligned}
+\]
+\[
+\Gamma=\{((o,b),z,v)\mid
+(o,b)\in\widehat B_0,\ z\preceq b,\ v\in\mathsf{Compat}(z)\}.
+\]
+Here \(D\) is the authenticated structural input size, \(\Lambda\) is indexed linearization volume, and \(\Gamma\) is the materialized prefix--outcome obligation relation.
+% 其中 \(D\) 是经认证结构输入大小，\(\Lambda\) 是带索引线性化体积，而 \(\Gamma\) 是物化的前缀--结果义务关系。
+The semantic compiler runs in \(O(D+n\Lambda+|\Gamma|+L\log(2+L))\) time and \(O(D+\Lambda+|\Gamma|)\) space, including its emitted witnesses.
+% 语义编译器在 \(O(D+n\Lambda+|\Gamma|+L\log(2+L))\) 时间和 \(O(D+\Lambda+|\Gamma|)\) 空间内运行，其中包括所输出的见证。
+Moreover, \(K\leq\sum_o|\Lin(p_o)|\), \(|\Gamma|\leq K(n+1)|O_{\mathcal C_u}|\), and the number of nonempty strict-removal ranks is at most \(K\).
+% 此外，\(K\leq\sum_o|\Lin(p_o)|\)、\(|\Gamma|\leq K(n+1)|O_{\mathcal C_u}|\)，且非空严格移除秩的数量至多为 \(K\)。
+\end{proposition}
+
+\begin{proof}
+A backtracking topological-order enumerator emits all indexed linearizations in \(O(n\Lambda)\) time, while resolution, policy simulation, and construction of raw and resolved prefix tries are linear in emitted volume.
+% 回溯式拓扑序枚举器在 \(O(n\Lambda)\) 时间内发出全部带索引线性化，而解析、策略模拟以及原始与已解析前缀字典树的构造关于输出体积均为线性。
+For every support key \((z,v)\), maintain the number of live pairs \((v,b')\) extending \(z\), initially enqueue candidates having a zero-count obligation, and remove candidates in synchronous batches.
+% 对每个支撑键 \((z,v)\)，维护扩展 \(z\) 的存活二元组 \((v,b')\) 数量，初始时将具有零计数义务的候选入队，并按同步批次删除候选。
+When removal makes a support count zero, enqueue exactly the candidates incident to that obligation for the next batch.
+% 当删除使一个支撑计数变为零时，恰将关联该义务的候选放入下一批次。
+Each candidate and each incidence in \(\Gamma\) is processed at most once, and the batches are exactly \(\widehat B_i\setminus\widehat B_{i+1}\).
+% 每个候选以及 \(\Gamma\) 中的每个关联至多处理一次，并且这些批次恰为 \(\widehat B_i\setminus\widehat B_{i+1}\)。
+Store one rank and cause per removed candidate rather than copied sets, and construct \(\mathsf{Can}(W,B)\) by bottom-up sorting of finite-trie derivative signatures in \(O(L\log(2+L))\) time.
+% 对每个被删除候选只存储一项秩与原因而不复制集合，并通过自底向上排序有限字典树的导数签名，在 \(O(L\log(2+L))\) 时间内构造 \(\mathsf{Can}(W,B)\)。
+\end{proof}
+
 \begin{proof}[Proof of \cref{lem:live-extension}]
 % \cref{lem:live-extension} 的证明
 \label{app:live-extension-proof}
@@ -110,6 +150,12 @@ The audit module imports these declarations and prints only the project-allowed 
 
 We make the normalization implicit in \(\mathsf{Sec}\) explicit.
 % 我们将 \(\mathsf{Sec}\) 中隐含的规范化过程显式化。
+Let \(\mathcal Q_{\rm sec}\) pair every valid \(V=\mathsf{Sec}(S;c,r)\) with a well-sorted \(q::=\mathsf{Decide}(u)\mid\mathsf{TryInstall}(u,Y)\), permitting stale names.
+% 令 \(\mathcal Q_{\rm sec}\) 将每个有效 \(V=\mathsf{Sec}(S;c,r)\) 与允许过期名称的良好定型 \(q::=\mathsf{Decide}(u)\mid\mathsf{TryInstall}(u,Y)\) 配对。
+\(\mathsf{Ans}\) returns \(\mathsf{Compile}(\Theta_V(u))\) for \(\mathsf{Decide}\), and for \(\mathsf{TryInstall}\) returns the successor bundle exactly when \(\mathsf{Ready}_V(u,Y)\), otherwise \(\mathsf{NoCommit}\).
+% 对 \(\mathsf{Decide}\)，\(\mathsf{Ans}\) 返回 \(\mathsf{Compile}(\Theta_V(u))\)；对 \(\mathsf{TryInstall}\)，它恰在 \(\mathsf{Ready}_V(u,Y)\) 时返回后继包，否则返回 \(\mathsf{NoCommit}\)。
+An equivariant \(\tau\) is exact iff some \(D_\tau\) maps every \(\langle\tau(V),q\rangle_{\cong}\) to \([\mathsf{Ans}(V,q)]_{\cong}\).
+% 等变 \(\tau\) 是精确的，当且仅当存在某个 \(D_\tau\) 将每个 \(\langle\tau(V),q\rangle_{\cong}\) 映射到 \([\mathsf{Ans}(V,q)]_{\cong}\)。
 Let \(\mathcal K\) be the finite typed key universe at a checked cut, containing tagged outcome, occurrence, cell, receipt, checkpoint, group, domain, epoch, policy-version, and schema-version keys.
 % 令 \(\mathcal K\) 为一个经检查切点处的有限类型化键宇宙，包含带标签的结果、发生项、单元、回执、检查点、组、域、纪元、策略版本和模式版本键。
 Public keys are authority labels and identifiers declared external by the interface, while every other key may be consistently renamed.
@@ -238,7 +284,7 @@ same marginals \(\{p\},\{d,e\}\), \(\ell(d)=\ell(e)=a\);
 \(\Alias(x_k,d)\): admit;
 \(\Fresh(x_k,d)\): reject \(aa\).\\
 \(\mathbf C\) &
-\(q_{\mathbf C}=\mathsf{Install}(u_0,Z_0)\), with \(Z_0\) minted at \(V^0\), is literal in both;
+\(q_{\mathbf C}=\mathsf{TryInstall}(u_0,Y_0)\), with full package \(Y_0\) compiled at \(V^0\), is literal in both;
 name supplies agree off the epoch sort, while live epoch, ownership, and dependent seals differ. &
 \(V^0\): install; \(V^1\): reject stale cut.\\
 \bottomrule
@@ -254,8 +300,8 @@ name supplies agree off the epoch sort, while live epoch, ownership, and depende
 
 We construct the finite lower-bound witnesses from one literal empty genesis \(\mathsf S_\emptyset\).
 % 我们从唯一的字面空起源状态 \(\mathsf S_\emptyset\) 构造有限下界见证。
-A registered slice \(R\) compiled from a finite typed Agent workflow \(\mathcal W\) contains only finite contracts, schemas, policy, lowering data, and authenticated occurrence, cell, invocation, lineage, scope, and label rows.
-% 从有限类型化 Agent 工作流 \(\mathcal W\) 编译得到的注册切片 \(R\) 只包含有限契约、模式、策略、降低数据，以及经认证的发生项、单元、调用、谱系、作用域和标签行。
+A registered slice \(R\) compiled from a boundary-finite typed Agent workflow \(\mathcal W\) contains only finite contracts, schemas, policy, lowering data, and authenticated occurrence, cell, invocation, lineage, scope, and label rows.
+% 从边界有限的类型化 Agent 工作流 \(\mathcal W\) 编译得到的注册切片 \(R\) 只包含有限契约、模式、策略、降低数据，以及经认证的发生项、单元、调用、谱系、作用域和标签行。
 It contains no receipt, cursor, outbox, epoch, certificate, result future, monitor state, or installed cut.
 % 它不包含回执、游标、发件箱、纪元、证书、结果期值、监控器状态或已安装切点。
 The pre-slice relation has a registration step \(\mathsf S_\emptyset\xrightarrow{\mathsf{register}(\mathcal W,R,n)}\mathsf{Reg}(R,n)\) exactly when \(\mathsf{CheckReg}(\mathcal W,R)\) accepts and \(n\) is a fresh private namespace, followed by checked root installation.
@@ -266,16 +312,22 @@ Root installation derives the initial cut and constructs empty receipt, cursor, 
 \begin{lemma}[Registration reflection]
 % 注册反射
 \label{lem:registration-reflection}
-For finite \(\mathcal W,R\), \(\mathsf{CheckReg}(\mathcal W,R)\) accepts iff the registered \(\lambda\) witnesses \(\mathcal W\sqsubseteq_\lambda R\) in \cref{def:registration-refinement}.
-% 对于有限的 \(\mathcal W,R\)，当且仅当已注册的 \(\lambda\) 见证 \cref{def:registration-refinement} 中的 \(\mathcal W\sqsubseteq_\lambda R\) 时，\(\mathsf{CheckReg}(\mathcal W,R)\) 才接受。
+For finite-state \(\mathcal W\) and finite \(R\), \(\mathsf{CheckReg}(\mathcal W,R)\) accepts iff the registered \(\lambda\) witnesses \(\mathcal W\sqsubseteq_\lambda R\) in \cref{def:registration-refinement}.
+% 对于有限状态的 \(\mathcal W\) 与有限的 \(R\)，当且仅当已注册的 \(\lambda\) 见证 \cref{def:registration-refinement} 中的 \(\mathcal W\sqsubseteq_\lambda R\) 时，\(\mathsf{CheckReg}(\mathcal W,R)\) 才接受。
 On acceptance, the \(\lambda\)-lowerings of source executions modulo \(\equiv_\partial\) correspond bijectively to \(\mathsf{BRuns}(R)\).
 % 接受时，模 \(\equiv_\partial\) 的源执行经 \(\lambda\) 降低后与 \(\mathsf{BRuns}(R)\) 双射对应。
 The correspondence preserves indexed outcomes, causal order, canonical invocation quotienting, receipt evolution, and the admission answer.
 % 该对应保持带索引结果、因果次序、规范调用商、回执演化与准入答案。
 \end{lemma}
 \begin{proof}
-The finite checker enumerates the boundary classes of \(\mathcal W\) and \(\mathsf{BRuns}(R)\) and directly decides outcome/site incidence, order, cell attestation, total unique lowering, raw-bypass exclusion, and prefix receipt commutation.
-% 有限检查器枚举 \(\mathcal W\) 的边界等价类与 \(\mathsf{BRuns}(R)\)，并直接判定结果/位置关联关系、次序、单元证明、全定义唯一降低、原始绕过排除与前缀回执交换性。
+The productive-SCC test terminates because the state graph is finite.
+% 有效强连通分量检查因状态图有限而终止。
+A productive SCC containing a durable-site edge can be pumped before an outcome, producing projected words of unbounded length.
+% 含有持久位置边的有效强连通分量可以在到达结果前被反复遍历，从而产生长度无界的投影词。
+Conversely, if no productive SCC contains such an edge, every productive SCC is boundary-silent, and contracting them yields a DAG with a finite enumerable projected language.
+% 反之，若任何有效强连通分量都不含此类边，则每个有效强连通分量在边界上静默，收缩它们会得到具有有限可枚举投影语言的 DAG。
+The checker compares that language with \(\mathsf{BRuns}(R)\) and directly decides outcome/site incidence, order, cell attestation, total unique lowering, raw-bypass exclusion, and prefix receipt commutation.
+% 检查器将该语言与 \(\mathsf{BRuns}(R)\) 比较，并直接判定结果/位置关联关系、次序、单元证明、全定义唯一降低、原始绕过排除与前缀回执交换性。
 Therefore it accepts exactly the semantic conjunction defining \(\mathcal W\sqsubseteq_\lambda R\), rather than an oracle restatement.
 % 因而，它恰好接受定义 \(\mathcal W\sqsubseteq_\lambda R\) 的语义合取，而不是对预言机的重述。
 Boundary projection erases only internal steps, so matching projected paths induce the quotient-execution bijection.
@@ -399,8 +451,8 @@ From the same literal empty genesis, register the same public slice \(R\) with s
 % 从同一个字面空起源出发，使用供给 \(n^0,n^1\) 注册同一个公开切片 \(R\)；二者在每个非纪元类型上相同，但生成不同的初始纪元 \(\eta_0\ne\eta_1\)，随后执行经检查根安装。
 The resulting \(V_{\mathbf C}^0,V_{\mathbf C}^1\) have literally identical \(\mathbf P,\mathbf I,\mathbf E\) base fields, while \(\mathbf C\)'s active epoch, gate ownership, certificate coordinates, and dependent authenticators differ.
 % 得到的 \(V_{\mathbf C}^0,V_{\mathbf C}^1\) 具有字面完全相同的 \(\mathbf P,\mathbf I,\mathbf E\) 基础字段，而 \(\mathbf C\) 的活跃纪元、门所有权、证书坐标及其依赖认证器不同。
-Compile the same registered edit \(u_0\) at \(V_{\mathbf C}^0\) to obtain \(Z_0\), and submit the same literal query \(q_{\mathbf C}=\mathsf{Install}(u_0,Z_0)\) to both views.
-% 在 \(V_{\mathbf C}^0\) 处编译同一个已注册编辑 \(u_0\) 得到 \(Z_0\)，并向两个视图提交同一个字面查询 \(q_{\mathbf C}=\mathsf{Install}(u_0,Z_0)\)。
+Compile the same registered edit \(u_0\) at \(V_{\mathbf C}^0\) to obtain \(Y_0=\mathsf{Installable}(\delta_0,W_0,\widehat B_0,Z_0)\), and submit the same literal query \(q_{\mathbf C}=\mathsf{TryInstall}(u_0,Y_0)\) to both views.
+% 在 \(V_{\mathbf C}^0\) 处编译同一个已注册编辑 \(u_0\) 得到 \(Y_0=\mathsf{Installable}(\delta_0,W_0,\widehat B_0,Z_0)\)，并向两个视图提交同一个字面查询 \(q_{\mathbf C}=\mathsf{TryInstall}(u_0,Y_0)\)。
 At \(V_{\mathbf C}^0\), recomputation reproduces \(\mathsf{cut}_{Z_0}\), so installation succeeds.
 % 在 \(V_{\mathbf C}^0\) 处，重新计算会重现 \(\mathsf{cut}_{Z_0}\)，因此安装成功。
 At \(V_{\mathbf C}^1\), recomputation binds \(\eta_1\) and its owner rather than the \(\eta_0\)-coordinates sealed in \(Z_0\), so installation rejects the stale cut.
@@ -488,6 +540,10 @@ Install derived \((\kappa^+,H^+,\mathcal A^+)\), checked monitor and certificate
 \(A_3\): source receipts and outbox retained.
 \(A_4\): install at \(q_\epsilon\).
 \(A_5\): total domain handoff.\\
+Verified \(\mathsf{Invalid}\) or \(\mathsf{Reject}\) &
+Emit the canonical current-cut certificate; no durable state mutation. &
+\((c,r)\) &
+All clauses unchanged; \(\gamma\) binds the visible answer to this decision cut.\\
 \(\mathsf{Save}\) &
 Snapshot the current residual/cursor pair in an authenticated checkpoint; advance \(\nu\). &
 \((c,r)\) &
@@ -517,10 +573,10 @@ Emit \(\mathsf{Settle}(d,[v]_{\cong})\), advance one receipt phase, and fill its
 \((c,r)\) &
 \(A_3\): cell, invocation, creator, authority, and order are immutable.
 Other clauses unchanged.\\
-Failed or stale installation &
+Stale or malformed candidate &
 No durable state mutation. &
 \((c,r)\) &
-All clauses unchanged.\\
+All clauses unchanged; the attempt is \(\tau\) and emits no verdict.\\
 Crash and recovery &
 Discard volatile work and expose the same recovered durable image. &
 \((c,r)\) &
@@ -670,6 +726,10 @@ Once the LTS records the recovered image, crashing again changes only volatile s
 
 We now prove the durable-realization clause of \cref{thm:exact-history} by exhausting the observable and silent cases.
 % 现在，我们通过穷尽可观测与静默情形来证明 \cref{thm:exact-history} 的持久实现条款。
+For \(K=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\), \(\mathsf{Live}(H)=X_{\sem{H.T}}\), and \(I=(K,c_I,r_I)\), let \(\alpha_I(I)=(K,c_I,r_I,H.\eta,H.\beta)\) and \(\alpha_S(S;c,r)=(K,\mathsf{icut}(c),r,H.\eta,\mathsf{bind}|_{\mathsf{Live}(H)})\).
+% 对于 \(K=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\)、\(\mathsf{Live}(H)=X_{\sem{H.T}}\) 与 \(I=(K,c_I,r_I)\)，令 \(\alpha_I(I)=(K,c_I,r_I,H.\eta,H.\beta)\)，并令 \(\alpha_S(S;c,r)=(K,\mathsf{icut}(c),r,H.\eta,\mathsf{bind}|_{\mathsf{Live}(H)})\)。
+Define \(I\,\mathcal R\,S\) iff some \(c,r\) satisfy \(\mathsf{AgentSec}(S;c,r)\) and \(\alpha_I(I)=\alpha_S(S;c,r)\); write \(\xRightarrow{\ell}=\tau^*\ell\tau^*\) and \(\xRightarrow{\tau}=\tau^*\).
+% 定义 \(I\,\mathcal R\,S\) 当且仅当存在 \(c,r\) 满足 \(\mathsf{AgentSec}(S;c,r)\) 与 \(\alpha_I(I)=\alpha_S(S;c,r)\)；记 \(\xRightarrow{\ell}=\tau^*\ell\tau^*\) 且 \(\xRightarrow{\tau}=\tau^*\)。
 Fix \(I\,\mathcal R\,S\) with witness \((c,r)\).
 % 固定一个以 \((c,r)\) 为见证的 \(I\,\mathcal R\,S\)。
 Equality of \(\alpha_I(I)\) and \(\alpha_S(S;c,r)\) gives both machines the same \(\kappa\), current policy, normalized history, receipt ledger, outbox, result futures, semantic cut, resolved prefix, active abstract epoch, and live gate bindings.
@@ -677,10 +737,14 @@ Equality of \(\alpha_I(I)\) and \(\alpha_S(S;c,r)\) gives both machines the same
 
 \paragraph{History edges}
 % 历史边
-The ideal machine forms the same \(\Theta_I(u)\) and enables its history edge exactly when the schema judgment exists and \(\mathsf{Spec}(\Theta_I(u))\) is defined.
-% 理想机形成相同的 \(\Theta_I(u)\)，并且当且仅当模式判定存在且 \(\mathsf{Spec}(\Theta_I(u))\) 有定义时启用其历史边。
-By \cref{lem:app-spec-bridge}, the compiled checker accepts exactly the same history edge and installs the same greatest language.
-% 根据 \cref{lem:app-spec-bridge}，编译后检查器恰好接纳同一条历史边，并安装相同的最大语言。
+The normalization equality makes both machines form the same current \(\Theta_I(u)\) and request-cut token \(\gamma(\Theta_I(u))\).
+% 规范化相等使两台机器形成相同的当前 \(\Theta_I(u)\) 与请求切点令牌 \(\gamma(\Theta_I(u))\)。
+If derivation is undefined, deterministic failed-check reflection makes both sides emit the same canonical \(\mathsf{Invalid}\) orbit and take a state self-loop.
+% 若推导未定义，则确定性的检查失败反射使两侧发出相同的规范 \(\mathsf{Invalid}\) 轨道并执行状态自环。
+If derivation exists but no declarative realization exists, \cref{lem:app-spec-bridge} and deterministic fixed-point checking make both sides emit the same canonical \(\mathsf{Reject}\) orbit and take a state self-loop.
+% 若推导存在但不存在声明式实现，则 \cref{lem:app-spec-bridge} 与确定性不动点检查使两侧发出相同的规范 \(\mathsf{Reject}\) 轨道并执行状态自环。
+Otherwise the ideal machine enables its history edge and, by \cref{lem:app-spec-bridge}, the compiled checker accepts exactly the same history edge and installs the same greatest language.
+% 否则，理想机启用其历史边，并且根据 \cref{lem:app-spec-bridge}，编译后检查器恰好接纳同一条历史边并安装相同的最大语言。
 The compiled side may take finitely many inactive-preloading \(\tau\)-steps before atomic installation.
 % 编译后一侧可以在原子安装之前执行有限次非活跃预加载 \(\tau\) 步。
 Pure compilation is outside the recovered-state LTS.
@@ -713,6 +777,8 @@ The compiled outbox stores \((d,\mathsf{inv}_\rho(d))\), never the caller buffer
 % 编译后发件箱存储 \((d,\mathsf{inv}_\rho(d))\) 而绝不存储调用方缓冲区，理想发件箱存储 \((d,m^\circ)\)；经验证的等式使这两条记录相同。
 In the \Alias case, both successors apply the same paired residual, append the same receipt-silent symbol to the global trace and branch-local cursor, and bind the occurrence to the same durable result future without changing \(\Delta\) or the outbox.
 % 在 \Alias 情形中，两个后继都应用相同的成对残余、把同一个不产生回执的符号追加到全局轨迹与分支局部游标，并把该发生项绑定到同一持久结果期值，而不改变 \(\Delta\) 或发件箱。
+Both successors remove \(x\)'s live binding; because the residual frontier no longer contains \(x\), their normalized live-binding components remain equal.
+% 两个后继都移除 \(x\) 的活跃绑定；由于残余前沿不再包含 \(x\)，它们规范化后的活跃绑定分量仍然相等。
 In either case, \cref{lem:app-event-derivative} re-establishes \(\mathcal R\) with witness \((c,ra)\).
 % 在任一情形中，\cref{lem:app-event-derivative} 都以 \((c,ra)\) 为见证重新建立 \(\mathcal R\)。
 
@@ -738,16 +804,16 @@ The ideal atomic order has exactly the same two cases, so neither side admits a 
 
 \paragraph{Replies, releases, and silent steps}
 % 回复、释放与静默步骤
-An authenticated retry, bundle retrieval, or result delivery follows the same authenticated link on both sides and exposes the same \(\mathsf{Return}(t,[v]_{\cong})\).
-% 经认证重试、包取回或结果交付在两侧沿相同的认证链接，并暴露相同的 \(\mathsf{Return}(t,[v]_{\cong})\)。
+An authenticated retry, bundle retrieval, or result delivery stutters only in security-state fields and follows the same authenticated link on both sides to expose \(\mathsf{Return}(t,[v]_{\cong})\).
+% 经认证重试、包取回或结果交付仅在安全状态字段中表现为停顿，并在两侧沿相同认证链接暴露 \(\mathsf{Return}(t,[v]_{\cong})\)。
 \(\Dispatch(d)\) is enabled at the same outbox head and makes the same observable release update.
 % \(\Dispatch(d)\) 在相同的发件箱头部启用，并产生相同的可观测释放更新。
 \(\mathsf{Settle}(d,[v]_{\cong})\) is enabled for the same receipt and produces the same stable result and normalized update.
 % \(\mathsf{Settle}(d,[v]_{\cong})\) 对相同回执启用，并产生相同的稳定结果与规范化更新。
 \(\mathsf{Save}\) takes matching \(\tau\)-steps.
 % \(\mathsf{Save}\) 执行匹配的 \(\tau\) 步。
-Compiled preload and failed installation are implementation-only \(\tau\)-steps matched by zero ideal steps because \(\alpha_S\) omits their inactive contents.
-% 编译后预加载和失败安装是仅属于实现的 \(\tau\) 步，由零个理想步骤匹配，因为 \(\alpha_S\) 会忽略其非活跃内容。
+Compiled preload and stale or malformed candidate attempts are implementation-only \(\tau\)-steps matched by zero ideal steps because \(\alpha_S\) omits their inactive contents and they emit no verdict.
+% 编译后预加载以及过期或畸形候选尝试是仅属于实现的 \(\tau\) 步，由零个理想步骤匹配，因为 \(\alpha_S\) 会忽略其非活跃内容且这些步骤不会发出判定。
 Crash is matched by a \(\tau\) self-loop on each recovered-state machine by \cref{lem:app-crash}.
 % 根据 \cref{lem:app-crash}，崩溃在每台恢复状态机器上都由一个 \(\tau\) 自环匹配。
 
@@ -765,8 +831,8 @@ For every step from either side, the corresponding case constructs a path with o
 % 对任一侧的每一步，对应情形都会构造一条观测为 \(\mathsf{obs}_{\rm api}(\ell)\) 的路径，以及一个通过该表中见证相关的后继。
 The construction is symmetric because successful ideal guards and successful compiled guards were shown equivalent, while implementation-only steps preserve the common abstraction.
 % 该构造是对称的，因为成功的理想守卫与成功的编译后守卫已被证明等价，而仅属于实现的步骤保持共同抽象。
-Arbitrary repetition of silent preload, failed installation, Save, or crash steps is ignored, which is precisely divergence-insensitive weak matching.
-% 任意重复的静默预加载、失败安装、Save 或崩溃步骤均被忽略，这恰是发散不敏感弱匹配。
+Arbitrary repetition of silent preload, stale-candidate, Save, or crash steps is ignored, which is precisely divergence-insensitive weak matching.
+% 任意重复的静默预加载、过期候选、Save 或崩溃步骤均被忽略，这恰是发散不敏感弱匹配。
 \end{proof}
 
 \subsection{Executable-Artifact Bounds}

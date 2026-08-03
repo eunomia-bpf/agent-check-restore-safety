@@ -59,6 +59,8 @@ This condition permits incomparable traces and different indices with the same t
 % 该条件允许不可比较的轨迹以及共享同一轨迹的不同索引，因此并不强制结果具有确定性。
 It fixes the interface boundary by requiring a registered logical occurrence to distinguish stopping from continuing at a shared prefix.
 % 它要求通过已注册的逻辑发生项区分在共享前缀处停止还是继续，从而确定接口边界。
+An otherwise silent optional stop is outside this boundary; a deployment can expose it as an authenticated controller-local, receipt-bearing terminal occurrence, without claiming a remote effect.
+% 否则不可见的可选停止不属于这一边界；部署可以将其暴露为一个经认证、由控制器本地处理且带回执的终止发生项，而不声称它构成远程效果。
 
 Contracts use the three partial constructors below.
 % 契约使用下列三个偏构造器。
@@ -219,8 +221,8 @@ Resolved occurrences are downward closed in their pomset, consistent with every 
 % 已解析发生项在其偏序事件集中向下闭合，与每个选择状态一致，并且不出现在残余前沿中。
 \item \emph{Live frontier.}
 % \emph{活跃前沿。}
-Every live gate has exactly one binding \((j,\eta)\) to the domain's single current epoch.
-% 每个活跃门恰有一个绑定 \((j,\eta)\)，指向该域唯一的当前纪元。
+\(\operatorname{dom}(\beta)=X_{\sem T}\), and every live occurrence \(x\) has exactly one authenticated binding \(\beta(x)=(j_x,\eta)\) to the domain's single current epoch.
+% \(\operatorname{dom}(\beta)=X_{\sem T}\)，且每个活跃发生项 \(x\) 都恰有一个经认证的绑定 \(\beta(x)=(j_x,\eta)\)，指向该域唯一的当前纪元。
 Every live leaf \(b{:}\mathcal C\) is exactly the indexed residual of its immutable registered base \(\Gamma_b\) by the raw projection of its resolved cursor \(\chi_b\), rather than a caller-pruned subfamily.
 % 每个活跃叶节点 \(b{:}\mathcal C\) 恰好是其不可变已注册基础 \(\Gamma_b\) 按已解析游标 \(\chi_b\) 的原始投影所得的带索引残余，而不是由调用方裁剪的子族。
 Every constructor in \(T\) is defined, so every subtree interpretation is completion-observable.
@@ -265,8 +267,8 @@ The adversary controls Agent output, operations, tool arguments, copied workspac
 % 对手控制 Agent 的输出、操作、工具参数、复制的工作区、重试、过期封印和调度，包括使用/编辑竞态。
 It cannot forge registries, the checkpoint/DAG store, cell certificates, policy, or the receipt ledger.
 % 它无法伪造注册表、检查点/DAG 存储、单元证书、策略或回执账本。
-The trusted computing base (TCB) includes the policy issuer and protected-call issuer and provides complete mediation and a linearizable, crash-stable transaction for every modeled durable mutation within a domain.
-% 可信计算基（TCB）包括策略发行方和受保护调用发行方，并为域内每项已建模的持久变更提供完全中介以及可线性化、崩溃稳定的事务。
+The trusted computing base (TCB) includes the policy issuer and protected-call issuer and provides complete mediation and a linearizable, crash-stable transaction for every modeled durable mutation or visible admission verdict within a domain.
+% 可信计算基（TCB）包括策略发行方和受保护调用发行方，并为域内每项已建模的持久变更或可见准入判定提供完全中介以及可线性化、崩溃稳定的事务。
 A recovered labeled transition system (LTS) state shows each transaction entirely uncommitted or committed according to whether its linearization point occurred; no transaction is torn, and volatile compiler caches lie outside the model.
 % 恢复后的标号转移系统（LTS）状态根据事务的线性化点是否已经发生，将每项事务完整地呈现为未提交或已提交；任何事务都不会撕裂，而易失的编译器缓存不在模型中。
 Before a checked cut, the protected-call issuer may instantiate finitely many pre-authorized schema templates: for invocation \(m\), it computes \(m^\circ=\mathsf{canon}_\kappa(m)\), reuses only a cell certified for \(m^\circ\) or allocates a fresh cell, and signs \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{lineage})\) into the authenticated registry.
@@ -283,31 +285,28 @@ The Agent may supply or weaken none of these derived objects.
 \begin{definition}[Checked registration refinement]
 % 经检查的注册精化
 \label{def:registration-refinement}
-A finite typed Agent workflow \(\mathcal W\) is an outcome-labeled LTS with internal \(\tau\)-edges and declared durable sites.
-% 有限类型化 Agent 工作流 \(\mathcal W\) 是一个带结果标签的 LTS，具有内部 \(\tau\) 边与声明的持久位置。
-For complete \(e\), \(\partial e=(o,s_1\cdots s_n)\) erases \(\tau\), and \(e\equiv_\partial e'\) means equal projections.
-% 对完整 \(e\)，\(\partial e=(o,s_1\cdots s_n)\) 擦除 \(\tau\)，而 \(e\equiv_\partial e'\) 表示投影相等。
-\(R\) stores a candidate lowering \(\lambda\) from each site to one registered occurrence and protected \Use.
-% \(R\) 存储候选降低映射 \(\lambda\)，把每个位置映射到一个已注册发生项及一次受保护 \Use。
-\(\mathsf{BRuns}(R)\) is the finite outcome-indexed boundary language obtained by linearizing \(R\)'s registered root pomsets and labeling every occurrence by its registered protected \Use.
-% \(\mathsf{BRuns}(R)\) 是通过线性化 \(R\) 的已注册根偏序事件集，并以其已注册受保护 \Use 标记每个发生项而得到的有限结果索引边界语言。
+A boundary-finite typed Agent workflow \(\mathcal W\) is a finite-state outcome-labeled LTS whose complete paths end at outcome terminals and whose \(\tau\)-erased durable-site projections \(\partial e=(o,s_1\cdots s_n)\) form finitely many classes under equality \(\equiv_\partial\).
+% 边界有限的类型化 Agent 工作流 \(\mathcal W\) 是一个带结果标签的有限状态 LTS；其完整路径终止于结果终点，并且经 \(\tau\) 擦除的持久位置投影 \(\partial e=(o,s_1\cdots s_n)\) 在相等关系 \(\equiv_\partial\) 下形成有限多个等价类。
+\(\mathsf{CheckReg}\) decides this by rejecting any reachable and terminal-co-reachable strongly connected component containing a durable-site edge while permitting erased \(\tau\)-cycles, then enumerates the finite classes.
+% \(\mathsf{CheckReg}\) 通过拒绝任何既可达、又可到达终止点且包含持久位置边的强连通分量，同时允许被擦除的 \(\tau\) 环，来判定该性质，随后枚举有限等价类。
+\(R\) stores a candidate lowering \(\lambda\), and \(\mathsf{BRuns}(R)\) is the finite outcome-indexed language obtained by linearizing its registered root pomsets and labeling each occurrence by its protected \Use.
+% \(R\) 存储候选降低映射 \(\lambda\)，而 \(\mathsf{BRuns}(R)\) 是通过线性化其已注册根偏序事件集，并以受保护 \Use 标记每个发生项而得到的有限结果索引语言。
 \(\mathcal W\sqsubseteq_\lambda R\) means that \(\lambda\) induces a bijection from boundary classes to \(\mathsf{BRuns}(R)\) that preserves outcomes, incidence, and order.
 % \(\mathcal W\sqsubseteq_\lambda R\) 表示 \(\lambda\) 从边界等价类到 \(\mathsf{BRuns}(R)\) 诱导一个保持结果、关联与次序的双射。
-Cells are exactly the canonical-invocation quotient, and lowering is total, unique, and exposes no raw durable instruction.
-% 单元恰为规范调用商，并且降低全定义、唯一且不暴露原始持久指令。
-Prefix receipt evolution commutes with \(\Resolve\) without dropping a promise, site, or receipt.
-% 前缀回执演化与 \(\Resolve\) 交换，并且不丢弃任何承诺、位置或回执。
-\(\mathsf{CheckReg}(\mathcal W,R)\) is the finite conjunction of these independently defined checks over the explicit LTSs and stored \(\lambda\).
-% \(\mathsf{CheckReg}(\mathcal W,R)\) 是在显式 LTS 与所存 \(\lambda\) 上对这些独立定义检查的有限合取。
+The finite checker also requires cells to be exactly the canonical-invocation quotient, lowering to be total, unique, and raw-instruction free, and prefix receipt evolution to commute with \(\Resolve\) without dropping a promise, site, or receipt.
+% 有限检查器还要求单元恰为规范调用商、降低映射全定义且唯一并且不暴露原始指令，同时要求前缀回执演化与 \(\Resolve\) 交换而不丢弃任何承诺、位置或回执。
 \end{definition}
 
 \Cref{thm:exact-history} proves checker reflection and a source-boundary/registered-realization bijection.
 % \Cref{thm:exact-history} 证明检查器反射以及源边界与注册实现之间的双射。
-The theory neither infers natural-language contracts nor equates local commit with remote physical exactly-once execution.
-% 该理论既不推断自然语言契约，也不把本地提交等同于远端物理恰好一次执行。
+The theory neither infers natural-language contracts nor equates local commit with remote physical exactly-once execution, which additionally requires an idempotent or queryable sink.
+% 该理论既不推断自然语言契约，也不把本地提交等同于远端物理恰好一次执行；后者还要求接收端具有幂等性或可查询性。
 
 \subsection{Six structural rewrite rules}
 % 六条结构重写规则
+
+The six disjoint constructors of \(\mathsf{Edit}_6\) are exactly the typed operation signatures in \cref{tab:history-rules}; \(\mathsf{Save}\), \(\mathsf{Root}\), \(\mathsf{Extend}\), protected use, and caller-supplied targets are excluded.
+% \(\mathsf{Edit}_6\) 的六个互不相交构造器恰为 \cref{tab:history-rules} 中带类型的操作签名；\(\mathsf{Save}\)、\(\mathsf{Root}\)、\(\mathsf{Extend}\)、受保护使用与调用方提供的目标均被排除。
 
 An untrusted request \(u\) supplies a rewrite kind, live object identifiers, and schema identifier \(\sigma\), never a target contract, while \(\Sigma_\zeta\) binds \(\sigma\) to that kind, exact source and checkpoint fingerprints, introduced suffix contracts, and a lineage certificate.
 % 不受信任的请求 \(u\) 提供重写种类、活跃对象标识和模式标识 \(\sigma\)，但绝不提供目标契约，而 \(\Sigma_\zeta\) 将 \(\sigma\) 绑定到该种类、精确的源与检查点指纹、引入的后缀契约和谱系证书。
@@ -469,8 +468,8 @@ In an open choice, the first \Fresh or \Alias atomically selects its arm and dis
 
 The model uses domain-wide handoff, never fencing only a selected subset of a domain's gates, so every live gate in \(H\) belongs to \(\eta^-=\eta\).
 % 该模型采用全域交接，从不只隔离域内选定的一部分门，因此 \(H\) 中的每个活跃门都属于 \(\eta^-=\eta\)。
-A table row plus the following common update is the complete rewrite rule.
-% 一个表格行与下列公共更新共同构成完整重写规则。
+The six-edit judgment is the least relation generated by one row of \cref{tab:history-rules} inside a well-typed single-hole context \(\mathcal E\), followed by the common update below; no other structural derivation exists.
+% 六种编辑判定是如下最小关系：在良类型单孔上下文 \(\mathcal E\) 中应用 \cref{tab:history-rules} 的一行，再执行下述公共更新；不存在其他结构推导。
 Let \(e_u\) contain its typed edge and exactly the newly allocated clone, suffix, and group nodes prescribed by \(T'\); carried node identities remain unchanged.
 % 令 \(e_u\) 包含其类型化边，以及恰由 \(T'\) 指定的新分配克隆节点、后缀节点和组节点；被携带节点的标识保持不变。
 For every live target occurrence \(x\), the trusted protected-call issuer deterministically mints \(j_x^+,h_x^+\), and \(\rho'\) preserves the row-certified cell, lineage, scope, digest, and historical records needed for \Retry while refreshing live gate and handle fields.
