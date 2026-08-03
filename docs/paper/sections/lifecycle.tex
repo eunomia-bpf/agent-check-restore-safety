@@ -1,148 +1,136 @@
-\section{A Running Agent History Cut}
+\section{One Agent, Two Histories}
 \label{sec:lifecycle}
 
-\subsection{Procurement with a live supplier choice}
-
-Consider a procurement Agent that has durably reserved the budget for one
-order and now explores two suppliers.  Its authenticated receipt trace is
-\(\delta=r\), where \(r\) records the reservation.  The Agent asks for a
-choice Fork whose protected target slice is
+Consider a procurement Agent authorized to place one order.  It durably
+reserves the budget, giving receipt log \(\Delta\) with
+\(\mathsf{lab}(\Delta)=r\), and saves checkpoint \(k\) before approval.
+Approval then commits as cell \(a\), so
+\(\mathsf{lab}(\Delta)=ra\).  The Agent requests a choice Fork between two
+suppliers.  Its protected completion contract has exactly two indexed
+outcomes:
 \[
-  (a_A;p_A;s_A)\ \oplus\ (a_B;p_B;s_B).
+\begin{split}
+ o_A&:\ p_A\prec s_A,\\
+ o_B&:\ p_B\prec s_B ,
+\end{split}
+\tag{1}\label{eq:running-outcomes}
 \]
-Here \(a_x\), \(p_x\), and \(s_x\) are raw handle occurrences for approval,
-payment to supplier \(x\), and shipment.  Sequence means that approval
-precedes payment and payment precedes shipment; tagged choice means that both
-supplier outcomes remain available but one execution cannot pay both.
+where \(p\) and \(s\) denote payment and shipment occurrences.  The
+alternatives are exclusive, but both must have a safe completion at the cut.
 
-Copied history does not make every occurrence a fresh effect.  Authenticated
-ledger anchors establish
+Logical occurrence is not effect identity.  The protected-call registry
+authenticates
 \[
-  q_{\rm cell}(a_A)=q_{\rm cell}(a_B)=a,\qquad
-  q_{\rm cell}(s_A)=q_{\rm cell}(s_B)=s,
+ q_{\rm cell}(s_A)=q_{\rm cell}(s_B)=s.
 \]
-whereas \(q_{\rm cell}(p_A)=p_A\) and
-\(q_{\rm cell}(p_B)=p_B\) remain distinct.  Thus both arms refer to the same
-order approval and shipment, but to different supplier payments.  A first
-successful redemption emits its semantic cell; an alias retry resolves the
-existing receipt and stutters.
+Both branches copied the same shipment handle, while payments retain
+distinct cells \(p_A\) and \(p_B\).  A later Restore of \(k\) will create a
+new approval occurrence \(a'\) with \(q_{\rm cell}(a')=a\).  The authority policy
+allows prefixes of \(rap_As\) and \(rap_Bs\), but no trace containing both
+payments or a payment before \(a\).
 
-Suppose the durable-authority policy permits exactly one supplier payment
-after approval and permits shipment only after that payment.  At receipt
-prefix \(r\), the strongest atomic monitor has normalized future
-\begin{equation}
-\label{eq:procurement-future}
-  F_R=
-  \{\epsilon,\ a,\ ap_A,\ ap_As,\ ap_B,\ ap_Bs\}.
-\end{equation}
-This language preserves distinctions that endpoint sets erase:
-\(ap_A\) is legal while \(p_Aa\) is not, and \(ap_Ap_B\) is forbidden even
-though either two-event prefix is legal.  The Fork promises two outcomes,
-\(a\prec p_A\prec s\) and \(a\prec p_B\prec s\); each has a linearization in
-\(F_R\).
+\paragraph{The admission calculation}
+At this cut each outcome has one causal linearization, resolving to
+\[
+\begin{aligned}
+ z_A&=\Fresh(p_A,p_A)\Fresh(s_A,s),\\
+ z_B&=\Fresh(p_B,p_B)\Fresh(s_B,s).
+\end{aligned}
+\]
+Thus \(M_{o_A}=\{z_A\}\), \(M_{o_B}=\{z_B\}\), and
+\(B^\star=\{z_A,z_B\}\); \(W\) contains exactly their prefixes.  If the
+durable policy residual instead removed \(rap_Bs\), then
+\(M_{o_B}=\varnothing\): admitting the Fork and silently pruning supplier
+\(B\) would violate the operation's history meaning.  This is the
+necessary-and-sufficient boundary generalized below.
 
-\begin{figure}[t]
+\begin{figure*}[t]
   \centering
   \begin{tikzpicture}[
       font=\scriptsize,
-      state/.style={draw,circle,minimum size=5.5mm,inner sep=0pt},
-      arr/.style={-{Latex[length=1.4mm]},thick},
-      lab/.style={midway,above,inner sep=1pt}
+      box/.style={draw,rounded corners=1pt,minimum height=5.5mm,
+        align=center,inner sep=2pt},
+      node/.style={draw,circle,minimum size=5.4mm,inner sep=0pt},
+      arr/.style={-{Latex[length=1.5mm]},thick},
+      stale/.style={-{Latex[length=1.5mm]},thick,dashed},
+      lab/.style={font=\scriptsize\bfseries,anchor=east}
     ]
-    \node[state] (q0) {$q_0$};
-    \node[state,right=8mm of q0] (q1) {$q_1$};
-    \node[state,above right=6mm and 10mm of q1] (qa) {$q_A$};
-    \node[state,below right=6mm and 10mm of q1] (qb) {$q_B$};
-    \node[state,right=12mm of qa,yshift=-6mm] (qd) {$q_f$};
-    \draw[arr] (q0) -- node[lab] {$a$} (q1);
-    \draw[arr] (q1) -- node[lab] {$p_A$} (qa);
-    \draw[arr] (q1) -- node[midway,below,inner sep=1pt] {$p_B$} (qb);
-    \draw[arr] (qa) -- node[lab] {$s$} (qd);
-    \draw[arr] (qb) -- node[midway,below,inner sep=1pt] {$s$} (qd);
+    \node[lab] at (0,2.15) {logical history};
+    \node[node] (h0) at (0.65,2.15) {$h_0$};
+    \node[node] (al) at (1.85,2.15) {$a$};
+    \node[box] (f) at (3.1,2.15) {choice\\Fork};
+    \node[node] (ba) at (4.45,2.62) {$A$};
+    \node[node] (bb) at (4.45,1.68) {$B$};
+    \node[box] (ms) at (5.95,2.62) {select\\Merge};
+    \node[node] (ha) at (7.25,2.62) {$h_A$};
+    \node[box] (rl) at (8.35,1.68) {live\\Restore $k$};
+    \node[node] (cl) at (9.75,1.68) {$a'$};
+    \node[box] (jn) at (11.15,2.15) {join\\Merge};
+    \draw[arr] (h0) -- node[above] {$k$} (al);
+    \draw[arr] (al) -- (f);
+    \draw[arr] (f) -- (ba);
+    \draw[arr] (f) -- (bb);
+    \draw[arr] (ba) -- (ms);
+    \draw[arr] (ms) -- (ha);
+    \draw[stale] (h0.north) -- (0.65,3.18) --
+      node[above] {checkpoint clone: new occurrence, same cell}
+      (8.35,3.18) -- (rl.north);
+    \draw[arr] (rl) -- (cl);
+    \draw[arr] (ha) -- (jn);
+    \draw[arr] (cl) -- (jn);
+    \draw[stale] (bb) to[bend left=17]
+      node[below] {must lose authority} (ms);
+
+    \node[lab] at (0,0.65) {world receipts};
+    \node[node] (r) at (0.65,0.65) {$r$};
+    \node[node] (a) at (3.05,0.65) {$a$};
+    \node[node] (pa) at (6.05,0.65) {$p_A$};
+    \node[node] (s) at (10.2,0.65) {$s$};
+    \draw[arr] (r) -- node[above] {append only} (a);
+    \draw[arr] (a) -- (pa);
+    \draw[arr] (pa) -- (s);
+    \node[align=center] at (9.75,1.12)
+      {\(\Alias(a',a)\)\\no new receipt};
+
+    \node[lab] at (0,-0.75) {controller owners};
+    \node[box] (e0) at (0.85,-0.75) {$\eta_0$};
+    \node[box] (ef) at (3.7,-0.75) {$\eta_F:\ A,B$};
+    \node[box] (ea) at (6.8,-0.75) {$\eta_A$};
+    \node[box] (ej) at (11.15,-0.75) {$\eta_J$};
+    \draw[arr] (e0) -- node[above] {close/open} (ef);
+    \draw[arr] (ef) -- node[above] {fence \(A,B\)} (ea);
+    \draw[arr] (ea) -- node[above] {fence live sources} (ej);
   \end{tikzpicture}
-  \caption{The canonical epoch for the procurement cut.  After approval, the
-  first payment moves to one supplier residual; there is no transition for
-  the other payment.  The automaton is derived from
-  \cref{eq:procurement-future}, not supplied by the caller.}
-  \label{fig:procurement-epoch}
-\end{figure}
+  \caption{An Agent has an editable logical history, a non-editable world
+  history, and live controller owners.  Restore clones logical occurrences
+  but preserves authenticated cell identity.  A history cut must therefore
+  order both receipt-changing \Fresh events and receipt-silent \Alias events
+  against complete source fencing.}
+  \label{fig:two-histories}
+\end{figure*}
 
-The residual controller in \cref{fig:procurement-epoch} is scoped to this
-history cut.  At \(q_1\), either payment is possible.  Once \(p_A\) commits,
-the residual enables only \(s\), so a copied supplier-\(B\) gate cannot turn
-exclusive exploration into two payments.  This finite automaton is classical;
-the Agent-specific problem is deriving its language and installing it while
-the old choice controller may still be executing.
+\paragraph{The fresh race}
+After the shared approval and before either payment, the Agent requests
+\(\mathsf{MergeSelect}(A)\).  If the old supplier-\(B\) controller commits
+\(p_B\) first, that occurrence durably selects \(B\) and changes the receipt
+prefix from \(ra\) to \(rap_B\); selecting \(A\) must therefore be
+re-derived and rejected.  If the Merge cut wins, it must close every owner of
+the affected choice group before any later \(p_B\) can commit.  Publishing a
+new controller without fencing the loser permits both payments.
 
-\subsection{Selection and the frontier race}
+\paragraph{The alias race}
+Now consider the live Restore in \cref{fig:two-histories}.  Cloning \(k\)
+creates a fresh logical approval occurrence \(a'\) and gate, but retains
+cell \(a\).  Because \(a\) is already receipted, executing \(a'\) is an
+\Alias: it advances the restored continuation past approval but leaves
+\(\Delta\) unchanged.  A concurrent join or replacement compiled before that
+progress is stale even though its receipt comparison still succeeds.  The cut
+must therefore compare a logical-occurrence frontier \(\chi\) in addition to
+the receipt frontier.
 
-Assume the Agent reaches \(q_1\), chooses supplier \(A\), and requests
-\(\mathsf{MergeSelect}_A\) before either payment commits.  The new target slice
-is \(p_A;s\); the losing supplier-\(B\) continuation must be canceled.  Merely
-publishing the target automaton is unsafe because an old gate may concurrently
-prepare \(p_B\).
-
-The history cut has exactly two safe linearizations.  If the old
-\(\Prepare(p_B)\) linearizes first, it appends \(p_B\) to the receipt trace,
-so an installation sealed for prefix \(ra\) fails its frontier comparison
-without changing controller state.  If installation linearizes first, it
-closes every source controller class, mints the selected target epoch, and
-binds its gate uses in one cut; the old supplier-\(B\) controller then has no
-fresh-\Prepare{} transition.  Replay, retry, and settlement may still resolve
-old receipts, but they emit no fresh authority event.
-
-\begin{figure}[t]
-  \centering
-  \begin{tikzpicture}[
-      font=\scriptsize,
-      box/.style={draw,rounded corners=1pt,align=center,
-        minimum height=5.5mm,inner sep=2pt},
-      arr/.style={-{Latex[length=1.3mm]},thick}
-    ]
-    \node[box] (p1) {$\mathsf{Prepare}_{B}$\\appends $p_B$};
-    \node[box,right=2.5mm of p1] (i1) {\textsc{Install}\\stale $\delta$};
-    \node[right=1.5mm of i1] (r1) {\textbf{fails}};
-    \draw[arr] (p1) -- (i1);
-
-    \node[box,below=3.5mm of p1] (i2) {\textsc{Install}\\close old/open new};
-    \node[box,right=2.5mm of i2] (p2) {old $\mathsf{Prepare}_{B}$\\closed epoch};
-    \node[right=1.5mm of p2] (r2) {\textbf{denied}};
-    \draw[arr] (i2) -- (p2);
-  \end{tikzpicture}
-  \caption{The frontier-CAS cut.  Whichever durable operation linearizes
-  first determines the only valid outcome; there is no cross-epoch fresh
-  commitment.}
-  \label{fig:install-race}
-\end{figure}
-
-This race is not a supervisor-localization detail.  With a fixed plant, the
-residual automaton already decides which next symbols are legal.  Here the
-plant, the active controller set, and the receipt prefix change in competing
-operations.  Removing the atomic source-epoch cut makes the trace theorem
-false even when the target automaton is perfect: an unfenced old controller
-can append \(p_B\) after the target has been published.  The installation
-invariant is therefore part of history-admission semantics rather than an
-adapter attestation.
-
-The same distinction applies to all six operations formalized in
-\cref{tab:edge-semantics}.  Choice Fork retains alternative outcomes, while
-parallel Fork permits their order-preserving shuffle; replacing Restore
-retires the current continuation, while live Restore rebinds both versions.
-Select Merge names a winner and closes its loser before the post-Merge plan,
-whereas join Merge places that plan causally after both inputs.  Their target
-languages and source-controller cuts are therefore both security semantics,
-not six labels for three endpoint-family constructors.
-
-\subsection{The admission target}
-
-A request contains the typed bounded slice, policy and view versions,
-ledger-backed cell and source-controller anchors, and the exact receipt trace.
-Normalization and the durable policy derive \(F_R\); the edge derives a finite
-set of promised partial-order outcomes.  History admission must either return
-one promise having no policy-legal linearization, or emit an epoch whose fresh
-language is exactly \(F_R\), whose target bindings are compiler minted, and
-whose installation closes the complete source set at the proved frontier.
-Language equality prevents safety by deleting optional legal behavior; the
-promise check prevents equality from disguising an edge that cannot deliver
-its advertised outcome.  \Cref{sec:model} defines these objects and the threat
-boundary; \cref{sec:results} proves the target for successive cuts.
+The example exposes the whole problem.  Workspace equality cannot recover
+which branch relation is live; receipt equality cannot detect alias progress;
+cell equality cannot identify which controller must be closed; and a target
+automaton supplied by the Agent cannot certify any of these facts.
+\Cref{sec:model} replaces that supplied request with a trusted history
+derivation.

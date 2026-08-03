@@ -1,82 +1,109 @@
-\section{Proof and Artifact Boundary}
+\section{Executable Validation}
 \label{sec:validation}
 
-The causal epoch theorem is a paper proof.  Our existing artifact predates the
-trace reformulation and checks only its permutation-invariant endpoint
-corollary.  We make this boundary explicit because neither successful tests
-nor component mechanization establishes a production Agent refinement.
+The main result is a pen-and-paper theorem; the artifact is a small bounded
+model intended to expose definition and cut mistakes, not replace the proof.
+It is dependency free and exposes two API phases: a witness producer that
+derives a cut and computes \(W\), and installation/use functions that
+recompute trusted state rather than accept semantic fields from the operation.
+The phases share one implementation and are not independent verification.
+
+\subsection{What the checker executes}
+
+The executable representation contains occurrences, finite pomsets, contract
+choice/parallel/sequence, a trusted history state, and exactly the six
+operation datatypes in \cref{tab:history-rules}.  Reflection tests verify that
+these operation objects have no contract, outcomes, plan, sources, anchors,
+receipts, or receipt-frontier fields.  The derivation returns
+\((\mathcal C,\Src,\mathsf{Tgt},H')\); the admission routine enumerates every
+topological sort, performs length-preserving fresh/alias resolution, tests
+the fresh projection against a prefix policy, and constructs \(W\) as exactly
+the set of safe-completion prefixes for the represented fixtures.  Contract
+construction also rejects a complete trace that strictly prefixes another.
+The
+artifact computes \(W\), but does not execute the marked residual controller
+of \cref{eq:canonical-program}; that implementation theorem remains on paper.
+It also quotients structurally identical pomsets, whereas the theory retains
+indexed outcome identities after residualization.  Its policy alphabet is the
+cell IDs themselves rather than a separate \(\ell(d)\), and protected use
+appends the ordered occurrence ID without separately advancing \(\nu\);
+general label projection and the full Use transition remain paper semantics.
+
+The model deliberately fails closed above 128 outcomes, eight occurrences per
+outcome, 50,000 linearizations per pomset, or 100,000 distinct safe resolved
+traces.  These caps make the search auditable and prevent an accidental
+scalability claim.  They are not bounds in \cref{thm:exact-history}.
 
 \begin{table}[t]
 \centering
-\caption{Evidence boundary.  ``Paper'' means a self-contained proof in this
-submission, not mechanization.}
-\label{tab:proof-boundary}
+\caption{Evidence boundary for the theory.}
+\label{tab:evidence}
 \scriptsize
 \setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}p{0.43\columnwidth}p{0.48\columnwidth}@{}}
+\begin{tabular}{@{}p{0.46\columnwidth}p{0.45\columnwidth}@{}}
 \toprule
-Claim/component & Current evidence\\
+Claim & Evidence\\
 \midrule
-Raw plan normalization and causal $F_R$ &
-Paper (\cref{lem:normalization})\\
-Residual epoch trace equality and complete rejection &
-Paper (\cref{thm:canonical-epoch})\\
-Prepare/Install cut and multi-edge safety &
-Paper LTS (\cref{thm:canonical-epoch})\\
-Permutation-invariant endpoint corollary &
-Lean~4 component theorems\\
-Legacy endpoint compiler/verifier &
-62 Python regression tests; exhaustive three-cell oracle\\
-Causal compiler extraction &
-Not implemented\\
-Production installer or Agent mediation &
-Not claimed\\
+Six history derivations and source extraction &
+Paper lemma; focused executable fixtures\\
+Length-preserving resolution and exact \(W\) &
+Paper lemmas; all linearizations of focused fixtures\\
+Exact occurrence fidelity and no cell borrowing &
+Paper LTS; negative executable fixtures\\
+Fresh/alias versus install cuts &
+Paper transition proof; both race orders executed\\
+Marked residual controller and arbitrary-edge weak bisimulation &
+Self-contained paper proof only\\
+Production registry, mediation, and storage &
+Assumed TCB; not implemented\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Mechanized commutative corollary}
+\subsection{Litmus suite}
 
-If both $\mathsf{Plant}_R$ and $\mathcal A$ are closed under permutations of
-distinct events, a trace is characterized by its endpoint set.  In that
-profile, the old downward-closed family semantics is a quotient of
-\cref{eq:reference-language}.  The Lean development checks typed
-choice/tensor/replacement constructors, durable-prefix filtering, monotone
-fresh receipts, semantic-cell aliases, controller-cover decomposition, and
-fixed-prefix structural transport for finite carriers.  Its audit uses no
-project axioms; the remaining dependencies are Lean's standard
-\texttt{propext}, \texttt{Quot.sound}, and
-\texttt{Classical.choice}.
+Seventeen focused tests cover:
 
-This evidence catches useful mistakes in the unordered submodel, but it does
-not prove sequence, shuffle, residual automata, or the installation LTS.
-Accordingly, the abstract and contributions do not call the causal theorem
-mechanized.
+\begin{itemize}[leftmargin=*,itemsep=1pt]
+ \item both Fork modes, both Restore modes, and both Merge modes;
+ \item same-cell copies before and after an existing receipt, retaining every
+       logical occurrence while emitting at most one fresh cell;
+ \item rejection of a silent early completion that is also a prefix of a
+       longer complete trace;
+ \item universal outcome coverage and exact prefix construction;
+ \item choice-selection consistency and derivation of every member owner for
+       both Merge forms;
+ \item rejection when a disabled or forged occurrence tries to borrow an
+       enabled transition through the same cell;
+ \item alias progress resolving a choice without changing receipts; and
+ \item both linearizations of fresh--install and alias--install races:
+       progress first makes the seal stale, while install first closes the old
+       generation.
+\end{itemize}
 
-\subsection{Executable legacy checks}
+All 17 focused tests pass; the repository's full artifact suite passes 79
+tests.  The anonymous archive is rebuilt, extracted into a clean directory,
+and reruns the focused suite.  These tests found the distinction between the
+receipt frontier and ordered logical-occurrence-ID frontier; the richer
+\((x,\mathsf{fresh/alias},d)\) records in the theorem are not mechanized.
 
-The dependency-free Python artifact has independent symbolic and bit-mask
-implementations of the endpoint predicate.  Thirty-eight of its 62 tests
-exercise the six history labels, receipt growth, alias/clone distinctions,
-controller correlations, malformed manifests, tampering, and deterministic
-certificates.  A direct oracle agrees on all 2,166 candidate/required/physical
-family instances over three cells.  These results validate the commutative
-corollary and preserve regression coverage for the earlier compiler.
+\subsection{Interpretation and falsifiability}
 
-They are not reported as evaluation of $\mathsf{Can}(R)$.  In particular, the
-artifact does not generate the causal residual program, bind it through a
-version/frontier CAS, recover a partially installed epoch, or prove complete
-mediation in Codex or Claude.  Implementing those bridges is engineering work
-needed before a systems claim; the security statement here is the abstract
-kernel theorem under the TCB in \cref{sec:model}.
+The checker directly executes a bounded subset of the finite definitions, so
+agreement is sanity evidence rather than independent verification or
+mechanization.  The marked residual program, full cut certificate, indexed
+residual outcomes, global weak bisimulation, least owner closure for nested
+histories and policy-connected scopes, and unbounded theorem remain paper
+proofs.  The older Lean
+development in the repository covers only a permutation-invariant endpoint
+model and is not evidence for \cref{thm:exact-history}.
 
-\subsection{Falsifiable scope}
-
-The main result would be falsified by a well-formed request for which the
-constructed epoch admits a word outside $F_R$, omits a word in $F_R$, accepts
-a stale-source fresh \Prepare{} after a successful install, or installs after
-the compared receipt trace has changed.  It would also be falsified by a
-monitor-sound, outcome-preserving epoch for a request rejected by
-\cref{eq:causal-admission}.  These are finite trace/LTS statements suitable
-for future mechanization and bounded model checking; no empirical workload
-prevalence assumption is needed for the theorem.
+The executable subset is falsified by a represented fixture in which
+derivation omits an affected owner, \(\Resolve\) loses or duplicates an
+occurrence, its computed \(W\) differs from the safe-completion prefixes, or
+a stale cut succeeds after fresh or alias progress.  The theorem is
+additionally falsified if the marked program differs from
+\((W,B^\star)\), an installed cut leaves an affected old use enabled, or the
+two LTSs have different observable traces.  These latter statements are
+explicit targets for future mechanization and model checking, not claims
+about the present executable.

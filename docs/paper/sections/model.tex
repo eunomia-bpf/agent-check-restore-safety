@@ -1,239 +1,303 @@
-\section{Raw Edges and Causal Reference Semantics}
+\section{Agent History Semantics}
 \label{sec:model}
 
-We model only protected effects between two history cuts.  The Agent may reason,
-edit files, query models, and create speculative state without appearing in the
-model.  An operation that would make a protected effect durable must pass
-through the epoch described below.  This separation permits rich, open-ended
-computation without pretending to predict the Agent's complete future.
+The model is finite at one history cut but permits an unbounded sequence of
+cuts.  One history state covers one authority-policy-connected scope; scopes
+with independent policies compose as a product.  Internal reasoning, model
+calls, and speculative file edits are unrestricted.  Before a protected call
+can become durable, its occurrence must belong to the current registered
+contract.
 
-\subsection{A bounded protected-slice calculus}
+\subsection{Causal-completion contracts}
 
-Let $\mathcal H$ be raw handle occurrences and $\mathcal J$ raw gate-use
-occurrences.  A protected action and a finite plan are
+A \emph{logical protected occurrence} \(x\) is a unique invocation slot, not
+an effect identity.  The protected-call registry authenticates its gate and
+handle certificate and maps it to a semantic redemption cell
+\(q_{\rm cell}(x)=d\) and authority label \(\ell(d)\).  Different occurrences
+may map to the same cell after Fork or Restore.
+
+A pomset \(p=(X_p,\prec_p)\) is a finite set of occurrences with a strict
+partial order.  Its linearizations \(\Lin(p)\) are the words containing each
+member of \(X_p\) once and respecting \(\prec_p\).  A
+\emph{causal-completion contract}
+\(\mathcal C=(O,\{p_o\}_{o\in O})\) is a finite nonempty
+\emph{indexed} family of pomsets.  Index \(o\) is a complete outcome identity;
+it is retained even if two residual pomsets later become equal.  Write
+\(\mathsf{CL}(\mathcal C)=\bigcup_{o\in O}\Lin(p_o)\).  We require
+\emph{completion observability}:
+\[
+ v,w\in\mathsf{CL}(\mathcal C)\ \land\
+ v\preceq_{\rm pref}w \quad\Longrightarrow\quad v=w .
+\]
+Thus one complete trace cannot be a strict prefix of another.  This is not
+outcome determinism: incomparable traces and different indices with the same
+trace remain valid.  Without this condition, the runtime cannot tell whether
+a prefix has terminated one outcome or is still inside another; that choice
+must instead be a registered logical occurrence.  The following constructors
+are partial and are defined only when their result remains
+completion-observable:
 \begin{equation}
-\label{eq:raw-plan}
-\begin{split}
- a &::= \mathsf{use}(j,h),\\
- P &::= \mathbf 0 \mid a \mid P;P \mid P\oplus P
-                 \mid P\parallel P .
-\end{split}
-\end{equation}
-Every syntactic action occurrence is branch tagged.  Repeated payload text
-does not create an alias.
-
-Write $\mathsf D(P)$ for the completed raw traces of $P$ and
-$\shuf$ for order-preserving shuffle:
-\begin{equation}
-\label{eq:done-language}
+\label{eq:contract-algebra}
 \begin{aligned}
-\mathsf D(\mathbf 0)&=\{\epsilon\},&
-\mathsf D(a)&=\{a\},\\
-\mathsf D(P;Q)&=\mathsf D(P)\mathsf D(Q),&
-\mathsf D(P\oplus Q)&=\mathsf D(P)\cup\mathsf D(Q),\\
-\mathsf D(P\parallel Q)&=
-  \mathsf D(P)\shuf\mathsf D(Q).&&
+ O_{\mathcal C\oplus\mathcal D}
+  &= (\{L\}\mathbin{\times}O_{\mathcal C})
+     \uplus(\{R\}\mathbin{\times}O_{\mathcal D}),\\
+ p_{(L,o)}&=p_o,\qquad p_{(R,v)}=p_v,\\
+ O_{\mathcal C\otimes\mathcal D}
+  &=O_{\mathcal C}\mathbin{\times}O_{\mathcal D},\\
+ p_{(o,v)}&=p_o\uplus p_v,\\
+ O_{\mathcal C\triangleright\mathcal D}
+  &=O_{\mathcal C}\mathbin{\times}O_{\mathcal D},\\
+ p_{(o,v)}&=p_o\triangleright p_v.
 \end{aligned}
 \end{equation}
-The union remains tagged because action occurrences are branch tagged.
-The executable plant of a plan is its prefix closure
-\[
-  \mathsf{Pref}(P)=\mathsf{prefixes}(\mathsf D(P)).
-\]
-Thus $a;b$ does not enable $b$ first, whereas
-$a\parallel b$ permits either interleaving.  Choice is resolved by the first
-arm-specific fresh commitment; after that point the other arm has no trace in
-the same epoch.
+Every binary constructor has occurrence-disjoint operands.  Before composing
+a newly registered or cloned operand, the history judgment deterministically
+freshens its logical occurrence identifiers and extends \(\rho\), while
+preserving authenticated cell identities.  Existing carried operands are
+already disjoint by history well-formedness.
+The parallel product \(\uplus\) adds no cross-order; the ordered product
+\(\triangleright\) places every event of \(p\) before every event of \(q\).
+The index set of \(\oplus\) is a tagged disjoint union; those of
+\(\otimes\) and \(\triangleright\) are Cartesian products.  Thus choice
+preserves an outcome from each arm, parallel requires both arms but permits
+any causal linearization, and sequence adds a barrier.
 
-A \emph{promised outcome} $\omega$ is a finite partial order of protected
-occurrences; $\mathsf{Lin}(\omega)$ is its set of linearizations.  A plan
-contract carries a finite, nonempty set $\Omega_P$ of outcomes that installing
-the plan promises to keep possible.  The promise concerns possibility, not
-scheduler fairness or task completion.  Sequence, choice, and parallel derive
-outcome contracts by ordered product, tagged union, and disjoint partial-order
-union, respectively.  Leaf promises come from the protected tool API or the
-operation request.  Understating them weakens only the stated transparency
-guarantee; it cannot enlarge the language enforced by the synthesized epoch.
-Writing $\omega\mathbin{\triangleright}\omega'$ for adding every event of
-$\omega$ as a predecessor of every event of $\omega'$ and $\uplus$ for
-disjoint partial-order union, the derivation is
-\begin{equation}
-\label{eq:promise-algebra}
-\begin{aligned}
-\Omega_{P;Q}
- &=\{\omega\triangleright\omega'
-       \mid\omega\in\Omega_P,\omega'\in\Omega_Q\},\\
-\Omega_{P\oplus Q}&=\Omega_P\uplus\Omega_Q,\\
-\Omega_{P\parallel Q}
- &=\{\omega\uplus\omega'
-       \mid\omega\in\Omega_P,\omega'\in\Omega_Q\}.
-\end{aligned}
-\end{equation}
+For a raw prefix \(w\), the residual \(\mathcal C/w\) retains every index
+\(o\) for which \(w\) is a linearization prefix of \(p_o\), and removes the
+occurrences in \(w\) with their incident order.  It is undefined when no index
+remains.  This derivative gives an operational meaning to ``remaining
+contract'' without erasing either outcome or occurrence identity.
 
-\begin{table}[t]
-\centering
-\caption{The six Agent history cuts.  Every cut closes the listed source
-controller classes; a retained continuation is reintroduced inside the newly
-minted target epoch.}
-\label{tab:edge-semantics}
-\scriptsize
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}lll@{}}
-\toprule
-Edge $e$ & target plan $P_e$ & source fate\\
-\midrule
-$\mathsf{ForkChoice}(L,R)$ & $L\oplus R$ & replace parent\\
-$\mathsf{ForkParallel}(L,R)$ & $L\parallel R$ & replace parent\\
-$\mathsf{RestoreReplace}(N,K)$ & $K$ & retire $N$\\
-$\mathsf{RestoreLive}(N,K)$ & $N\parallel K$ & carry $N$\\
-$\mathsf{MergeSelect}_b(L,R;J)$ & $P_b;J$ & retire loser\\
-$\mathsf{MergeJoin}(L,R;J)$ & $(L\parallel R);J$ & join both\\
-\bottomrule
-\end{tabular}
-\end{table}
-
-A raw edge request
-\[
- R=(\kappa,\nu,\delta,e,P_e,\Omega_e,\mathsf{src},\mathsf{anchors})
-\]
-contains a policy version $\kappa$, view version $\nu$, authenticated durable
-receipt trace $\delta$, one typed edge from
-\cref{tab:edge-semantics}, its derived target plan and promises, and the source
-controller anchors that the cut must close.  The caller chooses the operation
-and leaf plans, but cannot submit an arbitrary target language or target
-controller layout.  A new protected action outside $P_e$ is denied until a new
-request extends the bounded slice.
-
-\subsection{Authenticated normalization}
-
-Snapshots copy handles and gate references, so syntax is not security
-identity.  The redemption service authenticates for each $h\in\mathcal H$ a
-cell anchor, issuer, scope, effect digest, and authority lineage.  Define
-\[
-  h\equiv_{\rm cell}h'
-  \quad\Longleftrightarrow\quad
-  \mathsf{cellAnchor}(h)=\mathsf{cellAnchor}(h')
-\]
-and let $q_{\rm cell}:\mathcal H\to\mathcal D$ be the quotient.  A request is
-well formed only when issuer, scope, digest, and lineage agree inside each
-class.  Consequently lineage descends to
-$\ell:\mathcal D\to\mathcal U$, where $\mathcal U$ is the authority-event
-alphabet.  Independent arm occurrences receive fresh anchors by default;
-only authenticated equality creates an alias.
-
-Gate-use occurrences have a separate source relation
-\begin{equation}
-\label{eq:source-equivalence}
-\begin{aligned}
-  j\equiv_{\rm src}j'
-  \quad\Longleftrightarrow\quad{}
-  &\mathsf{controllerAnchor}(j)\\[-2pt]
-  &{}=\mathsf{controllerAnchor}(j').
-\end{aligned}
-\end{equation}
-Its classes determine which old controller states an installation must close.
-It does \emph{not} determine the target layout.  Successful synthesis mints
-one edge-scoped epoch identifier $\eta$ and binds every target gate use to its
-new residual state.  Hence the target controller identity is a compiler
-output, not an attested $q_{\rm ctrl}$, access relation, or co-liveness family.
-
-Normalization is stateful because replay is not a second authority event.
-Starting from the receipt ledger named by $\delta$, a deterministic transducer
-$N_\delta$ processes a raw trace.  On $\mathsf{use}(j,h)$ it resolves
-$d=q_{\rm cell}(h)$.  If $d$ already has a receipt, or was emitted earlier in
-this raw trace, the step emits $\epsilon$; otherwise it emits the fresh cell
-$d$ and marks it pending.  Malformed anchor collisions reject the request
-rather than guessing.  The normalized plant is
-\begin{equation}
-\label{eq:normalized-plant}
-  \mathsf{Plant}_R
-  =\{N_\delta(\hat\sigma)\mid
-       \hat\sigma\in\mathsf{Pref}(P_e)\}.
-\end{equation}
-Its words contain no repeated cell.  Because $N_\delta$ is
-prefix preserving, $\mathsf{Plant}_R$ is prefix closed.
-
-\begin{lemma}[Normalization matters]
-\label{lem:normalization}
-For every well-formed request, $\mathsf{Plant}_R$ is a finite prefix-closed
-language.  Changing an authenticated cell class can change
-$\mathsf{Plant}_R$, while changing a source controller class can change the
-set closed by installation even when $\mathsf{Plant}_R$ is unchanged.
+\begin{lemma}[Observable completion]
+\label{lem:observable-completion}
+Every defined residual \(\mathcal C/w\) is completion-observable, and either
+all of its retained pomsets are empty or none is.
 \end{lemma}
 \begin{proof}
-Induction on a raw trace prefix proves prefix preservation.  Two branch-tagged
-uses mapped to different cells emit two symbols; mapping them to one cell
-makes the second a stutter.  Conversely, source classes occur in the
-\textsc{Install} premise in \cref{sec:semantics}, not in cell emission.
+If residual suffix \(v\) strictly prefixes \(v'\), then \(wv\) strictly
+prefixes \(wv'\) in \(\mathsf{CL}(\mathcal C)\).  If one retained pomset is
+empty and another is not, choose its nonempty suffix \(v\); then \(w\)
+strictly prefixes \(wv\).  Both contradict completion observability.
 \end{proof}
 
-This is the formal separation missing from a workspace-only account: one
-quotient decides fresh redemption, while another decides which stale
-authoritative state must lose commit eligibility.
+\subsection{Trusted history state}
 
-\subsection{Durable causal policy and the exact monitor}
-
-Let $\mathcal A\subseteq\mathcal U^*$ be a regular prefix-closed
-durable-authority policy and assume the authenticated receipt trace
-$\delta\in\mathcal A$.  Symbols in $\mathcal U$ are qualified ledger events:
-they include the authority root, scope, unit/cell anchor, and effect class, so
-$\delta$ is the exact receipt trace rather than a trace of coarse action
-names.  Order is semantic: for example, the policy may contain
-$\mathsf{approve}\,\mathsf{pay}$ but not
-$\mathsf{pay}\,\mathsf{approve}$.  Extend lineage homomorphically to traces as
-$\ell^*$.  The exact safe future at request $R$ is
-\begin{definition}[Durable residual language]
-\label{def:reference-language}
+An Agent history state is
 \begin{equation}
-\label{eq:reference-language}
- F_R=\{\sigma\in\mathsf{Plant}_R
-       \mid \delta\cdot\ell^*(\sigma)\in\mathcal A\}.
+\label{eq:history-state}
+ H=(G,T,K,\rho,\beta,\chi,\nu).
 \end{equation}
+\(G\) is a finite append-only provenance DAG.  Its nodes are continuation
+instances carrying an immutable registered base contract and a branch-local
+progress cursor; its edges record typed Fork, Restore, and Merge operations.
+\(T\) is the structured live frontier:
+\[
+ T ::= b{:}\mathcal C
+     \mid T\oplus_g^s T
+     \mid T\parallel_g T
+     \mid \mathsf{jbar}(T,T)
+     \mid T;T .
+\]
+\(s\in\{\mathsf{open},L,R\}\) records whether a choice is unresolved or which
+arm has made durable logical progress.  Group identifier \(g\) records
+exclusive or jointly live siblings.  The contract interpretation
+\(\sem{T}\) uses both alternatives when \(s=\mathsf{open}\), only the selected
+residual afterward, \(\otimes\) for parallel and \(\mathsf{jbar}\), and
+\(\triangleright\) for sequence.
+The unaddressed constructor \(\mathsf{jbar}\) records that a parallel group
+has been joined and therefore cannot be matched by another Merge.
+
+A frontier \(T\) is \(\mathsf{complete}\) exactly when every pomset in
+\(\sem{T}\) is empty; \cref{lem:observable-completion} rules out a mixture of
+empty and nonempty active outcomes.  We set
+\(\mathsf{heads}(b{:}\mathcal C)=\{b\}\); choice exposes both arms while open
+and only its selected arm afterward; and parallel and \(\mathsf{jbar}\)
+expose the union of their arms.  Sequence exposes its left operand until it
+is complete, then its right.  Here \(\mathsf{heads}(T_1,T_2)\) abbreviates
+the union.  Occurrence progress residualizes leaf contracts but never deletes
+frontier structure; sequence exposure is predicate driven, so completed
+left-outcome indices remain in \(\sem{T}\).  In particular, an isolated
+completed leaf is not collapsed: \(b\) remains addressable for a later Fork
+or Restore.
+Consequently a joined group loses \(g\) immediately, while its continuation
+remains behind a barrier until both arms complete.
+An occurrence is enabled exactly when it is minimal in some pomset of
+\(\sem{T}\); observable completion makes this agree with sequence exposure.
+
+\(K\) maps checkpoint identifiers to immutable earlier continuation records.
+\(\rho\) contains the authenticated occurrence-to-gate/cell, handle,
+lineage, scope, and effect-digest data.  For each live occurrence \(x\), binding
+\(\beta(x)=(j,\eta)\) names its gate \(j\) and current controller generation
+\(\eta\).  Finally, \(\chi\) is the ordered append-only trace of durably
+\emph{resolved} logical occurrences, including \Fresh and \Alias bindings,
+and \(\nu\) is the history-view version.  Resolution may still await remote
+settlement or return; \(\chi\) records authorization/causal progress, not
+physical completion.
+
+\begin{definition}[Well-formed history]
+\label{def:well-formed-history}
+\(H\) is well formed when:
+(i) \(G\) is acyclic and every head of \(T\) is a live maximal node;
+(ii) every checkpoint names an immutable node and contract in \(G\);
+(iii) occurrence and gate identifiers are unique, while cell aliases agree on
+issuer, scope, digest, and lineage;
+(iv) resolved occurrences are downward closed in their pomset, consistent
+with every choice status, and absent from the residual frontier; and
+(v) every live gate has exactly one designated owner through \(\beta\); and
+(vi) every live leaf \(b{:}\mathcal C\) is exactly the indexed residual of
+its immutable registered base \(\Gamma_b\) by the raw projection of its
+branch-local suffix \(\chi_b\), rather than a caller-pruned subfamily; and
+(vii) every constructor in \(T\) is defined, hence every subtree
+interpretation is completion-observable.
+The durable kernel additionally requires that designated live owners are
+active.
 \end{definition}
-$F_R$ is prefix closed: both the plant and policy are prefix closed.
 
-The strongest atomic reference monitor $\mathsf{GM}(R)$ stores the normalized
-within-epoch trace $\sigma$ and has the fresh transition
-\begin{equation}
-\label{eq:gm-step}
- \frac{\sigma d\in F_R}
-      {\sigma\xrightarrow{\mathsf{fresh}(d)}\sigma d}.
-\end{equation}
-Retry, replay, settlement, and crash recovery are stutters in its fresh trace.
-By construction,
-\begin{equation}
-\label{eq:gm-language}
-  \mathsf{FreshTraces}(\mathsf{GM}(R))=F_R .
-\end{equation}
-This monitor is the baseline, not a straw man: under complete mediation and an
-atomic durable ledger it is maximally permissive for the fixed plan, receipt
-trace, and policy.
+The ledger state is not part of \(H\).  It stores a policy version \(\kappa\),
+an exact append-only receipt log \(\Delta\), and an ordered outbox.
+\(\mathsf{lab}(\Delta)\) is its authority-event trace.  Restore may reconstruct
+\(H\)'s workspace payload, but no member of \(\Delta\) is restored.
 
-The edge's preservation condition is
-\begin{definition}[Causal history admission]
-\label{def:causal-admission}
+A security state
+\((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) is \emph{well formed} when
+\(H\) is well formed, \(\mathsf{lab}(\Delta)\in\mathcal A\), each semantic
+cell has at most one fresh receipt, every fresh (respectively alias) record
+in \(\chi\) names its unique (respectively an earlier) receipt, and the
+outbox preserves the order of fresh records.  This joint invariant, rather
+than history well-formedness alone, is assumed below.
+
+\subsection{Six structural rewrite rules}
+
+An untrusted request contains an operation and identifiers, not a proposed
+target language or source set.  \(L,R,J\) below name contracts already
+authenticated by the protected-call registry.  Let \(\mathcal E[-]\) be a
+one-hole frontier context.  \(\mathsf{clone}_k\) creates fresh continuation,
+occurrence, and gate identities from checkpoint \(k\), while preserving each
+authenticated cell and lineage.  \(\mathsf{carry}\) preserves remaining
+logical occurrences and cells but mints target-epoch gate bindings.  Fresh
+identifiers, including the target generation \(\eta_{H,u}\), are
+deterministically allocated from \((\nu,u,\mathsf{role})\); there is no
+caller-selected naming oracle.
+
+\begin{table*}[t]
+\centering
+\caption{Trusted history rewrites.  The matched frontier, not a caller field,
+determines the seed whose owner closure must be fenced.}
+\label{tab:history-rules}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}p{0.19\textwidth}p{0.23\textwidth}
+                    p{0.37\textwidth}p{0.12\textwidth}@{}}
+\toprule
+Operation \(u\) & Required current shape & Derived target shape & Seed\\
+\midrule
+\(\mathsf{ForkChoice}(b,L,R)\) &
+\(\mathcal E[b{:}\mathcal C]\) &
+\(\mathcal E[b_L{:}L\oplus_g^{\mathsf{open}} b_R{:}R]\) &
+\(\{b\}\)\\
+\(\mathsf{ForkParallel}(b,L,R)\) &
+\(\mathcal E[b{:}\mathcal C]\) &
+\(\mathcal E[b_L{:}L\parallel_g b_R{:}R]\) &
+\(\{b\}\)\\
+\(\mathsf{RestoreReplace}(b,k)\) &
+\(\mathcal E[b{:}\mathcal C],\ k\in\operatorname{dom}K\) &
+\(\mathcal E[b_k{:}\mathsf{clone}_k(K(k))]\) &
+\(\{b\}\)\\
+\(\mathsf{RestoreLive}(b,k)\) &
+\(\mathcal E[b{:}\mathcal C],\ k\in\operatorname{dom}K\) &
+\(\mathcal E[b'{:}\mathsf{carry}(\mathcal C)
+ \parallel_g b_k{:}\mathsf{clone}_k(K(k))]\) &
+\(\{b\}\)\\
+\(\mathsf{MergeSelect}(g,w,J)\) &
+\(\mathcal E[T_L\oplus_g^sT_R],\
+ s\in\{\mathsf{open},w\}\) &
+\(\mathcal E[\mathsf{carry}(T_w);b_J{:}J]\) &
+\(\mathsf{heads}(T_L,T_R)\)\\
+\(\mathsf{MergeJoin}(g,J)\) &
+\(\mathcal E[T_L\parallel_gT_R]\) &
+\(\mathcal E[\mathsf{jbar}(\mathsf{carry}(T_L),
+ \mathsf{carry}(T_R));b_J{:}J]\) &
+\(\mathsf{heads}(T_L,T_R)\)\\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+The first fresh or alias occurrence in an open choice atomically sets its
+status; later occurrences from the other arm are disabled.  Hence
+\(\mathsf{MergeSelect}(g,w,J)\) has no derivation after durable logical
+progress in the loser, even when that progress was receipt silent.
+In \(\mathsf{MergeJoin}\), replacing the addressable
+\(\parallel_g\) node by \(\mathsf{jbar}\) retires \(g\) in the same rewrite;
+the same pair therefore cannot be joined twice.
+
+Each table seed denotes all live occurrences under the named branches.  It is
+closed through structured topology, shared ownership, and semantic cell.  It
+is also closed under authority-policy scope: all occurrences that can change
+the same policy residual are added.  Since one history state is exactly one
+policy-connected scope, this last rule reaches every live occurrence in
+\(T\); independent scopes have disjoint histories, logs, and policies.
+Call the least fixed point \(\mathsf{Aff}_H(u)\).  The derivation computes
 \begin{equation}
-\label{eq:causal-admission}
- \mathsf{Admit}(R)
- \iff
- \forall\omega\in\Omega_e.\quad
- \mathsf{Lin}(\omega)\cap F_R\ne\varnothing .
+\label{eq:derived-cut}
+\begin{aligned}
+ H\vdash u\Downarrow
+   &(H',\mathcal C_{H,u},\Src_{H,u},\mathsf{Tgt}_{H,u}),\\
+\mathcal C_{H,u}&=\sem{T'},\\
+\Src_{H,u}&=\{\eta\mid
+  x\in\mathsf{Aff}_H(u),\ \beta(x)=(j,\eta)\}.
+\end{aligned}
 \end{equation}
-\end{definition}
-Parallel scheduler orders count as one promised partial-order outcome, so one
-policy-legal linearization suffices.  A sequential prerequisite, exclusive
-choice, or join barrier is part of $\omega$ and cannot be reordered away.
-When the only promise is the empty outcome, a seal can still enforce safety,
-but it is reported as carrying no nontrivial transparency claim.
+Because one \(H\) contains one policy-connected scope and closure follows
+that component, \(\mathsf{Aff}_H(u)\) reaches every live gate in \(T\).
+Thus \(\mathcal C_{H,u}\), \(\Src_{H,u}\), and \(\mathsf{Tgt}_{H,u}\)
+describe the same complete cut rather than a whole-frontier language paired
+with a local handoff.
+\(G'\) appends the typed edge and target nodes; retired nodes remain in
+\(G'\), and \(\nu'=\nu+1\).  Target bindings cover every new or carried gate whose old owner is
+in \(\Src_{H,u}\), and name the derived generation \(\eta_{H,u}\).  A
+request naming a nonexistent checkpoint, the wrong
+group mode, a nonmember winner, an unregistered contract, or a composition
+that is not completion-observable has no derivation.
+
+\begin{lemma}[History integrity and source completeness]
+\label{lem:history-derivation}
+For well-formed \(H\), the judgment in \cref{eq:derived-cut} is deterministic.
+If it derives \(H'\), then \(H'\) is well formed.
+Moreover, \(\Src_{H,u}\) is exactly the set of designated generations owning
+a gate in the affected closure; it is not a request field.  Any generation
+outside \(\Src_{H,u}\) that owns a live gate belongs to an independent scope
+and cannot change a cell mode, structured-group state, or policy residual relevant to
+\(\mathcal C_{H,u}\) or \(W_{H,u}\).
+\end{lemma}
+\begin{proof}
+The unique group identifiers and one-hole match select at most one rule.
+Each rule appends edges to fresh nodes, so acyclicity is preserved.  Tags,
+\(\mathsf{clone}\), and \(\mathsf{carry}\) establish identifier and cell
+conditions.  \Cref{lem:observable-completion} handles residuals, and the
+partial-constructor check handles new compositions.  Predicate-driven
+sequence exposure preserves indexed contract interpretation, and the
+unaddressed join barrier makes group retirement irreversible.  Retirement
+and target rebinding establish the live-head and single-owner conditions.
+Least-fixed-point induction gives both inclusions
+of source completeness: every enumerated generation owns a reached gate, and
+closure visits every gate connected through topology, a shared generation,
+or semantic cell.  Scope closure reaches every remaining live gate in \(T\).
+Product separation then gives the final isolation statement.
+\end{proof}
+
+This lemma rules out the oracle used by a caller-described plan.  For example,
+an actual join with pending inputs \(a,b\) cannot pretend that either input is
+already complete: the request names only \(g,J\), and the rule reads both
+residual inputs from \(T\).
 
 \subsection{Adversary and trusted boundary}
 
-The adversary controls Agent output, tool arguments, stale snapshots, retries,
-and requested history edges.  It may race a fresh commitment against an
-installation and present copied raw handles.  Trusted components are the
-policy issuer, authenticated cell and source-controller anchors, the
-append-only receipt ledger, complete mediation of protected effects, and the
-linearizable crash-stable primitives used by \textsc{Prepare} and
-\textsc{Install}.  The calculus does not infer natural-language intent or
-external state.  Remote exactly-once delivery still requires an idempotent or
-queryable sink, an outbox, or conservative issue-time charging.
+The adversary controls Agent output, operation choice, tool arguments, copied
+workspace state, retries, stale seals, and scheduling.  It may race any live
+protected call against a history edit.  It cannot forge the protected-call
+registry, checkpoint/DAG store, cell certificates, policy, or durable ledger.
+We assume complete mediation and linearizable, crash-stable transactions for
+logical occurrence resolution and installation.  These are explicit TCB
+assumptions.  The model neither infers a contract from natural language nor
+claims that deployed Codex or Claude currently supplies this trusted state.

@@ -38,6 +38,28 @@ implementation may safely omit optional behavior without being confused with
 a GateClone over-approximation.  Its seal certifies structural history
 admission only; it deliberately does not authorize an external effect.
 
+`exact_history_realization.py` is a bounded executable model of the paper's
+unified Agent-history contract.  Unlike the older manifest checker, its
+untrusted operation objects cannot carry a plan, outcome family, source set,
+controller anchors, or receipt frontier.  The checker derives a finite pomset
+completion family and every affected source owner from a trusted
+`HistoryState` for all six Fork/Restore/Merge operations.  It then enumerates
+causal linearizations, performs length-preserving fresh/alias resolution,
+admits exactly when every derived outcome has a policy-safe completion, and
+constructs `W` as precisely the prefixes of those safe completions.  Its cut
+seal compares both the fresh receipt trace and the ordered, append-only
+logical-occurrence frontier, including an order-sensitive digest; installation
+re-derives and closes every source.  The
+17 focused litmus tests include completion-observability rejection,
+same-cell aliases, complete-outcome
+quantification, source completeness for both Merge forms, and both orderings
+of fresh/alias-versus-install races.
+
+The executable model deliberately uses a flat frontier and finite caps of
+128 outcomes, eight occurrences per outcome, and 50,000 linearizations.  These
+bounds make exhaustive checking auditable; passing them is not a proof of the
+paper's unbounded exact-realization or weak-bisimulation theorems.
+
 The history-admission request schema is version 3, while result and verifier
 schemas are version 4.  The adapter labels controller co-liveness evidence as
 `exact`, `sound_overapprox`, or `exact_projection_through_r`; this is an
@@ -62,6 +84,7 @@ Run the unit tests and deterministic exhaustive explorer from this directory:
 
 ```sh
 python3 -m unittest -v
+python3 -m unittest -v test_exact_history_realization
 python3 explore.py
 python3 -m history_admission.compiler \
   fixtures/history_admission/inherit_choice.json \

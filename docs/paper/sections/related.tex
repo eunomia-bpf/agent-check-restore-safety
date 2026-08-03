@@ -1,84 +1,79 @@
 \section{Related Work}
 \label{sec:related}
 
-\paragraph{Safety monitors and Agent authorization}
-Execution monitors enforce prefix-closed policies by mediating
-security-relevant actions~\cite{schneider2000enforceable}.  Consumable
-credentials provide atomic durable ratification
-~\cite{bowers2007consumable}; Commit-Time Authorization binds freshness,
-order, and eligibility to effect release~\cite{santos2026committime}; and
-FORGE evaluates policies over an Agent's causal-history view
-~\cite{palumbo2026forge}.  Under complete serialized mediation these systems
-can form the strong $\mathsf{GM}$ baseline used here.  Our result does not
-claim better per-action safety.  It gives a typed history-cut semantics,
-compiles the resulting causal residual into an epoch, and proves that an
-atomic live replacement preserves the reference language under races.
+\paragraph{History-sensitive authorization}
+Abadi and Fournet make access rights depend on execution history and give
+guidance for propagating current rights across fork/join; Krukow, Nielsen,
+and Sassone use event structures and dynamic checking for history-based policies
+~\cite{abadi2003history,krukow2008history}.  FORGE is the closest Agent-era
+reference monitor: it evaluates policy over a causal dependency DAG and proves
+verdict correctness from sufficient, sound observations
+~\cite{palumbo2026forge}.  These systems decide a proposed action from the
+history observed so far.  We instead admit a topology-changing operation by
+quantifying over its structurally derived future completions, including
+logical aliases that advance the new history without a new policy event.
+Thus we do not claim the first causal-DAG or fork/join authorization model.
+
+\paragraph{Dynamic controller and property update}
+Live controller update is a mature synthesis problem.  Nahabedian et al.
+synthesize a sound-and-complete transition controller around hot-swap and
+architectural reconfiguration~\cite{nahabedian2020dynamic}.  Amram et al.
+compute a bridge while a synthesized GR(1) controller keeps moving, prove
+soundness/completeness, and optimize worst-case bridge length
+~\cite{amram2022dynamic}.  Bresolin and Lanese construct most-general
+property-preserving replacements and characterize safe dynamic state transfer
+~\cite{bresolin2021static}.  Transformational supervisor synthesis updates an
+old supervisor after a model delta while retaining the result of fresh
+synthesis~\cite{thuijsman2022transformational}; reconfigurable DES work also
+models explicit configuration events~\cite{macktoobian2022reconfiguration}.
+
+Our result is not a first bridge, state transfer, hot-swap, or maximally
+permissive update.  Those abstractions take old/new specifications,
+controllers, or transfer relations as input.  Runtime-update models represent
+handoff or reconfiguration as semantic behavior, while transformational
+synthesis updates the modeled supervisor at design time.  Our starting point
+is instead an authenticated Agent history operation.  Its checkpoint lineage
+and live topology derive both the new completion contract and every source
+owner; its implementation theorem refines the history edge to one irreversible
+receipt/occurrence frontier under old-use races.
 
 \paragraph{Automata and supervisory control}
-Residual languages, canonical deterministic automata, and language
-equivalence are classical~\cite{brzozowski1964derivatives}.  Supervisory
-control synthesizes legal sublanguages under controllability and observation
-constraints~\cite{ramadge1987supervisory,cieslak1988partial}; range control
-adds lower and upper language bounds~\cite{yin2017range}; and decentralized
-supervision/localization distribute a monolithic supervisor while preserving
-controlled behavior~\cite{komenda2017decentralized,
-zhang2017localization}.  Reconfigurable DES work introduces explicit events
-for moving between already modeled configurations
-~\cite{macktoobian2022reconfiguration}.
+Security automata enforce prefix-closed properties
+~\cite{schneider2000enforceable}.  Under full observation, supervisory
+control yields supremal controllable behavior
+~\cite{ramadge1987supervisory}; partial observation adds observability
+conditions~\cite{cieslak1988partial}, and relative observability restores a
+union-closed supremal construction~\cite{cai2015relative}.  Residual languages
+give canonical deterministic recognizers~\cite{brzozowski1964derivatives}.
+Decentralized supervision and localization study correct distribution of a
+monolithic result~\cite{komenda2017decentralized,zhang2017localization}.
+We use these facts directly.  For a fixed completion family and receipt log,
+the greatest-language argument and residual implementation are established
+machinery.  The contribution is the Agent-history derivation and the
+occurrence-level durable refinement that make those fixed inputs trustworthy.
 
-We use the first of these results to represent $F_R$ and deliberately emit one
-logical epoch rather than claiming a new separability criterion.  The
-Agent-specific theorem begins one level earlier and ends one level later: a
-raw Fork/Restore/Merge cut plus copied identities and an irreversible receipt
-trace derives the language, while a version/frontier CAS retires the old
-language in the presence of concurrent fresh effects.  Removing either side
-reduces our construction to established automata or supervisor machinery.
+\paragraph{Causality and rollback}
+Event and configuration structures already model causality, conflict, and
+concurrency~\cite{winskel1987event,vanglabbeek2009configuration}; our finite
+pomset family is intentionally a small contract representation, not a new
+concurrency model.  Rollback recovery and continuity systems preserve,
+reconstruct, or detect inconsistent past state
+~\cite{elnozahy2002rollback,parno2011memoir,matetic2017rote,
+brandenburger2017lcm}.  Virtual-machine work observed early that checkpointed
+execution becomes a tree and can revive one-time security state
+~\cite{garfinkel2005virtual}; ACRFence identifies action replay and authority
+resurrection in Agent Restore~\cite{zheng2026acrfence}.  History admission
+does not make the world rollbackable.  It retains discarded nodes as
+provenance and decides which future can coexist with their durable effects.
 
-\paragraph{Causality, choice, and rollback}
-Event and configuration structures represent causality, conflict, and
-concurrency~\cite{winskel1987event,vanglabbeek2009configuration}; workflow and
-separation models provide related composition foundations
-~\cite{meyer2018workflow,pym2004bi}.  Our plan grammar uses only finite
-sequence, tagged choice, and shuffle, and makes no claim to a new model of
-concurrency.  Its purpose is to prevent the security reduction from collapsing
-approval-before-payment, exclusive alternatives, and join prerequisites to
-the same endpoint set.
-
-Rollback recovery reconstructs a consistent past and treats output commit as
-a boundary beyond recoverable computation~\cite{elnozahy2002rollback}.
-Memoir, ROTE, and LCM preserve or detect continuity, rollback, and forks
-~\cite{parno2011memoir,matetic2017rote,brandenburger2017lcm}.  These protect
-past state.  A live Agent cut additionally needs a future controller program
-and a linearization point between old and new commit eligibility; that is the
-role of the canonical epoch and \textsc{Install}.
-
-\paragraph{Agent lifecycle and effect substrates}
-ACRFence exposes authority resurrection after restore, while DART checks
-whether downstream commitments leave a checkpoint recoverable
-~\cite{zheng2026acrfence,yang2026dart}.  Crab, Fork--Explore--Commit, and
-Agent libOS provide concrete branching, checkpoint, selection, and
-capability-controlled substrates~\cite{wu2026crab,wang2026fork,
-zhang2026agentlibos}.  PORTICO compiles task contracts into epoch-bound
-capabilities, and Earned Authority bounds effects across Agent mutation
-~\cite{santos2026lingering,zhang2026earned}.  Atomix and Cordon stage
-multi-tool effects~\cite{mohammadi2026atomix,chen2026cordon}; transactional
-outboxes and stable idempotency keys are possible durable substrates
-~\cite{aws2026outbox,aws2026idempotency}.
-
-These mechanisms can implement anchors, receipts, fencing, or effect release.
-They do not give the theorem proved here: exact causal monitor residualization
-for six online history cuts plus a race-safe replacement rule that closes every
-source epoch.  Conversely, our abstract kernel does not establish their
-parsers, mediation, crash recovery, or external exactly-once delivery.
-
-\paragraph{Coordination and hyperproperties}
-Invariant confluence and Complete CALM characterize when coordination can be
-avoided for broader classes of state or history specifications
-~\cite{bailis2014coordination,hellerstein2026completecalm}.  Runtime
-enforcement and synthesis for hyperproperties relate several traces
-~\cite{clarkson2008hyperproperties,bonakdarpour2020controller,
-coenen2022hyperproperties}.  We claim neither a universal coordination
-criterion nor a new hyperproperty formalism.  The cross-history issue here is
-compiled into one finite causal safety language at each Agent cut; the new
-obligation is to replace its authoritative epoch without admitting a
-cross-version trace.
+\paragraph{Durable effects and fencing}
+Consumable credentials provide atomic distributed ratification and accounting
+of bounded authority~\cite{bowers2007consumable}.  Commit-Time Authorization checks
+freshness, causal priority, effect binding, and eligibility when an Agent
+effect becomes durable~\cite{santos2026committime}; PORTICO uses
+task-local epochs and stale-handle rejection~\cite{santos2026lingering}.
+Transactional outboxes and stable idempotency keys can provide the durable
+release substrate~\cite{aws2026outbox,aws2026idempotency}.  We assume these
+per-effect mechanisms.  The new obligation is cut-wide: derive and close
+every owner whose continuation the Agent edit changes, while ordering both
+new receipts and receipt-silent aliases against target activation.

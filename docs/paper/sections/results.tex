@@ -1,186 +1,175 @@
-\section{Canonical Causal Epoch Theorem}
+\section{Exact Agent History Realization}
 \label{sec:results}
 
-Write $\mathsf{Sound}_R(E)$ when
-$\mathsf{FreshTraces}(E)\subseteq F_R$, and
-$\mathsf{Pres}_R(E)$ when every $\omega\in\Omega_e$ has a linearization in
-$\mathsf{FreshTraces}(E)$.  These predicates quantify over behavior, not a
-caller-supplied controller manifest.
+We now join the structural, language, and durable levels in one result.
+Let \(I_0,S_0\) be full bootstrap states over the same well-formed durable
+core and admitted initial cut: both have empty resolved prefix and identical
+history, receipts, outbox, and target bindings; \(S_0\) additionally has the
+verified program at \(q^0\), with exactly the target generation active.
+Write \(\mathsf{Ideal}(I_0)\) for the atomic history machine of
+\cref{sec:ideal}, and \(\mathsf{Compiled}(S_0)\) for the kernel of
+\cref{sec:kernel} with arbitrary internal compilation, preloading, failed
+installs, retries, settlement, and crashes.
 
-\begin{theorem}[Canonical Causal Epoch]
-\label{thm:canonical-epoch}
-Let $R$ be well formed, let $\delta\in\mathcal A$, and assume complete
-mediation through the linearizable, crash-stable kernel rules in
-\cref{sec:semantics}.
-\begin{enumerate}[leftmargin=*,itemsep=2pt]
-  \item \textbf{Exact feasibility.}
-  \[
-    \mathsf{Admit}(R)
-    \quad\Longleftrightarrow\quad
-    \exists E.\ \mathsf{Sound}_R(E)\land\mathsf{Pres}_R(E).
-  \]
-  If it holds, $\mathsf{Can}(R)$ is such an epoch and
-  \[
-    \mathsf{FreshTraces}(\mathsf{Can}(R))
-      =\mathsf{FreshTraces}(\mathsf{GM}(R))=F_R .
-  \]
-  Hence it preserves every monitor-legal behavior, and every monitor-sound
-  epoch has a language contained in its language.
+The observable alphabet is
+\[
+\begin{split}
+\mathcal O=\{&
+ \mathsf{Edge}(u),\Fresh(x,d),\Alias(x,d),\\[-2pt]
+ &\mathsf{deny}(x),\Dispatch(d)\}.
+\end{split}
+\]
+Compiler/preload steps, failed stale installs, retries, settlement, result
+delivery, and crash recovery are \(\tau\).
+This choice observes logical alias progress even though its authority
+projection is empty.
+The observation projection maps a successful
+\(\mathsf{Use}(x,j,h)/a\) to \(a\), a successful \Install to
+\(\mathsf{Edge}(u)\), and invalid use and head release to
+\(\mathsf{deny}(x)\) and \(\Dispatch(d)\), respectively.
 
-  \item \textbf{Atomic-cut equivalence.}
-  Installing a verified seal at its named
-  $(\kappa,\nu,\delta,\mathsf{src})$ establishes
-  \cref{eq:kernel-reference-relation}.  The compiled kernel and ideal
-  history-cut monitor are bisimilar on \textnormal{\textsc{Prepare}} and
-  \textnormal{\textsc{Install}}, with replay, retry, settlement, and crash as matching
-  stutters.  A failed install has no state effect, and after a successful
-  install no source epoch can make a fresh preparation.
+\begin{theorem}[Exact Agent History Realization]
+\label{thm:exact-history}
+Let \(I_0,S_0\) be bootstrap states as above and assume the trusted boundary
+of \cref{sec:model}.
 
-  \item \textbf{Online composition.}
-  For every finite interleaving of fresh preparations, stutters, and
-  successfully installed admitted Fork/Restore/Merge requests
-  $R_0,R_1,\ldots$ under the same $(\kappa,\mathcal A)$, the execution
-  partitions at installs into traces
-  $\sigma_i\in F_{R_i}$.  At every prefix,
-  \[
-    \delta_0\ell_0^*(\sigma_0)
-      \ell_1^*(\sigma_1)\cdots\in\mathcal A ,
-  \]
-  and a fresh event belongs to exactly one side of every history cut.
+\begin{enumerate}[leftmargin=*,itemsep=3pt]
+ \item \textbf{Exact local realizability.}  For every reachable well-formed
+ security core \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) and operation
+ with a trusted derivation \(H\vdash u\Downarrow(\cdots)\), the following are
+ equivalent:
+ \[
+ \begin{aligned}
+  &\mathsf{Admit}(H,u);\\
+  &\exists (L,B).\ (L,B)\text{ realizes }(H,u);\\
+  &\mathsf{Compile}(H,u,\Delta)\text{ emits a verifiable seal}.
+ \end{aligned}
+ \]
+ If they hold, the compiled resolved-event language is exactly \(W_{H,u}\),
+ its marked completions are \(B^\star_{H,u}\), and every realization is
+ componentwise contained in this pair.  If they fail, a returned
+ outcome \(o\) with \(M_o(H,u)=\varnothing\) proves that no realization exists for the
+ fixed history, policy, log, and registered contracts.
+
+ \item \textbf{Global implementation equivalence.}
+ \[
+   \mathsf{Compiled}(S_0)
+   \ \approx_{\mathcal O}\
+   \mathsf{Ideal}(I_0)
+ \]
+ by weak bisimulation.  The equivalence covers arbitrary finite or infinite
+ interleavings of all six history operations, fresh commitments, logical
+ aliases, retries, ordered dispatch, settlement, and crashes.
 \end{enumerate}
+
+Consequently, at every reachable prefix: the authority trace satisfies
+\(\mathcal A\); every active cut remains completion-nonblocking; every live
+gate has one authoritative owner; a closed generation cannot make a fresh or
+alias transition; each logical occurrence linearizes on exactly one side of a
+successful history cut; and released effects follow fresh receipt order.
 \end{theorem}
 
 \begin{proof}
-\emph{Feasibility.}
-If a sound, promise-preserving $E$ exists, each promised outcome has a
-linearization in $\mathsf{FreshTraces}(E)\subseteq F_R$, which is precisely
-\cref{eq:causal-admission}.  Conversely, when
-$\mathsf{Admit}(R)$ holds, \cref{lem:residual-exact} gives
-$\mathsf{FreshTraces}(\mathsf{Can}(R))=F_R$; every promise therefore has a
-canonical-epoch execution.  Equality with the global monitor follows from
-\cref{eq:gm-language}.  The maximality statement is the definition of monitor
-soundness.
+\emph{Local equivalence.}
+\Cref{lem:greatest-realization} proves
+\(\mathsf{Admit}\) iff a realization exists and identifies its greatest
+language \(W\).  On admission, finiteness of the contracts makes \(W\) finite,
+so \cref{lem:compiled-language} emits an exact program and the checker accepts
+its symmetric-difference and cut-digest checks.  Conversely, a verifiable
+seal includes outcome coverage, \(B^\star\), and an exact program for \(W\), hence witnesses
+a realization.  If admission fails, any realization would have to cover the
+reported \(o\), contradicting \(M_o=\varnothing\).
 
-\emph{One cut.}
-Relate the initial canonical state to the ideal monitor at $\epsilon$.
-Suppose the relation holds after $\sigma$.  The canonical program enables $d$
-iff $\sigma d\in F_R$ by \cref{eq:canonical-epoch}; this is exactly the ideal
-monitor guard.  Both \Prepare{} steps append the same $\ell(d)$ and move to
-states related at $\sigma d$.  The \textsc{Install} guards compare the same
-durable fields.  On success both semantics close the complete source set,
-activate the target at $\epsilon$, and advance the view; on failure both
-stutter.  All remaining rules emit no fresh symbol and preserve the relation.
-This proves bisimulation by induction on transitions.  In particular, an old
-\Prepare{} before the cut changes the compared $\delta$, whereas after the
-cut its closed-phase premise is false.
+\emph{Bisimulation relation.}
+Relate an ideal state \(I\) and compiled state \(S\) when:
+(i) \(\kappa,H,\Delta\), all receipt phases, and the ordered outbox agree;
+(ii) their active cut and resolved prefix are
+\((W,B^\star),r\), and the compiled program state is
+\((W/r,B^\star/r)\);
+(iii) \(\beta\) equals the kernel's gate/occurrence binding, every designated
+live owner is the unique active generation, and no closed source owns a live
+gate; and
+(iv) the ordered occurrence/receipt invariant following
+\cref{eq:use-rule} holds.  The bootstrap construction satisfies this
+relation.
 
-\emph{Many cuts.}
-Within epoch $i$, the one-cut argument gives
-$\sigma_i\in F_{R_i}$, so the definition of $F_{R_i}$ keeps the cumulative
-receipt trace in $\mathcal A$ after every prefix.  A successful next install
-is anchored to that exact trace and starts the relation at $\epsilon$.
-Induction over successful installs proves the displayed invariant and unique
-cut ownership.
+\emph{Protected occurrences.}
+Suppose \(x\) is enabled.  Equal \(H\), registry data, and \(\Delta\) compute
+the same resolved label \(a\).  The compiled program has an \(a\)-transition
+iff \(ra\in W\) by \cref{lem:compiled-language}, exactly the ideal guard.
+Both atomic steps residualize the same occurrence, append \(a\) to \(\chi\),
+advance the view and residual state, and, only for \Fresh, append the same
+receipt and outbox item.  The successor states are related.  Disabled,
+misbound, or closed calls produce the same denial.  This proves both
+simulation directions for \Fresh, \Alias, and denials.
+
+\emph{History edges.}
+For an ideal \(\mathsf{Edge}(u)\), determinism of
+\cref{lem:history-derivation} gives one \(H'\), contract, source closure, and
+target.  Local realizability lets the compiled side take internal
+compile/check/preload steps and then a successful \Install.  Its transaction
+persists the same \(H'\), closes exactly the derived owners, and starts the
+exact program at \((W/\epsilon,B^\star/\epsilon)\); the successors are
+related.
+Conversely, every successful install re-derives the same judgment and verifies
+\(\mathsf{Admit}\), so the ideal edge exists and matches it.
+
+If a protected occurrence wins before installation, a fresh step changes
+\(\Delta,\chi,\nu\) and an alias changes \(\chi,\nu\); in either case the old
+digest fails and the install stutters.  If installation wins, every old
+affected owner is closed, so an old use has no transition.  Thus every
+fresh/alias/install race is covered without an intermediate unmatched state.
+This is exactly \cref{lem:cut-linearization}; its source-isolation case also
+shows that independent scopes preserve the relation.
+
+\emph{Remaining transitions.}
+Both machines dispatch the same outbox head.  Retry, result delivery,
+settlement, failed install, and crash recovery preserve the relation through
+matching \(\tau\)-steps.
+The relation is re-established at \(\epsilon\) after every successful edge,
+so coinduction covers an arbitrary edge sequence.  Policy safety and
+completion nonblocking follow from membership in \(W\); owner and
+closed-generation facts follow from the relation invariant.  Atomic ordering
+of \cref{eq:use-rule} and \Install assigns each occurrence to one cut side,
+and FIFO dispatch gives the final claim.
 \end{proof}
 
-The theorem is one compiler-correctness result.  Its first clause prevents
-``safe'' admission by deleting a promised causal outcome; its equality
-prevents deleting optional monitor behavior; and its last two clauses connect
-that language to the live controller generation that may actually prepare an
-effect.
+The theorem identifies a security boundary that does not exist for a
+single immutable execution: an Agent may rewrite a live logical past exactly
+when every outcome induced by that rewrite remains realizable, and the same
+criterion can be enforced while effects and history cuts race.  The residual
+construction and durable kernel are witnesses for this one history-realization
+theory, from typed Fork/Restore/Merge semantics to occurrence-level effects.
 
-\subsection{Complete negative evidence}
+\subsection{Why the boundary needs both histories}
 
-If admission fails, choose
-\[
- \omega\in\Omega_e
- \quad\text{with}\quad
- \mathsf{Lin}(\omega)\cap F_R=\varnothing .
-\]
-This is a complete witness, not merely a compiler timeout.
+The sufficient cut observation is
+\begin{equation}
+\label{eq:cut-observation}
+ \alpha(H,u)=
+ (\mathcal C_{H,u},\rho,\beta,
+  \Delta,\chi,\Src_{H,u},\kappa,\nu).
+\end{equation}
+This tuple is a sufficient semantic observation, not a claim that one literal
+encoding is componentwise minimal.  Its distinctions have independent roles.
+Causal order distinguishes \(a\prec b\) from \(b\prec a\) under a policy
+admitting only \(ab\); history mode distinguishes \(a\oplus b\) from
+\(a\otimes b\) under one-use authority.  Cell identity distinguishes two
+copied occurrences of one effect from two effects.  The receipt frontier
+decides whether the next occurrence is fresh, whereas the ordered
+logical-occurrence frontier records receipt-silent alias progress through a
+choice or join.  Finally, owner bindings determine which still-live
+generations must lose eligibility at the cut.  These examples explain why a
+workspace hash, receipt log, or controller epoch alone cannot implement the
+theorem; an implementation may encode the same information differently.
 
-\begin{corollary}[No pruning repair]
-\label{cor:no-pruning-repair}
-For such an $\omega$, no monitor-sound epoch can preserve the request.  Adding
-authority, changing the typed operation or its promise, or changing ledger
-identity produces a new request; restricting behavior cannot repair this one.
-\end{corollary}
-\begin{proof}
-Every monitor-sound epoch has trace language contained in $F_R$, which
-contains no linearization of $\omega$.
-\end{proof}
+\subsection{What rejection means}
 
-In the procurement example, if $p_B$ prepares before selection, the new
-durable residual may contain no completion of the promised supplier-$A$
-outcome.  The stale seal fails first; recompilation then returns that outcome
-as the witness instead of installing a controller that is certain to break
-the promise later.
-
-\subsection{Why the trace lift is strict}
-
-The causal model is not a notational lift of endpoint families.  Consider
-\[
-  F_1=\{\epsilon,a,b,ab\},
-  \qquad
-  F_2=\{\epsilon,a,b,ba\}.
-\]
-Both have exactly the endpoint family
-$\{\varnothing,\{a\},\{b\},\{a,b\}\}$, yet one admits $a\prec b$ and the
-other $b\prec a$.  The traces $ab$ and $ba$ have the same endpoint and
-opposite verdicts under an order-sensitive policy.
-
-\begin{proposition}[Endpoint erasure is incomplete]
-\label{prop:endpoint-incomplete}
-No admission decider that factors only through
-$\{\operatorname{set}(\sigma)\mid\sigma\in F_R\}$ is exact for the request
-class in \cref{eq:raw-plan}.
-\end{proposition}
-\begin{proof}
-Use the same two-action endpoint family in two requests, promising
-$a\prec b$.  Let the first policy admit $ab$ and the second admit only $ba$
-(in addition to both one-event traces).  The endpoint observation agrees, but
-\cref{eq:causal-admission} accepts only the first.
-\end{proof}
-
-Sequence and Merge barriers therefore add expressive power that qualified
-endpoint names cannot recover without encoding the entire causal state into
-each name.  When policy and plant are permutation invariant, quotienting by
-endpoint sets recovers the older commutative corollary in
-\cref{sec:validation}.
-
-\subsection{Tightness of the atomic cut}
-
-The program equality alone does not imply the online theorem.  Both durable
-comparisons in \cref{eq:install-rule} have small counterexamples.
-
-\paragraph{Receipt-frontier comparison}
-Let $\mathcal A=\{\epsilon,x,y\}$, let an old source be able to prepare $x$,
-and compile a target whose sole fresh action is $y$ at
-$\delta=\epsilon$.  If old $x$ linearizes first but installation ignores the
-changed receipt trace, target $y$ produces $xy\notin\mathcal A$.  Comparing
-only a workspace or view version does not detect this race.
-
-\paragraph{Complete source closure}
-Use the same policy, let installation linearize first, and omit the old source
-from the closed set.  Target $y$ and stale $x$ can again both prepare, in
-either order, although the canonical target program is exact.  Therefore a
-successful cut must compare and close the complete authoritative source set,
-not only publish a fresh target identifier.
-
-Policy and view versions prevent analogous ABA reuse: without them, a seal for
-an earlier Restore can overwrite a later Fork whose receipt trace happens to
-match.  Program and request hashes prevent rebinding a valid cut to different
-plan or anchor data.  We do not claim these literal fields are the only
-encoding; the counterexamples require their semantic distinctions or
-equivalent information.
-
-\subsection{The Agent-specific boundary}
-
-For a fixed $F_R$, residual synthesis is classical.  For a fixed configuration
-change with no protected race, compare-and-swap is classical.  The theorem
-quantifies over their shared linearization boundary: the typed Agent edge
-simultaneously changes the causal plant, the controller generation, and the
-meaning of copied handles, while the receipt trace may irreversibly advance.
-Its bisimulation fails if the cut is treated as an offline compiler call or if
-the installer is left as a refinement assumption.  This online
-raw-edge-to-durable-epoch statement is the claimed contribution.
+A witness \(o\) is not a compiler timeout or a suggested branch to delete.
+It identifies a pomset forced by the typed history operation whose every causal
+linearization violates the fixed durable residual.  Changing the operation,
+policy grant, checkpoint, or registered leaf contract creates a new problem
+instance.  With those inputs fixed, restricting runtime behavior cannot
+restore outcome coverage.  This exact negative direction is what permits
+history admission to serve as an API boundary rather than a best-effort
+planner.

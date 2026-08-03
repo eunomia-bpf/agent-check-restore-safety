@@ -1,91 +1,205 @@
-\section{Compilation and Verification}
-\label{sec:algorithm}
+\section{Compilation and Durable Refinement}
+\label{sec:kernel}
 
-The theorem yields a compiler for one proposed history cut, not a new Agent
-planner.  Its input is the raw request $R$ from \cref{sec:model}; its output is
-either a version-bound epoch seal or a promised outcome that no sound epoch
-can preserve.
+\subsection{Occurrence-sensitive compilation}
 
-\subsection{Canonical construction}
+Because every derived pomset is finite, \(W_{H,u}\) and
+\(B^\star_{H,u}\) are finite.  For a language \(L\) and resolved word \(z\),
+let \(L/z=\{v\mid zv\in L\}\).  The compiler emits the canonical
+generated/marked residual program.  Write
+\(q_z=(W/z,B^\star/z)\):
+\begin{equation}
+\label{eq:canonical-program}
+\begin{aligned}
+ Q_{W,B} &= \{q_z\mid z\in W\},\\
+ q^0&=q_\epsilon=(W,B^\star),\\
+ q_z\xrightarrow{a}q_{za}
+ &\quad\Longleftrightarrow\quad za\in W .
+\end{aligned}
+\end{equation}
+Every state is generated; a state is marked exactly when
+\(\epsilon\in B^\star/z\).
+The transition label \(a\) contains the logical occurrence \(x\), semantic
+cell \(d\), and fresh/alias mode.  Consequently an enabled cell cannot be
+exercised through the gate of a different branch occurrence.
 
-\begin{enumerate}[leftmargin=*,itemsep=2pt]
-  \item \textbf{Validate and normalize.}
-  Check the typed edge shape, source versions, authenticated anchors, and
-  within-class digest/issuer/scope/lineage agreement.  Translate the plan to a
-  finite automaton for $\mathsf{Plant}_R$, making receipt-backed replays
-  $\epsilon$-transitions.
+\begin{lemma}[Exact compiled realization]
+\label{lem:compiled-language}
+The generated and marked languages of the program in
+\cref{eq:canonical-program} are exactly
+\((W_{H,u},B^\star_{H,u})\).  It is the smallest deterministic marked
+partial automaton for this pair up to state renaming.
+\end{lemma}
+\begin{proof}
+After \(z\), induction places the program in
+\((W/z,B^\star/z)\); the rule enables \(a\) exactly when \(za\in W\), and
+the state is marked exactly when \(z\in B^\star\).  Two retained states differ
+on a generated or marked suffix, so every deterministic marked implementation
+must distinguish them.  The construction is the paired-language form of
+classical derivatives~\cite{brzozowski1964derivatives}.
+\end{proof}
 
-  \item \textbf{Take the durable residual.}
-  Product the plant with the policy automaton after reading $\delta$.  Remove
-  states whose policy component is rejecting.  The resulting prefix automaton
-  recognizes exactly $F_R$.
+The compiler first runs the trusted derivation and \cref{eq:admission}.  On
+failure it returns \(o\) with \(M_o=\varnothing\) and a product-emptiness
+certificate.  On success it emits the
+program and a seal
+\[
+ Z=(\kappa_Z,\mathsf{cut}_Z,u,H_{\mathsf{prog}},\eta_Z),
+\]
+where \(\eta_Z=\eta_{H,u}\) is the target generation deterministically minted
+by the history judgment.  The checked certificate also lists
+\(B^\star_{H,u}\) and one safe completion per outcome.  The cut digest is
+\begin{equation}
+\label{eq:cut-digest}
+ \mathsf{cut}_Z=
+ \mathsf{hash}(\kappa,H,\Delta,u,
+     \mathcal C_{H,u},\Src_{H,u},\mathsf{Tgt}_{H,u}).
+\end{equation}
+Because \(H\) contains \(\chi,\nu,\rho,\beta\), the digest binds both logical
+and ownership frontiers.  Compilation and inactive preloading are untrusted,
+unobservable work.  A small checker re-derives the judgment, reconstructs
+\(W\), and checks language equality and the hashes before installation.
 
-  \item \textbf{Check promises.}
-  For each $\omega\in\Omega_e$, explore its linearizations jointly with the
-  residual automaton.  If none reaches completion, return
-  $(\omega,\mathsf{cut}_\omega)$, where
-  $\mathsf{cut}_\omega$ records the first disabled causal frontier on every
-  explored linearization.  This is an explanation of the complete
-  impossibility in \cref{thm:canonical-epoch}, not a heuristic repair.
+\subsection{Durable kernel}
 
-  \item \textbf{Emit the canonical epoch.}
-  Merge states with the same right residual and encode the transition
-  relation of $\mathsf{Can}(R)$.  Mint a target epoch identifier and bind its
-  initial state, policy/view versions, exact receipt trace, source-controller
-  set, target gate uses, and program hash into a seal.
+The compiled state for one policy scope is
+\[
+ S=(\kappa,H,\Delta,\mathsf{out},
+    \mathsf{phase},\mathsf{bind},\mathsf{prog},\mathsf q),
+\]
+where generation phase is
+\(\mathsf{inactive}\), \(\mathsf{active}\), or \(\mathsf{closed}\).
+The following invariant is required:
+
+\begin{enumerate}[leftmargin=*,itemsep=1pt]
+ \item every live occurrence has one bound gate and active owner;
+ \item every resolved occurrence appears once in ordered \(\chi\);
+ \item every \Fresh in \(\chi\) has exactly one receipt in \(\Delta\), and
+       every \Alias names an earlier receipt;
+ \item the active program state is the generated/marked residual pair after
+       the current resolved prefix; and
+ \item a closed generation never becomes active again.
 \end{enumerate}
 
-The construction operates on automata, not an enumerated list of histories.
-Choice adds alternatives, sequence connects accepting frontiers, and parallel
-takes an order-preserving product.  Parallel composition and promise
-linearization can be exponential in the number of protected occurrences; we
-claim finite decidability for bounded slices, not a polynomial algorithm for
-arbitrary partial orders.  The residual quotient may reduce the emitted
-state space, but minimal-automaton theory itself is classical
-~\cite{brzozowski1964derivatives}.
-
-\subsection{Small trusted checker}
-
-The compiler is an untrusted witness producer.  A checker reparses $R$,
-authenticates its anchors and receipt trace, independently reconstructs the
-plan/policy product, and verifies:
-\[
+\paragraph{Atomic protected use}
+Let the current history bind occurrence \(x\) to expected gate \(j\), owned by
+\(\eta\), and let the supplied handle authenticate its expected cell \(d\).
+The kernel computes \(a=\Fresh(x,d)\) when \(d\notin D_\Delta\), and
+\(a=\Alias(x,d)\) otherwise.  Its one durable transition is
+\begin{equation}
+\label{eq:use-rule}
+\frac{
 \begin{gathered}
- \mathsf{FreshTraces}(\mathsf{program})=F_R,\\
- \forall\omega\in\Omega_e.\quad
- \mathsf{Lin}(\omega)\cap F_R\ne\varnothing,\\
- \mathsf{seal.scope}
-  =(\kappa,\nu,\delta,\mathsf{src},\mathsf{hash}(R),
-    \mathsf{hash}(\mathsf{program})).
-\end{gathered}
+ x\text{ enabled in }T\quad
+ \mathsf{bind}(x)=(j,\eta)\quad
+ \mathsf{phase}(\eta)=\mathsf{active}\\[-2pt]
+ \rho(x)\text{ authenticates }(j,d)\quad
+ \mathsf q(\eta)\xrightarrow{a}_{\mathsf{prog}(\eta)}q'
+\end{gathered}}
+{S\xrightarrow{\mathsf{Use}(x,j,h)/a}
+  \mathsf{Advance}(S,x,a,q')} .
+\end{equation}
+\(\mathsf{Advance}\) atomically residualizes the exact occurrence in \(T\),
+appends \(a\) to \(\chi\), advances \(\nu\), and stores \(q'\).  For \Fresh it
+also consumes the authority atom, appends the immutable labeled receipt to
+\(\Delta\), and enqueues the effect.  For \Alias it does not touch
+\(\Delta\), and binds the occurrence to the cell's durable result future.
+It also records the first durable progress through an open choice.  Thus
+history, controller, receipt, result binding, and outbox cannot be torn apart
+by a crash.
+
+A duplicate request with the same invocation identifier is \Retry: it returns
+the stored result without a second contract or controller transition.  An
+unbound, disabled, malformed, or closed-generation call returns
+\(\mathsf{deny}(x)\).  \Dispatch releases only the oldest pending outbox item;
+settlement and crash preserve the security state used by \cref{eq:use-rule}.
+
+\paragraph{Atomic installation}
+At commit time the kernel ignores any caller-supplied source enumeration.  It
+re-runs
+\[
+ H\vdash u\Downarrow
+ (H',\mathcal C,\Src,\mathsf{Tgt})
 \]
-Language equality is checked by the standard symmetric-difference product.
-The checker does not authorize an individual external effect.  A verified seal
-becomes installable only through the \textsc{Install} transition and only
-while its entire scope still matches durable state.  This producer/checker
-split follows the proof-carrying-code trust pattern
-~\cite{necula1997pcc}.
+over the current history and checks
+\begin{equation}
+\label{eq:install-premise}
+\begin{gathered}
+ \kappa=\kappa_Z,\qquad
+ \mathsf{hash}(\kappa,H,\Delta,u,\mathcal C,\Src,\mathsf{Tgt})
+   =\mathsf{cut}_Z,\\
+ \mathsf{Verify}(\mathsf{prog}_Z,W_{H,u},
+    B^\star_{H,u},H_{\mathsf{prog}}),\\
+ \mathsf{phase}(\eta_Z)=\mathsf{inactive}.
+\end{gathered}
+\end{equation}
+If all checks hold, one transaction closes every
+\(\eta\in\Src\), verifies that every target binding in \(H'\) names fresh
+gates owned by \(\eta_Z\), persists \(H'\), activates the verified program at
+\(q^0\).  This successful step is observed as
+\(\mathsf{Edge}(u)\).  Failure is an internal stutter with no state change.
 
-For a negative result, the checker verifies that $\omega$ belongs to the
-edge-derived promise set and that its product with $F_R$ has no accepting
-state.  It does not accept a compiler-supplied prose reason.  A caller may
-change the plan, promise, policy grant, or history operation and submit a new
-request; that is a different theorem instance.
+\begin{figure}[t]
+  \centering
+  \begin{tikzpicture}[
+      font=\scriptsize,
+      box/.style={draw,rounded corners=1pt,align=center,
+        minimum height=5.5mm,inner sep=2pt},
+      arr/.style={-{Latex[length=1.3mm]},thick}
+    ]
+    \node[box] (u1) {\(\Use_{\rm old}\) first\\
+      \Fresh changes \(\Delta,\chi\)\\or \Alias changes \(\chi\)};
+    \node[box,right=3mm of u1] (i1) {\Install\\digest mismatch};
+    \node[right=2mm of i1] (f1) {\textbf{stale}};
+    \draw[arr] (u1) -- (i1);
 
-\subsection{Why the output is one logical epoch}
+    \node[box,below=4mm of u1] (i2) {\Install first\\
+      close all sources};
+    \node[box,right=3mm of i2] (u2) {old \(\Use\)\\closed owner};
+    \node[right=2mm of u2] (f2) {\textbf{denied}};
+    \draw[arr] (i2) -- (u2);
+  \end{tikzpicture}
+  \caption{The history cut orders both kinds of logical progress.  Comparing
+  only receipts detects the fresh race but misses the alias race.}
+  \label{fig:cut-races}
+\end{figure}
 
-$\mathsf{Can}(R)$ is one authoritative logical state machine, even if a
-deployment later replicates it behind a consensus service or compiles a
-trace-equivalent distributed realization.  This choice removes a hidden
-assumption from the security theorem: the caller no longer asserts that
-several controllers preserve a correlation.  Decentralized supervisor
-synthesis and language separability characterize when such a factorization is
-possible~\cite{komenda2017decentralized}; they are optional lowerings below
-the verified epoch, not part of causal history admission.
+The source derivation and both frontier comparisons are semantic, not merely
+defensive metadata.  If an old use linearizes first, either \(\Delta\) or
+\(\chi\) changes and the compiled seal is stale.  If installation linearizes
+first, \cref{eq:use-rule} has no active-owner premise through an old binding.
+There is no execution in which pre-cut progress is absent from the proved
+state yet commits on the post-cut side.
 
-The logical epoch need not be a remote global round trip.  It is scoped to one
-bounded Agent edge and can be placed with the protected tool gateway.  It
-differs from the reference monitor in how it is obtained and retired: the
-global policy and receipt history are compiled at the cut, while subsequent
-fresh decisions use the installed residual state until another protected
-slice or history edge forces a new cut.
+\begin{lemma}[History-cut linearization]
+\label{lem:cut-linearization}
+In every reachable well-formed compiled state, a successful \Install and a
+protected use owned by one of its derived sources have a unique order.  If
+the use commits first, that seal cannot install.  If \Install commits first,
+the old use cannot resolve fresh or alias.  A generation outside the source
+set cannot change the installed cut's contract, cell mode, or policy
+residual.
+\end{lemma}
+\begin{proof}
+The use and installation rules are serializable transactions over the same
+history and generation records.  A fresh use changes
+\((\Delta,\chi,\nu)\); an alias changes \((\chi,\nu)\).  Since
+\(\mathsf{cut}_Z\) authenticates \(H\) and \(\Delta\), re-derivation after
+either use disagrees with the seal.  In the other order, \Install closes every
+generation in the derived source set before activating \(\eta_Z\), so the
+active-owner premise of \cref{eq:use-rule} is false for every old binding.
+The isolation clause of \cref{lem:history-derivation} gives the final case.
+Atomic persistence of \(H'\), the target bindings, and \(q^0\) restores the
+kernel invariant.
+\end{proof}
+
+\subsection{Decidability and trust}
+
+The checker can enumerate linearizations for small contracts or construct
+their asynchronous product with the policy automaton.  Parallel pomsets make
+the worst case exponential; the result is finite decidability for bounded
+protected slices, not a polynomial claim.  The trusted computing base is the
+history/contract registry, ledger and atomic rules, policy issuer, certificate
+verification, and complete mediation.  Compiler search, automaton
+minimization, and preloading remain outside it because \(\mathsf{Verify}\) and
+\Install re-establish their claims.

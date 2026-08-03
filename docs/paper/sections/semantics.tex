@@ -1,166 +1,210 @@
-\section{Canonical Epoch and Durable Kernel}
-\label{sec:semantics}
+\section{Exact History Admission}
+\label{sec:admission}
 
-\subsection{Residual epoch synthesis}
+Let \(\mathcal A\subseteq\mathcal U^*\) be a regular,
+prefix-closed authority policy.  The authenticated receipt log \(\Delta\)
+contains cell identities, phases, and qualified authority labels; its
+projection \(\mathsf{lab}(\Delta)\in\mathcal A\) is an authority word.  Write
+\(D_\Delta\) for its receipted cells.
 
-For a language $F$ and trace $\sigma$, its right residual is
-\[
-  F/\sigma=\{\rho\mid\sigma\rho\in F\}.
-\]
-The canonical epoch for request $R$ is the deterministic transition system
+\subsection{Fresh and alias resolution}
+
+The key typing rule is that logical occurrences never disappear.  Starting
+with \(R_0=D_\Delta\), the deterministic transducer
+\(\Resolve_\Delta\) maps a raw word \(w=x_1\cdots x_n\) to a resolved word
+\(z_1\cdots z_n\).  For \(d_i=q_{\rm cell}(x_i)\),
 \begin{equation}
-\label{eq:canonical-epoch}
-\begin{split}
- Q_R &=\{F_R/\sigma\mid\sigma\in F_R\},\\
- q_R^0&=F_R/\epsilon,\\
- (F_R/\sigma)\xrightarrow{d}(F_R/\sigma d)
-   &\quad\Longleftrightarrow\quad \sigma d\in F_R .
-\end{split}
+\label{eq:resolve}
+ z_i=
+ \begin{cases}
+  \Fresh(x_i,d_i), & d_i\notin R_{i-1},
+       \quad R_i=R_{i-1}\cup\{d_i\};\\
+  \Alias(x_i,d_i), & d_i\in R_{i-1},
+       \quad R_i=R_{i-1}.
+ \end{cases}
 \end{equation}
-Equality of residuals makes the transition well defined: if
-$F_R/\sigma=F_R/\tau$, then $d\rho$ belongs to one residual exactly when it
-belongs to the other.  Write $\mathsf{Can}(R)$ for this program together with
-the target gate-use bindings and request scope.
-
-\begin{lemma}[Exact residual epoch]
-\label{lem:residual-exact}
-For every well-formed $R$,
+The authority projection erases aliases but not occurrences:
 \[
-  \mathsf{FreshTraces}(\mathsf{Can}(R))=F_R .
+ \mathsf{auth}(\Fresh(x,d))=\ell(d),\qquad
+ \mathsf{auth}(\Alias(x,d))=\epsilon .
 \]
-Moreover, $\mathsf{Can}(R)$ is the unique smallest deterministic realization
-of $F_R$ up to state renaming.
+A repeated delivery of the \emph{same} invocation identifier is \Retry and
+does not occur a second time in \(w\).  In contrast, two restored occurrences
+with the same cell both occur in \(w\); one may be fresh and the other alias.
+
+\begin{lemma}[Resolution]
+\label{lem:resolution}
+\(\Resolve_\Delta\) is deterministic, length preserving, and prefix
+compatible.  Its fresh projection contains each cell at most once outside
+\(D_\Delta\), while its occurrence projection is exactly the input word.
+Moreover, if
+\(\Resolve_\Delta(rv)=zv'\), then \(z=\Resolve_\Delta(r)\) and
+\(v'=\Resolve_{\Delta_z}(v)\), where \(\Delta_z\) extends \(\Delta\) by the
+fresh events of \(z\).
 \end{lemma}
 \begin{proof}
-After reading $\sigma\in F_R$, induction on $|\sigma|$ places the epoch in
-$F_R/\sigma$.  The transition rule enables $d$ exactly when
-$\sigma d\in F_R$, proving both inclusions.  The last statement is the
-standard distinguishable-residual argument; we use it only for canonical
-representation, not as a novelty claim.
+Induct on the input length and the accumulated set \(R_i\).  Each step emits
+one symbol, updates \(R_i\) only in the fresh case, and depends only on the
+input prefix.  Set membership gives uniqueness of fresh emission; both cases
+retain \(x_i\).  Splitting the same induction after \(r\) gives the streaming
+equation.
 \end{proof}
 
-The epoch preserves the \emph{entire} atomic-monitor language.  Promises do
-not select a smaller safe implementation: they decide whether installing this
-edge can honestly retain the behavior its type and leaf contract advertise.
+This lemma fixes two distinct replay cases.  A network retry is a stutter in
+both histories.  A copied occurrence is a stutter only in the authority
+projection: it still resolves choice, sequence, or join causality.
 
-\subsection{Durable kernel state}
+\subsection{Safe completions and the admission boundary}
 
-The store state relevant to one authority scope is
+Suppose \(H\vdash u\Downarrow
+(H',\mathcal C_{H,u},\Src_{H,u},\mathsf{Tgt}_{H,u})\).
+For each structurally derived outcome \(o\in O_{H,u}\), define all resolved
+completions and then its safe subset:
+\begin{equation}
+\label{eq:safe-completions}
+\begin{aligned}
+ R_o(H,u)&=\{\Resolve_\Delta(w)\mid w\in\Lin(p_o)\},\\
+ M_o(H,u)&=\{z\in R_o(H,u)\mid
+   \mathsf{lab}(\Delta)\mathsf{auth}(z)\in\mathcal A\}.
+\end{aligned}
+\end{equation}
+The alphabets now agree: \(M_o\) contains resolved occurrence words, and the
+policy is consulted only through their authority projection.
+
+\begin{definition}[Agent history admission]
+\label{def:admission}
+\begin{equation}
+\label{eq:admission}
+ \mathsf{Admit}(H,u)
+ \quad\Longleftrightarrow\quad
+ \forall o\in O_{H,u}.\ M_o(H,u)\ne\varnothing .
+\end{equation}
+\end{definition}
+
+Universal quantification is over indexed outcomes derived by the trusted
+operation, not over caller-supplied promises.  Existential quantification
+inside \(M_o\) chooses a legal scheduler linearization; it does not promise
+fairness.  A true parallel contract therefore requires a safe execution
+containing both inputs, while a choice contract requires a safe execution for
+each arm.
+
+Let \(B^\star_{H,u}=\bigcup_{o\in O_{H,u}}M_o(H,u)\) be the marked safe
+completions.  The ideal generated language is
+\begin{equation}
+\label{eq:history-language}
+ W_{H,u}=\Pref(B^\star_{H,u}).
+\end{equation}
+It contains prefixes of safe \emph{complete} executions, not every prefix
+that happens to be policy safe now.
+
+\begin{definition}[Realization]
+\label{def:realization}
+A generated/marked pair \((L,B)\) realizes \((H,u)\) when:
+\begin{enumerate}[leftmargin=*,itemsep=1pt]
+ \item \emph{history fidelity:}
+\(B\subseteq\bigcup_{o\in O_{H,u}}R_o(H,u)\) and
+\(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\);
+ \item \emph{policy safety:}
+ \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A\)
+ for every \(z\in L\);
+ \item \emph{completion nonblocking:}
+ \(L=\Pref(B)\); and
+ \item \emph{outcome coverage:}
+ \(B\cap R_o(H,u)\ne\varnothing\) for every \(o\in O_{H,u}\).
+\end{enumerate}
+\end{definition}
+
+\begin{lemma}[Greatest realization]
+\label{lem:greatest-realization}
+A realization exists iff \(\mathsf{Admit}(H,u)\).
+On admission, \((W_{H,u},B^\star_{H,u})\) is a realization, and every
+realization \((L,B)\) satisfies
+\(B\subseteq B^\star_{H,u}\) and \(L\subseteq W_{H,u}\).
+\end{lemma}
+\begin{proof}
+Every member of \(B^\star\) resolves a derived outcome and is safe;
+\(W=\Pref(B^\star)\) gives nonblocking, and admission supplies coverage.
+Conversely, fidelity and safety put every \(b\in B\) in some \(M_o\), so
+\(B\subseteq B^\star\) and
+\(L=\Pref(B)\subseteq\Pref(B^\star)=W\).  Finally, coverage of \(o\) would
+witness \(M_o\ne\varnothing\), so a missing \(M_o\) is impossible.
+\end{proof}
+
+The nonblocking clause is what makes the boundary stronger than filtering
+pointwise-safe prefixes.  For example, if a payment prefix is legal but makes
+every registered shipment completion impossible, it is absent from \(W\).
+
+\begin{lemma}[Residual coherence]
+\label{lem:residual-coherence}
+If \(z\in W(\mathcal C,\Delta)\), then
+\(\Resolve_\Delta(\mathsf{raw}(z))=z\),
+\(\mathsf{lab}(\Delta_z)=
+ \mathsf{lab}(\Delta)\mathsf{auth}(z)\), and
 \[
- S=(\kappa,\nu,\delta,\mathsf{phase},\mathsf{bind},
-       \mathsf{prog},\mathsf{q},\mathsf{rcpt}).
+\begin{aligned}
+ W(\mathcal C,\Delta)/z
+  &=W(\mathcal C/\mathsf{raw}(z),\Delta_z),\\
+ B^\star(\mathcal C,\Delta)/z
+  &=B^\star(\mathcal C/\mathsf{raw}(z),\Delta_z).
+\end{aligned}
 \]
-$\kappa$ and $\nu$ are policy and Agent-view versions; $\delta$ is the
-append-only authority receipt trace.  For each controller epoch,
-$\mathsf{phase}\in\{\mathsf{inactive},\mathsf{active},\mathsf{closed}\}$.
-$\mathsf{bind}$ resolves gate uses to epochs, $\mathsf{prog}$ stores their
-verified programs, $\mathsf q$ their current states, and $\mathsf{rcpt}$ maps
-redeemed cells to immutable receipts and settlement phases.  A well-formed
-scope has one authoritative active epoch after a canonical installation; all
-live Agent branches route protected actions through it.
+\end{lemma}
+\begin{proof}
+Because \(z\) prefixes a member of \(B^\star\), prefix compatibility and raw
+recoverability in \cref{lem:resolution} give the first equality; its streaming
+case gives the ledger equality.  Taking the indexed pomset residual removes
+exactly that raw prefix while retaining every consistent outcome identity.
+Applying the same policy residual to the remaining suffixes gives the marked
+equality, and taking prefixes gives the generated equality.
+\end{proof}
+After a prefix, coverage ranges over residual outcome indices consistent with
+that prefix, not over alternatives already resolved away.
 
-A seal is
-\[
- Z=(\kappa_Z,\nu_Z,\delta_Z,\mathsf{src}_Z,
-       \mathsf{targetUses}_Z,H_R,H_{\mathsf{Can}},\eta_Z),
-\]
-where the two hashes bind the normalized request and canonical program and
-$\eta_Z$ is fresh.  The active source set is derived from the typed view and
-authenticated source anchors.  A caller cannot omit an authoritative source
-epoch and still satisfy the equality check below.
+\subsection{The ideal atomic history machine}
+\label{sec:ideal}
 
-\paragraph{Fresh preparation}
-Let gate use $j$ resolve to active epoch $\eta$ and handle $h$ to cell
-$d=q_{\rm cell}(h)$.  The security linearization point is
-\begin{equation}
-\label{eq:prepare-rule}
-\frac{
-\begin{gathered}
- \mathsf{phase}(\eta)=\mathsf{active}\quad
- \mathsf{bind}(j)=\eta\quad d\notin\operatorname{dom}(\mathsf{rcpt})\\[-2pt]
- \mathsf q(\eta)\xrightarrow{d}_{\mathsf{prog}(\eta)}q'
-\quad \ell(d)\text{ is unspent}
-\end{gathered}}
-{\begin{aligned}
- S&\xrightarrow{\mathsf{Prepare}(j,h)}S'\\[-2pt]
- S'&=S[\mathsf q(\eta):=q',\
-   \delta:=\delta\ell(d),\\[-2pt]
- &\hspace{22mm}\mathsf{rcpt}(d):=\mathsf{prepared}]
-\end{aligned}} .
-\end{equation}
-The transition, receipt append, and authority consumption are one durable
-atomic step.  Dispatch may occur after it; ambiguous remote outcomes are
-settled by a separate protocol.
+The ideal LTS retains abstract gate/owner identities so protected calls and
+history edges are defined, but has no generation phases, seals, preloading, or
+handoff microsteps: a history edge updates all affected identities atomically.
+Its durable state contains \((\kappa,H,\Delta,\mathsf{out})\) plus
+the current admitted cut
+\(c=(H_c,u,W_{H_c,u},B^\star_{H_c,u})\) and resolved prefix
+\(r\).  It has the following transitions.
 
-\paragraph{Atomic installation}
-Programs may be preloaded while inactive.  Publishing one uses the single
-compare-and-install rule
-\begin{equation}
-\label{eq:install-rule}
-\frac{
-\begin{gathered}
- \kappa=\kappa_Z\quad\nu=\nu_Z\quad\delta=\delta_Z\\[-2pt]
- \mathsf{ActiveSources}(S)=\mathsf{src}_Z\quad
- \mathsf{hash}(R)=H_R\\[-2pt]
- \mathsf{Verify}(\mathsf{Can}(R),H_{\mathsf{Can}})
-\end{gathered}}
-{\begin{aligned}
- S&\xrightarrow{\mathsf{Install}(Z)}S'\\[-2pt]
- S'=S[&
-   \mathsf{src}_Z:=\mathsf{closed},\
-   \eta_Z:=\mathsf{active},\\[-2pt]
-  &\mathsf{targetUses}_Z\mapsto\eta_Z,\
-   \mathsf q(\eta_Z):=q_R^0,\\[-2pt]
-  &\nu:=\nu+1]
-\end{aligned}} .
-\end{equation}
-Closing every source, opening the target, rebinding its uses, and advancing
-the view version occur at one linearization point.  If any premise fails,
-\textsc{Install} returns stale and leaves $S$ unchanged.  A retained
-continuation, as in live Restore, is rebound inside $\eta_Z$; its source epoch
-does not remain active beside the target.
+\paragraph{History edge}
+\(\mathsf{Edge}(u)\) atomically applies the unique judgment
+\(H\vdash u\Downarrow(H',\mathcal C,\Src,\mathsf{Tgt})\) when
+\(\mathsf{Admit}(H,u)\), persists the already version-advanced \(H'\), and
+sets the active reference to
+\((W_{H,u},B^\star_{H,u},\epsilon)\).  There is no semantic
+handoff protocol: this is the independent atomic behavior that the
+implementation must refine.
 
-\paragraph{Stutters and crashes}
-If $d$ already has a receipt, \textsc{Retry} or \textsc{Replay} returns it
-without a $d$ transition.  \textsc{Dispatch} and \textsc{Settle} update only
-the receipt phase.  A crash discards nondurable computation but not any field
-of $S$.  In particular, no recovery rule reopens a closed generation.
+\paragraph{Protected occurrence}
+Let \(x\) be an enabled occurrence of the current frontier with expected gate
+and authenticated cell \(d\).  Resolve it against the current receipts to
+\(a\in\{\Fresh(x,d),\Alias(x,d)\}\).  The transition is enabled exactly when
+\(ra\in W_{H_c,u}\).  It atomically residualizes the frontier by \(x\),
+appends \(a\) to \(\chi\), advances \(\nu\), and sets
+\(r:=ra\).  In the fresh case it also appends an immutable receipt
+for \(d\), labeled \(\ell(d)\), to \(\Delta\) and enqueues \(d\); in the alias
+case those fields do not change.
 
-\subsection{Ideal history-cut monitor}
+An invalid occurrence, gate, handle, or disabled branch produces
+\(\mathsf{deny}(x)\) without changing state.  An alias binds the restored
+occurrence to the same durable result future as its cell; it advances causal
+history but does not invent a result that the original invocation has not yet
+produced.
 
-For comparison, define $\mathsf{Ref}$ to store the same durable fields but to
-interpret the active request directly with \cref{eq:gm-step}, consulting
-$F_R$ rather than an emitted program.  It uses the same atomic history-cut
-guard as \cref{eq:install-rule}: a cut is enabled only at the named policy
-version, view, receipt trace, and complete source set.  Thus $\mathsf{Ref}$ is
-the strongest serialized monitor extended with an ideal atomic
-Fork/Restore/Merge operation.
+\paragraph{Retry, release, and crash}
+A same-invocation retry returns the recorded result without changing history.
+\Dispatch may release only the oldest prepared outbox item, so the release
+trace is a prefix of fresh preparation order.  Settlement changes only a
+receipt phase.  Crash discards nondurable computation and leaves the LTS state
+unchanged.  We make no claim about completion order inside an external
+network after release.
 
-Relate a compiled state $S$ and reference state $\bar S$ when their durable
-fields, bindings, and active request agree and, for the within-epoch fresh
-trace $\sigma$,
-\begin{equation}
-\label{eq:kernel-reference-relation}
- \mathsf q(\eta)=F_R/\sigma
- \quad\text{and}\quad
- \bar S.\mathsf{monitorTrace}=\sigma .
-\end{equation}
-This relation exposes the intended proof boundary: the compiler replaces
-online membership in $F_R$ with one state of its residual program, while the
-durable installation protocol remains observable on both sides.
-
-\subsection{The cut race}
-
-\textsc{Prepare} and \textsc{Install} both linearize through the same store.
-If an old \Prepare{} wins, it changes $\delta$ before the install comparison;
-the seal is stale.  If \textsc{Install} wins, every source epoch becomes
-closed before any later step, so \cref{eq:prepare-rule} has no premise through
-an old binding.  There is no execution in which an old fresh event is absent
-from the compared frontier yet commits after the target becomes active.
-
-Each successful target \Prepare{} advances both the canonical residual and
-the durable trace.  At the next history edge the compiler uses this new trace
-as $\delta_Z$; seals cannot be inherited across receipt growth.  The result in
-\cref{sec:results} lifts this one-cut argument to an arbitrary online sequence
-of Agent edges under one policy version.  Changing $\kappa$ invalidates the
-seal and begins a new theorem instance after policy migration.
+By \cref{lem:greatest-realization}, every reachable reference prefix retains
+a policy-safe completion until the next explicit history edge changes the
+contract.  The next sections implement this ideal machine without consulting
+the full completion set at every call.

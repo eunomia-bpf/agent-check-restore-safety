@@ -20,30 +20,22 @@
 \newtheorem{example}{Example}
 \newtheorem{remark}{Remark}
 
-\newcommand{\ac}{\mathsf{AC}}
-\newcommand{\need}{\mathsf{need}}
-\newcommand{\load}{\mathsf{load}}
-\newcommand{\front}{\mathsf{front}}
-\newcommand{\live}{\mathsf{live}}
-\newcommand{\dead}{\mathsf{dead}}
-\newcommand{\esc}{\mathsf{esc}}
-\newcommand{\safe}{\mathsf{Safe}}
-\newcommand{\unsafe}{\mathsf{Unsafe}}
-\newcommand{\Nat}{\mathbb N}
-\newcommand{\calK}{\mathcal K}
-\newcommand{\calF}{\mathcal F}
-\newcommand{\PhiD}{\Phi{\downarrow}}
 \newcommand{\papername}{history admission\xspace}
-\newcommand{\Remaining}{\ensuremath{\mathsf{remaining}}\xspace}
-\newcommand{\Prepared}{\ensuremath{\mathsf{prepared}}\xspace}
-\newcommand{\Withdrawn}{\ensuremath{\mathsf{withdrawn}}\xspace}
-\newcommand{\Prepare}{\ensuremath{\mathsf{Prepare}}\xspace}
+\newcommand{\Fresh}{\ensuremath{\mathsf{fresh}}\xspace}
+\newcommand{\Alias}{\ensuremath{\mathsf{alias}}\xspace}
+\newcommand{\Use}{\ensuremath{\mathsf{Use}}\xspace}
+\newcommand{\Install}{\ensuremath{\mathsf{Install}}\xspace}
 \newcommand{\Dispatch}{\ensuremath{\mathsf{Dispatch}}\xspace}
 \newcommand{\Retry}{\ensuremath{\mathsf{Retry}}\xspace}
-\newcommand{\shuf}{\mathbin{\Join}}
+\newcommand{\Resolve}{\ensuremath{\mathsf{Resolve}}\xspace}
+\newcommand{\Src}{\ensuremath{\mathsf{Src}}\xspace}
+\newcommand{\Comp}{\ensuremath{\mathsf{Comp}}\xspace}
+\newcommand{\Lin}{\ensuremath{\mathsf{Lin}}\xspace}
+\newcommand{\Pref}{\ensuremath{\mathsf{Pref}}\xspace}
+\newcommand{\sem}[1]{\mathopen{[\![}#1\mathclose{]\!]}}
 
-\title{Agent History Admission: Canonical Causal Epochs for Fork, Restore,
-and Merge}
+\title{When May an Agent Rewrite Its History?\\
+An Exact Realization Theory for Fork, Restore, and Merge}
 
 \author{}
 
@@ -51,43 +43,48 @@ and Merge}
 \maketitle
 
 \begin{abstract}
-Tool-using Agents build execution graphs online by forking alternatives,
-restoring checkpoints, and merging descendants while protected effects reach
-services that no workspace restore can undo.
-A history edge can therefore preserve every endpoint set yet violate the
-promised causal outcome: payment may precede approval, a canceled branch may
-commit after selection, or a join continuation may run before both inputs.
-The structural cause is that a restorable Agent view, an append-only receipt
-trace, and the controller epochs that remain able to prepare effects advance
-at different history cuts.
-Atomic monitors and classical supervisor synthesis enforce a fixed
-prefix-closed language, but do not establish that an online history rewrite
-closes old controllers at the same durable frontier.
-We treat each bounded protected slice as a causal-language compilation
-request whose output is a new, version-bound epoch.
-We formalize raw Fork/Restore/Merge plans, normalize ledger-backed handle
-aliases, derive the exact future language of the strongest atomic monitor,
-and construct its canonical residual epoch.
-Our Canonical Causal Epoch Theorem proves that admission is equivalent to
-every promised partial-order outcome having a reference-language
-linearization; the synthesized epoch then realizes the entire reference
-language, and frontier-CAS installation preserves that equality across
-Prepare/Install races and successive edges.
-Residual automata are classical machinery; the theorem's new boundary is the
-raw Agent-edge-to-installed-epoch refinement, including source-controller
-fencing and stale-receipt failure.
-We give self-contained paper proofs for the causal language, exact epoch, and
-installer invariant; the existing Lean and Python artifacts are reported only
-as evidence for the permutation-invariant endpoint corollary, not as
-mechanization of the causal theorem or a production Agent integration.
+Agents can rewrite which past continuations remain capable of acting:
+Fork creates several presents, Restore revives an earlier one, and Merge
+selects or joins their futures.
+The world does not follow these edits.
+Approvals, payments, and other authority commitments remain in an append-only
+ledger, while controllers from discarded histories may still be live.
+We ask when an Agent history rewrite has any implementation that is
+simultaneously policy safe, faithful to the rewritten history, able to
+complete, and able to realize every outcome structurally promised by the
+operation.
+
+We introduce \emph{Agent history admission}.
+A trusted history machine records an append-only Fork/Restore/Merge DAG,
+checkpoints, live continuations, durably resolved logical occurrences, and their
+controller owners.
+Each typed edit derives---rather than accepts from the Agent---a finite family
+of causal completions and the complete set of owners it affects.
+A length-preserving resolution semantics distinguishes a fresh commitment
+from a copied occurrence that aliases an existing receipt; the latter advances
+logical history without advancing the ledger.
+
+Our Exact Agent History Realization Theorem gives a necessary-and-sufficient
+admission test.
+When it succeeds, the prefixes of all policy-safe completions form the unique
+greatest history-faithful, completion-nonblocking realization; when it fails,
+one derived completion is a proof that no such realization exists.
+We compile the admitted language into an occurrence-sensitive controller and
+prove a global weak bisimulation between an ideal atomic history machine and a
+durable runtime for arbitrary sequences of all six edits.
+The implementation cut orders fresh commitments, receipt-silent aliases, and
+history installation while deriving and fencing every stale source generation.
+A small bounded checker exercises the six derivations, alias resolution, and
+cut races.  The result makes history editing an exact authorization boundary
+rather than a rollback heuristic.
 \end{abstract}
 
 \input{sections/introduction}
 \input{sections/lifecycle}
 \input{sections/model}
 \input{sections/semantics}
-\input{sections/results}
 \input{sections/algorithm}
+\input{sections/results}
 \input{sections/validation}
 \input{sections/related}
 \input{sections/discussion}

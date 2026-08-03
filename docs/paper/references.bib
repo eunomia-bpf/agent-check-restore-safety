@@ -75,6 +75,11 @@
   doi       = {10.1007/3-540-17906-2_31}
 }
 
+% VERIFIED: 2026-08-02
+% REAL: yes
+% PDF: not archived locally
+% ABSTRACT: Relates configuration structures, event structures, and Petri nets as models of causality, conflict, and concurrency.
+% USED_FOR: Credits established configuration-structure semantics rather than claiming a new concurrency model.
 @article{vanglabbeek2009configuration,
   author  = {Rob J. van Glabbeek and Gordon D. Plotkin},
   title   = {Configuration Structures, Event Structures and Petri Nets},
@@ -798,7 +803,7 @@
   pages   = {585--608},
   year    = {2017},
   doi     = {10.1007/s10626-017-0249-6},
-  url     = {https://arxiv.org/abs/1512.03267}
+  url     = {https://doi.org/10.1007/s10626-017-0249-6}
 }
 
 % VERIFIED: 2026-08-02
@@ -882,6 +887,7 @@
 
 % VERIFIED: 2026-08-02
 % REAL: yes
+% PDF: not archived locally
 % ABSTRACT: Introduces derivatives (left quotients) of regular expressions
 % and their use in constructing finite automata.
 % USED_FOR: Credits the classical residual-language automaton construction.
@@ -902,15 +908,16 @@
 % ABSTRACT: Decomposes monolithic safety and liveness supervisors into local
 % controllers while preserving the controlled behavior.
 % USED_FOR: Closest classical exact supervisor-localization baseline.
-@misc{zhang2017localization,
-  author        = {Renyuan Zhang and Kai Cai},
-  title         = {Supervisor Localization of Discrete-Event Systems with
-                   Infinite Behavior},
-  year          = {2017},
-  eprint        = {1710.08751},
-  archivePrefix = {arXiv},
-  primaryClass  = {cs.SY},
-  url           = {https://arxiv.org/abs/1710.08751}
+@article{zhang2017localization,
+  author  = {Renyuan Zhang and Kai Cai},
+  title   = {Supervisor Localization of Discrete-Event Systems with
+             Infinite Behavior},
+  journal = {IFAC-PapersOnLine},
+  volume  = {51},
+  number  = {7},
+  pages   = {361--366},
+  year    = {2018},
+  doi     = {10.1016/j.ifacol.2018.06.326}
 }
 
 % VERIFIED: 2026-08-02
@@ -920,13 +927,127 @@
 % supervisor that reaches a source state from which a requested
 % reconfiguration is enabled.
 % USED_FOR: Closest DES treatment of runtime configuration changes.
-@misc{macktoobian2022reconfiguration,
-  author        = {Matin Macktoobian and W. Murray Wonham},
-  title         = {Automatic Reconfiguration of Untimed Discrete-Event
-                   Systems},
-  year          = {2022},
-  eprint        = {2210.01332},
-  archivePrefix = {arXiv},
-  primaryClass  = {eess.SY},
-  url           = {https://arxiv.org/abs/2210.01332}
+@inproceedings{macktoobian2022reconfiguration,
+  author    = {Matin Macktoobian and W. Murray Wonham},
+  title     = {Automatic Reconfiguration of Untimed Discrete-Event Systems},
+  booktitle = {2017 14th International Conference on Electrical Engineering,
+               Computing Science and Automatic Control (CCE)},
+  pages     = {1--6},
+  publisher = {IEEE},
+  year      = {2017},
+  doi       = {10.1109/ICEEE.2017.8108839}
+}
+
+% VERIFIED: 2026-08-02
+% REAL: yes
+% PDF: not archived locally
+% ABSTRACT: Determines a program's run-time rights from all previously executed
+%   code and explicit right-augmentation requests, rather than only the stack.
+% USED_FOR: Establishes classical history-based access control over one observed execution.
+@inproceedings{abadi2003history,
+  author    = {Mart{\'{\i}}n Abadi and C{\'e}dric Fournet},
+  title     = {Access Control Based on Execution History},
+  booktitle = {Proceedings of the Network and Distributed System Security Symposium (NDSS)},
+  pages     = {107--121},
+  publisher = {Internet Society},
+  year      = {2003},
+  url       = {https://www.ndss-symposium.org/ndss2003/access-control-based-execution-history/}
+}
+
+% VERIFIED: 2026-08-02
+% REAL: yes
+% PDF: not archived locally
+% ABSTRACT: Defines event-structure histories, a past-time policy language,
+%   and incremental checks for behavior-based authorization and reputation.
+% USED_FOR: Establishes causal history-policy checking before the Agent history is rewritten.
+@article{krukow2008history,
+  author  = {Karl Krukow and Mogens Nielsen and Vladimiro Sassone},
+  title   = {A Logical Framework for History-Based Access Control and Reputation Systems},
+  journal = {Journal of Computer Security},
+  volume  = {16},
+  number  = {1},
+  pages   = {63--101},
+  year    = {2008},
+  doi     = {10.3233/JCS-2008-16102}
+}
+
+% VERIFIED: 2026-08-02
+% REAL: yes
+% PDF: not archived locally
+% ABSTRACT: Synthesizes a transition controller that guarantees progress to,
+%   and safety of, an update between old and new discrete-event controllers.
+% USED_FOR: Closest general sound live-controller-update theory.
+@article{nahabedian2020dynamic,
+  author  = {Leandro Nahabedian and V{\'i}ctor A. Braberman and Nicol{\'a}s D'Ippolito and Shinichi Honiden and Jeff Kramer and Kenji Tei and Sebasti{\'a}n Uchitel},
+  title   = {Dynamic Update of Discrete Event Controllers},
+  journal = {IEEE Transactions on Software Engineering},
+  volume  = {46},
+  number  = {11},
+  pages   = {1220--1240},
+  year    = {2020},
+  doi     = {10.1109/TSE.2018.2876843}
+}
+
+% VERIFIED: 2026-08-02
+% REAL: yes
+% PDF: not archived locally
+% ABSTRACT: Gives a sound, complete, and shortest-bridge solution for changing
+%   a running synthesized controller to a new GR(1) specification.
+% USED_FOR: Closest sound-and-complete bridge-controller update result.
+@inproceedings{amram2022dynamic,
+  author    = {Gal Amram and Shahar Maoz and Itai Segall and Matan Yossef},
+  title     = {Dynamic Update for Synthesized {GR(1)} Controllers},
+  booktitle = {Proceedings of the 44th International Conference on Software Engineering (ICSE)},
+  pages     = {786--797},
+  publisher = {ACM},
+  year      = {2022},
+  doi       = {10.1145/3510003.3510054}
+}
+
+% VERIFIED: 2026-08-02
+% REAL: yes
+% PDF: not archived locally
+% ABSTRACT: Constructs most-general component replacements that preserve
+%   automata-specified properties and derives valid state transfers for live update.
+% USED_FOR: Closest general theory of property-preserving replacement and state transfer.
+@article{bresolin2021static,
+  author  = {Davide Bresolin and Ivan Lanese},
+  title   = {Static and Dynamic Property-Preserving Updates},
+  journal = {Information and Computation},
+  volume  = {279},
+  pages   = {104611},
+  year    = {2021},
+  doi     = {10.1016/j.ic.2020.104611}
+}
+
+% VERIFIED: 2026-08-02
+% REAL: yes
+% PDF: not archived locally
+% ABSTRACT: Reuses a prior synthesis result plus model deltas to compute the
+%   same supervisor as fresh synthesis. A 2023 correction revises only efficiency conclusions.
+% USED_FOR: Closest exact supervisor transformation for an evolving modeled system.
+@article{thuijsman2022transformational,
+  author  = {Sander Thuijsman and Michel Reniers},
+  title   = {Transformational Supervisor Synthesis for Evolving Systems},
+  journal = {Discrete Event Dynamic Systems},
+  volume  = {32},
+  number  = {2},
+  pages   = {317--358},
+  year    = {2022},
+  doi     = {10.1007/s10626-021-00354-0}
+}
+
+% VERIFIED: 2026-08-02
+% REAL: yes
+% PDF: not archived locally
+% ABSTRACT: Shows how easy copying, checkpointing, and rollback of complete
+%   virtual-machine state invalidate assumptions made by static security architectures.
+% USED_FOR: Early systems-security precedent for clone and rollback breaking identity assumptions.
+@inproceedings{garfinkel2005virtual,
+  author    = {Tal Garfinkel and Mendel Rosenblum},
+  title     = {When Virtual Is Harder than Real: Security Challenges in Virtual Machine Based Computing Environments},
+  booktitle = {Proceedings of the 10th Workshop on Hot Topics in Operating Systems (HotOS X)},
+  publisher = {USENIX Association},
+  year      = {2005},
+  url       = {https://www.usenix.org/events/hotos05/final_papers/garfinkel.html}
 }
