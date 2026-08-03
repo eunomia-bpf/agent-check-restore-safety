@@ -8,13 +8,13 @@ Approval then commits as cell \(a\), so
 \(\mathsf{lab}(\Delta)=ra\).  The Agent requests a choice Fork between two
 suppliers.  Its protected completion contract has exactly two indexed
 outcomes:
-\[
+\begin{equation}
+\label{eq:running-outcomes}
 \begin{split}
  o_A&:\ p_A\prec s_A,\\
  o_B&:\ p_B\prec s_B ,
 \end{split}
-\tag{1}\label{eq:running-outcomes}
-\]
+\end{equation}
 where \(p\) and \(s\) denote payment and shipment occurrences.  The
 alternatives are exclusive, but both must have a safe completion at the cut.
 
@@ -38,11 +38,11 @@ At this cut each outcome has one causal linearization, resolving to
 \end{aligned}
 \]
 Thus \(M_{o_A}=\{z_A\}\), \(M_{o_B}=\{z_B\}\), and
-\(B^\star=\{z_A,z_B\}\); \(W\) contains exactly their prefixes.  If the
-durable policy residual instead removed \(rap_Bs\), then
-\(M_{o_B}=\varnothing\): admitting the Fork and silently pruning supplier
-\(B\) would violate the operation's history meaning.  This is the
-necessary-and-sufficient boundary generalized below.
+\(\widehat B^\dagger=\{(o_A,z_A),(o_B,z_B)\}\), with \(W^\dagger\) their
+prefix closure.  If policy excludes \(rap_Bs\), then \(M_{o_B}=\varnothing\)
+and the Fork is rejected: pruning supplier \(B\) would change its meaning.
+\Cref{sec:admission} gives the shared-prefix case where every outcome starts
+safe but no prefix-robust family exists.
 
 \begin{figure*}[t]
   \centering
@@ -92,20 +92,20 @@ necessary-and-sufficient boundary generalized below.
     \node[align=center] at (9.75,1.12)
       {\(\Alias(a',a)\)\\no new receipt};
 
-    \node[lab] at (0,-0.75) {controller owners};
+    \node[lab] at (0,-0.75) {policy-domain epoch};
     \node[box] (e0) at (0.85,-0.75) {$\eta_0$};
     \node[box] (ef) at (3.7,-0.75) {$\eta_F:\ A,B$};
     \node[box] (ea) at (6.8,-0.75) {$\eta_A$};
     \node[box] (ej) at (11.15,-0.75) {$\eta_J$};
-    \draw[arr] (e0) -- node[above] {close/open} (ef);
-    \draw[arr] (ef) -- node[above] {fence \(A,B\)} (ea);
-    \draw[arr] (ea) -- node[above] {fence live sources} (ej);
+    \draw[arr] (e0) -- node[above] {atomic swap} (ef);
+    \draw[arr] (ef) -- node[above] {atomic swap} (ea);
+    \draw[arr] (ea) -- node[above] {atomic swap} (ej);
   \end{tikzpicture}
   \caption{An Agent has an editable logical history, a non-editable world
-  history, and live controller owners.  Restore clones logical occurrences
+  history, and one current policy-domain epoch.  Restore clones logical occurrences
   but preserves authenticated cell identity.  A history cut must therefore
   order both receipt-changing \Fresh events and receipt-silent \Alias events
-  against complete source fencing.}
+  against a domain-wide epoch swap.}
   \label{fig:two-histories}
 \end{figure*}
 
@@ -114,9 +114,10 @@ After the shared approval and before either payment, the Agent requests
 \(\mathsf{MergeSelect}(A)\).  If the old supplier-\(B\) controller commits
 \(p_B\) first, that occurrence durably selects \(B\) and changes the receipt
 prefix from \(ra\) to \(rap_B\); selecting \(A\) must therefore be
-re-derived and rejected.  If the Merge cut wins, it must close every owner of
-the affected choice group before any later \(p_B\) can commit.  Publishing a
-new controller without fencing the loser permits both payments.
+re-derived and rejected.  If the Merge cut wins, it closes the current
+policy-domain epoch and rebinds every live gate before any later \(p_B\) can
+commit.  Publishing a new controller while an old domain epoch remains active
+permits both payments.
 
 \paragraph{The alias race}
 Now consider the live Restore in \cref{fig:two-histories}.  Cloning \(k\)
@@ -130,7 +131,7 @@ the receipt frontier.
 
 The example exposes the whole problem.  Workspace equality cannot recover
 which branch relation is live; receipt equality cannot detect alias progress;
-cell equality cannot identify which controller must be closed; and a target
+cell equality cannot determine the required obligation projection; and a target
 automaton supplied by the Agent cannot certify any of these facts.
 \Cref{sec:model} replaces that supplied request with a trusted history
 derivation.

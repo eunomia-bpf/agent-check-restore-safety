@@ -39,21 +39,28 @@ a GateClone over-approximation.  Its seal certifies structural history
 admission only; it deliberately does not authorize an external effect.
 
 `exact_history_realization.py` is a bounded executable model of the paper's
-unified Agent-history contract.  Unlike the older manifest checker, its
-untrusted operation objects cannot carry a plan, outcome family, source set,
-controller anchors, or receipt frontier.  The checker derives a finite pomset
-completion family and every affected source owner from a trusted
-`HistoryState` for all six Fork/Restore/Merge operations.  It then enumerates
-causal linearizations, performs length-preserving fresh/alias resolution,
-admits exactly when every derived outcome has a policy-safe completion, and
-constructs `W` as precisely the prefixes of those safe completions.  Its cut
-seal compares both the fresh receipt trace and the ordered, append-only
-logical-occurrence frontier, including an order-sensitive digest; installation
-re-derives and closes every source.  The
-17 focused litmus tests include completion-observability rejection,
-same-cell aliases, complete-outcome
-quantification, source completeness for both Merge forms, and both orderings
-of fresh/alias-versus-install races.
+unified Agent-history contract.  It enumerates indexed causal completions,
+performs length-preserving fresh/alias resolution, and computes the finite
+prefix-robust greatest fixed point.  The result retains indexed completion
+ghosts, the full descending chain, a ranked cause for every removal, and
+survivor witnesses for every prefix/still-compatible-outcome obligation.
+Installation re-derives admission instead of trusting a positive certificate.
+The shared-prefix regression `X tensor (Y choice Z)` under
+`Pref({yx, xz})` has one individually safe completion per outcome but is
+correctly rejected by the chain of sizes 2, 1, 0.  A second regression keeps
+two outcome identities even when their resolved traces coincide.
+
+The same file also retains an earlier bounded interface for all six
+Fork/Restore/Merge shapes.  Its operation objects name registered leaf
+contracts or checkpoints, derive per-source controller generations, and
+cannot carry a plan, outcome family, source set, controller anchors, or receipt
+frontier.  This is structural regression evidence only: it does not implement
+the paper's immutable edit-schema refinement checker, authorized retirement,
+or single global policy-domain epoch.  Its cut seal compares both the fresh
+receipt trace and the ordered, append-only logical-occurrence frontier,
+including an order-sensitive digest.  The 19 focused litmus tests also include
+completion-observability rejection, same-cell aliases, structural Merge
+fixtures, and both orderings of fresh/alias-versus-install races.
 
 The executable model deliberately uses a flat frontier and finite caps of
 128 outcomes, eight occurrences per outcome, and 50,000 linearizations.  These

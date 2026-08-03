@@ -1,14 +1,17 @@
 """Bounded executable model of Exact Agent History Realization.
 
 This module is intentionally small.  It checks finite causal-completion
-families and one atomic history cut; it is evidence for the paper's
-definitions, not a proof of the unbounded theorem.
+families, computes the prefix-robust greatest fixed point, and exercises one
+atomic history cut; it is evidence for the paper's definitions, not a proof
+of the unbounded theorem.
 
-The trusted input is a ``HistoryState``.  An untrusted operation names only
-live history objects and registered leaf contracts.  ``derive_rewrite``
-computes the completion family, complete source-owner set, and successor
-frontier.  In particular, the operation has no fields for a plan, outcome
-family, source set, receipt frontier, or controller binding.
+The separate bounded cut fixture takes a trusted ``HistoryState``.  Its older
+untrusted operation interface names only live history objects and registered
+leaf contracts; ``derive_rewrite`` computes the completion family, source
+owners, and successor frontier.  This fixture does not implement the paper's
+new immutable edit-schema relation or global policy-domain epoch.  In
+particular, the operation has no fields for a plan, outcome family, source set,
+receipt frontier, or controller binding.
 """
 
 from __future__ import annotations
@@ -665,49 +668,224 @@ def _remaining_contract(contract: Contract, completed: Sequence[str]) -> Contrac
 
 @dataclass(frozen=True)
 class OutcomeExecutions:
+    """Policy-safe executions of one explicitly indexed causal outcome."""
+
+    outcome_index: int
     outcome: Pomset
     safe: tuple[ResolvedTrace, ...]
+
+
+@dataclass(frozen=True)
+class IndexedCompletion:
+    """A completion together with the outcome identity erased at runtime."""
+
+    outcome_index: int
+    trace: ResolvedTrace
+
+
+@dataclass(frozen=True)
+class PruningCause:
+    """Why one candidate leaves the descending greatest-fixed-point chain."""
+
+    rank: int
+    removed: IndexedCompletion
+    prefix: ResolvedTrace
+    compatible_outcome_index: int
+
+
+@dataclass(frozen=True)
+class SurvivorWitness:
+    """One stabilized coverage witness for a prefix/outcome obligation."""
+
+    source: IndexedCompletion
+    prefix: ResolvedTrace
+    compatible_outcome_index: int
+    completion: IndexedCompletion
+
+
+@dataclass(frozen=True)
+class ImpossibilityWitness:
+    """A missing coverage obligation, including the all-unsafe base case."""
+
+    rank: int
+    prefix: ResolvedTrace
+    compatible_outcome_index: int
+    removed: IndexedCompletion | None
 
 
 @dataclass(frozen=True)
 class AdmissionResult:
     admitted: bool
     outcomes: tuple[OutcomeExecutions, ...]
+    candidate_completions: frozenset[IndexedCompletion]
+    surviving_indexed_completions: frozenset[IndexedCompletion]
     safe_completions: frozenset[ResolvedTrace]
     language_w: frozenset[ResolvedTrace]
-    impossibility_witness: Pomset | None
+    descending_chain: tuple[frozenset[IndexedCompletion], ...]
+    pruning_causes: tuple[PruningCause, ...]
+    survivor_witnesses: tuple[SurvivorWitness, ...]
+    impossibility_witness: ImpossibilityWitness | None
+
+
+def _trace_key(trace: ResolvedTrace) -> tuple[tuple[str, str, str], ...]:
+    return tuple((event.kind, event.logical_id, event.cell) for event in trace)
+
+
+def _completion_key(
+    completion: IndexedCompletion,
+) -> tuple[int, tuple[tuple[str, str, str], ...]]:
+    return completion.outcome_index, _trace_key(completion.trace)
+
+
+def _is_trace_prefix(prefix: ResolvedTrace, trace: ResolvedTrace) -> bool:
+    return len(prefix) <= len(trace) and trace[: len(prefix)] == prefix
+
+
+def _raw(trace: ResolvedTrace) -> tuple[str, ...]:
+    return tuple(event.logical_id for event in trace)
 
 
 def check_admission(state: HistoryState, contract: Contract) -> AdmissionResult:
-    """Check every derived outcome and construct W as safe-completion prefixes."""
+    """Compute the prefix-robust greatest fixed point and its certificates.
+
+    ``B_0`` contains every indexed policy-safe completion.  A candidate remains
+    in ``Phi(B)`` only when every prefix of that candidate has an extension in
+    ``B`` for every causal outcome still compatible with the prefix.  Iterating
+    ``Phi`` downward reaches the finite greatest fixed point.  Keeping outcome
+    indices here is important: two structurally distinct outcomes may have the
+    same resolved runtime trace.
+    """
 
     outcome_results: list[OutcomeExecutions] = []
-    all_safe: set[ResolvedTrace] = set()
-    for pomset in contract.outcomes:
+    candidates: set[IndexedCompletion] = set()
+    raw_prefixes_by_outcome: list[frozenset[tuple[str, ...]]] = []
+    for outcome_index, pomset in enumerate(contract.outcomes):
         safe: list[ResolvedTrace] = []
-        for raw in linearizations(pomset):
-            resolved = resolve(pomset, raw, state.receipts)
+        raw_prefixes: set[tuple[str, ...]] = {()}
+        for raw_linearization in linearizations(pomset):
+            for length in range(len(raw_linearization) + 1):
+                raw_prefixes.add(raw_linearization[:length])
+            resolved = resolve(pomset, raw_linearization, state.receipts)
             if state.policy.allows((*state.receipts, *auth(resolved))):
                 safe.append(resolved)
-                all_safe.add(resolved)
-                if len(all_safe) > MAX_SAFE_EXECUTIONS:
+                candidates.add(IndexedCompletion(outcome_index, resolved))
+                if len(candidates) > MAX_SAFE_EXECUTIONS:
                     raise ModelError(
-                        f"safe executions exceed the {MAX_SAFE_EXECUTIONS} cap"
+                        f"indexed safe executions exceed the "
+                        f"{MAX_SAFE_EXECUTIONS} cap"
                     )
-        outcome_results.append(OutcomeExecutions(pomset, tuple(safe)))
-    witness = next(
-        (result.outcome for result in outcome_results if not result.safe), None
-    )
-    language: set[ResolvedTrace] = {()}
-    for completion in all_safe:
-        for length in range(len(completion) + 1):
-            language.add(completion[:length])
+        outcome_results.append(
+            OutcomeExecutions(outcome_index, pomset, tuple(safe))
+        )
+        raw_prefixes_by_outcome.append(frozenset(raw_prefixes))
+
+    def compatible_outcomes(prefix: ResolvedTrace) -> tuple[int, ...]:
+        raw_prefix = _raw(prefix)
+        return tuple(
+            outcome_index
+            for outcome_index, prefixes in enumerate(raw_prefixes_by_outcome)
+            if raw_prefix in prefixes
+        )
+
+    current = frozenset(candidates)
+    descending_chain: list[frozenset[IndexedCompletion]] = [current]
+    pruning_causes: list[PruningCause] = []
+    rank = 1
+    while current:
+        removed: set[IndexedCompletion] = set()
+        for candidate in sorted(current, key=_completion_key):
+            cause: PruningCause | None = None
+            for length in range(len(candidate.trace) + 1):
+                prefix = candidate.trace[:length]
+                for outcome_index in compatible_outcomes(prefix):
+                    witness_exists = any(
+                        completion.outcome_index == outcome_index
+                        and _is_trace_prefix(prefix, completion.trace)
+                        for completion in current
+                    )
+                    if not witness_exists:
+                        cause = PruningCause(
+                            rank,
+                            candidate,
+                            prefix,
+                            outcome_index,
+                        )
+                        break
+                if cause is not None:
+                    break
+            if cause is not None:
+                removed.add(candidate)
+                pruning_causes.append(cause)
+        if not removed:
+            break
+        current = current - removed
+        descending_chain.append(current)
+        rank += 1
+
+    survivor_witnesses: list[SurvivorWitness] = []
+    for candidate in sorted(current, key=_completion_key):
+        for length in range(len(candidate.trace) + 1):
+            prefix = candidate.trace[:length]
+            for outcome_index in compatible_outcomes(prefix):
+                completion = next(
+                    (
+                        item
+                        for item in sorted(current, key=_completion_key)
+                        if item.outcome_index == outcome_index
+                        and _is_trace_prefix(prefix, item.trace)
+                    ),
+                    None,
+                )
+                if completion is None:  # pragma: no cover - internal invariant
+                    raise AssertionError("stabilized set lacks a coverage witness")
+                survivor_witnesses.append(
+                    SurvivorWitness(
+                        candidate,
+                        prefix,
+                        outcome_index,
+                        completion,
+                    )
+                )
+
+    language: set[ResolvedTrace] = set()
+    projected_survivors: set[ResolvedTrace] = set()
+    for completion in current:
+        projected_survivors.add(completion.trace)
+        for length in range(len(completion.trace) + 1):
+            language.add(completion.trace[:length])
+
+    impossibility: ImpossibilityWitness | None = None
+    if not current:
+        if pruning_causes:
+            last = pruning_causes[-1]
+            impossibility = ImpossibilityWitness(
+                last.rank,
+                last.prefix,
+                last.compatible_outcome_index,
+                last.removed,
+            )
+        else:
+            missing_outcome = next(
+                (
+                    result.outcome_index
+                    for result in outcome_results
+                    if not result.safe
+                ),
+                0,
+            )
+            impossibility = ImpossibilityWitness(0, (), missing_outcome, None)
+
     return AdmissionResult(
-        admitted=witness is None,
+        admitted=bool(current),
         outcomes=tuple(outcome_results),
-        safe_completions=frozenset(all_safe),
+        candidate_completions=frozenset(candidates),
+        surviving_indexed_completions=current,
+        safe_completions=frozenset(projected_survivors),
         language_w=frozenset(language),
-        impossibility_witness=witness,
+        descending_chain=tuple(descending_chain),
+        pruning_causes=tuple(pruning_causes),
+        survivor_witnesses=tuple(survivor_witnesses),
+        impossibility_witness=impossibility,
     )
 
 

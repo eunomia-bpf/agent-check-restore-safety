@@ -2,13 +2,14 @@
 \label{sec:results}
 
 We now join the structural, language, and durable levels in one result.
-Let \(I_0,S_0\) be full bootstrap states over the same well-formed durable
-core and admitted initial cut: both have empty resolved prefix and identical
-history, receipts, outbox, and target bindings; \(S_0\) additionally has the
-verified program at \(q^0\), with exactly the target generation active.
-Write \(\mathsf{Ideal}(I_0)\) for the atomic history machine of
-\cref{sec:ideal}, and \(\mathsf{Compiled}(S_0)\) for the kernel of
-\cref{sec:kernel} with arbitrary internal compilation, preloading, failed
+Let \(I_0,S_0\) be bootstrap states over the same well-formed security core
+and admitted initial cut.  They have empty resolved prefix and identical
+history, receipts, and outbox.  In both states, every live gate belongs to the
+domain's single current epoch; \(S_0\) additionally has the verified program
+at \(q^0\), with exactly that epoch active.  Write
+\(\mathsf{Ideal}(I_0)\) for the atomic history machine of
+\cref{sec:ideal}, and \(\mathsf{Compiled}(S_0)\) for the reference monitor of
+\cref{sec:kernel}, including internal compilation, preloading, failed
 installs, retries, settlement, and crashes.
 
 The observable alphabet is
@@ -19,76 +20,150 @@ The observable alphabet is
  &\mathsf{deny}(x),\Dispatch(d)\}.
 \end{split}
 \]
-Compiler/preload steps, failed stale installs, retries, settlement, result
-delivery, and crash recovery are \(\tau\).
-This choice observes logical alias progress even though its authority
-projection is empty.
-The observation projection maps a successful
-\(\mathsf{Use}(x,j,h)/a\) to \(a\), a successful \Install to
-\(\mathsf{Edge}(u)\), and invalid use and head release to
+Compiler and preload steps, failed stale installs, retries, settlement,
+result delivery, and crash recovery are \(\tau\).  Logical alias progress is
+observable even though its authority projection is empty.  The observation
+projection maps a successful \(\mathsf{Use}(x,j,h)/a\) to \(a\), a successful
+\Install to \(\mathsf{Edge}(u)\), and invalid use and head release to
 \(\mathsf{deny}(x)\) and \(\Dispatch(d)\), respectively.
+
+For a fixed full admission instance and schema-valid derivation, an
+\emph{exact atomic reference-monitor realization} is a successful
+single-domain installation satisfying \cref{eq:install-premise}, with
+\(\widehat B^\dagger_{H,u}\ne\varnothing\) and a checked indexed witness, that
+changes \(\eta^-\) to \(\eta^+\), persists the derived history, and activates
+the derivative-correct deterministic program
+\(\mathsf{Can}(W^\dagger_{H,u},B^\dagger_{H,u})\), up to checked state
+renaming.
 
 \begin{theorem}[Exact Agent History Realization]
 \label{thm:exact-history}
-Let \(I_0,S_0\) be bootstrap states as above and assume the trusted boundary
-of \cref{sec:model}.
+Assume the trusted boundary of \cref{sec:model}.  Let
+\((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) be a reachable well-formed
+security core and let the immutable schema registry derive
+\[
+ \Sigma_\zeta;H\vdash u\Downarrow
+ (H',\mathcal C_{H,u},\eta^-,\eta^+).
+\]
 
 \begin{enumerate}[leftmargin=*,itemsep=3pt]
- \item \textbf{Exact local realizability.}  For every reachable well-formed
- security core \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) and operation
- with a trusted derivation \(H\vdash u\Downarrow(\cdots)\), the following are
- equivalent:
+ \item \textbf{Schema fidelity.}
+ The derived history \(H'\) is unique and well formed.  Its preserved context
+ and regional family \(\mathcal P_u\) retain every inherited obligation not
+ discharged by an authorized retirement.  In each certified region,
+ \(\mu_r\) is one global occurrence bijection and
+ \(\pi_r:O_{\mathcal D_r}\twoheadrightarrow O_{\mathcal C_r}\); occurrence
+ incidence and causal order are preserved and reflected, and cell identity
+ and lineage are preserved.  No shared occurrence is split by outcome or
+ relabeled as a suffix.  Every \((r,o)\in\mathsf{Obl}_u\) has a checked
+ full-target witness \(t\) satisfying \(\mathsf{Lift}_u(t,r,o)\); context
+ outcomes bypassing the edit hole are preserved by identity.
+
+ \item \textbf{Exact prefix-robust admission.}
+ The following are equivalent:
  \[
  \begin{aligned}
-  &\mathsf{Admit}(H,u);\\
-  &\exists (L,B).\ (L,B)\text{ realizes }(H,u);\\
-  &\mathsf{Compile}(H,u,\Delta)\text{ emits a verifiable seal}.
+  &\widehat B^\dagger_{H,u}\ne\varnothing;\\
+  &\exists (L,\widehat B).\ (L,\widehat B)
+       \text{ realizes }(H,u);\\
+  &\text{an exact atomic reference-monitor realization exists};\\
+  &\mathsf{Compile}(\kappa,H,\Delta,\mathcal A,u)
+       \text{ emits a verifiable seal}.
  \end{aligned}
  \]
- If they hold, the compiled resolved-event language is exactly \(W_{H,u}\),
- its marked completions are \(B^\star_{H,u}\), and every realization is
- componentwise contained in this pair.  If they fail, a returned
- outcome \(o\) with \(M_o(H,u)=\varnothing\) proves that no realization exists for the
- fixed history, policy, log, and registered contracts.
+ When these conditions hold, the greatest indexed realization is exactly
+ \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\), its runtime marked
+ language is \(B^\dagger_{H,u}=\pi_2\widehat B^\dagger_{H,u}\), and every
+ realization \((L,\widehat B)\) satisfies
+ \(L\subseteq W^\dagger_{H,u}\) and
+ \(\widehat B\subseteq\widehat B^\dagger_{H,u}\).  In particular, after every
+ \(z\in W^\dagger_{H,u}\), every
+ \(o\in\mathsf{Compat}(z)\) still has a safe marked extension
+ \((o,b)\in\widehat B^\dagger_{H,u}\) with \(z\preceq_{\rm pref}b\).
+ At \(z=\epsilon\), every required \((r,o)\) and preserved context outcome
+ therefore has a full-target lift carrying a safe completion.  After a
+ nonempty prefix, persistent coverage applies exactly to target outcomes still
+ compatible with that prefix.
 
- \item \textbf{Global implementation equivalence.}
+ If admission fails, the complete descending chain
+ \(\widehat B_0,\widehat B_1,\ldots,\widehat B_n=\varnothing\), together
+ with each ranked cause \((i,(v,b),z,o)\) satisfying
+ \((v,b)\in\widehat B_i\setminus\widehat B_{i+1}\),
+ \(z\preceq_{\rm pref}b\),
+ \(o\in\mathsf{Compat}(z)\), and no extension of \(z\) in
+ \(\{b'\mid(o,b')\in\widehat B_i\}\), is a finite certificate that no
+ realization exists.
+
+ \item \textbf{Durable implementation refinement.}
+ For bootstrap states \(I_0,S_0\) as above,
  \[
    \mathsf{Compiled}(S_0)
-   \ \approx_{\mathcal O}\
+   \ \approx_{\mathcal O}^{\mathsf{di}}\
    \mathsf{Ideal}(I_0)
  \]
- by weak bisimulation.  The equivalence covers arbitrary finite or infinite
- interleavings of all six history operations, fresh commitments, logical
- aliases, retries, ordered dispatch, settlement, and crashes.
+ by divergence-insensitive weak bisimulation.  Every successful history edge
+ is one domain-wide cut: it closes \(\eta^-\), persists the
+ schema-derived history, rebinds every live target gate, and activates the
+ single fresh epoch \(\eta^+\) in one reference-monitor transaction.  The
+ theorem makes no within-domain partial-fencing claim.  Domains with disjoint
+ cells, receipt logs, and policies compose only by asynchronous product.
 \end{enumerate}
 
-Consequently, at every reachable prefix: the authority trace satisfies
-\(\mathcal A\); every active cut remains completion-nonblocking; every live
-gate has one authoritative owner; a closed generation cannot make a fresh or
-alias transition; each logical occurrence linearizes on exactly one side of a
-successful history cut; and released effects follow fresh receipt order.
+Consequently, at every reachable prefix the authority trace remains in
+\(\mathcal A\); the active cut remains completion-nonblocking and preserves
+every still-compatible indexed outcome; exactly the current domain epoch can
+authorize a fresh or alias transition; each logical occurrence linearizes on
+one side of a successful history cut; and released effects follow fresh
+receipt order.  Persistent outcome coverage is an existence property, not a
+fairness guarantee: the theorem does not assert that an enabled occurrence,
+history edge, dispatch, or internal computation eventually happens.
 \end{theorem}
 
 \begin{proof}
+\emph{Schema fidelity.}
+\Cref{lem:history-derivation} gives determinism, well-formedness, authorized
+retirement, and domain-wide rebinding.  Its context identity check and
+regional \(\mathcal P_u\) certificates give the stated global occurrence maps,
+indexed-outcome surjections, checked \(\mathsf{Lift}_u\) witnesses, and
+preservation properties.
+Thus the Agent supplies only structural identifiers and a schema identifier;
+it cannot choose a target contract that drops pending obligations.
+
 \emph{Local equivalence.}
-\Cref{lem:greatest-realization} proves
-\(\mathsf{Admit}\) iff a realization exists and identifies its greatest
-language \(W\).  On admission, finiteness of the contracts makes \(W\) finite,
-so \cref{lem:compiled-language} emits an exact program and the checker accepts
-its symmetric-difference and cut-digest checks.  Conversely, a verifiable
-seal includes outcome coverage, \(B^\star\), and an exact program for \(W\), hence witnesses
-a realization.  If admission fails, any realization would have to cover the
-reported \(o\), contradicting \(M_o=\varnothing\).
+\Cref{lem:greatest-realization} proves that
+\(\widehat B^\dagger_{H,u}\ne\varnothing\) iff a realization exists,
+identifies \((W^\dagger,\widehat B^\dagger)\) as the greatest one, and
+supplies persistent
+coverage at every retained prefix.  Finiteness of the derived contracts
+makes the fixed point finite.  On admission,
+\cref{lem:compiled-language} emits the canonical derivative program for those
+generated and projected marked languages, while the checker re-derives the trusted schema
+judgment, the indexed fixed point, its witnesses, and the cut seal.  One atomic installation
+therefore supplies an exact reference-monitor realization.  Conversely, a
+verifiable seal or exact realization includes a nonempty marked language
+whose checked indexed witness is \(\widehat B^\dagger\), so admission holds.
+At \(\epsilon\), fixed-point coverage supplies a safe pair for every target
+outcome; the checked regional and context lifts therefore supply a safe
+full-target preimage for every required obligation instance.
+On rejection, let \(P\) be any post-fixed family.  Forward induction maintains
+\(P\subseteq\widehat B_i\): the recomputed base gives the initial inclusion,
+and the checked missing-witness cause for every removed pair excludes it from
+\(P\).  Hence \(P\subseteq\widehat B_{i+1}\); an empty final set excludes every
+nonempty post-fixed family and therefore every realization.
 
 \emph{Bisimulation relation.}
 Relate an ideal state \(I\) and compiled state \(S\) when:
-(i) \(\kappa,H,\Delta\), all receipt phases, and the ordered outbox agree;
-(ii) their active cut and resolved prefix are
-\((W,B^\star),r\), and the compiled program state is
-\((W/r,B^\star/r)\);
-(iii) \(\beta\) equals the kernel's gate/occurrence binding, every designated
-live owner is the unique active generation, and no closed source owns a live
-gate; and
+(i) \(\kappa,H,\Delta\), receipt phases/result futures, and the ordered outbox
+agree;
+(ii) the ideal active cut is
+\((H_c,u,W^\dagger,\widehat B^\dagger)\), the compiled current-epoch
+certificate is exactly \((H_c,u,W^\dagger,\widehat B^\dagger,Z)\), their
+resolved prefix is \(r\), and
+\(\mathsf q(H.\mathsf{epoch})=q_r=(W^\dagger/r,B^\dagger/r)\);
+(iii) \(\beta\) equals the kernel binding on live occurrences, exactly
+\(H.\mathsf{epoch}\) is active, every live gate is bound to it, and every
+earlier epoch is closed; unreachable programs and records in inactive,
+unbound epochs are ignored; and
 (iv) the ordered occurrence/receipt invariant following
 \cref{eq:use-rule} holds.  The bootstrap construction satisfies this
 relation.
@@ -96,80 +171,91 @@ relation.
 \emph{Protected occurrences.}
 Suppose \(x\) is enabled.  Equal \(H\), registry data, and \(\Delta\) compute
 the same resolved label \(a\).  The compiled program has an \(a\)-transition
-iff \(ra\in W\) by \cref{lem:compiled-language}, exactly the ideal guard.
-Both atomic steps residualize the same occurrence, append \(a\) to \(\chi\),
-advance the view and residual state, and, only for \Fresh, append the same
-receipt and outbox item.  The successor states are related.  Disabled,
-misbound, or closed calls produce the same denial.  This proves both
+iff \(ra\in W^\dagger\) by \cref{lem:compiled-language}, exactly the ideal
+guard.  Both atomic steps residualize the same occurrence, append \(a\) to
+\(\chi\), advance the view and residual program state, and, only for \Fresh,
+append the same receipt and outbox item.  \Cref{lem:residual-coherence}
+re-establishes the greatest fixed point for the residual contract.  Any failed
+guard, including a missing program transition, disabled occurrence,
+misbinding, or closed epoch, produces the same state-preserving denial.  This proves both
 simulation directions for \Fresh, \Alias, and denials.
 
 \emph{History edges.}
 For an ideal \(\mathsf{Edge}(u)\), determinism of
-\cref{lem:history-derivation} gives one \(H'\), contract, source closure, and
-target.  Local realizability lets the compiled side take internal
-compile/check/preload steps and then a successful \Install.  Its transaction
-persists the same \(H'\), closes exactly the derived owners, and starts the
-exact program at \((W/\epsilon,B^\star/\epsilon)\); the successors are
-related.
-Conversely, every successful install re-derives the same judgment and verifies
+\cref{lem:history-derivation} gives one
+\((H',\mathcal C_{H,u},\eta^-,\eta^+)\) and the same checked schema
+certificates.  Local realizability lets the compiled side take internal
+compile, check, and preload steps and then a successful \Install.  Its single
+domain transaction persists the same \(H'\), closes \(\eta^-\), rebinds all
+live target gates, activates \(\eta^+\), and starts the exact program at
+\((W^\dagger/\epsilon,B^\dagger/\epsilon)\), and atomically records
+\((H_c,u,W^\dagger,\widehat B^\dagger,Z)\) as its certificate; the successors
+are related.
+Conversely, every successful install re-derives that judgment and verifies
 \(\mathsf{Admit}\), so the ideal edge exists and matches it.
 
-If a protected occurrence wins before installation, a fresh step changes
+If a protected occurrence commits before installation, a fresh step changes
 \(\Delta,\chi,\nu\) and an alias changes \(\chi,\nu\); in either case the old
-digest fails and the install stutters.  If installation wins, every old
-affected owner is closed, so an old use has no transition.  Thus every
-fresh/alias/install race is covered without an intermediate unmatched state.
-This is exactly \cref{lem:cut-linearization}; its source-isolation case also
-shows that independent scopes preserve the relation.
+seal is stale.  If installation commits first, it closes the one old domain
+epoch, so no gate bound to \(\eta^-\) can resolve either fresh or alias.
+\Cref{lem:cut-linearization} therefore orders every same-domain
+use/install race without an intermediate unmatched state.  Only domains with
+disjoint cells, logs, and policies commute, by their asynchronous-product
+semantics.
 
 \emph{Remaining transitions.}
-Both machines dispatch the same outbox head.  Retry, result delivery,
-settlement, failed install, and crash recovery preserve the relation through
-matching \(\tau\)-steps.
-The relation is re-established at \(\epsilon\) after every successful edge,
-so coinduction covers an arbitrary edge sequence.  Policy safety and
-completion nonblocking follow from membership in \(W\); owner and
-closed-generation facts follow from the relation invariant.  Atomic ordering
-of \cref{eq:use-rule} and \Install assigns each occurrence to one cut side,
-and FIFO dispatch gives the final claim.
+Both machines dispatch the same outbox head.  Preloading changes only ignored
+inactive garbage.  Retry, result delivery, settlement, failed installation,
+and crash recovery preserve the relation through matching \(\tau\)-steps.
+The relation is re-established at
+\(\epsilon\) after every successful edge, so coinduction gives weak
+bisimulation.  It is divergence insensitive: finite internal paths may be
+collapsed, but no termination, progress, or scheduler fairness conclusion is
+drawn.  Policy safety, persistent outcome coverage, and completion
+nonblocking follow from \(W^\dagger\); epoch exclusion follows from the
+relation invariant and the atomic cut; and FIFO dispatch gives the final
+ordering claim.
 \end{proof}
 
-The theorem identifies a security boundary that does not exist for a
-single immutable execution: an Agent may rewrite a live logical past exactly
-when every outcome induced by that rewrite remains realizable, and the same
-criterion can be enforced while effects and history cuts race.  The residual
-construction and durable kernel are witnesses for this one history-realization
-theory, from typed Fork/Restore/Merge semantics to occurrence-level effects.
+The theorem exposes one Agent-specific security boundary.  A live logical
+past may be rewritten exactly when a trusted edit schema preserves inherited
+obligations and the greatest prefix-robust family is nonempty.  The same
+object \(\widehat B^\dagger\) both decides the history edge and, by projection,
+generates the reference monitor that mediates every later protected
+occurrence.  Fork, Restore, and
+Merge are therefore instances of one history-admission theory rather than
+independent mechanisms whose guarantees are merely combined.
 
-\subsection{Why the boundary needs both histories}
+\subsection{Why the cut needs both histories}
 
-The sufficient cut observation is
+The implementation authenticates the sufficient cut observation
 \begin{equation}
 \label{eq:cut-observation}
  \alpha(H,u)=
- (\mathcal C_{H,u},\rho,\beta,
-  \Delta,\chi,\Src_{H,u},\kappa,\nu).
+ (\omega,\zeta,\kappa,H,\Delta,u,
+  \mathcal C_{H,u},H_{\mathsf{prog}},\eta^-,\eta^+).
 \end{equation}
-This tuple is a sufficient semantic observation, not a claim that one literal
-encoding is componentwise minimal.  Its distinctions have independent roles.
-Causal order distinguishes \(a\prec b\) from \(b\prec a\) under a policy
-admitting only \(ab\); history mode distinguishes \(a\oplus b\) from
-\(a\otimes b\) under one-use authority.  Cell identity distinguishes two
-copied occurrences of one effect from two effects.  The receipt frontier
-decides whether the next occurrence is fresh, whereas the ordered
-logical-occurrence frontier records receipt-silent alias progress through a
-choice or join.  Finally, owner bindings determine which still-live
-generations must lose eligibility at the cut.  These examples explain why a
-workspace hash, receipt log, or controller epoch alone cannot implement the
-theorem; an implementation may encode the same information differently.
+The schema and policy versions fix the meaning of the edit and of authority.
+Inside \(H\), causal order distinguishes \(a\prec b\) from \(b\prec a\);
+frontier mode distinguishes \(a\oplus b\) from \(a\otimes b\); and
+\(\rho\) distinguishes two restored occurrences of one semantic cell from
+two different effects.  The receipt frontier \(\Delta\) decides whether the
+next occurrence is fresh, whereas the ordered logical frontier \(\chi\)
+records receipt-silent alias progress through a choice or join.  Finally,
+\(\beta\) and \((\eta^-,\eta^+)\) bind the entire policy domain to one side of
+the atomic epoch cut.  A workspace hash, receipt log, or epoch identifier
+alone therefore omits a distinction used by the theorem.
 
 \subsection{What rejection means}
 
-A witness \(o\) is not a compiler timeout or a suggested branch to delete.
-It identifies a pomset forced by the typed history operation whose every causal
-linearization violates the fixed durable residual.  Changing the operation,
-policy grant, checkpoint, or registered leaf contract creates a new problem
-instance.  With those inputs fixed, restricting runtime behavior cannot
-restore outcome coverage.  This exact negative direction is what permits
-history admission to serve as an API boundary rather than a best-effort
-planner.
+Rejection is not a compiler timeout and need not identify an outcome with no
+initially safe completion.  At rank \(i\), a cause
+\((i,(v,b),z,o)\) says that indexed completion \((v,b)\) must be removed
+because, after its prefix \(z\), the raw contract still admits outcome \(o\)
+but \(\widehat B_i\) contains no surviving \(o\)-indexed safe extension.
+Later ranks expose the cascading loss of coverage;
+an empty stabilized family proves that no nonempty post-fixed realization
+exists, even when every \(M_o\) was initially nonempty.  Changing the edit
+schema, policy grant, checkpoint, or registered contract creates a new
+instance.  With those inputs fixed, silently pruning runtime behavior cannot
+repair the rejected history edge.

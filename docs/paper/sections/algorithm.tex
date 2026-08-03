@@ -3,22 +3,24 @@
 
 \subsection{Occurrence-sensitive compilation}
 
-Because every derived pomset is finite, \(W_{H,u}\) and
-\(B^\star_{H,u}\) are finite.  For a language \(L\) and resolved word \(z\),
-let \(L/z=\{v\mid zv\in L\}\).  The compiler emits the canonical
+Because every derived pomset is finite, \(W^\dagger_{H,u}\) and
+\(B^\dagger_{H,u}\) are finite.  For a language \(L\) and resolved word \(z\),
+let \(L/z=\{v\mid zv\in L\}\), and set
+\(W=W^\dagger_{H,u}\), \(B=B^\dagger_{H,u}\) in this construction.  The compiler emits the canonical
 generated/marked residual program.  Write
-\(q_z=(W/z,B^\star/z)\):
+\(q_z=(W^\dagger/z,B^\dagger/z)\):
 \begin{equation}
 \label{eq:canonical-program}
 \begin{aligned}
  Q_{W,B} &= \{q_z\mid z\in W\},\\
- q^0&=q_\epsilon=(W,B^\star),\\
+ q^0&=q_\epsilon=(W^\dagger,B^\dagger),\\
  q_z\xrightarrow{a}q_{za}
  &\quad\Longleftrightarrow\quad za\in W .
 \end{aligned}
 \end{equation}
+Write \(\mathsf{Can}(W,B)\) for this derivative automaton.
 Every state is generated; a state is marked exactly when
-\(\epsilon\in B^\star/z\).
+\(\epsilon\in B^\dagger/z\).
 The transition label \(a\) contains the logical occurrence \(x\), semantic
 cell \(d\), and fresh/alias mode.  Consequently an enabled cell cannot be
 exercised through the gate of a different branch occurrence.
@@ -27,117 +29,187 @@ exercised through the gate of a different branch occurrence.
 \label{lem:compiled-language}
 The generated and marked languages of the program in
 \cref{eq:canonical-program} are exactly
-\((W_{H,u},B^\star_{H,u})\).  It is the smallest deterministic marked
+\((W^\dagger_{H,u},B^\dagger_{H,u})\).  It is the smallest deterministic marked
 partial automaton for this pair up to state renaming.
 \end{lemma}
 \begin{proof}
 After \(z\), induction places the program in
-\((W/z,B^\star/z)\); the rule enables \(a\) exactly when \(za\in W\), and
-the state is marked exactly when \(z\in B^\star\).  Two retained states differ
+\((W^\dagger/z,B^\dagger/z)\); the rule enables \(a\) exactly when
+\(za\in W^\dagger\), and
+the state is marked exactly when \(z\in B^\dagger\).  Two retained states differ
 on a generated or marked suffix, so every deterministic marked implementation
 must distinguish them.  The construction is the paired-language form of
 classical derivatives~\cite{brzozowski1964derivatives}.
 \end{proof}
 
-The compiler first runs the trusted derivation and \cref{eq:admission}.  On
-failure it returns \(o\) with \(M_o=\varnothing\) and a product-emptiness
-certificate.  On success it emits the
-program and a seal
+The call \(\mathsf{Compile}(\kappa,H,\Delta,\mathcal A,u)\) first runs the
+schema judgment, trusted derivation, and
+\cref{eq:admission}.  On failure it returns the complete descending
+fixed-point chain and the ranked missing-witness causes described after
+\cref{lem:greatest-realization}.  On success it emits
+\(\widehat B^\dagger\), its complete stabilization chain, all
+persistent-coverage witnesses, the program over the projected marked language
+\(B^\dagger\), namely
+\(\mathsf{prog}_Z=\mathsf{Can}(W^\dagger,B^\dagger)\), and a seal
 \[
- Z=(\kappa_Z,\mathsf{cut}_Z,u,H_{\mathsf{prog}},\eta_Z),
+ Z=(\omega,\zeta,\kappa_Z,\mathsf{cut}_Z,u,
+    H_{\mathsf{prog}},\eta^-,\eta^+),
 \]
-where \(\eta_Z=\eta_{H,u}\) is the target generation deterministically minted
-by the history judgment.  The checked certificate also lists
-\(B^\star_{H,u}\) and one safe completion per outcome.  The cut digest is
+where \(\eta^+\) is deterministically minted by the history judgment.
+Let \(\mathsf{enc}\) be a canonical, length-delimited encoding; policy version
+\(\kappa\) binds the issuer-authenticated encoding of \(\mathcal A\).  The
+formal LTS uses domain-separated injective authenticated constructors
+\(\mathsf{Seal}_{\rm prog}\) and \(\mathsf{Seal}_{\rm cut}\): equality of
+symbolic seals implies equality of their encoded payloads.  Define
+\[
+ H_{\mathsf{prog}}=
+ \mathsf{Seal}_{\rm prog}(
+   \mathsf{enc}(\mathsf{prog}_Z,\widehat B^\dagger_{H,u})).
+\]
+The cut seal is
 \begin{equation}
-\label{eq:cut-digest}
+\label{eq:cut-seal}
  \mathsf{cut}_Z=
- \mathsf{hash}(\kappa,H,\Delta,u,
-     \mathcal C_{H,u},\Src_{H,u},\mathsf{Tgt}_{H,u}).
+ \mathsf{Seal}_{\rm cut}(\mathsf{enc}(\omega,\zeta,\kappa,H,\Delta,u,
+     \mathcal C_{H,u},H_{\mathsf{prog}},\eta^-,\eta^+)).
 \end{equation}
-Because \(H\) contains \(\chi,\nu,\rho,\beta\), the digest binds both logical
-and ownership frontiers.  Compilation and inactive preloading are untrusted,
-unobservable work.  A small checker re-derives the judgment, reconstructs
-\(W\), and checks language equality and the hashes before installation.
+Because \(H\) contains \(\chi,\nu,\rho,\beta\), the seal binds both logical
+and epoch frontiers.  Compilation and inactive preloading are untrusted,
+unobservable work.  A small checker re-derives the schema judgment, recomputes
+the indexed fixed point and its complete chain, reconstructs
+\((W^\dagger,B^\dagger)\), and verifies
+\[
+ \mathsf{prog}_Z\cong\mathsf{Can}(W^\dagger,B^\dagger),
+\]
+where the isomorphism preserves the initial state, markedness, and every
+labeled transition.  It then checks the program and cut seals before
+installation; language equality alone is not accepted.  A byte implementation
+may realize these constructors with domain-separated signatures or
+collision-resistant digests over \(\mathsf{enc}\); then the refinement claim
+is computational, up to the probability of a forgery or collision.  The exact
+bisimulation theorem below is for the symbolic constructors.
 
 \subsection{Durable kernel}
 
-The compiled state for one policy scope is
+The compiled state for one policy domain is
 \[
  S=(\kappa,H,\Delta,\mathsf{out},
-    \mathsf{phase},\mathsf{bind},\mathsf{prog},\mathsf q),
+    \mathsf{phase},\mathsf{bind},\mathsf{prog},\mathsf q,\mathsf{cert}),
 \]
-where generation phase is
+where epoch phase is
 \(\mathsf{inactive}\), \(\mathsf{active}\), or \(\mathsf{closed}\).
+\(\mathsf{cert}(\eta)\) is the checked installation record
+\((H_c,u,W^\dagger,\widehat B^\dagger,Z)\) for an active epoch; its indexed
+family is proof ghost state, while \(W^\dagger\), \(B^\dagger\), and the seal
+are checked enforcement data.
 The following invariant is required:
 
 \begin{enumerate}[leftmargin=*,itemsep=1pt]
- \item every live occurrence has one bound gate and active owner;
+ \item exactly the current epoch \(\eta\) is active and every live occurrence
+       has one gate bound to it;
+ \item inactive preloaded epochs own no live gate; arbitrary unreachable
+       inactive programs may be discarded as preload garbage;
+ \item the current certificate agrees with the admitted cut and projects to
+       the active program's generated/marked residual after the current prefix;
  \item every resolved occurrence appears once in ordered \(\chi\);
  \item every \Fresh in \(\chi\) has exactly one receipt in \(\Delta\), and
        every \Alias names an earlier receipt;
- \item the active program state is the generated/marked residual pair after
-       the current resolved prefix; and
- \item a closed generation never becomes active again.
+ \item a closed epoch never becomes active again.
 \end{enumerate}
 
 \paragraph{Atomic protected use}
 Let the current history bind occurrence \(x\) to expected gate \(j\), owned by
 \(\eta\), and let the supplied handle authenticate its expected cell \(d\).
+\(\mathsf{VerifyHandle}(h,\rho(x),j,d)\) checks issuer authentication, scope,
+effect digest, gate, and cell against the immutable registry record.
 The kernel computes \(a=\Fresh(x,d)\) when \(d\notin D_\Delta\), and
-\(a=\Alias(x,d)\) otherwise.  Its one durable transition is
+\(a=\Alias(x,d)\) otherwise.  Write \(\Use_x=\mathsf{Use}(x,j,h)\).
+Its one durable transition is
 \begin{equation}
 \label{eq:use-rule}
 \frac{
 \begin{gathered}
  x\text{ enabled in }T\quad
- \mathsf{bind}(x)=(j,\eta)\quad
+ \mathsf{bind}(x)=(j,\eta)\\[-2pt]
+ \eta=H.\mathsf{epoch}\quad
  \mathsf{phase}(\eta)=\mathsf{active}\\[-2pt]
- \rho(x)\text{ authenticates }(j,d)\quad
+ \mathsf{VerifyHandle}(h,\rho(x),j,d)\quad
  \mathsf q(\eta)\xrightarrow{a}_{\mathsf{prog}(\eta)}q'
 \end{gathered}}
-{S\xrightarrow{\mathsf{Use}(x,j,h)/a}
-  \mathsf{Advance}(S,x,a,q')} .
+{S\xrightarrow{\Use_x/a}S'} .
 \end{equation}
-\(\mathsf{Advance}\) atomically residualizes the exact occurrence in \(T\),
+\(S'=\mathsf{Advance}(S,x,a,q')\) atomically residualizes the exact occurrence in \(T\),
 appends \(a\) to \(\chi\), advances \(\nu\), and stores \(q'\).  For \Fresh it
-also consumes the authority atom, appends the immutable labeled receipt to
-\(\Delta\), and enqueues the effect.  For \Alias it does not touch
+appends the immutable labeled receipt to \(\Delta\) and enqueues the effect.
+For \Alias it does not touch
 \(\Delta\), and binds the occurrence to the cell's durable result future.
 It also records the first durable progress through an open choice.  Thus
 history, controller, receipt, result binding, and outbox cannot be torn apart
 by a crash.
 
-A duplicate request with the same invocation identifier is \Retry: it returns
-the stored result without a second contract or controller transition.  An
-unbound, disabled, malformed, or closed-generation call returns
-\(\mathsf{deny}(x)\).  \Dispatch releases only the oldest pending outbox item;
+Request processing is total and ordered.  First, an already-resolved \(x\)
+is a \Retry only if \(\mathsf{VerifyRetry}(h,x,j,d,\chi,\Delta)\)
+authenticates the same invocation capability recorded by its
+\(\chi\)-to-receipt link; it then returns the stable future/result without a
+state transition.  Otherwise an unresolved \(x\) takes
+\cref{eq:use-rule} exactly when all its premises hold.  Failure of the retry
+or use premises
+\cref{eq:use-rule}---including a missing program transition, bad handle,
+unbound occurrence, disabled branch, or closed epoch---returns
+\(\mathsf{deny}(x)\) without changing state.  \Dispatch releases only the oldest pending outbox item;
 settlement and crash preserve the security state used by \cref{eq:use-rule}.
 
 \paragraph{Atomic installation}
-At commit time the kernel ignores any caller-supplied source enumeration.  It
+At commit time the kernel ignores caller-supplied target or epoch data.  It
 re-runs
 \[
- H\vdash u\Downarrow
- (H',\mathcal C,\Src,\mathsf{Tgt})
+\Sigma_\zeta;H\vdash u\Downarrow
+ (H',\mathcal C,\eta^-,\eta^+)
 \]
-over the current history and checks
+over the current history and checks the following.  Here
+\(\mathsf{ReCut}(S,u,Z)\) recomputes the right-hand side of
+\cref{eq:cut-seal} from current state, and \(\mathsf{Verify}_Z\) includes
+the program/seal checks stated above:
 \begin{equation}
 \label{eq:install-premise}
 \begin{gathered}
  \kappa=\kappa_Z,\qquad
- \mathsf{hash}(\kappa,H,\Delta,u,\mathcal C,\Src,\mathsf{Tgt})
-   =\mathsf{cut}_Z,\\
- \mathsf{Verify}(\mathsf{prog}_Z,W_{H,u},
-    B^\star_{H,u},H_{\mathsf{prog}}),\\
- \mathsf{phase}(\eta_Z)=\mathsf{inactive}.
+ \mathsf{ReCut}(S,u,Z)=\mathsf{cut}_Z,\\
+ \mathsf{Verify}_Z(W^\dagger_{H,u},B^\dagger_{H,u},
+    \widehat B^\dagger_{H,u}),\\
+ \mathsf{Admit}(H,u,\Delta,\mathcal A),\\
+ H.\mathsf{epoch}=\eta^-,\qquad
+ \mathsf{phase}(\eta^+)=\mathsf{inactive}.
 \end{gathered}
 \end{equation}
-If all checks hold, one transaction closes every
-\(\eta\in\Src\), verifies that every target binding in \(H'\) names fresh
-gates owned by \(\eta_Z\), persists \(H'\), activates the verified program at
-\(q^0\).  This successful step is observed as
+If all checks hold, let \(H_c\) denote the pre-transaction \(H\).  One domain
+transaction verifies that every target binding in \(H'\) names a fresh gate
+owned by \(\eta^+\) and applies
+\[
+\begin{aligned}
+ H&:=H',&
+ \mathsf{phase}(\eta^-)&:=\mathsf{closed},\\
+ \mathsf{phase}(\eta^+)&:=\mathsf{active},&
+ \mathsf{bind}|_{X_{\sem{T'}}}&:=\beta',\\
+ \mathsf{prog}(\eta^+)&:=\mathsf{prog}_Z,&
+ \mathsf q(\eta^+)&:=q^0,\\
+ \mathsf{cert}(\eta^+)&:=
+   (H_c,u,W^\dagger,\widehat B^\dagger,Z).
+\end{aligned}
+\]
+All unrelated inactive/closed records are preserved and no stale binding can
+pass the current-epoch guard.  This successful step is observed as
 \(\mathsf{Edge}(u)\).  Failure is an internal stutter with no state change.
+
+\paragraph{Remaining rules}
+\(\mathsf{Preload}(\eta,Z)\) is a \(\tau\)-step that may change only an
+inactive, unbound epoch; failed installation is a state-preserving
+\(\tau\)-step.  Authenticated retry and result delivery are \(\tau\)-steps
+that return the linked stable future without changing the security core;
+settlement monotonically fills that future, and crash is a security-state
+self-loop.  \(\Dispatch(d)\) is enabled only for the outbox head and marks
+exactly that entry released.  These clauses, together with the total denial
+rule above, make the compiled LTS transition relation explicit.
 
 \begin{figure}[t]
   \centering
@@ -149,13 +221,13 @@ gates owned by \(\eta_Z\), persists \(H'\), activates the verified program at
     ]
     \node[box] (u1) {\(\Use_{\rm old}\) first\\
       \Fresh changes \(\Delta,\chi\)\\or \Alias changes \(\chi\)};
-    \node[box,right=3mm of u1] (i1) {\Install\\digest mismatch};
+    \node[box,right=3mm of u1] (i1) {\Install\\seal mismatch};
     \node[right=2mm of i1] (f1) {\textbf{stale}};
     \draw[arr] (u1) -- (i1);
 
     \node[box,below=4mm of u1] (i2) {\Install first\\
-      close all sources};
-    \node[box,right=3mm of i2] (u2) {old \(\Use\)\\closed owner};
+      close domain epoch};
+    \node[box,right=3mm of i2] (u2) {old \(\Use\)\\closed epoch};
     \node[right=2mm of u2] (f2) {\textbf{denied}};
     \draw[arr] (i2) -- (u2);
   \end{tikzpicture}
@@ -164,42 +236,43 @@ gates owned by \(\eta_Z\), persists \(H'\), activates the verified program at
   \label{fig:cut-races}
 \end{figure}
 
-The source derivation and both frontier comparisons are semantic, not merely
-defensive metadata.  If an old use linearizes first, either \(\Delta\) or
+Both frontier comparisons are semantic, not merely defensive metadata.  If
+an old use linearizes first, either \(\Delta\) or
 \(\chi\) changes and the compiled seal is stale.  If installation linearizes
-first, \cref{eq:use-rule} has no active-owner premise through an old binding.
+first, \cref{eq:use-rule} has no current-active-epoch premise through an old
+binding.
 There is no execution in which pre-cut progress is absent from the proved
 state yet commits on the post-cut side.
 
 \begin{lemma}[History-cut linearization]
 \label{lem:cut-linearization}
 In every reachable well-formed compiled state, a successful \Install and a
-protected use owned by one of its derived sources have a unique order.  If
+protected use in the same policy domain have a unique order.  If
 the use commits first, that seal cannot install.  If \Install commits first,
-the old use cannot resolve fresh or alias.  A generation outside the source
-set cannot change the installed cut's contract, cell mode, or policy
-residual.
+the old use cannot resolve fresh or alias.  Steps in independent domains
+commute by product semantics.
 \end{lemma}
 \begin{proof}
 The use and installation rules are serializable transactions over the same
-history and generation records.  A fresh use changes
+history and epoch records.  A fresh use changes
 \((\Delta,\chi,\nu)\); an alias changes \((\chi,\nu)\).  Since
 \(\mathsf{cut}_Z\) authenticates \(H\) and \(\Delta\), re-derivation after
-either use disagrees with the seal.  In the other order, \Install closes every
-generation in the derived source set before activating \(\eta_Z\), so the
-active-owner premise of \cref{eq:use-rule} is false for every old binding.
-The isolation clause of \cref{lem:history-derivation} gives the final case.
-Atomic persistence of \(H'\), the target bindings, and \(q^0\) restores the
+either use disagrees with the seal.  In the other order, \Install closes the
+old domain epoch before activating \(\eta^+\), so the current-active-epoch
+premise of \cref{eq:use-rule} is false for every old binding.  Disjoint cells,
+logs, and policies give the product case.  Atomic persistence of \(H'\), the
+target bindings, \(q^0\), and the checked active certificate restores the
 kernel invariant.
 \end{proof}
 
 \subsection{Decidability and trust}
 
-The checker can enumerate linearizations for small contracts or construct
-their asynchronous product with the policy automaton.  Parallel pomsets make
-the worst case exponential; the result is finite decidability for bounded
-protected slices, not a polynomial claim.  The trusted computing base is the
-history/contract registry, ledger and atomic rules, policy issuer, certificate
-verification, and complete mediation.  Compiler search, automaton
+The checker can enumerate indexed linearizations for small contracts or
+construct their asynchronous product with the policy automaton, then iterate
+\(\widehat\Phi\) at most \(|\widehat B_0|\) strict-removal rounds.  Parallel
+pomsets make the worst case exponential; the result is finite decidability for
+bounded protected slices, not a polynomial claim.  The trusted computing base
+is the history, protected-call, and edit-schema registries, ledger and atomic
+rules, policy issuer, certificate verification, and complete mediation.  Compiler search, automaton
 minimization, and preloading remain outside it because \(\mathsf{Verify}\) and
 \Install re-establish their claims.

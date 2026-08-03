@@ -1,18 +1,29 @@
 \section{Exact History Admission}
 \label{sec:admission}
 
-Let \(\mathcal A\subseteq\mathcal U^*\) be a regular,
+Let \(\mathcal U\) be the authority-label alphabet and
+\(\mathcal A\subseteq\mathcal U^*\) a regular,
 prefix-closed authority policy.  The authenticated receipt log \(\Delta\)
 contains cell identities, phases, and qualified authority labels; its
 projection \(\mathsf{lab}(\Delta)\in\mathcal A\) is an authority word.  Write
 \(D_\Delta\) for its receipted cells.
+For a proposed edit, fix the full admission instance
+\(\Theta=(\kappa,H,\Delta,\mathcal A,u)\) and its unique schema derivation
+\[
+ \Sigma_\zeta;H\vdash u\Downarrow
+ (H',\mathcal C_{H,u},\eta^-,\eta^+).
+\]
+Let \(\rho'\) be the authenticated target registry in \(H'\), and define
+\(O_{H,u}=O_{\mathcal C_{H,u}}\).  Every language below is a function of
+\(\Theta\), the fixed schema registry, and this derived \(\rho'\); subscripts
+\(H,u\) suppress those parameters only for readability.
 
 \subsection{Fresh and alias resolution}
 
 The key typing rule is that logical occurrences never disappear.  Starting
 with \(R_0=D_\Delta\), the deterministic transducer
-\(\Resolve_\Delta\) maps a raw word \(w=x_1\cdots x_n\) to a resolved word
-\(z_1\cdots z_n\).  For \(d_i=q_{\rm cell}(x_i)\),
+\(\Resolve^{\rho'}_\Delta\) maps a raw word \(w=x_1\cdots x_n\) to a resolved word
+\(z_1\cdots z_n\).  For \(d_i=q^{\rho'}_{\rm cell}(x_i)\),
 \begin{equation}
 \label{eq:resolve}
  z_i=
@@ -25,21 +36,24 @@ with \(R_0=D_\Delta\), the deterministic transducer
 \end{equation}
 The authority projection erases aliases but not occurrences:
 \[
- \mathsf{auth}(\Fresh(x,d))=\ell(d),\qquad
+ \mathsf{auth}(\Fresh(x,d))=\ell_{\rho'}(d),\qquad
  \mathsf{auth}(\Alias(x,d))=\epsilon .
 \]
+For a resolved word \(z\), \(\mathsf{raw}(z)\) erases the fresh/alias mode and
+cell fields but retains its ordered logical occurrence identifiers.
 A repeated delivery of the \emph{same} invocation identifier is \Retry and
 does not occur a second time in \(w\).  In contrast, two restored occurrences
 with the same cell both occur in \(w\); one may be fresh and the other alias.
 
 \begin{lemma}[Resolution]
 \label{lem:resolution}
-\(\Resolve_\Delta\) is deterministic, length preserving, and prefix
+\(\Resolve^{\rho'}_\Delta\) is deterministic, length preserving, and prefix
 compatible.  Its fresh projection contains each cell at most once outside
 \(D_\Delta\), while its occurrence projection is exactly the input word.
 Moreover, if
-\(\Resolve_\Delta(rv)=zv'\), then \(z=\Resolve_\Delta(r)\) and
-\(v'=\Resolve_{\Delta_z}(v)\), where \(\Delta_z\) extends \(\Delta\) by the
+\(\Resolve^{\rho'}_\Delta(rv)=zv'\), then
+\(z=\Resolve^{\rho'}_\Delta(r)\) and
+\(v'=\Resolve^{\rho'}_{\Delta_z}(v)\), where \(\Delta_z\) extends \(\Delta\) by the
 fresh events of \(z\).
 \end{lemma}
 \begin{proof}
@@ -54,16 +68,14 @@ This lemma fixes two distinct replay cases.  A network retry is a stutter in
 both histories.  A copied occurrence is a stutter only in the authority
 projection: it still resolves choice, sequence, or join causality.
 
-\subsection{Safe completions and the admission boundary}
+\subsection{Prefix-robust history admission}
 
-Suppose \(H\vdash u\Downarrow
-(H',\mathcal C_{H,u},\Src_{H,u},\mathsf{Tgt}_{H,u})\).
 For each structurally derived outcome \(o\in O_{H,u}\), define all resolved
 completions and then its safe subset:
 \begin{equation}
 \label{eq:safe-completions}
 \begin{aligned}
- R_o(H,u)&=\{\Resolve_\Delta(w)\mid w\in\Lin(p_o)\},\\
+ R_o(H,u)&=\{\Resolve^{\rho'}_\Delta(w)\mid w\in\Lin(p_o)\},\\
  M_o(H,u)&=\{z\in R_o(H,u)\mid
    \mathsf{lab}(\Delta)\mathsf{auth}(z)\in\mathcal A\}.
 \end{aligned}
@@ -71,112 +83,207 @@ completions and then its safe subset:
 The alphabets now agree: \(M_o\) contains resolved occurrence words, and the
 policy is consulted only through their authority projection.
 
+Initial outcome coverage is insufficient.  One safe schedule for outcome
+\(o\) and another for \(v\) may share a prefix that makes \(o\)'s remaining
+schedule unsafe, silently pruning an outcome that the raw contract still
+retains.  We therefore close safe completions under every shared prefix.
+For a resolved prefix \(z\), let
+\[
+ \mathsf{Compat}(z)=
+ \{o\mid \mathsf{raw}(z)\preceq_{\rm pref}w
+          \text{ for some }w\in\Lin(p_o)\}.
+\]
+Identical resolved words may belong to different indexed outcomes, so the
+fixed point must not quotient their identities.  Put
+\[
+ \widehat B_0=\biguplus_{o\in O_{H,u}}\{o\}\times M_o .
+\]
+For \(\widehat B\subseteq\widehat B_0\), define the monotone operator
+\begin{equation}
+\label{eq:robust-operator}
+\widehat\Phi(\widehat B)=
+\left\{(o,b)\in\widehat B_0\ \middle|\
+\begin{array}{l}
+\forall z\preceq_{\rm pref} b.\ \forall v\in\mathsf{Compat}(z).\\[-2pt]
+\exists (v,b')\in\widehat B.\ z\preceq_{\rm pref}b'
+\end{array}\right\}.
+\end{equation}
+Set \(\widehat B_{i+1}=\widehat\Phi(\widehat B_i)\).
+Because \(\widehat B_1\subseteq\widehat B_0\), and monotonicity gives
+\(\widehat B_{i+1}\subseteq\widehat B_i\) whenever
+\(\widehat B_i\subseteq\widehat B_{i-1}\), this is a descending finite
+sequence and stabilizes.  Let
+\[
+\begin{aligned}
+ \widehat B^\dagger_{H,u}
+   &=\nu\widehat B.\widehat\Phi(\widehat B)
+     =\bigcap_{i\geq 0}\widehat B_i,\\
+ B^\dagger_{H,u}&=\pi_2\widehat B^\dagger_{H,u},
+ &W^\dagger_{H,u}&=\Pref(B^\dagger_{H,u}).
+\end{aligned}
+\]
+The fixed point removes a completion if one of its prefixes lacks a surviving
+completion carrying even one still-compatible outcome index; removal can in turn
+invalidate coverage at an earlier prefix.  The runtime consumes the projected
+marked language \(B^\dagger\), while the checker and seal retain
+\(\widehat B^\dagger\) as a ghost witness relation.
+
 \begin{definition}[Agent history admission]
 \label{def:admission}
 \begin{equation}
 \label{eq:admission}
- \mathsf{Admit}(H,u)
+\mathsf{Admit}(H,u,\Delta,\mathcal A)
  \quad\Longleftrightarrow\quad
- \forall o\in O_{H,u}.\ M_o(H,u)\ne\varnothing .
+ \widehat B^\dagger_{H,u}\ne\varnothing .
 \end{equation}
 \end{definition}
+We write \(\mathsf{Admit}(H,u)\) only after the full instance \(\Theta\),
+schema registry, and derived target registry have been fixed.
 
-Universal quantification is over indexed outcomes derived by the trusted
-operation, not over caller-supplied promises.  Existential quantification
-inside \(M_o\) chooses a legal scheduler linearization; it does not promise
-fairness.  A true parallel contract therefore requires a safe execution
-containing both inputs, while a choice contract requires a safe execution for
-each arm.
+At \(z=\epsilon\), every derived outcome is compatible.  Thus nonemptiness of
+the fixed point already implies initial outcome coverage.  The inner
+existential still chooses a scheduler linearization, not a fairness promise;
+the outer prefix condition prevents that choice from silently deleting
+another outcome later.
 
-Let \(B^\star_{H,u}=\bigcup_{o\in O_{H,u}}M_o(H,u)\) be the marked safe
-completions.  The ideal generated language is
-\begin{equation}
-\label{eq:history-language}
- W_{H,u}=\Pref(B^\star_{H,u}).
-\end{equation}
-It contains prefixes of safe \emph{complete} executions, not every prefix
-that happens to be policy safe now.
-
-\begin{definition}[Realization]
+\begin{definition}[Indexed realization]
 \label{def:realization}
-A generated/marked pair \((L,B)\) realizes \((H,u)\) when:
+A generated language and indexed marked family
+\((L,\widehat B)\) realize \((H,u)\) when:
 \begin{enumerate}[leftmargin=*,itemsep=1pt]
+ \item \(\widehat B\ne\varnothing\);
  \item \emph{history fidelity:}
-\(B\subseteq\bigcup_{o\in O_{H,u}}R_o(H,u)\) and
+\(\widehat B\subseteq
+ \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\) and
 \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\);
  \item \emph{policy safety:}
  \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A\)
  for every \(z\in L\);
  \item \emph{completion nonblocking:}
- \(L=\Pref(B)\); and
- \item \emph{outcome coverage:}
- \(B\cap R_o(H,u)\ne\varnothing\) for every \(o\in O_{H,u}\).
+ \(L=\Pref(\pi_2\widehat B)\); and
+ \item \emph{persistent outcome coverage:} for every \(z\in L\) and
+ \(o\in\mathsf{Compat}(z)\), some
+ \((o,b)\in\widehat B\) extends \(z\).
 \end{enumerate}
 \end{definition}
 
-\begin{lemma}[Greatest realization]
+\begin{lemma}[Prefix-robust greatest realization]
 \label{lem:greatest-realization}
 A realization exists iff \(\mathsf{Admit}(H,u)\).
-On admission, \((W_{H,u},B^\star_{H,u})\) is a realization, and every
-realization \((L,B)\) satisfies
-\(B\subseteq B^\star_{H,u}\) and \(L\subseteq W_{H,u}\).
+On admission,
+\((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) is a realization, and every
+realization \((L,\widehat B)\) satisfies
+\(\widehat B\subseteq\widehat B^\dagger_{H,u}\) and
+\(L\subseteq W^\dagger_{H,u}\).
 \end{lemma}
 \begin{proof}
-Every member of \(B^\star\) resolves a derived outcome and is safe;
-\(W=\Pref(B^\star)\) gives nonblocking, and admission supplies coverage.
-Conversely, fidelity and safety put every \(b\in B\) in some \(M_o\), so
-\(B\subseteq B^\star\) and
-\(L=\Pref(B)\subseteq\Pref(B^\star)=W\).  Finally, coverage of \(o\) would
-witness \(M_o\ne\varnothing\), so a missing \(M_o\) is impossible.
+Fidelity, completion nonblocking, and safety put the indexed marked family of
+any realization inside \(\widehat B_0\).  Persistent coverage says exactly that
+\(\widehat B\subseteq\widehat\Phi(\widehat B)\), so \(\widehat B\) is a
+post-fixed point.  Monotonicity of \(\widehat\Phi\) and the finite
+Knaster--Tarski construction place every such family inside
+\(\widehat B^\dagger\); taking projected prefixes
+gives \(L\subseteq W^\dagger\).  Conversely,
+\(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) supplies persistent
+coverage, \(\widehat B^\dagger\subseteq\widehat B_0\) supplies fidelity and
+safe marked words; prefix closure of \(\mathcal A\) supplies safety for their
+prefixes; and \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) supplies
+nonblocking.  It is a realization exactly when nonempty.
 \end{proof}
 
-The nonblocking clause is what makes the boundary stronger than filtering
-pointwise-safe prefixes.  For example, if a payment prefix is legal but makes
-every registered shipment completion impossible, it is absent from \(W\).
+This fixed point is substantive even when every \(M_o\) is nonempty.  Let
+\(\mathcal C=X\otimes(Y\oplus Z)\), with distinct fresh cells, and
+\(\mathcal A=\Pref\{yx,xz\}\).  The two outcomes initially have safe
+completions \(yx\) and \(xz\).  Yet prefix \(x\), taken from \(xz\), remains
+raw-compatible with the \(xy\) outcome and leaves it no safe continuation.
+The first iteration removes \(xz\); the next removes \(yx\) because root
+coverage is then lost.  Hence the edit is rejected, whereas the independent
+\(\forall o.\,M_o\ne\varnothing\) test would admit it.
 
+Rejection has a finite proof.  For every
+\((o,b)\in\widehat B_i\setminus\widehat B_{i+1}\), record a prefix
+\(z\preceq b\) and outcome \(v\in\mathsf{Compat}(z)\) for which no
+\((v,b')\in\widehat B_i\) extends \(z\).  The removal round is its rank.
+For any post-fixed family \(P\), forward induction gives
+\(P\subseteq\widehat B_i\): the base is \(\widehat B_0\), and each recorded
+missing-witness cause excludes its removed pair from \(P\), yielding
+\(P\subseteq\widehat B_{i+1}\).  If the sequence reaches \(\varnothing\), no
+nonempty post-fixed family, hence no realization, exists.  The checker
+recomputes \(\widehat B_0\), verifies nestedness and a cause for every removed
+pair, and checks every survivor coverage witness at stabilization.
+
+For the following lemma, \(H,u,\mathcal A\) are fixed after deriving
+\(\mathcal C\); notation \(W^\dagger(\mathcal C,\Delta)\) and
+\(\widehat B^\dagger(\mathcal C,\Delta)\) suppresses those fixed parameters.
 \begin{lemma}[Residual coherence]
 \label{lem:residual-coherence}
-If \(z\in W(\mathcal C,\Delta)\), then
-\(\Resolve_\Delta(\mathsf{raw}(z))=z\),
+If \(z\in W^\dagger(\mathcal C,\Delta)\), then
+\(\Resolve^{\rho'}_\Delta(\mathsf{raw}(z))=z\),
 \(\mathsf{lab}(\Delta_z)=
  \mathsf{lab}(\Delta)\mathsf{auth}(z)\), and
 \[
 \begin{aligned}
- W(\mathcal C,\Delta)/z
-  &=W(\mathcal C/\mathsf{raw}(z),\Delta_z),\\
- B^\star(\mathcal C,\Delta)/z
-  &=B^\star(\mathcal C/\mathsf{raw}(z),\Delta_z).
+ W^\dagger(\mathcal C,\Delta)/z
+  &=W^\dagger(\mathcal C/\mathsf{raw}(z),\Delta_z),\\
+ \widehat B^\dagger(\mathcal C,\Delta)/z
+  &=\widehat B^\dagger(
+      \mathcal C/\mathsf{raw}(z),\Delta_z).
 \end{aligned}
 \]
+where
+\(\widehat B/z=\{(o,v)\mid(o,zv)\in\widehat B\}\).
 \end{lemma}
 \begin{proof}
-Because \(z\) prefixes a member of \(B^\star\), prefix compatibility and raw
+Because \(z\) prefixes the projection of a member of
+\(\widehat B^\dagger\), prefix compatibility and raw
 recoverability in \cref{lem:resolution} give the first equality; its streaming
 case gives the ledger equality.  Taking the indexed pomset residual removes
 exactly that raw prefix while retaining every consistent outcome identity.
-Applying the same policy residual to the remaining suffixes gives the marked
-equality, and taking prefixes gives the generated equality.
+Moreover,
+\(\mathsf{Compat}_{\mathcal C/\mathsf{raw}(z)}(s)
+ =\mathsf{Compat}_{\mathcal C}(zs)\).
+Streaming resolution and authority concatenation give the load-bearing base
+equality
+\[
+ \widehat B_0(\mathcal C,\Delta)/z
+ =\widehat B_0(\mathcal C/\mathsf{raw}(z),\Delta_z),
+\]
+with the same retained outcome identities, policy, and target registry.
+The quotient \(\widehat B^\dagger/z\) is therefore a post-fixed family for
+the residual operator, hence is contained in its greatest fixed point \(Y\).
+Conversely, let \(zY=\{(o,zy)\mid(o,y)\in Y\}\).
+The streaming equation and residual policy safety put \(zY\) inside the
+original \(\widehat B_0\).  Then
+\(\widehat B^\dagger\cup zY\) is post-fixed for the original operator:
+prefixes \(t\preceq z\) use witnesses already supplied by
+\(\widehat B^\dagger\), while prefixes \(t=zs\) use residual witnesses in \(Y\).
+Maximality of \(\widehat B^\dagger\) gives
+\(zY\subseteq\widehat B^\dagger\), so
+\(Y=\widehat B^\dagger/z\).  Finally,
+\(\Pref(B)/z=\Pref(B/z)\) for \(z\in\Pref(B)\); taking projected prefixes
+gives the generated equality.
 \end{proof}
-After a prefix, coverage ranges over residual outcome indices consistent with
-that prefix, not over alternatives already resolved away.
+Thus every admitted prefix retains a safe completion for every residual
+outcome index still structurally consistent with that prefix.
 
 \subsection{The ideal atomic history machine}
 \label{sec:ideal}
 
-The ideal LTS retains abstract gate/owner identities so protected calls and
-history edges are defined, but has no generation phases, seals, preloading, or
-handoff microsteps: a history edge updates all affected identities atomically.
+The ideal LTS retains abstract gate and epoch identities so protected calls
+and history edges are defined, but has no phase protocol, seals, preloading,
+or handoff microsteps: a history edge changes the policy-domain epoch
+atomically.
 Its durable state contains \((\kappa,H,\Delta,\mathsf{out})\) plus
 the current admitted cut
-\(c=(H_c,u,W_{H_c,u},B^\star_{H_c,u})\) and resolved prefix
+\(c=(H_c,u,W^\dagger_{H_c,u},\widehat B^\dagger_{H_c,u})\) and resolved prefix
 \(r\).  It has the following transitions.
 
 \paragraph{History edge}
 \(\mathsf{Edge}(u)\) atomically applies the unique judgment
-\(H\vdash u\Downarrow(H',\mathcal C,\Src,\mathsf{Tgt})\) when
+\(\Sigma_\zeta;H\vdash u\Downarrow(H',\mathcal C,\eta^-,\eta^+)\) when
 \(\mathsf{Admit}(H,u)\), persists the already version-advanced \(H'\), and
 sets the active reference to
-\((W_{H,u},B^\star_{H,u},\epsilon)\).  There is no semantic
+\((W^\dagger_{H,u},\widehat B^\dagger_{H,u},\epsilon)\).  There is no semantic
 handoff protocol: this is the independent atomic behavior that the
 implementation must refine.
 
@@ -184,25 +291,30 @@ implementation must refine.
 Let \(x\) be an enabled occurrence of the current frontier with expected gate
 and authenticated cell \(d\).  Resolve it against the current receipts to
 \(a\in\{\Fresh(x,d),\Alias(x,d)\}\).  The transition is enabled exactly when
-\(ra\in W_{H_c,u}\).  It atomically residualizes the frontier by \(x\),
+\(ra\in W^\dagger_{H_c,u}\).  It atomically residualizes the frontier by \(x\),
 appends \(a\) to \(\chi\), advances \(\nu\), and sets
 \(r:=ra\).  In the fresh case it also appends an immutable receipt
 for \(d\), labeled \(\ell(d)\), to \(\Delta\) and enqueues \(d\); in the alias
 case those fields do not change.
 
-An invalid occurrence, gate, handle, or disabled branch produces
-\(\mathsf{deny}(x)\) without changing state.  An alias binds the restored
+Failure of any protected-occurrence guard---including an invalid occurrence,
+gate, or handle, a disabled branch, or
+\(ra\notin W^\dagger_{H_c,u}\)---produces \(\mathsf{deny}(x)\) without
+changing state.  An alias binds the restored
 occurrence to the same durable result future as its cell; it advances causal
 history but does not invent a result that the original invocation has not yet
 produced.
 
 \paragraph{Retry, release, and crash}
-A same-invocation retry returns the recorded result without changing history.
-\Dispatch may release only the oldest prepared outbox item, so the release
-trace is a prefix of fresh preparation order.  Settlement changes only a
-receipt phase.  Crash discards nondurable computation and leaves the LTS state
-unchanged.  We make no claim about completion order inside an external
-network after release.
+An authenticated same-invocation retry follows its \(\chi\)-to-receipt link
+and returns the stable future/result without changing history; an
+unauthenticated lookup is denied.
+\Dispatch may release only the oldest prepared outbox item and marks that
+entry released, so the release trace is a prefix of fresh preparation order.
+Settlement monotonically advances its receipt phase and fills the stable
+future/result, but changes no history or authority field.  Crash discards
+nondurable computation and leaves the LTS state unchanged.  We make no claim
+about completion order inside an external network after release.
 
 By \cref{lem:greatest-realization}, every reachable reference prefix retains
 a policy-safe completion until the next explicit history edge changes the

@@ -1,109 +1,47 @@
 \section{Executable Validation}
 \label{sec:validation}
 
-The main result is a pen-and-paper theorem; the artifact is a small bounded
-model intended to expose definition and cut mistakes, not replace the proof.
-It is dependency free and exposes two API phases: a witness producer that
-derives a cut and computes \(W\), and installation/use functions that
-recompute trusted state rather than accept semantic fields from the operation.
-The phases share one implementation and are not independent verification.
+The main result is a pen-and-paper theorem.  The dependency-free artifact is
+a bounded bug finder, not a proof replacement or production Agent runtime.
 
-\subsection{What the checker executes}
+\paragraph{Executable core}
+The exact-admission API takes an already derived finite indexed-pomset
+contract.  It enumerates topological sorts, performs length-preserving
+fresh/alias resolution, checks the authority projection, iterates
+\(\widehat\Phi\) from \(\widehat B_0\), and records the full chain and one
+ranked cause per removal.  On acceptance it checks every
+survivor/prefix/compatible-outcome witness and constructs \(W^\dagger\)
+exactly from survivor prefixes.  Outcome indices remain distinct under equal
+trace projection, and contract construction rejects a complete trace that
+strictly prefixes another.  Search fails closed above 128 outcomes, eight
+occurrences per outcome, 50,000 linearizations per pomset, or 100,000 safe
+indexed completions; these are artifact caps, not theorem bounds.
 
-The executable representation contains occurrences, finite pomsets, contract
-choice/parallel/sequence, a trusted history state, and exactly the six
-operation datatypes in \cref{tab:history-rules}.  Reflection tests verify that
-these operation objects have no contract, outcomes, plan, sources, anchors,
-receipts, or receipt-frontier fields.  The derivation returns
-\((\mathcal C,\Src,\mathsf{Tgt},H')\); the admission routine enumerates every
-topological sort, performs length-preserving fresh/alias resolution, tests
-the fresh projection against a prefix policy, and constructs \(W\) as exactly
-the set of safe-completion prefixes for the represented fixtures.  Contract
-construction also rejects a complete trace that strictly prefixes another.
-The
-artifact computes \(W\), but does not execute the marked residual controller
-of \cref{eq:canonical-program}; that implementation theorem remains on paper.
-It also quotients structurally identical pomsets, whereas the theory retains
-indexed outcome identities after residualization.  Its policy alphabet is the
-cell IDs themselves rather than a separate \(\ell(d)\), and protected use
-appends the ordered occurrence ID without separately advancing \(\nu\);
-general label projection and the full Use transition remain paper semantics.
+A separate regression fixture derives contracts for all six edit forms from
+registered leaf, checkpoint, and join names and rechecks its local cut at
+installation.  It does not implement immutable edit schemas,
+\(\preccurlyeq_\mu\), authorized retirement, the domain-wide epoch, the marked
+controller, or weak bisimulation.  It also merges literally identical
+pomsets, uses cell IDs as policy labels, and omits the complete \Use rule.
+Those layers remain self-contained paper definitions and proofs; a production
+registry, mediator, and durable store are assumed TCB components.
 
-The model deliberately fails closed above 128 outcomes, eight occurrences per
-outcome, 50,000 linearizations per pomset, or 100,000 distinct safe resolved
-traces.  These caps make the search auditable and prevent an accidental
-scalability claim.  They are not bounds in \cref{thm:exact-history}.
+\paragraph{Litmus results}
+Nineteen focused tests cover the rejecting \(2,1,0\) chain for
+\(X\otimes(Y\oplus Z)\) under \(\Pref\{yx,xz\}\); distinct outcome ghosts with
+equal traces; exact survivor prefixes and completion observability; all six
+structural edits; same-cell copies, choice/merge consistency, and failed
+occurrence borrowing; receipt-silent alias progress; and both fresh--install
+and alias--install orders.  In each race, progress first stales the seal,
+whereas installation first closes the fixture-local controller.
+All 19 focused tests and all 81 repository artifact tests pass; the anonymous
+archive also reruns the focused suite after clean extraction.
 
-\begin{table}[t]
-\centering
-\caption{Evidence boundary for the theory.}
-\label{tab:evidence}
-\scriptsize
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}p{0.46\columnwidth}p{0.45\columnwidth}@{}}
-\toprule
-Claim & Evidence\\
-\midrule
-Six history derivations and source extraction &
-Paper lemma; focused executable fixtures\\
-Length-preserving resolution and exact \(W\) &
-Paper lemmas; all linearizations of focused fixtures\\
-Exact occurrence fidelity and no cell borrowing &
-Paper LTS; negative executable fixtures\\
-Fresh/alias versus install cuts &
-Paper transition proof; both race orders executed\\
-Marked residual controller and arbitrary-edge weak bisimulation &
-Self-contained paper proof only\\
-Production registry, mediation, and storage &
-Assumed TCB; not implemented\\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\subsection{Litmus suite}
-
-Seventeen focused tests cover:
-
-\begin{itemize}[leftmargin=*,itemsep=1pt]
- \item both Fork modes, both Restore modes, and both Merge modes;
- \item same-cell copies before and after an existing receipt, retaining every
-       logical occurrence while emitting at most one fresh cell;
- \item rejection of a silent early completion that is also a prefix of a
-       longer complete trace;
- \item universal outcome coverage and exact prefix construction;
- \item choice-selection consistency and derivation of every member owner for
-       both Merge forms;
- \item rejection when a disabled or forged occurrence tries to borrow an
-       enabled transition through the same cell;
- \item alias progress resolving a choice without changing receipts; and
- \item both linearizations of fresh--install and alias--install races:
-       progress first makes the seal stale, while install first closes the old
-       generation.
-\end{itemize}
-
-All 17 focused tests pass; the repository's full artifact suite passes 79
-tests.  The anonymous archive is rebuilt, extracted into a clean directory,
-and reruns the focused suite.  These tests found the distinction between the
-receipt frontier and ordered logical-occurrence-ID frontier; the richer
-\((x,\mathsf{fresh/alias},d)\) records in the theorem are not mechanized.
-
-\subsection{Interpretation and falsifiability}
-
-The checker directly executes a bounded subset of the finite definitions, so
-agreement is sanity evidence rather than independent verification or
-mechanization.  The marked residual program, full cut certificate, indexed
-residual outcomes, global weak bisimulation, least owner closure for nested
-histories and policy-connected scopes, and unbounded theorem remain paper
-proofs.  The older Lean
-development in the repository covers only a permutation-invariant endpoint
-model and is not evidence for \cref{thm:exact-history}.
-
-The executable subset is falsified by a represented fixture in which
-derivation omits an affected owner, \(\Resolve\) loses or duplicates an
-occurrence, its computed \(W\) differs from the safe-completion prefixes, or
-a stale cut succeeds after fresh or alias progress.  The theorem is
-additionally falsified if the marked program differs from
-\((W,B^\star)\), an installed cut leaves an affected old use enabled, or the
-two LTSs have different observable traces.  These latter statements are
-explicit targets for future mechanization and model checking, not claims
-about the present executable.
+\paragraph{Falsifiability}
+The executable subset fails if resolution loses an occurrence, a survivor or
+removal lacks its required witness, \(W^\dagger\) is not the survivor-prefix
+language, or a stale local cut succeeds.  The theorem fails if refinement
+drops an obligation, the monitor language differs, an old epoch remains
+enabled, or the two LTSs differ observably.  The separate Lean endpoint model
+does not prove \cref{thm:exact-history}; stronger mechanization remains future
+work.

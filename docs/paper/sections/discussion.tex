@@ -1,59 +1,40 @@
 \section{Scope and Limitations}
 \label{sec:discussion}
 
-\paragraph{Bounded, observable contracts}
-The model does not predict an Agent's complete future.  A contract covers the
-finite protected slice registered at one cut; internal reasoning and
-unprotected computation remain open ended.  A newly proposed protected call
-outside the frontier fails closed and triggers another registration and
-admission.  This boundary is essential: omission cannot silently weaken
-outcome coverage.  Complete raw traces must also be prefix-free.  If stopping
-and continuing are indistinguishable at the same prefix, the workflow must
-register an explicit durable logical decision; otherwise the history
-operation has no exact derivation.
+\paragraph{Contracts and progress}
+A contract covers one finite registered slice of protected calls; Agent
+reasoning and unprotected computation remain open ended.  An unregistered
+protected call fails closed and requires another admission.  Complete raw
+traces must be prefix-free, so stopping versus continuing requires an explicit
+logical occurrence.  Completion nonblocking preserves a safe completion for
+every still-compatible outcome, but implies neither fairness, useful task
+completion, nor admission of a later edit.  The policy governs authority
+commitments, not prompt integrity, branch confidentiality, action quality, or
+Agent alignment.
 
-\paragraph{Safety and progress}
-Completion nonblocking means that every admitted prefix has some safe
-completion and every derived outcome has an initial witness.  It does not
-guarantee scheduler fairness, useful task completion, or that a later explicit
-history edit preserves the old obligation.  The policy governs authority
-commitments, not action quality, prompt integrity, confidentiality of
-speculative branches, or Agent alignment.
+\paragraph{Durability and distribution}
+The theorem assumes complete mediation and linearizable, crash-stable
+occurrence and installation transactions.  Remote physical exactly-once
+execution still requires idempotency, queryable outcomes, or a transactional
+sink.  Changing policy version \(\kappa\) invalidates seals and requires
+re-admission.  Each disjoint policy domain has one logical epoch and state
+machine, possibly replicated behind a fault-tolerant store; decentralized
+branch controllers are future work.  Enumeration can be exponential, inviting
+symbolic pomsets and partial-order reduction.
 
-\paragraph{Durability}
-The theorem requires complete mediation plus linearizable, crash-stable
-occurrence and installation transactions.  It proves receipt order and FIFO
-release order.  Physical exactly-once execution and completion order at a
-remote service still require idempotency, queryable outcomes, or a compatible
-transactional sink.  Policy migration is outside one theorem instance:
-changing \(\kappa\) invalidates every seal and requires re-admission.
-
-\paragraph{Centralized logical epoch}
-The compiled controller is one logical state machine, although it may be
-replicated behind a fault-tolerant store.  Factoring it into
-communication-free branch controllers is a separate decentralization problem
-and is not assumed.  Parallel enumeration can be exponential; symbolic
-pomsets, partial-order reduction, and verified localization are natural future
-work.
-
-\paragraph{Deployment and ethics}
-The artifact is a bounded executable model, not an integration claiming that
-current Codex or Claude histories are trustworthy.  A deployment must protect
-the history registry, authenticate tool contracts and cell lineage, and
-mediate every protected effect.  Our evaluation uses synthetic histories and
-causes no external effects or human-subject risk.  History retention can itself
-contain sensitive provenance; a deployment should minimize payload storage
-and retain only authenticated security metadata needed by the cut.
+\paragraph{Deployment}
+The bounded artifact is not an integration claiming that current Agent
+histories are trustworthy.  Deployment must protect registries, authenticate
+tool contracts and cell lineage, mediate every protected effect, and minimize
+sensitive provenance.  Our synthetic validation causes no external effects or
+human-subject risk.
 
 \section{Conclusion}
 
-An Agent may rewrite its logical past, but it cannot rewrite facts already
-committed to the world.  Agent history admission makes that mismatch a precise
-security boundary.  The history structure itself derives the outcomes that
-must remain possible and every old owner that must be fenced; length-preserving
-resolution accounts for copied occurrences without confusing them with fresh
-effects.  The Exact Agent History Realization Theorem then characterizes every
-implementable edit and refines the characterization to a durable runtime
-across arbitrary Fork, Restore, Merge, fresh, alias, and installation races.
-History editing is therefore authority editing---and can be admitted exactly,
-not heuristically.
+An Agent may rewrite its logical past but not facts committed to the world.
+Agent history admission makes this mismatch precise.  Within our finite
+registered model, the Exact Agent History Realization Theorem characterizes
+when a schema-derived edit has a prefix-robust implementation, constructs its
+greatest durable monitor, and certifies impossibility otherwise.  It covers
+arbitrary Fork, Restore, Merge, fresh/alias, and cut races.  History editing is
+authority editing---and can be admitted exactly.

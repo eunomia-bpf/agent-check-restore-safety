@@ -2,126 +2,91 @@
 \label{sec:introduction}
 
 An ordinary execution accumulates one past.  A tool-using Agent can instead
-edit the relation between past and future while it is running.  A Fork makes
-several continuations live, a Restore creates a new continuation from an old
-checkpoint, and a Merge selects or joins descendants.  Production interfaces
-already expose session forks and checkpoints
-~\cite{codexappserver,claudesessions,claudecheckpoint}; emerging Agent
+Fork live continuations, Restore an earlier checkpoint, and Merge descendants.
+Production interfaces already expose forks and checkpoints
+~\cite{codexappserver,claudesessions,claudecheckpoint}, and emerging Agent
 substrates make these operations explicit
-~\cite{wang2026fork,wu2026crab,zhang2026agentlibos}.
+~\cite{wang2026fork,wu2026crab,zhang2026agentlibos}.  Yet the world is not
+editable: a pre-Restore payment remains charged, copied occurrences may share
+one-use authority, and an old controller may race a Merge.  History editing
+therefore changes \emph{which past continuations can still produce a future}
+while commitments remain ordered and irreversible.
 
-The external world does not share this editable history.  A payment prepared
-before Restore remains charged; a copied payment handle may name the same
-one-use authority cell; and a controller attached to a losing branch may
-remain able to commit after Merge.  These are not merely rollback bugs.
-Fork, Restore, and Merge change \emph{which past continuations can still
-produce a future}.  A safe runtime must reconcile the rewritten logical
-history with an ordered, non-restorable commitment history.
-
-This paper studies one foundational question:
-
+This paper asks:
 \begin{quote}
 \emph{When does an Agent history rewrite have a policy-safe,
-history-faithful, completion-preserving realization, and how can a runtime
-implement exactly that boundary while old effects race the rewrite?}
+history-faithful, completion-nonblocking realization preserving every
+structurally promised outcome, and how can a reference monitor realize exactly
+that boundary while effects race the rewrite?}
 \end{quote}
 
-The question has two traps.  First, deciding only from eventual effect sets
-loses causality: approval--payment and payment--approval have the same
-endpoint; so do an exclusive supplier choice and paying both suppliers.
-Second, erasing copied actions as ``replays'' loses logical progress.  A
-restored approval occurrence may alias an existing receipt, append nothing to
-the ledger, yet satisfy a predecessor or select a branch.  Receipt state alone
-therefore cannot linearize the history cut.
+Endpoint safety is insufficient.  Two outcomes may each have a safe
+completion, yet after a shared causal prefix one can remain structurally
+possible with no safe continuation.  Admitting that prefix silently retracts
+an Agent promise.  The failure cascades when removing that completion destroys
+coverage at an earlier prefix, so testing each outcome independently is
+unsound.
 
-Several mature theories solve important neighboring problems.  History-based
-access control and causal Agent monitors decide actions from an observed past
-~\cite{abadi2003history,krukow2008history,palumbo2026forge}.  Consumable
-credentials atomically account for distributed uses of bounded authority
-~\cite{bowers2007consumable}; commit-time authorization binds an individual
-effect to fresh evidence when it becomes durable
-~\cite{santos2026committime}.  Dynamic-update work
-synthesizes sound-and-complete transition controllers for live systems
-~\cite{nahabedian2020dynamic,amram2022dynamic}.  Property-preserving updates
-characterize most-general replacements and safe state transfer
-~\cite{bresolin2021static}; transformational synthesis reproduces the
-maximally permissive supervisor for an evolved plant
-~\cite{thuijsman2022transformational}.  We rely on, rather than reclaim,
-these results.
+Existing theories judge neighboring boundaries.  History-based authorization
+and causal Agent monitors select a next action from an observed
+past~\cite{abadi2003history,krukow2008history,palumbo2026forge};
+commit-time authorization checks one durable
+effect~\cite{santos2026committime}.  Reversible and checkpointed sessions
+preserve communication properties under rollback
+~\cite{dezani2016checkpoints,castellani2017concurrent,mezzina2021causal,
+mezzina2025checkpoint}; dynamic update bridges given specifications or
+controllers~\cite{nahabedian2020dynamic,amram2022dynamic,bresolin2021static,
+thuijsman2022transformational}.  Agent history admission instead judges the
+edit itself: it must derive future obligations, preserve them after every
+compatible prefix, and respect irreversible receipts.
 
-Their abstractions leave a distinct boundary exposed for Agents.  A generic
-update starts from an old controller, a new controller or specification, and a
-state-transfer relation.  An Agent runtime must instead derive the new
-obligation and the entire handoff footprint from persistent history: which
-checkpoint was cloned, which branches are mutually exclusive or jointly live,
-which logical occurrences share an irreversible cell, and which controller
-generations still own affected gates.  Moreover, one history operation must
-be ordered against both ledger-changing commitments and ledger-silent alias
-progress.
-
-\paragraph{Approach}
-We make Agent history, rather than a supplied target automaton, the security
-object.  A trusted history machine records an append-only provenance DAG,
-structured live frontier, immutable checkpoints, logical occurrence progress,
-authenticated cell identities, and current controller owners.  An untrusted
-Agent may request one of six typed operations, but cannot state its target
-plan, required outcomes, source set, or receipt frontier.  A deterministic
-history judgment derives all of them.
-
-The judgment produces one \emph{causal-completion contract}: a finite family
-of pomsets whose members are the operation's complete outcomes.  We resolve a
-raw linearization without erasing occurrences.  Its first use of a semantic
-cell becomes \Fresh; a distinct copied occurrence becomes \Alias.  Only the
-\Fresh projection advances the authority policy, while both events advance
-the logical contract.  For each derived outcome we compute its policy-safe
-resolved completions.  An edit is admitted exactly when every outcome has at
-least one.
-
-The reference behavior is then forced:
+Our key observation is that safe Agent history editing is one
+greatest-fixed-point problem over \emph{outcome-indexed causal completions}.
+From the policy-safe resolved completions \(\widehat B_0\), an operator removes
+any completion having a prefix without a surviving continuation for even one
+raw-compatible outcome:
 \[
-  W_{H,u} =
-  \Pref\!\left(\text{all safe completions derived from }H,u\right).
+ \widehat B^\dagger=\nu\widehat B.\widehat\Phi(\widehat B),
+ \qquad B^\dagger=\pi_2\widehat B^\dagger,\qquad
+ W^\dagger=\Pref(B^\dagger).
 \]
-Unlike a pointwise safety monitor, \(W_{H,u}\) contains no prefix from which
-every declared completion is already impossible.  Unlike a witness-only
-test, it retains every safe completion.  It is the unique greatest language
-that is history faithful, policy safe, completion nonblocking, and covers all
-structurally derived outcomes.
+The edit is admissible exactly when \(\widehat B^\dagger\neq\varnothing\);
+\(W^\dagger\) is its behavior.  This recursive closure turns policy safety
+into a persistent Agent-history promise.
 
-\paragraph{Result}
-Our \emph{Exact Agent History Realization Theorem} proves that admission, the
-existence of any realization with those four properties, and successful
-compilation are equivalent.  Rejection returns one derived outcome for which
-no policy-safe linearization exists, proving that behavior pruning cannot
-repair the fixed request.  On acceptance, a standard residual construction
-implements exactly \(W_{H,u}\); residual automata are representation
-machinery, not the contribution.
+Three controls make this fixed point a security boundary.  An untrusted Agent
+names only live objects and an immutable schema; a trusted judgment derives
+the target and preserves inherited outcomes, occurrences, cells, lineage, and
+causal order except under typed retirement.  Resolution records both \Fresh
+commitments and receipt-silent \Alias occurrences.  At every cut, one fresh
+epoch replaces the current epoch of the whole policy domain, ordering old
+uses, aliases, and target activation.
 
-The theorem then crosses the implementation boundary.  We specify an ideal
-atomic Agent-history LTS independently of a durable kernel.  The kernel
-re-derives the edit and every affected owner, compares both the receipt
-frontier and the logical-occurrence frontier, closes all source generations,
-persists the history edge, and activates the target in one cut.  We prove weak
-bisimulation for arbitrary sequences of Fork, Restore, Merge, \Fresh,
-\Alias, retry, ordered dispatch, and crash steps.  This yields one theorem
-from a proposed history edit to the effects a live runtime may release.
+\paragraph{Result and use}
+Our \emph{Exact Agent History Realization Theorem} makes fixed-point admission,
+existence of any history-faithful policy-safe nonblocking realization with
+persistent outcome coverage, and exact compilation equivalent.  Acceptance
+yields the greatest realization; rejection yields a finite cascading-pruning
+certificate.  Operationally, the Agent submits edit \(u\).  A trusted
+controller re-derives its schema from authenticated history, receipts, and
+policy.  It rejects an invalid schema request; otherwise it returns the
+pruning certificate or atomically installs the compiled occurrence-sensitive
+monitor under a fresh domain epoch.  Every protected call passes through this
+monitor.
 
-\paragraph{Contributions}
-The paper contributes:
+We prove weak bisimulation between the durable monitor and an independent
+ideal atomic Agent-history LTS for arbitrary sequences of all six edits,
+\Fresh, \Alias, retry, dispatch, and crash steps.  A dependency-free bounded
+checker executes the fixed point, alias resolution, and representative cut
+races; schema preservation and domain-epoch correctness remain proof objects.
 
-\begin{enumerate}[leftmargin=*,itemsep=2pt]
-  \item \textbf{Agent history admission theory.}  We define the trusted
-  history state, all six structural rewrite rules, length-preserving
-  fresh/alias resolution, and the exact greatest completion-safe language.
-  The central theorem gives both realizability and impossibility, plus
-  worst-case examples showing why causal mode, cell identity, receipt and
-  occurrence frontiers, and source ownership cannot be erased
-  (\cref{sec:model,sec:admission,sec:results}).
-
-  \item \textbf{A refinement to a durable cut.}  We compile the theory to an
-  occurrence-sensitive epoch and prove global equivalence with the ideal
-  history machine under fresh/alias/install races and successive edits.
-  A small dependency-free checker executes all six derivations and bounded
-  counterexamples; it is validation of the model, not a production Agent
-  system (\cref{sec:kernel,sec:validation}).
-\end{enumerate}
+\paragraph{Contribution}
+We contribute one end-to-end Agent History-Admission Theory.  Its Exact Agent
+History Realization Theorem simultaneously (i) gives schema fidelity and the
+greatest prefix-robust realization---or a finite impossibility
+certificate---for all six Fork/Restore/Merge edits, and (ii) compiles that
+realization into a durable monitor weakly bisimilar to the ideal Agent history
+machine across fresh/alias/install races and successive edits
+(\cref{sec:model,sec:admission,sec:kernel,sec:results}).  A dependency-free
+bounded checker validates fixed-point certificates and selected race fixtures
+(\cref{sec:validation}).

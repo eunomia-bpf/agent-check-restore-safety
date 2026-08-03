@@ -14,6 +14,7 @@ from exact_history_realization import (
     FrontierGroup,
     GateInvocation,
     HistoryState,
+    IndexedCompletion,
     LiveBranch,
     MergeJoin,
     MergeSelect,
@@ -34,6 +35,7 @@ from exact_history_realization import (
     install_cut,
     linearizations,
     logical_frontier_digest,
+    parallel,
     resolve,
     singleton_contract,
 )
@@ -142,7 +144,7 @@ class ResolutionAndAdmissionTests(unittest.TestCase):
             )
         )
 
-    def test_every_derived_outcome_needs_a_safe_linearization(self) -> None:
+    def test_missing_outcome_prunes_the_whole_fixed_point(self) -> None:
         left = one("left", "a")
         right = one("right", "b")
         contract = choice(left, right)
@@ -153,7 +155,9 @@ class ResolutionAndAdmissionTests(unittest.TestCase):
         result = check_admission(rejecting, contract)
         self.assertFalse(result.admitted)
         self.assertIsNotNone(result.impossibility_witness)
-        self.assertEqual(1, len(result.safe_completions))
+        self.assertEqual(1, len(result.candidate_completions))
+        self.assertEqual(0, len(result.safe_completions))
+        self.assertEqual(frozenset(), result.language_w)
 
         accepting = HistoryState(
             branches=(LiveBranch("b", one("current", "c"), "gen:old"),),
@@ -164,7 +168,89 @@ class ResolutionAndAdmissionTests(unittest.TestCase):
         self.assertEqual(2, len(admitted.outcomes))
         self.assertTrue(all(outcome.safe for outcome in admitted.outcomes))
 
-    def test_w_is_exactly_prefixes_of_safe_completions(self) -> None:
+    def test_shared_prefix_requires_every_still_compatible_outcome(self) -> None:
+        x = one("x", "x")
+        y = one("y", "y")
+        z = one("z", "z")
+        contract = parallel(x, choice(y, z))
+        state = HistoryState(
+            branches=(LiveBranch("b", contract, "gen:old"),),
+            policy=PrefixPolicy.from_maximal(("y", "x"), ("x", "z")),
+        )
+
+        result = check_admission(state, contract)
+
+        # The old ``forall outcome, exists safe completion`` check accepted:
+        # outcome x||y has yx and outcome x||z has xz.  After prefix x,
+        # however, both outcomes remain structurally compatible and only the
+        # latter has a safe x-extension.
+        self.assertTrue(all(outcome.safe for outcome in result.outcomes))
+        self.assertEqual(2, len(result.candidate_completions))
+        self.assertFalse(result.admitted)
+        self.assertEqual([2, 1, 0], [len(step) for step in result.descending_chain])
+        self.assertEqual({1, 2}, {cause.rank for cause in result.pruning_causes})
+        first_rank = [
+            cause for cause in result.pruning_causes if cause.rank == 1
+        ]
+        self.assertEqual(1, len(first_rank))
+        self.assertEqual(("x",), tuple(event.logical_id for event in first_rank[0].prefix))
+        self.assertEqual(0, first_rank[0].compatible_outcome_index)
+
+    def test_indexed_outcomes_survive_trace_projection(self) -> None:
+        nodes = (
+            Occurrence("a", "a"),
+            Occurrence("b", "b"),
+            Occurrence("c", "c"),
+        )
+        contract = Contract(
+            (
+                Pomset(nodes, frozenset({("a", "b"), ("b", "c")})),
+                Pomset(
+                    nodes,
+                    frozenset({("a", "b"), ("b", "c"), ("a", "c")}),
+                ),
+            )
+        )
+        state = HistoryState(
+            branches=(LiveBranch("b", contract, "gen:old"),),
+            policy=PrefixPolicy.from_maximal(("a", "b", "c")),
+        )
+
+        result = check_admission(state, contract)
+
+        self.assertTrue(result.admitted)
+        self.assertEqual(2, len(result.surviving_indexed_completions))
+        self.assertEqual(1, len(result.safe_completions))
+        self.assertEqual(
+            {0, 1},
+            {
+                completion.outcome_index
+                for completion in result.surviving_indexed_completions
+            },
+        )
+        empty_coverage = {
+            witness.compatible_outcome_index
+            for witness in result.survivor_witnesses
+            if witness.prefix == ()
+        }
+        self.assertEqual({0, 1}, empty_coverage)
+        self.assertEqual(16, len(result.survivor_witnesses))
+        self.assertEqual(
+            {0, 1},
+            {
+                witness.source.outcome_index
+                for witness in result.survivor_witnesses
+            },
+        )
+        self.assertTrue(
+            all(
+                isinstance(witness.source, IndexedCompletion)
+                and isinstance(witness.completion, IndexedCompletion)
+                for witness in result.survivor_witnesses
+            )
+        )
+
+    def test_w_is_exactly_prefixes_of_greatest_fixed_point(self) -> None:
         contract = singleton_contract(
             Occurrence("a", "a"),
             Occurrence("b", "b"),
