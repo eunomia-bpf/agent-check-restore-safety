@@ -2,11 +2,9 @@
 % 相关工作
 \label{sec:related}
 
-\paragraph{Closest boundaries}
-% 最接近的边界
-Shepherd, AgentGit, LangGraph, GoEX, SagaLLM, Atomix, Cordon, and DART provide reversible histories or actions, transactions, staged effects, and recovery checks~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart}.
-% Shepherd、AgentGit、LangGraph、GoEX、SagaLLM、Atomix、Cordon 与 DART 提供可逆历史或动作、事务、分阶段效果和恢复检查~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart}。
-History authorization and migration validate supplied actions or updates~\cite{abadi2003history,krukow2008history,palumbo2026forge,vanderaalst2002inheritance,bakshi2024history}; nonblocking and live synthesis assume plants, markings, and obligations~\cite{ramadge1987supervisory,fabian2000mutually,malik2008generalised,finkbeiner2022live,zhu2022duties}; rollback security, fencing, outboxes, and idempotency protect state or effects~\cite{elnozahy2002rollback,brandenburger2017lcm,zheng2026acrfence,santos2026committime,santos2026lingering,aws2026outbox,aws2026idempotency}.
-% 历史授权与迁移验证给定动作或更新~\cite{abadi2003history,krukow2008history,palumbo2026forge,vanderaalst2002inheritance,bakshi2024history}；非阻塞与在线综合假定已有被控对象、标记和义务~\cite{ramadge1987supervisory,fabian2000mutually,malik2008generalised,finkbeiner2022live,zhu2022duties}；回滚安全、隔离、发件箱和幂等性保护状态或效果~\cite{elnozahy2002rollback,brandenburger2017lcm,zheng2026acrfence,santos2026committime,santos2026lingering,aws2026outbox,aws2026idempotency}。
-From an authenticated edit, Agent History Admission derives outcomes, effect identities, and the exact cut; computes the greatest prefix-robust realization or its impossibility certificate; and atomically installs a \Fresh/\Alias-sensitive monitor.
-% Agent 历史准入从经认证编辑推导结果、效果标识和精确切点；计算最大的前缀鲁棒实现或其不可能性证书；并原子安装一个对 \Fresh/\Alias 敏感的监控器。
+\paragraph{Theorem boundary}
+% 定理边界
+Agent systems provide versioned histories, checkpoint forks, staged effects, transactions, and recovery checks, but none derives an edit's preserved outcomes and effect identities and then returns its greatest monitor or an impossibility proof~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart}.
+% Agent 系统提供版本化历史、检查点分叉、分阶段效果、事务和恢复检查，但没有系统会推导编辑所保留的结果与效果标识，再返回其最大监控器或不可能性证明~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart}。
+Synthesis and enforcement assume supplied plants, histories, or policies, while rollback, fencing, and outboxes implement rather than decide an admitted edit; \cref{thm:exact-history} derives the missing instance and proves its exact epoch-mediated realization~\cite{malik2008generalised,finkbeiner2022live,abadi2003history,palumbo2026forge,elnozahy2002rollback,zheng2026acrfence,santos2026committime,aws2026outbox}.
+% 综合与执行机制假定已有被控对象、历史或策略，而回滚、隔离和发件箱只实现而不决定已接纳编辑；\cref{thm:exact-history} 推导缺失的实例，并证明其可由纪元中介机制精确实现~\cite{malik2008generalised,finkbeiner2022live,abadi2003history,palumbo2026forge,elnozahy2002rollback,zheng2026acrfence,santos2026committime,aws2026outbox}。

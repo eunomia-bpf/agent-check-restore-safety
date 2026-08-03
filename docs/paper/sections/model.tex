@@ -273,8 +273,14 @@ Before a checked cut, the protected-call issuer may instantiate finitely many pr
 % 在一个经检查的切点之前，受保护调用发行方可以实例化有限个预授权模式模板：对于调用 \(m\)，它计算 \(m^\circ=\mathsf{canon}_\kappa(m)\)，只复用已认证用于 \(m^\circ\) 的单元或分配新单元，并把 \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{lineage})\) 签入经认证的注册表。
 The resulting finite registry defines the admission's registered protected-call slice and, with its schema version, remains immutable; unmatched calls fail closed until a trusted schema update and new admission, so online growth is a sequence of finite checked cuts.
 % 由此得到的有限注册表定义该次准入的已注册受保护调用切片，并与其模式版本一起保持不可变；无法匹配的调用会以关闭方式失败，直至完成可信模式更新和新的准入，因此在线增长是一系列有限的经检查切点。
-The theory is parametric in issuer and schema correctness: it introduces no storage protocol, infers no natural-language contract or semantic equivalence, and assumes no deployed Agent runtime already supplies this state.
-% 该理论以发行方和模式的正确性为参数：它不引入存储协议，不推断自然语言契约或语义等价性，也不假定已部署的 Agent 运行时已经提供该状态。
+A registered slice is \emph{adequate} for an Agent task when its schema enumerates every outcome that the platform promises to preserve, its registry mediates every protected external effect reachable in those outcomes, its occurrence--cell and canonical-invocation rows match the intended irreversible effects, and each receipt records the first durable local commit of its cell.
+% 当一个注册切片的模式枚举平台承诺保留的每个结果、注册表中介这些结果中可达的每个受保护外部效果、发生项--单元与规范调用记录符合预期的不可逆效果，并且每条回执记录其单元的首次持久本地提交时，该切片对于 Agent 任务是\emph{充分的}。
+This application-to-model refinement obligation belongs to the policy and protected-call issuers and may be discharged by a typed workflow compiler, a schema audit, or a separate platform refinement proof.
+% 这一从应用到模型的精化义务由策略发行方与受保护调用发行方承担，并可通过类型化工作流编译器、模式审计或独立的平台精化证明来履行。
+Under this obligation, \cref{thm:exact-history} is complete for mediated executions of the registered slice; structural or digest disagreement fails closed, and later schema growth proceeds through a new checked cut.
+% 在这一义务成立时，\cref{thm:exact-history} 对注册切片中受中介的执行是完备的；结构或摘要不一致会以关闭方式失败，而后续模式扩展通过新的经检查切点进行。
+The theory neither infers natural-language contracts nor equates a durable local commit with remote physical exactly-once execution.
+% 该理论既不推断自然语言契约，也不把持久本地提交等同于远端物理意义上的恰好一次执行。
 
 \subsection{Six structural rewrite rules}
 % 六条结构重写规则
@@ -510,5 +516,5 @@ Finally, \(\beta'\) and \(\mathcal H_u^+\) establish handoff totality at \(\eta^
 % 最后，\(\beta'\) 和 \(\mathcal H_u^+\) 在 \(\eta^+\) 上建立交接完备性。
 \end{proof}
 
-Thus no caller supplies a semantic oracle: Fork arms must project onto pending \(\mathcal C\), and Join reads both residuals before appending \(E_\sigma^J\).
-% 因此，调用方不会提供语义预言机：Fork 分支必须投影到待处理的 \(\mathcal C\)，而 Join 会在追加 \(E_\sigma^J\) 之前读取两个残余。
+Thus the Agent supplies no semantic oracle: under the registered adequacy contract, Fork arms must project onto pending \(\mathcal C\), and Join reads both residuals before appending \(E_\sigma^J\).
+% 因此，Agent 不提供语义预言机：在已注册的充分性契约下，Fork 分支必须投影到待处理的 \(\mathcal C\)，而 Join 会在追加 \(E_\sigma^J\) 之前读取两个残余。

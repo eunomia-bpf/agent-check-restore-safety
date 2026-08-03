@@ -2,7 +2,7 @@
 % 可执行验证
 \label{sec:validation}
 
-The outcome-indexed bounded validator fails closed beyond its bounds; 81 tests cover shared-prefix rejection, six edits, identity erasures, \Alias, and use/install races.
-% 保持结果索引的有界验证器在超出其界限时以关闭方式失败；81 项测试覆盖共享前缀拒绝、六种编辑、标识擦除、\Alias 和使用/安装竞态。
-Kernel-checked Lean proves exact acceptance and greatestness for every finite registered resolver/fixed-point instance; six-edit closure, lower bounds, and durable bisimulation remain mathematical proofs.
-% 由内核检查的 Lean 证明每个有限已注册解析器/不动点实例满足精确接纳与最大性；六种编辑闭包、下界和持久弱互模拟仍由数学证明给出。
+Three Lean modules kernel-check finite compiler exactness/greatestness, six-edit derivation and well-formedness, and \(\mathsf{AgentSec}\) preservation for installed events, finite traces, and all three cut races; factor lower bounds and ideal-machine durable bisimulation remain mathematical proofs, while 81 tests exercise critical cases.
+% 三个 Lean 模块由内核检查有限编译器的精确性/最大性、六类编辑派生与良构性，以及已安装事件、有限轨迹和全部三类切点竞态中的 \(\mathsf{AgentSec}\) 保持；因子下界和理想机持久互模拟仍由数学证明给出，而 81 项测试运行关键案例。
+Across five fresh processes per point, median core times were \(53.47\) ms for 128 admitted outcomes, \(5.51\) ms for a rejected 128-outcome conflict, and \(50.35\) ms for 720 unordered completions; the bounded kernel rejects 129 outcomes or nine events before search, and the supplement records all raw decision-kernel---not Agent-runtime---measurements.
+% 每个数据点使用五个新进程时，128 个被接纳结果、128 个结果的拒绝冲突和 720 条无序完成路径的核心耗时中位数分别为 \(53.47\)、\(5.51\) 和 \(50.35\) ms；有界内核会在搜索前拒绝 129 个结果或九个事件，补充制品记录全部属于判定内核而非 Agent 运行时的原始测量。

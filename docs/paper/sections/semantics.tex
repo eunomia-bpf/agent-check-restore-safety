@@ -256,18 +256,18 @@ For strictness, the preceding instance has the marker-nonblocking projected pair
 
 Malik and Leduc define generalized nonblocking through conditional plant and terminal markings, while de Queiroz et al.\ synthesize supervisors for multiple persistent tasks~\cite{dequeiroz2005multitasking,malik2008generalised}.
 % Malik 与 Leduc 通过条件化的被控对象标记和终止标记定义广义非阻塞，而 de Queiroz 等人则为多个持久任务综合监督器~\cite{dequeiroz2005multitasking,malik2008generalised}。
-Once the conditional markings are supplied, \cref{prop:outcome-necessary} is an instance of that established theory rather than a new fixed-point algorithm.
-% 一旦给定条件标记，\cref{prop:outcome-necessary} 就是该既有理论的一个实例，而非一种新的不动点算法。
-A fixed-plant encoding takes the full prefix trie of \(\widehat B_0\) and adds one controllable outcome-specific terminal edge after each indexed completion, so selecting terminal edges selects \(\widehat B\).
-% 一种固定被控对象编码取 \(\widehat B_0\) 的完整前缀字典树，并在每个带索引完成路径之后添加一条可控的结果特定终止边，因此选择终止边就等同于选择 \(\widehat B\)。
-The synthesis alphabet contains committed resolved events, and complete mediation makes every \Fresh/\Alias commit controllable even though the Agent may issue arbitrary requests.
-% 综合字母表包含已提交的解析事件，而完全中介使每个 \Fresh/\Alias 提交均可控，即使 Agent 可以发出任意请求。
-Request arrival, crash, settlement, delivery, and scheduling of a prepared dispatch are uncontrollable but do not advance the resolved word; a deployment with uncontrollable resolved events must instead compute a supremal controllable sublanguage.
-% 请求到达、崩溃、结算、交付以及已准备派发的调度不可控，但不会推进解析词；具有不可控解析事件的部署必须改为计算上确界可控子语言。
-The Agent-specific problem is to derive those markings and terminal incidences from authenticated topology, schema-authorized retirement, occurrence-to-cell effect identity, and irreversible receipts.
-% Agent 特有的问题在于，从经认证的拓扑、模式授权退役、发生项到单元的效果标识以及不可逆回执中推导这些标记与终止关联。
-Erasing that relational evidence leaves a target-only trace view that cannot support an exact history compiler (\cref{thm:exact-history}).
-% 擦除这些关系证据后，只剩下仅含目标轨迹的视图，而该视图无法支持精确的历史编译器（\cref{thm:exact-history}）。
+\Cref{prop:outcome-necessary} identifies the exact interface to that theory because generalized nonblocking computes the same greatest completion family once \(\alpha_o\) and \(\omega_o\) are supplied.
+% \Cref{prop:outcome-necessary} 确定了与该理论的精确接口，因为一旦给定 \(\alpha_o\) 和 \(\omega_o\)，广义非阻塞就会计算同一个最大完成族。
+Agent History Admission supplies the missing theorem by deriving those markings and terminal incidences from an authenticated topology-changing edit, schema-authorized retirement, occurrence--cell identity, irreversible receipts, and the exact cut.
+% Agent 历史准入补上了缺失的定理：从经认证的拓扑变更编辑、模式授权退役、发生项--单元标识、不可逆回执和精确切点推导这些标记与终止关联。
+The correspondence encodes indexed completions as outcome-specific terminal edges, and complete mediation makes committed \Fresh and \Alias events controllable.
+% 该对应关系把带索引的完成编码为结果特定的终止边，而完全中介使已提交的 \Fresh 和 \Alias 事件可控。
+A deployment with uncontrollable resolved events instead requires the usual supremal-controllable-language refinement.
+% 具有不可控已解析事件的部署则需要通常的上确界可控语言精化。
+The characterization additionally proves that the result is the greatest realizable Agent monitor or an impossibility certificate and that atomic epoch installation preserves this boundary through races and crashes.
+% 该刻画还证明结果是最大的可实现 Agent 监控器或不可能性证书，并证明原子纪元安装在竞态与崩溃期间保持这一边界。
+The factor lower bounds show why no caller-supplied target or target-only trace view can recover the derivation.
+% 因子下界说明为何调用者提供的目标或仅含目标轨迹的视图都无法恢复这一推导。
 
 For every \((o_{\rm rem},b)\in\widehat B_i\setminus\widehat B_{i+1}\), the rejection certificate records rank \(i\), prefix \(z\preceq b\), and \(o_{\rm miss}\in\mathsf{Compat}(z)\) for which no \((o_{\rm miss},b')\in\widehat B_i\) extends \(z\).
 % 对每个 \((o_{\rm rem},b)\in\widehat B_i\setminus\widehat B_{i+1}\)，拒绝证书都会记录秩 \(i\)、前缀 \(z\preceq b\)，以及一个 \(o_{\rm miss}\in\mathsf{Compat}(z)\)，使得没有 \((o_{\rm miss},b')\in\widehat B_i\) 扩展 \(z\)。

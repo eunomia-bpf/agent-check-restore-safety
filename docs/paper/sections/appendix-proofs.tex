@@ -88,16 +88,26 @@ We make the normalization implicit in \(\mathsf{Sec}\) explicit.
 % 我们将 \(\mathsf{Sec}\) 中隐含的规范化过程显式化。
 Let \(\mathcal K\) be the finite typed key universe at a checked cut, containing tagged outcome, occurrence, cell, receipt, checkpoint, group, domain, epoch, policy-version, and schema-version keys.
 % 令 \(\mathcal K\) 为一个经检查切点处的有限类型化键宇宙，包含带标签的结果、发生项、单元、回执、检查点、组、域、纪元、策略版本和模式版本键。
-Public keys are the request, public authority labels, and externally named objects, while every other key may be consistently renamed.
-% 公开键包括请求、公开权限标签和外部具名对象，而其他每个键都可以一致地重命名。
+Public keys are authority labels and identifiers declared external by the interface, while every other key may be consistently renamed.
+% 公开键包括权限标签和接口声明为外部的标识符，而其他每个键都可以一致地重命名。
+For a typed query \(q\), \(\mathsf{supp}(q)\) is defined recursively over its full syntax, including all identifiers nested inside a supplied symbolic certificate, monitor, or cut seal.
+% 对带类型查询 \(q\)，\(\mathsf{supp}(q)\) 在其完整语法上递归定义，包括所提供符号证书、监控器或切点封印中嵌套的全部标识符。
 Let \(\mathcal F\) be the finite set of typed field paths and assign every semantic base field a unique owner
 % 令 \(\mathcal F\) 为有限的类型化字段路径集合，并为每个语义基础字段指定唯一所有者：
 \[
  \mathsf{own}:\mathcal F_{\rm base}
  \longrightarrow\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}.
 \]
-Base fields include the relations listed in the relational-evidence paragraph of \cref{sec:results}.
-% 基础字段包括 \cref{sec:results} 的关系证据段落所列的关系。
+\(\mathbf P\) owns history constructor tags, live/checkpoint/target contract nodes, order and outcome membership, schema kind and source fingerprints, lift relations, and retirement declarations.
+% \(\mathbf P\) 拥有历史构造器标签、活跃/检查点/目标契约节点、顺序与结果成员关系、模式种类与源指纹、提升关系和退役声明。
+\(\mathbf I\) owns occurrence--cell incidence, cell--canonical-invocation/label/scope rows, occurrence lineage, and logical gate and handle slots.
+% \(\mathbf I\) 拥有发生项--单元关联、单元--规范调用/标签/作用域记录、发生项谱系以及逻辑门与句柄槽位。
+\(\mathbf E\) owns the global resolved trace, live and checkpoint cursors, receipt--cell/creator and retry paths, result futures, ordered outbox phase rows, and residual policy.
+% \(\mathbf E\) 拥有全局已解析轨迹、活跃与检查点游标、回执--单元/创建者与重试路径、结果期值、有序发件箱阶段记录和残余策略。
+\(\mathbf C\) owns the domain, policy/schema/view versions, private namespace, epoch allocation and phase, active epoch and gate ownership, certificate origin and coordinates, and checkpoint cut coordinates.
+% \(\mathbf C\) 拥有域、策略/模式/视图版本、私有命名空间、纪元分配与阶段、活跃纪元与门所有权、证书来源与坐标以及检查点切点坐标。
+These four lists are disjoint and exhaustive for semantic base fields.
+% 这四组列表对语义基础字段既互不相交又完全覆盖。
 Certificate bytes, seals, fingerprints, digests, derived authority words, and foreign-key paths are derived fields rather than additional semantic facts.
 % 证书字节、封印、指纹、摘要、派生权限词和外键路径是派生字段，而不是额外的语义事实。
 
@@ -105,6 +115,8 @@ Write \(f\leadsto g\) when the value or well-typed interpretation of derived fie
 % 当派生字段 \(g\) 的值或良类型解释直接依赖字段 \(f\) 时，记 \(f\leadsto g\)。
 The dependency graph is acyclic because canonical encodings are constructed from base relations in a fixed order.
 % 依赖图是无环的，因为规范编码按固定顺序从基础关系构造。
+Every foreign-key path depends on its target; authenticated gate and handle bytes depend on their \(\mathbf I\) slot and \(\mathbf C\) epoch/owner; receipt reconstruction and the authority word depend on \(\mathbf E\) receipt/cursor rows and their \(\mathbf I\) cells and labels; and target certificates, cut seals, and digests depend on every encoded base field in their payload.
+% 每条外键路径依赖其目标；认证门与句柄字节依赖其 \(\mathbf I\) 槽位和 \(\mathbf C\) 纪元/所有者；回执重建与权限词依赖 \(\mathbf E\) 的回执/游标记录及其 \(\mathbf I\) 单元与标签；目标证书、切点封印和摘要则依赖其载荷中编码的每个基础字段。
 A normalized full view \(V\) is a compatible finite assignment to all base fields together with the unique values of all derivable fields.
 % 规范化完整视图 \(V\) 是对所有基础字段的相容有限赋值，并带有全部可派生字段的唯一值。
 Compatibility requires equal values on shared typed keys and the well-formedness conditions of \cref{def:well-formed-history}.
@@ -114,8 +126,8 @@ The natural join \(\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) i
 It is undefined precisely when shared typed keys disagree or a required foreign-key target is absent.
 % 当且仅当共享类型化键不一致或必需的外键目标缺失时，该连接无定义。
 
-For \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), start with base fields owned by \(J\) and the public keys needed to type the query.
-% 对 \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\)，先保留由 \(J\) 所有的基础字段和为查询定型所需的公开键。
+For \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), start with base fields owned by \(J\) and the public sort declarations needed to type the retained records.
+% 对 \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\)，先保留由 \(J\) 所有的基础字段和为保留记录定型所需的公开类型声明。
 Repeatedly delete any foreign-key path whose target has been deleted and any derived field having a deleted transitive dependency.
 % 随后反复删除目标已被删除的任何外键路径，以及具有已删除传递依赖的任何派生字段。
 The unique fixed point of this deletion is \(\mathsf{Ret}(J)\), and \(\pi_J(V)\) is \(V\) restricted to \(\mathsf{Ret}(J)\).
@@ -127,8 +139,10 @@ The incidence-erasure projection \(\pi_{\neg oc}\) starts from the full view, de
 % 关联擦除投影 \(\pi_{\neg oc}\) 从完整视图出发，删除发生项--单元关系，并应用相同的依赖删除，同时保留发生项和单元边际记录。
 The projection \(\pi_{\neg rc}\) analogously deletes receipt--cell incidence and every path that reconstructs it, including receipt--creator, cursor--receipt, and archived creator--cell paths, while retaining the receipt, creator, occurrence, and cell marginals.
 % 投影 \(\pi_{\neg rc}\) 类似地删除回执--单元关联以及每条可重建该关联的路径，包括回执--创建者、游标--回执和归档创建者--单元路径，同时保留回执、创建者、发生项和单元边际记录。
-Views are compared modulo a sort-preserving bijection on private keys that fixes the request and all public keys.
-% 视图在保持类型的私有键双射意义下比较，该双射固定请求和所有公开键。
+State views are compared modulo a sort-preserving bijection on private keys that fixes all public keys.
+% 状态视图在保持类型的私有键双射意义下比较，该双射固定全部公开键。
+For a common literal query \(q\), write \(V\cong_qV'\) when the witnessing bijection additionally fixes \(\mathsf{supp}(q)\) pointwise; equivalently, \(\langle V,q\rangle_{\cong}=\langle V',q\rangle_{\cong}\).
+% 对共同的字面查询 \(q\)，当见证双射还逐点固定 \(\mathsf{supp}(q)\) 时，记 \(V\cong_qV'\)；等价地，\(\langle V,q\rangle_{\cong}=\langle V',q\rangle_{\cong}\)。
 
 \begin{lemma}[Projection is well defined]
 % 投影良定义性
@@ -155,19 +169,19 @@ Canonical recomposition is equivariant because it is a typed constructor over ex
 \label{lem:app-observational-separation}
 Let \(V_0,V_1\) be finite valid full views and let \(q\) be a typed query.
 % 令 \(V_0,V_1\) 为有限有效完整视图，并令 \(q\) 为带类型查询。
-If \(\mathsf{Ans}(V_0,q)\ne\mathsf{Ans}(V_1,q)\), then every exact abstraction \(\tau\) satisfies \(\tau(V_0)\ne\tau(V_1)\).
-% 若 \(\mathsf{Ans}(V_0,q)\ne\mathsf{Ans}(V_1,q)\)，则每个精确抽象 \(\tau\) 都满足 \(\tau(V_0)\ne\tau(V_1)\)。
+If \([\mathsf{Ans}(V_0,q)]_{\cong}\ne[\mathsf{Ans}(V_1,q)]_{\cong}\), then every exact abstraction \(\tau\) satisfies \(\tau(V_0)\not\cong_q\tau(V_1)\).
+% 若 \([\mathsf{Ans}(V_0,q)]_{\cong}\ne[\mathsf{Ans}(V_1,q)]_{\cong}\)，则每个精确抽象 \(\tau\) 都满足 \(\tau(V_0)\not\cong_q\tau(V_1)\)。
 The claim applies to arbitrary encodings and is not a minimal-table or unique-representation claim.
 % 该结论适用于任意编码，并不声称表的数量最少或表示方式唯一。
 \end{lemma}
 
 \begin{proof}
-Assume toward contradiction that an exact \(\tau\) maps both views to one value \(t\).
-% 反设某个精确的 \(\tau\) 把两个视图都映射到同一个值 \(t\)。
-Its decoder must then return both \(\mathsf{Ans}(V_0,q)\) and \(\mathsf{Ans}(V_1,q)\) on the single input \((t,q)\).
-% 此时，它的解码器必须在同一个输入 \((t,q)\) 上同时返回 \(\mathsf{Ans}(V_0,q)\) 和 \(\mathsf{Ans}(V_1,q)\)。
-This contradicts the two answers being different.
-% 这与两个答案不同相矛盾。
+Assume toward contradiction that \(\tau(V_0)\cong_q\tau(V_1)\).
+% 反设 \(\tau(V_0)\cong_q\tau(V_1)\)。
+The joint decoder inputs \(\langle\tau(V_0),q\rangle_{\cong}\) and \(\langle\tau(V_1),q\rangle_{\cong}\) then coincide.
+% 此时，联合解码器输入 \(\langle\tau(V_0),q\rangle_{\cong}\) 与 \(\langle\tau(V_1),q\rangle_{\cong}\) 相同。
+Exactness forces equal answer orbits, contradicting the premise.
+% 精确性迫使答案轨道相等，与前提矛盾。
 \end{proof}
 
 \subsection{Bootstrap States and Explicit Separation Pairs}
@@ -277,26 +291,28 @@ After dependency deletion, both \(\pi_{\{\mathbf P,\mathbf I,\mathbf C\}}\) and 
 
 \paragraph{\(\mathbf C\): history cut}
 % \(\mathbf C\)：历史切点
-Let \(V_{\mathbf C}^0\) and \(V_{\mathbf C}^1\) arise from alternative registrations of the same public slice under fresh private namespaces, followed by deterministic checked root installation.
-% 令 \(V_{\mathbf C}^0\) 与 \(V_{\mathbf C}^1\) 由同一公开切片在不同新鲜私有命名空间下的备选注册产生，随后执行确定性的经检查根安装。
-They have identical normalized \(\mathbf P,\mathbf I,\mathbf E\) relations but different private live epochs, view versions, gate ownership, and dependent seals and digests.
-% 它们具有相同的规范化 \(\mathbf P,\mathbf I,\mathbf E\) 关系，但具有不同的私有活跃纪元、视图版本、门所有权以及依赖的封印和摘要。
-Let \(Z_0\) be emitted and sealed at \(V_{\mathbf C}^0\), and use the same query \(q_{\mathbf C}=\mathsf{Install}(u_0,Z_0)\) in both views.
-% 令 \(Z_0\) 在 \(V_{\mathbf C}^0\) 处生成并封印，并在两个视图中使用同一查询 \(q_{\mathbf C}=\mathsf{Install}(u_0,Z_0)\)。
-Recomputation at \(V_{\mathbf C}^0\) reproduces \(\mathsf{cut}_{Z_0}\), so installation succeeds.
-% 在 \(V_{\mathbf C}^0\) 处重新计算会重现 \(\mathsf{cut}_{Z_0}\)，因此安装成功。
-Recomputation at \(V_{\mathbf C}^1\) binds the different version and active epoch, so the injective cut seal differs and installation is stale.
-% 在 \(V_{\mathbf C}^1\) 处重新计算会绑定不同的版本和活跃纪元，因此单射切点封印不同，安装已过期。
-Erasing \(\mathbf C\) also erases epoch-dependent handle and seal payloads, after which a private-key bijection makes the retained views identical.
-% 擦除 \(\mathbf C\) 也会擦除依赖纪元的句柄与封印载荷，此后一个私有键双射会使保留视图相同。
+Let a bootstrap namespace be a family \(n=(n_s)_{s\in\mathsf{Sort}}\) of injective, per-sort fresh supplies.
+% 令引导命名空间为一族 \(n=(n_s)_{s\in\mathsf{Sort}}\)；其中每个类型的供给均为单射且新鲜。
+From the same literal empty genesis, register the same public slice \(R\) with supplies \(n^0,n^1\) that agree on every non-epoch sort but mint distinct initial epochs \(\eta_0\ne\eta_1\), and perform checked root installation.
+% 从同一个字面空起源出发，使用供给 \(n^0,n^1\) 注册同一个公开切片 \(R\)；二者在每个非纪元类型上相同，但生成不同的初始纪元 \(\eta_0\ne\eta_1\)，随后执行经检查根安装。
+The resulting \(V_{\mathbf C}^0,V_{\mathbf C}^1\) have literally identical \(\mathbf P,\mathbf I,\mathbf E\) base fields, while \(\mathbf C\)'s active epoch, gate ownership, certificate coordinates, and dependent authenticators differ.
+% 得到的 \(V_{\mathbf C}^0,V_{\mathbf C}^1\) 具有字面完全相同的 \(\mathbf P,\mathbf I,\mathbf E\) 基础字段，而 \(\mathbf C\) 的活跃纪元、门所有权、证书坐标及其依赖认证器不同。
+Compile the same registered edit \(u_0\) at \(V_{\mathbf C}^0\) to obtain \(Z_0\), and submit the same literal query \(q_{\mathbf C}=\mathsf{Install}(u_0,Z_0)\) to both views.
+% 在 \(V_{\mathbf C}^0\) 处编译同一个已注册编辑 \(u_0\) 得到 \(Z_0\)，并向两个视图提交同一个字面查询 \(q_{\mathbf C}=\mathsf{Install}(u_0,Z_0)\)。
+At \(V_{\mathbf C}^0\), recomputation reproduces \(\mathsf{cut}_{Z_0}\), so installation succeeds.
+% 在 \(V_{\mathbf C}^0\) 处，重新计算会重现 \(\mathsf{cut}_{Z_0}\)，因此安装成功。
+At \(V_{\mathbf C}^1\), recomputation binds \(\eta_1\) and its owner rather than the \(\eta_0\)-coordinates sealed in \(Z_0\), so installation rejects the stale cut.
+% 在 \(V_{\mathbf C}^1\) 处，重新计算绑定 \(\eta_1\) 及其所有者，而非 \(Z_0\) 中封印的 \(\eta_0\) 坐标，因此安装会拒绝这一过期切点。
+Erasing \(\mathbf C\) recursively erases epoch-dependent gate/handle rows, certificate coordinates, seals, and authenticators; the identity bijection on every retained sort then witnesses \(V_{\mathbf C}^0\cong_{q_{\mathbf C}}V_{\mathbf C}^1\).
+% 擦除 \(\mathbf C\) 会递归擦除依赖纪元的门/句柄记录、证书坐标、封印和认证器；此后每个保留类型上的恒等双射见证 \(V_{\mathbf C}^0\cong_{q_{\mathbf C}}V_{\mathbf C}^1\)。
 
 \begin{proposition}[Explicit factor and incidence lower bounds]
 % 显式因子与关联下界
 \label{prop:app-explicit-pairs}
 Every pair above consists of finite states reached from the common empty genesis and satisfying \(\mathsf{AgentSec}\).
 % 上述每一对均由从共同空起源状态到达且满足 \(\mathsf{AgentSec}\) 的有限状态组成。
-Each pair has isomorphic indicated projections and opposite exact answers to its common query.
-% 每一对都具有同构的指定投影，并对其共同查询给出相反的精确答案。
+Each pair has \(q\)-isomorphic indicated projections and opposite answer orbits for its common literal query.
+% 每一对都具有关于 \(q\) 同构的指定投影，并对其共同字面查询给出相反的答案轨道。
 Therefore every proper factor projection, \(\pi_{\neg oc}\), and \(\pi_{\neg rc}\) is inexact.
 % 因此，每个真因子投影、\(\pi_{\neg oc}\) 和 \(\pi_{\neg rc}\) 都是不精确的。
 Every exact abstraction must distinguish all four pairs.
@@ -308,8 +324,8 @@ Every exact abstraction must distinguish all four pairs.
 % \Cref{lem:app-boot} 给出共同起源状态和有效根安装，而上述显式轨迹只使用已建模的 Save、受保护使用和六种编辑转移。
 The displayed one-step schema and resolution calculations give the opposite answers.
 % 所显示的一步模式与解析计算给出相反答案。
-\Cref{lem:app-projection} and the specified private-name bijections give projection equality.
-% \Cref{lem:app-projection} 与所指定的私有名称双射给出投影相等性。
+\Cref{lem:app-projection} and the specified private-name bijections, each pointwise fixing the common query support, give \(q\)-relative projection equality.
+% \Cref{lem:app-projection} 与所指定的私有名称双射给出关于 \(q\) 的投影相等性；每个双射都逐点固定共同查询的支撑。
 Any projection omitting at least one factor collapses the corresponding factor pair, while the two incidence erasures collapse their corresponding incidence pairs.
 % 任何遗漏至少一个因子的投影都会合并对应的因子对，而两种关联擦除会合并各自对应的关联对。
 Inexactness and the general information lower bound now follow from \cref{lem:app-observational-separation}.
@@ -411,13 +427,13 @@ All clauses unchanged under the assumed crash-stable transaction boundary.\\
 \begin{lemma}[Representative-independent event derivative]
 % 与代表元无关的事件导数
 \label{lem:app-event-derivative}
-For every fully parameterized trusted event record \(e\), the guarded update induces a partial function \(\partial_e\) on security-state isomorphism classes.
-% 对于每个参数完整的可信事件记录 \(e\)，带守卫更新都会在安全状态同构类上诱导一个偏函数 \(\partial_e\)。
+The guarded update induces a partial function \(\partial\) on joint state--event orbits \(\langle V,e\rangle_{\cong}\).
+% 带守卫更新在联合状态--事件轨道 \(\langle V,e\rangle_{\cong}\) 上诱导一个偏函数 \(\partial\)。
 If \(\mathsf{AgentSec}(S;c,r)\) and \(S\xrightarrow eS'\), the witness in \cref{tab:app-event-matrix} satisfies \(\mathsf{AgentSec}(S';c',r')\) and
 % 若 \(\mathsf{AgentSec}(S;c,r)\) 且 \(S\xrightarrow eS'\)，则 \cref{tab:app-event-matrix} 中的见证满足 \(\mathsf{AgentSec}(S';c',r')\)，并且
 \[
  [\mathsf{Sec}(S';c',r')]_{\cong}
- =\partial_e([\mathsf{Sec}(S;c,r)]_{\cong}).
+ =\partial(\langle\mathsf{Sec}(S;c,r),e\rangle_{\cong}).
 \]
 \end{lemma}
 
@@ -426,8 +442,10 @@ All rule guards use typed equality, membership, order, canonical constructors, a
 % 所有规则守卫仅使用类型化相等性、成员关系、次序、规范构造器和经认证载荷相等性。
 These operations are equivariant under a simultaneous private-key renaming of the state and event payload.
 % 这些操作在状态与事件载荷的同步私有键重命名下是等变的。
-The same renaming therefore maps an enabled guard to an enabled guard and its unique update to the renamed update.
-% 因而，同一个重命名会把启用的守卫映射到启用的守卫，并把其唯一更新映射到重命名后的更新。
+For every such renaming \(\pi\), \(G_e(V)\Longleftrightarrow G_{\pi e}(\pi V)\) and \(\mathsf U_{\pi e}(\pi V)=\pi\mathsf U_e(V)\).
+% 对每个这样的重命名 \(\pi\)，都有 \(G_e(V)\Longleftrightarrow G_{\pi e}(\pi V)\) 且 \(\mathsf U_{\pi e}(\pi V)=\pi\mathsf U_e(V)\)。
+Thus equal pointed orbits have the same definedness and the same successor orbit.
+% 因而，相等的带指向轨道具有相同的有定义性和相同的后继轨道。
 This proves representative independence and functionality.
 % 这证明了与代表元无关性和函数性。
 
@@ -456,11 +474,13 @@ Starting from any valid bootstrap, every finite prefix of any sequence of the ev
 % 从任意有效引导状态出发，\cref{tab:app-event-matrix} 中事件类别所组成任意序列的每个有限前缀都终止于满足 \(\mathsf{AgentSec}\) 的状态。
 The sequence length is unbounded, although every individual admission instance and event payload is finite.
 % 序列长度不受固定上界限制，但每个单独的准入实例与事件载荷都是有限的。
+For a finite word \(\bar e\), the iterated derivative is defined on \(\langle V,\bar e\rangle_{\cong}\), where one renaming acts on the initial view and the whole word.
+% 对于有限词 \(\bar e\)，迭代导数定义在 \(\langle V,\bar e\rangle_{\cong}\) 上，其中同一次重命名作用于初始视图与整个事件词。
 \end{corollary}
 
 \begin{proof}
-The base case is \cref{lem:app-boot}, and the inductive step is \cref{lem:app-event-derivative}.
-% 基础情形由 \cref{lem:app-boot} 给出，归纳步骤由 \cref{lem:app-event-derivative} 给出。
+The base case is \cref{lem:app-boot}, and \cref{lem:app-event-derivative} supplies both the invariant-preserving inductive step and equivariance under one renaming of the remaining event suffix.
+% 基础情形由 \cref{lem:app-boot} 给出，而 \cref{lem:app-event-derivative} 同时给出保持不变量的归纳步骤，以及在同一次重命名下对剩余事件后缀的等变性。
 \end{proof}
 
 \subsection{Uncontrollable Events and Recovered-State Crashes}

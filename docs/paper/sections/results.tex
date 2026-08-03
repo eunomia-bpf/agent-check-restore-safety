@@ -13,8 +13,10 @@ The swap is defined independently of \(\mathsf{Admit}\), \(\widehat B^\dagger\),
 
 \paragraph{Relational evidence}
 % 关系证据
-At a checked cut, four finite keyed factors record (1) live/checkpoint contracts, schemas, lifts, and retirement in \(\mathbf P\); (2) live, checkpoint, and schema-target occurrence--cell, gate, handle, lineage, label, and digest incidence in \(\mathbf I\); (3) the global resolved trace, live branch cursors, checkpoint cursor snapshots, receipt--cell records with archived creator--cell and retry-reconstruction paths, result futures, complete ordered outbox entries and release phases, and residual policy in \(\mathbf E\); and (4) domain and policy/schema versions, finite epoch phase/freshness and gate ownership, the active epoch, history-view versions, certificate metadata, and checkpoint coordinates in \(\mathbf C\).
-% 在一个经检查的切点处，四个有限带键因子分别记录：(1) \(\mathbf P\) 中的活跃/检查点契约、模式、提升和退役；(2) \(\mathbf I\) 中的活跃、检查点与模式目标的发生项--单元、门、句柄、谱系、标签和摘要关联；(3) \(\mathbf E\) 中的全局已解析轨迹、活跃分支游标、检查点游标快照、带归档创建者--单元路径和重试重建路径的回执--单元记录、结果期值、完整有序发件箱条目及释放阶段和残余策略；以及 (4) \(\mathbf C\) 中的域与策略/模式版本、有限纪元阶段/新鲜性与门所有权、活跃纪元、历史视图版本、证书元数据和检查点坐标。
+At a checked cut, four finite keyed factors record promised topology, schemas, lifts, and retirement in \(\mathbf P\); occurrence--cell identity, invocation, and lineage in \(\mathbf I\); resolved progress, receipts, results, outbox, and policy in \(\mathbf E\); and versions, epoch ownership, certificates, and cut coordinates in \(\mathbf C\).
+% 在一个经检查的切点处，四个有限带键因子分别记录：\(\mathbf P\) 中的承诺拓扑、模式、提升和退役；\(\mathbf I\) 中的发生项--单元标识、调用和谱系；\(\mathbf E\) 中的已解析进展、回执、结果、发件箱和策略；以及 \(\mathbf C\) 中的版本、纪元所有权、证书和切点坐标。
+The appendix enumerates every owned base field and transitive dependency.
+% 附录枚举每个具有所有者的基础字段及其传递依赖。
 Their normalized natural join \(\bowtie\) uses shared typed outcome, occurrence, cell, checkpoint, domain, and version keys, is undefined on disagreement, stores each semantic field once, and canonically recomposes raw checked certificates.
 % 它们的规范化自然连接 \(\bowtie\) 使用共享的类型化结果、发生项、单元、检查点、域和版本键，在值不一致时无定义，每个语义字段只存储一次，并规范重组原始的经检查证书。
 For \(\mathsf{AgentSec}(S;c,r)\), define the incidence-preserving evidence view
@@ -25,18 +27,23 @@ For \(\mathsf{AgentSec}(S;c,r)\), define the incidence-preserving evidence view
 \]
 This view binds checkpoints to contracts/cursors/registries, occurrences to outcomes/cells, receipts to cells, and the cursor to the history cut.
 % 该视图把检查点绑定到契约/游标/注册表，把发生项绑定到结果/单元，把回执绑定到单元，并把游标绑定到历史切点。
-For \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), \(\pi_J\) projects to the named records modulo private-identifier renaming that fixes public labels and the request, recursively removing foreign-key paths, certificate components, seals, and digests whose payload mentions an erased field.
-% 对 \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\)，\(\pi_J\) 在固定公开标签与请求的私有标识重命名意义下投影到具名记录，并递归移除载荷提及已擦除字段的外键路径、证书组件、封印和摘要。
+For \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), \(\pi_J\) projects to the named records modulo sort-preserving private-identifier renaming that fixes public keys, recursively removing foreign-key paths, certificate components, seals, and digests whose payload mentions an erased field.
+% 对 \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\)，\(\pi_J\) 在固定公开键且保持类型的私有标识重命名意义下投影到具名记录，并递归移除载荷提及已擦除字段的外键路径、证书组件、封印和摘要。
 \(\pi_{\neg oc}\) retains all marginal occurrence/cell records but recursively erases their incidence; \(\pi_{\neg rc}\) similarly retains marginal receipt, creator, occurrence, and cell records but erases receipt--cell incidence and reconstructing paths, including receipt--creator and cursor--receipt links.
 % \(\pi_{\neg oc}\) 保留全部边际发生项/单元记录，但递归擦除其关联；\(\pi_{\neg rc}\) 类似地保留边际回执、创建者、发生项和单元记录，但擦除回执--单元关联及其重建路径，其中包括回执--创建者和游标--回执链接。
 For a finite valid full view \(V\) and typed edit or installation query \(q\), let \(\mathsf{Ans}(V,q)\) be the semantic answer: structural rejection, the greatest realization, or the history-cut installation decision.
 % 对于有限有效的完整视图 \(V\) 和带类型的编辑或安装查询 \(q\)，令 \(\mathsf{Ans}(V,q)\) 表示语义答案：结构拒绝、最大实现或历史切点安装判定。
-An arbitrary state abstraction \(\tau\) is \emph{exact} when some decoder \(D_\tau\) satisfies
-% 当存在某个解码器 \(D_\tau\) 满足下式时，任意状态抽象 \(\tau\) 是\emph{精确的}：
+Let \(\mathsf{supp}(q)\) recursively contain every identifier in \(q\), including identifiers inside a supplied symbolic certificate \(Z\), and let \(V\cong_qV'\) require a sort-preserving bijection that fixes public keys and \(\mathsf{supp}(q)\) pointwise.
+% 令 \(\mathsf{supp}(q)\) 递归包含 \(q\) 中的每个标识符，包括所提供符号证书 \(Z\) 内的标识符；并令 \(V\cong_qV'\) 要求存在保持类型且逐点固定公开键与 \(\mathsf{supp}(q)\) 的双射。
+Write \(\langle V,q\rangle_{\cong}\) for the joint orbit under simultaneous renaming of the state and query.
+% 用 \(\langle V,q\rangle_{\cong}\) 表示在同步重命名状态与查询下得到的联合轨道。
+An equivariant state abstraction \(\tau\) is \emph{exact} when some equivariant decoder \(D_\tau\) satisfies
+% 当存在某个等变解码器 \(D_\tau\) 满足下式时，等变状态抽象 \(\tau\) 是\emph{精确的}：
 \[
  \mathsf{Exact}(\tau)\ \Longleftrightarrow\
  \exists D_\tau.\ \forall V,q.\
- D_\tau(\tau(V),q)=\mathsf{Ans}(V,q).
+ D_\tau(\langle\tau(V),q\rangle_{\cong})
+   =[\mathsf{Ans}(V,q)]_{\cong}.
 \]
 Thus exactness constrains information, not a literal storage layout: any opposite-answer pair must remain distinguishable, while an implementation may encode or compress the evidence.
 % 因而，精确性约束的是信息而非字面存储布局：任何答案相反的历史对都必须保持可区分，而实现可以对证据进行编码或压缩。
@@ -49,8 +56,8 @@ The security observation alphabet is
              &\mathsf{deny}(x),\Dispatch(d)\}.
 \end{split}
 \]
-A fully parameterized trusted event record \(e\) carries every hidden payload used by its guard, and pairs \(([\mathsf{Sec}]_{\cong},e)\) are quotiented simultaneously by private-identifier renaming.
-% 参数完整的可信事件记录 \(e\) 携带其守卫使用的全部隐藏载荷，并且二元组 \(([\mathsf{Sec}]_{\cong},e)\) 按私有标识的同步重命名取商。
+A fully parameterized trusted event record \(e\) carries every hidden payload used by its guard; write \(\langle V,e\rangle_{\cong}\) for the joint orbit under one simultaneous sort-preserving renaming of the state and event.
+% 参数完整的可信事件记录 \(e\) 携带其守卫使用的全部隐藏载荷；用 \(\langle V,e\rangle_{\cong}\) 表示在一次保持类型的同步状态与事件重命名下得到的联合轨道。
 The relabeling satisfies \(\mathsf{obs}(\Use_x(m)/a)=a\), maps a successful installation record \((\mathsf{Edge}(u),Z,\delta)\) to \(\mathsf{Edge}(u)\), preserves \(\mathsf{deny}(x)\) and \(\Dispatch(d)\), and maps every other label to \(\tau\).
 % 重标记满足 \(\mathsf{obs}(\Use_x(m)/a)=a\)，把成功安装记录 \((\mathsf{Edge}(u),Z,\delta)\) 映射为 \(\mathsf{Edge}(u)\)，保持 \(\mathsf{deny}(x)\) 和 \(\Dispatch(d)\)，并把其他所有标签映射为 \(\tau\)。
 Write \(\xRightarrow{\ell}\) for \(\tau^*\ell\tau^*\), with \(\xRightarrow{\tau}=\tau^*\).
@@ -73,8 +80,8 @@ A \emph{good initial pair} satisfies \(\mathcal R\) with \(r=\epsilon\) immediat
 
 \paragraph{Event derivatives}
 % 事件导数
-For every fully parameterized trusted event \(e\), let \(G_e\) and \(\mathsf U_e\) be exactly its explicit LTS guard and durable update, and define \(\partial_e([V]_{\cong})=[\mathsf U_e(V)]_{\cong}\) exactly when \(G_e(V)\) holds.
-% 对于每个参数完整的可信事件 \(e\)，令 \(G_e\) 和 \(\mathsf U_e\) 恰为其显式 LTS 守卫与持久更新，并且当且仅当 \(G_e(V)\) 成立时定义 \(\partial_e([V]_{\cong})=[\mathsf U_e(V)]_{\cong}\)。
+For every fully parameterized trusted event \(e\), let \(G_e\) and \(\mathsf U_e\) be exactly its explicit LTS guard and durable update, and define \(\partial(\langle V,e\rangle_{\cong})=[\mathsf U_e(V)]_{\cong}\) exactly when \(G_e(V)\) holds.
+% 对于每个参数完整的可信事件 \(e\)，令 \(G_e\) 和 \(\mathsf U_e\) 恰为其显式 LTS 守卫与持久更新，并且当且仅当 \(G_e(V)\) 成立时定义 \(\partial(\langle V,e\rangle_{\cong})=[\mathsf U_e(V)]_{\cong}\)。
 The appendix enumerates all event classes, invariant witnesses, and bidirectional matches; \Use advances to \((c,ra)\), successful \(\mathsf{Edge}\) resets to \((c_\delta^+,\epsilon)\), and every other event retains \((c,r)\).
 % 附录枚举全部事件类别、不变量见证和双向匹配；\Use 推进到 \((c,ra)\)，成功的 \(\mathsf{Edge}\) 重置到 \((c_\delta^+,\epsilon)\)，而其他每个事件都保持 \((c,r)\)。
 
@@ -122,19 +129,21 @@ No exact compiler factors through caller-proposed target-only \(\tau_{\rm tgt}\)
 
 \item \textbf{Sequence closure.}
 % 序列闭包。
-Each fully parameterized trusted event \(e\) induces a partial function \(\partial_e\) on finite security-state isomorphism classes, defined exactly when \(e\) is enabled:
-% 每个参数完整的可信事件 \(e\) 在有限安全状态同构类上诱导一个偏函数 \(\partial_e\)，且该函数恰在 \(e\) 启用时有定义：
+Each fully parameterized trusted event \(e\) induces a partial function \(\partial\) on pointed state--event orbits, defined exactly when \(e\) is enabled:
+% 每个参数完整的可信事件 \(e\) 在带指向的状态--事件轨道上诱导一个偏函数 \(\partial\)，且该函数恰在 \(e\) 启用时有定义：
 \[
 \begin{aligned}
 &\mathsf{AgentSec}(S;c,r)\land S\xrightarrow e S'\\[-2pt]
 &\quad\Longrightarrow \exists c',r'.\
   \mathsf{AgentSec}(S';c',r')\\[-2pt]
 &\qquad\land [\mathsf{Sec}(S';c',r')]_{\cong}
-  =\partial_e([\mathsf{Sec}(S;c,r)]_{\cong}).
+  =\partial(\langle\mathsf{Sec}(S;c,r),e\rangle_{\cong}).
 \end{aligned}
 \]
 The family covers all six edits and modeled use, ledger, installation, and crash events in an installed registered slice.
 % 该事件族覆盖已安装注册切片内全部六种编辑以及已建模的使用、账本、安装和崩溃事件。
+For a finite event word \(\bar e\), the iterated derivative uses \(\langle V,\bar e\rangle_{\cong}\) with one renaming of \(V\) and the whole word, so identifiers carried between events cannot be renamed independently.
+% 对于有限事件词 \(\bar e\)，迭代导数使用 \(\langle V,\bar e\rangle_{\cong}\)，并对 \(V\) 与整个事件词应用同一次重命名，因此事件之间传递的标识符不能被独立重命名。
 Thus the characterization holds after every finite prefix of an arbitrarily long sequence of these events; registration is a separate root-admission phase.
 % 因此，该刻画在这些事件组成的任意长序列的每个有限前缀后均成立；注册属于独立的根准入阶段。
 
@@ -183,8 +192,8 @@ same marginals \(\{p\},\{d,e\}\), \(\ell(d)=\ell(e)=a\);
 \(\Alias(x,d)\): admit;
 \(\Fresh(x,d)\): reject \(aa\).\\
 \(\mathbf C\) &
-\(q_{\mathbf C}=\mathsf{Install}(u_0,Z_0)\), with \(Z_0\) from \(V^0\);
-\(V^1\) changes \(\nu,\eta\), ownership, and dependent seals. &
+\(q_{\mathbf C}=\mathsf{Install}(u_0,Z_0)\), with \(Z_0\) minted at \(V^0\), is literal in both;
+name supplies agree off the epoch sort, while live epoch, ownership, and dependent seals differ. &
 \(V^0\): install; \(V^1\): reject stale cut.\\
 \bottomrule
 \end{tabular}

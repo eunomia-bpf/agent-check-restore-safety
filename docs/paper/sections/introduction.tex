@@ -18,28 +18,31 @@ This paper asks the following question.
 % Agent 历史重写何时具有一种策略安全、历史忠实且完成非阻塞的实现，能够保留每个结构性承诺的结果；当效应与重写发生竞态时，参考监控器又如何精确实现这一边界？
 \end{quote}
 
-Endpoint safety is insufficient.
-% 仅保证端点安全并不充分。
-Two outcomes may each have a safe completion, yet after a shared causal prefix one can remain structurally possible with no safe continuation.
-% 两个结果可能各自都有安全的完成路径，但在共享一个因果前缀后，其中一个结果可能在结构上仍然可行，却不存在安全的后续路径。
-Admitting that prefix silently retracts an Agent promise.
-% 接纳该前缀会悄然撤回 Agent 的一项承诺。
-The failure cascades when removing that completion destroys coverage at an earlier prefix, so testing each outcome independently is unsound.
-% 当移除该完成路径会破坏更早前缀处的覆盖性时，失败便会级联，因此独立测试每个结果并不可靠。
+\paragraph{One Restore, end to end}
+% 一次 Restore 的端到端过程
+In our running procurement history, the Agent saves checkpoint \(k\) before approval, the approval later commits, and the Agent eventually submits only \(u=\mathsf{RestoreLive}(b,k,\sigma)\).
+% 在贯穿全文的采购历史中，Agent 在审批前保存检查点 \(k\)，该审批随后提交，而 Agent 最终仅提交 \(u=\mathsf{RestoreLive}(b,k,\sigma)\)。
+The trusted controller snapshots \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\), re-derives every schema-preserved outcome and occurrence--cell identity, and computes the greatest prefix-robust fixed point.
+% 可信控制器快照 \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\)，重新推导模式所保留的每个结果及发生项--单元标识关系，并计算前缀鲁棒最大不动点。
+Its external result is either \(\mathsf{Install}(\mathsf{Can}(W^\dagger,B^\dagger),\eta^+)\) or \(\mathsf{Reject}(\mathit{certificate})\).
+% 它的外部结果要么是 \(\mathsf{Install}(\mathsf{Can}(W^\dagger,B^\dagger),\eta^+)\)，要么是 \(\mathsf{Reject}(\mathit{certificate})\)。
+After installation, every protected call is classified as \Fresh, \Alias, or denied, and the restored approval becomes a receipt-reusing \Alias rather than a second local outbox preparation.
+% 安装之后，每个受保护调用都被分类为 \Fresh、\Alias 或拒绝，而恢复后的审批成为复用回执的 \Alias，而非第二次本地发件箱准备。
+An empty result rejects the Restore with a ranked elimination certificate, and the Agent can neither weaken the derived target nor bypass the installed monitor.
+% 空结果会以带秩淘汰证书拒绝 Restore，且 Agent 既不能弱化派生目标，也不能绕过已安装监控器。
+\Cref{sec:lifecycle} carries this exact history through Fork, Merge, both cut races, and the later Restore.
+% \Cref{sec:lifecycle} 沿用这段完全相同的历史，依次展开 Fork、Merge、两类切点竞态和随后的 Restore。
 
-Live synthesis carries supplied temporal obligations, while history monitors and commit-time authorization judge an existing history or one effect~\cite{finkbeiner2022live,zhu2022duties,abadi2003history,krukow2008history,palumbo2026forge,santos2026committime}.
-% 在线综合携带给定的时序义务，而历史监控器与提交时授权判断既有历史或单个效果~\cite{finkbeiner2022live,zhu2022duties,abadi2003history,krukow2008history,palumbo2026forge,santos2026committime}。
-Agent history admission instead authenticates a topology-changing edit and derives its outcomes, effect identities, receipt ledger, and cut before synthesis.
-% Agent 历史准入则在综合前认证改变拓扑的编辑，并推导其结果、效果标识、回执账本和切点。
-
-Our key observation is that exact Agent history editing requires one relational security state spanning promised causal completions, occurrence-to-cell effect identity, the append-only receipt ledger, and the history cut.
-% 我们的关键观察是，精确的 Agent 历史编辑需要一种关系化安全状态，它同时涵盖已承诺的因果完成、发生项到单元的效果标识关系、仅追加回执账本和历史切点。
-None of these factors is merely implementation metadata.
-% 这些因子都不只是实现元数据。
-For each proper factor projection, two finite registered histories expose the same retained view but require opposite admission or installation decisions.
-% 对每个真因子投影，都存在两条有限的注册历史，它们呈现相同的保留视图，却要求相反的准入或安装判定。
-The relational state remains closed after every finite prefix of an arbitrarily long online sequence of trusted edits and protected calls, rather than applying only to one rewrite.
-% 对可信编辑和受保护调用组成的任意长在线序列，该关系状态在每个有限前缀之后仍保持闭合，而不只适用于一次重写。
+Closest Agent systems provide branching, versioned histories, staged effects, transactions, or recovery checks, but none characterizes exactly which topology-changing edits preserve every promised outcome or constructs the greatest enforcing monitor~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart}.
+% 最接近的 Agent 系统提供分支、版本化历史、分阶段效果、事务或恢复检查，但没有系统精确刻画哪些改变拓扑的编辑会保留每个已承诺结果，也没有构造最大的执行监控器~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart}。
+Generalized nonblocking and live synthesis compute behavior from supplied plants and obligations, while history authorization and runtime enforcement judge supplied histories, actions, or policies~\cite{malik2008generalised,finkbeiner2022live,zhu2022duties,abadi2003history,krukow2008history,palumbo2026forge,santos2026committime}.
+% 广义非阻塞与在线综合根据给定的被控对象和义务计算行为，而历史授权与运行时执行判断给定的历史、动作或策略~\cite{malik2008generalised,finkbeiner2022live,zhu2022duties,abadi2003history,krukow2008history,palumbo2026forge,santos2026committime}。
+Our theorem covers the missing end-to-end boundary by deriving outcomes, occurrence--cell identities, irreversible receipts, and the exact cut from authenticated Agent history and connecting them to exact admission, greatest enforcement, and atomic realization.
+% 我们的定理覆盖这一缺失的端到端边界：从经认证的 Agent 历史推导结果、发生项--单元标识、不可逆回执和精确切点，并将它们连接到精确准入、最大执行与原子实现。
+For each proper projection of this relational security state, two finite registered histories have the same retained view but require opposite admission or installation decisions.
+% 对这一关系安全状态的每个真投影，都存在两条有限注册历史具有相同的保留视图，却要求相反的准入或安装判定。
+The full state remains closed across successive edits rather than characterizing only one rewrite.
+% 完整状态在连续编辑之间保持闭合，而非只刻画一次重写。
 
 Once the trusted semantics has derived this Agent-specific state, conditional generalized nonblocking supplies the synthesis backend~\cite{malik2008generalised}.
 % 可信语义推导出这一 Agent 特有状态之后，条件广义非阻塞提供综合后端~\cite{malik2008generalised}。
@@ -54,30 +57,19 @@ The edit is admissible exactly when \(\widehat B^\dagger\neq\varnothing\).
 % 当且仅当 \(\widehat B^\dagger\neq\varnothing\) 时，该编辑才可接纳。
 When nonempty, it yields the greatest permitted behavior \(W^\dagger\), and when empty, its ranked elimination chain proves impossibility.
 % 当该不动点非空时，它给出最大的允许行为 \(W^\dagger\)，而当其为空时，带秩的淘汰链证明不可能性。
-Ordinary marker nonblocking over traces alone loses both outcome compatibility and occurrence-to-cell effect identity (\cref{prop:outcome-necessary,thm:exact-history}).
-% 普通的纯轨迹标记非阻塞会丢失结果兼容性和发生项到单元的效果标识这两类信息（\cref{prop:outcome-necessary,thm:exact-history}）。
+Ordinary marker nonblocking over traces alone loses both outcome compatibility and occurrence--cell identity (\cref{prop:outcome-necessary,thm:exact-history}).
+% 普通的纯轨迹标记非阻塞会丢失结果兼容性和发生项--单元标识这两类信息（\cref{prop:outcome-necessary,thm:exact-history}）。
 
 The Agent names only live objects and an immutable schema; a trusted judgment derives the target and preserves outcomes, occurrences, cells, lineage, and causal order except under schema-authorized retirement.
 % Agent 仅指名活对象和不可变模式；可信判定推导目标，并保持结果、发生项、单元、谱系和因果顺序，除非模式授权将其退役。
 Resolution distinguishes \Fresh commitments from receipt-silent \Alias progress, and each cut replaces the whole policy-domain epoch to order old uses against target activation.
 % 解析区分 \Fresh 承诺与不产生回执的 \Alias 进展，而每个切点都会替换整个策略域纪元，从而确定旧使用与目标激活的次序。
 
-\paragraph{Theory as a security compiler}
-% 作为安全编译器的理论
-The \emph{Agent Security-State Characterization Theorem} makes this state a security-compiler contract rather than an application proof obligation.
-% \emph{Agent 安全状态刻画定理}使这一状态成为安全编译器契约，而不是应用承担的证明义务。
-Platform developers register policy and carry/clone/retire schemas; the Agent submits only \(u\), and the checker re-derives the obligations, effect identities, cut, and nonblocking solution.
-% 平台开发者注册策略以及携带/克隆/退役模式；Agent 仅提交 \(u\)，检查器则重新推导义务、效果标识、切点和非阻塞解。
-On acceptance, the kernel installs \(\mathsf{Can}(W^\dagger,B^\dagger)\), fresh gates, and replacement handles under one new epoch, after which every protected call must follow the installed program.
-% 接纳后，内核在一个新纪元下安装 \(\mathsf{Can}(W^\dagger,B^\dagger)\)、新门和替换句柄，此后每个受保护调用都必须遵循已安装程序。
-Thus the Agent can neither bypass admission nor discard obligations outside schema-authorized retirement.
-% 因而，Agent 既无法绕过准入，也无法丢弃模式授权退役范围之外的义务。
-
 \paragraph{Contribution}
 % 贡献
-We contribute one unified Agent History Admission Theory whose central thesis is that history rewriting is exactly governable by the joined security state above.
-% 我们提出一套统一的 Agent 历史准入理论，其中心论点是，历史重写恰可由上述联合安全状态治理。
-Its characterization theorem proves exact compilation or certified impossibility, factor-projection lower bounds, closure across successive edits, and weak bisimulation between the compiled monitor and an independent ideal Agent-history machine (\cref{sec:model,sec:admission,sec:kernel,sec:results}).
-% 其刻画定理证明精确编译或经认证的不可能性、因子投影下界、连续编辑下的闭包性，以及编译监控器与独立理想 Agent 历史机之间的弱互模拟（\cref{sec:model,sec:admission,sec:kernel,sec:results}）。
-The artifact exercises the bounded decision kernel, examples that erase one identity relation at a time, and cut races (\cref{sec:validation}).
-% 该制品运行有界判定内核、每次擦除一种标识关系的案例和切点竞态（\cref{sec:validation}）。
+We contribute one unified Agent History Admission Theory in which the relational security state is both the exact admission boundary and the compiler interface.
+% 我们提出一套统一的 Agent 历史准入理论，其中关系安全状态既是精确准入边界，也是编译器接口。
+The theorem establishes one equivalence among safe realizability, a nonempty derived fixed point, successful installation, and an enabled ideal history edge.
+% 该定理在安全可实现性、非空派生不动点、成功安装和已启用的理想历史边之间建立一个统一等价关系。
+Its lower bounds, closure result, and weak bisimulation show that the same equivalence is information-tight, stable across successive edits, and durably realizable (\cref{sec:model,sec:admission,sec:kernel,sec:results}).
+% 其下界、闭包结果和弱互模拟表明，同一等价关系在信息上是紧致的，能够跨连续编辑保持，并可持久实现（\cref{sec:model,sec:admission,sec:kernel,sec:results}）。
