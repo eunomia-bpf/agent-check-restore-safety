@@ -11,23 +11,23 @@ We instead judge a topology-changing edit and preserve a safe completion for eve
 
 \paragraph{Reversal and update}
 % 逆转与更新
-Reversible sessions, workflow inheritance, dynamic update, and REBOUND preserve or authorize supplied rollback or update structures~\cite{dezani2016checkpoints,mezzina2025checkpoint,vanderaalst2002inheritance,nahabedian2020dynamic,amram2022dynamic,bresolin2021static,burke2026rebound}.
-% 可逆会话、工作流继承、动态更新和 REBOUND 保持或授权给定的回滚或更新结构~\cite{dezani2016checkpoints,mezzina2025checkpoint,vanderaalst2002inheritance,nahabedian2020dynamic,amram2022dynamic,bresolin2021static,burke2026rebound}。
-Our theory instead derives outcomes that cannot be discarded and occurrence-to-cell effect identity from authenticated Agent history, then proves that erasure can reverse the correct decision.
-% 我们的理论则从经认证的 Agent 历史中推导不可丢弃的结果与发生项到单元的效果标识，随后证明擦除这些信息可能反转正确判定。
+Reversible sessions, workflow inheritance, dynamic update, and REBOUND preserve or authorize supplied rollback or update structures~\cite{dezani2016checkpoints,mezzina2025checkpoint,vanderaalst2002inheritance,nahabedian2020dynamic,amram2022dynamic,bresolin2021static,burke2026rebound}, while Revisable by Design studies streaming Agent revision with irreversible actions~\cite{zhai2026revisable}.
+% 可逆会话、工作流继承、动态更新和 REBOUND 保持或授权给定的回滚或更新结构~\cite{dezani2016checkpoints,mezzina2025checkpoint,vanderaalst2002inheritance,nahabedian2020dynamic,amram2022dynamic,bresolin2021static,burke2026rebound}，而 Revisable by Design 研究带有不可逆动作的流式 Agent 修订~\cite{zhai2026revisable}。
+We instead derive promised outcomes, effect identities, and the history cut from authenticated branching Agent history, and prove that erasing any required factor or either named incidence relation can reverse the correct Fork/Restore/Merge decision.
+% 我们则从经认证的分支 Agent 历史中推导已承诺结果、效果标识和历史切点，并证明擦除任一必需因子或两个具名关联关系中的任一个，都可能反转正确的 Fork/Restore/Merge 判定。
 
 \paragraph{Automata and causality}
 % 自动机与因果性
-Security automata, supervisory control, and generalized nonblocking enforce prefix properties or synthesize legal marked behavior~\cite{schneider2000enforceable,ramadge1987supervisory,dequeiroz2005multitasking,malik2008generalised}.
-% 安全自动机、监督控制和广义非阻塞强制执行前缀性质，或综合合法的标记行为~\cite{schneider2000enforceable,ramadge1987supervisory,dequeiroz2005multitasking,malik2008generalised}。
-Given markings, \cref{prop:outcome-necessary} reduces synthesis to generalized nonblocking; \cref{thm:exact-history} derives them and proves that target-only state and epoch fences cannot recover source obligations or occurrence-to-cell effect identity.
-% 给定标记后，\cref{prop:outcome-necessary} 将综合归约到广义非阻塞；\cref{thm:exact-history} 推导这些标记，并证明仅含目标的状态和纪元隔离无法恢复源义务或发生项到单元的效果标识。
-Derivatives and pomsets provide the recognizer and causal representation~\cite{brzozowski1964derivatives,winskel1987event,vanglabbeek2009configuration}.
-% 导数和偏序事件集提供识别器与因果表示~\cite{brzozowski1964derivatives,winskel1987event,vanglabbeek2009configuration}。
+Security automata, supervisory control, generalized nonblocking, Live Synthesis, and Duties/Rights enforce prefixes or synthesize behavior once given a plant, temporal specification, linear history, and conditional obligations~\cite{schneider2000enforceable,ramadge1987supervisory,dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,zhu2022duties}.
+% 安全自动机、监督控制、广义非阻塞、Live Synthesis 和 Duties/Rights 在给定被控对象、时序规范、线性历史和条件义务后强制执行前缀或综合行为~\cite{schneider2000enforceable,ramadge1987supervisory,dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,zhu2022duties}。
+\Cref{thm:exact-history} derives and authenticates that complete instance from topology-changing Agent history and proves pre-synthesis observational lower bounds; derivatives and pomsets supply its recognizer and causal representation~\cite{brzozowski1964derivatives,winskel1987event,vanglabbeek2009configuration}.
+% \Cref{thm:exact-history} 从改变拓扑的 Agent 历史中推导并认证这一完整实例，并证明综合前的观测下界；导数和偏序事件集提供其识别器与因果表示~\cite{brzozowski1964derivatives,winskel1987event,vanglabbeek2009configuration}。
 
 \paragraph{Durable effects}
 % 持久效果
 Rollback security, checkpoint trees, and ACRFence address restored state or authority~\cite{elnozahy2002rollback,parno2011memoir,matetic2017rote,brandenburger2017lcm,garfinkel2005virtual,zheng2026acrfence}.
 % 回滚安全、检查点树和 ACRFence 处理被恢复的状态或权限~\cite{elnozahy2002rollback,parno2011memoir,matetic2017rote,brandenburger2017lcm,garfinkel2005virtual,zheng2026acrfence}。
-Consumable credentials, commit checks, fencing, outboxes, and idempotency protect individual effects~\cite{bowers2007consumable,santos2026committime,santos2026lingering,aws2026outbox,aws2026idempotency}; we characterize whole edits and order receipts and \Alias progress before monitor activation.
-% 可消费凭据、提交检查、隔离、发件箱和幂等性保护单个效果~\cite{bowers2007consumable,santos2026committime,santos2026lingering,aws2026outbox,aws2026idempotency}；我们则刻画完整编辑，并在监控器激活之前确定回执与 \Alias 进展的顺序。
+Recorded-result replay, credentials, commit checks, fencing, outboxes, and idempotency protect individual effects or one invocation under time travel~\cite{somogyi2003idempotent,bowers2007consumable,santos2026committime,santos2026lingering,aws2026outbox,aws2026idempotency}.
+% 结果记录重放、凭据、提交检查、隔离、发件箱和幂等性保护单个效果或时间旅行下的一次调用~\cite{somogyi2003idempotent,bowers2007consumable,santos2026committime,santos2026lingering,aws2026outbox,aws2026idempotency}。
+We characterize whole edits where copied or renamed Agent occurrences may share an invocation, while installation serializes receipt-changing \Fresh and receipt-silent \Alias progress with monitor activation.
+% 我们刻画完整编辑：被复制或重命名的 Agent 发生项可能共享一次调用，而安装过程将会改变回执的 \Fresh 进展和不产生回执的 \Alias 进展与监控器激活串行化。

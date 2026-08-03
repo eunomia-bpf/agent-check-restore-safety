@@ -48,14 +48,14 @@ Tool-using Agents can Fork live continuations, Restore a checkpoint, and Merge d
 % 使用工具的 Agent 可以 Fork 活跃延续、Restore 检查点并 Merge 后代，但外部世界不会回退。
 Commitments are append-only, copied occurrences may share one irreversible receipt, and old protected calls may race the rewrite.
 % 承诺只能追加，复制的发生项可能共享同一不可逆回执，旧的受保护调用还可能与历史重写发生竞态。
-We ask what security state is necessary and sufficient to decide and realize these edits without retracting any outcome not discharged by schema-authorized retirement.
-% 我们研究何种安全状态是判定并实现这些编辑的充要依据，同时不撤回任何未由模式授权退役解除的结果。
+We ask what security information is necessary and sufficient, up to lossless encoding, to decide and realize these edits without retracting any outcome not discharged by schema-authorized retirement.
+% 我们研究在允许无损编码的意义下，何种安全信息是判定并实现这些编辑的充要依据，同时不撤回任何未由模式授权退役解除的结果。
 Checking outcomes separately is unsound because a shared prefix can strand an outcome that the edited history still promises.
 % 分别检查各个结果并不可靠，因为共享前缀可能使编辑后历史仍承诺的某个结果无法完成。
-We identify one relational Agent security state joining four kinds of evidence: (1) promised causal futures, (2) occurrence-to-cell effect identity, (3) the irreversible receipt frontier, and (4) the exact live cut.
-% 我们识别出一种关系化的 Agent 安全状态，它连接四类证据：(1) 已承诺的因果未来，(2) 发生项到单元的效果标识关系，(3) 不可逆回执前沿，以及 (4) 精确的活跃切点。
-The Agent Security-State Characterization Theorem proves this state sufficient for exact compilation and irredundant among its factor projections.
-% Agent 安全状态刻画定理证明，该状态足以支持精确编译，并且在其因子投影中不可约简。
+We identify one relational Agent security state joining four kinds of evidence: (1) promised causal completions, (2) occurrence-to-cell effect identity, (3) the append-only receipt ledger, and (4) the exact history cut.
+% 我们识别出一种关系化的 Agent 安全状态，它连接四类证据：(1) 已承诺的因果完成，(2) 发生项到单元的效果标识关系，(3) 仅追加回执账本，以及 (4) 精确的历史切点。
+The Agent Security-State Characterization Theorem proves the full state sufficient for exact compilation and gives observational lower bounds that every exact state abstraction must satisfy.
+% Agent 安全状态刻画定理证明完整状态足以支持精确编译，并给出每个精确状态抽象都必须满足的观测下界。
 Finite pairs of histories show that erasing any factor, the decisive occurrence--cell incidence, or the receipt--cell incidence and its reconstructing links can make two histories indistinguishable to the compiler even though they require opposite correct decisions.
 % 成对的有限历史表明，擦除任何因子、关键的发生项--单元关联，或回执--单元关联及其重建链接，都可能使两条历史对编译器不可区分，尽管它们要求相反的正确判定。
 The state remains closed after every finite prefix of an arbitrarily long sequence of the six trusted edits and protected calls.
@@ -68,10 +68,10 @@ The untrusted Agent only requests an edit and cannot supply a weaker target or d
 % 不受信任的 Agent 只能请求编辑，无法提供更弱的目标或丢弃不便的义务。
 On acceptance, a durable kernel atomically installs the canonical occurrence-sensitive monitor and authenticated replacement handles under one new policy-domain epoch.
 % 准入后，持久内核在一个新的策略域纪元下原子安装规范的发生项敏感监控器和经过认证的替换句柄。
-We prove divergence-insensitive weak bisimulation between this reference monitor and an ideal atomic Agent-history machine across arbitrary edit sequences, first-redemption and receipt-reuse races, retries, dispatch, and crashes.
-% 我们证明该参考监控器与理想原子 Agent 历史机在任意编辑序列、首次兑付与回执复用竞态、重试、派发和崩溃下满足发散不敏感弱互模拟。
-A bounded artifact checks the executable decision kernel, identity-erasure cases, and representative cut races.
-% 一个有界制品检查可执行判定内核、标识擦除案例和代表性切点竞态。
+Under linearizable crash-stable domain transactions, we prove divergence-insensitive weak bisimulation between this reference monitor and an ideal atomic Agent-history machine across arbitrary edit sequences, races involving first-redemption \Fresh events and receipt-reusing \Alias events, retries, dispatch, and crashes.
+% 在可线性化且崩溃稳定的域事务假设下，我们证明该参考监控器与理想原子 Agent 历史机在任意编辑序列、涉及首次兑付 \Fresh 事件与复用回执 \Alias 事件的竞态、重试、派发和崩溃下满足发散不敏感弱互模拟。
+A bounded artifact checks the executable decision kernel, examples that erase one identity relation at a time, and representative cut races.
+% 一个有界制品检查可执行判定内核、每次擦除一种标识关系的示例以及代表性切点竞态。
 \end{abstract}
 
 \input{sections/introduction}
@@ -83,6 +83,10 @@ A bounded artifact checks the executable decision kernel, identity-erasure cases
 \input{sections/validation}
 \input{sections/related}
 \input{sections/discussion}
+
+\clearpage
+\appendices
+\input{sections/appendix-proofs}
 
 \clearpage
 \section*{AI Use Acknowledgment}

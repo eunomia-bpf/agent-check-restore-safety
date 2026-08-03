@@ -4,26 +4,26 @@
 
 \paragraph{Contracts and progress}
 % 契约与进展
-Each admission covers a finite registered history slice.
-% 每次准入覆盖一个有限的已注册历史切片。
-\Cref{thm:exact-history} closes its security state after every finite prefix of arbitrarily long sequences; unregistered calls fail closed.
-% \Cref{thm:exact-history} 使其安全状态在任意长序列的每个有限前缀之后保持闭合；未注册调用以关闭方式失败。
-Prefix-free traces distinguish stopping from continuing; completion nonblocking preserves one safe completion per compatible outcome but not fairness, task completion, or later admission.
-% 无前缀关系的轨迹区分停止与继续；完成非阻塞性为每个兼容结果保留一条安全完成路径，但不保证公平性、任务完成或后续准入。
-Policy covers authority commitments, not prompt integrity, confidentiality, action quality, or alignment.
-% 策略覆盖权限承诺，而不覆盖提示完整性、机密性、动作质量或对齐。
+Each admission covers a finite registered protected-call slice; \cref{thm:exact-history} keeps its security state closed after every finite prefix of arbitrarily long sequences, while unregistered calls fail closed.
+% 每次准入覆盖一个有限的已注册受保护调用切片；\cref{thm:exact-history} 使其安全状态在任意长序列的每个有限前缀之后保持闭合，而未注册调用以关闭方式失败。
+Prefix-free complete traces distinguish stopping from continuing.
+% 无前缀关系的完整轨迹区分停止与继续。
+Completion nonblocking preserves one safe completion per compatible outcome but guarantees neither fairness, task completion, nor later admission.
+% 完成非阻塞性为每个兼容结果保留一条安全完成路径，但不保证公平性、任务完成或后续准入。
+Policy governs authority, not prompt integrity, confidentiality, action quality, or alignment.
+% 策略治理权限，而不治理提示完整性、机密性、动作质量或对齐。
 
 \paragraph{Deployment}
 % 部署
-The theorem assumes complete mediation and linearizable crash-stable transactions; exactly-once remote effects also require idempotency, queryable outcomes, or a transactional sink, and policy changes need re-admission.
-% 该定理假设完全中介以及可线性化且崩溃稳定的事务；远程效果的恰好一次执行还需要幂等性、可查询结果或事务性接收端，而策略变更需要重新准入。
-Each disjoint domain has one epoch and possible replication; deployment protects registries and lineage, mediates protected effects, and minimizes unnecessary provenance.
-% 每个互不相交的域拥有一个纪元且可采用副本部署；部署保护注册表与谱系、中介受保护效果，并最小化不必要的溯源信息。
-The artifact omits Agent-runtime integration, external effects, and full mechanization; decentralized control and symbolic reduction remain future work.
-% 该制品不包含 Agent 运行时集成、外部效果和完整机械化；去中心化控制与符号化约简仍属于未来工作。
+Deployment assumes complete mediation, crash-stable linearizable transactions, and one epoch per disjoint domain.
+% 部署假设完全中介、崩溃稳定的可线性化事务，以及每个互不相交的域拥有一个纪元。
+Remote exactly-once needs an idempotent or queryable sink; policy changes require re-admission.
+% 远程恰好一次执行需要幂等或可查询的接收端；策略变更需要重新准入。
+The artifact omits Agent-runtime integration, external effects, and full mechanization.
+% 该制品不包含 Agent 运行时集成、外部效果和完整机械化。
 
 \section{Conclusion}
 % 结论
 
-Since committed facts cannot be rewritten, the exact, factor-tight Agent security state yields either the greatest atomically installable monitor or an impossibility certificate.
-% 由于已提交事实无法被重写，精确且因子紧致的 Agent 安全状态要么给出可原子安装的最大监控器，要么给出不可能性证书。
+Agent History Admission exactly compiles each edit into its greatest atomically installable safe monitor or proves realization impossible.
+% Agent 历史准入将每次编辑精确编译为可原子安装的最大安全监控器，或证明其无法实现。

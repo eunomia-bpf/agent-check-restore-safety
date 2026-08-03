@@ -27,15 +27,15 @@ Admitting that prefix silently retracts an Agent promise.
 The failure cascades when removing that completion destroys coverage at an earlier prefix, so testing each outcome independently is unsound.
 % 当移除该完成路径会破坏更早前缀处的覆盖性时，失败便会级联，因此独立测试每个结果并不可靠。
 
-Prior theories address adjacent enforcement problems.
-% 既有理论处理相邻的强制执行问题。
-History monitors judge a next action~\cite{abadi2003history,krukow2008history,palumbo2026forge}, commit-time authorization judges one effect~\cite{santos2026committime}, and reversible sessions or dynamic update preserve given specifications~\cite{dezani2016checkpoints,mezzina2025checkpoint,nahabedian2020dynamic,amram2022dynamic}.
-% 历史监控器判断下一个动作~\cite{abadi2003history,krukow2008history,palumbo2026forge}，提交时授权判断单个效果~\cite{santos2026committime}，而可逆会话或动态更新保持给定规约~\cite{dezani2016checkpoints,mezzina2025checkpoint,nahabedian2020dynamic,amram2022dynamic}。
-Agent history admission judges the edit itself by deriving future obligations, preserving them after every admitted prefix, and respecting irreversible receipts.
-% Agent 历史准入通过推导未来义务、在每个已准入前缀之后保持这些义务并尊重不可逆回执，来判断编辑本身。
+Prior theories already carry unfinished temporal obligations into a live replacement and retain duties or optional rights after every prefix~\cite{finkbeiner2022live,zhu2022duties}.
+% 既有理论已经能够把未完成的时序义务带入在线替换，并在每个前缀之后保留职责或可选权利~\cite{finkbeiner2022live,zhu2022duties}。
+They receive old and new formulas, a plant, and a linear trace or current state, while history monitors and commit-time authorization judge an existing history or one effect~\cite{abadi2003history,krukow2008history,palumbo2026forge,santos2026committime}.
+% 它们接收新旧公式、被控对象以及线性轨迹或当前状态，而历史监控器和提交时授权则判断既有历史或单个效果~\cite{abadi2003history,krukow2008history,palumbo2026forge,santos2026committime}。
+Agent history admission authenticates the topology-changing edit and derives its outcome identities, occurrence-to-cell incidence, receipt ledger, and history cut before applying such synthesis.
+% Agent 历史准入先认证改变拓扑的编辑，并推导其结果标识、发生项到单元的关联、回执账本和历史切点，随后才应用这类综合。
 
-Our key observation is that exact Agent history editing requires one relational security state spanning promised causal futures, occurrence-to-cell effect identity, irreversible receipts, and the live history cut.
-% 我们的关键观察是，精确的 Agent 历史编辑需要一种关系化安全状态，它同时涵盖已承诺的因果未来、发生项到单元的效果标识关系、不可逆回执和活跃历史切点。
+Our key observation is that exact Agent history editing requires one relational security state spanning promised causal completions, occurrence-to-cell effect identity, the append-only receipt ledger, and the history cut.
+% 我们的关键观察是，精确的 Agent 历史编辑需要一种关系化安全状态，它同时涵盖已承诺的因果完成、发生项到单元的效果标识关系、仅追加回执账本和历史切点。
 None of these factors is merely implementation metadata.
 % 这些因子都不只是实现元数据。
 For each proper factor projection, two finite registered histories expose the same retained view but require opposite admission or installation decisions.
@@ -45,8 +45,8 @@ The relational state remains closed after every finite prefix of an arbitrarily 
 
 Once the trusted semantics has derived this Agent-specific state, conditional generalized nonblocking supplies the synthesis backend.
 % 可信语义推导出这一 Agent 特有状态之后，条件广义非阻塞提供综合后端。
-From the policy-safe resolved completions \(\widehat B_0\), its operator removes any completion having a prefix without a surviving continuation for even one contract-compatible outcome.
-% 从策略安全的已解析完成路径 \(\widehat B_0\) 出发，该算子会移除任何包含如下前缀的完成路径：哪怕仅对一个与契约兼容的结果，该前缀都没有仍然存活的后续路径。
+From the policy-safe resolved completions \(\widehat B_0\), the pruning operator \(\widehat\Phi\) removes any completion having a prefix without a surviving continuation for even one contract-compatible outcome.
+% 从策略安全的已解析完成路径 \(\widehat B_0\) 出发，裁剪算子 \(\widehat\Phi\) 会移除任何包含如下前缀的完成路径：哪怕仅对一个与契约兼容的结果，该前缀都没有仍然存活的后续路径。
 \[
  \widehat B^\dagger=\nu\widehat B.\widehat\Phi(\widehat B),
  \qquad B^\dagger=\pi_2\widehat B^\dagger,\qquad
@@ -76,10 +76,10 @@ Platform developers register policy and schemas describing what an edit carries,
 % 平台开发者注册策略和模式，用以描述一次编辑会携带、克隆或退役哪些内容。
 The Agent submits only \(u\).
 % Agent 仅提交 \(u\)。
-The installation checker re-derives the obligations, effect identities, receipt frontier, exact cut, and nonblocking solution.
-% 安装检查器重新推导义务、效果标识、回执前沿、精确切点和非阻塞解。
-On acceptance, the kernel atomically installs \(\mathsf{Can}(W^\dagger,B^\dagger)\), minted gates, and authenticated replacement handles under one new epoch.
-% 接纳后，内核在一个新纪元下原子地安装 \(\mathsf{Can}(W^\dagger,B^\dagger)\)、新铸造的门和经过认证的替换句柄。
+The installation checker re-derives the obligations, effect identities, receipt ledger, history cut, and nonblocking solution.
+% 安装检查器重新推导义务、效果标识、回执账本、历史切点和非阻塞解。
+On acceptance, the kernel atomically installs the canonical monitor \(\mathsf{Can}(W^\dagger,B^\dagger)\), minted gates, and authenticated replacement handles under one new epoch.
+% 接纳后，内核在一个新纪元下原子地安装规范监控器 \(\mathsf{Can}(W^\dagger,B^\dagger)\)、新铸造的门和经过认证的替换句柄。
 The monitor then authenticates the occurrence, gate, handle, cell, and epoch of every protected call and permits only transitions in the current program.
 % 随后，监控器认证每个受保护调用的发生项、门、句柄、单元和纪元，并且只允许当前程序中的转移。
 A valid \Retry only returns its stable result.

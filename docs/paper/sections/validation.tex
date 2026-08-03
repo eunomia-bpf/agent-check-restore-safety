@@ -4,18 +4,16 @@
 
 \paragraph{Decision kernel}
 % 判定内核
-The bounded validator enumerates indexed pomset linearizations, resolves \Fresh and \Alias, checks authority and witnesses, iterates \(\widehat\Phi\), and reconstructs \(W^\dagger\) without merging equal-trace outcomes.
-% 有界验证器枚举带索引偏序事件集的线性化、解析 \Fresh 与 \Alias、检查权限与见证、迭代 \(\widehat\Phi\)，并重建 \(W^\dagger\) 而不合并同轨迹结果。
-It fails closed beyond 128 outcomes, eight occurrences per outcome, 50,000 linearizations, or 100,000 completions; it is neither the trusted checker nor a proof, and these bounds do not constrain the theorem.
-% 当结果超过 128 个、每个结果的发生项超过 8 个、线性化超过 50,000 个或完成路径超过 100,000 条时，它以关闭方式失败；它既不是可信检查器也不是证明，且这些界限不约束该定理。
+The bounded validator implements the indexed fixed-point kernel without merging equal-trace outcomes and fails closed beyond the appendix bounds.
+% 有界验证器实现带索引的不动点内核，不合并同轨迹结果，并在超出附录界限时以关闭方式失败。
+It is neither the trusted checker nor a proof; these bounds do not constrain the theorem.
+% 它既不是可信检查器也不是证明；这些界限不约束该定理。
 
 \paragraph{Litmus tests}
 % 试金石测试
-All 81 tests pass after clean extraction.
-% 全部 81 个测试在干净解压后均通过。
-Nineteen cover a rejecting shared-prefix chain of family sizes \(2,1,0\), equal-trace indexed outcomes, all six edits, shared and distinct cells, receipt-silent \Alias, and both orders of use and installation.
-% 其中 19 个覆盖族大小为 \(2,1,0\) 的被拒绝共享前缀链、同轨迹带索引结果、全部六种编辑、共享与不同单元、不产生回执的 \Alias，以及使用和安装的两种次序。
-\Cref{tab:projection-pairs} remains pen-and-paper; tests cover its mechanisms, while Lean checks whether erasing a cell's semantic identity or authorized controller reverses redemption.
-% \Cref{tab:projection-pairs} 仍是纸笔模型；测试覆盖其机制，而 Lean 检查擦除单元的语义标识或授权控制器是否会反转兑付判定。
-Neither artifact mechanizes schema fidelity, sequence closure, handoff, durable refinement, or the theorem.
-% 两种制品都没有机械化模式保真性、序列闭包、交接、持久精化或该定理。
+All 81 tests pass, including from a clean extracted archive; 19 focused tests cover the \(2,1,0\) rejecting shared-prefix chain, distinct indices with identical traces, all six edits, shared and distinct cells, receipt-silent \Alias, and both use/install orderings.
+% 全部 81 个测试均通过，其中也包括从干净解压的归档中运行的测试；19 个重点测试覆盖 \(2,1,0\) 拒绝型共享前缀链、轨迹相同但索引不同的结果、全部六种编辑、共享与不同单元、不产生回执的 \Alias，以及使用/安装的两种次序。
+These tests exercise \cref{tab:projection-pairs}, and Lean checks auxiliary identity-erasure cases.
+% 这些测试运行 \cref{tab:projection-pairs} 中的机制，而 Lean 检查辅助的标识擦除案例。
+The appendix proves the theorem; neither artifact claims full mechanization.
+% 附录证明该定理；两种制品都不声称实现了完整机械化。

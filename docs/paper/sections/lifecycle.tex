@@ -4,8 +4,8 @@
 
 Consider a procurement Agent authorized to place one order.
 % 考虑一个获授权只能下单一次的采购 Agent。
-It durably reserves the budget, so the receipt ledger \(\Delta\) satisfies \(\mathsf{lab}(\Delta)=r\), and saves checkpoint \(k\) before approval.
-% 它持久地预留预算，因此回执账本 \(\Delta\) 满足 \(\mathsf{lab}(\Delta)=r\)，并在审批前保存检查点 \(k\)。
+It durably reserves the budget, making the receipt ledger's authority-label word, written \(\mathsf{lab}(\Delta)\), equal to \(r\), and saves checkpoint \(k\) before approval.
+% 它持久地预留预算，使回执账本的权限标签词（记作 \(\mathsf{lab}(\Delta)\)）等于 \(r\)，并在审批前保存检查点 \(k\)。
 Approval occurrence \(x_a\) then commits through cell \(d_a\), whose authority label is \(a\), so \(\mathsf{lab}(\Delta)=ra\).
 % 随后，审批发生项 \(x_a\) 通过单元 \(d_a\) 提交；该单元的权限标签为 \(a\)，因此 \(\mathsf{lab}(\Delta)=ra\)。
 The Agent requests a choice Fork between two suppliers, \(L\) and \(R\).
@@ -60,8 +60,8 @@ On acceptance, these prefixes become the generated behavior of the compiled moni
 % 准入后，这些前缀成为已编译监控器所生成的行为。
 If policy excludes \(rap_Rs\), then \(M_{o_R}=\varnothing\), and the Fork is rejected because pruning supplier \(R\) would change its meaning.
 % 如果策略排除 \(rap_Rs\)，则 \(M_{o_R}=\varnothing\)，并且该 Fork 会被拒绝，因为剪除供应商 \(R\) 将改变其含义。
-\Cref{sec:admission} gives the shared-prefix case where every outcome starts safe but no prefix-robust family exists.
-% \Cref{sec:admission} 给出了共享前缀情形：每个结果开始时都安全，但不存在前缀鲁棒族。
+\Cref{sec:admission} gives the shared-prefix case where every outcome starts safe but no family preserves every compatible outcome after every prefix.
+% \Cref{sec:admission} 给出了共享前缀情形：每个结果开始时都安全，但没有任何完成族能在每个前缀之后保留每个兼容结果。
 
 \begin{figure*}[t]
   \centering
@@ -100,7 +100,7 @@ If policy excludes \(rap_Rs\), then \(M_{o_R}=\varnothing\), and the Fork is rej
     \draw[stale] (bb) to[bend left=17]
       node[below] {must lose authority} (ms);
 
-    \node[lab] at (0,0.65) {receipt authority trace};
+    \node[lab] at (0,0.65) {receipt-ledger authority word};
     \node[node] (r) at (0.65,0.65) {$r$};
     \node[node] (a) at (3.05,0.65) {$a$};
     \node[node] (pa) at (6.05,0.65) {$p_L$};
@@ -120,8 +120,8 @@ If policy excludes \(rap_Rs\), then \(M_{o_R}=\varnothing\), and the Fork is rej
     \draw[arr] (ef) -- node[above] {atomic swap} (ea);
     \draw[arr] (ea) -- node[above] {atomic swap} (ej);
   \end{tikzpicture}
-  \caption{An Agent has an editable logical history, a non-editable world history, and one current policy-domain epoch.
-  % Agent 拥有一段可编辑的逻辑历史、一段不可编辑的世界历史，以及一个当前策略域纪元。
+  \caption{An Agent has an editable logical history, an append-only receipt-ledger authority word, and one current policy-domain epoch.
+  % Agent 拥有一段可编辑的逻辑历史、一个仅追加的回执账本权限词，以及一个当前策略域纪元。
   Restore clones logical occurrences but preserves authenticated cell identity.
   % Restore 会克隆逻辑发生项，但保留经过认证的单元标识。
   A history cut must therefore order both receipt-changing \Fresh events and receipt-silent \Alias events against a policy-domain epoch swap.}
@@ -133,8 +133,8 @@ If policy excludes \(rap_Rs\), then \(M_{o_R}=\varnothing\), and the Fork is rej
 % \Fresh 竞态
 After the shared approval and before either payment, the Agent requests \(\mathsf{MergeSelect}(g,L,\sigma)\).
 % 在共享审批之后、任一付款之前，Agent 请求 \(\mathsf{MergeSelect}(g,L,\sigma)\)。
-If a protected use from the old supplier-\(R\) arm commits \(x_R^p\) first, that occurrence durably selects \(R\) and changes the receipt ledger's authority trace \(\mathsf{lab}(\Delta)\) from \(ra\) to \(rap_R\).
-% 如果旧供应商 \(R\) 分支的一次受保护使用先提交 \(x_R^p\)，该发生项就会持久选择 \(R\)，并将回执账本的权限轨迹 \(\mathsf{lab}(\Delta)\) 从 \(ra\) 改为 \(rap_R\)。
+If a protected use from the old supplier-\(R\) arm commits \(x_R^p\) first, that occurrence durably selects \(R\) and changes the receipt ledger's authority word \(\mathsf{lab}(\Delta)\) from \(ra\) to \(rap_R\).
+% 如果旧供应商 \(R\) 分支的一次受保护使用先提交 \(x_R^p\)，该发生项就会持久选择 \(R\)，并将回执账本的权限词 \(\mathsf{lab}(\Delta)\) 从 \(ra\) 改为 \(rap_R\)。
 Selecting \(L\) must therefore be re-derived and rejected.
 % 因此，选择 \(L\) 必须重新推导并被拒绝。
 If the Merge cut wins, it closes the current policy-domain epoch and rebinds every live gate before any later \(x_R^p\) can commit.

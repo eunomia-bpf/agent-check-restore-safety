@@ -747,3 +747,61 @@ positioning sentence is:
 > derives the exact completion contract and every still-authoritative source,
 > while one cut orders fresh and alias progress against complete fencing and
 > target activation.
+
+## 9. Live-synthesis and Agent-revision boundary (2026-08-03)
+
+The final blind-review audit found four omitted closest works and materially
+changed the novelty boundary.  The checked primary-source queries covered live
+system replacement with unfinished obligations, per-prefix Agent duties and
+rights, streaming LLM revision with irreversible actions, and idempotent I/O
+under time travel.  The downloaded full texts are:
+
+- `reference/closest-work/2021-finkbeiner-live-synthesis.pdf`, SHA-256
+  `8f63ce3fd20d3cf4c463f9b8366c3dc13f1cd0fad5266c6691d77439e5d66d24`;
+- `reference/closest-work/2022-zhu-duties-rights.pdf`, SHA-256
+  `baadcd62bc099f0f211f8c6c7f5f332142fe7e49c9e4ee6792c695e01f8f1ece`;
+- `reference/closest-work/2026-zhai-revisable-by-design.pdf`, SHA-256
+  `f248f2e5244ef662945468fbb77cc46ee30bc77c062c49b9b224bb413a01a069`;
+- `reference/closest-work/2003-somogyi-idempotent-io.pdf`, SHA-256
+  `0b11b91c88e36b4fae89b56fbeaf1264ae723b2d38c7c0fe88b26b73cd8bbc23`.
+
+Finkbeiner, Klein, and Metzger's *Live Synthesis* already computes the
+unfinished obligations of an old LTL specification after a finite trace and
+synthesizes a replacement satisfying both those obligations and a new
+specification.  Zhu and De Giacomo already synthesize an Agent strategy that
+retains, at every prefix, the ability to satisfy duties and optional rights,
+including duties and rights added after a history.  Somogyi already records an
+I/O result on first execution and returns that result after debugger time
+travel.  *Revisable by Design* already connects streaming LLM-agent revision
+to idempotent, reversible, compensable, and irreversible actions and proves an
+irreversibility-based impossibility result.  The paper therefore cannot claim
+novelty for residual-obligation derivation, persistent per-prefix ability,
+recorded-result replay, or Agent revision under irreversible actions alone.
+
+The larger surviving claim begins one layer earlier and ends one layer later.
+Live and controller-update synthesis receive temporal formulas, task colors,
+plant structure, and a current trace or state.  Rollback and Agent-runtime
+systems receive action identities or classifications, rollback policy,
+capabilities, or provider effect metadata.  Agent History Admission instead
+derives and authenticates the entire edit-specific instance from one registered
+Fork/Restore/Merge history: source and target topology, authorized retirement,
+outcome identities and compatibility markings, occurrence--cell and
+receipt--cell incidence, the receipt frontier and logical cursor, and the exact
+epoch cut.  It then gives an end-to-end iff characterization, greatest
+realization or impossibility certificate, observational lower bounds on the
+required distinctions, finite-prefix closure, and a cut-bound realization.
+Generalized nonblocking and live synthesis are admissible backends after this
+derivation; encoding the missing identities and cut as propositions amounts to
+supplying the security state that this theory derives and proves necessary to
+distinguish.
+
+The safe theorem-level comparison is consequently:
+
+> Given the trusted formulas, markings, plant, and current trace, prior live
+> synthesis can carry unfinished obligations into a replacement controller.
+> Given an authenticated branching Agent history and irreversible effects,
+> this theory first derives which outcomes remain promised, which copied
+> occurrences denote the same effect, which receipts already exist, and which
+> exact cut may install.  It then compiles the resulting instance to its
+> greatest prefix-robust monitor or a finite impossibility certificate and
+> proves the monitor realizes the atomic history edit.
