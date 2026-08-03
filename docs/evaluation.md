@@ -747,7 +747,25 @@ answers. It cannot begin until the revised contract is approved.
 - Planned raw evidence:
   `docs/tmp/research-experiment-design-20260803T160000Z/raw/`.
 - Current status: **final contract approved; real preflight PASS as
-  dependency-only evidence after one semantic FAIL and repair; decisive
-  general formalization not yet run**.
+  dependency-only evidence after one semantic FAIL and repair; the general
+  registered finite admission core now PASSes after a separate nonvacuity FAIL,
+  repair, `--trust=0` replay, and adversarial finite probes**.
 - Preflight result:
   `docs/tmp/research-experiment-design-20260803T160000Z/preflight-result.md`.
+- General finite-core result:
+  `docs/tmp/research-experiment-design-20260803T160000Z/general-finite-core-result.md`.
+
+The general finite result connects a total inductive receipt-threaded resolver
+to constructional candidate generation, derives receipt state and durable
+authority prefix from one ordered ledger, keeps `Realization` independent of
+the compiler, and proves that `CompilerAns` and `SemanticAns` both admit
+exactly the valid declarative realizations. It also proves monotonicity,
+bounded stabilization, equality with the greatest postfixed family, and
+componentwise language/family greatestness for every registered finite input.
+The literal paper fixture remains `[2,1,0]`.
+
+This is the first theorem-bearing submilestone, not completion of the central
+experiment. `OperationalSemantics.lean`, `ReachableEvidence.lean`, and
+`DurableRefinement.lean` remain required before the paper may call the
+six-edit closure, state lower bounds, or weak bisimulation mechanized. The
+ranked deletion-cause certificate is likewise deferred rather than weakened.
