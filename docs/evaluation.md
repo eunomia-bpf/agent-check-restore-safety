@@ -746,5 +746,8 @@ answers. It cannot begin until the revised contract is approved.
   `docs/tmp/research-experiment-design-20260803T160000Z/plan.md`.
 - Planned raw evidence:
   `docs/tmp/research-experiment-design-20260803T160000Z/raw/`.
-- Current status: **final contract approved by general, nominal, and atomic
-  reviewers; real preflight not yet run**.
+- Current status: **final contract approved; real preflight PASS as
+  dependency-only evidence after one semantic FAIL and repair; decisive
+  general formalization not yet run**.
+- Preflight result:
+  `docs/tmp/research-experiment-design-20260803T160000Z/preflight-result.md`.
