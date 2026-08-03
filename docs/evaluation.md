@@ -709,16 +709,42 @@ reachability; it must not be described as directly proving the current
 length-zero wording.
 
 The real toolchain is installed and pinned at Lean 4.30.0, Lake 5.0.0, Mathlib
-v4.30.0, and Elan 4.2.3. The plan passed a fresh read-only experiment review
-with verdict **APPROVE**. Completion requires every frozen theorem to appear in
-the audit root, pass the placeholder/project-axiom scan, build from a clean
-state, and survive `lake env leanchecker --fresh AuthorityContinuity.Main`.
-The first gate is a real shared-prefix preflight reproducing the paper's
-two-outcome `[2,1,0]` pruning chain with independently computed semantic and
-compiler answers.
+v4.30.0, and Elan 4.2.3. An initial fresh read-only review approved the
+four-module structure. A subsequent reverse map against every clause of the
+frozen PDF found additional load-bearing obligations: the independent atomic
+realization, three-way semantic answer including stale installation,
+representative-independent event derivatives, typed natural-join
+normalization, target-only lower bound, generalized-nonblocking
+correspondence, and the precise common abstraction for bisimulation. These are
+now binding in the revised plan. A second formal-scope audit additionally
+forced an explicit root-cut origin, a total edit-answer type for empty fixed
+points, simultaneous state/event/trace nominal quotients, alpha-equivalent
+observable labels, state-indexed atomic-swap premises, and a precise
+query-fixing construction for the C pair. Two narrower audits then strengthened
+that repair further: declarative history derivation is now independent of the
+executable derivation; semantic installation handles arbitrary stale or corrupt
+artifacts; public answers erase diagnostics only after verification; factor
+exactness is typed over the joint `(view,query)` orbit; and weak bisimulation
+carries one persistent renaming witness so Fresh/Alias identity is preserved
+across the entire observation trace. Bootstrap keeps deterministic allocation
+by choosing a private namespace seed before initial installation. The resulting
+contract passed three independent final checks: a whole-plan/paper-contract
+review, a nominal-semantics review, and an atomic-answer/installation review,
+all with verdict **APPROVE**. The last correction makes C-erasure use one
+static unary dependency schema: I-owned gate/handle rows whose mandatory
+foreign-key closure reaches erased seed/epoch ownership are removed uniformly,
+never according to which two worlds are being compared.
+
+Completion requires every frozen theorem to appear in the audit root, pass the
+placeholder/project-axiom scan, build from a clean state, and survive
+`lake env leanchecker --fresh AuthorityContinuity.Main`. The first execution
+gate remains a real shared-prefix preflight reproducing the paper's two-outcome
+`[2,1,0]` pruning chain with independently computed semantic and compiler
+answers. It cannot begin until the revised contract is approved.
 
 - Approved plan:
   `docs/tmp/research-experiment-design-20260803T160000Z/plan.md`.
 - Planned raw evidence:
   `docs/tmp/research-experiment-design-20260803T160000Z/raw/`.
-- Current status: **approved; real preflight not yet run**.
+- Current status: **final contract approved by general, nominal, and atomic
+  reviewers; real preflight not yet run**.
