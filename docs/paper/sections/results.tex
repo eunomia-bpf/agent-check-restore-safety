@@ -2,10 +2,8 @@
 % Agent 安全状态刻画
 \label{sec:results}
 
-The theorem unifies schema checking, nonblocking synthesis, and epoch installation in one state.
-% 该定理在一种状态中统一模式检查、非阻塞综合与纪元安装。
-For witness \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\), an independently defined \emph{exact atomic realization} has \(\mathsf{Mark}(M,q^0)=\pi_2\widehat B_M\), installs \((\kappa_u,H_u,\mathcal A_u,M)\) at \(\eta^+\), closes \(\eta^-\), binds target gates, and publishes replacement handles.
-% 对于见证 \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)，独立定义的\emph{精确原子实现}满足 \(\mathsf{Mark}(M,q^0)=\pi_2\widehat B_M\)，在 \(\eta^+\) 安装 \((\kappa_u,H_u,\mathcal A_u,M)\)，关闭 \(\eta^-\)，绑定目标门并发布替换句柄。
+For witness \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\), an independently defined \emph{exact atomic realization} is \((M,\widehat B_M)\) such that \((\mathsf{Gen}(M,q^0),\widehat B_M)\) realizes \((H,u)\) by \cref{def:realization}, \(\mathsf{Mark}(M,q^0)=\pi_2\widehat B_M\), and \(\delta\)'s exact-cut transaction atomically installs \((\kappa_u,H_u,\mathcal A_u,M)\) at \(\eta^+\), closes \(\eta^-\), binds target gates, and publishes replacement handles.
+% 对于见证 \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)，独立定义的\emph{精确原子实现}是满足以下条件的 \((M,\widehat B_M)\)：\((\mathsf{Gen}(M,q^0),\widehat B_M)\) 按照 \cref{def:realization} 实现 \((H,u)\)，\(\mathsf{Mark}(M,q^0)=\pi_2\widehat B_M\)，且 \(\delta\) 的精确切点事务原子地在 \(\eta^+\) 安装 \((\kappa_u,H_u,\mathcal A_u,M)\)、关闭 \(\eta^-\)、绑定目标门并发布替换句柄。
 
 \paragraph{Relational evidence}
 % 关系证据
