@@ -908,3 +908,80 @@ auditable.
 Full claim-by-claim evidence, source hashes, search log, and update triggers
 are recorded in
 `docs/tmp/research-literature-novelty-20260803T160000Z/report.md`.
+
+## 11. Name-free theorem boundary and enforcement backends (2026-08-03)
+
+This pass removed the paper's coined terminology and compared the remaining
+claims against the primary sources for generalized nonblocking, runtime
+enforcement, workflow migration, causal reversibility, recent Agent recovery,
+and Agent policy enforcement. The defensible unified claim is not a new
+fixed-point or monitor formalism. It is the following exact security-state
+characterization:
+
+> Given an authenticated branching history and a typed structural edit,
+> derive the still-promised causal outcomes, the quotient from logical
+> occurrences to irreversible effects, the durable receipt incidence, and the
+> exact installation cut; decide whether all non-retired outcomes admit one
+> prefix-robust realization; return its greatest behavior or a finite
+> impossibility certificate; and preserve that decision across the atomic
+> handoff and later protected calls.
+
+The inspected sources own important backend or neighboring results:
+
+- Malik and Leduc's [generalised
+  nonblocking](https://researchcommons.waikato.ac.nz/entities/publication/325106ee-ab3c-48ed-9d83-810f578c1b80)
+  owns conditional coloured nonblocking and maximal nonblocking subautomata
+  once the plant and markings are supplied.
+- Ligatti, Bauer, and Walker's [edit
+  automata](https://users.ece.cmu.edu/~lbauer/papers/2009/tissec09-editauto.pdf)
+  and Aceto et al.'s [suppression-monitor
+  synthesis](https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.CONCUR.2018.34)
+  own runtime modification/suppression and proved monitor synthesis from a
+  supplied property.
+- Workflow inheritance and history-equivalent migration own sound state
+  transfer between supplied old and new workflow models; causal-reversibility
+  work owns rollback consistency for computational actions.
+- [DART](https://arxiv.org/abs/2605.23311) owns admissibility conditions for
+  one local checkpoint recovery, [Atomix](https://arxiv.org/abs/2602.14849)
+  owns progress-aware effect staging and settlement, and
+  [ACRFence](https://arxiv.org/abs/2603.20625) identifies action replay and
+  authority resurrection after Agent rollback.
+- [FORGE](https://arxiv.org/abs/2602.16708) owns history-sensitive per-action
+  Agent policy enforcement, PORTICO owns task-contract compilation to
+  epoch-bound capabilities, and [Earned
+  Authority](https://arxiv.org/abs/2607.23586) owns non-amplification beneath a
+  fixed authority ceiling. Earned Authority explicitly describes its
+  escalation closure as forgetting witness compatibility across histories and
+  therefore as a sound history-independent over-approximation, not an exact
+  attainable effect set.
+
+The current theorem already contains four opposite-answer witnesses that state
+the exact separation without relying on paper-specific names:
+
+1. The same proposed target and remaining records arise from an exclusive
+   choice or a jointly live parallel source, but a select edit is legal only
+   for the former. A caller-supplied target does not authenticate edit meaning.
+2. The same occurrence and effect marginals arise when two logical occurrences
+   denote one effect or two effects. Under a one-use policy,
+   `Fresh; Alias` admits while `Fresh; Fresh` rejects.
+3. With the occurrence mapping fixed, the same receipt and effect marginals
+   arise when the durable receipt names the restored effect or an equal-labelled
+   different effect. The former aliases and the latter spends fresh authority.
+4. The same semantic edit state with a current or stale owner/version cut
+   requires opposite installation decisions.
+
+The shared-prefix witness is a strict separation from trace-only ordinary
+marker nonblocking, but not from generalized coloured nonblocking after the
+outcome-compatible markings have already been supplied. The fresh/alias race
+adds a realization separation: comparing receipts alone cannot detect
+receipt-silent logical progress, so the atomic cut must also bind the logical
+frontier and policy-domain epoch.
+
+The strongest concise positioning is therefore:
+
+> Existing synthesis and enforcement can realize a supplied plant, obligation
+> family, policy, or authority ceiling. This theory characterizes the complete
+> security state that a trusted Agent history editor must derive before those
+> backends can be sound and exact, proves every component observationally
+> necessary, and carries the resulting decision through one durable atomic
+> history cut.
