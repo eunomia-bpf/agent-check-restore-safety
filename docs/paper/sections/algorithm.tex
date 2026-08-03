@@ -1,12 +1,16 @@
 \section{Compilation and Durable Refinement}
+% 编译与持久精化
 \label{sec:kernel}
 
 \subsection{Occurrence-sensitive compilation}
+% 发生项敏感编译
 
 Compilation maps the greatest realization to a canonical installable program.
+% 编译将最大实现映射为规范的可安装程序。
 Finite pomsets make \(W=W^\dagger_{H,u}\) and \(B=B^\dagger_{H,u}\) finite.
-For \(L/z=\{v\mid zv\in L\}\), use residual states
-\(q_z=(W^\dagger/z,B^\dagger/z)\).
+% 有限偏序事件集使 \(W=W^\dagger_{H,u}\) 和 \(B=B^\dagger_{H,u}\) 均为有限集。
+For \(L/z=\{v\mid zv\in L\}\), use residual states \(q_z=(W^\dagger/z,B^\dagger/z)\).
+% 对于 \(L/z=\{v\mid zv\in L\}\)，使用残余状态 \(q_z=(W^\dagger/z,B^\dagger/z)\)。
 \begin{equation}
 \label{eq:canonical-program}
 \begin{aligned}
@@ -16,106 +20,129 @@ For \(L/z=\{v\mid zv\in L\}\), use residual states
  &\quad\Longleftrightarrow\quad za\in W .
 \end{aligned}
 \end{equation}
-Write \(\mathsf{Can}(W,B)\) for this automaton.  Every state is reachable and
-marked exactly when \(\epsilon\in B^\dagger/z\).  Transition symbol \(a\) contains
-occurrence \(x\), cell \(d\), and \Fresh/\Alias mode, preventing use through
-another occurrence's gate.
+Write \(\mathsf{Can}(W,B)\) for this automaton.
+% 将此自动机记作 \(\mathsf{Can}(W,B)\)。
+Every state is reachable and marked exactly when \(\epsilon\in B^\dagger/z\).
+% 每个状态均可达，并且恰在 \(\epsilon\in B^\dagger/z\) 时被标记。
+Transition symbol \(a\) contains occurrence \(x\), cell \(d\), and \Fresh/\Alias mode, preventing use through another occurrence's gate.
+% 转换符号 \(a\) 包含发生项 \(x\)、单元 \(d\) 以及 \Fresh/\Alias 模式，从而防止通过另一发生项的门进行使用。
 
 \begin{lemma}[Exact compiled realization]
+% 精确的编译实现
 \label{lem:compiled-language}
-The generated and marked languages of the program in
-\cref{eq:canonical-program} are exactly
-\((W^\dagger_{H,u},B^\dagger_{H,u})\).  The program is the smallest deterministic marked
-partial automaton for this pair up to state renaming.
+The generated and marked languages of the program in \cref{eq:canonical-program} are exactly \((W^\dagger_{H,u},B^\dagger_{H,u})\).
+% \cref{eq:canonical-program} 中程序的生成语言和标记语言恰为 \((W^\dagger_{H,u},B^\dagger_{H,u})\)。
+The program is the smallest deterministic marked partial automaton for this pair up to state renaming.
+% 在忽略状态重命名的意义下，该程序是实现这对语言的最小确定性标记偏自动机。
 \end{lemma}
 \begin{proof}
-Induction on \(z\) reaches \((W^\dagger/z,B^\dagger/z)\), enables \(a\) iff
-\(za\in W^\dagger\), and marks the state iff \(z\in B^\dagger\).  Distinct
-states differ on a generated or marked suffix and must remain distinct.  This
-is the paired-language derivative construction
-~\cite{brzozowski1964derivatives}.
+Induction on \(z\) reaches \((W^\dagger/z,B^\dagger/z)\), enables \(a\) iff \(za\in W^\dagger\), and marks the state iff \(z\in B^\dagger\).
+% 对 \(z\) 归纳可到达 \((W^\dagger/z,B^\dagger/z)\)，当且仅当 \(za\in W^\dagger\) 时启用 \(a\)，并且当且仅当 \(z\in B^\dagger\) 时标记该状态。
+Distinct states differ on a generated or marked suffix and must remain distinct.
+% 不同状态在某个生成后缀或标记后缀上存在差异，因此必须保持不同。
+This is the paired-language derivative construction ~\cite{brzozowski1964derivatives}.
+% 这就是成对语言的导数构造~\cite{brzozowski1964derivatives}。
 \end{proof}
 
 \(\mathsf{Compile}(\kappa,H,\Delta,\mathcal A,u)\) runs the schema judgment.
-Failure returns the failed structural check.  Otherwise it computes
-\(\widehat B^\dagger_{H,u}\) using \cref{eq:robust-operator} and applies the
-admission test in \cref{eq:admission}.  An empty fixed point returns its chain
-and ranked causes.
-Success emits \(\widehat B^\dagger\), the complete chain and coverage
-witnesses,
-\(\mathsf{prog}_Z=\mathsf{Can}(W^\dagger,B^\dagger)\), and a seal
+% \(\mathsf{Compile}(\kappa,H,\Delta,\mathcal A,u)\) 执行模式判定。
+Failure returns the failed structural check.
+% 失败时返回未通过的结构检查。
+Otherwise it computes \(\widehat B^\dagger_{H,u}\) using \cref{eq:robust-operator} and applies the admission test in \cref{eq:admission}.
+% 否则，它使用 \cref{eq:robust-operator} 计算 \(\widehat B^\dagger_{H,u}\)，并应用 \cref{eq:admission} 中的准入测试。
+An empty fixed point returns its chain and ranked causes.
+% 若不动点为空，则返回其迭代链和排序后的原因。
+Success emits \(\widehat B^\dagger\), the complete chain and coverage witnesses, \(\mathsf{prog}_Z=\mathsf{Can}(W^\dagger,B^\dagger)\), and a seal
+% 成功时输出 \(\widehat B^\dagger\)、完整迭代链与覆盖见证、\(\mathsf{prog}_Z=\mathsf{Can}(W^\dagger,B^\dagger)\)，以及封印
 \[
  Z=(\omega,\zeta,\kappa_Z,\mathsf{cut}_Z,u,
     H_{\mathsf{prog}},\eta^-,\eta^+),
 \]
-where \(\kappa_Z=\kappa\), \(H_c=H\) is the authenticated pre-installation
-history, and the history judgment mints \(\eta^+\).
+where \(\kappa_Z=\kappa\), \(H_c=H\) is the authenticated pre-installation history, and the history judgment mints \(\eta^+\).
+% 其中 \(\kappa_Z=\kappa\)，\(H_c=H\) 是经认证的安装前历史，而历史判定生成 \(\eta^+\)。
 
-Let \(\mathsf{enc}\) be canonical and length-delimited, with \(\kappa\)
-authenticating \(\mathcal A\).  The symbolic LTS uses domain-separated
-injective authenticated constructors \(\mathsf{Seal}_{\rm prog}\) and
-\(\mathsf{Seal}_{\rm cut}\), so equal seals have equal payloads.  Define
+Let \(\mathsf{enc}\) be canonical and length-delimited, with \(\kappa\) authenticating \(\mathcal A\).
+% 令 \(\mathsf{enc}\) 采用规范且带长度分隔的编码，并由 \(\kappa\) 认证 \(\mathcal A\)。
+The symbolic LTS uses domain-separated injective authenticated constructors \(\mathsf{Seal}_{\rm prog}\) and \(\mathsf{Seal}_{\rm cut}\), so equal seals have equal payloads.
+% 符号 LTS 使用域分离、单射且经认证的构造器 \(\mathsf{Seal}_{\rm prog}\) 和 \(\mathsf{Seal}_{\rm cut}\)，因此相同封印具有相同载荷。
+Define
+% 定义
 \[
  H_{\mathsf{prog}}=
  \mathsf{Seal}_{\rm prog}(
    \mathsf{enc}(\mathsf{prog}_Z,\widehat B^\dagger_{H,u})).
 \]
 The cut seal is
+% 切点封印为
 \begin{equation}
 \label{eq:cut-seal}
  \mathsf{cut}_Z=
  \mathsf{Seal}_{\rm cut}(\mathsf{enc}(\omega,\zeta,\kappa,H,\Delta,u,
      \mathcal C_{H,u},H_{\mathsf{prog}},\eta^-,\eta^+)).
 \end{equation}
-Because \(H\) contains \(\chi,\nu,\rho,\beta\), the cut binds logical progress,
-the history view, registry state, and gate/epoch bindings.  Search and inactive preloading are untrusted.  The installation
-checker re-derives the schema judgment and complete indexed fixed point,
-reconstructs
-\((W^\dagger,B^\dagger)\), and verifies
+Because \(H\) contains \(\chi,\nu,\rho,\beta\), the cut binds logical progress, the history view, registry state, and gate/epoch bindings.
+% 由于 \(H\) 包含 \(\chi,\nu,\rho,\beta\)，该切点绑定逻辑进度、历史视图、注册表状态以及门/纪元绑定。
+Search and inactive preloading are untrusted.
+% 搜索和非活跃预加载不受信任。
+The installation checker re-derives the schema judgment and complete indexed fixed point, reconstructs \((W^\dagger,B^\dagger)\), and verifies
+% 安装检查器重新推导模式判定和完整的带索引不动点，重建 \((W^\dagger,B^\dagger)\)，并验证
 \[
  \mathsf{prog}_Z\cong\mathsf{Can}(W^\dagger,B^\dagger),
 \]
-preserving the initial state, marking, and each labeled transition.  It verifies
-both seals and the full automaton isomorphism above.  A byte implementation may use
-signatures or collision-resistant digests over \(\mathsf{enc}\), making
-refinement computational up to forgery or collision.  Exact bisimulation uses
-the symbolic constructors.
+preserving the initial state, marking, and each labeled transition.
+% 该同构保持初始状态、标记以及每个带标签转换。
+It verifies both seals and the full automaton isomorphism above.
+% 它验证两个封印以及上述完整自动机同构。
+A byte implementation may use signatures or collision-resistant digests over \(\mathsf{enc}\), making refinement computational up to forgery or collision.
+% 字节级实现可以对 \(\mathsf{enc}\) 使用签名或抗碰撞摘要，使精化在计算意义上成立，除非发生伪造或碰撞。
+Exact bisimulation uses the symbolic constructors.
+% 精确双模拟使用这些符号构造器。
 
 \subsection{Durable kernel}
+% 持久内核
 
 The compiled state for one policy domain is
+% 一个策略域的编译状态为
 \[
  S=(\kappa,H,\Delta,\mathsf{out},
     \mathsf{phase},\mathsf{bind},\mathsf{prog},\mathsf q,\mathsf{cert}),
 \]
-where every epoch has phase
-\(\mathsf{inactive}\), \(\mathsf{active}\), or \(\mathsf{closed}\).
-\(\mathsf{cert}(\eta)\) is the checked installation record
-\((H_c,u,W^\dagger,\widehat B^\dagger,Z)\) for an active epoch.  Its indexed
-family is proof-only ghost state, while \(W^\dagger\), \(B^\dagger\), and the seal
-are checked enforcement data.
+where every epoch has phase \(\mathsf{inactive}\), \(\mathsf{active}\), or \(\mathsf{closed}\).
+% 其中每个纪元的阶段为 \(\mathsf{inactive}\)、\(\mathsf{active}\) 或 \(\mathsf{closed}\)。
+\(\mathsf{cert}(\eta)\) is the checked installation record \((H_c,u,W^\dagger,\widehat B^\dagger,Z)\) for an active epoch.
+% \(\mathsf{cert}(\eta)\) 是活跃纪元经检查的安装记录 \((H_c,u,W^\dagger,\widehat B^\dagger,Z)\)。
+Its indexed family is proof-only ghost state, while \(W^\dagger\), \(B^\dagger\), and the seal are checked enforcement data.
+% 其带索引族是仅用于证明的幽灵状态，而 \(W^\dagger\)、\(B^\dagger\) 和封印则是经检查的强制执行数据。
 The following invariant clauses are required:
+% 必须满足以下不变量条款：
 
 \begin{enumerate}[leftmargin=*,itemsep=1pt]
-\item exactly the current epoch \(\eta\) is active and every live occurrence
-       has one authenticated handle for its gate, which is bound to \(\eta\);
- \item inactive preloaded epochs own no live gate or available handle; arbitrary unreachable
-       inactive programs may be discarded as preload garbage;
- \item the current certificate agrees with the admitted cut and projects to
-       the active program's generated/marked residual after the current prefix;
+\item exactly the current epoch \(\eta\) is active and every live occurrence has one authenticated handle for its gate, which is bound to \(\eta\);
+% 恰有当前纪元 \(\eta\) 处于活跃状态，并且每个活跃发生项都为其门持有一个经认证的句柄，而该门绑定到 \(\eta\)；
+ \item inactive preloaded epochs own no live gate or available handle; arbitrary unreachable inactive programs may be discarded as preload garbage;
+% 非活跃的预加载纪元不拥有活跃门或可用句柄；任意不可达的非活跃程序均可作为预加载垃圾丢弃；
+ \item the current certificate agrees with the admitted cut and projects to the active program's generated/marked residual after the current prefix;
+% 当前证书与获准切点一致，并投影到当前前缀之后活跃程序的生成/标记残余；
  \item every resolved occurrence appears once in ordered \(\chi\);
- \item every \Fresh in \(\chi\) has exactly one receipt in \(\Delta\), and
-       every \Alias names an earlier receipt;
+% 每个已决发生项在有序的 \(\chi\) 中恰好出现一次；
+ \item every \Fresh in \(\chi\) has exactly one receipt in \(\Delta\), and every \Alias names an earlier receipt;
+% \(\chi\) 中的每个 \Fresh 在 \(\Delta\) 中恰有一条回执，并且每个 \Alias 都指明一条更早的回执；
  \item a closed epoch never becomes active again.
+% 已关闭的纪元永不再次变为活跃状态。
 \end{enumerate}
 
 \paragraph{Atomic protected use}
-For occurrence \(x\) bound to gate \(j\) in epoch \(\eta\), handle \(h\)
-authenticates cell \(d\).
-\(\mathsf{VerifyHandle}(h,\rho(x),j,d)\) checks the protected-call issuer,
-scope, digest, gate, and cell.  Resolve \(a\) as \(\Fresh(x,d)\) if \(d\notin D_\Delta\) and
-\(\Alias(x,d)\) otherwise.  Write \(\Use_x=\mathsf{Use}(x,j,h)\).
+% 原子受保护使用
+For occurrence \(x\) bound to gate \(j\) in epoch \(\eta\), handle \(h\) authenticates cell \(d\).
+% 对于纪元 \(\eta\) 中绑定到门 \(j\) 的发生项 \(x\)，句柄 \(h\) 认证单元 \(d\)。
+\(\mathsf{VerifyHandle}(h,\rho(x),j,d)\) checks the protected-call issuer, scope, digest, gate, and cell.
+% \(\mathsf{VerifyHandle}(h,\rho(x),j,d)\) 检查受保护调用发行方、作用域、摘要、门和单元。
+Resolve \(a\) as \(\Fresh(x,d)\) if \(d\notin D_\Delta\) and \(\Alias(x,d)\) otherwise.
+% 若 \(d\notin D_\Delta\)，则将 \(a\) 解析为 \(\Fresh(x,d)\)，否则解析为 \(\Alias(x,d)\)。
+Write \(\Use_x=\mathsf{Use}(x,j,h)\).
+% 记 \(\Use_x=\mathsf{Use}(x,j,h)\)。
 Its one durable transition is
+% 它唯一的持久转换为
 \begin{equation}
 \label{eq:use-rule}
 \frac{
@@ -129,11 +156,14 @@ Its one durable transition is
 \end{gathered}}
 {S\xrightarrow{\Use_x/a}S'} .
 \end{equation}
-Let \(T/(x,a)\) be the unique structured residual that removes \(x\) from its leaf
-contract and appends \(a\) to that leaf's resolved cursor.  If \(x\) lies below
-an open choice, \(T/(x,a)\) also selects the unique arm containing \(x\).  All
-frontier constructors remain present.  Then
-\(\mathsf{Advance}(S,x,a,q')\) changes exactly
+Let \(T/(x,a)\) be the unique structured residual that removes \(x\) from its leaf contract and appends \(a\) to that leaf's resolved cursor.
+% 令 \(T/(x,a)\) 为唯一的结构化残余：它从 \(x\) 所在的叶契约中移除 \(x\)，并将 \(a\) 追加到该叶的已决游标。
+If \(x\) lies below an open choice, \(T/(x,a)\) also selects the unique arm containing \(x\).
+% 若 \(x\) 位于一个开放选择之下，\(T/(x,a)\) 还会选中包含 \(x\) 的唯一分支。
+All frontier constructors remain present.
+% 所有前沿构造器均保持存在。
+Then \(\mathsf{Advance}(S,x,a,q')\) changes exactly
+% 随后，\(\mathsf{Advance}(S,x,a,q')\) 精确修改如下
 \[
 \begin{aligned}
  H.T&:=T/(x,a),& H.\chi&:=\chi a,& H.\nu&:=\nu+1,\\
@@ -142,37 +172,44 @@ frontier constructors remain present.  Then
  \mathsf q(\eta)&:=q'.
 \end{aligned}
 \]
-For \Fresh it additionally appends the immutable labeled receipt and outbox
-item.  For \Alias it records the link to the cell's durable result future
-without changing \(\Delta\).  Every other field is unchanged.
+For \Fresh it additionally appends the immutable labeled receipt and outbox item.
+% 对于 \Fresh，它还会追加不可变的带标签回执和发件箱条目。
+For \Alias it records the link to the cell's durable result future without changing \(\Delta\).
+% 对于 \Alias，它会记录指向该单元持久结果 future（期值）的链接，而不改变 \(\Delta\)。
+Every other field is unchanged.
+% 其他所有字段均保持不变。
 
-A request naming an already-resolved \(x\) is treated as a \Retry only when
-\(\mathsf{VerifyRetry}(h,x,j,d,\chi,\Delta)\) authenticates the retry handle
-through the \(\chi\)-to-receipt link.  On success, the kernel returns the
-stable result without a transition.  The kernel applies \cref{eq:use-rule} to
-a request naming an unresolved \(x\) iff all premises hold.  Any failure,
-including a missing transition, bad handle, unbound
-occurrence, disabled branch, or closed epoch, returns \(\mathsf{deny}(x)\)
-without changing state.  \Dispatch releases only the oldest outbox item.
+A request naming an already-resolved \(x\) is treated as a \Retry only when \(\mathsf{VerifyRetry}(h,x,j,d,\chi,\Delta)\) authenticates the retry handle through the \(\chi\)-to-receipt link.
+% 仅当 \(\mathsf{VerifyRetry}(h,x,j,d,\chi,\Delta)\) 通过从 \(\chi\) 到回执的链接认证重试句柄时，指明已决 \(x\) 的请求才会被视为 \Retry。
+On success, the kernel returns the stable result without a transition.
+% 成功时，内核返回稳定结果而不发生转换。
+The kernel applies \cref{eq:use-rule} to a request naming an unresolved \(x\) iff all premises hold.
+% 当且仅当所有前提均成立时，内核才对指明未决 \(x\) 的请求应用 \cref{eq:use-rule}。
+Any failure, including a missing transition, bad handle, unbound occurrence, disabled branch, or closed epoch, returns \(\mathsf{deny}(x)\) without changing state.
+% 任何失败，包括缺失转换、错误句柄、未绑定发生项、禁用分支或已关闭纪元，都会返回 \(\mathsf{deny}(x)\) 且不改变状态。
+\Dispatch releases only the oldest outbox item.
+% \Dispatch 仅释放最早的发件箱条目。
 Settlement and crash preserve security state.
+% 结算和崩溃保持安全状态。
 
 \paragraph{Atomic installation}
-At commit time the kernel ignores caller-supplied target or epoch data.  It
-re-runs
+% 原子安装
+At commit time the kernel ignores caller-supplied target or epoch data.
+% 提交时，内核忽略调用方提供的目标或纪元数据。
+It re-runs
+% 它重新执行
 \[
 \Sigma_\zeta;H\vdash u\Downarrow
  (H',\mathcal C,\eta^-,\eta^+)
 \]
-over the current history.  \(\mathsf{ReCut}(S,u,Z)\) is undefined if this
-judgment has no derivation and otherwise equals the right-hand side of
-\cref{eq:cut-seal} recomputed from current state.
-\(\mathsf{Verify}_Z(W,B,\widehat B)\) holds exactly when the trusted
-installation checker recomputes \(\widehat B_0\) and every fixed-point
-iteration, verifies every ranked removal cause and surviving coverage witness,
-requires the stabilized \(\widehat B\ne\varnothing\), reconstructs
-\(B=\pi_2\widehat B\) and \(W=\Pref(B)\), checks
-\(\mathsf{prog}_Z\cong\mathsf{Can}(W,B)\), and verifies the program seal.
+over the current history.
+% 并以当前历史为依据。
+\(\mathsf{ReCut}(S,u,Z)\) is undefined if this judgment has no derivation and otherwise equals the right-hand side of \cref{eq:cut-seal} recomputed from current state.
+% 若此判定没有推导，则 \(\mathsf{ReCut}(S,u,Z)\) 未定义；否则，它等于根据当前状态重新计算的 \cref{eq:cut-seal} 右侧。
+\(\mathsf{Verify}_Z(W,B,\widehat B)\) holds exactly when the trusted installation checker recomputes \(\widehat B_0\) and every fixed-point iteration, verifies every ranked removal cause and surviving coverage witness, requires the stabilized \(\widehat B\ne\varnothing\), reconstructs \(B=\pi_2\widehat B\) and \(W=\Pref(B)\), checks \(\mathsf{prog}_Z\cong\mathsf{Can}(W,B)\), and verifies the program seal.
+% 当且仅当可信安装检查器重新计算 \(\widehat B_0\) 及每次不动点迭代、验证每个排序后的移除原因和保留下来的覆盖见证、要求稳定后的 \(\widehat B\ne\varnothing\)、重建 \(B=\pi_2\widehat B\) 和 \(W=\Pref(B)\)、检查 \(\mathsf{prog}_Z\cong\mathsf{Can}(W,B)\) 并验证程序封印时，\(\mathsf{Verify}_Z(W,B,\widehat B)\) 成立。
 Installation requires
+% 安装要求
 \begin{equation}
 \label{eq:install-premise}
 \begin{gathered}
@@ -184,11 +221,10 @@ Installation requires
  \mathsf{phase}(\eta^+)=\mathsf{inactive}.
 \end{gathered}
 \end{equation}
-If all checks hold, one domain transaction verifies that every target binding
-in \(H'\) names a new gate owned by \(\eta^+\), and that every
-\((x,j_x^+,h_x^+)\in\mathcal H_u^+\) passes
-\(\mathsf{VerifyHandle}(h_x^+,\rho'(x),j_x^+,q_{\rm cell}^{\rho'}(x))\).
+If all checks hold, one domain transaction verifies that every target binding in \(H'\) names a new gate owned by \(\eta^+\), and that every \((x,j_x^+,h_x^+)\in\mathcal H_u^+\) passes \(\mathsf{VerifyHandle}(h_x^+,\rho'(x),j_x^+,q_{\rm cell}^{\rho'}(x))\).
+% 若所有检查均通过，则一个域事务会验证 \(H'\) 中的每个目标绑定都指明由 \(\eta^+\) 拥有的新门，并验证每个 \((x,j_x^+,h_x^+)\in\mathcal H_u^+\) 均通过 \(\mathsf{VerifyHandle}(h_x^+,\rho'(x),j_x^+,q_{\rm cell}^{\rho'}(x))\)。
 It then applies
+% 随后它应用
 \[
 \begin{aligned}
  H&:=H',&
@@ -201,27 +237,35 @@ It then applies
    (H_c,u,W^\dagger,\widehat B^\dagger,Z).
 \end{aligned}
 \]
-All unrelated inactive/closed records are preserved.  The transaction makes
-the stable bundle \(\mathcal H_u^+\) available only after \(\eta^+\) is active.
+All unrelated inactive/closed records are preserved.
+% 所有无关的非活跃/已关闭记录均被保留。
+The transaction makes the stable bundle \(\mathcal H_u^+\) available only after \(\eta^+\) is active.
+% 该事务仅在 \(\eta^+\) 变为活跃后才使稳定包 \(\mathcal H_u^+\) 可用。
 A lost reply is retrieved from the durable target registry after recovery.
-Old handles for unresolved occurrences fail the refreshed registry/gate check,
-whereas a same-invocation \Retry follows its archived
-\(\chi\)-to-receipt link.  The successful step is observed as
-\(\mathsf{Edge}(u)\), whose notation suppresses the schema-determined bundle.
+% 恢复后可从持久目标注册表中取回丢失的回复。
+Old handles for unresolved occurrences fail the refreshed registry/gate check, whereas a same-invocation \Retry follows its archived \(\chi\)-to-receipt link.
+% 未决发生项的旧句柄无法通过更新后的注册表/门检查，而同调用 \Retry 则沿其已归档的从 \(\chi\) 到回执的链接。
+The successful step is observed as \(\mathsf{Edge}(u)\), whose notation suppresses the schema-determined bundle.
+% 成功步骤被观测为 \(\mathsf{Edge}(u)\)，该记法省略了由模式确定的包。
 Failure is an internal stutter with no state change.
+% 失败是一次不改变状态的内部停顿。
 
 \paragraph{Remaining rules}
-\(\mathsf{Preload}(\eta,Z)\) is a \(\tau\)-step that may change only an
-inactive, unbound epoch.  Failed installation is a state-preserving
-\(\tau\)-step.  \(\mathsf{Save}\) takes the trusted checkpoint transition
-defined in \cref{sec:model}.  Authenticated retry, bundle retrieval, and result
-delivery are \(\tau\)-steps that return their durable value without changing
-the security core.
-Settlement monotonically fills the corresponding durable result future, and
-crash is a security-state
-self-loop.  \(\Dispatch(d)\) is enabled only for the outbox head and marks
-exactly that entry released.  These clauses, together with the total denial
-rule above, make the compiled LTS transition relation explicit.
+% 其余规则
+\(\mathsf{Preload}(\eta,Z)\) is a \(\tau\)-step that may change only an inactive, unbound epoch.
+% \(\mathsf{Preload}(\eta,Z)\) 是一个仅可改变非活跃且未绑定纪元的 \(\tau\) 步骤。
+Failed installation is a state-preserving \(\tau\)-step.
+% 失败的安装是一个保持状态的 \(\tau\) 步骤。
+\(\mathsf{Save}\) takes the trusted checkpoint transition defined in \cref{sec:model}.
+% \(\mathsf{Save}\) 执行 \cref{sec:model} 中定义的可信检查点转换。
+Authenticated retry, bundle retrieval, and result delivery are \(\tau\)-steps that return their durable value without changing the security core.
+% 经认证的重试、包取回和结果交付都是 \(\tau\) 步骤，它们返回各自的持久值而不改变安全核心。
+Settlement monotonically fills the corresponding durable result future, and crash is a security-state self-loop.
+% 结算会单调填充相应的持久结果 future（期值），而崩溃是安全状态上的自环。
+\(\Dispatch(d)\) is enabled only for the outbox head and marks exactly that entry released.
+% \(\Dispatch(d)\) 仅对发件箱头部启用，并且仅将该条目标记为已释放。
+These clauses, together with the total denial rule above, make the compiled LTS transition relation explicit.
+% 这些条款与上述全域拒绝规则共同明确给出了编译后 LTS 的转换关系。
 
 \begin{figure}[t]
   \centering
@@ -243,37 +287,48 @@ rule above, make the compiled LTS transition relation explicit.
     \node[right=2mm of u2] (f2) {\textbf{denied}};
     \draw[arr] (i2) -- (u2);
   \end{tikzpicture}
-  \caption{The history cut orders both kinds of logical progress.  Comparing
-  only receipts detects the \Fresh race but misses the \Alias race.}
+  \caption{The history cut orders both kinds of logical progress.
+  % 历史切点为两种逻辑进度排序。
+  Comparing only receipts detects the \Fresh race but misses the \Alias race.}
+  % 仅比较回执能够检测 \Fresh 竞态，却会漏掉 \Alias 竞态。
   \label{fig:cut-races}
 \end{figure}
 
 \begin{lemma}[History-cut linearization]
+% 历史切点线性化
 \label{lem:cut-linearization}
-In every reachable well-formed compiled state, a successful \Install and a
-protected use in the same policy domain have a unique order.  If
-the use commits first, that seal cannot install.  If \Install commits first,
-the old use cannot resolve \Fresh or \Alias.  Steps in independent domains
-commute by product semantics.
+In every reachable well-formed compiled state, a successful \Install and a protected use in the same policy domain have a unique order.
+% 在每个可达的良构编译状态中，同一策略域内的一次成功 \Install 与一次受保护使用具有唯一顺序。
+If the use commits first, that seal cannot install.
+% 若该使用先提交，则该封印无法安装。
+If \Install commits first, the old use cannot resolve \Fresh or \Alias.
+% 若 \Install 先提交，则旧使用无法解析 \Fresh 或 \Alias。
+Steps in independent domains commute by product semantics.
+% 独立域中的步骤依据乘积语义可交换。
 \end{lemma}
 \begin{proof}
 Use and installation serialize on the same history and epoch records.
+% 使用与安装在同一历史和纪元记录上串行化。
 \Fresh changes \((\Delta,\chi,\nu)\), while \Alias changes \((\chi,\nu)\).
-Because \(\mathsf{cut}_Z\) authenticates \(H\) and \(\Delta\), a prior use
-invalidates the seal.  Installation first closes the old epoch, so
-\cref{eq:use-rule} rejects every old binding.  Disjoint cells, receipt ledgers, and
-policies give the product case.  Persisting \(H'\), target bindings, \(q^0\),
-and the checked certificate restores the invariant.
+% \Fresh 修改 \((\Delta,\chi,\nu)\)，而 \Alias 修改 \((\chi,\nu)\)。
+Because \(\mathsf{cut}_Z\) authenticates \(H\) and \(\Delta\), a prior use invalidates the seal.
+% 由于 \(\mathsf{cut}_Z\) 认证 \(H\) 和 \(\Delta\)，先发生的使用会使封印失效。
+Installation first closes the old epoch, so \cref{eq:use-rule} rejects every old binding.
+% 安装先发生时会关闭旧纪元，因此 \cref{eq:use-rule} 拒绝每个旧绑定。
+Disjoint cells, receipt ledgers, and policies give the product case.
+% 互不相交的单元、回执账本和策略构成乘积情形。
+Persisting \(H'\), target bindings, \(q^0\), and the checked certificate restores the invariant.
+% 持久化 \(H'\)、目标绑定、\(q^0\) 和经检查的证书会恢复该不变量。
 \end{proof}
 
 \subsection{Decidability and trust}
+% 可判定性与信任
 
-The installation checker enumerates indexed linearizations or their asynchronous product
-with the policy automaton, then performs at most
-\(|\widehat B_0|\) strict-removal rounds.  Parallel pomsets make the worst case
-exponential: decidability is finite for bounded slices, not polynomial.  The
-TCB comprises registries, receipt ledger and atomic rules, the policy issuer
-and protected-call issuer, certificate verification, and complete mediation.
-Search, minimization, and preloading remain untrusted because
-\(\mathsf{Verify}_Z\) and \Install independently re-establish the required
-invariants.
+The installation checker enumerates indexed linearizations or their asynchronous product with the policy automaton, then performs at most \(|\widehat B_0|\) strict-removal rounds.
+% 安装检查器枚举带索引的线性化或它们与策略自动机的异步乘积，随后至多执行 \(|\widehat B_0|\) 轮严格移除。
+Parallel pomsets make the worst case exponential: decidability is finite for bounded slices, not polynomial.
+% 并行偏序事件集使最坏情况呈指数级：有界切片上的判定过程是有限的，但并非多项式时间。
+The TCB comprises registries, receipt ledger and atomic rules, the policy issuer and protected-call issuer, certificate verification, and complete mediation.
+% TCB 包括注册表、回执账本与原子规则、策略发行方与受保护调用发行方、证书验证以及完全中介。
+Search, minimization, and preloading remain untrusted because \(\mathsf{Verify}_Z\) and \Install independently re-establish the required invariants.
+% 搜索、最小化和预加载仍不受信任，因为 \(\mathsf{Verify}_Z\) 和 \Install 会各自重新建立所需不变量。

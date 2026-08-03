@@ -1,18 +1,18 @@
 \section{Exact Agent History Realization}
+% 精确的 Agent 历史实现
 \label{sec:results}
 
-The theorem follows the security-compiler pipeline: schema fidelity derives a
-target, exact admission decides and constructs its greatest realization, and
-durable refinement installs that realization.
-Let \(I_0,S_0\) be bootstrap states over the same well-formed security core
-and admitted cut, with empty resolved prefix and identical history, receipt ledger,
-outbox, gates, and current epoch.  State \(S_0\) additionally has the verified
-program at \(q^0\).  Write
-\(\mathsf{Ideal}(I_0)\) for the atomic history machine of
-\cref{sec:ideal}, and \(\mathsf{Compiled}(S_0)\) for the reference monitor of
-\cref{sec:kernel}, including its internal \(\tau\)-steps.
+The theorem follows the security-compiler pipeline: schema fidelity derives a target, exact admission decides and constructs its greatest realization, and durable refinement installs that realization.
+% 该定理遵循安全编译器流水线：模式保真性导出目标，精确准入判定并构造其最大实现，持久细化则安装该实现。
+Let \(I_0,S_0\) be bootstrap states over the same well-formed security core and admitted cut, with empty resolved prefix and identical history, receipt ledger, outbox, gates, and current epoch.
+% 令 \(I_0,S_0\) 为同一良构安全核心和已准入切点上的引导状态，其已解析前缀为空，且历史、回执账本、发件箱、门和当前纪元均相同。
+State \(S_0\) additionally has the verified program at \(q^0\).
+% 状态 \(S_0\) 还在 \(q^0\) 处具有已验证程序。
+Write \(\mathsf{Ideal}(I_0)\) for the atomic history machine of \cref{sec:ideal}, and \(\mathsf{Compiled}(S_0)\) for the reference monitor of \cref{sec:kernel}, including its internal \(\tau\)-steps.
+% 记 \(\mathsf{Ideal}(I_0)\) 为 \cref{sec:ideal} 的原子历史机，记 \(\mathsf{Compiled}(S_0)\) 为 \cref{sec:kernel} 的参考监控器，其中包括其内部 \(\tau\) 步。
 
 The observable alphabet is
+% 可观测字母表为
 \[
 \begin{split}
 \mathcal O=\{&
@@ -20,31 +20,35 @@ The observable alphabet is
  &\mathsf{deny}(x),\Dispatch(d)\}.
 \end{split}
 \]
-\(\mathsf{Edge}(u)\) includes the suppressed stable payload
-\(\mathcal H_u^+\).  Compilation, failed installs, retries, settlement, result
-delivery, and crashes are \(\tau\).  Logical \Alias progress remains observable
-despite its empty authority projection.  Successful use and installation map
-to \(a\) and \(\mathsf{Edge}(u)\).  Invalid use and head release map to
-\(\mathsf{deny}(x)\) and \(\Dispatch(d)\).
+\(\mathsf{Edge}(u)\) includes the suppressed stable payload \(\mathcal H_u^+\).
+% \(\mathsf{Edge}(u)\) 包含被隐藏的稳定载荷 \(\mathcal H_u^+\)。
+Compilation, failed installs, retries, settlement, result delivery, and crashes are \(\tau\).
+% 编译、安装失败、重试、结算、结果交付和崩溃均为 \(\tau\)。
+Logical \Alias progress remains observable despite its empty authority projection.
+% 尽管逻辑 \Alias 进展的权限投影为空，它仍然可观测。
+Successful use and installation map to \(a\) and \(\mathsf{Edge}(u)\).
+% 成功使用和安装分别映射到 \(a\) 与 \(\mathsf{Edge}(u)\)。
+Invalid use and head release map to \(\mathsf{deny}(x)\) and \(\Dispatch(d)\).
+% 无效使用和队首释放分别映射到 \(\mathsf{deny}(x)\) 与 \(\Dispatch(d)\)。
 
-Write \(\mathsf{Gen}(P)\) and \(\mathsf{Mark}(P)\) for the generated and
-marked languages of a finite deterministic occurrence-labeled program \(P\).
-For a schema-valid derivation, an \emph{exact atomic reference-monitor
-realization} is a pair \((P,\widehat B_P)\) such that
-\((\mathsf{Gen}(P),\widehat B_P)\) realizes \((H,u)\),
-\(\mathsf{Mark}(P)=\pi_2\widehat B_P\), and one domain transaction persists
-\(H'\), closes \(\eta^-\), activates \(\eta^+\), binds every target gate to
-\(P\), and publishes \(\mathcal H_u^+\) only after activation.  Subsequent
-protected uses take exactly the enabled \(P\)-transitions through the atomic
-\Use rule.  \(\widehat B_P\) is specification-only ghost state, not an input to
-\(P\).  This definition does not refer to \(\mathsf{Admit}\),
-\(\widehat B^\dagger\), \(\mathsf{Compile}\), or \(\mathsf{Can}\).
+Write \(\mathsf{Gen}(P)\) and \(\mathsf{Mark}(P)\) for the generated and marked languages of a finite deterministic occurrence-labeled program \(P\).
+% 记 \(\mathsf{Gen}(P)\) 和 \(\mathsf{Mark}(P)\) 为有限确定性、以发生项为标签的程序 \(P\) 的生成语言和标记语言。
+For a schema-valid derivation, an \emph{exact atomic reference-monitor realization} is a pair \((P,\widehat B_P)\) such that \((\mathsf{Gen}(P),\widehat B_P)\) realizes \((H,u)\), \(\mathsf{Mark}(P)=\pi_2\widehat B_P\), and one domain transaction persists \(H'\), closes \(\eta^-\), activates \(\eta^+\), binds every target gate to \(P\), and publishes \(\mathcal H_u^+\) only after activation.
+% 对于模式有效推导，\emph{精确原子参考监控器实现}是一个二元组 \((P,\widehat B_P)\)：\((\mathsf{Gen}(P),\widehat B_P)\) 实现 \((H,u)\)，\(\mathsf{Mark}(P)=\pi_2\widehat B_P\)，而且一个域事务会持久化 \(H'\)、关闭 \(\eta^-\)、激活 \(\eta^+\)、将每个目标门绑定到 \(P\)，并仅在激活后发布 \(\mathcal H_u^+\)。
+Subsequent protected uses take exactly the enabled \(P\)-transitions through the atomic \Use rule.
+% 后续受保护使用通过原子 \Use 规则，恰好执行已启用的 \(P\) 转换。
+\(\widehat B_P\) is specification-only ghost state, not an input to \(P\).
+% \(\widehat B_P\) 是仅用于规约的幽灵状态，而非 \(P\) 的输入。
+This definition does not refer to \(\mathsf{Admit}\), \(\widehat B^\dagger\), \(\mathsf{Compile}\), or \(\mathsf{Can}\).
+% 该定义不引用 \(\mathsf{Admit}\)、\(\widehat B^\dagger\)、\(\mathsf{Compile}\) 或 \(\mathsf{Can}\)。
 
 \begin{theorem}[Exact Agent History Realization]
+% 精确的 Agent 历史实现
 \label{thm:exact-history}
-Assume the trusted boundary of \cref{sec:model}.  Let
-\((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) be a reachable well-formed
-security core and let the immutable schema registry derive
+Assume the trusted boundary of \cref{sec:model}.
+% 假设采用 \cref{sec:model} 的可信边界。
+Let \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) be a reachable well-formed security core and let the immutable schema registry derive
+% 令 \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) 为可达的良构安全核心，并令不可变模式注册表推导出
 \[
  \Sigma_\zeta;H\vdash u\Downarrow
  (H',\mathcal C_{H,u},\eta^-,\eta^+).
@@ -52,19 +56,26 @@ security core and let the immutable schema registry derive
 
 \begin{enumerate}[leftmargin=*,itemsep=3pt]
  \item \textbf{Schema fidelity.}
- The derived history \(H'\) is unique and well formed.  Its preserved context
- and \(\mathcal P_u\) retain all obligations not discharged by
- schema-authorized retirement.  Each \(\mu_r\) is a global occurrence
- bijection, each
-\(\pi_r:O_{\mathcal D_r}\twoheadrightarrow O_{\mathcal C_r}\) is surjective,
-and incidence,
- order, cell, and lineage are preserved and reflected.  No occurrence is split
- by outcome or relabeled as a suffix.  Every
- \((r,o)\in\mathsf{Obl}_u\) has a full-target \(\mathsf{Lift}_u\) witness.
+ % 模式保真性。
+ The derived history \(H'\) is unique and well formed.
+ % 派生历史 \(H'\) 唯一且良构。
+ Its preserved context and \(\mathcal P_u\) retain all obligations not discharged by schema-authorized retirement.
+ % 其保留的上下文和 \(\mathcal P_u\) 保留了所有未由模式授权退役解除的义务。
+ Each \(\mu_r\) is a global occurrence bijection, each \(\pi_r:O_{\mathcal D_r}\twoheadrightarrow O_{\mathcal C_r}\) is surjective, and incidence, order, cell, and lineage are preserved and reflected.
+ % 每个 \(\mu_r\) 都是全局发生项双射，每个 \(\pi_r:O_{\mathcal D_r}\twoheadrightarrow O_{\mathcal C_r}\) 都是满射，并且关联、顺序、单元和谱系均被保持并反映。
+ No occurrence is split by outcome or relabeled as a suffix.
+ % 不会按结果拆分任何发生项，也不会将其重新标记为后缀。
+ Every \((r,o)\in\mathsf{Obl}_u\) has a full-target \(\mathsf{Lift}_u\) witness.
+ % 每个 \((r,o)\in\mathsf{Obl}_u\) 都有一个完整目标 \(\mathsf{Lift}_u\) 见证。
  Bypassing context outcomes are preserved by identity.
+ % 绕过的上下文结果通过恒等映射得到保持。
 
  \item \textbf{Exact prefix-robust admission.}
- \emph{Existence.}  The following conditions are equivalent.
+ % 精确的前缀鲁棒准入。
+ \emph{Existence.}
+ % 存在性。
+ The following conditions are equivalent.
+ % 以下条件等价。
  \[
  \begin{aligned}
   &\widehat B^\dagger_{H,u}\ne\varnothing;\\
@@ -76,155 +87,158 @@ and incidence,
  \end{aligned}
  \]
  \emph{Accepted edits.}
- When these conditions hold, the greatest indexed realization is exactly
- \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\), with runtime marking
- \(B^\dagger_{H,u}=\pi_2\widehat B^\dagger_{H,u}\).  Every
- realization \((L,\widehat B)\) satisfies
- \(L\subseteq W^\dagger_{H,u}\) and
- \(\widehat B\subseteq\widehat B^\dagger_{H,u}\).  After every
- \(z\in W^\dagger_{H,u}\), every
- \(o\in\mathsf{Compat}(z)\) still has a safe marked extension
- \((o,b)\in\widehat B^\dagger_{H,u}\) with \(z\preceq_{\rm pref}b\).
- At \(z=\epsilon\), the coverage property supplies a safe full-target lift for
- every required regional or context outcome.  At later prefixes, it applies to
- every contract-compatible outcome.
+ % 已接受的编辑。
+ When these conditions hold, the greatest indexed realization is exactly \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\), with runtime marking \(B^\dagger_{H,u}=\pi_2\widehat B^\dagger_{H,u}\).
+ % 当这些条件成立时，最大索引实现恰为 \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\)，其运行时标记为 \(B^\dagger_{H,u}=\pi_2\widehat B^\dagger_{H,u}\)。
+ Every realization \((L,\widehat B)\) satisfies \(L\subseteq W^\dagger_{H,u}\) and \(\widehat B\subseteq\widehat B^\dagger_{H,u}\).
+ % 每个实现 \((L,\widehat B)\) 都满足 \(L\subseteq W^\dagger_{H,u}\) 且 \(\widehat B\subseteq\widehat B^\dagger_{H,u}\)。
+ After every \(z\in W^\dagger_{H,u}\), every \(o\in\mathsf{Compat}(z)\) still has a safe marked extension \((o,b)\in\widehat B^\dagger_{H,u}\) with \(z\preceq_{\rm pref}b\).
+ % 在每个 \(z\in W^\dagger_{H,u}\) 之后，每个 \(o\in\mathsf{Compat}(z)\) 仍有安全标记扩展 \((o,b)\in\widehat B^\dagger_{H,u}\)，且 \(z\preceq_{\rm pref}b\)。
+ At \(z=\epsilon\), the coverage property supplies a safe full-target lift for every required regional or context outcome.
+ % 在 \(z=\epsilon\) 处，覆盖性质为每个必需的区域或上下文结果提供安全的完整目标提升。
+ At later prefixes, it applies to every contract-compatible outcome.
+ % 在后续前缀处，它适用于每个与契约兼容的结果。
 
  \emph{Rejected edits.}
- If admission fails, the complete descending chain
- \(\widehat B_0,\widehat B_1,\ldots,\widehat B_n=\varnothing\), together
- with each ranked cause
- \((i,(o_{\rm rem},b),z,o_{\rm miss})\) satisfying
- \((o_{\rm rem},b)\in\widehat B_i\setminus\widehat B_{i+1}\),
- \(z\preceq_{\rm pref}b\),
- \(o_{\rm miss}\in\mathsf{Compat}(z)\), and no extension of \(z\) in
- \(\{b'\mid(o_{\rm miss},b')\in\widehat B_i\}\), is a finite certificate that no
- realization exists.
+ % 被拒绝的编辑。
+ If admission fails, the complete descending chain \(\widehat B_0,\widehat B_1,\ldots,\widehat B_n=\varnothing\), together with each ranked cause \((i,(o_{\rm rem},b),z,o_{\rm miss})\) satisfying \((o_{\rm rem},b)\in\widehat B_i\setminus\widehat B_{i+1}\), \(z\preceq_{\rm pref}b\), \(o_{\rm miss}\in\mathsf{Compat}(z)\), and no extension of \(z\) in \(\{b'\mid(o_{\rm miss},b')\in\widehat B_i\}\), is a finite certificate that no realization exists.
+ % 若准入失败，则完整的下降链 \(\widehat B_0,\widehat B_1,\ldots,\widehat B_n=\varnothing\)，连同每个满足 \((o_{\rm rem},b)\in\widehat B_i\setminus\widehat B_{i+1}\)、\(z\preceq_{\rm pref}b\)、\(o_{\rm miss}\in\mathsf{Compat}(z)\) 且 \(\{b'\mid(o_{\rm miss},b')\in\widehat B_i\}\) 中不存在 \(z\) 的扩展的分级原因 \((i,(o_{\rm rem},b),z,o_{\rm miss})\)，共同构成不存在实现的有限证书。
 
  \item \textbf{Durable implementation refinement.}
+ % 持久实现细化。
  For bootstrap states \(I_0,S_0\) as above,
+ % 对于上述引导状态 \(I_0,S_0\)，
  \[
    \mathsf{Compiled}(S_0)
    \ \approx_{\mathcal O}^{\mathsf{di}}\
    \mathsf{Ideal}(I_0)
  \]
- by divergence-insensitive weak bisimulation.  Every successful history edge
- is one domain-wide cut.  It closes \(\eta^-\), persists the
- schema-derived history, rebinds every live target gate, and activates the
- single new epoch \(\eta^+\) with \(\mathcal H_u^+\) in one reference-monitor
- transaction.  The
- theorem makes no within-domain partial-fencing claim.  Domains with disjoint
- cells, receipt ledgers, and policies compose only by asynchronous product.
+ by divergence-insensitive weak bisimulation.
+ % 二者构成发散不敏感弱互模拟。
+ Every successful history edge is one domain-wide cut.
+ % 每条成功的历史边都是一个全域切点。
+ It closes \(\eta^-\), persists the schema-derived history, rebinds every live target gate, and activates the single new epoch \(\eta^+\) with \(\mathcal H_u^+\) in one reference-monitor transaction.
+ % 它在一个参考监控器事务中关闭 \(\eta^-\)、持久化模式派生历史、重新绑定每个活跃目标门，并激活携带 \(\mathcal H_u^+\) 的唯一新纪元 \(\eta^+\)。
+ The theorem makes no within-domain partial-fencing claim.
+ % 该定理不主张域内部分隔离。
+ Domains with disjoint cells, receipt ledgers, and policies compose only by asynchronous product.
+ % 单元、回执账本和策略互不相交的域仅通过异步积进行组合。
 \end{enumerate}
 
-Consequently, authority remains in \(\mathcal A\), every contract-compatible outcome
-retains a completion, only the current epoch authorizes \Fresh or \Alias, and
-each occurrence linearizes on one side of a cut.  FIFO release follows \Fresh
-receipt order.  Coverage is existential: it implies neither fairness nor that
-an enabled step eventually occurs.
+Consequently, authority remains in \(\mathcal A\), every contract-compatible outcome retains a completion, only the current epoch authorizes \Fresh or \Alias, and each occurrence linearizes on one side of a cut.
+% 因此，权限仍保留在 \(\mathcal A\) 中，每个与契约兼容的结果都保留一条完成路径，仅当前纪元授权 \Fresh 或 \Alias，且每个发生项都在切点的一侧线性化。
+FIFO release follows \Fresh receipt order.
+% FIFO 释放遵循 \Fresh 回执顺序。
+Coverage is existential: it implies neither fairness nor that an enabled step eventually occurs.
+% 覆盖是存在性的：它既不蕴含公平性，也不蕴含已启用步骤最终会发生。
 \end{theorem}
 
 \begin{proof}
 \emph{Schema fidelity.}
-\Cref{lem:history-derivation} gives all stated preservation properties,
-schema-authorized retirement, witnesses, and domain-wide rebinding.  The Agent cannot
-choose a target contract that drops obligations.
+% 模式保真性。
+\Cref{lem:history-derivation} gives all stated preservation properties, schema-authorized retirement, witnesses, and domain-wide rebinding.
+% \Cref{lem:history-derivation} 给出了所述全部保持性质、模式授权退役、见证和全域重新绑定。
+The Agent cannot choose a target contract that drops obligations.
+% Agent 无法选择会丢弃义务的目标契约。
 
 \emph{Local equivalence.}
-\Cref{lem:greatest-realization} proves that
-\(\widehat B^\dagger_{H,u}\ne\varnothing\) iff an indexed realization exists
-and identifies \((W^\dagger,\widehat B^\dagger)\) as the greatest one.  If an
-exact atomic reference-monitor realization exists, its defining pair
-\((\mathsf{Gen}(P),\widehat B_P)\) is an indexed realization, so admission
-holds.  Conversely, admission makes
-\((W^\dagger,\widehat B^\dagger)\) a realization, and
-\cref{lem:compiled-language} constructs
-\(\mathsf{Can}(W^\dagger,B^\dagger)\) with those generated and marked
-languages.  The trusted installation checker re-derives the nonempty fixed
-point, and the atomic transaction installs that program, so an exact
-reference-monitor realization exists.  Finally, \(\mathsf{Compile}\) emits a
-verifiable seal exactly when \(\mathsf{Verify}_Z\) reaches a nonempty stabilized
-family.  This establishes all four implications without assuming
-implementation existence in any definition.
-At \(\epsilon\), fixed-point coverage supplies a safe pair for every target
-outcome.  The checked regional and context lifts therefore supply a safe
-full-target preimage for every required obligation instance.
-On rejection, let \(P\) be any post-fixed family.  Forward induction maintains
-\(P\subseteq\widehat B_i\).  The recomputed base gives the initial inclusion,
-and the checked missing-witness cause for every removed pair excludes it from
-\(P\).  Hence \(P\subseteq\widehat B_{i+1}\).  An empty final set excludes every
-nonempty post-fixed family and therefore every realization.
+% 局部等价性。
+\Cref{lem:greatest-realization} proves that \(\widehat B^\dagger_{H,u}\ne\varnothing\) iff an indexed realization exists and identifies \((W^\dagger,\widehat B^\dagger)\) as the greatest one.
+% \Cref{lem:greatest-realization} 证明 \(\widehat B^\dagger_{H,u}\ne\varnothing\) 当且仅当存在索引实现，并将 \((W^\dagger,\widehat B^\dagger)\) 确定为最大实现。
+If an exact atomic reference-monitor realization exists, its defining pair \((\mathsf{Gen}(P),\widehat B_P)\) is an indexed realization, so admission holds.
+% 若存在精确原子参考监控器实现，则其定义二元组 \((\mathsf{Gen}(P),\widehat B_P)\) 是索引实现，因此准入成立。
+Conversely, admission makes \((W^\dagger,\widehat B^\dagger)\) a realization, and \cref{lem:compiled-language} constructs \(\mathsf{Can}(W^\dagger,B^\dagger)\) with those generated and marked languages.
+% 反之，准入使 \((W^\dagger,\widehat B^\dagger)\) 成为一个实现，而 \cref{lem:compiled-language} 构造了具有这些生成语言和标记语言的 \(\mathsf{Can}(W^\dagger,B^\dagger)\)。
+The trusted installation checker re-derives the nonempty fixed point, and the atomic transaction installs that program, so an exact reference-monitor realization exists.
+% 可信安装检查器重新推导非空不动点，原子事务安装该程序，因此存在精确参考监控器实现。
+Finally, \(\mathsf{Compile}\) emits a verifiable seal exactly when \(\mathsf{Verify}_Z\) reaches a nonempty stabilized family.
+% 最后，当且仅当 \(\mathsf{Verify}_Z\) 到达非空稳定族时，\(\mathsf{Compile}\) 才发出可验证封印。
+This establishes all four implications without assuming implementation existence in any definition.
+% 这在任何定义都不假设实现存在的情况下，建立了全部四个蕴含。
+At \(\epsilon\), fixed-point coverage supplies a safe pair for every target outcome.
+% 在 \(\epsilon\) 处，不动点覆盖为每个目标结果提供一个安全二元组。
+The checked regional and context lifts therefore supply a safe full-target preimage for every required obligation instance.
+% 因此，经检查的区域和上下文提升为每个必需义务实例提供一个安全的完整目标原像。
+On rejection, let \(P\) be any post-fixed family.
+% 在拒绝时，令 \(P\) 为任意后不动族。
+Forward induction maintains \(P\subseteq\widehat B_i\).
+% 前向归纳保持 \(P\subseteq\widehat B_i\)。
+The recomputed base gives the initial inclusion, and the checked missing-witness cause for every removed pair excludes it from \(P\).
+% 重新计算的基集给出初始包含关系，而每个被移除二元组经检查的缺失见证原因将其排除在 \(P\) 之外。
+Hence \(P\subseteq\widehat B_{i+1}\).
+% 因此 \(P\subseteq\widehat B_{i+1}\)。
+An empty final set excludes every nonempty post-fixed family and therefore every realization.
+% 空的最终集合排除了每个非空后不动族，因而排除了每个实现。
 
 \emph{Bisimulation relation.}
-Relate an ideal state \(I\) and compiled state \(S\) when:
-(i) \(\kappa,H,\Delta\), receipt phases and result futures, and the ordered outbox
-agree;
-(ii) the ideal active cut is
-\((H_c,u,W^\dagger,\widehat B^\dagger)\), the compiled current-epoch
-certificate is exactly \((H_c,u,W^\dagger,\widehat B^\dagger,Z)\), their
-resolved prefix is \(r\), and
-\(\mathsf q(H.\mathsf{epoch})=q_r=(W^\dagger/r,B^\dagger/r)\);
-(iii) \(\beta\) equals the kernel binding on live occurrences,
-\(H.\mathsf{epoch}\) is the only active epoch, every live gate is bound to it and has one
-authenticated current handle, and every earlier epoch is closed; unreachable programs and records in inactive,
-unbound epochs are ignored; and
-(iv) the ordering invariant for occurrences and receipts following
-\cref{eq:use-rule} holds.  The bootstrap construction satisfies this
-relation.
+% 互模拟关系。
+Relate an ideal state \(I\) and compiled state \(S\) when: (i) \(\kappa,H,\Delta\), receipt phases and result futures, and the ordered outbox agree; (ii) the ideal active cut is \((H_c,u,W^\dagger,\widehat B^\dagger)\), the compiled current-epoch certificate is exactly \((H_c,u,W^\dagger,\widehat B^\dagger,Z)\), their resolved prefix is \(r\), and \(\mathsf q(H.\mathsf{epoch})=q_r=(W^\dagger/r,B^\dagger/r)\); (iii) \(\beta\) equals the kernel binding on live occurrences, \(H.\mathsf{epoch}\) is the only active epoch, every live gate is bound to it and has one authenticated current handle, and every earlier epoch is closed; unreachable programs and records in inactive, unbound epochs are ignored; and (iv) the ordering invariant for occurrences and receipts following \cref{eq:use-rule} holds.
+% 在以下条件下，将理想状态 \(I\) 与编译状态 \(S\) 关联：(i) \(\kappa,H,\Delta\)、回执阶段与结果 future（期值）以及有序发件箱一致；(ii) 理想侧的活跃切点为 \((H_c,u,W^\dagger,\widehat B^\dagger)\)，编译侧的当前纪元证书恰为 \((H_c,u,W^\dagger,\widehat B^\dagger,Z)\)，二者已解析前缀为 \(r\)，且 \(\mathsf q(H.\mathsf{epoch})=q_r=(W^\dagger/r,B^\dagger/r)\)；(iii) \(\beta\) 等于活跃发生项上的内核绑定，\(H.\mathsf{epoch}\) 是唯一活跃纪元，每个活跃门都绑定到它并具有一个已认证的当前句柄，且每个更早的纪元都已关闭；忽略非活跃、未绑定纪元中不可达的程序和记录；以及 (iv) \cref{eq:use-rule} 所述的发生项与回执顺序不变量成立。
+The bootstrap construction satisfies this relation.
+% 引导构造满足该关系。
 
 \emph{Protected occurrences.}
-Suppose \(x\) is enabled.  Because the two states agree on \(H\), registry data,
-and \(\Delta\), they compute the same resolved symbol \(a\).  By
-\cref{lem:compiled-language}, the compiled program has an \(a\)-transition iff
-\(ra\in W^\dagger\), which is the same guard used by the ideal machine.  Both atomic steps
-residualize the same occurrence, append \(a\) to
-\(\chi\), advance the view and residual program state, and, only for \Fresh,
-append the same receipt and outbox item.  \Cref{lem:residual-coherence}
-re-establishes the greatest fixed point for the residual contract.  Any failed
-guard, including a missing program transition, disabled occurrence,
-misbinding, or closed epoch, produces the same state-preserving denial.  This
-proves both simulation directions for \Fresh, \Alias, and denials.
+% 受保护发生项。
+Suppose \(x\) is enabled.
+% 假设 \(x\) 已启用。
+Because the two states agree on \(H\), registry data, and \(\Delta\), they compute the same resolved symbol \(a\).
+% 由于两个状态在 \(H\)、注册表数据和 \(\Delta\) 上一致，它们计算出相同的已解析符号 \(a\)。
+By \cref{lem:compiled-language}, the compiled program has an \(a\)-transition iff \(ra\in W^\dagger\), which is the same guard used by the ideal machine.
+% 根据 \cref{lem:compiled-language}，编译程序具有 \(a\) 转移当且仅当 \(ra\in W^\dagger\)，这与理想机使用的守卫相同。
+Both atomic steps residualize the same occurrence, append \(a\) to \(\chi\), advance the view and residual program state, and, only for \Fresh, append the same receipt and outbox item.
+% 两个原子步骤都将同一发生项残余化，把 \(a\) 追加到 \(\chi\)，推进视图和剩余程序状态，并且仅对 \Fresh 追加相同的回执和发件箱条目。
+\Cref{lem:residual-coherence} re-establishes the greatest fixed point for the residual contract.
+% \Cref{lem:residual-coherence} 为剩余契约重新建立最大不动点。
+Any failed guard, including a missing program transition, disabled occurrence, misbinding, or closed epoch, produces the same state-preserving denial.
+% 任何失败的守卫，包括程序转换缺失、发生项被禁用、绑定错误或纪元已关闭，都会产生相同的状态保持拒绝。
+This proves both simulation directions for \Fresh, \Alias, and denials.
+% 这证明了 \Fresh、\Alias 和拒绝的两个模拟方向。
 
 \emph{History edges.}
-For an ideal \(\mathsf{Edge}(u)\), determinism of
-\cref{lem:history-derivation} gives one
-\((H',\mathcal C_{H,u},\eta^-,\eta^+)\) and the same checked schema
-certificates.  Local realizability lets the compiled side take internal
-compile, check, and preload steps and then a successful \Install.  Its single
-domain transaction persists the same \(H'\), closes \(\eta^-\), rebinds all
-live target gates, activates \(\eta^+\), publishes the same
-\(\mathcal H_u^+\), starts the canonical program at
-\((W^\dagger/\epsilon,B^\dagger/\epsilon)\), and atomically records
-\((H_c,u,W^\dagger,\widehat B^\dagger,Z)\) as its certificate.  The successors
-are related.  Conversely, every successful install re-derives that judgment
-and verifies a nonempty stabilized fixed point, so the ideal edge exists and
-matches it.
+% 历史边。
+For an ideal \(\mathsf{Edge}(u)\), determinism of \cref{lem:history-derivation} gives one \((H',\mathcal C_{H,u},\eta^-,\eta^+)\) and the same checked schema certificates.
+% 对于理想的 \(\mathsf{Edge}(u)\)，\cref{lem:history-derivation} 的确定性给出唯一的 \((H',\mathcal C_{H,u},\eta^-,\eta^+)\) 以及相同的已检查模式证书。
+Local realizability lets the compiled side take internal compile, check, and preload steps and then a successful \Install.
+% 局部可实现性允许编译侧先执行内部编译、检查和预加载步骤，再执行一次成功的 \Install。
+Its single domain transaction persists the same \(H'\), closes \(\eta^-\), rebinds all live target gates, activates \(\eta^+\), publishes the same \(\mathcal H_u^+\), starts the canonical program at \((W^\dagger/\epsilon,B^\dagger/\epsilon)\), and atomically records \((H_c,u,W^\dagger,\widehat B^\dagger,Z)\) as its certificate.
+% 它的单一域事务持久化相同的 \(H'\)、关闭 \(\eta^-\)、重新绑定所有活跃目标门、激活 \(\eta^+\)、发布相同的 \(\mathcal H_u^+\)、在 \((W^\dagger/\epsilon,B^\dagger/\epsilon)\) 处启动规范程序，并原子地将 \((H_c,u,W^\dagger,\widehat B^\dagger,Z)\) 记录为其证书。
+The successors are related.
+% 后继状态彼此关联。
+Conversely, every successful install re-derives that judgment and verifies a nonempty stabilized fixed point, so the ideal edge exists and matches it.
+% 反之，每次成功安装都会重新推导该判断并验证一个非空稳定不动点，因此理想边存在且与之匹配。
 
-If a protected occurrence commits before installation, a \Fresh step changes
-\(\Delta,\chi,\nu\), while an \Alias changes \(\chi,\nu\).  In either case the old
-seal is stale.  If installation commits first, it closes the old policy-domain
-epoch, so no gate bound to \(\eta^-\) can resolve either \Fresh or
-\Alias.
-\Cref{lem:cut-linearization} therefore orders every same-domain
-race between a protected use and installation without an intermediate
-unmatched state.  Only domains with disjoint cells, receipt ledgers, and policies commute by their asynchronous-product
-semantics.
+If a protected occurrence commits before installation, a \Fresh step changes \(\Delta,\chi,\nu\), while an \Alias changes \(\chi,\nu\).
+% 若受保护发生项先于安装提交，则 \Fresh 步改变 \(\Delta,\chi,\nu\)，而 \Alias 改变 \(\chi,\nu\)。
+In either case the old seal is stale.
+% 无论哪种情况，旧封印都会失效。
+If installation commits first, it closes the old policy-domain epoch, so no gate bound to \(\eta^-\) can resolve either \Fresh or \Alias.
+% 若安装先提交，它会关闭旧策略域纪元，因此绑定到 \(\eta^-\) 的任何门都无法解析 \Fresh 或 \Alias。
+\Cref{lem:cut-linearization} therefore orders every same-domain race between a protected use and installation without an intermediate unmatched state.
+% 因此，\Cref{lem:cut-linearization} 在不产生中间失配状态的情况下，为受保护使用与安装之间的每个同域竞态排序。
+Only domains with disjoint cells, receipt ledgers, and policies commute by their asynchronous-product semantics.
+% 仅当域的单元、回执账本和策略互不相交时，它们才依其异步积语义可交换。
 
 \emph{Remaining transitions.}
-Both machines dispatch the same outbox head.  Matching \(\mathsf{Save}\)
-transitions append the same authenticated checkpoint and advance the same
-view.  Preloading changes only ignored inactive garbage.  Retry, handle-bundle
-retrieval, result delivery, settlement, failed installation, and crash recovery
-preserve the relation through matching \(\tau\)-steps.
-The relation is re-established at
-\(\epsilon\) after every successful edge, so coinduction gives weak
-bisimulation.  The bisimulation is divergence insensitive, so finite internal
-paths may be collapsed without implying termination, progress, or scheduler
-fairness.  Policy safety, persistent outcome coverage, and completion
-nonblocking follow from \(W^\dagger\).  Epoch exclusion follows from the
-relation invariant and the atomic cut, while FIFO dispatch gives the final
-ordering claim.
+% 其余转移。
+Both machines dispatch the same outbox head.
+% 两台机器分派相同的发件箱队首。
+Matching \(\mathsf{Save}\) transitions append the same authenticated checkpoint and advance the same view.
+% 匹配的 \(\mathsf{Save}\) 转移追加相同的已认证检查点，并推进相同的视图。
+Preloading changes only ignored inactive garbage.
+% 预加载仅改变被忽略的非活跃垃圾。
+Retry, handle-bundle retrieval, result delivery, settlement, failed installation, and crash recovery preserve the relation through matching \(\tau\)-steps.
+% 重试、句柄束检索、结果交付、结算、安装失败和崩溃恢复通过匹配的 \(\tau\) 步保持该关系。
+The relation is re-established at \(\epsilon\) after every successful edge, so coinduction gives weak bisimulation.
+% 每条成功边之后，该关系都会在 \(\epsilon\) 处重新建立，因此余归纳给出弱互模拟。
+The bisimulation is divergence insensitive, so finite internal paths may be collapsed without implying termination, progress, or scheduler fairness.
+% 该互模拟对发散不敏感，因此可以折叠有限内部路径，而不蕴含终止、进展或调度器公平性。
+Policy safety, persistent outcome coverage, and completion nonblocking follow from \(W^\dagger\).
+% 策略安全性、持久结果覆盖和完成非阻塞性由 \(W^\dagger\) 推出。
+Epoch exclusion follows from the relation invariant and the atomic cut, while FIFO dispatch gives the final ordering claim.
+% 纪元排他性由关系不变量和原子切点推出，而 FIFO 分派给出最终的顺序主张。
 \end{proof}
 
-Thus one object, \(\widehat B^\dagger\), decides a schema-derived Agent history
-edge and generates the canonical monitor for every later protected occurrence.
+Thus one object, \(\widehat B^\dagger\), decides a schema-derived Agent history edge and generates the canonical monitor for every later protected occurrence.
+% 因而，单个对象 \(\widehat B^\dagger\) 判定模式派生的 Agent 历史边，并为此后每个受保护发生项生成规范监控器。
 Fork, Restore, and Merge are instances of one history-admission theory.
+% Fork、Restore 和 Merge 是同一历史准入理论的实例。

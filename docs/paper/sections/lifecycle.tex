@@ -1,14 +1,17 @@
 \section{One Agent, Two Histories}
+% 一个 Agent，两段历史
 \label{sec:lifecycle}
 
-Consider a procurement Agent authorized to place one order.  It durably
-reserves the budget, so the receipt ledger \(\Delta\) satisfies
-\(\mathsf{lab}(\Delta)=r\), and saves checkpoint \(k\) before approval.
-Approval occurrence \(x_a\) then commits through cell \(d_a\), whose authority
-label is \(a\), so
-\(\mathsf{lab}(\Delta)=ra\).  The Agent requests a choice Fork between two
-suppliers, \(L\) and \(R\).  Its registered causal-completion contract has exactly two indexed
-outcomes.
+Consider a procurement Agent authorized to place one order.
+% 考虑一个获授权只能下单一次的采购 Agent。
+It durably reserves the budget, so the receipt ledger \(\Delta\) satisfies \(\mathsf{lab}(\Delta)=r\), and saves checkpoint \(k\) before approval.
+% 它持久地预留预算，因此回执账本 \(\Delta\) 满足 \(\mathsf{lab}(\Delta)=r\)，并在审批前保存检查点 \(k\)。
+Approval occurrence \(x_a\) then commits through cell \(d_a\), whose authority label is \(a\), so \(\mathsf{lab}(\Delta)=ra\).
+% 随后，审批发生项 \(x_a\) 通过单元 \(d_a\) 提交；该单元的权限标签为 \(a\)，因此 \(\mathsf{lab}(\Delta)=ra\)。
+The Agent requests a choice Fork between two suppliers, \(L\) and \(R\).
+% Agent 请求在供应商 \(L\) 和 \(R\) 之间执行一次选择型 Fork。
+Its registered causal-completion contract has exactly two indexed outcomes.
+% 其登记的因果完成契约恰好有两个带索引的结果。
 \begin{equation}
 \label{eq:running-outcomes}
 \begin{split}
@@ -16,39 +19,49 @@ outcomes.
  o_R&:\ x_R^p\prec x_R^s ,
 \end{split}
 \end{equation}
-where \(x_i^p\) and \(x_i^s\) are payment and shipment occurrences.  The
-alternatives are exclusive, but both must have a safe completion at the cut.
+where \(x_i^p\) and \(x_i^s\) are payment and shipment occurrences.
+% 其中，\(x_i^p\) 和 \(x_i^s\) 分别是付款发生项和发货发生项。
+The alternatives are exclusive, but both must have a safe completion at the cut.
+% 两个备选结果互斥，但二者在切点处都必须存在安全完成路径。
 
-A logical occurrence is distinct from the semantic cell whose authority it
-redeems.  The protected-call registry authenticates
+A logical occurrence is distinct from the semantic cell whose authority it redeems.
+% 逻辑发生项不同于其所兑现权限对应的语义单元。
+The protected-call registry authenticates
+% 受保护调用注册表认证如下关系：
 \[
  q_{\rm cell}(x_L^s)=q_{\rm cell}(x_R^s)=d_s.
 \]
-The two branch occurrences refer to the same shipment cell but receive
-distinct occurrence-bound handles after the Fork.  Payments retain distinct
-cells \(d_L^p\) and \(d_R^p\).  The authority labels of
-\(d_s,d_L^p,d_R^p\) are \(s,p_L,p_R\), respectively.  A later Restore of \(k\) creates approval
-occurrence \(x_a'\) with \(q_{\rm cell}(x_a')=d_a\).  The authority policy
-allows prefixes of \(rap_Ls\) and \(rap_Rs\), but no trace containing both
-payment labels or a payment before \(a\).
+The two branch occurrences refer to the same shipment cell but receive distinct occurrence-bound handles after the Fork.
+% 两个分支发生项指向同一个发货单元，但在 Fork 后获得不同的发生项绑定句柄。
+Payments retain distinct cells \(d_L^p\) and \(d_R^p\).
+% 两笔付款保留不同的单元 \(d_L^p\) 和 \(d_R^p\)。
+The authority labels of \(d_s,d_L^p,d_R^p\) are \(s,p_L,p_R\), respectively.
+% \(d_s,d_L^p,d_R^p\) 的权限标签分别为 \(s,p_L,p_R\)。
+A later Restore of \(k\) creates approval occurrence \(x_a'\) with \(q_{\rm cell}(x_a')=d_a\).
+% 随后对 \(k\) 的 Restore 会创建审批发生项 \(x_a'\)，且 \(q_{\rm cell}(x_a')=d_a\)。
+The authority policy allows prefixes of \(rap_Ls\) and \(rap_Rs\), but no trace containing both payment labels or a payment before \(a\).
+% 权限策略允许 \(rap_Ls\) 和 \(rap_Rs\) 的前缀，但不允许同时包含两个付款标签的轨迹，也不允许在 \(a\) 之前出现付款的轨迹。
 
 \paragraph{The admission calculation}
-Using the admission notation formalized in \cref{sec:admission}, write \(M_o\)
-for outcome \(o\)'s policy-safe resolved completions.  At this cut each outcome
-has one causal linearization, resolving to
+% 准入计算
+Using the admission notation formalized in \cref{sec:admission}, write \(M_o\) for outcome \(o\)'s policy-safe resolved completions.
+% 使用 \cref{sec:admission} 中形式化的准入记法，以 \(M_o\) 表示结果 \(o\) 的策略安全已解析完成路径。
+At this cut each outcome has one causal linearization, resolving to
+% 在此切点，每个结果都有一种因果线性化，并解析为：
 \[
 \begin{aligned}
  z_L&=\Fresh(x_L^p,d_L^p)\Fresh(x_L^s,d_s),\\
  z_R&=\Fresh(x_R^p,d_R^p)\Fresh(x_R^s,d_s).
 \end{aligned}
 \]
-Thus \(M_{o_L}=\{z_L\}\), \(M_{o_R}=\{z_R\}\), and
-\(\widehat B^\dagger=\{(o_L,z_L),(o_R,z_R)\}\), with \(W^\dagger\) their
-prefix closure.  On acceptance, these prefixes become the generated behavior
-of the compiled monitor.  If policy excludes \(rap_Rs\), then
-\(M_{o_R}=\varnothing\), and the Fork is rejected because pruning supplier
-\(R\) would change its meaning.  \Cref{sec:admission} gives the shared-prefix
-case where every outcome starts safe but no prefix-robust family exists.
+Thus \(M_{o_L}=\{z_L\}\), \(M_{o_R}=\{z_R\}\), and \(\widehat B^\dagger=\{(o_L,z_L),(o_R,z_R)\}\), with \(W^\dagger\) their prefix closure.
+% 因此，\(M_{o_L}=\{z_L\}\)、\(M_{o_R}=\{z_R\}\)，且 \(\widehat B^\dagger=\{(o_L,z_L),(o_R,z_R)\}\)，其中 \(W^\dagger\) 是它们的前缀闭包。
+On acceptance, these prefixes become the generated behavior of the compiled monitor.
+% 准入后，这些前缀成为已编译监控器所生成的行为。
+If policy excludes \(rap_Rs\), then \(M_{o_R}=\varnothing\), and the Fork is rejected because pruning supplier \(R\) would change its meaning.
+% 如果策略排除 \(rap_Rs\)，则 \(M_{o_R}=\varnothing\)，并且该 Fork 会被拒绝，因为剪除供应商 \(R\) 将改变其含义。
+\Cref{sec:admission} gives the shared-prefix case where every outcome starts safe but no prefix-robust family exists.
+% \Cref{sec:admission} 给出了共享前缀情形：每个结果开始时都安全，但不存在前缀鲁棒族。
 
 \begin{figure*}[t]
   \centering
@@ -107,39 +120,46 @@ case where every outcome starts safe but no prefix-robust family exists.
     \draw[arr] (ef) -- node[above] {atomic swap} (ea);
     \draw[arr] (ea) -- node[above] {atomic swap} (ej);
   \end{tikzpicture}
-  \caption{An Agent has an editable logical history, a non-editable world
-  history, and one current policy-domain epoch.  Restore clones logical occurrences
-  but preserves authenticated cell identity.  A history cut must therefore
-  order both receipt-changing \Fresh events and receipt-silent \Alias events
-  against a policy-domain epoch swap.}
+  \caption{An Agent has an editable logical history, a non-editable world history, and one current policy-domain epoch.
+  % Agent 拥有一段可编辑的逻辑历史、一段不可编辑的世界历史，以及一个当前策略域纪元。
+  Restore clones logical occurrences but preserves authenticated cell identity.
+  % Restore 会克隆逻辑发生项，但保留经过认证的单元标识。
+  A history cut must therefore order both receipt-changing \Fresh events and receipt-silent \Alias events against a policy-domain epoch swap.}
+  % 因此，历史切点必须确定会改变回执的 \Fresh 事件和不产生回执的 \Alias 事件相对于策略域纪元切换的顺序。
   \label{fig:two-histories}
 \end{figure*}
 
 \paragraph{The \Fresh race}
-After the shared approval and before either payment, the Agent requests
-\(\mathsf{MergeSelect}(g,L,\sigma)\).  If a protected use from the old
-supplier-\(R\) arm commits \(x_R^p\) first, that occurrence durably selects
-\(R\) and changes the receipt
-ledger's authority trace \(\mathsf{lab}(\Delta)\) from \(ra\) to \(rap_R\).
-Selecting \(L\) must therefore be re-derived
-and rejected.  If the Merge cut wins, it closes the current
-policy-domain epoch and rebinds every live gate before any later \(x_R^p\) can
-commit.  Installing a new program while an old policy-domain epoch remains
-active permits both payments.
+% \Fresh 竞态
+After the shared approval and before either payment, the Agent requests \(\mathsf{MergeSelect}(g,L,\sigma)\).
+% 在共享审批之后、任一付款之前，Agent 请求 \(\mathsf{MergeSelect}(g,L,\sigma)\)。
+If a protected use from the old supplier-\(R\) arm commits \(x_R^p\) first, that occurrence durably selects \(R\) and changes the receipt ledger's authority trace \(\mathsf{lab}(\Delta)\) from \(ra\) to \(rap_R\).
+% 如果旧供应商 \(R\) 分支的一次受保护使用先提交 \(x_R^p\)，该发生项就会持久选择 \(R\)，并将回执账本的权限轨迹 \(\mathsf{lab}(\Delta)\) 从 \(ra\) 改为 \(rap_R\)。
+Selecting \(L\) must therefore be re-derived and rejected.
+% 因此，选择 \(L\) 必须重新推导并被拒绝。
+If the Merge cut wins, it closes the current policy-domain epoch and rebinds every live gate before any later \(x_R^p\) can commit.
+% 如果 Merge 切点获胜，它会关闭当前策略域纪元，并在后续任何 \(x_R^p\) 提交之前重新绑定所有活跃门。
+Installing a new program while an old policy-domain epoch remains active permits both payments.
+% 在旧策略域纪元仍处于活跃状态时安装新程序，会使两笔付款都被允许。
 
 \paragraph{The \Alias race}
-Now consider the live Restore in \cref{fig:two-histories}.  Cloning \(k\)
-creates a new logical approval occurrence \(x_a'\), a newly minted gate, and an
-authenticated handle, but retains cell \(d_a\).  Because \(d_a\) is
-already receipted, executing \(x_a'\) is an
-\Alias that advances the restored continuation past approval while leaving
-\(\Delta\) unchanged.  A concurrent join or replacement compiled before that
-progress is stale even though its receipt comparison still succeeds.  The cut
-must therefore compare the resolved-occurrence trace \(\chi\) in addition to
-the receipt ledger.
+% \Alias 竞态
+Now consider the live Restore in \cref{fig:two-histories}.
+% 现在考虑 \cref{fig:two-histories} 中的活跃 Restore。
+Cloning \(k\) creates a new logical approval occurrence \(x_a'\), a newly minted gate, and an authenticated handle, but retains cell \(d_a\).
+% 克隆 \(k\) 会创建新的逻辑审批发生项 \(x_a'\)、新铸造的门和经过认证的句柄，但会保留单元 \(d_a\)。
+Because \(d_a\) is already receipted, executing \(x_a'\) is an \Alias that advances the restored continuation past approval while leaving \(\Delta\) unchanged.
+% 由于 \(d_a\) 已有回执，执行 \(x_a'\) 是一次 \Alias：它推进已恢复的延续越过审批，同时保持 \(\Delta\) 不变。
+A concurrent join or replacement compiled before that progress is stale even though its receipt comparison still succeeds.
+% 在该进展之前编译的并发 join 或替换已失效，即使其回执比较仍然成功。
+The cut must therefore compare the resolved-occurrence trace \(\chi\) in addition to the receipt ledger.
+% 因此，除回执账本外，切点还必须比较已解析发生项轨迹 \(\chi\)。
 
-The example exposes the whole problem.  Workspace equality cannot recover
-which branch relation is live, and receipt equality cannot detect \Alias
-progress.  Cell equality cannot determine the required obligation projection,
-while a caller-supplied target automaton cannot certify any of these facts.
+The example exposes the whole problem.
+% 这个例子揭示了完整的问题。
+Workspace equality cannot recover which branch relation is live, and receipt equality cannot detect \Alias progress.
+% 工作区相等性无法恢复哪个分支关系仍然活跃，而回执相等性无法检测 \Alias 进展。
+Cell equality cannot determine the required obligation projection, while a caller-supplied target automaton cannot certify any of these facts.
+% 单元相等性无法确定所需的义务投影，而调用者提供的目标自动机也无法认证这些事实。
 \Cref{sec:model} instead derives the target through a trusted history judgment.
+% 相比之下，\Cref{sec:model} 通过可信历史判断推导目标。

@@ -34,7 +34,9 @@
 \newcommand{\sem}[1]{\mathopen{[\![}#1\mathclose{]\!]}}
 
 \title{When May an Agent Rewrite Its History?\\
+% Agent 何时可以重写自身历史？
 A Prefix-Robust Theory of Fork, Restore, and Merge}
+% 一种关于 Fork、Restore 与 Merge 的前缀鲁棒理论
 
 \author{}
 
@@ -42,33 +44,36 @@ A Prefix-Robust Theory of Fork, Restore, and Merge}
 \maketitle
 
 \begin{abstract}
-Tool-using Agents can Fork live continuations, Restore a checkpoint, and Merge
-descendants, but the external world does not rewind.  Commitments are
-append-only, copied occurrences may share one irreversible receipt, and old
-protected calls may race the rewrite.  We ask exactly when such an edit has a
-policy-safe, history-faithful, completion-nonblocking implementation that
-preserves every promised outcome not discharged by schema-authorized
-retirement.  Checking outcomes separately is unsound: a shared prefix can
-strand an outcome that the edited history still promises.
-We present a prefix-robust \emph{Agent History-Admission Theory} over
-outcome-indexed causal completions.  Its greatest fixed point removes a
-completion whenever one of its prefixes lacks a safe continuation for any
-contract-compatible outcome.  The Exact Agent History Realization Theorem proves
-that a history rewrite is implementable exactly when this fixed point is
-nonempty.  In that case it constructs the greatest realization and its
-canonical monitor program.  If the fixed point is empty, a finite ranked
-missing-witness certificate proves that no realization exists.
-The theorem makes history admission a security compiler, not an application
-proof obligation.  A platform registers policy and immutable edit schemas,
-while an untrusted Agent only requests an edit.  The trusted installation
-checker then derives the target, verifies inherited obligations, and checks the fixed point.  On
-acceptance, a durable kernel atomically installs the canonical
-occurrence-sensitive program, new gates, and authenticated replacement handles
-under one new policy-domain epoch.  We prove divergence-insensitive weak bisimulation
-between this reference monitor and an ideal atomic Agent-history machine across
-arbitrary edit sequences, \Fresh/\Alias races, retries, dispatch, and crashes.
-A bounded artifact validator exercises the executable decision kernel and
-representative cut races.
+Tool-using Agents can Fork live continuations, Restore a checkpoint, and Merge descendants, but the external world does not rewind.
+% 使用工具的 Agent 可以 Fork 活跃延续、Restore 检查点并 Merge 后代，但外部世界不会回退。
+Commitments are append-only, copied occurrences may share one irreversible receipt, and old protected calls may race the rewrite.
+% 承诺只能追加，复制的发生项可能共享同一不可逆回执，旧的受保护调用还可能与历史重写发生竞态。
+We ask exactly when such an edit has a policy-safe, history-faithful, completion-nonblocking implementation that preserves every promised outcome not discharged by schema-authorized retirement.
+% 我们精确研究何时这种编辑存在策略安全、历史忠实且完成非阻塞的实现，并保留所有未被模式授权退役所解除的承诺结果。
+Checking outcomes separately is unsound: a shared prefix can strand an outcome that the edited history still promises.
+% 分别检查各个结果并不可靠，因为共享前缀可能使编辑后历史仍承诺的某个结果无法完成。
+We present a prefix-robust \emph{Agent History-Admission Theory} over outcome-indexed causal completions.
+% 我们针对按结果索引的因果完成路径提出一套前缀鲁棒的 \emph{Agent 历史准入理论}。
+Its greatest fixed point removes a completion whenever one of its prefixes lacks a safe continuation for any contract-compatible outcome.
+% 只要某条完成路径的某个前缀对某个与契约兼容的结果缺少安全延续，最大不动点就会移除该完成路径。
+The Exact Agent History Realization Theorem proves that a history rewrite is implementable exactly when this fixed point is nonempty.
+% 精确 Agent 历史实现定理证明，历史重写可实现当且仅当该不动点非空。
+In that case it constructs the greatest realization and its canonical monitor program.
+% 在这种情况下，该定理构造最大的实现及其规范监控器程序。
+If the fixed point is empty, a finite ranked missing-witness certificate proves that no realization exists.
+% 若不动点为空，一个有限的分级缺失见证证书会证明不存在任何实现。
+The theorem makes history admission a security compiler, not an application proof obligation.
+% 该定理把历史准入变成安全编译器，而不是应用承担的证明义务。
+A platform registers policy and immutable edit schemas, while an untrusted Agent only requests an edit.
+% 平台注册策略和不可变编辑模式，而不受信任的 Agent 只能请求编辑。
+The trusted installation checker then derives the target, verifies inherited obligations, and checks the fixed point.
+% 随后，可信安装检查器推导目标、验证继承义务并检查不动点。
+On acceptance, a durable kernel atomically installs the canonical occurrence-sensitive program, new gates, and authenticated replacement handles under one new policy-domain epoch.
+% 准入后，持久内核在一个新的策略域纪元下原子安装规范的发生项敏感程序、新门和经过认证的替换句柄。
+We prove divergence-insensitive weak bisimulation between this reference monitor and an ideal atomic Agent-history machine across arbitrary edit sequences, \Fresh/\Alias races, retries, dispatch, and crashes.
+% 我们证明该参考监控器与理想原子 Agent 历史机在任意编辑序列、\Fresh/\Alias 竞态、重试、派发和崩溃下满足发散不敏感弱互模拟。
+A bounded artifact validator exercises the executable decision kernel and representative cut races.
+% 一个有界制品验证器测试可执行判定内核和代表性的切点竞态。
 \end{abstract}
 
 \input{sections/introduction}
@@ -83,9 +88,13 @@ representative cut races.
 
 \clearpage
 \section*{AI Use Acknowledgment}
+% AI 使用声明
 OpenAI Codex was used in all sections for initial prose drafting and rewriting, and in the executable artifact for code scaffolding and test generation.
+% 所有章节的初始文本起草与改写，以及可执行制品中的代码脚手架和测试生成，均使用了 OpenAI Codex。
 It was also used to assist with literature discovery, formal-model iteration, and counterexample search.
+% 它还用于辅助文献发现、形式模型迭代和反例搜索。
 The authors selected the research direction, checked the cited sources and mathematical arguments, and remain responsible for every claim, proof, result, and citation.
+% 作者选择了研究方向，核查了所引文献和数学论证，并对每一项主张、证明、结果与引用承担责任。
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}

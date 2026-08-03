@@ -1,49 +1,51 @@
 \section{Related Work}
+% 相关工作
 \label{sec:related}
 
 \paragraph{History-sensitive authorization}
-History-based access control and event-structure monitors judge a next action
-from its past~\cite{abadi2003history,krukow2008history}.  FORGE proves Agent
-verdicts from causal-DAG observations~\cite{palumbo2026forge}.  We judge a
-topology-changing edit: every contract-compatible outcome must retain a safe
-completion after every admitted prefix, including receipt-silent \Alias occurrences.
+% 历史敏感授权
+History-based access control and event-structure monitors judge a next action from its past~\cite{abadi2003history,krukow2008history}.
+% 基于历史的访问控制和事件结构监控器根据过去判断下一动作~\cite{abadi2003history,krukow2008history}。
+FORGE proves Agent verdicts from causal-DAG observations~\cite{palumbo2026forge}.
+% FORGE 根据因果 DAG 观测证明 Agent 判定~\cite{palumbo2026forge}。
+We judge a topology-changing edit: every contract-compatible outcome must retain a safe completion after every admitted prefix, including receipt-silent \Alias occurrences.
+% 我们判定的是改变拓扑的编辑：在每个已准入前缀之后，每个与契约兼容的结果都必须保留一条安全完成路径，其中包括不产生回执的 \Alias 发生项。
 
 \paragraph{Reversal and update}
-Reversible and checkpointed sessions guarantee rollback consistency and typed
-progress~\cite{dezani2016checkpoints,castellani2017concurrent,
-mezzina2021causal,mezzina2025checkpoint}.  Retractable contracts model
-backtracking~\cite{barbanera2018contracts}.  Update theories synthesize
-controllers or bridges between given specifications
-~\cite{nahabedian2020dynamic,amram2022dynamic,bresolin2021static,
-thuijsman2022transformational,macktoobian2022reconfiguration}.  Our edit
-schemas instead derive inherited obligations while receipts remain
-irreversible, and admission preserves those obligations after every admitted
-prefix.
+% 逆转与更新
+Reversible and checkpointed sessions guarantee rollback consistency and typed progress~\cite{dezani2016checkpoints,castellani2017concurrent,mezzina2021causal,mezzina2025checkpoint}.
+% 可逆会话和带检查点的会话保证回滚一致性与类型化进展~\cite{dezani2016checkpoints,castellani2017concurrent,mezzina2021causal,mezzina2025checkpoint}。
+Retractable contracts model backtracking~\cite{barbanera2018contracts}.
+% 可撤回契约对回溯进行建模~\cite{barbanera2018contracts}。
+Update theories synthesize controllers or bridges between given specifications ~\cite{nahabedian2020dynamic,amram2022dynamic,bresolin2021static,thuijsman2022transformational,macktoobian2022reconfiguration}.
+% 更新理论在给定规约之间合成控制器或桥接机制~\cite{nahabedian2020dynamic,amram2022dynamic,bresolin2021static,thuijsman2022transformational,macktoobian2022reconfiguration}。
+Our edit schemas instead derive inherited obligations while receipts remain irreversible, and admission preserves those obligations after every admitted prefix.
+% 相比之下，我们的编辑模式在回执保持不可逆的同时推导继承义务，并且准入会在每个已准入前缀之后保持这些义务。
 
 \paragraph{Automata and causality}
-Security automata enforce prefix-closed properties
-~\cite{schneider2000enforceable}, while supervisory control constructs
-supremal legal behavior~\cite{ramadge1987supervisory}.  Multitasking and
-generalized nonblocking preserve multiple conditionally marked goals
-~\cite{dequeiroz2005multitasking,malik2008generalised}.
-\Cref{prop:outcome-necessary} makes the relationship exact: with
-outcome-compatibility markings, our kernel is a conditional
-generalized-nonblocking computation.  Without them, projected marker
-nonblocking is strictly weaker.  Our history-admission construction derives
-the markings from authenticated Fork/Restore/Merge topology, schema-authorized retirement,
-and irreversible receipts, then realizes the greatest behavior through a
-durable history cut.  Derivatives provide the canonical recognizer
-~\cite{brzozowski1964derivatives}.  Pomsets represent causality and concurrency
-~\cite{winskel1987event,vanglabbeek2009configuration}.
+% 自动机与因果性
+Security automata enforce prefix-closed properties ~\cite{schneider2000enforceable}, while supervisory control constructs supremal legal behavior~\cite{ramadge1987supervisory}.
+% 安全自动机强制执行前缀闭合性质~\cite{schneider2000enforceable}，而监督控制构造上确界合法行为~\cite{ramadge1987supervisory}。
+Multitasking and generalized nonblocking preserve multiple conditionally marked goals ~\cite{dequeiroz2005multitasking,malik2008generalised}.
+% 多任务与广义非阻塞会保持多个带条件标记的目标~\cite{dequeiroz2005multitasking,malik2008generalised}。
+\Cref{prop:outcome-necessary} makes the relationship exact: with outcome-compatibility markings, our kernel is a conditional generalized-nonblocking computation.
+% \Cref{prop:outcome-necessary} 精确刻画了这一关系：给定结果兼容性标记后，我们的内核就是一种条件广义非阻塞计算。
+Without them, projected marker nonblocking is strictly weaker.
+% 没有这些标记时，投影后的标记非阻塞性严格更弱。
+Our history-admission construction derives the markings from authenticated Fork/Restore/Merge topology, schema-authorized retirement, and irreversible receipts, then realizes the greatest behavior through a durable history cut.
+% 我们的历史准入构造从经过认证的 Fork/Restore/Merge 拓扑、模式授权的退役和不可逆回执中推导这些标记，再通过持久历史切点实现最大行为。
+Derivatives provide the canonical recognizer ~\cite{brzozowski1964derivatives}.
+% 导数给出规范识别器~\cite{brzozowski1964derivatives}。
+Pomsets represent causality and concurrency ~\cite{winskel1987event,vanglabbeek2009configuration}.
+% 偏序事件集表示因果性与并发性~\cite{winskel1987event,vanglabbeek2009configuration}。
 
 \paragraph{Durable effects}
-Rollback systems preserve or detect past state
-~\cite{elnozahy2002rollback,parno2011memoir,matetic2017rote,
-brandenburger2017lcm}, and checkpoint trees can revive one-time state
-~\cite{garfinkel2005virtual}.  ACRFence targets authority resurrection in
-Agent Restore~\cite{zheng2026acrfence}.  Consumable credentials, commit-time
-checks, stale-handle fencing, outboxes, and idempotency protect individual
-effects~\cite{bowers2007consumable,santos2026committime,
-santos2026lingering,aws2026outbox,aws2026idempotency}.  Our theory instead
-characterizes whole history edits and orders receipts and \Alias progress
-before monitor activation.
+% 持久效果
+Rollback systems preserve or detect past state ~\cite{elnozahy2002rollback,parno2011memoir,matetic2017rote,brandenburger2017lcm}, and checkpoint trees can revive one-time state ~\cite{garfinkel2005virtual}.
+% 回滚系统保存或检测过去状态~\cite{elnozahy2002rollback,parno2011memoir,matetic2017rote,brandenburger2017lcm}，而检查点树可以复活一次性状态~\cite{garfinkel2005virtual}。
+ACRFence targets authority resurrection in Agent Restore~\cite{zheng2026acrfence}.
+% ACRFence 针对 Agent Restore 中的权限复活问题~\cite{zheng2026acrfence}。
+Consumable credentials, commit-time checks, stale-handle fencing, outboxes, and idempotency protect individual effects~\cite{bowers2007consumable,santos2026committime,santos2026lingering,aws2026outbox,aws2026idempotency}.
+% 可消费凭据、提交时检查、陈旧句柄隔离、发件箱和幂等性保护单个效果~\cite{bowers2007consumable,santos2026committime,santos2026lingering,aws2026outbox,aws2026idempotency}。
+Our theory instead characterizes whole history edits and orders receipts and \Alias progress before monitor activation.
+% 相比之下，我们的理论刻画完整的历史编辑，并在监控器激活之前确定回执与 \Alias 进展的顺序。

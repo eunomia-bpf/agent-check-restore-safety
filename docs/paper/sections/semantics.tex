@@ -1,27 +1,33 @@
 \section{Exact History Admission}
+% 精确历史准入
 \label{sec:admission}
 
-Let \(\mathcal U\) be the authority-label alphabet and
-\(\mathcal A\subseteq\mathcal U^*\) a regular, prefix-closed policy.  For the
-authenticated receipt ledger \(\Delta\), write
-\(\mathsf{lab}(\Delta)\in\mathcal A\) for its authority word and
-\(D_\Delta\) for its receipted cells.  Fix the admission instance
-\(\Theta=(\kappa,H,\Delta,\mathcal A,u)\) and its unique schema derivation
+Let \(\mathcal U\) be the authority-label alphabet and \(\mathcal A\subseteq\mathcal U^*\) a regular, prefix-closed policy.
+% 令 \(\mathcal U\) 为权限标签字母表，\(\mathcal A\subseteq\mathcal U^*\) 为一个正则且前缀闭合的策略。
+For the authenticated receipt ledger \(\Delta\), write \(\mathsf{lab}(\Delta)\in\mathcal A\) for its authority word and \(D_\Delta\) for its receipted cells.
+% 对于经认证的回执账本 \(\Delta\)，用 \(\mathsf{lab}(\Delta)\in\mathcal A\) 表示其权限词，用 \(D_\Delta\) 表示其中已有回执的单元。
+Fix the admission instance \(\Theta=(\kappa,H,\Delta,\mathcal A,u)\) and its unique schema derivation
+% 固定准入实例 \(\Theta=(\kappa,H,\Delta,\mathcal A,u)\) 及其唯一的模式推导如下：
 \[
  \Sigma_\zeta;H\vdash u\Downarrow
  (H',\mathcal C_{H,u},\eta^-,\eta^+).
 \]
-Let \(\rho'\) be the authenticated target registry in \(H'\) and
-\(O_{H,u}=O_{\mathcal C_{H,u}}\).  All languages below depend on
-\(\Theta\), the schema registry, and \(\rho'\).  We write only \(H,u\) where
-the remaining parameters are fixed.
+Let \(\rho'\) be the authenticated target registry in \(H'\) and \(O_{H,u}=O_{\mathcal C_{H,u}}\).
+% 令 \(\rho'\) 为 \(H'\) 中经认证的目标注册表，并令 \(O_{H,u}=O_{\mathcal C_{H,u}}\)。
+All languages below depend on \(\Theta\), the schema registry, and \(\rho'\).
+% 下文所有语言均依赖于 \(\Theta\)、模式注册表和 \(\rho'\)。
+We write only \(H,u\) where the remaining parameters are fixed.
+% 当其余参数固定时，我们仅写作 \(H,u\)。
 
 \subsection{\Fresh and \Alias resolution}
+% \Fresh 与 \Alias 解析
 
-Resolution never erases an occurrence retained by the derived contract.  Starting
-with \(R_0=D_\Delta\), the deterministic transducer
-\(\Resolve^{\rho'}_\Delta\) maps a raw word \(w=x_1\cdots x_n\) to a resolved word
-\(z_1\cdots z_n\).  For \(d_i=q^{\rho'}_{\rm cell}(x_i)\),
+Resolution never erases an occurrence retained by the derived contract.
+% 解析绝不会擦除派生契约所保留的发生项。
+Starting with \(R_0=D_\Delta\), the deterministic transducer \(\Resolve^{\rho'}_\Delta\) maps a raw word \(w=x_1\cdots x_n\) to a resolved word \(z_1\cdots z_n\).
+% 从 \(R_0=D_\Delta\) 开始，确定性转换器 \(\Resolve^{\rho'}_\Delta\) 将原始词 \(w=x_1\cdots x_n\) 映射为已解析词 \(z_1\cdots z_n\)。
+For \(d_i=q^{\rho'}_{\rm cell}(x_i)\),
+% 对于 \(d_i=q^{\rho'}_{\rm cell}(x_i)\)，定义 \(z_i\) 如下：
 \begin{equation}
 \label{eq:resolve}
  z_i=
@@ -32,42 +38,47 @@ with \(R_0=D_\Delta\), the deterministic transducer
        \quad R_i=R_{i-1}.
  \end{cases}
 \end{equation}
-The authority projection erases \Alias symbols and maps each \Fresh symbol to
-its cell's authority label.
+The authority projection erases \Alias symbols and maps each \Fresh symbol to its cell's authority label.
+% 权限投影会擦除 \Alias 符号，并将每个 \Fresh 符号映射到其单元的权限标签。
 \[
  \mathsf{auth}(\Fresh(x,d))=\ell_{\rho'}(d),\qquad
  \mathsf{auth}(\Alias(x,d))=\epsilon .
 \]
-For resolved \(z\), \(\mathsf{raw}(z)\) drops the \Fresh/\Alias mode and cell
-but preserves ordered occurrence identifiers.  A \Retry repeats the same
-invocation and adds no occurrence.  Restored occurrences sharing a cell remain
-distinct and may resolve differently.
+For resolved \(z\), \(\mathsf{raw}(z)\) drops the \Fresh/\Alias mode and cell but preserves ordered occurrence identifiers.
+% 对于已解析的 \(z\)，\(\mathsf{raw}(z)\) 会去除 \Fresh/\Alias 模式和单元，但保留有序的发生项标识符。
+A \Retry repeats the same invocation and adds no occurrence.
+% \Retry 重复同一次调用，不增加任何发生项。
+Restored occurrences sharing a cell remain distinct and may resolve differently.
+% 共享同一单元的恢复发生项仍彼此有别，并且可能得到不同的解析结果。
 
 \begin{lemma}[Resolution]
+% 解析
 \label{lem:resolution}
-\(\Resolve^{\rho'}_\Delta\) is deterministic, length preserving, and prefix
-compatible.  Its \Fresh projection contains each cell at most once outside
-\(D_\Delta\), while its occurrence projection is exactly the input word.
-Moreover, if
-\(\Resolve^{\rho'}_\Delta(rv)=zv'\), then
-\(z=\Resolve^{\rho'}_\Delta(r)\) and
-\(v'=\Resolve^{\rho'}_{\Delta_z}(v)\), where \(\Delta_z\) extends \(\Delta\) by the
-\Fresh events of \(z\).
+\(\Resolve^{\rho'}_\Delta\) is deterministic, length preserving, and prefix compatible.
+% \(\Resolve^{\rho'}_\Delta\) 是确定性的、保持长度的，并且与前缀兼容。
+Its \Fresh projection contains each cell at most once outside \(D_\Delta\), while its occurrence projection is exactly the input word.
+% 在 \(D_\Delta\) 之外，其 \Fresh 投影至多包含每个单元一次，而其发生项投影恰好就是输入词。
+Moreover, if \(\Resolve^{\rho'}_\Delta(rv)=zv'\), then \(z=\Resolve^{\rho'}_\Delta(r)\) and \(v'=\Resolve^{\rho'}_{\Delta_z}(v)\), where \(\Delta_z\) extends \(\Delta\) by the \Fresh events of \(z\).
+% 此外，若 \(\Resolve^{\rho'}_\Delta(rv)=zv'\)，则 \(z=\Resolve^{\rho'}_\Delta(r)\) 且 \(v'=\Resolve^{\rho'}_{\Delta_z}(v)\)，其中 \(\Delta_z\) 通过加入 \(z\) 的 \Fresh 事件来扩展 \(\Delta\)。
 \end{lemma}
 \begin{proof}
-Induction on input length gives one prefix-determined output symbol per input
-and updates \(R_i\) only for \Fresh.  Set membership ensures one \Fresh
-emission per cell.  Both cases retain \(x_i\).  Splitting after \(r\) gives the
-streaming equation.
+Induction on input length gives one prefix-determined output symbol per input and updates \(R_i\) only for \Fresh.
+% 对输入长度进行归纳可知，每个输入都会产生一个由前缀决定的输出符号，并且仅在 \Fresh 时更新 \(R_i\)。
+Set membership ensures one \Fresh emission per cell.
+% 集合成员关系确保每个单元仅产生一次 \Fresh。
+Both cases retain \(x_i\).
+% 两种情形都会保留 \(x_i\)。
+Splitting after \(r\) gives the streaming equation.
+% 在 \(r\) 之后拆分即可得到流式等式。
 \end{proof}
-Thus a retry stutters in both histories, whereas a copied occurrence stutters
-\emph{when it resolves as \Alias}: it advances causality without changing the
-authority trace.
+Thus a retry stutters in both histories, whereas a copied occurrence stutters \emph{when it resolves as \Alias}: it advances causality without changing the authority trace.
+% 因此，重试在两种历史中都表现为停顿，而复制的发生项在解析为 \Alias 时表现为停顿：它推进因果关系，却不改变权限轨迹。
 
 \subsection{Prefix-robust history admission}
+% 前缀鲁棒的历史准入
 
-For each structurally derived outcome \(o\in O_{H,u}\), define its set of
-resolved completions and the corresponding safe subset.
+For each structurally derived outcome \(o\in O_{H,u}\), define its set of resolved completions and the corresponding safe subset.
+% 对每个结构化派生的结果 \(o\in O_{H,u}\)，定义其已解析完成路径的集合及相应的安全子集。
 \begin{equation}
 \label{eq:safe-completions}
 \begin{aligned}
@@ -76,22 +87,26 @@ resolved completions and the corresponding safe subset.
    \mathsf{lab}(\Delta)\mathsf{auth}(z)\in\mathcal A\}.
 \end{aligned}
 \end{equation}
-Thus \(M_o\) contains the policy-safe resolved words for \(o\).  Individual
-outcome safety is insufficient because a shared prefix can strand a
-contract-compatible outcome, so admission closes safe completions under every
-shared prefix.
+Thus \(M_o\) contains the policy-safe resolved words for \(o\).
+% 因此，\(M_o\) 包含结果 \(o\) 的策略安全已解析词。
+Individual outcome safety is insufficient because a shared prefix can strand a contract-compatible outcome, so admission closes safe completions under every shared prefix.
+% 单个结果的安全性并不充分，因为共享前缀可能使一个与契约兼容的结果陷入无后续状态，因此准入要求安全完成路径集合在每个共享前缀下闭合。
 For a resolved prefix \(z\), let
+% 对于已解析前缀 \(z\)，定义 \(\mathsf{Compat}(z)\) 如下：
 \[
  \mathsf{Compat}(z)=
  \{o\mid \mathsf{raw}(z)\preceq_{\rm pref}w
-          \text{ for some }w\in\Lin(p_o)\}.
+		          \text{ for some }w\in\Lin(p_o)\}.
 \]
-Identical resolved words may belong to different indexed outcomes, so the
-fixed point must not quotient their identities.  Put
+Identical resolved words may belong to different indexed outcomes, so the fixed point must not quotient their identities.
+% 相同的已解析词可能属于不同的带索引结果，因此该不动点不得对这些结果标识取商。
+Put
+% 令 \(\widehat B_0\) 如下：
 \[
  \widehat B_0=\biguplus_{o\in O_{H,u}}\{o\}\times M_o .
 \]
 For \(\widehat B\subseteq\widehat B_0\), define the monotone operator
+% 对于 \(\widehat B\subseteq\widehat B_0\)，定义如下单调算子：
 \begin{equation}
 \label{eq:robust-operator}
 \widehat\Phi(\widehat B)=
@@ -102,8 +117,9 @@ For \(\widehat B\subseteq\widehat B_0\), define the monotone operator
 \end{array}\right\}.
 \end{equation}
 Set \(\widehat B_{i+1}=\widehat\Phi(\widehat B_i)\).
-Since \(\widehat B_1\subseteq\widehat B_0\), monotonicity yields a finite
-descending chain, whose limit is
+% 令 \(\widehat B_{i+1}=\widehat\Phi(\widehat B_i)\)。
+Since \(\widehat B_1\subseteq\widehat B_0\), monotonicity yields a finite descending chain, whose limit is
+% 由于 \(\widehat B_1\subseteq\widehat B_0\)，单调性产生一条有限下降链，其极限如下：
 \[
 \begin{aligned}
  \widehat B^\dagger_{H,u}
@@ -113,12 +129,15 @@ descending chain, whose limit is
  &W^\dagger_{H,u}&=\Pref(B^\dagger_{H,u}).
 \end{aligned}
 \]
-The operator removes completions that strand a contract-compatible outcome,
-including through cascading earlier loss.  Runtime uses only the projected pair
-\((W^\dagger,B^\dagger)\).  The installation checker and seal retain the
-indexed witness \(\widehat B^\dagger\).
+The operator removes completions that strand a contract-compatible outcome, including through cascading earlier loss.
+% 该算子会移除使某个契约兼容结果陷入无后续状态的完成路径，包括由更早损失级联导致的此类完成路径。
+Runtime uses only the projected pair \((W^\dagger,B^\dagger)\).
+% 运行时仅使用投影后的二元组 \((W^\dagger,B^\dagger)\)。
+The installation checker and seal retain the indexed witness \(\widehat B^\dagger\).
+% 安装检查器和封印保留带索引见证 \(\widehat B^\dagger\)。
 
 \begin{definition}[Agent history admission]
+% Agent 历史准入
 \label{def:admission}
 \begin{equation}
 \label{eq:admission}
@@ -127,81 +146,91 @@ indexed witness \(\widehat B^\dagger\).
  \widehat B^\dagger_{H,u}\ne\varnothing .
 \end{equation}
 \end{definition}
-The abbreviation \(\mathsf{Admit}(H,u)\) assumes \(\Theta\) and both
-registries fixed.  At \(z=\epsilon\), all outcomes are compatible, so
-nonemptiness gives initial coverage.  The existential selects a linearization
-without fairness.  The universal prefix condition prevents later deletion.
+The abbreviation \(\mathsf{Admit}(H,u)\) assumes \(\Theta\) and both registries fixed.
+% 缩写 \(\mathsf{Admit}(H,u)\) 假定 \(\Theta\) 和两个注册表均已固定。
+At \(z=\epsilon\), all outcomes are compatible, so nonemptiness gives initial coverage.
+% 当 \(z=\epsilon\) 时，所有结果均兼容，因此非空性给出初始覆盖。
+The existential selects a linearization without fairness.
+% 该存在量词选择一种线性化，而不要求公平性。
+The universal prefix condition prevents later deletion.
+% 全称前缀条件可防止后续删除。
 
 \begin{definition}[Indexed realization]
+% 带索引实现
 \label{def:realization}
-A generated language and indexed marked family
-\((L,\widehat B)\) realize \((H,u)\) when:
+A generated language and indexed marked family \((L,\widehat B)\) realize \((H,u)\) when:
+% 生成语言和带索引的标记族 \((L,\widehat B)\) 在满足以下条件时实现 \((H,u)\)：
 \begin{enumerate}[leftmargin=*,itemsep=1pt]
  \item \(\widehat B\ne\varnothing\);
- \item \emph{history fidelity:}
-\(\widehat B\subseteq
- \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\) and
-\(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\);
- \item \emph{policy safety:}
- \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A\)
- for every \(z\in L\);
- \item \emph{completion nonblocking:}
- \(L=\Pref(\pi_2\widehat B)\); and
- \item \emph{persistent outcome coverage:} for every \(z\in L\) and
- \(o\in\mathsf{Compat}(z)\), some
- \((o,b)\in\widehat B\) extends \(z\).
+% \(\widehat B\) 非空；
+ \item \emph{history fidelity:} \(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\) and \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\);
+% 历史忠实性：\(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\)，且 \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\)。
+ \item \emph{policy safety:} \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A\) for every \(z\in L\);
+% 策略安全性：对每个 \(z\in L\)，均有 \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A\)。
+ \item \emph{completion nonblocking:} \(L=\Pref(\pi_2\widehat B)\); and
+% 完成非阻塞性：\(L=\Pref(\pi_2\widehat B)\)；并且
+ \item \emph{persistent outcome coverage:} for every \(z\in L\) and \(o\in\mathsf{Compat}(z)\), some \((o,b)\in\widehat B\) extends \(z\).
+% 持续的结果覆盖：对于每个 \(z\in L\) 和 \(o\in\mathsf{Compat}(z)\)，都存在某个 \((o,b)\in\widehat B\) 扩展 \(z\)。
 \end{enumerate}
 \end{definition}
 
 \begin{lemma}[Prefix-robust greatest realization]
+% 前缀鲁棒的最大实现
 \label{lem:greatest-realization}
 A realization exists iff \(\mathsf{Admit}(H,u)\).
-On admission,
-\((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) is a realization, and every
-realization \((L,\widehat B)\) satisfies
-\(\widehat B\subseteq\widehat B^\dagger_{H,u}\) and
-\(L\subseteq W^\dagger_{H,u}\).
+% 当且仅当 \(\mathsf{Admit}(H,u)\) 成立时，实现存在。
+On admission, \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) is a realization, and every realization \((L,\widehat B)\) satisfies \(\widehat B\subseteq\widehat B^\dagger_{H,u}\) and \(L\subseteq W^\dagger_{H,u}\).
+% 准入时，\((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) 是一个实现，并且每个实现 \((L,\widehat B)\) 都满足 \(\widehat B\subseteq\widehat B^\dagger_{H,u}\) 和 \(L\subseteq W^\dagger_{H,u}\)。
 \end{lemma}
 \begin{proof}
-Fidelity, completion nonblocking, and safety put the indexed marked family of
-any realization inside \(\widehat B_0\).  Persistent coverage says exactly that
-\(\widehat B\subseteq\widehat\Phi(\widehat B)\), so \(\widehat B\) is a
-post-fixed point.  Monotonicity of \(\widehat\Phi\) and the finite
-Knaster--Tarski construction place every such family inside
-\(\widehat B^\dagger\).  Taking projected prefixes
-gives \(L\subseteq W^\dagger\).  Conversely,
-the equality
-\(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) supplies persistent
-coverage.  The inclusion
-\(\widehat B^\dagger\subseteq\widehat B_0\) supplies fidelity and safe marked
-words.  Prefix closure of \(\mathcal A\) supplies safety for their prefixes,
-while \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) supplies nonblocking.  The
-fixed point is a realization exactly when nonempty.
+Fidelity, completion nonblocking, and safety put the indexed marked family of any realization inside \(\widehat B_0\).
+% 忠实性、完成非阻塞性和安全性使任意实现的带索引标记族包含于 \(\widehat B_0\)。
+Persistent coverage says exactly that \(\widehat B\subseteq\widehat\Phi(\widehat B)\), so \(\widehat B\) is a post-fixed point.
+% 持续覆盖恰好表明 \(\widehat B\subseteq\widehat\Phi(\widehat B)\)，因此 \(\widehat B\) 是一个后不动点。
+Monotonicity of \(\widehat\Phi\) and the finite Knaster--Tarski construction place every such family inside \(\widehat B^\dagger\).
+% \(\widehat\Phi\) 的单调性和有限的 Knaster--Tarski 构造使每个这样的族都包含于 \(\widehat B^\dagger\)。
+Taking projected prefixes gives \(L\subseteq W^\dagger\).
+% 对投影取前缀可得 \(L\subseteq W^\dagger\)。
+Conversely, the equality \(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) supplies persistent coverage.
+% 反之，等式 \(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) 提供持续覆盖。
+The inclusion \(\widehat B^\dagger\subseteq\widehat B_0\) supplies fidelity and safe marked words.
+% 包含关系 \(\widehat B^\dagger\subseteq\widehat B_0\) 提供忠实性和安全的标记词。
+Prefix closure of \(\mathcal A\) supplies safety for their prefixes, while \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) supplies nonblocking.
+% \(\mathcal A\) 的前缀闭合性为这些词的前缀提供安全性，而 \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) 提供非阻塞性。
+The fixed point is a realization exactly when nonempty.
+% 该不动点恰在非空时构成一个实现。
 \end{proof}
 
-This fixed point is substantive even when every \(M_o\) is nonempty.  Let
-\(X,Y,Z\) be singleton contracts containing occurrences \(x_o,y_o,z_o\).
-The target registry maps them to distinct previously unreceipted cells
-\(d_x,d_y,d_z\), whose authority labels are \(x,y,z\), respectively.  Write
-\(\bar x=\Fresh(x_o,d_x)\), \(\bar y=\Fresh(y_o,d_y)\), and
-\(\bar z=\Fresh(z_o,d_z)\).  Let
-\(\mathcal C=X\otimes(Y\oplus Z)\) and
-\(\mathcal A=\Pref\{yx,xz\}\).  The \(X\otimes Y\) and \(X\otimes Z\) outcomes
-initially have safe resolved completions \(\bar y\bar x\) and
-\(\bar x\bar z\), whose authority projections are \(yx\) and \(xz\),
-respectively.  Yet the resolved prefix \(\bar x\), taken from
-\(\bar x\bar z\), remains contract-compatible with the \(X\otimes Y\) outcome
-and leaves it no safe continuation.  The first iteration removes
-\(\bar x\bar z\).  The next removes \(\bar y\bar x\) because root coverage is
-then lost.  Hence the edit is rejected, whereas the independent
-\(\forall o.\,M_o\ne\varnothing\) test would admit it.
+This fixed point is substantive even when every \(M_o\) is nonempty.
+% 即使每个 \(M_o\) 都非空，这个不动点仍具有实质作用。
+Let \(X,Y,Z\) be singleton contracts containing occurrences \(x_o,y_o,z_o\).
+% 令 \(X,Y,Z\) 为分别包含发生项 \(x_o,y_o,z_o\) 的单元素契约。
+The target registry maps them to distinct previously unreceipted cells \(d_x,d_y,d_z\), whose authority labels are \(x,y,z\), respectively.
+% 目标注册表将它们映射到互不相同且先前无回执的单元 \(d_x,d_y,d_z\)，这些单元的权限标签分别为 \(x,y,z\)。
+Write \(\bar x=\Fresh(x_o,d_x)\), \(\bar y=\Fresh(y_o,d_y)\), and \(\bar z=\Fresh(z_o,d_z)\).
+% 记 \(\bar x=\Fresh(x_o,d_x)\)、\(\bar y=\Fresh(y_o,d_y)\)、\(\bar z=\Fresh(z_o,d_z)\)。
+Let \(\mathcal C=X\otimes(Y\oplus Z)\) and \(\mathcal A=\Pref\{yx,xz\}\).
+% 令 \(\mathcal C=X\otimes(Y\oplus Z)\)，并令 \(\mathcal A=\Pref\{yx,xz\}\)。
+The \(X\otimes Y\) and \(X\otimes Z\) outcomes initially have safe resolved completions \(\bar y\bar x\) and \(\bar x\bar z\), whose authority projections are \(yx\) and \(xz\), respectively.
+% \(X\otimes Y\) 和 \(X\otimes Z\) 两个结果最初分别具有安全的已解析完成路径 \(\bar y\bar x\) 和 \(\bar x\bar z\)，其权限投影分别为 \(yx\) 和 \(xz\)。
+Yet the resolved prefix \(\bar x\), taken from \(\bar x\bar z\), remains contract-compatible with the \(X\otimes Y\) outcome and leaves it no safe continuation.
+% 然而，取自 \(\bar x\bar z\) 的已解析前缀 \(\bar x\) 仍与 \(X\otimes Y\) 结果契约兼容，却使该结果没有安全的后续。
+The first iteration removes \(\bar x\bar z\).
+% 第一次迭代移除 \(\bar x\bar z\)。
+The next removes \(\bar y\bar x\) because root coverage is then lost.
+% 下一次迭代移除 \(\bar y\bar x\)，因为此时根覆盖已经丢失。
+Hence the edit is rejected, whereas the independent \(\forall o.\,M_o\ne\varnothing\) test would admit it.
+% 因此，该编辑会被拒绝，而独立的 \(\forall o.\,M_o\ne\varnothing\) 检验却会准入它。
 
 \begin{proposition}[Outcome-indexed nonblocking correspondence]
+% 结果索引的非阻塞对应关系
 \label{prop:outcome-necessary}
-For nonempty \(\widehat B\subseteq\widehat B_0\), let \(G_{\widehat B}\) be the
-prefix trie of \(L_{\widehat B}=\Pref(\pi_2\widehat B)\).  Mark state \(z\)
-by \(\alpha_o\) exactly when \(o\in\mathsf{Compat}(z)\), and mark state \(b\)
-by \(\omega_o\) exactly when \((o,b)\in\widehat B\).  Then
+For nonempty \(\widehat B\subseteq\widehat B_0\), let \(G_{\widehat B}\) be the prefix trie of \(L_{\widehat B}=\Pref(\pi_2\widehat B)\).
+% 对于非空的 \(\widehat B\subseteq\widehat B_0\)，令 \(G_{\widehat B}\) 为 \(L_{\widehat B}=\Pref(\pi_2\widehat B)\) 的前缀字典树。
+Mark state \(z\) by \(\alpha_o\) exactly when \(o\in\mathsf{Compat}(z)\), and mark state \(b\) by \(\omega_o\) exactly when \((o,b)\in\widehat B\).
+% 当且仅当 \(o\in\mathsf{Compat}(z)\) 时用 \(\alpha_o\) 标记状态 \(z\)，并且当且仅当 \((o,b)\in\widehat B\) 时用 \(\omega_o\) 标记状态 \(b\)。
+Then
+% 则有以下等价关系：
 \[
 \begin{gathered}
  \widehat B\subseteq\widehat\Phi(\widehat B)\\[-2pt]
@@ -210,47 +239,49 @@ by \(\omega_o\) exactly when \((o,b)\in\widehat B\).  Then
  G_{\widehat B}\text{ is }(\alpha_o,\omega_o)\text{-nonblocking}.
 \end{gathered}
 \]
-Consequently, if \(\widehat B^\dagger\) is nonempty, it is the greatest
-nonempty completion subfamily of \(\widehat B_0\) satisfying these conditional
-nonblocking obligations.  If it is empty, no nonempty subfamily satisfies
-them.
-Ordinary marker nonblocking of the unaugmented projected language is strictly
-weaker.
+Consequently, if \(\widehat B^\dagger\) is nonempty, it is the greatest nonempty completion subfamily of \(\widehat B_0\) satisfying these conditional nonblocking obligations.
+% 因此，若 \(\widehat B^\dagger\) 非空，则它是 \(\widehat B_0\) 中满足这些条件非阻塞义务的最大非空完成路径子族。
+If it is empty, no nonempty subfamily satisfies them.
+% 若它为空，则没有任何非空子族满足这些义务。
+Ordinary marker nonblocking of the unaugmented projected language is strictly weaker.
+% 未增广投影语言的普通标记非阻塞性严格更弱。
 \end{proposition}
 \begin{proof}
-From reachable prefix \(z\), an \(\omega_o\)-marked state is reachable exactly
-when some \((o,b)\in\widehat B\) extends \(z\).  Quantifying over exactly the
-states marked \(\alpha_o\) is therefore the post-fixed-point condition.
-Greatestness follows from the greatest-fixed-point construction.  For
-strictness, the preceding instance has the marker-nonblocking projected pair
-\((\Pref\{\bar y\bar x,\bar x\bar z\},
-  \{\bar y\bar x,\bar x\bar z\})\), but its indexed fixed point is empty.
+From reachable prefix \(z\), an \(\omega_o\)-marked state is reachable exactly when some \((o,b)\in\widehat B\) extends \(z\).
+% 从可达前缀 \(z\) 出发，当且仅当某个 \((o,b)\in\widehat B\) 扩展 \(z\) 时，才可到达一个带 \(\omega_o\) 标记的状态。
+Quantifying over exactly the states marked \(\alpha_o\) is therefore the post-fixed-point condition.
+% 因此，恰好对带 \(\alpha_o\) 标记的状态进行量化就是后不动点条件。
+Greatestness follows from the greatest-fixed-point construction.
+% 最大性由最大不动点构造得到。
+For strictness, the preceding instance has the marker-nonblocking projected pair \((\Pref\{\bar y\bar x,\bar x\bar z\}, \{\bar y\bar x,\bar x\bar z\})\), but its indexed fixed point is empty.
+% 关于严格性，前述实例具有标记非阻塞的投影二元组 \((\Pref\{\bar y\bar x,\bar x\bar z\}, \{\bar y\bar x,\bar x\bar z\})\)，但其带索引不动点为空。
 \end{proof}
 
-Generalized nonblocking reduces to marker nonblocking with conditional plant
-markings~\cite{dequeiroz2005multitasking,malik2008generalised}.
-\Cref{prop:outcome-necessary} shows why markings must retain authenticated
-outcome compatibility: trace-only nonblocking is weaker.  Our
-history-admission theory derives them from topology, schema-authorized retirement, and
-receipts.  Outcome indexing is therefore semantic, not optional runtime state.
+Generalized nonblocking reduces to marker nonblocking with conditional plant markings~\cite{dequeiroz2005multitasking,malik2008generalised}.
+% 广义非阻塞可归约为具有条件化被控对象标记的标记非阻塞~\cite{dequeiroz2005multitasking,malik2008generalised}。
+\Cref{prop:outcome-necessary} shows why markings must retain authenticated outcome compatibility: trace-only nonblocking is weaker.
+% \Cref{prop:outcome-necessary} 说明了标记为何必须保留经认证的结果兼容性：仅基于轨迹的非阻塞性更弱。
+Our history-admission theory derives them from topology, schema-authorized retirement, and receipts.
+% 我们的历史准入理论从拓扑、模式授权的退役和回执中派生这些标记。
+Outcome indexing is therefore semantic, not optional runtime state.
+% 因此，结果索引属于语义，而非可选的运行时状态。
 
-For every
-\((o_{\rm rem},b)\in\widehat B_i\setminus\widehat B_{i+1}\), the rejection
-certificate records rank \(i\), prefix \(z\preceq b\), and
-\(o_{\rm miss}\in\mathsf{Compat}(z)\) for which no
-\((o_{\rm miss},b')\in\widehat B_i\) extends \(z\).  For any post-fixed family
-\(P\), induction gives \(P\subseteq\widehat B_i\): the base follows from
-\(\widehat B_0\), and each cause excludes its removed pair from the next round.
-Thus an empty final family excludes every realization.  The installation
-checker recomputes the base, chain, causes, and survivor witnesses.
+For every \((o_{\rm rem},b)\in\widehat B_i\setminus\widehat B_{i+1}\), the rejection certificate records rank \(i\), prefix \(z\preceq b\), and \(o_{\rm miss}\in\mathsf{Compat}(z)\) for which no \((o_{\rm miss},b')\in\widehat B_i\) extends \(z\).
+% 对每个 \((o_{\rm rem},b)\in\widehat B_i\setminus\widehat B_{i+1}\)，拒绝证书都会记录秩 \(i\)、前缀 \(z\preceq b\)，以及一个 \(o_{\rm miss}\in\mathsf{Compat}(z)\)，使得没有 \((o_{\rm miss},b')\in\widehat B_i\) 扩展 \(z\)。
+For any post-fixed family \(P\), induction gives \(P\subseteq\widehat B_i\): the base follows from \(\widehat B_0\), and each cause excludes its removed pair from the next round.
+% 对任意后不动点族 \(P\)，归纳可得 \(P\subseteq\widehat B_i\)：基础情形由 \(\widehat B_0\) 得到，而每个原因都会将其对应的被移除二元组排除在下一轮之外。
+Thus an empty final family excludes every realization.
+% 因此，最终族为空即可排除所有实现。
+The installation checker recomputes the base, chain, causes, and survivor witnesses.
+% 安装检查器会重新计算基础集合、链、原因和幸存者见证。
 
-To preserve admission after each permitted prefix, fix \(H,u,\mathcal A\)
-after deriving \(\mathcal C\), and write
-\(W^\dagger(\mathcal C,\Delta)\) and
-\(\widehat B^\dagger(\mathcal C,\Delta)\) with those parameters suppressed.
+To preserve admission after each permitted prefix, fix \(H,u,\mathcal A\) after deriving \(\mathcal C\), and write \(W^\dagger(\mathcal C,\Delta)\) and \(\widehat B^\dagger(\mathcal C,\Delta)\) with those parameters suppressed.
+% 为在每个允许的前缀之后保持准入，先在派生 \(\mathcal C\) 后固定 \(H,u,\mathcal A\)，再将省略这些参数的记法写作 \(W^\dagger(\mathcal C,\Delta)\) 和 \(\widehat B^\dagger(\mathcal C,\Delta)\)。
 \begin{lemma}[Residual coherence]
+% 残余一致性
 \label{lem:residual-coherence}
 If \(z\in W^\dagger(\mathcal C,\Delta)\), then
+% 若 \(z\in W^\dagger(\mathcal C,\Delta)\)，则：
 \(\Resolve^{\rho'}_\Delta(\mathsf{raw}(z))=z\),
 \(\mathsf{lab}(\Delta_z)=
  \mathsf{lab}(\Delta)\mathsf{auth}(z)\), and
@@ -264,96 +295,116 @@ If \(z\in W^\dagger(\mathcal C,\Delta)\), then
 \end{aligned}
 \]
 where
+% 其中
 \(\widehat B/z=\{(o,v)\mid(o,zv)\in\widehat B\}\).
 \end{lemma}
 \begin{proof}
-Because \(z\) prefixes the projection of a member of
-\(\widehat B^\dagger\), raw recoverability in \cref{lem:resolution} gives the
-first equality.  Its streaming
-case gives the receipt-ledger equality.  Taking the indexed pomset residual removes
-exactly that raw prefix while retaining every contract-compatible outcome
-identity.
-Moreover,
-\(\mathsf{Compat}_{\mathcal C/\mathsf{raw}(z)}(s)
- =\mathsf{Compat}_{\mathcal C}(zs)\).
-Streaming resolution and authority concatenation give the load-bearing base
-equality
+Because \(z\) prefixes the projection of a member of \(\widehat B^\dagger\), raw recoverability in \cref{lem:resolution} gives the first equality.
+% 因为 \(z\) 是 \(\widehat B^\dagger\) 某个成员之投影的前缀，\cref{lem:resolution} 中的原始词可恢复性给出第一个等式。
+Its streaming case gives the receipt-ledger equality.
+% 其流式情形给出回执账本等式。
+Taking the indexed pomset residual removes exactly that raw prefix while retaining every contract-compatible outcome identity.
+% 对带索引的偏序事件集取残余会恰好移除该原始前缀，同时保留每个契约兼容结果的标识。
+Moreover, \(\mathsf{Compat}_{\mathcal C/\mathsf{raw}(z)}(s) =\mathsf{Compat}_{\mathcal C}(zs)\).
+% 此外，\(\mathsf{Compat}_{\mathcal C/\mathsf{raw}(z)}(s) =\mathsf{Compat}_{\mathcal C}(zs)\)。
+Streaming resolution and authority concatenation give the load-bearing base equality
+% 流式解析和权限串接给出如下关键基础等式：
 \[
  \widehat B_0(\mathcal C,\Delta)/z
  =\widehat B_0(\mathcal C/\mathsf{raw}(z),\Delta_z),
 \]
 with the same retained outcome identities, policy, and target registry.
-The quotient \(\widehat B^\dagger/z\) is therefore a post-fixed family for
-the residual operator, hence is contained in its greatest fixed point \(Y\).
+% 且保留的结果标识、策略和目标注册表均相同。
+The quotient \(\widehat B^\dagger/z\) is therefore a post-fixed family for the residual operator, hence is contained in its greatest fixed point \(Y\).
+% 因此，商 \(\widehat B^\dagger/z\) 是残余算子的后不动点族，故包含于其最大不动点 \(Y\) 中。
 Conversely, let \(zY=\{(o,zy)\mid(o,y)\in Y\}\).
-The streaming equation and residual policy safety put \(zY\) inside the
-original \(\widehat B_0\).  Then
-\(\widehat B^\dagger\cup zY\) is post-fixed for the original operator.
-Prefixes \(t\preceq z\) use witnesses already supplied by
-\(\widehat B^\dagger\), while prefixes \(t=zs\) use residual witnesses in \(Y\).
-Greatestness of \(\widehat B^\dagger\) gives
-\(zY\subseteq\widehat B^\dagger\), so
-\(Y=\widehat B^\dagger/z\).  Finally,
-\(\Pref(B)/z=\Pref(B/z)\) for \(z\in\Pref(B)\).  Taking projected prefixes
-gives the generated equality.
+% 反之，令 \(zY=\{(o,zy)\mid(o,y)\in Y\}\)。
+The streaming equation and residual policy safety put \(zY\) inside the original \(\widehat B_0\).
+% 流式等式和残余策略安全性使 \(zY\) 包含于原始的 \(\widehat B_0\) 中。
+Then \(\widehat B^\dagger\cup zY\) is post-fixed for the original operator.
+% 于是，\(\widehat B^\dagger\cup zY\) 是原算子的后不动点。
+Prefixes \(t\preceq z\) use witnesses already supplied by \(\widehat B^\dagger\), while prefixes \(t=zs\) use residual witnesses in \(Y\).
+% 前缀 \(t\preceq z\) 使用 \(\widehat B^\dagger\) 已提供的见证，而前缀 \(t=zs\) 使用 \(Y\) 中的残余见证。
+Greatestness of \(\widehat B^\dagger\) gives \(zY\subseteq\widehat B^\dagger\), so \(Y=\widehat B^\dagger/z\).
+% \(\widehat B^\dagger\) 的最大性给出 \(zY\subseteq\widehat B^\dagger\)，因此 \(Y=\widehat B^\dagger/z\)。
+Finally, \(\Pref(B)/z=\Pref(B/z)\) for \(z\in\Pref(B)\).
+% 最后，对 \(z\in\Pref(B)\) 有 \(\Pref(B)/z=\Pref(B/z)\)。
+Taking projected prefixes gives the generated equality.
+% 对投影取前缀即可得到生成语言的等式。
 \end{proof}
-Thus every admitted prefix retains a safe completion for every residual
-outcome index still contract-compatible with that prefix.
+Thus every admitted prefix retains a safe completion for every residual outcome index still contract-compatible with that prefix.
+% 因此，每个已准入前缀都会为仍与该前缀契约兼容的每个残余结果索引保留一条安全完成路径。
 
 \subsection{The ideal atomic history machine}
+% 理想原子历史机
 \label{sec:ideal}
 
-The ideal labeled transition system (LTS) retains abstract gate and epoch identities so protected calls
-and history edges are defined, but has no phase protocol, seals, preloading,
-or handoff microsteps.  A history edge changes the policy-domain epoch
-atomically.
-Its durable state contains \((\kappa,H,\Delta,\mathsf{out})\) plus
-the current admitted cut
-\(c=(H_c,u,W^\dagger_{H_c,u},\widehat B^\dagger_{H_c,u})\) and resolved prefix
-\(r\).  It has the following transitions.
+The ideal labeled transition system (LTS) retains abstract gate and epoch identities so protected calls and history edges are defined, but has no phase protocol, seals, preloading, or handoff microsteps.
+% 理想标号转移系统（LTS）保留抽象的门和纪元标识，从而定义受保护调用和历史边，但不含阶段协议、封印、预加载或交接微步骤。
+A history edge changes the policy-domain epoch atomically.
+% 历史边以原子方式改变策略域纪元。
+Its durable state contains \((\kappa,H,\Delta,\mathsf{out})\) plus the current admitted cut \(c=(H_c,u,W^\dagger_{H_c,u},\widehat B^\dagger_{H_c,u})\) and resolved prefix \(r\).
+% 其持久状态包含 \((\kappa,H,\Delta,\mathsf{out})\)，以及当前已准入切点 \(c=(H_c,u,W^\dagger_{H_c,u},\widehat B^\dagger_{H_c,u})\) 和已解析前缀 \(r\)。
+It has the following transitions.
+% 它具有以下转移。
 
 \paragraph{History edge}
-Let \(H_c=H\) in the pre-edge state.  \(\mathsf{Edge}(u)\) atomically applies the unique judgment
-\(\Sigma_\zeta;H\vdash u\Downarrow(H',\mathcal C,\eta^-,\eta^+)\) when
-\(\mathsf{Admit}(H,u)\), persists the already version-advanced \(H'\), sets
-\(c:=(H_c,u,W^\dagger_{H_c,u},\widehat B^\dagger_{H_c,u})\), and sets
-\(r:=\epsilon\).  It also returns the stable authenticated bundle
-\(\mathcal H_u^+\).  No handle in that bundle is available before the edge.
-The notation suppresses this schema-determined payload.  No semantic handoff
-protocol is present.  This independent atomic behavior is what the
-implementation must refine.
+% 历史边
+Let \(H_c=H\) in the pre-edge state.
+% 在边之前的状态中令 \(H_c=H\)。
+\(\mathsf{Edge}(u)\) atomically applies the unique judgment \(\Sigma_\zeta;H\vdash u\Downarrow(H',\mathcal C,\eta^-,\eta^+)\) when \(\mathsf{Admit}(H,u)\), persists the already version-advanced \(H'\), sets \(c:=(H_c,u,W^\dagger_{H_c,u},\widehat B^\dagger_{H_c,u})\), and sets \(r:=\epsilon\).
+% 当 \(\mathsf{Admit}(H,u)\) 成立时，\(\mathsf{Edge}(u)\) 原子地应用唯一判断 \(\Sigma_\zeta;H\vdash u\Downarrow(H',\mathcal C,\eta^-,\eta^+)\)，持久化已推进版本的 \(H'\)，设置 \(c:=(H_c,u,W^\dagger_{H_c,u},\widehat B^\dagger_{H_c,u})\)，并设置 \(r:=\epsilon\)。
+It also returns the stable authenticated bundle \(\mathcal H_u^+\).
+% 它还返回稳定的认证包 \(\mathcal H_u^+\)。
+No handle in that bundle is available before the edge.
+% 该包中的任何句柄在此边之前均不可用。
+The notation suppresses this schema-determined payload.
+% 该记法省略了这个由模式决定的载荷。
+No semantic handoff protocol is present.
+% 此处不存在语义交接协议。
+This independent atomic behavior is what the implementation must refine.
+% 实现必须精化的正是这一独立原子行为。
 
 \paragraph{Protected occurrence}
-Let \(x\) be an enabled occurrence of the current frontier with expected gate
-and authenticated cell \(d\).  Resolve it against the current receipts to
-\(a\in\{\Fresh(x,d),\Alias(x,d)\}\).  The transition is enabled exactly when
-\(ra\in W^\dagger_{H_c,u}\).  It atomically residualizes the frontier by \(x\),
-appends \(a\) to \(\chi\), advances \(\nu\), and sets
-\(r:=ra\).  In the \Fresh case it also appends an immutable receipt
-for \(d\), labeled \(\ell(d)\), to \(\Delta\) and enqueues \(d\).  In the \Alias
-case those fields do not change.
+% 受保护发生项
+Let \(x\) be an enabled occurrence of the current frontier with expected gate and authenticated cell \(d\).
+% 令 \(x\) 为当前前沿中已启用的发生项，它具有预期的门和经认证的单元 \(d\)。
+Resolve it against the current receipts to \(a\in\{\Fresh(x,d),\Alias(x,d)\}\).
+% 根据当前回执将其解析为 \(a\in\{\Fresh(x,d),\Alias(x,d)\}\)。
+The transition is enabled exactly when \(ra\in W^\dagger_{H_c,u}\).
+% 当且仅当 \(ra\in W^\dagger_{H_c,u}\) 时，该转移才启用。
+It atomically residualizes the frontier by \(x\), appends \(a\) to \(\chi\), advances \(\nu\), and sets \(r:=ra\).
+% 它以 \(x\) 对前沿原子地取残余，将 \(a\) 追加到 \(\chi\)，推进 \(\nu\)，并设置 \(r:=ra\)。
+In the \Fresh case it also appends an immutable receipt for \(d\), labeled \(\ell(d)\), to \(\Delta\) and enqueues \(d\).
+% 在 \Fresh 情形中，它还会向 \(\Delta\) 追加一条标签为 \(\ell(d)\) 且关于 \(d\) 的不可变回执，并将 \(d\) 入队。
+In the \Alias case those fields do not change.
+% 在 \Alias 情形中，这些字段不发生变化。
 
-Failure of any protected-occurrence guard, including an invalid occurrence,
-gate, or handle, a disabled branch, or
-\(ra\notin W^\dagger_{H_c,u}\), produces \(\mathsf{deny}(x)\) without
-changing state.  An \Alias binds the restored
-occurrence to the same durable result future as its cell.  It advances causal
-history but does not invent a result that the original invocation has not yet
-produced.
+Failure of any protected-occurrence guard, including an invalid occurrence, gate, or handle, a disabled branch, or \(ra\notin W^\dagger_{H_c,u}\), produces \(\mathsf{deny}(x)\) without changing state.
+% 任一受保护发生项守卫失败，包括发生项、门或句柄无效、分支未启用，或 \(ra\notin W^\dagger_{H_c,u}\)，都会产生 \(\mathsf{deny}(x)\) 且不改变状态。
+An \Alias binds the restored occurrence to the same durable result future as its cell.
+% \Alias 将恢复的发生项绑定到其单元所用的同一持久结果 future（期值）。
+It advances causal history but does not invent a result that the original invocation has not yet produced.
+% 它会推进因果历史，但不会虚构原始调用尚未产生的结果。
 
 \paragraph{Retry, release, and crash}
-\(\mathsf{Save}\) takes the trusted checkpoint transition defined in
-\cref{sec:model} as a \(\tau\)-step.  An authenticated same-invocation retry
-follows its \(\chi\)-to-receipt link and returns the same stable result future
-without changing history.  An unauthenticated lookup is denied.
-\Dispatch may release only the oldest prepared outbox item and marks that
-entry released, so the release trace is a prefix of \Fresh preparation order.
-Settlement monotonically advances the receipt phase and fills that future with
-the stable result, but changes no history or authority field.  Crash discards
-nondurable computation and leaves the LTS state unchanged.  We make no claim
-about completion order inside an external network after release.
+% 重试、释放与崩溃
+\(\mathsf{Save}\) takes the trusted checkpoint transition defined in \cref{sec:model} as a \(\tau\)-step.
+% \(\mathsf{Save}\) 将 \cref{sec:model} 中定义的可信检查点转移作为一个 \(\tau\) 步。
+An authenticated same-invocation retry follows its \(\chi\)-to-receipt link and returns the same stable result future without changing history.
+% 经认证的同调用重试沿其从 \(\chi\) 到回执的链接，并返回同一个稳定结果 future（期值），且不改变历史。
+An unauthenticated lookup is denied.
+% 未认证的查找会被拒绝。
+\Dispatch may release only the oldest prepared outbox item and marks that entry released, so the release trace is a prefix of \Fresh preparation order.
+% \Dispatch 只能释放最早准备的发件箱条目并将该条目标记为已释放，因此释放轨迹是 \Fresh 准备顺序的一个前缀。
+Settlement monotonically advances the receipt phase and fills that future with the stable result, but changes no history or authority field.
+% 结算会单调推进回执阶段，并用稳定结果填充该 future（期值），但不改变任何历史或权限字段。
+Crash discards nondurable computation and leaves the LTS state unchanged.
+% 崩溃会丢弃非持久计算，并使 LTS 状态保持不变。
+We make no claim about completion order inside an external network after release.
+% 我们不对释放之后外部网络内部的完成顺序作任何主张。
 
-By \cref{lem:greatest-realization}, every reachable reference prefix retains
-a policy-safe completion until the next explicit history edge changes the
-contract.  The next sections implement this ideal machine without consulting
-the full completion set at every call.
+By \cref{lem:greatest-realization}, every reachable reference prefix retains a policy-safe completion until the next explicit history edge changes the contract.
+% 根据 \cref{lem:greatest-realization}，每个可达的参考前缀都会保留一条策略安全完成路径，直到下一条显式历史边改变契约。
+The next sections implement this ideal machine without consulting the full completion set at every call.
+% 接下来的章节实现这一理想机器，而无需在每次调用时查询完整完成路径集合。

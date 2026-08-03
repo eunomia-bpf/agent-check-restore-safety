@@ -1,31 +1,47 @@
 \section{Scope and Limitations}
+% 范围与局限
 \label{sec:discussion}
 
 \paragraph{Contracts and progress}
-Contracts cover finite registered slices.  An unregistered protected call fails
-closed until another admission.  Prefix-free complete traces distinguish
-stopping from continuing.  Completion nonblocking preserves a safe completion
-for each contract-compatible outcome, but guarantees neither fairness, task completion,
-nor later admission.  Policy covers authority commitments, not prompt
-integrity, confidentiality, action quality, or Agent alignment.
+% 契约与进展
+Contracts cover finite registered slices.
+% 契约覆盖有限的已注册切片。
+An unregistered protected call fails closed until another admission.
+% 未注册的受保护调用会以关闭方式失败，直至再次进行准入。
+Prefix-free complete traces distinguish stopping from continuing.
+% 无前缀关系的完整轨迹用于区分停止与继续。
+Completion nonblocking preserves a safe completion for each contract-compatible outcome, but guarantees neither fairness, task completion, nor later admission.
+% 完成非阻塞性为每个与契约兼容的结果保留一条安全完成路径，但既不保证公平性、任务完成，也不保证后续准入。
+Policy covers authority commitments, not prompt integrity, confidentiality, action quality, or Agent alignment.
+% 策略覆盖权限承诺，而不覆盖提示完整性、机密性、动作质量或 Agent 对齐。
 
 \paragraph{Deployment}
-The theorem assumes complete mediation and linearizable, crash-stable
-transactions.  Remote exactly-once execution still requires idempotency,
-queryable outcomes, or a transactional sink.  A policy-version change requires
-re-admission.  Each disjoint domain has one policy-domain epoch and state machine,
-possibly replicated behind a fault-tolerant store.  Deployment must protect registries and lineage, mediate every
-protected effect, and minimize provenance.  The artifact neither integrates
-with Agent runtimes nor causes external effects or human-subject risk, and it
-does not prove the theorem.  Decentralized controllers and symbolic reduction
-remain future work.
+% 部署
+The theorem assumes complete mediation and linearizable, crash-stable transactions.
+% 该定理假设完全中介以及可线性化、崩溃稳定的事务。
+Remote exactly-once execution still requires idempotency, queryable outcomes, or a transactional sink.
+% 远程恰好一次执行仍需要幂等性、可查询的结果或事务性接收端。
+A policy-version change requires re-admission.
+% 策略版本变更需要重新准入。
+Each disjoint domain has one policy-domain epoch and state machine, possibly replicated behind a fault-tolerant store.
+% 每个互不相交的域拥有一个策略域纪元和一个状态机，并且可能在容错存储之后进行复制。
+Deployment must protect registries and lineage, mediate every protected effect, and minimize provenance.
+% 部署必须保护注册表与谱系、中介每个受保护效果，并最小化来源信息。
+The artifact neither integrates with Agent runtimes nor causes external effects or human-subject risk, and it does not prove the theorem.
+% 该制品既未与 Agent 运行时集成，也不会造成外部效果或涉及人类受试者风险，并且它不证明该定理。
+Decentralized controllers and symbolic reduction remain future work.
+% 去中心化控制器与符号化约简仍属于未来工作。
 
 \section{Conclusion}
+% 结论
 
-An Agent may rewrite its logical history but not committed world facts.  The
-Exact Agent History Realization Theorem decides whether a registered edit has
-a prefix-robust implementation, then constructs its greatest canonical monitor
-or certifies impossibility.  The Agent only requests Fork, Restore, or Merge.
-The trusted installation checker decides, and the durable kernel atomically installs
-the result across \Fresh/\Alias and cut races.  History editing is authority
-editing with exact admission.
+An Agent may rewrite its logical history but not committed world facts.
+% Agent 可以重写其逻辑历史，却不能重写已提交的世界事实。
+The Exact Agent History Realization Theorem decides whether a registered edit has a prefix-robust implementation, then constructs its greatest canonical monitor or certifies impossibility.
+% 精确 Agent 历史实现定理判定一个已注册编辑是否具有前缀鲁棒的实现，随后构造其最大规范监控器，或认证其不可能性。
+The Agent only requests Fork, Restore, or Merge.
+% Agent 只负责请求 Fork、Restore 或 Merge。
+The trusted installation checker decides, and the durable kernel atomically installs the result across \Fresh/\Alias and cut races.
+% 可信安装检查器负责判定，持久内核则跨 \Fresh/\Alias 与切点竞态原子地安装结果。
+History editing is authority editing with exact admission.
+% 历史编辑就是具有精确准入的权限编辑。
