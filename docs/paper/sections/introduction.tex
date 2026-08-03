@@ -22,29 +22,33 @@ This paper asks the following question.
 % 一次 Restore 的端到端过程
 In our running procurement history, the Agent saves checkpoint \(k\) before approval, the approval later commits, and the Agent eventually submits only \(u=\mathsf{RestoreLive}(b,k,\sigma)\).
 % 在贯穿全文的采购历史中，Agent 在审批前保存检查点 \(k\)，该审批随后提交，而 Agent 最终仅提交 \(u=\mathsf{RestoreLive}(b,k,\sigma)\)。
-Before execution, \(\mathsf{CheckReg}(A,R)\) checks the typed procurement effect boundary against the finite registered slice \(R\) and establishes \(A\sqsubseteq R\).
-% 执行之前，\(\mathsf{CheckReg}(A,R)\) 根据有限注册切片 \(R\) 检查类型化采购效果边界，并建立 \(A\sqsubseteq R\)。
+Before execution, \(\mathsf{CheckReg}(\mathcal W,R)\) checks the typed procurement effect boundary against the finite registered slice \(R\) and establishes \(\mathcal W\sqsubseteq_\lambda R\) for the registered lowering \(\lambda\).
+% 执行之前，\(\mathsf{CheckReg}(\mathcal W,R)\) 根据有限注册切片 \(R\) 检查类型化采购效果边界，并为已注册降低映射 \(\lambda\) 建立 \(\mathcal W\sqsubseteq_\lambda R\)。
 Registration derives cells from canonical invocations, and the checker rejects a missing promised outcome, an unmediated durable edge, or an inconsistent receipt binding.
 % 注册过程从规范调用推导单元，而检查器会拒绝遗漏承诺结果、未受中介的持久边或不一致的回执绑定。
 At Restore, the trusted controller snapshots \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\), re-derives every schema-preserved outcome and occurrence--cell identity, and computes the greatest prefix-robust fixed point.
 % 在 Restore 时，可信控制器快照 \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\)，重新推导模式所保留的每个结果及发生项--单元标识关系，并计算前缀鲁棒最大不动点。
-Its external result is either \(\mathsf{Install}(\mathsf{Can}(W^\dagger,B^\dagger),\eta^+)\) or \(\mathsf{Reject}(\mathit{certificate})\).
-% 它的外部结果要么是 \(\mathsf{Install}(\mathsf{Can}(W^\dagger,B^\dagger),\eta^+)\)，要么是 \(\mathsf{Reject}(\mathit{certificate})\)。
+Its uncapped semantic result is either \(\mathsf{Install}(\mathsf{Can}(W^\dagger,B^\dagger),\eta^+)\) or \(\mathsf{Reject}(\mathit{certificate})\).
+% 它的无上限语义结果要么是 \(\mathsf{Install}(\mathsf{Can}(W^\dagger,B^\dagger),\eta^+)\)，要么是 \(\mathsf{Reject}(\mathit{certificate})\)。
 After installation, every protected call is classified as \Fresh, \Alias, or denied, and the restored approval becomes a receipt-reusing \Alias rather than a second local outbox preparation.
 % 安装之后，每个受保护调用都被分类为 \Fresh、\Alias 或拒绝，而恢复后的审批成为复用回执的 \Alias，而非第二次本地发件箱准备。
-An empty result rejects the Restore with a ranked elimination certificate, and the Agent can neither weaken the derived target nor bypass the installed monitor.
-% 空结果会以带秩淘汰证书拒绝 Restore，且 Agent 既不能弱化派生目标，也不能绕过已安装监控器。
+A verified empty fixed point rejects the Restore with a ranked elimination certificate, and the Agent can neither weaken the derived target nor bypass the installed monitor.
+% 经验证的空不动点会以带秩淘汰证书拒绝 Restore，且 Agent 既不能弱化派生目标，也不能绕过已安装监控器。
 \Cref{sec:lifecycle} carries this exact history through Fork, Merge, both cut races, and the later Restore.
 % \Cref{sec:lifecycle} 沿用这段完全相同的历史，依次展开 Fork、Merge、两类切点竞态和随后的 Restore。
 
 Closest Agent systems provide branching, versioned histories, staged effects, transactions, or recovery checks, but none characterizes exactly which topology-changing edits preserve every promised outcome or constructs the greatest enforcing monitor~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart}.
 % 最接近的 Agent 系统提供分支、版本化历史、分阶段效果、事务或恢复检查，但没有系统精确刻画哪些改变拓扑的编辑会保留每个已承诺结果，也没有构造最大的执行监控器~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart}。
-Generalized nonblocking and multitasking control synthesize maximal behavior once the plant and conditional task markings are supplied; live synthesis derives unfinished obligations from a supplied old specification and execution; suppression enforcement synthesizes correct monitors from a supplied formula~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,aceto2018suppressions}.
-% 广义非阻塞与多任务控制在被控对象和条件任务标记给定后综合最大行为；在线综合从给定的旧规范和执行中推导未完成义务；抑制式执行则从给定公式综合正确监控器~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,aceto2018suppressions}。
+Generalized nonblocking and multitasking control synthesize maximal behavior once the plant and conditional task markings are supplied.
+% 广义非阻塞与多任务控制在被控对象和条件任务标记给定后综合最大行为。
+Live synthesis derives unfinished obligations from a supplied old specification and execution, while suppression enforcement synthesizes correct monitors from a supplied formula~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,aceto2018suppressions}.
+% 在线综合从给定的旧规范和执行中推导未完成义务，而抑制式执行从给定公式综合正确监控器~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,aceto2018suppressions}。
 Our theorem begins at the checked typed Agent workflow and ends at the installed history edge: authenticated history determines outcomes, occurrence--cell/receipt state, and the exact cut consumed by synthesis, and an epoch transaction realizes the answer.
 % 我们的定理始于经检查的类型化 Agent 工作流，止于已安装的历史边：经认证历史决定综合所需的结果、发生项--单元/回执状态与精确切点，而纪元事务实现该判定。
-For each proper projection of this relational security state, two finite registered histories have the same retained view but require opposite admission or installation decisions.
-% 对这一关系安全状态的每个真投影，都存在两条有限注册历史具有相同的保留视图，却要求相反的准入或安装判定。
+For every projection omitting one of the four semantic factors, two finite registered histories have the same retained view but require opposite admission or installation decisions.
+% 对于每个遗漏四个语义因子之一的投影，都存在两条有限注册历史具有相同的保留视图，却要求相反的准入或安装判定。
+The same holds for either incidence erasure proved in the appendix.
+% 附录证明的两种关联擦除也具有同样性质。
 The full state remains closed across successive edits, protected calls, and authenticated live schema/policy extensions rather than characterizing only one rewrite.
 % 完整状态在连续编辑、受保护调用以及经认证的在线模式/策略扩展之间保持闭合，而非只刻画一次重写。
 
@@ -64,8 +68,10 @@ When nonempty, it yields the greatest permitted behavior \(W^\dagger\), and when
 Ordinary marker nonblocking over traces alone loses both outcome compatibility and occurrence--cell identity (\cref{prop:outcome-necessary,thm:exact-history}).
 % 普通的纯轨迹标记非阻塞会丢失结果兼容性和发生项--单元标识这两类信息（\cref{prop:outcome-necessary,thm:exact-history}）。
 
-For a structural edit, the Agent names only live objects and an immutable schema; for online growth, it names only an authenticated extension-record identifier.
-% 对于结构编辑，Agent 仅指名活对象和不可变模式；对于在线增长，它仅指名一个经认证的扩展记录标识符。
+For a structural edit, the Agent names only live objects and an immutable schema.
+% 对于结构编辑，Agent 仅指名活对象和不可变模式。
+For online growth, it names only an authenticated extension-record identifier.
+% 对于在线增长，它仅指名一个经认证的扩展记录标识符。
 A trusted judgment derives the target and preserves outcomes, occurrences, cells, lineage, and causal order except under schema-authorized retirement.
 % 可信判定推导目标，并保持结果、发生项、单元、谱系和因果顺序，除非模式授权将其退役。
 Resolution distinguishes \Fresh commitments from receipt-silent \Alias progress, and each cut replaces the whole policy-domain epoch to order old uses against target activation.

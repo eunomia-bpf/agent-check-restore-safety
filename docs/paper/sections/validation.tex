@@ -2,7 +2,11 @@
 % 可执行验证
 \label{sec:validation}
 
-Five Lean modules pass direct \texttt{--trust=0} checking, with exact mapping in \cref{app:lean-map}; factor lower bounds, general pomset lifting, and durable bisimulation remain mathematical proofs.
-% 五个 Lean 模块通过直接 \texttt{--trust=0} 检查，精确映射见 \cref{app:lean-map}；因子下界、一般偏序事件集提升与持久互模拟仍由数学证明给出。
-Eighty-one tests exercise critical cases; five-process medians are \(53.47\), \(5.51\), and \(50.35\) ms for 128-outcome admission, 128-outcome rejection, and 720 completions, respectively; inputs above stated bounds are rejected before search, and these are decision-kernel rather than Agent-runtime measurements.
-% 八十一项测试运行关键案例；五进程耗时中位数分别为 \(53.47\)、\(5.51\) 与 \(50.35\) ms，对应 128 个结果的准入、128 个结果的拒绝与 720 条完成路径；超过既定边界的输入会在搜索前被拒绝，且这些数据属于判定内核而非 Agent 运行时测量。
+Five Lean modules pass \texttt{--trust=0} with mapping in \cref{app:lean-map}.
+% 五个 Lean 模块通过 \texttt{--trust=0} 检查，映射见 \cref{app:lean-map}。
+The factor bounds, pomset lifting, and bisimulation remain mathematical.
+% 因子下界、偏序事件集提升与互模拟仍由数学证明给出。
+Across 81 tests, five-process medians are \(53.47/5.51/50.35\) ms for 128-outcome admission/rejection and 720 completions.
+% 在 81 项测试中，128 个结果的准入/拒绝与 720 条完成路径的五进程中位数为 \(53.47/5.51/50.35\) ms。
+Over-cap inputs return \(\mathsf{ResourceLimit}\) without installation, and all measurements concern the decision kernel.
+% 超过上限的输入返回 \(\mathsf{ResourceLimit}\) 且不安装，所有测量均针对判定内核。

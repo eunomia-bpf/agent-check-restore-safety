@@ -52,6 +52,12 @@ Success returns \(\widehat B^\dagger\), the complete chain and coverage witnesse
 \]
 where \(\kappa_Z=\kappa\), \(H_c=H\) is the authenticated pre-installation history, and the history judgment mints \(\eta^+\).
 % 其中 \(\kappa_Z=\kappa\)，\(H_c=H\) 是经认证的安装前历史，而历史判定生成 \(\eta^+\)。
+Mathematical \(\mathsf{Compile}\) is total on finite inputs.
+% 数学 \(\mathsf{Compile}\) 在有限输入上全定义。
+The bounded wrapper may instead return \(\mathsf{ResourceLimit}(b,n)\), which installs nothing and proves neither admission nor impossibility.
+% 有界包装器可能改为返回 \(\mathsf{ResourceLimit}(b,n)\)，它不安装任何内容，也不证明准入或不可能性。
+Only a verified chain ending in \(\varnothing\) yields \(\mathsf{Impossible}(C_{\rm fp})\).
+% 只有以 \(\varnothing\) 结束的经验证链才产生 \(\mathsf{Impossible}(C_{\rm fp})\)。
 
 Let \(\mathsf{enc}\) be canonical and length-delimited, with \(\kappa\) authenticating \(\mathcal A\).
 % 令 \(\mathsf{enc}\) 为规范且带长度分隔的编码，并由 \(\kappa\) 认证 \(\mathcal A\)。
@@ -100,8 +106,8 @@ where \(\mathsf{phase}\) is a finite partial map with \(\mathsf{phase}(\eta)=\bo
 % 其中 \(\mathsf{phase}\) 是有限偏映射；未分配纪元满足 \(\mathsf{phase}(\eta)=\bot\)，否则其值为 \(\mathsf{inactive}\)、\(\mathsf{active}\) 或 \(\mathsf{closed}\)。
 Reserve \(u=\mathsf{Root}(R,n)\) for bootstrap only.
 % 保留 \(u=\mathsf{Root}(R,n)\) 仅用于引导。
-The root rule is enabled only when \(\mathsf{CheckReg}(A,R)\) accepts a finite typed Agent workflow \(A\) and registered slice \(R\).
-% 只有当 \(\mathsf{CheckReg}(A,R)\) 接受有限类型化 Agent 工作流 \(A\) 与注册切片 \(R\) 时，根规则才启用。
+The root rule is enabled only when \(\mathsf{CheckReg}(\mathcal W,R)\) accepts a finite typed Agent workflow \(\mathcal W\) and registered slice \(R\).
+% 只有当 \(\mathsf{CheckReg}(\mathcal W,R)\) 接受有限类型化 Agent 工作流 \(\mathcal W\) 与注册切片 \(R\) 时，根规则才启用。
 The deterministic judgment \(\mathsf{Reg}(R,n)\vdash\mathsf{Root}\Downarrow(H_R^+,\mathcal C_R,\bot,\eta_R)\) constructs \(\mathsf{src}_R^-=(\kappa,H_R^-,\epsilon,\epsilon,\mathcal A)\) from registered slice \(R\) and private namespace \(n\), with empty progress, checkpoints, bindings, and epoch, sets \(\mathsf{Req}_{\mathsf{Root}}\) to \(R\)'s root outcomes, and defines \(\mathsf{Lift}_{\mathsf{Root}}(t,o)\Longleftrightarrow t=o\).
 % 确定性判定 \(\mathsf{Reg}(R,n)\vdash\mathsf{Root}\Downarrow(H_R^+,\mathcal C_R,\bot,\eta_R)\) 从已注册切片 \(R\) 和私有命名空间 \(n\) 构造 \(\mathsf{src}_R^-=(\kappa,H_R^-,\epsilon,\epsilon,\mathcal A)\)，其中进度、检查点、绑定和纪元均为空；它将 \(\mathsf{Req}_{\mathsf{Root}}\) 设为 \(R\) 的根结果，并定义 \(\mathsf{Lift}_{\mathsf{Root}}(t,o)\Longleftrightarrow t=o\)。
 The checked record \(\mathsf{cert}(\eta)=c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\) contains source cut \(\mathsf{src}_c=(\kappa,H_c,\Delta_c,\mathsf{out}_c,\mathcal A)\), pre-progress target \(H_c^+\), and ideal-cut projection \(\mathsf{icut}(c)=(H_c,u,W,\widehat B)\).
@@ -245,8 +251,10 @@ The transaction preserves unrelated inactive or closed records, exposes \(\mathc
 % 该事务保留无关的非活跃或已关闭记录，仅在 \(\eta^+\) 激活后公开 \(\mathcal H_u^+\)，并让恢复过程从持久目标注册表取回丢失的回复。
 Old handles for unresolved occurrences fail the refreshed registry/gate check, whereas same-invocation \Retry follows its archived \(\chi\)-to-receipt link.
 % 未解析发生项的旧句柄无法通过更新后的注册表/门检查，而同调用 \Retry 沿其已归档的从 \(\chi\) 到回执的链接。
-Success is observed as \(\mathsf{Edge}(u)\), suppressing the schema-determined bundle; failure is a state-preserving internal stutter.
-% 成功被观测为 \(\mathsf{Edge}(u)\)，并省略由模式决定的包；失败则是保持状态的内部停顿。
+Success is observed as \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\), retaining the schema-determined reply bundle modulo private-name renaming.
+% 成功被观测为 \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\)，并在私有名称重命名取商意义下保留模式决定的回复包。
+Failure is a state-preserving internal stutter.
+% 失败是保持状态的内部停顿。
 
 \paragraph{Remaining rules}
 % 其余规则
@@ -254,12 +262,16 @@ Success is observed as \(\mathsf{Edge}(u)\), suppressing the schema-determined b
 % \(\mathsf{Preload}(\eta,Z)\) 是一个 \(\tau\) 步，它可以分配尚未分配的纪元或改变处于非活跃且未绑定状态的纪元，并使该纪元保持非活跃，而失败的安装是保持状态的 \(\tau\) 步。
 \(\mathsf{Save}\) takes the trusted checkpoint transition in \cref{sec:model}.
 % \(\mathsf{Save}\) 执行 \cref{sec:model} 中的可信检查点转移。
-Authenticated retry, bundle retrieval, and result delivery are \(\tau\)-steps that return durable values without changing the security core, while settlement monotonically fills the corresponding durable result future and crash is a security-state self-loop.
-% 经认证的重试、包取回和结果交付都是返回持久值且不改变安全核心的 \(\tau\) 步，而结算单调填充相应的持久结果期值，崩溃则是安全状态自环。
+Authenticated retry, bundle retrieval, and result delivery emit \(\mathsf{Return}(t,[v]_{\cong})\) without changing the security core, while settlement emits \(\mathsf{Settle}(d,[v]_{\cong})\) and monotonically fills the corresponding durable result future.
+% 经认证的重试、包取回和结果交付发出 \(\mathsf{Return}(t,[v]_{\cong})\) 且不改变安全核心，而结算发出 \(\mathsf{Settle}(d,[v]_{\cong})\) 并单调填充相应的持久结果期值。
+Crash is a security-state self-loop.
+% 崩溃是安全状态自环。
 \(\Dispatch(d)\) is enabled only for the outbox head and marks exactly that entry released.
 % \(\Dispatch(d)\) 仅对发件箱头部启用，并且仅将该条目标记为已释放。
-Together with the total denial rule above, these clauses make the compiled LTS transition relation explicit.
-% 这些条款与上述全定义拒绝规则共同明确了编译后 LTS 的转移关系。
+The compiled LTS is the least relation generated by \cref{eq:use-rule} and the installation, denial, preload, Save, retry/retrieval/delivery, \(\Dispatch\), settlement, failed-installation, and crash rules above.
+% 编译后 LTS 是由 \cref{eq:use-rule} 与上述安装、拒绝、预加载、Save、重试/取回/交付、\(\Dispatch\)、结算、失败安装和崩溃规则生成的最小关系。
+Pure \(\mathsf{Compile}\) is meta-level.
+% 纯 \(\mathsf{Compile}\) 位于元层。
 
 \begin{lemma}[History-cut linearization]
 % 历史切点线性化

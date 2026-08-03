@@ -2,7 +2,9 @@
 % 相关工作
 \label{sec:related}
 
-Rebound, ACRFence, DART, and Atomix address rollback, fencing, restore admission, and settlement~\cite{burke2026rebound,zheng2026acrfence,yang2026dart,mohammadi2026atomix}, but none derives six-edit obligations from the outcome--occurrence--cell--receipt relation or returns greatest realizations or impossibility proofs.
-% Rebound、ACRFence、DART 与 Atomix 分别处理回滚、隔离、恢复准入与结算~\cite{burke2026rebound,zheng2026acrfence,yang2026dart,mohammadi2026atomix}，但它们都不从结果--发生项--单元--回执关系推导六种编辑义务，也不返回最大实现或不可能性证明。
-Prior synthesis and enforcement start from supplied control instances~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,aceto2018suppressions}; our theorem derives Agent-history obligations and spans checked admission to epoch realization.
-% 既有综合与执行从给定控制实例出发~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,aceto2018suppressions}；我们的定理从 Agent 历史推导义务，并贯通经检查准入到纪元实现。
+Agent work covers rollback, commit authority, fencing, recovery, settlement, or supplied-trace validation~\cite{burke2026rebound,santos2026committime,rhodes2026proofexecution,zheng2026acrfence,yang2026dart,mohammadi2026atomix}, but not six-edit obligation derivation and greatest realization from the outcome--occurrence--cell--receipt relation.
+% Agent 工作覆盖回滚、提交权限、隔离、恢复、结算或给定轨迹验证~\cite{burke2026rebound,santos2026committime,rhodes2026proofexecution,zheng2026acrfence,yang2026dart,mohammadi2026atomix}，但不从结果--发生项--单元--回执关系派生六种编辑义务与最大实现。
+Prior synthesis receives supplied plants/markings~\cite{dequeiroz2005multitasking,malik2008generalised,fabian2000mutually,minkenberg2026multimodal}, old/new models~\cite{finkbeiner2022live,thuijsman2022transformational,nahabedian2020dynamic,amram2022dynamic}, or policies/compensations~\cite{ligatti2005edit,aceto2018suppressions,garciamolina1987sagas}.
+% 既有综合接收给定被控对象/标记~\cite{dequeiroz2005multitasking,malik2008generalised,fabian2000mutually,minkenberg2026multimodal}、新旧模型~\cite{finkbeiner2022live,thuijsman2022transformational,nahabedian2020dynamic,amram2022dynamic}，或策略/补偿~\cite{ligatti2005edit,aceto2018suppressions,garciamolina1987sagas}。
+Our theorem instead derives the Agent-history instance and carries its exact answer through atomic epoch installation.
+% 相比之下，我们的定理派生 Agent 历史实例，并将其精确答案贯穿到原子纪元安装。

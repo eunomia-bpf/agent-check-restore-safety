@@ -273,24 +273,38 @@ Before a checked cut, the protected-call issuer may instantiate finitely many pr
 % 在一个经检查的切点之前，受保护调用发行方可以实例化有限个预授权模式模板：对于调用 \(m\)，它计算 \(m^\circ=\mathsf{canon}_\kappa(m)\)，只复用已认证用于 \(m^\circ\) 的单元或分配新单元，并把 \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{lineage})\) 签入经认证的注册表。
 The resulting finite registry defines one registered protected-call slice \(R\), which remains immutable during a checked cut; unmatched calls fail closed.
 % 由此得到的有限注册表定义一个注册受保护调用切片 \(R\)，该切片在一个经检查的切点期间保持不可变；不匹配的调用以关闭方式失败。
+The platform supplies authenticated \(\mathcal W,R\), schemas, canonicalization, policy, checkpoints, and the receipt/outbox cut.
+% 平台提供经认证的 \(\mathcal W,R\)、模式、规范化规则、策略、检查点与回执/发件箱切点。
+From these inputs and an identifier-only Agent request, the controller derives the target, obligations, resolution, fixed point, monitor, certificate, epoch, and handles.
+% 控制器根据这些输入与 Agent 仅含标识符的请求派生目标、义务、解析、不动点、监控器、证书、纪元和句柄。
+The Agent may supply or weaken none of these derived objects.
+% Agent 不得提供或弱化这些派生对象中的任何一个。
 
 \begin{definition}[Checked registration refinement]
 % 经检查的注册精化
 \label{def:registration-refinement}
-A finite typed Agent workflow slice \(A\) declares its platform-promised outcomes, protected effect sites and causal orders, and a finite boundary whose edges are classified as internal or durably external.
-% 一个有限的类型化 Agent 工作流切片 \(A\) 声明平台承诺的结果、受保护效果位置及其因果顺序，以及一个将边分类为内部边或持久外部边的有限边界。
-The refinement \(A\sqsubseteq R\) relates every promised outcome and protected site to \(R\) and checks protected-issuer cell attestations against the current receipt cut.
-% 精化关系 \(A\sqsubseteq R\) 将每个承诺结果与受保护位置关联到 \(R\)，并依据当前回执切点检查受保护调用发行方的单元证明。
-\(\mathsf{CheckReg}(A,R)\) accepts exactly when outcome/site incidence and order are preserved; registered cell equality is the quotient induced by canonical invocation equality; every declared durably external site lowers to its unique protected \Use and the backend exposes no raw durable-effect instruction; and source and registered receipt evolution agree with \(\Resolve\) at every prefix.
-% \(\mathsf{CheckReg}(A,R)\) 当且仅当以下条件成立时接受：结果/位置关联关系与次序得到保持；注册单元相等关系恰为规范调用相等关系诱导的商；每个声明为持久外部的位置都降低为其唯一的受保护 \Use，且后端不暴露原始持久效果指令；源执行与注册执行的回执演化在每个前缀处都与 \(\Resolve\) 一致。
-No promised outcome or protected site may disappear during registration, and registration never removes a receipt.
-% 注册过程中不得丢失任何承诺结果或受保护位置，并且注册绝不移除回执。
+A finite typed Agent workflow \(\mathcal W\) is an outcome-labeled LTS with internal \(\tau\)-edges and declared durable sites.
+% 有限类型化 Agent 工作流 \(\mathcal W\) 是一个带结果标签的 LTS，具有内部 \(\tau\) 边与声明的持久位置。
+For complete \(e\), \(\partial e=(o,s_1\cdots s_n)\) erases \(\tau\), and \(e\equiv_\partial e'\) means equal projections.
+% 对完整 \(e\)，\(\partial e=(o,s_1\cdots s_n)\) 擦除 \(\tau\)，而 \(e\equiv_\partial e'\) 表示投影相等。
+\(R\) stores a candidate lowering \(\lambda\) from each site to one registered occurrence and protected \Use.
+% \(R\) 存储候选降低映射 \(\lambda\)，把每个位置映射到一个已注册发生项及一次受保护 \Use。
+\(\mathsf{BRuns}(R)\) is the finite outcome-indexed boundary language obtained by linearizing \(R\)'s registered root pomsets and labeling every occurrence by its registered protected \Use.
+% \(\mathsf{BRuns}(R)\) 是通过线性化 \(R\) 的已注册根偏序事件集，并以其已注册受保护 \Use 标记每个发生项而得到的有限结果索引边界语言。
+\(\mathcal W\sqsubseteq_\lambda R\) means that \(\lambda\) induces a bijection from boundary classes to \(\mathsf{BRuns}(R)\) that preserves outcomes, incidence, and order.
+% \(\mathcal W\sqsubseteq_\lambda R\) 表示 \(\lambda\) 从边界等价类到 \(\mathsf{BRuns}(R)\) 诱导一个保持结果、关联与次序的双射。
+Cells are exactly the canonical-invocation quotient, and lowering is total, unique, and exposes no raw durable instruction.
+% 单元恰为规范调用商，并且降低全定义、唯一且不暴露原始持久指令。
+Prefix receipt evolution commutes with \(\Resolve\) without dropping a promise, site, or receipt.
+% 前缀回执演化与 \(\Resolve\) 交换，并且不丢弃任何承诺、位置或回执。
+\(\mathsf{CheckReg}(\mathcal W,R)\) is the finite conjunction of these independently defined checks over the explicit LTSs and stored \(\lambda\).
+% \(\mathsf{CheckReg}(\mathcal W,R)\) 是在显式 LTS 与所存 \(\lambda\) 上对这些独立定义检查的有限合取。
 \end{definition}
 
-The registration-reflection clause of \cref{thm:exact-history} proves that the finite checker accepts exactly this refinement and that compilation and pullback give a bijection between source-slice and registered realizations.
-% \cref{thm:exact-history} 的注册反射条款证明，有限检查器恰好接受这一精化，并且编译与回拉会在源切片实现与注册实现之间给出一个双射。
-Thus adequacy is checked rather than supplied as a semantic oracle; the theory neither infers natural-language contracts nor equates a durable local commit with remote physical exactly-once execution.
-% 因而，充分性经过检查，而非作为语义预言机被提供；该理论既不推断自然语言契约，也不把持久本地提交等同于远端物理意义上的恰好一次执行。
+\Cref{thm:exact-history} proves checker reflection and a source-boundary/registered-realization bijection.
+% \Cref{thm:exact-history} 证明检查器反射以及源边界与注册实现之间的双射。
+The theory neither infers natural-language contracts nor equates local commit with remote physical exactly-once execution.
+% 该理论既不推断自然语言契约，也不把本地提交等同于远端物理恰好一次执行。
 
 \subsection{Six structural rewrite rules}
 % 六条结构重写规则

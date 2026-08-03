@@ -33,57 +33,62 @@ For semantic answer \(\mathsf{Ans}(V,q)\), an equivariant abstraction \(\tau\) i
 Thus the lower bound concerns information, not a literal storage layout.
 % 因而，该下界约束的是信息，而非字面存储布局。
 
-\paragraph{Durable observation}
-% 持久观测
-The security alphabet is \(\mathcal O=\{\mathsf{Edge}(u),\Fresh(x,d),\Alias(x,d),\mathsf{deny}(x),\Dispatch(d)\}\).
-% 安全字母表为 \(\mathcal O=\{\mathsf{Edge}(u),\Fresh(x,d),\Alias(x,d),\mathsf{deny}(x),\Dispatch(d)\}\)。
-The relabeling \(\mathsf{obs}\) exposes protected \Fresh/\Alias uses, successful history edges, denials, and dispatches and maps compilation protocol to \(\tau\); write \(\xRightarrow{\ell}=\tau^*\ell\tau^*\).
-% 重标记 \(\mathsf{obs}\) 暴露受保护的 \Fresh/\Alias 使用、成功历史边、拒绝与派发，并把编译协议映射为 \(\tau\)；记 \(\xRightarrow{\ell}=\tau^*\ell\tau^*\)。
-The normalizations \(\alpha_I,\alpha_S\) retain history, receipts, outbox, semantic cut, resolved prefix, results, current epoch, and live bindings but erase representation-only protocol state.
-% 规范化 \(\alpha_I,\alpha_S\) 保留历史、回执、发件箱、语义切点、已解析前缀、结果、当前纪元与活跃绑定，但擦除仅与表示有关的协议状态。
-Define
-% 定义
+\paragraph{Durable Agent-API observation}
+% 持久 Agent API 观测
+\(\mathcal O_{\rm api}\) contains \(\mathsf{Edge}(u,[\mathcal H]_{\cong})\), \Fresh/\Alias, \(\mathsf{deny}(x)\), \(\Dispatch(d)\), \(\mathsf{Settle}(d,[v]_{\cong})\), and \(\mathsf{Return}(t,[v]_{\cong})\).
+% \(\mathcal O_{\rm api}\) 包含 \(\mathsf{Edge}(u,[\mathcal H]_{\cong})\)、\Fresh/\Alias、\(\mathsf{deny}(x)\)、\(\Dispatch(d)\)、\(\mathsf{Settle}(d,[v]_{\cong})\) 和 \(\mathsf{Return}(t,[v]_{\cong})\)。
+Private names share one renaming orbit, public result bytes remain visible, and \(\mathsf{obs}_{\rm api}\) maps only Save, computation, inactive preload, failed installation, and recovered crash to \(\tau\).
+% 私有名称共享一个重命名轨道，公开结果字节仍然可见，而 \(\mathsf{obs}_{\rm api}\) 只把 Save、计算、非活跃预加载、失败安装与恢复崩溃映射为 \(\tau\)。
+Write \(\xRightarrow{\ell}=\tau^*\ell\tau^*\) and \(\xRightarrow{\tau}=\tau^*\).
+% 记 \(\xRightarrow{\ell}=\tau^*\ell\tau^*\) 且 \(\xRightarrow{\tau}=\tau^*\)。
+Let \(K=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\), \(\mathsf{Live}(H)=X_{\sem{H.T}}\), and \(I=(K,c_I,r_I)\).
+% 令 \(K=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\)、\(\mathsf{Live}(H)=X_{\sem{H.T}}\)，并令 \(I=(K,c_I,r_I)\)。
 \[
 \begin{aligned}
- I\,\mathcal R\,S\quad\Longleftrightarrow\quad
- &\exists c,r.\ \mathsf{AgentSec}(S;c,r)\\[-2pt]
- &{}\land\alpha_I(I;\mathsf{icut}(c),r)=\alpha_S(S;c,r).
+\alpha_I(I)&=(K,c_I,r_I,H.\eta,H.\beta),\\
+\alpha_S(S;c,r)&=(K,\mathsf{icut}(c),r,H.\eta,\\[-2pt]
+&\qquad \mathsf{bind}|_{\mathsf{Live}(H)}),\\
+I\,\mathcal R\,S&\Longleftrightarrow
+\exists c,r.\ \mathsf{AgentSec}(S;c,r)\\[-2pt]
+&\qquad\land\alpha_I(I)=\alpha_S(S;c,r).
 \end{aligned}
 \]
+\(\alpha_S\) erases representation/protocol state but retains the policy, results, cut, and every \(\mathcal O_{\rm api}\)-visible field.
+% \(\alpha_S\) 擦除表示/协议状态，但保留策略、结果、切点以及每个通过 \(\mathcal O_{\rm api}\) 可见的字段。
 A \emph{good initial pair} satisfies \(\mathcal R\) with \(r=\epsilon\) immediately after a checked atomic installation.
 % \emph{良好初始对}在一次经检查的原子安装后立即以 \(r=\epsilon\) 满足 \(\mathcal R\)。
 
 \begin{theorem}[Agent Security-State Characterization]
 % Agent 安全状态刻画
 \label{thm:exact-history}
-Assume the trusted boundary of \cref{sec:model}.
-% 假定 \cref{sec:model} 的可信边界。
-For every finite typed Agent workflow \(A\) and registered slice \(R\), the first clause holds.
-% 对每个有限类型化 Agent 工作流 \(A\) 与注册切片 \(R\)，第一条款均成立。
-Whenever registration accepts and checked root installation has produced a finite reachable \(S\) satisfying \(\mathsf{AgentSec}(S;c,r)\), let \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\); the remaining clauses hold for every such state and request.
-% 只要注册被接受且经检查的根安装已经产生一个满足 \(\mathsf{AgentSec}(S;c,r)\) 的有限可达状态 \(S\)，就令 \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\)；其余条款对每个这样的状态和请求均成立。
-\begin{enumerate}[leftmargin=*,itemsep=2pt]
+Under \cref{sec:model}'s boundary, clause 1 holds for every finite \(\mathcal W,R\).
+% 在 \cref{sec:model} 的边界下，第 1 条对每个有限 \(\mathcal W,R\) 成立。
+Clauses 2--5 hold for every \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) at any finite reachable checked-root state satisfying \(\mathsf{AgentSec}(S;c,r)\).
+% 第 2--5 条对任意有限可达且满足 \(\mathsf{AgentSec}(S;c,r)\) 的经检查根状态上的每个 \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) 成立。
+\begin{enumerate}[leftmargin=*,itemsep=0pt]
 \item \textbf{Registration reflection.}
 % 注册反射。
-\(\mathsf{CheckReg}(A,R)\) accepts iff \(A\sqsubseteq R\) satisfies \cref{def:registration-refinement}.
-% 当且仅当 \(A\sqsubseteq R\) 满足 \cref{def:registration-refinement} 时，\(\mathsf{CheckReg}(A,R)\) 才接受。
-On acceptance, compilation and pullback are inverse on source and registered realizations, preserving outcome indices, causal order, canonical cell equality, \Fresh/\Alias resolution, and admission.
-% 接受时，编译与回拉在源工作流实现和注册实现上互为逆映射，并保持结果索引、因果次序、规范单元相等性、\Fresh/\Alias 解析与准入。
-Thus a greatest registered monitor induces the greatest source-workflow monitor, while a missing promise, inconsistent cell row, or unmediated durable edge is rejected before bootstrap.
-% 因而，最大的注册监控器会诱导最大的源工作流监控器，而缺失的承诺、不一致的单元记录或未经中介的持久边会在引导前被拒绝。
+\(\mathsf{CheckReg}(\mathcal W,R)\) accepts iff stored \(\lambda\) witnesses \(\mathcal W\sqsubseteq_\lambda R\).
+% 当且仅当所存 \(\lambda\) 见证 \(\mathcal W\sqsubseteq_\lambda R\) 时，\(\mathsf{CheckReg}(\mathcal W,R)\) 才接受。
+Then the \(\lambda\)-lowerings of source executions modulo \(\equiv_\partial\) are order-isomorphic to \(\mathsf{BRuns}(R)\), preserving outcomes, order, cells, \Fresh/\Alias, admission, and the greatest monitor.
+% 此时，模 \(\equiv_\partial\) 的源执行经 \(\lambda\) 降低后与 \(\mathsf{BRuns}(R)\) 序同构，并保持结果、次序、单元、\Fresh/\Alias、准入与最大监控器。
+Missing promises, inconsistent cells, or unmediated durable edges reject before bootstrap.
+% 缺失承诺、不一致单元或未经中介的持久边会在引导前被拒绝。
 
 \item \textbf{Exact compilation.}
 % 精确编译。
-Without a history derivation, \(\mathsf{Compile}\) rejects structurally and both machines disable \(\mathsf{Edge}(u)\).
-% 若历史推导不存在，\(\mathsf{Compile}\) 会作出结构拒绝，且两台机器都禁用 \(\mathsf{Edge}(u)\)。
-Otherwise let \(\delta\) be its unique witness, set \(\mathsf{Out}_\delta=\mathsf{Compile}(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), and let \(c_\delta^+\) be the checked installed record; all subscripts below are \(\delta\)-derived, and the following are equivalent.
-% 否则，令 \(\delta\) 为其唯一见证，置 \(\mathsf{Out}_\delta=\mathsf{Compile}(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并令 \(c_\delta^+\) 为经检查的安装记录；下文所有下标均由 \(\delta\) 派生，且以下条件等价。
+Without a derivation, \(\mathsf{Compile}\) rejects structurally and both machines disable every \(\mathsf{Edge}(u,\cdot)\).
+% 若不存在派生，\(\mathsf{Compile}\) 会作出结构拒绝，且两台机器都禁用每个 \(\mathsf{Edge}(u,\cdot)\)。
+Otherwise let unique witness \(\delta\) derive all subscripts, \(\mathsf{Out}_\delta=\mathsf{Compile}(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), and checked record \(c_\delta^+\).
+% 否则，令唯一见证 \(\delta\) 派生所有下标，令 \(\mathsf{Out}_\delta=\mathsf{Compile}(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并令 \(c_\delta^+\) 为经检查记录。
+The following conditions are equivalent.
+% 以下条件等价。
 \[
 \begin{aligned}
  &\widehat B^\dagger_\delta\ne\varnothing;\\
  &\text{an exact atomic realization of }(H,u,\delta)\text{ exists};\\
  &\mathsf{Out}_\delta\models\cref{eq:install-premise};\\
- &\exists S^+.\ S\xRightarrow{\mathsf{Edge}(u)}S^+
+ &\exists S^+.\ S\xRightarrow{\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})}S^+
        \land\mathsf{AgentSec}(S^+;c_\delta^+,\epsilon).
 \end{aligned}
 \]
@@ -101,10 +106,10 @@ The full join is sufficient, and every proper factor projection is insufficient:
  \quad\Longleftrightarrow\quad
  J=\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}.
 \]
-Every exact abstraction must distinguish the opposite-answer pairs in \cref{tab:projection-pairs}; both incidence erasures remain inexact despite retaining all marginals.
-% 每个精确抽象都必须区分 \cref{tab:projection-pairs} 中答案相反的配对；两种关联擦除即使保留全部边际记录仍不精确。
-No exact compiler factors through caller-proposed target-only \(\tau_{\rm tgt}\); generalized nonblocking becomes exact only after trusted derivation supplies the target and markings.
-% 不存在经由调用方提出的仅目标 \(\tau_{\rm tgt}\) 的精确编译器；广义非阻塞只有在可信推导提供目标与标记之后才变得精确。
+Every exact abstraction distinguishes \cref{tab:projection-pairs}.
+% 每个精确抽象都区分 \cref{tab:projection-pairs}。
+Both incidence erasures and caller-proposed target-only \(\tau_{\rm tgt}\) remain inexact, while generalized nonblocking becomes exact after trusted target/marking derivation.
+% 两种关联擦除与调用方提出的仅目标 \(\tau_{\rm tgt}\) 仍不精确，而广义非阻塞在可信目标/标记派生之后变得精确。
 
 \item \textbf{Sequence closure.}
 % 序列闭包。
@@ -119,23 +124,24 @@ Each fully parameterized trusted event \(e\) induces a partial function \(\parti
   =\partial(\langle\mathsf{Sec}(S;c,r),e\rangle_{\cong}).
 \end{aligned}
 \]
-The family covers all six edits, authenticated live extension, use, ledger, installation, and crash; iterating \(\partial\) on one jointly renamed finite event word proves the characterization after every finite prefix of an arbitrarily long history, including additive schema/policy growth without reset.
-% 该事件族覆盖全部六种编辑、经认证在线扩展、使用、账本、安装与崩溃；在一个联合重命名的有限事件词上迭代 \(\partial\)，即可证明该刻画在任意长历史的每个有限前缀后成立，其中包括无需重置的仅追加模式/策略增长。
+This covers all edits, live extension, use, ledger, installation, and crash.
+% 这覆盖全部编辑、在线扩展、使用、账本、安装与崩溃。
+Iteration proves the characterization after every finite prefix, including additive schema/policy growth.
+% 迭代证明该刻画在每个有限前缀后成立，其中包括仅追加模式/策略增长。
 
-\item \textbf{Durable realization.}
-% 持久实现。
-\(\mathcal R\) is a divergence-insensitive weak bisimulation under \(\mathsf{obs}\): either side's step with label \(\ell\) has a matching \(\xRightarrow{\mathsf{obs}(\ell)}\) path to a related state.
-% \(\mathcal R\) 在 \(\mathsf{obs}\) 下是发散不敏感弱互模拟：任一侧标签为 \(\ell\) 的一步都有一条匹配的 \(\xRightarrow{\mathsf{obs}(\ell)}\) 路径到达相关状态。
-Hence every good initial pair satisfies \(S_0\approx_{\mathcal O}^{\mathsf{di}}I_0\).
-% 因此，每个良好初始对都满足 \(S_0\approx_{\mathcal O}^{\mathsf{di}}I_0\)。
+\item \textbf{Durable Agent-API realization.}
+% 持久 Agent API 实现。
+\(\mathcal R\) is a divergence-insensitive weak bisimulation under \(\mathsf{obs}_{\rm api}\), so every good pair satisfies \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\), including bundles/results but excluding time, fairness, and post-\(\Dispatch\) networking.
+% \(\mathcal R\) 在 \(\mathsf{obs}_{\rm api}\) 下是发散不敏感弱互模拟，所以每个良好对都满足 \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\)，其中包括包/结果，但不包括时间、公平性与 \(\Dispatch\) 后网络行为。
+Disjoint domains compose asynchronously.
+% 互不相交的域异步组合。
 \end{enumerate}
 \end{theorem}
 
-\(\mathcal R\) composes disjoint policy domains by asynchronous product.
-% \(\mathcal R\) 通过异步积组合互不相交的策略域。
-
 \begin{proof}[Proof sketch]
 % 证明概要。
-Finite-checker reflection, greatest-fixed-point induction, opposite-answer pairs, and event induction prove the five clauses; the appendix gives the witnesses and durable simulation.
-% 有限检查器反射、最大不动点归纳、答案相反配对与事件归纳证明五个条款；附录给出见证与持久模拟。
+Finite-checker reflection, greatest-fixed-point induction, opposite-answer pairs, and event induction prove the five clauses.
+% 有限检查器反射、最大不动点归纳、答案相反配对与事件归纳证明五个条款。
+The appendix gives the witnesses and durable simulation.
+% 附录给出见证与持久模拟。
 \end{proof}

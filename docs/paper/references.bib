@@ -345,7 +345,7 @@
 
 % VERIFIED: 2026-07-31
 % REAL: yes
-% PDF: reference/closest-work/commit-time-authorization.pdf
+% PDF: reference/closest-work/2026-santos-temporary-authority.pdf
 % ABSTRACT: Defines commit-time authorization requiring a durable effect's witness to remain fresh, causally prior, effect-bound, and eligible at commit, and evaluates CommitGuard.
 % USED_FOR: Establishes authorization-evidence validity at commit as adjacent to, but distinct from, aggregate co-durable authority.
 @misc{santos2026committime,
@@ -360,7 +360,7 @@
 
 % VERIFIED: 2026-08-01
 % REAL: yes
-% PDF: not archived locally
+% PDF: reference/closest-work/2026-burke-rebound.pdf
 % ABSTRACT: Makes rollback a policy-authorized, append-only state transition under a reference monitor that atomically co-seals authenticated state versions and audit history in one authoritative order.
 % USED_FOR: Closest authorized-rollback work; distinguishes authoritative persistent-state continuity from occurrence conservation across co-durable agent histories.
 @inproceedings{burke2026rebound,
@@ -1117,7 +1117,7 @@
 
 % VERIFIED: 2026-08-02
 % REAL: yes
-% PDF: not archived locally
+% PDF: reference/closest-work/2022-thuijsman-transformational-supervisor.pdf
 % ABSTRACT: Reuses a prior synthesis result plus model deltas to compute the
 %   same supervisor as fresh synthesis. A 2023 correction revises only efficiency conclusions.
 % USED_FOR: Closest exact supervisor transformation for an evolving modeled system.
@@ -1378,4 +1378,68 @@
   archivePrefix = {arXiv},
   primaryClass  = {cs.SE},
   url           = {https://arxiv.org/abs/2412.08314}
+}
+
+% VERIFIED: 2026-08-03
+% REAL: yes
+% PDF: reference/closest-work/2026-rhodes-proof-of-execution.pdf
+% ABSTRACT: Validates a supplied contract, causal event stream, and replay context for authorization, path compliance, history integrity, and replayability of governed Agent actions.
+% USED_FOR: Closest Agent execution-attestation work; distinguished from deriving and synthesizing the greatest realization for a topology-changing history edit.
+@misc{rhodes2026proofexecution,
+  author        = {James Rhodes and George Kang},
+  title         = {Proof of Execution: Runtime Verification for Governed {AI} Agent Actions},
+  year          = {2026},
+  eprint        = {2607.05397},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CR},
+  url           = {https://arxiv.org/abs/2607.05397}
+}
+
+% VERIFIED: 2026-08-03
+% REAL: yes
+% PDF: reference/closest-work/2026-minkenberg-multimodal-nonblocking.pdf
+% ABSTRACT: Defines modal and multimodal nonblocking for supplied plants with faults, reconfiguration, or multiple goals and gives supervisor-synthesis algorithms.
+% USED_FOR: Closest contemporary nonblocking variant; clarifies that our synthesis backend follows trusted derivation of Agent-history outcomes and conditional markings.
+@misc{minkenberg2026multimodal,
+  author        = {Marijn Minkenberg and Michel A. Reniers and Martijn A. Goorden and J. M. van de Mortel-Fronczak and Wan J. Fokkink},
+  title         = {Multimodal Nonblocking Supervisory Control Synthesis},
+  year          = {2026},
+  eprint        = {2607.03263},
+  archivePrefix = {arXiv},
+  primaryClass  = {eess.SY},
+  note          = {Submitted to the 2026 IEEE Conference on Decision and Control},
+  url           = {https://arxiv.org/abs/2607.03263}
+}
+
+% VERIFIED: 2026-08-03
+% REAL: yes
+% PDF: reference/closest-work/2005-ligatti-edit-automata.pdf
+% ABSTRACT: Characterizes runtime security policies enforceable by automata that suppress, insert, or terminate actions.
+% USED_FOR: Establishes edit-automaton enforcement from a supplied policy, contrasted with history-derived admission and greatest-monitor construction.
+@article{ligatti2005edit,
+  author  = {Jay Ligatti and Lujo Bauer and David Walker},
+  title   = {Edit Automata: Enforcement Mechanisms for Run-Time Security Policies},
+  journal = {International Journal of Information Security},
+  volume  = {4},
+  number  = {1--2},
+  pages   = {2--16},
+  year    = {2005},
+  doi     = {10.1007/s10207-004-0046-8},
+  url     = {https://doi.org/10.1007/s10207-004-0046-8}
+}
+
+% VERIFIED: 2026-08-03
+% REAL: yes
+% PDF: not archived locally
+% ABSTRACT: Decomposes a long-lived transaction into interleavable transactions and compensations supplied by the application.
+% USED_FOR: Classical compensation baseline; distinguished from deciding whether an Agent history rewrite has any prefix-robust realization.
+@inproceedings{garciamolina1987sagas,
+  author    = {Hector Garcia-Molina and Kenneth Salem},
+  title     = {Sagas},
+  booktitle = {Proceedings of the 1987 ACM SIGMOD International Conference on Management of Data},
+  pages     = {249--259},
+  year      = {1987},
+  publisher = {ACM},
+  doi       = {10.1145/38713.38742},
+  url       = {https://doi.org/10.1145/38713.38742}
 }

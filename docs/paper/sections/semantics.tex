@@ -8,14 +8,22 @@ For the authenticated receipt ledger \(\Delta\), write \(\mathsf{lab}(\Delta)\in
 % 对于经认证的回执账本 \(\Delta\)，用 \(\mathsf{lab}(\Delta)\in\mathcal A\) 表示其权限词，用 \(D_\Delta\) 表示其中已有回执的单元。
 Fix \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\) and write \(\mathsf{src}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\).
 % 固定 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并记 \(\mathsf{src}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\)。
-When defined, the tagged root, structural-edit, or live-extension derivation is unique; write \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
-% 带标签的根、结构编辑或在线扩展推导在有定义时是唯一的；记为 \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
-Root derivation additionally requires that \(\mathsf{CheckReg}(A,R)\) accept; a structural edit has \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) and uses the unique six-edit judgment; and \(\mathsf{Extend}(\xi)\) uses the authenticated judgment in \cref{sec:model}.
-% 根推导还要求 \(\mathsf{CheckReg}(A,R)\) 接受；结构编辑满足 \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) 并使用唯一的六种编辑判定；而 \(\mathsf{Extend}(\xi)\) 使用 \cref{sec:model} 中的认证判定。
+When defined, the tagged root, structural-edit, or live-extension derivation is unique.
+% 带标签的根、结构编辑或在线扩展推导在有定义时是唯一的。
+Write \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
+% 记为 \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
+Root derivation additionally requires that \(\mathsf{CheckReg}(\mathcal W,R)\) accept.
+% 根推导还要求 \(\mathsf{CheckReg}(\mathcal W,R)\) 接受。
+A structural edit has \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) and uses the unique six-edit judgment.
+% 结构编辑满足 \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) 并使用唯一的六种编辑判定。
+\(\mathsf{Extend}(\xi)\) uses the authenticated judgment in \cref{sec:model}.
+% \(\mathsf{Extend}(\xi)\) 使用 \cref{sec:model} 中的认证判定。
 Let \(\rho_u\) be the authenticated target registry in \(H_u\), let \(O_{H,u}=O_{\mathcal C_u}\), and use \(H'=H_u\) and \(\rho'=\rho_u\) where earlier notation is convenient.
 % 令 \(\rho_u\) 为 \(H_u\) 中经认证的目标注册表，令 \(O_{H,u}=O_{\mathcal C_u}\)，并在沿用先前记法更方便时使用 \(H'=H_u\) 和 \(\rho'=\rho_u\)。
-All languages below depend on \(\Theta\), the schema registry, \(\rho_u\), and target policy \(\mathcal A_u\), but are insensitive to \(\mathsf{out}\); the executable compiler still binds \(\mathsf{out}\) into the exact installation cut.
-% 下文所有语言均依赖于 \(\Theta\)、模式注册表、\(\rho_u\) 与目标策略 \(\mathcal A_u\)，但对 \(\mathsf{out}\) 不敏感；可执行编译器仍会把 \(\mathsf{out}\) 绑定到精确安装切点中。
+All languages below depend on \(\Theta\), the schema registry, \(\rho_u\), and target policy \(\mathcal A_u\), but are insensitive to \(\mathsf{out}\).
+% 下文所有语言均依赖于 \(\Theta\)、模式注册表、\(\rho_u\) 与目标策略 \(\mathcal A_u\)，但对 \(\mathsf{out}\) 不敏感。
+The executable compiler still binds \(\mathsf{out}\) into the exact installation cut.
+% 可执行编译器仍会把 \(\mathsf{out}\) 绑定到精确安装切点中。
 We write only \(H,u\) where the remaining parameters are fixed.
 % 当其余参数固定时，我们仅写作 \(H,u\)。
 
@@ -89,8 +97,6 @@ For each structurally derived outcome \(o\in O_{H,u}\), define its set of resolv
    \mathsf{lab}(\Delta)\mathsf{auth}(z)\in\mathcal A_u\}.
 \end{aligned}
 \end{equation}
-Thus \(M_o\) contains the policy-safe resolved words for \(o\).
-% 因此，\(M_o\) 包含结果 \(o\) 的策略安全已解析词。
 Individual outcome safety is insufficient because a shared prefix can strand a contract-compatible outcome, so admission closes safe completions under every shared prefix.
 % 单个结果的安全性并不充分，因为共享前缀可能使一个与契约兼容的结果陷入无后续状态，因此准入要求安全完成路径集合在每个共享前缀下闭合。
 For a resolved prefix \(z\), let
@@ -100,8 +106,6 @@ For a resolved prefix \(z\), let
  \{o\mid \mathsf{raw}(z)\preceq_{\rm pref}w
 		          \text{ for some }w\in\Lin(p_o)\}.
 \]
-Identical resolved words may belong to different indexed outcomes, so the fixed point must not quotient their identities.
-% 相同的已解析词可能属于不同的带索引结果，因此该不动点不得对这些结果标识取商。
 Put
 % 令 \(\widehat B_0\) 如下：
 \[
@@ -131,18 +135,16 @@ Since \(\widehat B_1\subseteq\widehat B_0\), monotonicity yields a finite descen
  &W^\dagger_{H,u}&=\Pref(B^\dagger_{H,u}).
 \end{aligned}
 \]
-The operator removes completions that strand a contract-compatible outcome, including through cascading earlier loss.
-% 该算子会移除使某个契约兼容结果陷入无后续状态的完成路径，包括由更早损失级联导致的此类完成路径。
-Runtime uses only the projected pair \((W^\dagger,B^\dagger)\).
-% 运行时仅使用投影后的二元组 \((W^\dagger,B^\dagger)\)。
-The installation checker and seal retain the indexed witness \(\widehat B^\dagger\).
-% 安装检查器和封印保留带索引见证 \(\widehat B^\dagger\)。
+Runtime uses \((W^\dagger,B^\dagger)\), while the checker and seal retain indexed witness \(\widehat B^\dagger\).
+% 运行时使用 \((W^\dagger,B^\dagger)\)，而检查器与封印保留带索引见证 \(\widehat B^\dagger\)。
 
 \begin{definition}[Agent history admission]
 % Agent 历史准入
 \label{def:admission}
-If \(\mathsf{Derive}(\Theta)\) is undefined, then \(\mathsf{Admit}(\Theta)\) is false; otherwise
-% 若 \(\mathsf{Derive}(\Theta)\) 无定义，则 \(\mathsf{Admit}(\Theta)\) 为假；否则
+If \(\mathsf{Derive}(\Theta)\) is undefined, then \(\mathsf{Admit}(\Theta)\) is false.
+% 若 \(\mathsf{Derive}(\Theta)\) 无定义，则 \(\mathsf{Admit}(\Theta)\) 为假。
+Otherwise,
+% 否则，
 \begin{equation}
 \label{eq:admission}
 \mathsf{Admit}(\Theta)
@@ -150,14 +152,10 @@ If \(\mathsf{Derive}(\Theta)\) is undefined, then \(\mathsf{Admit}(\Theta)\) is 
  \widehat B^\dagger_{H,u}\ne\varnothing .
 \end{equation}
 \end{definition}
-The abbreviation \(\mathsf{Admit}(H,u)\) assumes \(\Theta\) and both registries fixed.
-% 缩写 \(\mathsf{Admit}(H,u)\) 假定 \(\Theta\) 和两个注册表均已固定。
-At \(z=\epsilon\), all outcomes are compatible, so nonemptiness gives initial coverage.
-% 当 \(z=\epsilon\) 时，所有结果均兼容，因此非空性给出初始覆盖。
-The existential selects a linearization without fairness.
-% 该存在量词选择一种线性化，而不要求公平性。
-The universal prefix condition prevents later deletion.
-% 全称前缀条件可防止后续删除。
+\(\mathsf{Admit}(H,u)\) fixes \(\Theta\) and both registries.
+% \(\mathsf{Admit}(H,u)\) 固定 \(\Theta\) 与两个注册表。
+At \(z=\epsilon\), nonemptiness covers every outcome, while the existential chooses a linearization without fairness and the universal prefix condition prevents stranding.
+% 在 \(z=\epsilon\) 处，非空性覆盖每个结果，而存在量词在不要求公平性的情况下选择线性化，全称前缀条件则防止结果陷入无后续状态。
 
 \begin{definition}[Indexed realization]
 % 带索引实现
@@ -187,22 +185,20 @@ On admission, \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) is a realization, a
 % 准入时，\((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) 是一个实现，并且每个实现 \((L,\widehat B)\) 都满足 \(\widehat B\subseteq\widehat B^\dagger_{H,u}\) 和 \(L\subseteq W^\dagger_{H,u}\)。
 \end{lemma}
 \begin{proof}
-Fidelity, completion nonblocking, and safety place any realization's indexed marked family inside \(\widehat B_0\); persistent coverage makes it post-fixed, so monotonicity and finite Knaster--Tarski place it inside \(\widehat B^\dagger\), and projected prefixes give \(L\subseteq W^\dagger\).
-% 忠实性、完成非阻塞性和安全性使任意实现的带索引标记族包含于 \(\widehat B_0\)；持续覆盖使其成为后不动点，因此由单调性和有限 Knaster--Tarski 可知其包含于 \(\widehat B^\dagger\)，而投影前缀给出 \(L\subseteq W^\dagger\)。
+Fidelity, completion nonblocking, and safety place any realization's indexed marked family inside \(\widehat B_0\).
+% 忠实性、完成非阻塞性和安全性使任意实现的带索引标记族包含于 \(\widehat B_0\)。
+Persistent coverage makes it post-fixed, so monotonicity and finite Knaster--Tarski place it inside \(\widehat B^\dagger\), and projected prefixes give \(L\subseteq W^\dagger\).
+% 持续覆盖使其成为后不动点，因此由单调性和有限 Knaster--Tarski 可知其包含于 \(\widehat B^\dagger\)，而投影前缀给出 \(L\subseteq W^\dagger\)。
 Conversely, \(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) supplies persistent coverage, \(\widehat B^\dagger\subseteq\widehat B_0\) supplies fidelity and safe marked words, prefix closure of \(\mathcal A_u\) supplies prefix safety, and \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) supplies nonblocking.
 % 反之，\(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) 提供持续覆盖，\(\widehat B^\dagger\subseteq\widehat B_0\) 提供忠实性和安全标记词，\(\mathcal A_u\) 的前缀闭合性提供前缀安全性，而 \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) 提供非阻塞性。
 Hence the fixed point is a realization exactly when nonempty.
 % 因此，该不动点恰在非空时构成实现。
 \end{proof}
 
-Define \(\mathsf{GReal}(H,u;L,\widehat B)\) to mean that \((L,\widehat B)\) is an indexed realization and contains every other realization componentwise.
-% 定义 \(\mathsf{GReal}(H,u;L,\widehat B)\) 表示 \((L,\widehat B)\) 是一个带索引实现，并且按分量包含其他每个实现。
-When this predicate has a witness, that witness is unique; write \(\mathsf{Spec}(H,u)=(L^*,\widehat B^*)\).
-% 当该谓词存在见证时，见证是唯一的；将其记为 \(\mathsf{Spec}(H,u)=(L^*,\widehat B^*)\)。
-This is a declarative security specification quantified over realizations, not a definition by the fixed point or compiler.
-% 这是一个在实现上量化的声明式安全规范，而不是通过不动点或编译器给出的定义。
-\Cref{lem:greatest-realization} proves that \(\mathsf{Spec}(H,u)\) is defined exactly when \(\widehat B^\dagger_{H,u}\ne\varnothing\), and then equals \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\).
-% \Cref{lem:greatest-realization} 证明，当且仅当 \(\widehat B^\dagger_{H,u}\ne\varnothing\) 时 \(\mathsf{Spec}(H,u)\) 有定义，并且此时它等于 \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\)。
+\(\mathsf{GReal}(\Theta;L,\widehat B)\) declaratively denotes a realization containing every other one componentwise, and its unique witness is \(\mathsf{Spec}(\Theta)\).
+% \(\mathsf{GReal}(\Theta;L,\widehat B)\) 声明式表示一个按分量包含其他所有实现的实现，其唯一见证记为 \(\mathsf{Spec}(\Theta)\)。
+\Cref{lem:greatest-realization} proves that this witness exists exactly when \(\widehat B^\dagger_{H,u}\ne\varnothing\) and then equals \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\).
+% \Cref{lem:greatest-realization} 证明该见证恰在 \(\widehat B^\dagger_{H,u}\ne\varnothing\) 时存在，并且此时等于 \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\)。
 
 The following shared-prefix instance shows why derived conditional markings matter even when every \(M_o\) is nonempty.
 % 下列共享前缀实例说明了为何即使每个 \(M_o\) 都非空，所派生的条件标记仍然重要。
@@ -254,31 +250,19 @@ For strictness, the preceding instance has the marker-nonblocking projected pair
 % 关于严格性，前述实例具有标记非阻塞的投影二元组 \((\Pref\{\bar y\bar x,\bar x\bar z\}, \{\bar y\bar x,\bar x\bar z\})\)，但其带索引不动点为空。
 \end{proof}
 
-Malik and Leduc define generalized nonblocking through conditional plant and terminal markings, while de Queiroz et al.\ synthesize supervisors for multiple persistent tasks~\cite{dequeiroz2005multitasking,malik2008generalised}.
-% Malik 与 Leduc 通过条件化的被控对象标记和终止标记定义广义非阻塞，而 de Queiroz 等人则为多个持久任务综合监督器~\cite{dequeiroz2005multitasking,malik2008generalised}。
-\Cref{prop:outcome-necessary} identifies the exact interface to that theory because generalized nonblocking computes the same greatest completion family once \(\alpha_o\) and \(\omega_o\) are supplied.
-% \Cref{prop:outcome-necessary} 确定了与该理论的精确接口，因为一旦给定 \(\alpha_o\) 和 \(\omega_o\)，广义非阻塞就会计算同一个最大完成族。
-Agent History Admission supplies the missing theorem by deriving those markings and terminal incidences from an authenticated topology-changing edit, schema-authorized retirement, occurrence--cell identity, irreversible receipts, and the exact cut.
-% Agent 历史准入补上了缺失的定理：从经认证的拓扑变更编辑、模式授权退役、发生项--单元标识、不可逆回执和精确切点推导这些标记与终止关联。
-The correspondence encodes indexed completions as outcome-specific terminal edges, and complete mediation makes committed \Fresh and \Alias events controllable.
-% 该对应关系把带索引的完成编码为结果特定的终止边，而完全中介使已提交的 \Fresh 和 \Alias 事件可控。
-A deployment with uncontrollable resolved events instead requires the usual supremal-controllable-language refinement.
-% 具有不可控已解析事件的部署则需要通常的上确界可控语言精化。
-The characterization additionally proves that the result is the greatest realizable Agent monitor or an impossibility certificate and that atomic epoch installation preserves this boundary through races and crashes.
-% 该刻画还证明结果是最大的可实现 Agent 监控器或不可能性证书，并证明原子纪元安装在竞态与崩溃期间保持这一边界。
-The factor lower bounds show why no caller-supplied target or target-only trace view can recover the derivation.
-% 因子下界说明为何调用者提供的目标或仅含目标轨迹的视图都无法恢复这一推导。
+\Cref{prop:outcome-necessary} gives the exact generalized-nonblocking interface~\cite{dequeiroz2005multitasking,malik2008generalised}: after Agent history derives \(\alpha_o,\omega_o\) from the edit, retirement, cells, receipts, and cut, that backend computes the same greatest family.
+% \Cref{prop:outcome-necessary} 给出精确的广义非阻塞接口~\cite{dequeiroz2005multitasking,malik2008generalised}：Agent 历史从编辑、退役、单元、回执与切点派生 \(\alpha_o,\omega_o\) 后，该后端计算同一个最大族。
+Complete mediation makes \Fresh/\Alias controllable.
+% 完全中介使 \Fresh/\Alias 可控。
+Deployments with uncontrollable resolved events need the usual supremal-controllable refinement.
+% 具有不可控已解析事件的部署需要通常的上确界可控精化。
+Our characterization additionally constructs the greatest Agent monitor or impossibility certificate, carries it through atomic installation, and proves that neither a caller target nor a target-only trace can recover the derivation.
+% 我们的刻画还构造最大 Agent 监控器或不可能性证书，将其贯穿原子安装，并证明调用方目标或仅目标轨迹都无法恢复该派生。
 
-For every \((o_{\rm rem},b)\in\widehat B_i\setminus\widehat B_{i+1}\), the rejection certificate records rank \(i\), prefix \(z\preceq b\), and \(o_{\rm miss}\in\mathsf{Compat}(z)\) for which no \((o_{\rm miss},b')\in\widehat B_i\) extends \(z\).
-% 对每个 \((o_{\rm rem},b)\in\widehat B_i\setminus\widehat B_{i+1}\)，拒绝证书都会记录秩 \(i\)、前缀 \(z\preceq b\)，以及一个 \(o_{\rm miss}\in\mathsf{Compat}(z)\)，使得没有 \((o_{\rm miss},b')\in\widehat B_i\) 扩展 \(z\)。
-For any post-fixed family \(P\), induction gives \(P\subseteq\widehat B_i\).
-% 对任意后不动点族 \(P\)，归纳可得 \(P\subseteq\widehat B_i\)。
-The base case follows from \(\widehat B_0\), and each cause excludes its removed pair from the next round.
-% 基础情形由 \(\widehat B_0\) 得到，而每个原因都会将其对应的被移除二元组排除在下一轮之外。
-Thus an empty final family excludes every realization.
-% 因此，最终族为空即可排除所有实现。
-The installation checker recomputes \(\widehat B_0\), the chain, causes, and survivor witnesses.
-% 安装检查器会重新计算 \(\widehat B_0\)、淘汰链、原因和幸存者见证。
+Each removed \((o_{\rm rem},b)\) records its rank \(i\), a prefix \(z\preceq b\), and uncovered \(o_{\rm miss}\in\mathsf{Compat}(z)\).
+% 每个被移除的 \((o_{\rm rem},b)\) 记录其秩 \(i\)、前缀 \(z\preceq b\) 与未覆盖的 \(o_{\rm miss}\in\mathsf{Compat}(z)\)。
+Induction gives every post-fixed \(P\subseteq\widehat B_i\), so an empty final family excludes every realization, and installation recomputes the chain, causes, and survivor witnesses.
+% 归纳给出每个后不动点 \(P\subseteq\widehat B_i\)，因此最终族为空会排除每个实现，而安装会重新计算淘汰链、原因与幸存者见证。
 
 To preserve admission after each permitted prefix, fix \(H,u,\mathcal A_u\) after deriving \(\mathcal C\), and write \(W^\dagger(\mathcal C,\Delta)\) and \(\widehat B^\dagger(\mathcal C,\Delta)\) with those parameters suppressed.
 % 为在每个允许的前缀之后保持准入，先在派生 \(\mathcal C\) 后固定 \(H,u,\mathcal A_u\)，再将省略这些参数的记法写作 \(W^\dagger(\mathcal C,\Delta)\) 和 \(\widehat B^\dagger(\mathcal C,\Delta)\)。
@@ -351,26 +335,30 @@ The proof is in \cref{app:live-extension-proof}.
 
 The ideal labeled transition system (LTS) retains abstract gate and epoch identities for protected calls and history edges but omits the compiler, monitor representation, phase protocols, seals, preloading, and handoff microsteps.
 % 理想标号转移系统（LTS）保留受保护调用和历史边所需的抽象门与纪元标识，但省略编译器、监控器表示、阶段协议、封印、预加载和交接微步骤。
-Its durable state is \((\kappa,H,\Delta,\mathsf{out})\), current semantic cut \(c=(H_c,u,L^*,\widehat B^*)\), and resolved prefix \(r\).
-% 其持久状态为 \((\kappa,H,\Delta,\mathsf{out})\)、当前语义切点 \(c=(H_c,u,L^*,\widehat B^*)\) 和已解析前缀 \(r\)。
+An ideal state is \(I=(\kappa,H,\Delta,\mathsf{out},\mathcal A,c,r)\), where \(c=(H_c,u,L^*,\widehat B^*)\).
+% 理想状态为 \(I=(\kappa,H,\Delta,\mathsf{out},\mathcal A,c,r)\)，其中 \(c=(H_c,u,L^*,\widehat B^*)\)。
+\(H.\eta\) and \(H.\beta\) are its current abstract epoch and live bindings.
+% \(H.\eta\) 与 \(H.\beta\) 是其当前抽象纪元与活跃绑定。
 
 \paragraph{History edge}
 % 历史边
-For the current pre-edge history \(H_0=H\) and \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\), \(\mathsf{Edge}(u)\) is enabled exactly when \(\mathsf{Derive}(\Theta)\) exists and \(\mathsf{Spec}(H_0,u)=(L^*,\widehat B^*)\) is defined.
-% 对于当前编辑前历史 \(H_0=H\) 和 \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\)，当且仅当 \(\mathsf{Derive}(\Theta)\) 存在且 \(\mathsf{Spec}(H_0,u)=(L^*,\widehat B^*)\) 有定义时，\(\mathsf{Edge}(u)\) 才启用。
-One atomic transition persists \((\kappa_u,H_u,\mathcal A_u)\), closes \(\eta^-\), activates \(\eta^+\), binds the derived target gates, stores \(c:=(H_0,u,L^*,\widehat B^*)\), resets \(r:=\epsilon\), and returns \(\mathcal H_u^+\).
-% 一个原子转移持久化 \((\kappa_u,H_u,\mathcal A_u)\)、关闭 \(\eta^-\)、激活 \(\eta^+\)、绑定派生的目标门、存储 \(c:=(H_0,u,L^*,\widehat B^*)\)、将 \(r\) 重置为 \(\epsilon\)，并返回 \(\mathcal H_u^+\)。
-This rule is defined through \(\mathsf{Spec}\), rather than operationally invoking \(\mathsf{Admit}\), the fixed-point computation, \(\mathsf{Compile}\), or installation.
-% 该规则通过 \(\mathsf{Spec}\) 定义，而不会在操作上调用 \(\mathsf{Admit}\)、不动点计算、\(\mathsf{Compile}\) 或安装过程。
+For \(\Theta_I(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), the rule \(I\xrightarrow{\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})}(\kappa_u,H_u,\Delta,\mathsf{out},\mathcal A_u,(H,u,L^*,\widehat B^*),\epsilon)\) exists exactly when \(\mathsf{Derive}(\Theta_I(u))=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\) and \(\mathsf{Spec}(\Theta_I(u))=(L^*,\widehat B^*)\).
+% 对 \(\Theta_I(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，当且仅当 \(\mathsf{Derive}(\Theta_I(u))=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\) 且 \(\mathsf{Spec}(\Theta_I(u))=(L^*,\widehat B^*)\) 时，规则 \(I\xrightarrow{\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})}(\kappa_u,H_u,\Delta,\mathsf{out},\mathcal A_u,(H,u,L^*,\widehat B^*),\epsilon)\) 存在。
+\(H_u\) records the epoch handoff and target gates, while \(\mathsf{Spec}\) is independent of \(\mathsf{Admit}\), \(\mathsf{Compile}\), and installation.
+% \(H_u\) 记录纪元交接与目标门，而 \(\mathsf{Spec}\) 独立于 \(\mathsf{Admit}\)、\(\mathsf{Compile}\) 和安装。
 
 \paragraph{Protected occurrence}
 % 受保护发生项
-For submitted invocation \(m\), an enabled current-frontier occurrence \(x\) passes the ideal guard exactly when its gate and authenticated handle bind cell \(d\) and \(\mathsf{canon}_\kappa(m)=\mathsf{inv}_\rho(d)\); current receipts then determine \(a\in\{\Fresh(x,d),\Alias(x,d)\}\).
-% 对于提交的调用 \(m\)，当且仅当已启用的当前前沿发生项 \(x\) 的门和认证句柄绑定单元 \(d\)，且 \(\mathsf{canon}_\kappa(m)=\mathsf{inv}_\rho(d)\) 时，它才通过理想守卫；随后，当前回执确定 \(a\in\{\Fresh(x,d),\Alias(x,d)\}\)。
+For submitted invocation \(m\), an enabled current-frontier occurrence \(x\) passes the ideal guard exactly when \(H.\beta(x)=(j,H.\eta)\), its authenticated handle binds \(j\) and cell \(d\), and \(\mathsf{canon}_\kappa(m)=\mathsf{inv}_\rho(d)\).
+% 对于提交的调用 \(m\)，当且仅当已启用的当前前沿发生项 \(x\) 满足 \(H.\beta(x)=(j,H.\eta)\)、其认证句柄绑定 \(j\) 与单元 \(d\)，且 \(\mathsf{canon}_\kappa(m)=\mathsf{inv}_\rho(d)\) 时，它才通过理想守卫。
+Current receipts then determine \(a\in\{\Fresh(x,d),\Alias(x,d)\}\).
+% 随后，当前回执确定 \(a\in\{\Fresh(x,d),\Alias(x,d)\}\)。
 Exactly when \(ra\in L^*\), one atomic transition applies \(\mathsf{HStep}((G,T),a)\), appends \(a\) to the global resolved-occurrence trace \(\chi\), advances \(\nu\), and sets \(r:=ra\).
 % 当且仅当 \(ra\in L^*\) 时，一个原子转移应用 \(\mathsf{HStep}((G,T),a)\)，将 \(a\) 追加到全局已解析发生项轨迹 \(\chi\)，推进 \(\nu\)，并设置 \(r:=ra\)。
-\Fresh also appends to \(\Delta\) an immutable receipt for \(d\) labeled \(\ell(d)\) and enqueues \((d,\mathsf{canon}_\kappa(m))\); \Alias changes neither field.
-% \Fresh 还向 \(\Delta\) 追加一条标签为 \(\ell(d)\) 且关于 \(d\) 的不可变回执，并将 \((d,\mathsf{canon}_\kappa(m))\) 入队；\Alias 不改变这两个字段。
+\Fresh also appends to \(\Delta\) an immutable receipt for \(d\) labeled \(\ell(d)\) and enqueues \((d,\mathsf{canon}_\kappa(m))\).
+% \Fresh 还向 \(\Delta\) 追加一条标签为 \(\ell(d)\) 且关于 \(d\) 的不可变回执，并将 \((d,\mathsf{canon}_\kappa(m))\) 入队。
+\Alias changes neither field.
+% \Alias 不改变这两个字段。
 
 An invalid occurrence, gate, handle, or invocation, a disabled branch, or \(ra\notin L^*\) fails the guard and returns \(\mathsf{deny}(x)\) without changing state.
 % 无效的发生项、门、句柄或调用、禁用分支或 \(ra\notin L^*\) 会使守卫失败，并返回 \(\mathsf{deny}(x)\) 且不改变状态。
@@ -381,14 +369,20 @@ An invalid occurrence, gate, handle, or invocation, a disabled branch, or \(ra\n
 % 重试、释放与崩溃
 \(\mathsf{Save}\) takes the trusted checkpoint transition in \cref{sec:model} as a \(\tau\)-step.
 % \(\mathsf{Save}\) 将 \cref{sec:model} 中的可信检查点转移作为一个 \(\tau\) 步。
-An authenticated same-invocation retry follows its \(\chi\)-to-receipt link and returns the same stable result future without changing history, whereas an unauthenticated or argument-changing lookup is denied.
-% 经认证的同调用重试沿其从 \(\chi\) 到回执的链接返回同一稳定结果期值，且不改变历史，而未认证或改变参数的查找会被拒绝。
+An authenticated same-invocation retry follows its \(\chi\)-to-receipt link and emits \(\mathsf{Return}(t,[v]_{\cong})\) for the same stable result future without changing history, whereas an unauthenticated or argument-changing lookup is denied.
+% 经认证的同调用重试沿其从 \(\chi\) 到回执的链接，为同一稳定结果期值发出 \(\mathsf{Return}(t,[v]_{\cong})\) 且不改变历史，而未认证或改变参数的查找会被拒绝。
 \Dispatch releases exactly the stored invocation in the oldest prepared outbox item and marks that item released, making the release trace a prefix of \Fresh preparation order.
 % \Dispatch 恰好释放最早已准备发件箱条目中存储的调用并将该条目标记为已释放，使释放轨迹成为 \Fresh 准备次序的前缀。
-Settlement monotonically advances a receipt's phase and fills its durable result future with the stable result, changing no history or authority field.
-% 结算单调推进回执阶段，并以稳定结果填充其持久结果期值，且不改变历史或权限字段。
-Crash discards nondurable computation without changing LTS state; we make no claim about completion order inside an external network after release.
-% 崩溃丢弃非持久计算而不改变 LTS 状态；我们不对释放后外部网络内部的完成顺序作任何主张。
+Settlement emits \(\mathsf{Settle}(d,[v]_{\cong})\), monotonically advances a receipt's phase, and fills its durable result future with the stable result, changing no history or authority field.
+% 结算发出 \(\mathsf{Settle}(d,[v]_{\cong})\)，单调推进回执阶段，并以稳定结果填充其持久结果期值，且不改变历史或权限字段。
+Crash discards nondurable computation without changing LTS state.
+% 崩溃丢弃非持久计算而不改变 LTS 状态。
+We make no claim about completion order inside an external network after release.
+% 我们不对释放后外部网络内部的完成顺序作任何主张。
+The ideal LTS is the least relation generated by these rules and their Save, retry/retrieval/delivery, and recovered-crash cases.
+% 理想 LTS 是由这些规则及其 Save、重试/取回/交付与恢复崩溃情形生成的最小关系。
+No other transition, including compiler computation, exists.
+% 不存在包括编译器计算在内的其他转移。
 
 By \cref{lem:greatest-realization}, every reachable ideal-machine prefix retains a policy-safe completion until the next explicit history edge changes the contract.
 % 根据 \cref{lem:greatest-realization}，理想机的每个可达前缀都会保留一条策略安全完成路径，直到下一条显式历史边改变契约。
