@@ -1,42 +1,29 @@
 \section{Executable Validation}
 \label{sec:validation}
 
-The main result is a pen-and-paper theorem.  The dependency-free artifact is
-only a bounded bug finder.
+The main result is a pen-and-paper theorem.  The dependency-free bounded
+artifact validator handles finite instances.  It is neither the trusted
+installation checker nor a mechanized proof of \cref{thm:exact-history}.
 
-\paragraph{Executable core}
-The exact-admission API takes a derived finite indexed-pomset contract,
-enumerates its topological sorts, performs length-preserving fresh/alias
-resolution, checks authority projections, iterates \(\widehat\Phi\) from
-\(\widehat B_0\), and records the chain and ranked removal causes.  On
-acceptance, the checker verifies every
-survivor/prefix/outcome witness and constructs \(W^\dagger\) exactly.  Outcome
-indices remain distinct under equal trace projections, and contract
-construction enforces completion observability.  Search fails closed above 128 outcomes, eight
-occurrences per outcome, 50,000 linearizations per pomset, or 100,000 safe
-indexed completions.  These caps do not bound the theorem.
+\paragraph{Decision kernel}
+Given a derived indexed-pomset contract, the validator enumerates topological
+sorts, resolves \Fresh/\Alias occurrences, checks authority projections,
+iterates \(\widehat\Phi\), verifies removal causes and survivor witnesses, and
+reconstructs \(W^\dagger\).  Outcome indices remain distinct under equal trace
+projections.  Search fails closed above 128 outcomes, eight occurrences per
+outcome, 50,000 linearizations per pomset, or 100,000 safe indexed
+completions.  These bounds do not constrain the theorem.
 
-A separate fixture derives all six edits and rechecks its cut.  It omits
-immutable schemas, \(\preccurlyeq_\mu\), retirement, policy-domain epochs, the
-canonical program, weak bisimulation, and the complete \Use rule.  It merges
-identical pomsets and uses cell IDs as labels.  The paper defines and proves
-the omitted layers.  Both representation choices are fixture simplifications.
-Production assumes trusted registries, mediation, and durable storage.
-
-\paragraph{Litmus results}
-Nineteen focused tests cover (1) the rejecting \(2,1,0\) chain for
-\(X\otimes(Y\oplus Z)\) under \(\Pref\{yx,xz\}\), (2) distinct identical-trace
-indices, (3) survivor prefixes and completion observability, (4) all six edits
-with same-cell, choice/merge, and gate-borrowing cases, (5) receipt-silent
-alias progress, and (6) both fresh--install and alias--install orders.
-If progress occurs first, it invalidates the seal, whereas installation first
-closes the fixture's old program generation.  All 19 focused and 81 repository
-tests pass, including the focused suite after clean archive extraction.
-
-\paragraph{Falsifiability}
-The executable subset fails if resolution loses an occurrence, a fixed-point
-step lacks its witness, \(W^\dagger\) differs from the survivor-prefix
-language, or a stale cut succeeds.  The theorem fails if refinement drops an
-obligation, the monitor language differs, an old epoch remains enabled, or
-the LTSs differ observably.  The separate Lean endpoint model does not prove
-\cref{thm:exact-history}.  Stronger mechanization remains future work.
+\paragraph{Litmus tests}
+The focused suite comprises 19 of the repository's 81 passing tests.  It
+covers the rejecting \(2,1,0\) chain, identical-trace indices, completion
+observability, structural fixtures for all six edit shapes, same-cell and gate-borrowing cases,
+receipt-silent \Alias progress, and both orders of \Fresh/\Alias versus
+installation.  The focused tests also pass after clean archive extraction.
+These executions test only the decision kernel and bounded structural/race
+fixtures.  They do not mechanize schema fidelity, authenticated handle handoff,
+durable refinement, or \cref{thm:exact-history}.
+Occurrence loss, an unwitnessed elimination, an incorrect survivor language,
+or stale-cut acceptance falsifies the executable subset.  Obligation loss,
+language mismatch, an enabled old epoch, or observable LTS divergence
+falsifies the theorem.

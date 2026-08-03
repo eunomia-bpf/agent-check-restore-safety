@@ -2,23 +2,21 @@
 \label{sec:admission}
 
 Let \(\mathcal U\) be the authority-label alphabet and
-\(\mathcal A\subseteq\mathcal U^*\) a regular,
-prefix-closed authority policy.  The authenticated receipt log \(\Delta\)
-contains cell identities, phases, and qualified authority labels.  Its
-projection \(\mathsf{lab}(\Delta)\in\mathcal A\) is an authority word.  Write
-\(D_\Delta\) for its receipted cells.
-For a proposed edit, fix the full admission instance
+\(\mathcal A\subseteq\mathcal U^*\) a regular, prefix-closed policy.  For the
+authenticated receipt ledger \(\Delta\), write
+\(\mathsf{lab}(\Delta)\in\mathcal A\) for its authority word and
+\(D_\Delta\) for its receipted cells.  Fix the admission instance
 \(\Theta=(\kappa,H,\Delta,\mathcal A,u)\) and its unique schema derivation
 \[
  \Sigma_\zeta;H\vdash u\Downarrow
  (H',\mathcal C_{H,u},\eta^-,\eta^+).
 \]
-Let \(\rho'\) be the authenticated target registry in \(H'\), and define
-\(O_{H,u}=O_{\mathcal C_{H,u}}\).  Every language below is a function of
-\(\Theta\), the fixed schema registry, and this derived \(\rho'\).  Subscripts
-\(H,u\) suppress those parameters only for readability.
+Let \(\rho'\) be the authenticated target registry in \(H'\) and
+\(O_{H,u}=O_{\mathcal C_{H,u}}\).  All languages below depend on
+\(\Theta\), the schema registry, and \(\rho'\).  We write only \(H,u\) where
+the remaining parameters are fixed.
 
-\subsection{Fresh and alias resolution}
+\subsection{\Fresh and \Alias resolution}
 
 Resolution never erases an occurrence retained by the derived contract.  Starting
 with \(R_0=D_\Delta\), the deterministic transducer
@@ -34,40 +32,37 @@ with \(R_0=D_\Delta\), the deterministic transducer
        \quad R_i=R_{i-1}.
  \end{cases}
 \end{equation}
-The authority projection erases aliases but retains occurrences.
+The authority projection erases \Alias symbols and maps each \Fresh symbol to
+its cell's authority label.
 \[
  \mathsf{auth}(\Fresh(x,d))=\ell_{\rho'}(d),\qquad
  \mathsf{auth}(\Alias(x,d))=\epsilon .
 \]
-For a resolved word \(z\), \(\mathsf{raw}(z)\) erases the fresh/alias mode and
-cell fields but retains its ordered logical occurrence identifiers.
-A repeated delivery of the \emph{same} invocation identifier is \Retry and
-does not occur a second time in \(w\).  In contrast, two restored occurrences
-with the same cell both occur in \(w\), although one may be fresh and the other
-alias.
+For resolved \(z\), \(\mathsf{raw}(z)\) drops the \Fresh/\Alias mode and cell
+but preserves ordered occurrence identifiers.  A \Retry repeats the same
+invocation and adds no occurrence.  Restored occurrences sharing a cell remain
+distinct and may resolve differently.
 
 \begin{lemma}[Resolution]
 \label{lem:resolution}
 \(\Resolve^{\rho'}_\Delta\) is deterministic, length preserving, and prefix
-compatible.  Its fresh projection contains each cell at most once outside
+compatible.  Its \Fresh projection contains each cell at most once outside
 \(D_\Delta\), while its occurrence projection is exactly the input word.
 Moreover, if
 \(\Resolve^{\rho'}_\Delta(rv)=zv'\), then
 \(z=\Resolve^{\rho'}_\Delta(r)\) and
 \(v'=\Resolve^{\rho'}_{\Delta_z}(v)\), where \(\Delta_z\) extends \(\Delta\) by the
-fresh events of \(z\).
+\Fresh events of \(z\).
 \end{lemma}
 \begin{proof}
-Induct on the input length and the accumulated set \(R_i\).  Each step emits
-one symbol, updates \(R_i\) only in the fresh case, and depends only on the
-input prefix.  Set membership gives uniqueness of fresh emission.  Both cases
-retain \(x_i\).  Splitting the same induction after \(r\) gives the streaming
-equation.
+Induction on input length gives one prefix-determined output symbol per input
+and updates \(R_i\) only for \Fresh.  Set membership ensures one \Fresh
+emission per cell.  Both cases retain \(x_i\).  Splitting after \(r\) gives the
+streaming equation.
 \end{proof}
-
-This lemma fixes two distinct replay cases.  A network retry is a stutter in
-both histories.  A copied occurrence is a stutter only in the authority
-projection because it still resolves choice, sequence, or join causality.
+Thus a retry stutters in both histories, whereas a copied occurrence stutters
+\emph{when it resolves as \Alias}: it advances causality without changing the
+authority trace.
 
 \subsection{Prefix-robust history admission}
 
@@ -81,14 +76,10 @@ resolved completions and the corresponding safe subset.
    \mathsf{lab}(\Delta)\mathsf{auth}(z)\in\mathcal A\}.
 \end{aligned}
 \end{equation}
-The two definitions now share an alphabet.  \(M_o\) contains resolved
-occurrence words, and the policy is consulted only through their authority
-projection.
-
-Initial outcome coverage is insufficient.  One safe schedule for outcome
-\(o\) and another for \(v\) may share a prefix that makes \(o\)'s remaining
-schedule unsafe, silently pruning an outcome that the raw contract still
-retains.  We therefore close safe completions under every shared prefix.
+Thus \(M_o\) contains the policy-safe resolved words for \(o\).  Individual
+outcome safety is insufficient because a shared prefix can strand a
+contract-compatible outcome, so admission closes safe completions under every
+shared prefix.
 For a resolved prefix \(z\), let
 \[
  \mathsf{Compat}(z)=
@@ -111,10 +102,8 @@ For \(\widehat B\subseteq\widehat B_0\), define the monotone operator
 \end{array}\right\}.
 \end{equation}
 Set \(\widehat B_{i+1}=\widehat\Phi(\widehat B_i)\).
-Because \(\widehat B_1\subseteq\widehat B_0\), and monotonicity gives
-\(\widehat B_{i+1}\subseteq\widehat B_i\) whenever
-\(\widehat B_i\subseteq\widehat B_{i-1}\), the resulting finite sequence
-descends and stabilizes.  Let
+Since \(\widehat B_1\subseteq\widehat B_0\), monotonicity yields a finite
+descending chain, whose limit is
 \[
 \begin{aligned}
  \widehat B^\dagger_{H,u}
@@ -124,11 +113,10 @@ descends and stabilizes.  Let
  &W^\dagger_{H,u}&=\Pref(B^\dagger_{H,u}).
 \end{aligned}
 \]
-The fixed point removes a completion if one of its prefixes lacks a surviving
-completion carrying even one still-compatible outcome index.  This removal can
-invalidate coverage at an earlier prefix.  The runtime consumes the projected
-marked language \(B^\dagger\), while the checker and seal retain
-\(\widehat B^\dagger\) as a ghost witness relation.
+The operator removes completions that strand a contract-compatible outcome,
+including through cascading earlier loss.  Runtime uses only the projected pair
+\((W^\dagger,B^\dagger)\).  The installation checker and seal retain the
+indexed witness \(\widehat B^\dagger\).
 
 \begin{definition}[Agent history admission]
 \label{def:admission}
@@ -139,14 +127,10 @@ marked language \(B^\dagger\), while the checker and seal retain
  \widehat B^\dagger_{H,u}\ne\varnothing .
 \end{equation}
 \end{definition}
-We write \(\mathsf{Admit}(H,u)\) only after the full instance \(\Theta\),
-schema registry, and derived target registry have been fixed.
-
-At \(z=\epsilon\), every derived outcome is compatible.  Thus nonemptiness of
-the fixed point already implies initial outcome coverage.  The inner
-existential chooses a scheduler linearization rather than promising fairness.
-The outer prefix condition prevents that choice from silently deleting another
-outcome later.
+The abbreviation \(\mathsf{Admit}(H,u)\) assumes \(\Theta\) and both
+registries fixed.  At \(z=\epsilon\), all outcomes are compatible, so
+nonemptiness gives initial coverage.  The existential selects a linearization
+without fairness.  The universal prefix condition prevents later deletion.
 
 \begin{definition}[Indexed realization]
 \label{def:realization}
@@ -186,36 +170,79 @@ post-fixed point.  Monotonicity of \(\widehat\Phi\) and the finite
 Knaster--Tarski construction place every such family inside
 \(\widehat B^\dagger\).  Taking projected prefixes
 gives \(L\subseteq W^\dagger\).  Conversely,
+the equality
 \(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) supplies persistent
-coverage, \(\widehat B^\dagger\subseteq\widehat B_0\) supplies fidelity and
-safe marked words.  Prefix closure of \(\mathcal A\) supplies safety for their
-prefixes, while \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) supplies
-nonblocking.  The fixed point is a realization exactly when nonempty.
+coverage.  The inclusion
+\(\widehat B^\dagger\subseteq\widehat B_0\) supplies fidelity and safe marked
+words.  Prefix closure of \(\mathcal A\) supplies safety for their prefixes,
+while \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) supplies nonblocking.  The
+fixed point is a realization exactly when nonempty.
 \end{proof}
 
 This fixed point is substantive even when every \(M_o\) is nonempty.  Let
-\(X,Y,Z\) be singleton contracts over distinct fresh cells labeled
-\(x,y,z\), respectively.  Let \(\mathcal C=X\otimes(Y\oplus Z)\) and
-\(\mathcal A=\Pref\{yx,xz\}\).  The two outcomes initially have safe
-completions \(yx\) and \(xz\).  Yet prefix \(x\), taken from \(xz\), remains
-raw-compatible with the \(xy\) outcome and leaves it no safe continuation.
-The first iteration removes \(xz\).  The next removes \(yx\) because root
-coverage is then lost.  Hence the edit is rejected, whereas the independent
+\(X,Y,Z\) be singleton contracts containing occurrences \(x_o,y_o,z_o\).
+The target registry maps them to distinct previously unreceipted cells
+\(d_x,d_y,d_z\), whose authority labels are \(x,y,z\), respectively.  Write
+\(\bar x=\Fresh(x_o,d_x)\), \(\bar y=\Fresh(y_o,d_y)\), and
+\(\bar z=\Fresh(z_o,d_z)\).  Let
+\(\mathcal C=X\otimes(Y\oplus Z)\) and
+\(\mathcal A=\Pref\{yx,xz\}\).  The \(X\otimes Y\) and \(X\otimes Z\) outcomes
+initially have safe resolved completions \(\bar y\bar x\) and
+\(\bar x\bar z\), whose authority projections are \(yx\) and \(xz\),
+respectively.  Yet the resolved prefix \(\bar x\), taken from
+\(\bar x\bar z\), remains contract-compatible with the \(X\otimes Y\) outcome
+and leaves it no safe continuation.  The first iteration removes
+\(\bar x\bar z\).  The next removes \(\bar y\bar x\) because root coverage is
+then lost.  Hence the edit is rejected, whereas the independent
 \(\forall o.\,M_o\ne\varnothing\) test would admit it.
 
-Rejection has a finite proof.  For every
-\((o_{\rm rem},b)\in\widehat B_i\setminus\widehat B_{i+1}\), record a prefix
-\(z\preceq b\) and outcome
+\begin{proposition}[Outcome-indexed nonblocking correspondence]
+\label{prop:outcome-necessary}
+For nonempty \(\widehat B\subseteq\widehat B_0\), let \(G_{\widehat B}\) be the
+prefix trie of \(L_{\widehat B}=\Pref(\pi_2\widehat B)\).  Mark state \(z\)
+by \(\alpha_o\) exactly when \(o\in\mathsf{Compat}(z)\), and mark state \(b\)
+by \(\omega_o\) exactly when \((o,b)\in\widehat B\).  Then
+\[
+\begin{gathered}
+ \widehat B\subseteq\widehat\Phi(\widehat B)\\[-2pt]
+ \Longleftrightarrow\
+ \forall o\in O_{H,u}.\;
+ G_{\widehat B}\text{ is }(\alpha_o,\omega_o)\text{-nonblocking}.
+\end{gathered}
+\]
+Consequently, if \(\widehat B^\dagger\) is nonempty, it is the greatest
+nonempty completion subfamily of \(\widehat B_0\) satisfying these conditional
+nonblocking obligations.  If it is empty, no nonempty subfamily satisfies
+them.
+Ordinary marker nonblocking of the unaugmented projected language is strictly
+weaker.
+\end{proposition}
+\begin{proof}
+From reachable prefix \(z\), an \(\omega_o\)-marked state is reachable exactly
+when some \((o,b)\in\widehat B\) extends \(z\).  Quantifying over exactly the
+states marked \(\alpha_o\) is therefore the post-fixed-point condition.
+Greatestness follows from the greatest-fixed-point construction.  For
+strictness, the preceding instance has the marker-nonblocking projected pair
+\((\Pref\{\bar y\bar x,\bar x\bar z\},
+  \{\bar y\bar x,\bar x\bar z\})\), but its indexed fixed point is empty.
+\end{proof}
+
+Generalized nonblocking reduces to marker nonblocking with conditional plant
+markings~\cite{dequeiroz2005multitasking,malik2008generalised}.
+\Cref{prop:outcome-necessary} shows why markings must retain authenticated
+outcome compatibility: trace-only nonblocking is weaker.  Our
+history-admission theory derives them from topology, schema-authorized retirement, and
+receipts.  Outcome indexing is therefore semantic, not optional runtime state.
+
+For every
+\((o_{\rm rem},b)\in\widehat B_i\setminus\widehat B_{i+1}\), the rejection
+certificate records rank \(i\), prefix \(z\preceq b\), and
 \(o_{\rm miss}\in\mathsf{Compat}(z)\) for which no
-\((o_{\rm miss},b')\in\widehat B_i\) extends \(z\).  The removal round is its
-rank.
-For any post-fixed family \(P\), forward induction gives
-\(P\subseteq\widehat B_i\).  The base is \(\widehat B_0\), and each recorded
-missing-witness cause excludes its removed pair from \(P\), yielding
-\(P\subseteq\widehat B_{i+1}\).  If the sequence reaches \(\varnothing\), no
-nonempty post-fixed family, hence no realization, exists.  The checker
-recomputes \(\widehat B_0\), verifies nestedness and a cause for every removed
-pair, and checks every survivor coverage witness at stabilization.
+\((o_{\rm miss},b')\in\widehat B_i\) extends \(z\).  For any post-fixed family
+\(P\), induction gives \(P\subseteq\widehat B_i\): the base follows from
+\(\widehat B_0\), and each cause excludes its removed pair from the next round.
+Thus an empty final family excludes every realization.  The installation
+checker recomputes the base, chain, causes, and survivor witnesses.
 
 To preserve admission after each permitted prefix, fix \(H,u,\mathcal A\)
 after deriving \(\mathcal C\), and write
@@ -241,10 +268,11 @@ where
 \end{lemma}
 \begin{proof}
 Because \(z\) prefixes the projection of a member of
-\(\widehat B^\dagger\), prefix compatibility and raw
-recoverability in \cref{lem:resolution} give the first equality.  Its streaming
-case gives the ledger equality.  Taking the indexed pomset residual removes
-exactly that raw prefix while retaining every consistent outcome identity.
+\(\widehat B^\dagger\), raw recoverability in \cref{lem:resolution} gives the
+first equality.  Its streaming
+case gives the receipt-ledger equality.  Taking the indexed pomset residual removes
+exactly that raw prefix while retaining every contract-compatible outcome
+identity.
 Moreover,
 \(\mathsf{Compat}_{\mathcal C/\mathsf{raw}(z)}(s)
  =\mathsf{Compat}_{\mathcal C}(zs)\).
@@ -263,19 +291,19 @@ original \(\widehat B_0\).  Then
 \(\widehat B^\dagger\cup zY\) is post-fixed for the original operator.
 Prefixes \(t\preceq z\) use witnesses already supplied by
 \(\widehat B^\dagger\), while prefixes \(t=zs\) use residual witnesses in \(Y\).
-Maximality of \(\widehat B^\dagger\) gives
+Greatestness of \(\widehat B^\dagger\) gives
 \(zY\subseteq\widehat B^\dagger\), so
 \(Y=\widehat B^\dagger/z\).  Finally,
 \(\Pref(B)/z=\Pref(B/z)\) for \(z\in\Pref(B)\).  Taking projected prefixes
 gives the generated equality.
 \end{proof}
 Thus every admitted prefix retains a safe completion for every residual
-outcome index still structurally consistent with that prefix.
+outcome index still contract-compatible with that prefix.
 
 \subsection{The ideal atomic history machine}
 \label{sec:ideal}
 
-The ideal LTS retains abstract gate and epoch identities so protected calls
+The ideal labeled transition system (LTS) retains abstract gate and epoch identities so protected calls
 and history edges are defined, but has no phase protocol, seals, preloading,
 or handoff microsteps.  A history edge changes the policy-domain epoch
 atomically.
@@ -289,7 +317,9 @@ Let \(H_c=H\) in the pre-edge state.  \(\mathsf{Edge}(u)\) atomically applies th
 \(\Sigma_\zeta;H\vdash u\Downarrow(H',\mathcal C,\eta^-,\eta^+)\) when
 \(\mathsf{Admit}(H,u)\), persists the already version-advanced \(H'\), sets
 \(c:=(H_c,u,W^\dagger_{H_c,u},\widehat B^\dagger_{H_c,u})\), and sets
-\(r:=\epsilon\).  No semantic handoff
+\(r:=\epsilon\).  It also returns the stable authenticated bundle
+\(\mathcal H_u^+\).  No handle in that bundle is available before the edge.
+The notation suppresses this schema-determined payload.  No semantic handoff
 protocol is present.  This independent atomic behavior is what the
 implementation must refine.
 
@@ -299,26 +329,27 @@ and authenticated cell \(d\).  Resolve it against the current receipts to
 \(a\in\{\Fresh(x,d),\Alias(x,d)\}\).  The transition is enabled exactly when
 \(ra\in W^\dagger_{H_c,u}\).  It atomically residualizes the frontier by \(x\),
 appends \(a\) to \(\chi\), advances \(\nu\), and sets
-\(r:=ra\).  In the fresh case it also appends an immutable receipt
-for \(d\), labeled \(\ell(d)\), to \(\Delta\) and enqueues \(d\).  In the alias
+\(r:=ra\).  In the \Fresh case it also appends an immutable receipt
+for \(d\), labeled \(\ell(d)\), to \(\Delta\) and enqueues \(d\).  In the \Alias
 case those fields do not change.
 
 Failure of any protected-occurrence guard, including an invalid occurrence,
 gate, or handle, a disabled branch, or
 \(ra\notin W^\dagger_{H_c,u}\), produces \(\mathsf{deny}(x)\) without
-changing state.  An alias binds the restored
+changing state.  An \Alias binds the restored
 occurrence to the same durable result future as its cell.  It advances causal
 history but does not invent a result that the original invocation has not yet
 produced.
 
 \paragraph{Retry, release, and crash}
-An authenticated same-invocation retry follows its \(\chi\)-to-receipt link
-and returns the stable future/result without changing history.  An
-unauthenticated lookup is denied.
+\(\mathsf{Save}\) takes the trusted checkpoint transition defined in
+\cref{sec:model} as a \(\tau\)-step.  An authenticated same-invocation retry
+follows its \(\chi\)-to-receipt link and returns the same stable result future
+without changing history.  An unauthenticated lookup is denied.
 \Dispatch may release only the oldest prepared outbox item and marks that
-entry released, so the release trace is a prefix of fresh preparation order.
-Settlement monotonically advances its receipt phase and fills the stable
-future/result, but changes no history or authority field.  Crash discards
+entry released, so the release trace is a prefix of \Fresh preparation order.
+Settlement monotonically advances the receipt phase and fills that future with
+the stable result, but changes no history or authority field.  Crash discards
 nondurable computation and leaves the LTS state unchanged.  We make no claim
 about completion order inside an external network after release.
 

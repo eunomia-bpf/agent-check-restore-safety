@@ -2,49 +2,48 @@
 \label{sec:related}
 
 \paragraph{History-sensitive authorization}
-History-based access control and event-structure monitors decide an action
-from its observed past~\cite{abadi2003history,krukow2008history}.  FORGE proves
-Agent verdict correctness from sufficient causal-DAG
-observations~\cite{palumbo2026forge}.  We instead judge a topology-changing
-edit.  Every raw-compatible outcome must retain a safe completion after every
-prefix, including receipt-silent aliases.
+History-based access control and event-structure monitors judge a next action
+from its past~\cite{abadi2003history,krukow2008history}.  FORGE proves Agent
+verdicts from causal-DAG observations~\cite{palumbo2026forge}.  We judge a
+topology-changing edit: every contract-compatible outcome must retain a safe
+completion after every admitted prefix, including receipt-silent \Alias occurrences.
 
-\paragraph{Reversal, checkpoints, and update}
-Reversible session calculi provide named checkpoints, causally consistent
-rollback, and session fidelity.  Session programming adds typed
-commit/rollback/abort~\cite{dezani2016checkpoints,castellani2017concurrent,
+\paragraph{Reversal and update}
+Reversible and checkpointed sessions guarantee rollback consistency and typed
+progress~\cite{dezani2016checkpoints,castellani2017concurrent,
 mezzina2021causal,mezzina2025checkpoint}.  Retractable contracts model
-backtracking and speculative alternatives~\cite{barbanera2018contracts}.
-Update theories synthesize controllers, bridges, or most-general
-replacements from given old/new specifications
+backtracking~\cite{barbanera2018contracts}.  Update theories synthesize
+controllers or bridges between given specifications
 ~\cite{nahabedian2020dynamic,amram2022dynamic,bresolin2021static,
-thuijsman2022transformational,macktoobian2022reconfiguration}.  Here the edit
-schema must derive inherited obligations, world receipts remain irreversible,
-and the fixed point tests those obligations after every compatible prefix.
+thuijsman2022transformational,macktoobian2022reconfiguration}.  Our edit
+schemas instead derive inherited obligations while receipts remain
+irreversible, and admission preserves those obligations after every admitted
+prefix.
 
 \paragraph{Automata and causality}
 Security automata enforce prefix-closed properties
-~\cite{schneider2000enforceable}.  Supervisory control constructs supremal
-behavior under observation assumptions
-~\cite{ramadge1987supervisory,cieslak1988partial,cai2015relative}.
-Residual languages yield canonical recognizers, while decentralized
-supervision studies distribution
-~\cite{brzozowski1964derivatives,komenda2017decentralized,
-zhang2017localization}.  Our operator instead couples indexed completions:
-removing a schedule that strands another outcome may invalidate earlier
-prefixes.  Pomsets represent finite causality, conflict, and concurrency
+~\cite{schneider2000enforceable}, while supervisory control constructs
+supremal legal behavior~\cite{ramadge1987supervisory}.  Multitasking and
+generalized nonblocking preserve multiple conditionally marked goals
+~\cite{dequeiroz2005multitasking,malik2008generalised}.
+\Cref{prop:outcome-necessary} makes the relationship exact: with
+outcome-compatibility markings, our kernel is a conditional
+generalized-nonblocking computation.  Without them, projected marker
+nonblocking is strictly weaker.  Our history-admission construction derives
+the markings from authenticated Fork/Restore/Merge topology, schema-authorized retirement,
+and irreversible receipts, then realizes the greatest behavior through a
+durable history cut.  Derivatives provide the canonical recognizer
+~\cite{brzozowski1964derivatives}.  Pomsets represent causality and concurrency
 ~\cite{winskel1987event,vanglabbeek2009configuration}.
 
-\paragraph{Rollback continuity and durable effects}
+\paragraph{Durable effects}
 Rollback systems preserve or detect past state
 ~\cite{elnozahy2002rollback,parno2011memoir,matetic2017rote,
-brandenburger2017lcm}.  VM work identified checkpoint trees that revive
-one-time state~\cite{garfinkel2005virtual}, and ACRFence targets authority
-resurrection in Agent Restore~\cite{zheng2026acrfence}.  Consumable
-credentials, commit-time checks, stale-handle fencing, outboxes, and stable
-idempotency keys protect individual effects
-~\cite{bowers2007consumable,santos2026committime,santos2026lingering,
-aws2026outbox,aws2026idempotency}.  Under irreversible receipts, our theory
-characterizes exactly which topology-changing history edits admit a greatest
-prefix-robust realization.  Its domain-wide cut orders new receipts and alias
-progress before monitor activation.
+brandenburger2017lcm}, and checkpoint trees can revive one-time state
+~\cite{garfinkel2005virtual}.  ACRFence targets authority resurrection in
+Agent Restore~\cite{zheng2026acrfence}.  Consumable credentials, commit-time
+checks, stale-handle fencing, outboxes, and idempotency protect individual
+effects~\cite{bowers2007consumable,santos2026committime,
+santos2026lingering,aws2026outbox,aws2026idempotency}.  Our theory instead
+characterizes whole history edits and orders receipts and \Alias progress
+before monitor activation.

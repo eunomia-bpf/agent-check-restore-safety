@@ -2,34 +2,30 @@
 \label{sec:discussion}
 
 \paragraph{Contracts and progress}
-A contract covers one finite registered slice of protected calls.  Agent
-reasoning remains open-ended, but an unregistered protected call fails closed
-until another admission.  Complete raw traces are prefix-free, so stopping
-versus continuing requires an explicit occurrence.  Completion nonblocking
-preserves a safe completion for each compatible outcome.  It guarantees
-neither fairness, useful task completion, nor later admission.  The policy
-governs authority commitments, not prompt integrity, confidentiality, action
-quality, or Agent alignment.
+Contracts cover finite registered slices.  An unregistered protected call fails
+closed until another admission.  Prefix-free complete traces distinguish
+stopping from continuing.  Completion nonblocking preserves a safe completion
+for each contract-compatible outcome, but guarantees neither fairness, task completion,
+nor later admission.  Policy covers authority commitments, not prompt
+integrity, confidentiality, action quality, or Agent alignment.
 
-\paragraph{Durability and deployment}
+\paragraph{Deployment}
 The theorem assumes complete mediation and linearizable, crash-stable
-transactions.  Remote exactly-once execution still needs idempotency,
-queryable outcomes, or a transactional sink.  Changing policy version
-\(\kappa\) requires re-admission.  Each disjoint domain has one logical epoch
-and state machine, possibly replicated behind a fault-tolerant store.
-Deployment must protect registries, authenticate contracts and cell lineage,
-mediate every protected effect, and minimize sensitive provenance.  The
-artifact does not integrate with Agent runtimes and causes no external effects
-or human-subject risk.  Decentralized controllers and symbolic reduction
+transactions.  Remote exactly-once execution still requires idempotency,
+queryable outcomes, or a transactional sink.  A policy-version change requires
+re-admission.  Each disjoint domain has one policy-domain epoch and state machine,
+possibly replicated behind a fault-tolerant store.  Deployment must protect registries and lineage, mediate every
+protected effect, and minimize provenance.  The artifact neither integrates
+with Agent runtimes nor causes external effects or human-subject risk, and it
+does not prove the theorem.  Decentralized controllers and symbolic reduction
 remain future work.
 
 \section{Conclusion}
 
-An Agent may rewrite its logical history but not committed world facts.
-The Exact Agent History Realization Theorem characterizes exactly which
-registered edits admit a prefix-robust implementation and then either constructs
-their greatest behavior and canonical program or certifies impossibility.
-The Agent only requests an edit.  A trusted checker decides each Fork, Restore,
-or Merge request, and the kernel atomically installs accepted programs across
-fresh/alias and cut races.  History editing is authority editing with exact
-admission.
+An Agent may rewrite its logical history but not committed world facts.  The
+Exact Agent History Realization Theorem decides whether a registered edit has
+a prefix-robust implementation, then constructs its greatest canonical monitor
+or certifies impossibility.  The Agent only requests Fork, Restore, or Merge.
+The trusted installation checker decides, and the durable kernel atomically installs
+the result across \Fresh/\Alias and cut races.  History editing is authority
+editing with exact admission.

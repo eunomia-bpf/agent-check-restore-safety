@@ -42,32 +42,33 @@ A Prefix-Robust Theory of Fork, Restore, and Merge}
 \maketitle
 
 \begin{abstract}
-Tool-using Agents rewrite which past continuations may act.  Fork creates live
-continuations, Restore revives an earlier checkpoint, and Merge selects or
-joins branches.  The external world does not rewind.  Commitments are
+Tool-using Agents can Fork live continuations, Restore a checkpoint, and Merge
+descendants, but the external world does not rewind.  Commitments are
 append-only, copied occurrences may share one irreversible receipt, and old
-protected calls may race the rewrite.  We ask when such an edit has a policy-safe,
-history-faithful, completion-nonblocking implementation preserving every
-promised outcome not discharged by authenticated typed retirement.  Endpoint
-checks fail because a prefix shared by individually safe outcomes can strand
-an outcome that the Agent history still promises.
-We develop a prefix-robust \emph{Agent History-Admission Theory}.  Its greatest
-fixed point removes any completion whose prefix lacks a safe continuation for
-a still-compatible outcome.  Trusted schemas preserve inherited obligations
-or retire them explicitly, while resolution keeps fresh commitments and
-receipt-silent aliases as distinct occurrences.  The Exact Agent History
-Realization Theorem proves that the fixed point is nonempty exactly when a
-realization exists and yields either the greatest realization or a finite
-ranked missing-witness certificate.  The theory serves as a security compiler
-for Agent history operations.  The platform registers policy and immutable
-schemas, while the Agent only requests an edit.  A trusted checker re-derives
-the target and fixed point.  It reports structural errors or fixed-point
-rejection certificates, while the durable kernel atomically installs an
-accepted canonical occurrence-sensitive program under a fresh policy-domain
-epoch.  We prove weak bisimulation between an ideal atomic Agent history
-machine and the durable reference monitor across arbitrary edit sequences,
-fresh/alias races, retries, dispatch, and crashes.  A bounded checker validates
-the fixed point, alias resolution, and representative races.
+protected calls may race the rewrite.  We ask exactly when such an edit has a
+policy-safe, history-faithful, completion-nonblocking implementation that
+preserves every promised outcome not discharged by schema-authorized
+retirement.  Checking outcomes separately is unsound: a shared prefix can
+strand an outcome that the edited history still promises.
+We present a prefix-robust \emph{Agent History-Admission Theory} over
+outcome-indexed causal completions.  Its greatest fixed point removes a
+completion whenever one of its prefixes lacks a safe continuation for any
+contract-compatible outcome.  The Exact Agent History Realization Theorem proves
+that a history rewrite is implementable exactly when this fixed point is
+nonempty.  In that case it constructs the greatest realization and its
+canonical monitor program.  If the fixed point is empty, a finite ranked
+missing-witness certificate proves that no realization exists.
+The theorem makes history admission a security compiler, not an application
+proof obligation.  A platform registers policy and immutable edit schemas,
+while an untrusted Agent only requests an edit.  The trusted installation
+checker then derives the target, verifies inherited obligations, and checks the fixed point.  On
+acceptance, a durable kernel atomically installs the canonical
+occurrence-sensitive program, new gates, and authenticated replacement handles
+under one new policy-domain epoch.  We prove divergence-insensitive weak bisimulation
+between this reference monitor and an ideal atomic Agent-history machine across
+arbitrary edit sequences, \Fresh/\Alias races, retries, dispatch, and crashes.
+A bounded artifact validator exercises the executable decision kernel and
+representative cut races.
 \end{abstract}
 
 \input{sections/introduction}

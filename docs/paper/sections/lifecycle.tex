@@ -2,32 +2,35 @@
 \label{sec:lifecycle}
 
 Consider a procurement Agent authorized to place one order.  It durably
-reserves the budget, giving receipt log \(\Delta\) with
+reserves the budget, so the receipt ledger \(\Delta\) satisfies
 \(\mathsf{lab}(\Delta)=r\), and saves checkpoint \(k\) before approval.
-Approval then commits as cell \(a\), so
+Approval occurrence \(x_a\) then commits through cell \(d_a\), whose authority
+label is \(a\), so
 \(\mathsf{lab}(\Delta)=ra\).  The Agent requests a choice Fork between two
-	suppliers.  Its protected completion contract has exactly two indexed
-	outcomes.
+suppliers, \(L\) and \(R\).  Its registered causal-completion contract has exactly two indexed
+outcomes.
 \begin{equation}
 \label{eq:running-outcomes}
 \begin{split}
- o_A&:\ p_A\prec s_A,\\
- o_B&:\ p_B\prec s_B ,
+ o_L&:\ x_L^p\prec x_L^s,\\
+ o_R&:\ x_R^p\prec x_R^s ,
 \end{split}
 \end{equation}
-where \(p\) and \(s\) denote payment and shipment occurrences.  The
+where \(x_i^p\) and \(x_i^s\) are payment and shipment occurrences.  The
 alternatives are exclusive, but both must have a safe completion at the cut.
 
-Logical occurrence is not effect identity.  The protected-call registry
-authenticates
+A logical occurrence is distinct from the semantic cell whose authority it
+redeems.  The protected-call registry authenticates
 \[
- q_{\rm cell}(s_A)=q_{\rm cell}(s_B)=s.
+ q_{\rm cell}(x_L^s)=q_{\rm cell}(x_R^s)=d_s.
 \]
-Both branches copied the same shipment handle, while payments retain
-distinct cells \(p_A\) and \(p_B\).  A later Restore of \(k\) will create a
-new approval occurrence \(a'\) with \(q_{\rm cell}(a')=a\).  The authority policy
-allows prefixes of \(rap_As\) and \(rap_Bs\), but no trace containing both
-payments or a payment before \(a\).
+The two branch occurrences refer to the same shipment cell but receive
+distinct occurrence-bound handles after the Fork.  Payments retain distinct
+cells \(d_L^p\) and \(d_R^p\).  The authority labels of
+\(d_s,d_L^p,d_R^p\) are \(s,p_L,p_R\), respectively.  A later Restore of \(k\) creates approval
+occurrence \(x_a'\) with \(q_{\rm cell}(x_a')=d_a\).  The authority policy
+allows prefixes of \(rap_Ls\) and \(rap_Rs\), but no trace containing both
+payment labels or a payment before \(a\).
 
 \paragraph{The admission calculation}
 Using the admission notation formalized in \cref{sec:admission}, write \(M_o\)
@@ -35,16 +38,16 @@ for outcome \(o\)'s policy-safe resolved completions.  At this cut each outcome
 has one causal linearization, resolving to
 \[
 \begin{aligned}
- z_A&=\Fresh(p_A,p_A)\Fresh(s_A,s),\\
- z_B&=\Fresh(p_B,p_B)\Fresh(s_B,s).
+ z_L&=\Fresh(x_L^p,d_L^p)\Fresh(x_L^s,d_s),\\
+ z_R&=\Fresh(x_R^p,d_R^p)\Fresh(x_R^s,d_s).
 \end{aligned}
 \]
-Thus \(M_{o_A}=\{z_A\}\), \(M_{o_B}=\{z_B\}\), and
-\(\widehat B^\dagger=\{(o_A,z_A),(o_B,z_B)\}\), with \(W^\dagger\) their
+Thus \(M_{o_L}=\{z_L\}\), \(M_{o_R}=\{z_R\}\), and
+\(\widehat B^\dagger=\{(o_L,z_L),(o_R,z_R)\}\), with \(W^\dagger\) their
 prefix closure.  On acceptance, these prefixes become the generated behavior
-of the compiled monitor.  If policy excludes \(rap_Bs\), then
-\(M_{o_B}=\varnothing\), and the Fork is rejected because pruning supplier
-\(B\) would change its meaning.  \Cref{sec:admission} gives the shared-prefix
+of the compiled monitor.  If policy excludes \(rap_Rs\), then
+\(M_{o_R}=\varnothing\), and the Fork is rejected because pruning supplier
+\(R\) would change its meaning.  \Cref{sec:admission} gives the shared-prefix
 case where every outcome starts safe but no prefix-robust family exists.
 
 \begin{figure*}[t]
@@ -59,46 +62,46 @@ case where every outcome starts safe but no prefix-robust family exists.
       lab/.style={font=\scriptsize\bfseries,anchor=east}
     ]
     \node[lab] at (0,2.15) {logical history};
-    \node[node] (h0) at (0.65,2.15) {$h_0$};
-    \node[node] (al) at (1.85,2.15) {$a$};
+    \node[node] (b0) at (0.65,2.15) {$b_0$};
+    \node[node] (al) at (1.85,2.15) {$x_a$};
     \node[box] (f) at (3.1,2.15) {choice\\Fork};
-    \node[node] (ba) at (4.45,2.62) {$A$};
-    \node[node] (bb) at (4.45,1.68) {$B$};
+    \node[node] (ba) at (4.45,2.62) {$L$};
+    \node[node] (bb) at (4.45,1.68) {$R$};
     \node[box] (ms) at (5.95,2.62) {select\\Merge};
-    \node[node] (ha) at (7.25,2.62) {$h_A$};
+    \node[node] (bl) at (7.25,2.62) {$b_L$};
     \node[box] (rl) at (8.35,1.68) {live\\Restore $k$};
-    \node[node] (cl) at (9.75,1.68) {$a'$};
+    \node[node] (cl) at (9.75,1.68) {$x_a'$};
     \node[box] (jn) at (11.15,2.15) {join\\Merge};
-    \draw[arr] (h0) -- node[above] {$k$} (al);
+    \draw[arr] (b0) -- node[above] {$k$} (al);
     \draw[arr] (al) -- (f);
     \draw[arr] (f) -- (ba);
     \draw[arr] (f) -- (bb);
     \draw[arr] (ba) -- (ms);
-    \draw[arr] (ms) -- (ha);
-    \draw[stale] (h0.north) -- (0.65,3.18) --
+    \draw[arr] (ms) -- (bl);
+    \draw[stale] (b0.north) -- (0.65,3.18) --
       node[above] {checkpoint clone: new occurrence, same cell}
       (8.35,3.18) -- (rl.north);
     \draw[arr] (rl) -- (cl);
-    \draw[arr] (ha) -- (jn);
+    \draw[arr] (bl) -- (jn);
     \draw[arr] (cl) -- (jn);
     \draw[stale] (bb) to[bend left=17]
       node[below] {must lose authority} (ms);
 
-    \node[lab] at (0,0.65) {world receipts};
+    \node[lab] at (0,0.65) {receipt authority trace};
     \node[node] (r) at (0.65,0.65) {$r$};
     \node[node] (a) at (3.05,0.65) {$a$};
-    \node[node] (pa) at (6.05,0.65) {$p_A$};
+    \node[node] (pa) at (6.05,0.65) {$p_L$};
     \node[node] (s) at (10.2,0.65) {$s$};
     \draw[arr] (r) -- node[above] {append only} (a);
     \draw[arr] (a) -- (pa);
     \draw[arr] (pa) -- (s);
     \node[align=center] at (9.75,1.12)
-      {\(\Alias(a',a)\)\\no new receipt};
+      {\(\Alias(x_a',d_a)\)\\no new receipt};
 
     \node[lab] at (0,-0.75) {policy-domain epoch};
     \node[box] (e0) at (0.85,-0.75) {$\eta_0$};
-    \node[box] (ef) at (3.7,-0.75) {$\eta_F:\ A,B$};
-    \node[box] (ea) at (6.8,-0.75) {$\eta_A$};
+    \node[box] (ef) at (3.7,-0.75) {$\eta_F:\ L,R$};
+    \node[box] (ea) at (6.8,-0.75) {$\eta_L$};
     \node[box] (ej) at (11.15,-0.75) {$\eta_J$};
     \draw[arr] (e0) -- node[above] {atomic swap} (ef);
     \draw[arr] (ef) -- node[above] {atomic swap} (ea);
@@ -112,28 +115,31 @@ case where every outcome starts safe but no prefix-robust family exists.
   \label{fig:two-histories}
 \end{figure*}
 
-\paragraph{The fresh race}
+\paragraph{The \Fresh race}
 After the shared approval and before either payment, the Agent requests
-\(\mathsf{MergeSelect}(g,A,\sigma)\).  If an old supplier-\(B\) protected use
-commits \(p_B\) first, that occurrence durably selects \(B\) and changes the receipt
-prefix from \(ra\) to \(rap_B\).  Selecting \(A\) must therefore be re-derived
+\(\mathsf{MergeSelect}(g,L,\sigma)\).  If a protected use from the old
+supplier-\(R\) arm commits \(x_R^p\) first, that occurrence durably selects
+\(R\) and changes the receipt
+ledger's authority trace \(\mathsf{lab}(\Delta)\) from \(ra\) to \(rap_R\).
+Selecting \(L\) must therefore be re-derived
 and rejected.  If the Merge cut wins, it closes the current
-policy-domain epoch and rebinds every live gate before any later \(p_B\) can
+policy-domain epoch and rebinds every live gate before any later \(x_R^p\) can
 commit.  Installing a new program while an old policy-domain epoch remains
 active permits both payments.
 
-\paragraph{The alias race}
+\paragraph{The \Alias race}
 Now consider the live Restore in \cref{fig:two-histories}.  Cloning \(k\)
-creates a fresh logical approval occurrence \(a'\) and gate, but retains
-cell \(a\).  Because \(a\) is already receipted, executing \(a'\) is an
+creates a new logical approval occurrence \(x_a'\), a newly minted gate, and an
+authenticated handle, but retains cell \(d_a\).  Because \(d_a\) is
+already receipted, executing \(x_a'\) is an
 \Alias that advances the restored continuation past approval while leaving
 \(\Delta\) unchanged.  A concurrent join or replacement compiled before that
 progress is stale even though its receipt comparison still succeeds.  The cut
-must therefore compare a logical-occurrence frontier \(\chi\) in addition to
-the receipt frontier.
+must therefore compare the resolved-occurrence trace \(\chi\) in addition to
+the receipt ledger.
 
 The example exposes the whole problem.  Workspace equality cannot recover
-which branch relation is live, and receipt equality cannot detect alias
+which branch relation is live, and receipt equality cannot detect \Alias
 progress.  Cell equality cannot determine the required obligation projection,
 while a caller-supplied target automaton cannot certify any of these facts.
 \Cref{sec:model} instead derives the target through a trusted history judgment.

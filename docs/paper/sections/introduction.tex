@@ -1,16 +1,13 @@
 \section{Introduction}
 \label{sec:introduction}
 
-An ordinary execution accumulates one past.  A tool-using Agent can instead
-Fork live continuations, Restore an earlier checkpoint, and Merge descendants.
-Production interfaces already expose forks and checkpoints
-~\cite{codexappserver,claudesessions,claudecheckpoint}, and emerging Agent
-substrates make these operations explicit
-~\cite{wang2026fork,wu2026crab,zhang2026agentlibos}.  Yet the world is not
-editable: a pre-Restore payment remains charged, copied occurrences may share
-one-use authority, and an old protected call may race a Merge.  History editing
-therefore changes \emph{which past continuations can still produce a future}
-while commitments remain ordered and irreversible.
+A tool-using Agent can Fork live continuations, Restore a checkpoint, and
+Merge descendants~\cite{codexappserver,claudesessions,claudecheckpoint,
+wang2026fork,wu2026crab,zhang2026agentlibos}.  The world does not rewind: a
+pre-Restore payment remains charged, copied occurrences may share one-use
+authority, and an old call may race a Merge.  History editing changes
+\emph{which past continuations can still produce a future} while commitments
+remain irreversible.
 
 This paper asks the following question.
 \begin{quote}
@@ -27,24 +24,20 @@ an Agent promise.  The failure cascades when removing that completion destroys
 coverage at an earlier prefix, so testing each outcome independently is
 unsound.
 
-Existing theories judge neighboring boundaries.  History-based authorization
-and causal Agent monitors select a next action from an observed
-past~\cite{abadi2003history,krukow2008history,palumbo2026forge}, while
-commit-time authorization checks one durable
-effect~\cite{santos2026committime}.  Reversible and checkpointed sessions
-preserve communication properties under rollback
-~\cite{dezani2016checkpoints,castellani2017concurrent,mezzina2021causal,
-mezzina2025checkpoint}.  Dynamic update bridges given specifications or
-controllers~\cite{nahabedian2020dynamic,amram2022dynamic,bresolin2021static,
-thuijsman2022transformational}.  Agent history admission instead judges the
-edit itself by requiring it to derive future obligations, preserve them after
-every compatible prefix, and respect irreversible receipts.
+Prior theories control neighboring boundaries: history monitors judge a next
+action~\cite{abadi2003history,krukow2008history,palumbo2026forge}, commit-time
+authorization judges one effect~\cite{santos2026committime}, and reversible
+sessions or dynamic update preserve given specifications
+~\cite{dezani2016checkpoints,mezzina2025checkpoint,nahabedian2020dynamic,
+amram2022dynamic}.  Agent history admission judges the edit itself: it derives
+future obligations, preserves them after every admitted prefix, and respects
+irreversible receipts.
 
 Our key observation is that safe Agent history editing is one
 greatest-fixed-point problem over \emph{outcome-indexed causal completions}.
 From the policy-safe resolved completions \(\widehat B_0\), an operator removes
 any completion having a prefix without a surviving continuation for even one
-raw-compatible outcome.
+contract-compatible outcome.
 \[
  \widehat B^\dagger=\nu\widehat B.\widehat\Phi(\widehat B),
  \qquad B^\dagger=\pi_2\widehat B^\dagger,\qquad
@@ -52,57 +45,42 @@ raw-compatible outcome.
 \]
 The edit is admissible exactly when \(\widehat B^\dagger\neq\varnothing\).
 Its permitted behavior is \(W^\dagger\).  This recursive closure turns policy safety
-into a persistent Agent-history promise.
+into a persistent Agent-history promise.  It also identifies information that
+ordinary trace-only nonblocking loses: the same projected safe language may be
+marker-nonblocking even though one contract-compatible outcome has been stranded
+(\cref{prop:outcome-necessary}).
 
-The fixed point is defined over a trusted Agent-history semantics rather than
-an Agent-supplied target.  An untrusted Agent names only live objects and an
-immutable schema.  A trusted judgment derives the target and preserves
-inherited outcomes, occurrences, cells, lineage, and causal order except under
-typed retirement.  Resolution records both \Fresh commitments and
-receipt-silent \Alias occurrences.  At every cut, one fresh epoch replaces the
-current epoch of the whole policy domain, ordering old uses, aliases, and
-target activation.
+The Agent names only live objects and an immutable schema.  A trusted judgment
+derives the target and preserves outcomes, occurrences, cells, lineage, and
+causal order except under schema-authorized retirement.  Resolution records
+\Fresh commitments and receipt-silent \Alias occurrences.  Each cut replaces
+the whole policy domain's epoch, ordering old uses and target activation.
 
 \paragraph{Theory as a security compiler}
-Our \emph{Exact Agent History Realization Theorem} makes fixed-point admission,
-existence of any history-faithful policy-safe nonblocking realization with
-persistent outcome coverage, and exact compilation equivalent.  It yields the
-greatest realization or a finite certificate that none exists.  This result
-induces a security compiler rather than an application proof obligation.
-Platform developers supply policy \(\mathcal A\) and immutable schemas that
-specify which obligations each edit carries, clones, or retires.  The Agent
-submits only \(u\), naming live objects and one registered schema.  The trusted
-controller comprises a checker and durable kernel.  Search and preloading may
-be untrusted because the checker re-derives the schema judgment, fixed point,
-and canonical program.
+The \emph{Exact Agent History Realization Theorem} equates admission,
+realization existence, and exact compilation.  It yields the greatest
+realization or a finite impossibility certificate.  Platform developers
+register policy and schemas describing what an edit carries, clones, or
+retires.  The Agent submits only \(u\).  The installation checker re-derives
+the schema judgment and fixed point.  On acceptance, the kernel atomically
+installs \(\mathsf{Can}(W^\dagger,B^\dagger)\), minted gates, and authenticated
+replacement handles under one new epoch.  The monitor then authenticates the
+occurrence, gate, handle, cell, and epoch of every protected call and permits
+only current-program transitions.  A valid \Retry only returns its stable
+result.  The Agent cannot discard obligations outside schema-authorized
+retirement or bypass admission.
 
-For each request, the checker authenticates the current history, receipts,
-policy, epoch, and any named checkpoint.  Schema failure yields a checkable
-structural error.  Otherwise the checker computes
-\(\widehat B^\dagger_{H,u}\).  An empty fixed point yields its ranked
-missing-witness certificate.  A nonempty one yields the greatest permitted
-behavior and canonical program \(\mathsf{Can}(W^\dagger,B^\dagger)\), which the
-kernel installs atomically under a fresh policy-domain epoch.  The monitor
-authenticates each protected call's occurrence, gate, handle, cell, and epoch.
-A matching \Retry returns the stable future without changing state, whereas an
-unresolved \Fresh or \Alias must take a current-program transition.  The Agent
-cannot discard obligations except through retirement already authorized by the
-registered schema and cannot bypass the decision.
-
-We prove weak bisimulation between the durable monitor and an independent
-ideal atomic Agent-history LTS under arbitrary sequences of the six edits and
-protected-use, retry, dispatch, and crash steps, including
-fresh/alias/install races.  A dependency-free bounded checker executes the
-fixed point, alias resolution, and representative cut races.  Schema
-preservation and policy-domain epoch correctness remain proof objects.
+We prove weak bisimulation with an independent ideal Agent-history labeled
+transition system (LTS) across arbitrary edit sequences, protected uses,
+retries, dispatch, crashes, and \Fresh/\Alias/install races.  A bounded
+artifact validator exercises the decision kernel and race fixtures.
 
 \paragraph{Contribution}
-We contribute one end-to-end Agent History-Admission Theory.  Its Exact Agent
-History Realization Theorem establishes schema fidelity for all six edits,
-constructs the greatest prefix-robust realization or certifies impossibility,
-and compiles each accepted realization into a durable monitor weakly bisimilar
-to the ideal Agent history machine across successive edits and
-fresh/alias/install races
-(\cref{sec:model,sec:admission,sec:kernel,sec:results}).  A dependency-free
-bounded checker validates fixed-point certificates and selected race fixtures
+We contribute a unified Agent History-Admission Theory centered on one Exact
+Realization Theorem, which provides three inseparable deliverables:
+(1) trusted semantics for all six edits, (2) an exact criterion that constructs
+the greatest prefix-robust behavior or certifies impossibility, and (3) a security
+compiler weakly bisimilar to the ideal Agent-history machine across successive edits and races
+(\cref{sec:model,sec:admission,sec:kernel,sec:results}).  The bounded artifact
+validator exercises the decision kernel and selected race fixtures
 (\cref{sec:validation}).
