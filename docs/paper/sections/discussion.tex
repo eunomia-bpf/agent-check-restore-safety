@@ -2,12 +2,12 @@
 % 范围与局限
 \label{sec:discussion}
 
-Each admission instance is finite, but the theorem remains closed after every finite prefix of an unbounded history containing protected calls, six structural edits, and authenticated additive live extensions.
-% 每个准入实例都是有限的，但该定理在由受保护调用、六种结构编辑和经认证的仅追加在线扩展组成的无界历史的每个有限前缀后仍保持闭合；未注册调用依旧以关闭方式失败。
+Each safety-check instance is finite, but the theorem remains closed after every finite prefix of an unbounded history containing protected calls, six execution edits, and authenticated additive live extensions.
+% 每个安全检查实例都是有限的，但该定理在由受保护调用、六种执行编辑和经认证的仅追加在线扩展组成的无界历史的每个有限前缀后仍保持闭合；未注册调用依旧以关闭方式失败。
 Unregistered calls still fail closed.
 % 未注册调用依旧以关闭方式失败。
-Completion nonblocking preserves a safe completion per compatible outcome but guarantees neither fairness, task completion, later admission, prompt integrity, confidentiality, action quality, nor alignment.
-% 完成非阻塞性为每个兼容结果保留一条安全完成路径，但不保证公平性、任务完成、后续准入、提示完整性、机密性、动作质量或对齐。
+Completion nonblocking preserves a safe completion per compatible outcome but guarantees neither fairness, task completion, acceptance of a later edit, prompt integrity, confidentiality, action quality, nor alignment.
+% 完成非阻塞性为每个兼容结果保留一条安全完成路径，但不保证公平性、任务完成、后续编辑被接受、提示完整性、机密性、动作质量或对齐。
 
 Deployment requires complete mediation, crash-stable linearizable domain transactions, and one active epoch per policy domain.
 % 部署要求完全中介、崩溃稳定的可线性化域事务，以及每个策略域只有一个活跃纪元；经认证的仅追加策略增长使用在线扩展，而撤销或其他非单调策略变更需要新的经检查根，远程恰好一次执行则需要幂等或可查询的接收端。
@@ -15,8 +15,10 @@ Authenticated additive policy growth uses live extension, whereas revocation or 
 % 经认证的仅追加策略增长使用在线扩展，而撤销或其他非单调策略变更需要新的经检查根。
 Remote exactly-once execution additionally requires an idempotent or queryable sink.
 % 远程恰好一次执行还需要幂等或可查询的接收端。
-The artifact omits runtime integration, external effects, and full mechanization; it uses only synthetic local histories, so no participants or user data are involved.
+The artifact omits runtime integration, external effects, and full mechanization.
+% 本制品不包含运行时集成、外部效果和完整机械化。
+It uses only synthetic local histories, so no participants or user data are involved.
 % 本制品不包含运行时集成、外部效果和完整机械化；它只使用本地合成历史，因此不涉及参与者或用户数据。
 
-\sys yields each edit's greatest safe monitor or an impossibility proof.
-% Agent 历史准入为每次编辑给出其最大安全监控器或不可能性证明。
+The checker yields each edit's greatest safe monitor or an impossibility proof.
+% 检查器为每次编辑给出其最大安全监控器或不可能性证明。

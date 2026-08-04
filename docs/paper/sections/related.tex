@@ -2,15 +2,23 @@
 % 相关工作
 \label{sec:related}
 
+\paragraph{Recovery and rollback}
+% 恢复与回滚
 Output-commit recovery delays effects until state commits and reconstructs a fixed computation after failure.
 % 输出提交恢复将效果延迟到状态提交后，并在故障后重建固定计算；它不对带索引结果与共享权限下改变拓扑的 Agent 编辑作准入判定~\cite{strom1985optimistic,elnozahy2002rollback}。
 It does not admit topology-changing Agent edits under indexed outcomes and shared authority~\cite{strom1985optimistic,elnozahy2002rollback}.
 % 它不对带索引结果与共享权限下改变拓扑的 Agent 编辑作准入判定~\cite{strom1985optimistic,elnozahy2002rollback}。
 
+\paragraph{Supervisory control and synthesis}
+% 监督控制与综合
 Generalized nonblocking and live synthesis consume supplied plants and markings or old specifications and executions.
 % 广义非阻塞与 Live Synthesis 使用给定的被控对象/标记或旧规范/执行；我们的理论则在最大安装之前，从经认证的 Agent 历史派生六类编辑义务以及必要且充分的准入状态~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live}。
-\sys instead derives the obligations of all six edits and the necessary-and-sufficient admission state from authenticated Agent history before installation~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live}.
-% 相比之下，\sys 在安装之前从经认证的 Agent 历史派生六类编辑的义务以及必要且充分的准入状态~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live}。
+Our checker instead derives the obligations of all six edits and the necessary-and-sufficient condition for an exact safety decision from authenticated Agent history before installation~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live}.
+% 相比之下，我们的检查器在安装之前从经认证的 Agent 历史派生六类编辑的义务以及精确安全判定所需的条件~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live}。
 
-ACRFence/DART/Atomix/Rebound fence post-Restore replay, choose preserving checkpoints, settle after frontiers, or make rollback atomic and auditable, but take supplied logs, scopes, classes, frontiers, or policies~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}.
+\paragraph{Agent recovery mechanisms}
+% Agent 恢复机制
+ACRFence, DART, Atomix, and Rebound fence post-Restore replay, choose preserving checkpoints, settle after frontiers, or make rollback atomic and auditable.
 % ACRFence/DART/Atomix/Rebound 隔离 Restore 后的重放、选择保持既有工作的检查点、在前沿之后结算，或使回滚具有原子性与可审计性，但它们使用给定的日志、范围、类别、前沿或策略~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}。
+These mechanisms take logs, scopes, classes, frontiers, or policies as inputs rather than deriving the exact safety condition from an authenticated execution record~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}.
+% 这些机制将日志、范围、类别、前沿或策略作为输入，而不是从经认证的执行记录中推导精确安全条件~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}。

@@ -1,72 +1,110 @@
-\section{Main Characterization Theorem}
-% Agent 安全状态刻画
+\section{Exact Edit-Safety Characterization}
+% 精确编辑安全刻画
 \label{sec:results}
 
-The main theorem connects the preceding layers: authenticated derivation, exact admission, monitor compilation, and durable installation.
-% 主定理连接前述各层：经认证推导、精确准入、监控器编译与持久安装。
+The main theorem connects the preceding layers: authenticated derivation, the exact safety check, monitor compilation, and durable installation.
+% 主定理连接前述各层：经认证推导、精确安全检查、监控器编译与持久安装。
 It also characterizes which history information an exact implementation must retain and proves closure across finite executions.
 % 它还刻画精确实现必须保留哪些历史信息，并证明有限执行上的闭合性。
+The theorem has one central equivalence and three supporting guarantees.
+% 该定理包含一个核心等价关系和三类支撑保证。
+Clause~2 equates realizability, successful compilation, and atomic installation.
+% 第 2 条将可实现性、成功编译与原子安装等同起来。
+Clauses~1 and~3 justify the checked boundary and the necessity of its state, while clauses~4 and~5 lift the result to finite histories and the durable API.
+% 第 1 条和第 3 条分别论证经检查边界及其状态的必要性，第 4 条和第 5 条则将结果提升到有限历史与持久 API。
 
 Fix a derivation witness \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
 % 固定一个推导见证 \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
-An independently defined \emph{exact atomic realization} is a pair \((M,\widehat B_M)\) whose generated language realizes \((H,u)\) according to \cref{def:realization} and whose marked language is \(\pi_2\widehat B_M\).
-% 独立定义的\emph{精确原子实现}是一个二元组 \((M,\widehat B_M)\)，其生成语言按照 \cref{def:realization} 实现 \((H,u)\)，且其标记语言为 \(\pi_2\widehat B_M\)。
+An independently defined \emph{installed atomic realization} is a pair \((M,\widehat B_M)\) whose generated language realizes \((H,u)\) according to \cref{def:realization} and whose marked language is \(\pi_2\widehat B_M\).
+% 独立定义的\emph{已安装原子实现}是一个二元组 \((M,\widehat B_M)\)，其生成语言按照 \cref{def:realization} 实现 \((H,u)\)，且其标记语言为 \(\pi_2\widehat B_M\)。
 The witness's exact-cut transaction must atomically install \((\kappa_u,H_u,\mathcal A_u,M)\) at \(\eta^+\), close \(\eta^-\), bind the target gates, and publish replacement handles.
 % 对于见证 \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)，独立定义的\emph{精确原子实现}是满足以下条件的 \((M,\widehat B_M)\)：\((\mathsf{Gen}(M,q^0),\widehat B_M)\) 按照 \cref{def:realization} 实现 \((H,u)\)，\(\mathsf{Mark}(M,q^0)=\pi_2\widehat B_M\)，且 \(\delta\) 的精确切点事务原子地在 \(\eta^+\) 安装 \((\kappa_u,H_u,\mathcal A_u,M)\)、关闭 \(\eta^-\)、绑定目标门并发布替换句柄。
 
 \paragraph{Relational evidence}
 % 关系证据
+We call \(S\) the compiled runtime state, \(\mathsf{AgentSec}\) its invariant, and \(\mathsf{Sec}(S;c,r)\) the four-factor information view used by the lower bound.
+% 我们将 \(S\) 称为编译后运行时状态，将 \(\mathsf{AgentSec}\) 称为其不变量，并将 \(\mathsf{Sec}(S;c,r)\) 称为下界所用的四因子信息视图。
 At a checked cut, \(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) joins promised topology/schema, occurrence--cell identity, effect progress/receipts, and epoch/cut coordinates.
 % 在经检查的切点处，\(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) 连接已承诺拓扑/模式、发生项--单元标识、效果进展/回执以及纪元/切点坐标。
 \(\mathcal Q_{\rm sec}\) contains typed decide/install queries, and \(\mathsf{Exact}(\tau)\) means that a decoder reproduces \(\mathsf{Ans}\) from \(\tau(\mathsf{Sec})\) for every such query.
 % \(\mathcal Q_{\rm sec}\) 包含带类型的判定/安装查询，而 \(\mathsf{Exact}(\tau)\) 意味着一个解码器能从 \(\tau(\mathsf{Sec})\) 为每个此类查询复现 \(\mathsf{Ans}\)。
-\Cref{app:evidence} gives the full field dependencies, projections, query semantics, and private-name orbits; the lower bound concerns information, not layout.
+\Cref{app:evidence} gives the full field dependencies, projections, query semantics, and private-name orbits.
 % \Cref{app:evidence} 给出完整字段依赖、投影、查询语义与私有名称轨道；该下界约束信息而非布局。
+The lower bound concerns information rather than a particular layout.
+% 该下界约束信息，而非特定布局。
 
 \paragraph{Durable Agent-API observation}
 % 持久 Agent API 观测
-\(\mathcal O_{\rm api}\) exposes cut-bound verdicts/edges, protected-use outcomes, dispatch, settlement, and authenticated returns, quotienting private names but not public bytes; \(\mathsf{obs}_{\rm api}\) hides only internal computation, preload, Save, stale attempts, and recovered crash.
+\(\mathcal O_{\rm api}\) exposes verdicts and history edges bound to a specific cut, protected-use outcomes, dispatch, settlement, and authenticated returns.
 % \(\mathcal O_{\rm api}\) 暴露绑定切点的判定/历史边、受保护使用结果、派发、结算与经认证返回，对私有名称而非公开字节取商；\(\mathsf{obs}_{\rm api}\) 只隐藏内部计算、预加载、Save、过期尝试与恢复崩溃。
-\(\mathcal R\) equates ideal and compiled states when \(\mathsf{AgentSec}\), cut/prefix, epoch, live bindings, and visible fields agree; \cref{app:bisimulation} gives its typed maps, reply linkage, and good initial pairs.
+It quotients private names but preserves public bytes.
+% 它对私有名称取商，但保留公开字节。
+\(\mathsf{obs}_{\rm api}\) hides only internal computation, preload, Save, stale attempts, and recovered crash.
+% \(\mathsf{obs}_{\rm api}\) 只隐藏内部计算、预加载、Save、过期尝试与恢复崩溃。
+\(\mathcal R\) equates ideal and compiled states when \(\mathsf{AgentSec}\), cut and prefix, epoch, live bindings, and visible fields agree.
 % 当 \(\mathsf{AgentSec}\)、切点/前缀、纪元、在线绑定与可见字段一致时，\(\mathcal R\) 等同理想状态与编译状态；\cref{app:bisimulation} 给出其类型化映射、回复链接与良好初始对。
+\Cref{app:bisimulation} gives its typed maps, reply linkage, and good initial pairs.
+% \Cref{app:bisimulation} 给出其类型化映射、回复链接与良好初始对。
 
-\begin{theorem}[Agent Security-State Characterization]
-% Agent 安全状态刻画
+\begin{theorem}[Exact Edit-Safety]
+% 精确编辑安全
 \label{thm:exact-history}
-Under \cref{sec:model}'s boundary, clause 1 holds for every finite-state \(\mathcal W\) and finite \(R\), and clauses 2--5 for every \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) at every finite reachable state satisfying \(\mathsf{AgentSec}\); registration acceptance entails boundary-finiteness.
+Under \cref{sec:model}'s boundary, clause 1 holds for every finite-state \(\mathcal W\) and finite \(R\).
 % 在 \cref{sec:model} 的边界下，第 1 条对每个有限状态 \(\mathcal W\) 与有限 \(R\) 成立，第 2--5 条对每个满足 \(\mathsf{AgentSec}\) 的有限可达状态上的每个 \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) 成立；注册接受蕴含边界有限性。
+Clauses 2--5 hold for every \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) at every finite reachable state satisfying \(\mathsf{AgentSec}\).
+% 第 2--5 条对每个满足 \(\mathsf{AgentSec}\) 的有限可达状态上的每个 \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) 成立。
+Registration acceptance entails boundary-finiteness.
+% 注册接受蕴含边界有限性。
 \begin{enumerate}[leftmargin=*,itemsep=0pt]
 \item \textbf{Registration reflection.}
 % 注册反射。
-\(\mathsf{CheckReg}(\mathcal W,R)\) accepts iff stored \(\lambda\) witnesses \(\mathcal W\sqsubseteq_\lambda R\); source executions modulo \(\equiv_\partial\) are then order-isomorphic to \(\mathsf{BRuns}(R)\), preserving outcomes, order, cells, \Fresh/\Alias, admission, and the greatest monitor, while missing promises, inconsistent cells, or unmediated durable edges reject before bootstrap.
+\(\mathsf{CheckReg}(\mathcal W,R)\) accepts iff stored \(\lambda\) witnesses \(\mathcal W\sqsubseteq_\lambda R\).
 % 当且仅当所存 \(\lambda\) 见证 \(\mathcal W\sqsubseteq_\lambda R\) 时，\(\mathsf{CheckReg}(\mathcal W,R)\) 才接受；此时模 \(\equiv_\partial\) 的源执行与 \(\mathsf{BRuns}(R)\) 序同构，并保持结果、次序、单元、\Fresh/\Alias、准入与最大监控器，而缺失承诺、不一致单元或未经中介的持久边会在引导前被拒绝。
+Source executions modulo \(\equiv_\partial\) are then order-isomorphic to \(\mathsf{BRuns}(R)\), preserving outcomes, order, cells, \Fresh/\Alias, the safety decision, and the greatest monitor.
+% 此时模 \(\equiv_\partial\) 的源执行与 \(\mathsf{BRuns}(R)\) 序同构，并保持结果、次序、单元、\Fresh/\Alias、安全判定与最大监控器。
+Missing promises, inconsistent cells, or unmediated durable edges reject before bootstrap.
+% 缺失承诺、不一致单元或未经中介的持久边会在引导前被拒绝。
 
 \item \textbf{Exact compilation.}
 % 精确编译。
-For \(\Theta=\Theta_S(u)\), both machines share one cut-bound trichotomy: undefined derivation gives verified state-preserving \(\mathsf{Invalid}\); a unique \(\delta\) with \(\widehat B^\dagger_\delta=\varnothing\) gives verified state-preserving \(\mathsf{Reject}\) and no exact realization; otherwise let \(Y=\mathsf{Compile}(\Theta)\) and \(c_\delta^+\) be the checked record.
+For \(\Theta=\Theta_S(u)\), both machines share one trichotomy bound to the same decision cut.
 % 对于 \(\Theta=\Theta_S(u)\)，两台机器共享一种绑定切点的三分判定：未定义推导给出经验证且保持状态的 \(\mathsf{Invalid}\)；唯一 \(\delta\) 满足 \(\widehat B^\dagger_\delta=\varnothing\) 时给出经验证且保持状态的 \(\mathsf{Reject}\)，且不存在精确实现；否则令 \(Y=\mathsf{Compile}(\Theta)\)，并令 \(c_\delta^+\) 为经检查记录。
-In the positive case, \(\widehat B^\dagger_\delta\ne\varnothing\), existence of an exact realization, \(\mathsf{Ready}(S,u,Y)\), and an \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\) successor satisfying \(\mathsf{AgentSec}(S^+;c_\delta^+,\epsilon)\) are equivalent; the greatest witness and canonical monitor satisfy \(\mathsf{SPC}\), while the edge retains \(\mathsf{Done}_{H,u}\)'s evidence and records \(\mathsf{Dec}_{H,u}\).
+An undefined derivation gives a verified, state-preserving \(\mathsf{Invalid}\).
+% 未定义推导给出经验证且保持状态的 \(\mathsf{Invalid}\)。
+A unique \(\delta\) with \(\widehat B^\dagger_\delta=\varnothing\) gives a verified, state-preserving \(\mathsf{Reject}\) and no installed atomic realization.
+% 唯一 \(\delta\) 满足 \(\widehat B^\dagger_\delta=\varnothing\) 时给出经验证且保持状态的 \(\mathsf{Reject}\)，且不存在精确实现。
+Otherwise, let \(Y=\mathsf{Compile}(\Theta)\) and \(c_\delta^+\) be the checked record.
+% 否则，令 \(Y=\mathsf{Compile}(\Theta)\)，并令 \(c_\delta^+\) 为经检查记录。
+In this positive case, the following conditions are equivalent: (1) \(\widehat B^\dagger_\delta\ne\varnothing\), (2) an installed atomic realization exists, (3) \(\mathsf{Ready}(S,u,Y)\) holds, and (4) an \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\) successor satisfies \(\mathsf{AgentSec}(S^+;c_\delta^+,\epsilon)\).
 % 在正面情形中，\(\widehat B^\dagger_\delta\ne\varnothing\)、精确实现存在、\(\mathsf{Ready}(S,u,Y)\) 以及存在满足 \(\mathsf{AgentSec}(S^+;c_\delta^+,\epsilon)\) 的 \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\) 后继彼此等价；最大见证与规范监控器满足 \(\mathsf{SPC}\)，而该边保留 \(\mathsf{Done}_{H,u}\) 的证据并记录 \(\mathsf{Dec}_{H,u}\)。
+The greatest witness and canonical monitor satisfy \(\mathsf{SPC}\), while the edge retains \(\mathsf{Done}_{H,u}\)'s evidence and records \(\mathsf{Dec}_{H,u}\).
+% 最大见证与规范监控器满足 \(\mathsf{SPC}\)，而该边保留 \(\mathsf{Done}_{H,u}\) 的证据并记录 \(\mathsf{Dec}_{H,u}\)。
 The three verdict classes are mutually exclusive and exhaustive at the same decision cut.
 % 三类判定在同一决策切点上互斥且穷尽。
 
 \item \textbf{Factor tightness.}
 % 因子紧致性。
-The full join is sufficient and every proper factor projection insufficient: \(\mathsf{Exact}(\pi_J)\Longleftrightarrow J=\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\).
+The full join is sufficient, and every proper factor projection is insufficient:
 % 完整连接充分而每个真因子投影均不充分：\(\mathsf{Exact}(\pi_J)\Longleftrightarrow J=\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\)。
+\[
+\mathsf{Exact}(\pi_J)\Longleftrightarrow
+J=\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}.
+\]
 Every exact abstraction distinguishes \cref{tab:projection-pairs}; incidence erasures and caller-proposed target-only \(\tau_{\rm tgt}\) remain inexact, while generalized nonblocking becomes exact after trusted target/marking derivation.
 % 每个精确抽象都区分 \cref{tab:projection-pairs}；关联擦除与调用方提出的仅目标 \(\tau_{\rm tgt}\) 仍不精确，而广义非阻塞在可信目标/标记派生之后变得精确。
 
 \item \textbf{Sequence closure.}
 % 序列闭包。
-Every enabled fully parameterized event induces the corresponding partial derivative on security-state orbits and preserves \(\mathsf{AgentSec}\).
+Every enabled fully parameterized event induces the corresponding partial derivative on the private-name equivalence classes of \(\mathsf{Sec}\) and preserves \(\mathsf{AgentSec}\).
 % 每个启用且参数完整的事件都在安全状态轨道上诱导相应的偏导数，并保持 \(\mathsf{AgentSec}\)。
 Iteration covers every finite prefix of edits, live extension, protected use, ledger, installation, and crash, with finite cuts but no uniform history-length bound.
 % 迭代覆盖编辑、在线扩展、受保护使用、账本、安装与崩溃组成的每个有限前缀；每个切点有限，但不存在统一历史长度界。
 
 \item \textbf{Durable Agent-API realization.}
 % 持久 Agent API 实现。
-\(\mathcal R\) is a divergence-insensitive weak bisimulation under \(\mathsf{obs}_{\rm api}\), so every good pair satisfies \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\), including cut-bound verdicts, bundles, and results but excluding time, fairness, and post-\(\Dispatch\) networking.
+\(\mathcal R\) is a divergence-insensitive weak bisimulation under \(\mathsf{obs}_{\rm api}\), so every good pair satisfies \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\).
+% \(\mathcal R\) 在 \(\mathsf{obs}_{\rm api}\) 下是发散不敏感弱互模拟，因此每个良好对均满足 \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\)。
+The observation includes verdicts tied to the authenticated history cut, bundles, and results, but excludes time, fairness, and post-\(\Dispatch\) networking.
 % \(\mathcal R\) 在 \(\mathsf{obs}_{\rm api}\) 下是发散不敏感弱互模拟，所以每个良好对都满足 \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\)，其中包括绑定切点的判定、包与结果，但不包括时间、公平性与 \(\Dispatch\) 后网络行为。
 Disjoint domains compose asynchronously.
 % 互不相交的域异步组合。
@@ -75,6 +113,8 @@ Disjoint domains compose asynchronously.
 
 \begin{proof}[Proof sketch]
 % 证明概要。
-Schema conservation, finite-checker reflection, fixed-point and event induction, and opposite-answer pairs prove the clauses; the appendix gives all witnesses and the durable simulation.
+Schema conservation and finite-checker reflection prove Clause~1, fixed-point reasoning proves Clause~2, opposite-answer pairs prove Clause~3, and event induction together with durable simulation proves Clauses~4 and~5.
+% 模式守恒与有限检查器反射证明第 1 条，不动点推理证明第 2 条，相反答案对证明第 3 条，事件归纳证明第 4 条和第 5 条。
+The appendix supplies the witnesses and durable simulation.
 % 模式守恒、有限检查器反射、不动点与事件归纳以及答案相反配对证明这些条款；附录给出全部见证与持久模拟。
 \end{proof}

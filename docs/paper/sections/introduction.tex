@@ -8,11 +8,11 @@ Modern runtimes let an Agent Fork live continuations, Restore a checkpoint, and 
 % 现代运行时允许 Agent Fork 活跃延续、Restore 检查点并 Merge 后代~\cite{codexappserver,claudesessions,claudecheckpoint,wang2026fork,wu2026crab,zhang2026agentlibos}。
 These operations support exploration, recovery, and reuse without restarting the whole task.
 % 这些操作支持探索、恢复与复用，而无需重新开始整个任务。
-Consequently, an Agent's logical execution history becomes mutable runtime state.
-% 因此，Agent 的逻辑执行历史成为可变的运行时状态。
+Together, these operations make an Agent's live execution structure editable.
+% 这些操作共同使 Agent 的活跃执行结构可以被编辑。
 
-However, the world does not rewind with that history.
-% 然而，现实世界不会随这段历史一起倒转。
+However, the world does not rewind when the Agent edits its execution.
+% 然而，当 Agent 编辑其执行时，现实世界不会随之倒转。
 In our running procurement example, the Agent saves checkpoint \(k\) before approval, the approval later commits, and a Restore of \(k\) creates a new logical approval occurrence while the old receipt remains.
 % 在贯穿全文的采购例子中，Agent 在审批前保存检查点 \(k\)，审批随后提交，而对 \(k\) 的 Restore 会创建一个新的逻辑审批发生项，同时旧回执仍然存在。
 Treating that occurrence as new can repeat the approval, while selecting supplier \(L\) in a Merge as an old supplier-\(R\) payment commits can authorize both branches.
@@ -22,24 +22,24 @@ A checkpoint-correct edit can therefore be security-wrong.
 
 The root cause is that a checkpoint records only part of the facts that determine whether an edit is safe.
 % 根因在于，检查点只记录了决定一次编辑是否安全的部分事实。
-The controller must also know which results the old execution still promises, which logical calls refer to the same irreversible action, which effects have already advanced, and the exact moment at which the edit takes effect.
+The controller must also know which outcomes the old execution still promises, which logical calls refer to the same irreversible action, which effects have already advanced, and the exact moment at which the edit takes effect.
 % 控制器还必须知道旧执行仍然承诺哪些结果、哪些逻辑调用指向同一个不可逆动作、哪些效果已经推进，以及编辑生效的精确时刻。
 Each fact can change the correct decision.
 % 每项事实都可能改变正确判定。
 None can be reconstructed from workspace equality, a trace or receipt ledger alone, or a new target proposed by the caller.
 % 这些事实都无法仅从工作区相等性、单独的轨迹或回执账本，或者调用方提出的新目标中恢复。
 
-Existing approaches cover pieces of this problem but do not derive its end-to-end admission boundary.
-% 现有方法覆盖了该问题的部分环节，却没有推导其端到端准入边界。
+Existing approaches cover pieces of this problem but do not derive its complete safety condition.
+% 现有方法覆盖了该问题的部分环节，却没有推导其完整安全条件。
 Agent systems provide branching, staged effects, transactions, or recovery checks~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart}.
 % Agent 系统提供分支、分阶段效果、事务或恢复检查~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart}。
 Control and synthesis choose behavior after a model of possible executions and desired final states has been supplied~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,aceto2018suppressions}.
 % 控制与综合方法则在可能执行及期望最终状态的模型已经给定后选择行为~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,aceto2018suppressions}。
-Neither line of work by itself derives, from an authenticated editable history, everything that a particular edit must preserve before that edit can be installed.
-% 这两类工作本身都不会从经认证的可编辑历史中推导出某次具体编辑在安装前必须保留的全部内容。
+Neither line of work by itself derives, from an authenticated execution record, everything that a particular edit must preserve before that edit can be installed.
+% 这两类工作本身都不会从经认证的执行记录中推导出某次具体编辑在安装前必须保留的全部内容。
 
-Our key idea is that a history edit must not make old facts or unfinished promises disappear.
-% 我们的关键思想是：历史编辑不能让旧事实或尚未完成的承诺消失。
+Our key idea is that an execution edit must not make old facts or unfinished promises disappear.
+% 我们的关键思想是：执行编辑不能让旧事实或尚未完成的承诺消失。
 After an edit, every old promise must still be required, have durable evidence that it was completed, or have been explicitly canceled by the authority that created it.
 % 编辑之后，每项旧承诺都必须继续有效、已有持久证据证明其完成，或已由创建它的权限方明确取消。
 The Agent chooses only a registered operation.
@@ -58,8 +58,8 @@ Second, at every allowed partial execution, each result that is still possible m
 Third, the answer must take effect atomically with respect to old calls, including calls that race the edit or survive a crash.
 % 第三，该判定必须相对于旧调用原子生效，包括与编辑竞态或跨越崩溃存活的调用。
 
-We develop \sys, an exact decision procedure for this boundary.
-% 我们提出 Agent 历史准入，即针对这一边界的精确判定过程。
+We give an exact checker for execution edits.
+% 我们给出一个针对执行编辑的精确检查器。
 For a requested edit, the controller takes the checked workflow, authenticated history, receipts, pending effects, policy, and current runtime version, and derives all legal completed executions.
 % 对于一次编辑请求，控制器接收经检查的工作流、经认证历史、回执、待处理效果、策略与当前运行时版本，并推导所有合法完整执行。
 It repeatedly removes any execution having a prefix after which one still-possible promised result can no longer finish safely.
@@ -77,10 +77,10 @@ The restored approval reuses its earlier receipt rather than producing a second 
 
 \paragraph{Contributions}
 % 贡献
-We contribute one end-to-end theorem connecting the original Agent workflow, the requested history edit, the exact decision procedure, and the installed runtime.
-% 我们贡献一个端到端定理，将原始 Agent 工作流、请求的历史编辑、精确判定过程与已安装运行时连接起来。
-For all six registered history operations and authenticated additive extensions, a safe implementation exists exactly when the procedure leaves a nonempty set of executions, exactly when its monitor can be installed, and exactly when an ideal atomic machine permits the same edit.
-% 对全部六种已注册历史操作和经认证的仅追加扩展，当且仅当该过程留下非空执行集合、其监控器能够安装且理想原子机器允许同一次编辑时，安全实现才存在。
+We contribute one end-to-end theorem connecting the original Agent workflow, the requested execution edit, the exact decision procedure, and the installed runtime.
+% 我们贡献一个端到端定理，将原始 Agent 工作流、请求的执行编辑、精确判定过程与已安装运行时连接起来。
+For all six registered execution edits and authenticated additive extensions, a safe implementation exists exactly when the procedure leaves a nonempty set of executions, exactly when its monitor can be installed, and exactly when an ideal atomic machine permits the same edit.
+% 对全部六种已注册执行编辑和经认证的仅追加扩展，当且仅当该过程留下非空执行集合、其监控器能够安装且理想原子机器允许同一次编辑时，安全实现才存在。
 The theorem also proves that every category of history information used by the procedure is necessary, that the result remains valid after every finite sequence of operations, and that the concrete runtime has the same visible behavior as the ideal machine (\cref{sec:model,sec:admission,sec:kernel,sec:results}).
 % 该定理还证明，判定过程使用的每类历史信息都不可缺少，结果在操作组成的每个有限序列之后仍然成立，并且具体运行时与理想机器具有相同的可见行为（\cref{sec:model,sec:admission,sec:kernel,sec:results}）。
 Five kernel-checked Lean modules, 81 executable tests, and a bounded scaling study validate the finite checked core, critical examples, and explicit decision procedure.

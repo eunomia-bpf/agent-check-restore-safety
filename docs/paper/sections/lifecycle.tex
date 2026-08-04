@@ -24,8 +24,12 @@ where \(x_i^p\) and \(x_i^s\) are payment and shipment occurrences.
 The alternatives are exclusive, but both must have a safe completion at the cut.
 % 两个备选结果互斥，但二者在切点处都必须存在安全完成路径。
 
-A logical occurrence is distinct from the semantic cell whose authority it redeems.
+An occurrence identifies one logical call slot.
 % 逻辑发生项不同于其所兑现权限对应的语义单元。
+A cell identifies the irreversible real-world action and one-use authority behind that slot.
+% 单元标识该调用槽背后的不可逆现实动作和一次性权限。
+Fork or Restore may create new occurrences that still point to the same cell.
+% Fork 或 Restore 可以创建仍指向同一单元的新发生项。
 The protected-call registry authenticates
 % 受保护调用注册表认证如下关系：
 \[
@@ -62,15 +66,17 @@ At this cut, each outcome has exactly one causal linearization, and the two line
 \]
 Thus \(M_{o_L}=\{z_L\}\), \(M_{o_R}=\{z_R\}\), and \(\widehat B^\dagger=\{(o_L,z_L),(o_R,z_R)\}\), with \(W^\dagger\) their prefix closure.
 % 因此，\(M_{o_L}=\{z_L\}\)、\(M_{o_R}=\{z_R\}\)，且 \(\widehat B^\dagger=\{(o_L,z_L),(o_R,z_R)\}\)，其中 \(W^\dagger\) 是它们的前缀闭包。
-Admission compiles \(\mathsf{Can}(W^\dagger,\pi_2\widehat B^\dagger)\), seals the exact source cut, and atomically installs the monitor and replacement handles at a fresh epoch.
-% 准入过程编译 \(\mathsf{Can}(W^\dagger,\pi_2\widehat B^\dagger)\)，封印精确源切点，并在新纪元中原子安装监控器和替换句柄。
+The checker compiles \(\mathsf{Can}(W^\dagger,\pi_2\widehat B^\dagger)\), seals the exact source cut, and atomically installs the monitor and replacement handles at a fresh epoch.
+% 检查器编译 \(\mathsf{Can}(W^\dagger,\pi_2\widehat B^\dagger)\)，封印精确源切点，并在新纪元中原子安装监控器和替换句柄。
 The installed monitor then admits only these prefixes and classifies each protected call as a new \Fresh effect, a receipt-reusing \Alias, or a denial.
 % 随后，已安装监控器只接纳这些前缀，并将每个受保护调用归类为新的 \Fresh 效果、复用回执的 \Alias 或拒绝。
+\Fresh creates a cell's first receipt, whereas \Alias reuses that receipt while advancing a distinct occurrence.
+% \Fresh 创建单元的第一条回执，而 \Alias 在推进不同发生项时复用该回执。
 If policy excludes \(rap_Rs\), then \(M_{o_R}=\varnothing\), and the Fork is rejected because pruning supplier \(R\) would change its meaning.
 % 如果策略排除 \(rap_Rs\)，则 \(M_{o_R}=\varnothing\)，并且该 Fork 会被拒绝，因为剪除供应商 \(R\) 将改变其含义。
 Rejection returns the ranked elimination chain rather than letting the Agent weaken the target.
 % 拒绝会返回带秩淘汰链，而不允许 Agent 弱化目标；\cref{sec:admission} 给出了共享前缀情形：每个结果开始时都安全，但没有任何完成族保持前缀鲁棒。
-\Cref{sec:admission} gives the shared-prefix case where every outcome starts safe but no family remains prefix-robust.
+\Cref{sec:admission} gives the shared-prefix case where every outcome starts safe but no set of executions can preserve every still-compatible outcome after every shared prefix.
 % \Cref{sec:admission} 给出了共享前缀情形：每个结果开始时都安全，但没有任何完成族保持前缀鲁棒。
 
 \paragraph{Live growth without a reset}
@@ -85,6 +91,11 @@ The controller recompiles the monitor and atomically rotates the domain epoch.
 % 控制器重新编译监控器并原子轮换整个域的纪元，此后后续编辑可以引用新模式而无需引导；Agent 不能重新绑定旧调用或弱化活跃义务。
 A later edit may then cite the new schema without bootstrap, but the Agent cannot rebind an old invocation or weaken a live obligation.
 % 此后，后续编辑可以引用新模式而无需引导，但 Agent 不能重新绑定旧调用或弱化活跃义务。
+
+A \emph{policy domain} is the set of protected cells governed by one receipt ledger and policy.
+% \emph{策略域}是由同一回执账本和策略管理的一组受保护单元。
+Its epoch identifies the monitor version currently authorized for that set.
+% 策略域的纪元标识当前获准管理该集合的监控器版本。
 
 \begin{figure*}[t]
   \centering

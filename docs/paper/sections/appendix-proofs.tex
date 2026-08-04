@@ -13,8 +13,8 @@ Independent domains retain the product interpretation stated in the paper.
 % 声明式规范及其计算见证
 \label{app:spec-bridge}
 
-Fix a well-formed admission instance \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\) for which the history judgment derives \(\delta=(H^+,\mathcal C,\eta^-,\eta^+)\).
-% 固定一个良构的准入实例 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，其历史判定派生出 \(\delta=(H^+,\mathcal C,\eta^-,\eta^+)\)。
+Fix a well-formed safety-check instance \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\) for which the history judgment derives \(\delta=(H^+,\mathcal C,\eta^-,\eta^+)\).
+% 固定一个良构的安全检查实例 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，其历史判定派生出 \(\delta=(H^+,\mathcal C,\eta^-,\eta^+)\)。
 All sets in this subsection are indexed sets, so two equal resolved words belonging to different outcomes remain different elements.
 % 本小节中的所有集合都是带索引集合，因此属于不同结果的两个相同已解析词仍是不同元素。
 \begin{definition}[Source-promise coverage]
@@ -28,7 +28,11 @@ All sets in this subsection are indexed sets, so two equal resolved words belong
 &\hspace{32mm}\mathsf{Lift}_u(t,a)\land(t,b)\in\widehat B .
 \end{aligned}
 \]
-Here \(\mathsf{Dec}_{H,u}\) is the typed losing-arm outcomes for \(\mathsf{MergeSelect}\), or the current-role outcomes of a pending certified \(\mathsf{RestoreReplace}\); \(\mathsf{Done}_{H,u}\) is the completed current role of \(\mathsf{RestoreReplace}\); both are empty for every other row and for live extension.
+Here \(\mathsf{Dec}_{H,u}\) contains the typed losing-arm outcomes for \(\mathsf{MergeSelect}\) or the current-role outcomes of a pending certified \(\mathsf{RestoreReplace}\).
+% 此处 \(\mathsf{Dec}_{H,u}\) 包含 \(\mathsf{MergeSelect}\) 的类型化失败分支结果，或待处理且经认证的 \(\mathsf{RestoreReplace}\) 的当前角色结果。
+\(\mathsf{Done}_{H,u}\) contains the completed current role of \(\mathsf{RestoreReplace}\).
+% \(\mathsf{Done}_{H,u}\) 包含 \(\mathsf{RestoreReplace}\) 已完成的当前角色。
+Both sets are empty for every other row and for live extension.
 % 此处 \(\mathsf{Dec}_{H,u}\) 是 \(\mathsf{MergeSelect}\) 的类型化失败分支结果，或待处理且经认证的 \(\mathsf{RestoreReplace}\) 的当前角色结果；\(\mathsf{Done}_{H,u}\) 是 \(\mathsf{RestoreReplace}\) 已完成的当前角色；对于其余各行与在线扩展，二者均为空。
 Thus \(\mathsf{Req}_u=\mathsf{SrcProm}(H,u)\setminus(\mathsf{Done}_{H,u}\uplus\mathsf{Dec}_{H,u})\), so \(\mathsf{SPC}\) covers exactly the promises neither already discharged nor explicitly declassified.
 % 因此 \(\mathsf{Req}_u=\mathsf{SrcProm}(H,u)\setminus(\mathsf{Done}_{H,u}\uplus\mathsf{Dec}_{H,u})\)，所以 \(\mathsf{SPC}\) 恰好覆盖既未履行也未被显式解除的承诺。
@@ -149,12 +153,12 @@ The current residual family is therefore post-fixed, and greatestness gives its 
 % Lean 定理映射
 \label{app:lean-map}
 
-\path{RegistrationRefinement.checkRegistration_iff}, \path{RegistrationRefinement.compiled_cell_eq_iff_canonical_eq}, \path{RegistrationRefinement.compiled_mediation_exhaustive}, the three receipt theorems, and \path{RegistrationRefinement.compiled_admission_preserved} cover registration reflection and its link to admission.
-% \path{RegistrationRefinement.checkRegistration_iff}、\path{RegistrationRefinement.compiled_cell_eq_iff_canonical_eq}、\path{RegistrationRefinement.compiled_mediation_exhaustive}、三条回执定理与 \path{RegistrationRefinement.compiled_admission_preserved} 覆盖注册反射及其与准入的连接。
+\path{RegistrationRefinement.checkRegistration_iff}, \path{RegistrationRefinement.compiled_cell_eq_iff_canonical_eq}, \path{RegistrationRefinement.compiled_mediation_exhaustive}, the three receipt theorems, and \path{RegistrationRefinement.compiled_admission_preserved} cover registration reflection and its link to the safety decision.
+% \path{RegistrationRefinement.checkRegistration_iff}、\path{RegistrationRefinement.compiled_cell_eq_iff_canonical_eq}、\path{RegistrationRefinement.compiled_mediation_exhaustive}、三条回执定理与 \path{RegistrationRefinement.compiled_admission_preserved} 覆盖注册反射及其与安全判定的连接。
 \path{FiniteCore.compiler_eq_semantic} and the greatest-realization theorems cover the fixed point, while \path{HistoryStructure.deriveEdit_iff} covers all six structural derivations.
 % \path{FiniteCore.compiler_eq_semantic} 与最大实现定理覆盖不动点，而 \path{HistoryStructure.deriveEdit_iff} 覆盖全部六种结构推导。
-\path{CompilationBridge.compiler_admit_exists_secure_install} constructs a valid installed cut from admission, and its converse declarations recover admission from any valid install candidate.
-% \path{CompilationBridge.compiler_admit_exists_secure_install} 从准入构造有效安装切点，而其逆向声明从任意有效安装候选恢复准入。
+\path{CompilationBridge.compiler_admit_exists_secure_install} constructs a valid installed cut from an accepted edit, and its converse declarations recover acceptance from any valid install candidate.
+% \path{CompilationBridge.compiler_admit_exists_secure_install} 从被接受的编辑构造有效安装切点，而其逆向声明从任意有效安装候选恢复接受判定。
 \path{OperationalSemantics.kernelTrace_preserves_agentSec}, \path{OperationalSemantics.live_extension_preserves_agentSec}, \path{OperationalSemantics.fresh_before_live_extension_stale}, \path{OperationalSemantics.alias_before_live_extension_stale}, and \path{OperationalSemantics.live_extension_before_old_use_denied} cover installed finite-prefix closure and the extension races.
 % \path{OperationalSemantics.kernelTrace_preserves_agentSec}、\path{OperationalSemantics.live_extension_preserves_agentSec}、\path{OperationalSemantics.fresh_before_live_extension_stale}、\path{OperationalSemantics.alias_before_live_extension_stale} 与 \path{OperationalSemantics.live_extension_before_old_use_denied} 覆盖安装后的有限前缀闭包与扩展竞态。
 The audit module imports these declarations and prints only the project-allowed axioms \texttt{propext}, \texttt{Classical.choice}, and \texttt{Quot.sound}.
@@ -163,6 +167,11 @@ The audit module imports these declarations and prints only the project-allowed 
 \subsection{Normalized Evidence and Safe Projection}
 % 规范化证据与安全投影
 \label{app:evidence}
+
+This subsection asks which parts of the authenticated security state are necessary to reproduce every safety-check and installation answer.
+% 本小节研究经认证安全状态的哪些部分是复现每个安全检查与安装答案所必需的。
+We first normalize private identifiers so that representation choices cannot distinguish two states, then remove one information factor at a time and construct queries whose correct answers differ.
+% 我们首先规范化私有标识，使表示选择无法区分两个状态，随后逐一移除信息因子，并构造正确答案不同的查询。
 
 We make the normalization implicit in \(\mathsf{Sec}\) explicit.
 % 我们将 \(\mathsf{Sec}\) 中隐含的规范化过程显式化。
@@ -201,7 +210,13 @@ Write \(f\leadsto g\) when the value or well-typed interpretation of derived fie
 % 当派生字段 \(g\) 的值或良类型解释直接依赖字段 \(f\) 时，记 \(f\leadsto g\)。
 The dependency graph is acyclic because canonical encodings are constructed from base relations in a fixed order.
 % 依赖图是无环的，因为规范编码按固定顺序从基础关系构造。
-Every foreign-key path depends on its target; authenticated gate and handle bytes depend on their \(\mathbf I\) slot and \(\mathbf C\) epoch/owner; receipt reconstruction and the authority word depend on \(\mathbf E\) receipt/cursor rows and their \(\mathbf I\) cells and labels; and target certificates, cut seals, and digests depend on every encoded base field in their payload.
+Every foreign-key path depends on its target.
+% 每条外键路径依赖其目标。
+Authenticated gate and handle bytes depend on their \(\mathbf I\) slot and \(\mathbf C\) epoch and owner.
+% 认证门与句柄字节依赖其 \(\mathbf I\) 槽位以及 \(\mathbf C\) 纪元和所有者。
+Receipt reconstruction and the authority word depend on the \(\mathbf E\) receipt and cursor rows together with their \(\mathbf I\) cells and labels.
+% 回执重建与权限词依赖 \(\mathbf E\) 的回执与游标记录以及对应的 \(\mathbf I\) 单元与标签。
+Target certificates, cut seals, and digests depend on every encoded base field in their payload.
 % 每条外键路径依赖其目标；认证门与句柄字节依赖其 \(\mathbf I\) 槽位和 \(\mathbf C\) 纪元/所有者；回执重建与权限词依赖 \(\mathbf E\) 的回执/游标记录及其 \(\mathbf I\) 单元与标签；目标证书、切点封印和摘要则依赖其载荷中编码的每个基础字段。
 A normalized full view \(V\) is a compatible finite assignment to all base fields together with the unique values of all derivable fields.
 % 规范化完整视图 \(V\) 是对所有基础字段的相容有限赋值，并带有全部可派生字段的唯一值。
@@ -320,6 +335,13 @@ name supplies agree off the epoch sort, while live epoch, ownership, and depende
 % 引导状态与显式分离对
 \label{app:boot-pairs}
 
+Every separation proof follows the same recipe.
+% 每个分离证明都遵循同一方法。
+Starting from a common checked genesis, we vary exactly one security-state factor, keep the visible projection and literal query fixed, and obtain opposite correct answers.
+% 从共同的经检查起源状态出发，我们只改变一个安全状态因子，保持可见投影与字面查询不变，并得到相反的正确答案。
+The resulting pair proves that an exact abstraction cannot erase that factor.
+% 所得状态对证明精确抽象不能擦除该因子。
+
 We construct the finite lower-bound witnesses from one literal empty genesis \(\mathsf S_\emptyset\).
 % 我们从唯一的字面空起源状态 \(\mathsf S_\emptyset\) 构造有限下界见证。
 A registered slice \(R\) compiled from a boundary-finite typed Agent workflow \(\mathcal W\) contains only finite contracts, schemas, policy, lowering data, and authenticated occurrence, cell, invocation, lineage, scope, and label rows.
@@ -338,8 +360,8 @@ For finite-state \(\mathcal W\) and finite \(R\), \(\mathsf{CheckReg}(\mathcal W
 % 对于有限状态的 \(\mathcal W\) 与有限的 \(R\)，当且仅当已注册的 \(\lambda\) 见证 \cref{def:registration-refinement} 中的 \(\mathcal W\sqsubseteq_\lambda R\) 时，\(\mathsf{CheckReg}(\mathcal W,R)\) 才接受。
 On acceptance, the \(\lambda\)-lowerings of source executions modulo \(\equiv_\partial\) correspond bijectively to \(\mathsf{BRuns}(R)\).
 % 接受时，模 \(\equiv_\partial\) 的源执行经 \(\lambda\) 降低后与 \(\mathsf{BRuns}(R)\) 双射对应。
-The correspondence preserves indexed outcomes, causal order, canonical invocation quotienting, receipt evolution, and the admission answer.
-% 该对应保持带索引结果、因果次序、规范调用商、回执演化与准入答案。
+The correspondence preserves indexed outcomes, causal order, canonical invocation quotienting, receipt evolution, and the safety-check answer.
+% 该对应保持带索引结果、因果次序、规范调用商、回执演化与安全检查答案。
 \end{lemma}
 \begin{proof}
 The productive-SCC test terminates because the state graph is finite.
@@ -356,8 +378,8 @@ Boundary projection erases only internal steps, so matching projected paths indu
 % 边界投影只擦除内部步骤，因此匹配的投影路径诱导执行商上的双射。
 Canonical invocation equality and deterministic \(\Resolve\) make receipt evolution commute with this bijection at every prefix.
 % 规范调用相等性与确定性的 \(\Resolve\) 使回执演化在每个前缀处与该双射交换。
-The realization families are therefore order-isomorphic, so the fixed-point operator preserves admission, greatestness, and pullback of the monitor.
-% 因而，实现族彼此序同构，所以不动点算子保持准入、最大性与监控器回拉。
+The realization families are therefore order-isomorphic, so the fixed-point operator preserves the safety decision, greatestness, and pullback of the monitor.
+% 因而，实现族彼此序同构，所以不动点算子保持安全判定、最大性与监控器回拉。
 \end{proof}
 
 \begin{lemma}[Natural bootstrap]
@@ -365,8 +387,8 @@ The realization families are therefore order-isomorphic, so the fixed-point oper
 \label{lem:app-boot}
 If \(\mathsf{CheckReg}(\mathcal W,R)\) accepts and \(R\)'s registered root contract and policy have a nonempty greatest realization, registration and checked root installation reach a finite state \(S_R\) with \(\mathsf{AgentSec}(S_R;c_R,\epsilon)\).
 % 若 \(\mathsf{CheckReg}(\mathcal W,R)\) 接受且 \(R\) 的已注册根契约与策略具有非空的最大实现，则注册与经检查的根安装会到达一个满足 \(\mathsf{AgentSec}(S_R;c_R,\epsilon)\) 的有限状态 \(S_R\)。
-The cut origin is the checked root derivation, while every later cut-changing transition records a six-edit derivation or an authenticated live extension.
-% 该切点的来源是经检查的根推导，而此后每个改变切点的转移都记录一种六类编辑推导或一次经认证的在线扩展。
+The cut origin is the checked root derivation, while every later cut-changing transition records an execution-edit derivation or an authenticated live extension.
+% 该切点的来源是经检查的根推导，而此后每个改变切点的转移都记录一种执行编辑推导或一次经认证的在线扩展。
 \end{lemma}
 
 \begin{proof}
@@ -376,8 +398,8 @@ The root judgment and checked lifts establish core/schema coherence, and the rec
 % 根判定与经检查的提升建立核心/模式一致性，而重新计算的非空不动点建立承诺一致性。
 Empty runtime progress establishes execution coherence, the canonical program at \(q_\epsilon\) establishes monitor coherence, and the atomic phase/binding assignments establish epoch coherence.
 % 空运行时进度建立执行一致性，位于 \(q_\epsilon\) 的规范程序建立监控器一致性，而原子的阶段/绑定赋值建立纪元一致性。
-Only initial installation creates a root origin, and every successful later installation stores its checked structural-edit or live-extension derivation.
-% 只有初始安装会创建根来源，而此后每次成功安装都会存储其经检查的结构编辑或在线扩展推导。
+Only initial installation creates a root origin, and every successful later installation stores its checked execution-edit or live-extension derivation.
+% 只有初始安装会创建根来源，而此后每次成功安装都会存储其经检查的执行编辑或在线扩展推导。
 \end{proof}
 
 The following finite pairs use private names except for each displayed query and authority labels.
@@ -501,8 +523,8 @@ Every exact abstraction must distinguish all displayed pairs.
 \end{proposition}
 
 \begin{proof}
-\Cref{lem:app-boot} gives the common genesis and valid root installation, while the explicit traces above use only modeled Save, protected-use, and six-edit transitions.
-% \Cref{lem:app-boot} 给出共同起源状态和有效根安装，而上述显式轨迹只使用已建模的 Save、受保护使用和六种编辑转移。
+\Cref{lem:app-boot} gives the common genesis and valid root installation, while the explicit traces above use only modeled Save, protected-use, and execution-edit transitions.
+% \Cref{lem:app-boot} 给出共同起源状态和有效根安装，而上述显式轨迹只使用已建模的 Save、受保护使用和执行编辑转移。
 For the incidence pairs, the empty root completes with \(\epsilon\), and each installed Fork arm has a one-\Fresh completion labeled \(a\).
 % 对于关联对，空根以 \(\epsilon\) 完成，并且每个已安装 Fork 分支都具有一条标签为 \(a\) 的单次 \Fresh 完成路径。
 Hence every displayed pre-query state is reachable under \(\Pref\{a\}\).
@@ -532,8 +554,8 @@ Write \(A_1,\ldots,A_5\) for the five clauses of \(\mathsf{AgentSec}\) in their 
 % 依照陈述顺序，用 \(A_1,\ldots,A_5\) 表示 \(\mathsf{AgentSec}\) 的五个条款。
 The following matrix is exhaustive for durable transitions inside an installed registered protected-call slice.
 % 下表穷尽一个已安装的已注册受保护调用切片内部的持久转移。
-Initial registration occurs before root admission; later additive schema and policy growth is the authenticated live-extension history edge listed below.
-% 初始注册发生在根准入之前；后续仅追加的模式与策略增长由下表所列的经认证在线扩展历史边完成。
+Initial registration occurs before the root safety check; later additive schema and policy growth is the authenticated live-extension history edge listed below.
+% 初始注册发生在根安全检查之前；后续仅追加的模式与策略增长由下表所列的经认证在线扩展历史边完成。
 
 \begin{table*}[t]
 \centering
@@ -663,8 +685,8 @@ Thus every successor has the displayed witness and normalized update.
 \label{cor:app-prefix-closure}
 Starting from any valid bootstrap, every finite prefix of any sequence of the event classes in \cref{tab:app-event-matrix} ends in a state satisfying \(\mathsf{AgentSec}\).
 % 从任意有效引导状态出发，\cref{tab:app-event-matrix} 中事件类别所组成任意序列的每个有限前缀都终止于满足 \(\mathsf{AgentSec}\) 的状态。
-The sequence length is unbounded, although every individual admission instance and event payload is finite.
-% 序列长度不受固定上界限制，但每个单独的准入实例与事件载荷都是有限的。
+The sequence length is unbounded, although every individual safety-check instance and event payload is finite.
+% 序列长度不受固定上界限制，但每个单独的安全检查实例与事件载荷都是有限的。
 For a finite word \(\bar e\), the iterated derivative is defined on \(\langle V,\bar e\rangle_{\cong}\), where one renaming acts on the initial view and the whole word.
 % 对于有限词 \(\bar e\)，迭代导数定义在 \(\langle V,\bar e\rangle_{\cong}\) 上，其中同一次重命名作用于初始视图与整个事件词。
 \end{corollary}
@@ -782,8 +804,8 @@ Deterministic allocation gives the same reply-bundle orbit, so both expose \(\ma
 % 确定性分配给出相同的回复包轨道，因此两侧都暴露 \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\)。
 Conversely, every successful compiled installation has passed the schema, fixed-point, seal, and cut checks, so \cref{lem:app-spec-bridge} enables the matching ideal edge.
 % 反之，每次成功的编译后安装都已通过模式、不动点、封印和切点检查，因此 \cref{lem:app-spec-bridge} 会启用匹配的理想边。
-This argument applies uniformly to all six structural rewrite modes and authenticated live extension.
-% 该论证一致地适用于全部六种结构重写模式与经认证的在线扩展。
+This argument applies uniformly to all six execution edits and authenticated live extension.
+% 该论证一致地适用于全部六种执行编辑与经认证的在线扩展。
 
 \paragraph{Protected uses and concrete invocations}
 % 受保护使用与具体调用

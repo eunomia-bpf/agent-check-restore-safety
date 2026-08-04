@@ -1,5 +1,5 @@
-\section{Exact History Admission}
-% 精确历史准入
+\section{Exact Safety Check for Execution Edits}
+% 执行编辑的精确安全检查
 \label{sec:admission}
 
 The preceding section derives a target contract from the authenticated source history and requested edit.
@@ -15,14 +15,14 @@ For the authenticated receipt ledger \(\Delta\), write \(\mathsf{lab}(\Delta)\in
 % 对于经认证的回执账本 \(\Delta\)，用 \(\mathsf{lab}(\Delta)\in\mathcal A\) 表示其权限词，用 \(D_\Delta\) 表示其中已有回执的单元。
 Fix \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\) and write \(\mathsf{src}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\).
 % 固定 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并记 \(\mathsf{src}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\)。
-When defined, the tagged root, structural-edit, or live-extension derivation is unique.
-% 带标签的根、结构编辑或在线扩展推导在有定义时是唯一的。
+When defined, the tagged root, execution-edit, or live-extension derivation is unique.
+% 带标签的根、执行编辑或在线扩展推导在有定义时是唯一的。
 Write \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
 % 记为 \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
 Root derivation additionally requires that \(\mathsf{CheckReg}(\mathcal W,R)\) accept.
 % 根推导还要求 \(\mathsf{CheckReg}(\mathcal W,R)\) 接受。
-A structural edit has \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) and uses the unique six-edit judgment.
-% 结构编辑满足 \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) 并使用唯一的六种编辑判定。
+An execution edit has \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) and uses the unique execution-edit judgment.
+% 执行编辑满足 \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) 并使用唯一的执行编辑判定。
 \(\mathsf{Extend}(\xi)\) uses the authenticated judgment in \cref{sec:model}.
 % \(\mathsf{Extend}(\xi)\) 使用 \cref{sec:model} 中的认证判定。
 Let \(\rho_u\) be the authenticated target registry in \(H_u\), let \(O_{H,u}=O_{\mathcal C_u}\), and use \(H'=H_u\) and \(\rho'=\rho_u\) where earlier notation is convenient.
@@ -91,8 +91,8 @@ Thus a retry stutters in the resolved causal and authority histories, although i
 A copied occurrence that resolves as \Alias stutters only in the authority history because it advances causal history without changing the authority word.
 % 解析为 \Alias 的复制发生项只在权限历史中表现为停顿，因为它会推进因果历史而不改变权限词。
 
-\subsection{Prefix-robust history admission}
-% 前缀鲁棒的历史准入
+\subsection{Safe Completion After Every Prefix}
+% 每个前缀之后的安全完成
 
 \subsubsection{Greatest Prefix-Robust Fixed Point}
 
@@ -106,8 +106,8 @@ For each structurally derived outcome \(o\in O_{H,u}\), define its set of resolv
    \mathsf{lab}(\Delta)\mathsf{auth}(z)\in\mathcal A_u\}.
 \end{aligned}
 \end{equation}
-Individual outcome safety is insufficient because a shared prefix can strand a contract-compatible outcome, so admission closes safe completions under every shared prefix.
-% 单个结果的安全性并不充分，因为共享前缀可能使一个与契约兼容的结果陷入无后续状态，因此准入要求安全完成路径集合在每个共享前缀下闭合。
+Individual outcome safety is insufficient because a shared prefix can strand a contract-compatible outcome, so the safety check closes safe completions under every shared prefix.
+% 单个结果的安全性并不充分，因为共享前缀可能使一个与契约兼容的结果陷入无后续状态，因此安全检查要求安全完成路径集合在每个共享前缀下闭合。
 For a resolved prefix \(z\), let
 % 对于已解析前缀 \(z\)，定义 \(\mathsf{Compat}(z)\) 如下：
 \[
@@ -147,8 +147,8 @@ Since \(\widehat B_1\subseteq\widehat B_0\), monotonicity yields a finite descen
 Runtime uses \((W^\dagger,B^\dagger)\), while the checker and seal retain indexed witness \(\widehat B^\dagger\).
 % 运行时使用 \((W^\dagger,B^\dagger)\)，而检查器与封印保留带索引见证 \(\widehat B^\dagger\)。
 
-\begin{definition}[Agent history admission]
-% Agent 历史准入
+\begin{definition}[Safe execution edit]
+% 安全执行编辑
 \label{def:admission}
 If \(\mathsf{Derive}(\Theta)\) is undefined, then \(\mathsf{Admit}(\Theta)\) is false.
 % 若 \(\mathsf{Derive}(\Theta)\) 无定义，则 \(\mathsf{Admit}(\Theta)\) 为假。
@@ -165,7 +165,7 @@ Otherwise,
 % \(\mathsf{Admit}(H,u)\) 固定 \(\Theta\) 与两个注册表。
 At \(z=\epsilon\), nonemptiness covers every outcome, while the existential chooses a linearization without fairness and the universal prefix condition prevents stranding.
 % 在 \(z=\epsilon\) 处，非空性覆盖每个结果，而存在量词在不要求公平性的情况下选择线性化，全称前缀条件则防止结果陷入无后续状态。
-Here \(\mathsf{SPC}\) is the source-lift coverage relation formalized in \cref{app:spc}.
+Here \(\mathsf{SPC}\) requires every source outcome that is neither discharged nor issuer-declassified to have a checked lift into \(\widehat B\); \cref{app:spc} gives the full relation.
 % 此处 \(\mathsf{SPC}\) 是 \cref{app:spc} 中形式化的源提升覆盖关系。
 
 \begin{definition}[Indexed realization]
@@ -192,15 +192,21 @@ A generated language and indexed marked family \((L,\widehat B)\) realize \((H,u
 \label{lem:greatest-realization}
 A realization exists iff \(\mathsf{Admit}(H,u)\).
 % 当且仅当 \(\mathsf{Admit}(H,u)\) 成立时，实现存在。
-On admission, \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) is a realization, and every realization \((L,\widehat B)\) satisfies \(\widehat B\subseteq\widehat B^\dagger_{H,u}\) and \(L\subseteq W^\dagger_{H,u}\).
-% 准入时，\((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) 是一个实现，并且每个实现 \((L,\widehat B)\) 都满足 \(\widehat B\subseteq\widehat B^\dagger_{H,u}\) 和 \(L\subseteq W^\dagger_{H,u}\)。
+When the edit is safe, \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) is a realization, and every realization \((L,\widehat B)\) satisfies \(\widehat B\subseteq\widehat B^\dagger_{H,u}\) and \(L\subseteq W^\dagger_{H,u}\).
+% 当编辑安全时，\((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) 是一个实现，并且每个实现 \((L,\widehat B)\) 都满足 \(\widehat B\subseteq\widehat B^\dagger_{H,u}\) 和 \(L\subseteq W^\dagger_{H,u}\)。
 \end{lemma}
 \begin{proof}
 Fidelity, completion nonblocking, and safety place any realization's indexed marked family inside \(\widehat B_0\).
 % 忠实性、完成非阻塞性和安全性使任意实现的带索引标记族包含于 \(\widehat B_0\)。
 Persistent coverage makes it post-fixed, so monotonicity and finite Knaster--Tarski place it inside \(\widehat B^\dagger\), and projected prefixes give \(L\subseteq W^\dagger\).
 % 持续覆盖使其成为后不动点，因此由单调性和有限 Knaster--Tarski 可知其包含于 \(\widehat B^\dagger\)，而投影前缀给出 \(L\subseteq W^\dagger\)。
-Conversely, \(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) supplies persistent coverage, which with checked lifts yields \(\mathsf{SPC}\) at \(\epsilon\); \(\widehat B^\dagger\subseteq\widehat B_0\) supplies target fidelity and safe marked words, prefix closure of \(\mathcal A_u\) supplies prefix safety, and \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) supplies nonblocking.
+Conversely, \(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) supplies persistent coverage.
+% 反之，\(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) 提供持续覆盖。
+Together with checked lifts, this coverage establishes \(\mathsf{SPC}\) at \(\epsilon\).
+% 该覆盖与经检查的提升共同在 \(\epsilon\) 处建立 \(\mathsf{SPC}\)。
+The inclusion \(\widehat B^\dagger\subseteq\widehat B_0\) supplies target fidelity and safe marked words, while prefix closure of \(\mathcal A_u\) supplies prefix safety.
+% 包含关系 \(\widehat B^\dagger\subseteq\widehat B_0\) 提供目标忠实性和安全标记词，而 \(\mathcal A_u\) 的前缀闭包提供前缀安全性。
+Finally, \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) supplies nonblocking.
 % 反之，\(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) 提供持续覆盖，它与经检查的提升共同在 \(\epsilon\) 处建立 \(\mathsf{SPC}\)；\(\widehat B^\dagger\subseteq\widehat B_0\) 提供目标忠实性和安全标记词，\(\mathcal A_u\) 的前缀闭合性提供前缀安全性，而 \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) 提供非阻塞性。
 Hence the fixed point is a realization exactly when nonempty.
 % 因此，该不动点恰在非空时构成实现。
@@ -279,8 +285,8 @@ Induction gives every post-fixed \(P\subseteq\widehat B_i\), so an empty final f
 
 \subsubsection{Rejection Certificates and Residual Closure}
 
-To preserve admission after each permitted prefix, fix \(H,u,\mathcal A_u\) after deriving \(\mathcal C\), and write \(W^\dagger(\mathcal C,\Delta)\) and \(\widehat B^\dagger(\mathcal C,\Delta)\) with those parameters suppressed.
-% 为在每个允许的前缀之后保持准入，先在派生 \(\mathcal C\) 后固定 \(H,u,\mathcal A_u\)，再将省略这些参数的记法写作 \(W^\dagger(\mathcal C,\Delta)\) 和 \(\widehat B^\dagger(\mathcal C,\Delta)\)。
+To preserve the safety result after each permitted prefix, fix \(H,u,\mathcal A_u\) after deriving \(\mathcal C\), and write \(W^\dagger(\mathcal C,\Delta)\) and \(\widehat B^\dagger(\mathcal C,\Delta)\) with those parameters suppressed.
+% 为在每个允许的前缀之后保持安全判定，先在派生 \(\mathcal C\) 后固定 \(H,u,\mathcal A_u\)，再将省略这些参数的记法写作 \(W^\dagger(\mathcal C,\Delta)\) 和 \(\widehat B^\dagger(\mathcal C,\Delta)\)。
 \begin{lemma}[Residual coherence]
 % 残余一致性
 \label{lem:residual-coherence}
@@ -330,8 +336,8 @@ Greatestness gives \(zY\subseteq\widehat B^\dagger\), hence \(Y=\widehat B^\dagg
 Finally, \(\Pref(B)/z=\Pref(B/z)\) yields the generated-language equality.
 % 最后，\(\Pref(B)/z=\Pref(B/z)\) 给出生成语言等式。
 \end{proof}
-Thus every admitted prefix retains a safe completion for every residual outcome index still contract-compatible with that prefix.
-% 因此，每个已准入前缀都会为仍与该前缀契约兼容的每个残余结果索引保留一条安全完成路径。
+Thus every accepted prefix retains a safe completion for every residual outcome index still contract-compatible with that prefix.
+% 因此，每个被接受的前缀都会为仍与该前缀契约兼容的每个残余结果索引保留一条安全完成路径。
 
 \subsubsection{Live Extension}
 

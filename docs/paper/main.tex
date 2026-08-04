@@ -20,8 +20,6 @@
 \newtheorem{example}{Example}
 \newtheorem{remark}{Remark}
 
-\newcommand{\papername}{history admission\xspace}
-\newcommand{\sys}{Agent History Admission\xspace}
 \newcommand{\Fresh}{\ensuremath{\mathsf{fresh}}\xspace}
 \newcommand{\Alias}{\ensuremath{\mathsf{alias}}\xspace}
 \newcommand{\Use}{\ensuremath{\mathsf{Use}}\xspace}
@@ -34,10 +32,10 @@
 \newcommand{\Pref}{\ensuremath{\mathsf{Pref}}\xspace}
 \newcommand{\sem}[1]{\mathopen{[\![}#1\mathclose{]\!]}}
 
-\title{The Security State of a History-Rewriting Agent\\
-% 历史重写 Agent 的安全状态
-Exact Admission for Fork, Restore, and Merge}
-% Fork、Restore 与 Merge 的精确准入
+\title{When Are Agent Execution Edits Safe?\\
+% Agent 执行编辑何时安全？
+An Exact Characterization of Fork, Restore, and Merge}
+% Fork、Restore 与 Merge 的精确刻画
 
 \author{}
 
@@ -47,8 +45,10 @@ Exact Admission for Fork, Restore, and Merge}
 \begin{abstract}
 Tool-using Agents support Fork, Restore, and Merge so that an execution can explore alternatives or recover without starting over.
 % 使用工具的 Agent 支持 Fork、Restore 和 Merge，使执行能够探索备选路径或从故障中恢复，而无需从头开始。
-These operations rewind logical control state, but not an approval, payment, message, or one-use authority already committed to the world; an edit can therefore duplicate an effect, erase a promised outcome, or race an old call.
-% 这些操作会倒转逻辑控制状态，却不会撤销已经提交到现实世界的审批、付款、消息或一次性权限；因此，一次编辑可能重复效果、抹去已承诺结果，或与旧调用发生竞态。
+These execution edits rewind logical control state, but they do not rewind an approval, payment, message, or one-use authority already committed to the world.
+% 这些执行编辑会倒转逻辑控制状态，却不会撤销已经提交到现实世界的审批、付款、消息或一次性权限。
+An edit can therefore duplicate an effect, erase a promised outcome, or race an old call.
+% 这些执行编辑会倒转逻辑控制状态，却不会撤销已经提交到现实世界的审批、付款、消息或一次性权限；因此，一次编辑可能重复效果、抹去已承诺结果，或与旧调用发生竞态。
 A safe edit must therefore account for both what the original execution has already done and what it still owes.
 % 因此，一次安全编辑必须同时考虑原执行已经完成的事情和仍然负有的责任。
 Each old promise must remain required after the edit, have durable evidence of completion, or be explicitly canceled by the authority that created it.
@@ -63,8 +63,8 @@ If nothing remains, the procedure returns a finite proof that no implementation 
 % 如果没有未来留下，该过程返回一份有限证明，说明任何实现都无法满足要求；否则，留下的未来会被编译成可强制执行的最大安全行为集合。
 Otherwise, the survivors compile into the largest enforceable set of safe behaviors.
 % 否则，留下的未来会被编译成可强制执行的最大安全行为集合。
-For all six registered history operations and authenticated additive extensions, our main theorem proves that this procedure succeeds exactly when some implementation can enforce policy, preserve the edit's meaning, and keep every still-possible result able to finish.
-% 对全部六种已注册历史操作和经认证的仅追加扩展，我们的主定理证明：当且仅当某个实现能够执行策略、保持编辑含义并让每个仍可能的结果都可完成时，该过程才会成功；定理还证明，所得监控器能够在调用竞态下原子安装。
+For all six registered execution edits and authenticated additive extensions, our main theorem proves that this procedure succeeds exactly when some implementation can enforce policy, preserve the edit's meaning, and keep every still-possible outcome able to finish.
+% 对全部六种已注册执行编辑和经认证的仅追加扩展，我们的主定理证明：当且仅当某个实现能够执行策略、保持编辑含义并让每个仍可能的结果都可完成时，该过程才会成功。
 The theorem also proves that the resulting monitor can be installed atomically despite racing calls.
 % 定理还证明，所得监控器能够在调用竞态下原子安装。
 It identifies the history information that no exact decision can discard, remains valid through every finite sequence of operations, and connects the installed runtime to an ideal atomic machine.

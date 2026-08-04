@@ -20,8 +20,8 @@ The definitions below first describe completion obligations and then introduce t
 
 \paragraph{Typed runtime vocabulary}
 % 类型化运行时词汇
-We capitalize \emph{Agent} for the untrusted principal requesting history operations.
-% 我们将请求历史操作的不受信任主体称为 \emph{Agent}。
+We capitalize \emph{Agent} for the untrusted principal requesting execution edits.
+% 我们将请求执行编辑的不受信任主体称为 \emph{Agent}。
 A logical protected occurrence \(x\) is an invocation slot, and its protected \emph{use} is a monitor transition.
 % 一个逻辑受保护发生项 \(x\) 是一个调用槽，而它的受保护\emph{使用}是一次监控器转移。
 A semantic cell \(d\) is the irreversible effect and authority-redemption identity whose first redemption creates a receipt.
@@ -196,8 +196,8 @@ For each live occurrence \(x\), binding \(\beta(x)=(j,\eta)\) names its gate and
 Because \(\chi\) records authorization and causal progress rather than physical completion, the corresponding external result may still await remote settlement or return.
 % 由于 \(\chi\) 记录授权和因果进展而非物理完成，相应的外部结果仍可能等待远程结算或返回。
 
-\(\mathsf{Save}(k,b)\) is an explicit checkpoint transition, not a seventh history rewrite, and requires fresh \(k\) and addressable \(b\).
-% \(\mathsf{Save}(k,b)\) 是显式检查点转移，而非第七种历史重写，并要求 \(k\) 为新标识且 \(b\) 可寻址。
+\(\mathsf{Save}(k,b)\) is an explicit checkpoint transition, not a seventh execution edit, and requires fresh \(k\) and addressable \(b\).
+% \(\mathsf{Save}(k,b)\) 是显式检查点转移，而非第七种执行编辑，并要求 \(k\) 为新标识且 \(b\) 可寻址。
 A trusted transaction snapshots the current pair \((\mathcal C_b,\chi_b)\) by value and appends \((\omega,b,\mathcal C_b,\chi_b,\rho|_{X_{\mathcal C_b}},\zeta)\) and its authenticated fingerprint to \(K\).
 % 一个可信事务按值快照当前的 \((\mathcal C_b,\chi_b)\) 对，并向 \(K\) 追加 \((\omega,b,\mathcal C_b,\chi_b,\rho|_{X_{\mathcal C_b}},\zeta)\) 及其认证指纹。
 The checkpoint check requires \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\), and the transaction advances \(\nu\) without changing the frontier, receipts, bindings, epochs, or authority.
@@ -279,8 +279,8 @@ The adversary controls Agent output, operations, tool arguments, copied workspac
 % 对手控制 Agent 的输出、操作、工具参数、复制的工作区、重试、过期封印和调度，包括使用/编辑竞态。
 It cannot forge registries, the checkpoint/DAG store, cell certificates, policy, or the receipt ledger.
 % 它无法伪造注册表、检查点/DAG 存储、单元证书、策略或回执账本。
-The trusted computing base (TCB) includes the policy issuer and protected-call issuer and provides complete mediation and a linearizable, crash-stable transaction for every modeled durable mutation or visible admission verdict within a domain.
-% 可信计算基（TCB）包括策略发行方和受保护调用发行方，并为域内每项已建模的持久变更或可见准入判定提供完全中介以及可线性化、崩溃稳定的事务。
+The trusted computing base (TCB) includes the policy issuer and protected-call issuer and provides complete mediation and a linearizable, crash-stable transaction for every modeled durable mutation or visible edit verdict within a domain.
+% 可信计算基（TCB）包括策略发行方和受保护调用发行方，并为域内每项已建模的持久变更或可见编辑判定提供完全中介以及可线性化、崩溃稳定的事务。
 A recovered labeled transition system (LTS) state shows each transaction entirely uncommitted or committed according to whether its linearization point occurred.
 % 恢复后的标号转移系统（LTS）状态根据事务的线性化点是否已经发生，将每项事务完整地呈现为未提交或已提交；任何事务都不会撕裂，而易失的编译器缓存不在模型中。
 No transaction is torn, and volatile compiler caches lie outside the model.
@@ -318,19 +318,21 @@ The finite checker also requires cells to be exactly the canonical-invocation qu
 The theory neither infers natural-language contracts nor equates local commit with remote physical exactly-once execution, which additionally requires an idempotent or queryable sink.
 % 该理论既不推断自然语言契约，也不把本地提交等同于远端物理恰好一次执行；后者还要求接收端具有幂等性或可查询性。
 
-\subsection{Six structural rewrite rules}
-% 六条结构重写规则
+\subsection{Six Execution-Edit Rules}
+% 六条执行编辑规则
 
-\subsubsection{Rewrite Certificates}
+\subsubsection{Edit Certificates}
 
-The six disjoint constructors of \(\mathsf{Edit}_6\) are exactly the typed operation signatures in \cref{tab:history-rules}; \(\mathsf{Save}\), \(\mathsf{Root}\), \(\mathsf{Extend}\), protected use, and caller-supplied targets are excluded.
+The six disjoint constructors of \(\mathsf{Edit}_6\) are exactly the typed operation signatures in \cref{tab:history-rules}.
+% \(\mathsf{Edit}_6\) 的六个互不相交构造器恰为 \cref{tab:history-rules} 中带类型的操作签名。
+The set excludes \(\mathsf{Save}\), \(\mathsf{Root}\), \(\mathsf{Extend}\), protected use, and caller-supplied targets.
 % \(\mathsf{Edit}_6\) 的六个互不相交构造器恰为 \cref{tab:history-rules} 中带类型的操作签名；\(\mathsf{Save}\)、\(\mathsf{Root}\)、\(\mathsf{Extend}\)、受保护使用与调用方提供的目标均被排除。
 
-An untrusted request \(u\) supplies a rewrite kind, live object identifiers, and schema identifier \(\sigma\), never a target contract, while \(\Sigma_\zeta\) binds \(\sigma\) to that kind, exact source and checkpoint fingerprints, introduced suffix contracts, and a lineage certificate.
-% 不受信任的请求 \(u\) 提供重写种类、活跃对象标识和模式标识 \(\sigma\)，但绝不提供目标契约，而 \(\Sigma_\zeta\) 将 \(\sigma\) 绑定到该种类、精确的源与检查点指纹、引入的后缀契约和谱系证书。
+An untrusted request \(u\) supplies an edit kind, live object identifiers, and schema identifier \(\sigma\), never a target contract, while \(\Sigma_\zeta\) binds \(\sigma\) to that kind, exact source and checkpoint fingerprints, introduced suffix contracts, and a lineage certificate.
+% 不受信任的请求 \(u\) 提供编辑种类、活跃对象标识和模式标识 \(\sigma\)，但绝不提供目标契约，而 \(\Sigma_\zeta\) 将 \(\sigma\) 绑定到该种类、精确的源与检查点指纹、引入的后缀契约和谱系证书。
 
-The rewrite certificate defined below makes history derivation checkable.
-% 下文定义的重写证书使历史派生成为可检查的性质。
+The edit certificate defined below makes the derivation checkable.
+% 下文定义的编辑证书使该推导成为可检查的性质。
 For indexed source \(\mathcal C\), schema-designated carried or cloned target region \(\mathcal D\), and parent map \(\mu:X_{\mathcal D}\to X_{\mathcal C}\), write \(\mathcal C\preccurlyeq_\mu\mathcal D\) exactly when \(\mu\) is a global bijection, some surjection \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\) satisfies the conditions below for every target outcome \(v\), and \(\mu\) preserves cell identity and lineage.
 % 对于带索引的源 \(\mathcal C\)、由模式指定的携带或克隆目标区域 \(\mathcal D\) 以及父映射 \(\mu:X_{\mathcal D}\to X_{\mathcal C}\)，当且仅当 \(\mu\) 是全局双射、存在满射 \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\) 使下列条件对每个目标结果 \(v\) 成立，且 \(\mu\) 保持单元标识和谱系时，记作 \(\mathcal C\preccurlyeq_\mu\mathcal D\)。
 \[
@@ -344,7 +346,9 @@ For indexed source \(\mathcal C\), schema-designated carried or cloned target re
 Global bijection and occurrence--outcome membership equivalence prevent splitting a source occurrence shared across outcomes into outcome-specific target occurrences.
 % 全局双射和发生项--结果成员关系等价防止将跨结果共享的源发生项拆分为特定于结果的目标发生项。
 
-For candidate \(T'\), let \(R_u\) index the disjoint carried or cloned target regions inside the replaced subtree; a rewrite certificate \(\mathcal P_u=\{(\mathcal C_r,\mathcal D_r,\mu_r,\pi_r)\}_{r\in R_u}\) contains their relations.
+For candidate \(T'\), let \(R_u\) index the disjoint carried or cloned target regions inside the replaced subtree.
+% 对候选 \(T'\)，令 \(R_u\) 索引被替换子树中互不相交的携带或克隆目标区域。
+A rewrite certificate \(\mathcal P_u=\{(\mathcal C_r,\mathcal D_r,\mu_r,\pi_r)\}_{r\in R_u}\) contains the relation for each indexed region.
 % 对于候选 \(T'\)，令 \(R_u\) 为被替换子树内互不相交的携带或克隆目标区域的索引集；重写证书 \(\mathcal P_u=\{(\mathcal C_r,\mathcal D_r,\mu_r,\pi_r)\}_{r\in R_u}\) 包含这些区域的关系。
 A separate identity map checks that the exposed one-hole context preserves syntax, outcome indices, occurrences, cells, lineage, and order.
 % 另一个恒等映射检查已暴露单孔上下文是否保持语法、结果索引、发生项、单元、谱系和次序。
@@ -400,9 +404,23 @@ Its certified set must equal the typed losing arm for MergeSelect or the current
 % 对于 MergeSelect，其认证集合必须等于类型化失败分支；对于 RestoreReplace，则必须等于当前延续。
 \subsubsection{Promise Conservation}
 
+Formally, a promise is a row-tagged source outcome.
+% 形式上，承诺是一个带行标签的源结果。
+\(\mathsf{Req}_u\) contains the promises still owed after removing outcomes that have already been discharged or explicitly declassified by their issuer.
+% \(\mathsf{Req}_u\) 包含去除已经履行或由发行方明确解密的结果后仍然负有的承诺。
+The occurrences of a promised outcome are the calls needed to realize it.
+% 一个已承诺结果中的发生项是实现该结果所需的调用。
+
 Independently of \(T'\), let \(\mathsf{SrcProm}(H,u)\) be the row-tagged source outcomes, \(\mathsf{Done}_{H,u}\) those already discharged at the current cursor, and \(\mathsf{Dec}_{H,u}\) the exact issuer-certified pending retirement set.
 % 独立于 \(T'\)，令 \(\mathsf{SrcProm}(H,u)\) 为带行标签的源结果，\(\mathsf{Done}_{H,u}\) 为当前游标处已经履行的结果，并令 \(\mathsf{Dec}_{H,u}\) 为发行方精确认证的待处理退役集合。
-The checker enforces the \emph{source-promise conservation law} \(\mathsf{SrcProm}(H,u)=\mathsf{Req}_u\uplus\mathsf{Done}_{H,u}\uplus\mathsf{Dec}_{H,u}\): lifts preserve cell, lineage, and order; the edge retains discharged evidence and records the declassification set, which the Agent cannot enlarge.
+The checker enforces the \emph{source-promise conservation law}
+\[
+\mathsf{SrcProm}(H,u)=
+\mathsf{Req}_u\uplus\mathsf{Done}_{H,u}\uplus\mathsf{Dec}_{H,u}.
+\]
+Checked lifts preserve cell identity, lineage, and order.
+% 经检查的提升保持单元标识、谱系与次序。
+The history edge retains discharged evidence and records the declassification set, which the Agent cannot enlarge.
 % 检查器执行\emph{源承诺守恒律} \(\mathsf{SrcProm}(H,u)=\mathsf{Req}_u\uplus\mathsf{Done}_{H,u}\uplus\mathsf{Dec}_{H,u}\)：提升保持单元、谱系和次序；该边保留已履行证据并记录解除集合，而 Agent 无法扩大该集合。
 
 Let \(\mathcal E[-]\) be a one-hole \emph{exposed} frontier context, so its hole has the addressability property above.
@@ -423,8 +441,8 @@ Define
 \]
 New identifiers and the target epoch \(\eta^+\) are deterministically allocated from \((\omega,\zeta,\nu,u,\mathsf{role})\).
 % 新标识和目标纪元 \(\eta^+\) 由 \((\omega,\zeta,\nu,u,\mathsf{role})\) 确定性分配。
-\(\mathsf{role}\) identifies the rewrite row and operand position.
-% \(\mathsf{role}\) 标识重写行和操作数位置。
+\(\mathsf{role}\) identifies the edit row and operand position.
+% \(\mathsf{role}\) 标识编辑行和操作数位置。
 Write \(\mathsf{Cl}_r(\mathcal C)\) for the certified tuple \((\mathcal C,\mathsf{clone}_r(\mathcal C),\mu_r,\pi_r)\), and \(\mathsf{Ca}(\mathcal C)\) for \((\mathcal C,\mathsf{carry}(\mathcal C),\mu,\pi)\).
 % 将认证元组 \((\mathcal C,\mathsf{clone}_r(\mathcal C),\mu_r,\pi_r)\) 记为 \(\mathsf{Cl}_r(\mathcal C)\)，并将 \((\mathcal C,\mathsf{carry}(\mathcal C),\mu,\pi)\) 记为 \(\mathsf{Ca}(\mathcal C)\)。
 Each abbreviation asserts the corresponding \(\preccurlyeq_\mu\) relation.
@@ -436,7 +454,7 @@ Every \(b\) or \(g\) named below must lie in \(\mathsf{addr}(T)\).
 
 \begin{table*}[t]
 \centering
-\caption{Schema-checked Agent history rewrites.
+\caption{Schema-checked Agent execution edits.
 % 经模式检查的 Agent 历史重写。
 \(E_\sigma^\bullet\) is derived from \(\Sigma_\zeta\), never supplied as a target contract.}
 % \(E_\sigma^\bullet\) 派生自 \(\Sigma_\zeta\)，绝不会作为目标契约提供。
@@ -492,8 +510,8 @@ The model uses domain-wide handoff, never fencing only a selected subset of a do
 % 该模型采用全域交接，从不只隔离域内选定的一部分门，因此 \(H\) 中的每个活跃门都属于 \(\eta^-=\eta\)。
 \subsubsection{Common Epoch Handoff}
 
-The six-edit judgment is the least relation generated by one row of \cref{tab:history-rules} inside a well-typed single-hole context \(\mathcal E\), followed by the common update below; no other structural derivation exists.
-% 六种编辑判定是如下最小关系：在良类型单孔上下文 \(\mathcal E\) 中应用 \cref{tab:history-rules} 的一行，再执行下述公共更新；不存在其他结构推导。
+The execution-edit judgment is the least relation generated by one row of \cref{tab:history-rules} inside a well-typed single-hole context \(\mathcal E\), followed by the common update below; no other execution-edit derivation exists.
+% 执行编辑判定是如下最小关系：在良类型单孔上下文 \(\mathcal E\) 中应用 \cref{tab:history-rules} 的一行，再执行下述公共更新；不存在其他执行编辑推导。
 Let \(e_u\) contain its typed edge and exactly the newly allocated clone, suffix, and group nodes prescribed by \(T'\); carried node identities remain unchanged.
 % 令 \(e_u\) 包含其类型化边，以及恰由 \(T'\) 指定的新分配克隆节点、后缀节点和组节点；被携带节点的标识保持不变。
 For every live target occurrence \(x\), the trusted protected-call issuer deterministically mints \(j_x^+,h_x^+\), and \(\rho'\) preserves the row-certified cell, lineage, scope, digest, and historical records needed for \Retry while refreshing live gate and handle fields.
@@ -566,11 +584,17 @@ Finally, \(\beta'\) and \(\mathcal H_u^+\) establish handoff totality at \(\eta^
 \subsection{Authenticated live extension}
 % 经认证的在线扩展
 
-Online growth is a trusted control-plane edge, not a seventh structural rewrite.
-% 在线增长是一条可信控制面边，而不是第七种结构重写。
+Online growth is a trusted control-plane edge, not a seventh execution edit.
+% 在线增长是一条可信控制面边，而不是第七种执行编辑。
 The Agent may name only an immutable record \(\xi\) binding the exact predecessor schema, registry, and policy roots to finite disjoint additions \(D_\Sigma,D_\rho\) and a successor policy \(\mathcal A^+\).
 % Agent 只能指名一个不可变记录 \(\xi\)，该记录将精确的前驱模式、注册表和策略根绑定到有限且不交的新增集合 \(D_\Sigma,D_\rho\) 以及后继策略 \(\mathcal A^+\)。
-Both issuers authenticate \(\xi\); old schema identifiers, occurrence--cell/invocation rows, labels, scopes, lineages, receipts, and canonicalization rules retain exactly their meanings; new identifiers are fresh, finite, domain-scoped, foreign-key closed, and completion-observable; and the record contains no cursor, receipt, outbox, epoch, result, monitor, or installed certificate.
+Both issuers authenticate \(\xi\).
+% 两个发行方都认证 \(\xi\)。
+Existing schema identifiers, occurrence--cell and invocation rows, labels, scopes, lineages, receipts, and canonicalization rules retain their meanings.
+% 现有模式标识、发生项--单元与调用行、标签、作用域、谱系、回执和规范化规则保持原有含义。
+New identifiers are fresh, finite, domain-scoped, foreign-key closed, and completion-observable.
+% 新标识是新鲜、有限、域限定、外键闭合且完成可观测的。
+The record contains no cursor, receipt, outbox, epoch, result, monitor, or installed certificate.
 % 两类发行方都认证 \(\xi\)；旧模式标识、发生项--单元/调用行、标签、作用域、谱系、回执与规范化规则都精确保留原义；新标识是新鲜、有限、域内、外键闭合且完成可观测的；该记录不包含游标、回执、发件箱、纪元、结果、监控器或已安装证书。
 The successor policy is regular and prefix closed and conservatively extends the old policy, \(\mathcal A\subseteq\mathcal A^+\).
 % 后继策略是正则且前缀闭合的，并保守扩展旧策略，即 \(\mathcal A\subseteq\mathcal A^+\)。
@@ -596,5 +620,5 @@ The checked judgment
 \]
 preserves \(G,T,K,\chi,\Delta,\mathsf{out}\), every current outcome, occurrence, cell, lineage, and causal edge, and authorizes no retirement.
 % 保持 \(G,T,K,\chi,\Delta,\mathsf{out}\)、每个当前结果、发生项、单元、谱系与因果边，并且不授权任何退役。
-It appends one authenticated version edge and then uses the same admission compiler and atomic epoch installation as a structural edit.
-% 它追加一条经认证的版本边，随后使用与结构编辑相同的准入编译器和原子纪元安装。
+It appends one authenticated version edge and then uses the same edit checker and atomic epoch installation as an execution edit.
+% 它追加一条经认证的版本边，随后使用与执行编辑相同的编辑检查器和原子纪元安装。

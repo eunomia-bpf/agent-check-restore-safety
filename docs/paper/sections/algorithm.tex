@@ -2,8 +2,8 @@
 % 编译与持久精化
 \label{sec:kernel}
 
-Admission produces either an impossibility certificate or the greatest safe family of completed executions.
-% 准入过程生成不可能性证书或安全完整执行的最大集合。
+The safety check produces either an impossibility certificate or the greatest safe family of completed executions.
+% 安全检查生成不可能性证书或安全完整执行的最大集合。
 The durable kernel turns a nonempty family into enforcement in three steps: (1) compile its prefix closure into a canonical monitor, (2) bind the monitor to the authenticated source cut, and (3) atomically install it under a fresh epoch.
 % 持久内核分三步将非空集合转化为强制执行：(1) 将其前缀闭包编译为规范监控器，(2) 将监控器绑定到经认证的源切点，(3) 在新纪元下原子安装。
 The rules below make racing protected calls occur entirely before or after this installation boundary.
@@ -25,7 +25,11 @@ For \(L/z=\{v\mid zv\in L\}\), use residual states \(q_z=(W^\dagger/z,B^\dagger/
  &\quad\Longleftrightarrow\quad za\in W .
 \end{aligned}
 \end{equation}
-Call this automaton \(\mathsf{Can}(W,B)\); every state is reachable and marked exactly when \(\epsilon\in B^\dagger/z\), while each transition symbol \(a\) contains occurrence \(x\), cell \(d\), and \Fresh/\Alias mode, preventing use through another occurrence's gate.
+Call this automaton \(\mathsf{Can}(W,B)\).
+% 将该自动机记作 \(\mathsf{Can}(W,B)\)。
+Every state is reachable and is marked exactly when \(\epsilon\in B^\dagger/z\).
+% 每个状态均可达，并且恰在 \(\epsilon\in B^\dagger/z\) 时被标记。
+Each transition symbol \(a\) contains occurrence \(x\), cell \(d\), and its \Fresh or \Alias mode, so a caller cannot use another occurrence's gate.
 % 将此自动机称为 \(\mathsf{Can}(W,B)\)；每个状态均可达，并且恰在 \(\epsilon\in B^\dagger/z\) 时被标记，而每个转移符号 \(a\) 都包含发生项 \(x\)、单元 \(d\) 以及 \Fresh/\Alias 模式，从而防止通过另一发生项的门进行使用。
 
 \begin{lemma}[Exact compiled realization]
@@ -62,8 +66,8 @@ For \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), let \(\gamma(\Theta)
 \]
 where \(\kappa_Z=\kappa\), \(H_c=H\) is the authenticated pre-installation history, and the history judgment mints \(\eta^+\).
 % 其中 \(\kappa_Z=\kappa\)，\(H_c=H\) 是经认证的安装前历史，而历史判定生成 \(\eta^+\)。
-Canonical encoding order makes all three finite semantic results unique and equivariant; the bounded wrapper may instead return \(\mathsf{ResourceLimit}(b,n)\), which installs nothing and proves neither admission nor impossibility.
-% 规范编码顺序使三种有限语义结果均唯一且保持等变性；有界包装器可能改为返回 \(\mathsf{ResourceLimit}(b,n)\)，它不安装任何内容，也不证明准入或不可能性。
+Canonical encoding order makes all three finite semantic results unique and equivariant; the bounded wrapper may instead return \(\mathsf{ResourceLimit}(b,n)\), which installs nothing and proves neither safety nor impossibility.
+% 规范编码顺序使三种有限语义结果均唯一且保持等变性；有界包装器可能改为返回 \(\mathsf{ResourceLimit}(b,n)\)，它不安装任何内容，也不证明安全性或不可能性。
 
 Let \(\mathsf{enc}\) be canonical and length-delimited, with \(\kappa\) authenticating \(\mathcal A\).
 % 令 \(\mathsf{enc}\) 为规范且带长度分隔的编码，并由 \(\kappa\) 认证 \(\mathcal A\)。
@@ -118,8 +122,8 @@ The deterministic judgment \(\mathsf{Reg}(R,n)\vdash\mathsf{Root}\Downarrow(H_R^
 % 确定性判定 \(\mathsf{Reg}(R,n)\vdash\mathsf{Root}\Downarrow(H_R^+,\mathcal C_R,\bot,\eta_R)\) 从已注册切片 \(R\) 和私有命名空间 \(n\) 构造 \(\mathsf{src}_R^-=(\kappa,H_R^-,\epsilon,\epsilon,\mathcal A)\)，其中进度、检查点、绑定和纪元均为空；它将 \(\mathsf{Req}_{\mathsf{Root}}\) 设为 \(R\) 的根结果，并定义 \(\mathsf{Lift}_{\mathsf{Root}}(t,o)\Longleftrightarrow t=o\)。
 The checked record \(\mathsf{cert}(\eta)=c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\) contains source cut \(\mathsf{src}_c=(\kappa,H_c,\Delta_c,\mathsf{out}_c,\mathcal A)\), pre-progress target \(H_c^+\), and ideal-cut projection \(\mathsf{icut}(c)=(H_c,u,W,\widehat B)\).
 % 经检查的记录 \(\mathsf{cert}(\eta)=c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\) 包含源切点 \(\mathsf{src}_c=(\kappa,H_c,\Delta_c,\mathsf{out}_c,\mathcal A)\)、受保护进展前目标 \(H_c^+\)，以及理想切点投影 \(\mathsf{icut}(c)=(H_c,u,W,\widehat B)\)。
-Its tagged origin is the checked root judgment exactly when \(u=\mathsf{Root}(R,n)\) and \(\mathsf{src}_c=\mathsf{src}_R^-\); otherwise it is the checked derivation of either one of the six structural edits or an authenticated live extension.
-% 当且仅当 \(u=\mathsf{Root}(R,n)\) 且 \(\mathsf{src}_c=\mathsf{src}_R^-\) 时，其带标签来源为经检查的根判定；否则，它是六种结构编辑之一或一次经认证在线扩展的经检查推导。
+Its tagged origin is the checked root judgment exactly when \(u=\mathsf{Root}(R,n)\) and \(\mathsf{src}_c=\mathsf{src}_R^-\); otherwise it is the checked derivation of either one of the six execution edits or an authenticated live extension.
+% 当且仅当 \(u=\mathsf{Root}(R,n)\) 且 \(\mathsf{src}_c=\mathsf{src}_R^-\) 时，其带标签来源为经检查的根判定；否则，它是六种执行编辑之一或一次经认证在线扩展的经检查推导。
 Its indexed family is proof-only ghost state, while \(W^\dagger\), \(B^\dagger\), and the seal are checked enforcement data; \(\mathsf{Gen}(P,q)\) and \(\mathsf{Mark}(P,q)\) denote \(P\)'s generated and marked languages from \(q\).
 % 其带索引族是仅用于证明的幽灵状态，而 \(W^\dagger\)、\(B^\dagger\) 和封印是经检查的强制执行数据；\(\mathsf{Gen}(P,q)\) 和 \(\mathsf{Mark}(P,q)\) 表示 \(P\) 从 \(q\) 出发的生成语言和标记语言。
 
@@ -131,8 +135,8 @@ For \(c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\) and resolved \(r\), \(\mathsf{
 \begin{enumerate}[leftmargin=*,itemsep=1pt]
 \item \emph{Core and schema coherence.}
 % 核心与模式一致性。
-The current security core is well formed, \(c=\mathsf{cert}(\eta)\), and the tagged origin derives \((H_c^+,\mathcal C,\eta^-,\eta)\) by its corresponding checked root, six-edit, or live-extension judgment; each \(a\in\mathsf{Req}_u\) has a checked full-target \(\mathsf{Lift}_u\) witness.
-% 当前安全核心良构，\(c=\mathsf{cert}(\eta)\)，且带标签来源通过相应的经检查根判定、六种编辑判定或在线扩展判定推导出 \((H_c^+,\mathcal C,\eta^-,\eta)\)；每个 \(a\in\mathsf{Req}_u\) 都有经检查的完整目标 \(\mathsf{Lift}_u\) 见证。
+The current security core is well formed, \(c=\mathsf{cert}(\eta)\), and the tagged origin derives \((H_c^+,\mathcal C,\eta^-,\eta)\) by its corresponding checked root, execution-edit, or live-extension judgment; each \(a\in\mathsf{Req}_u\) has a checked full-target \(\mathsf{Lift}_u\) witness.
+% 当前安全核心良构，\(c=\mathsf{cert}(\eta)\)，且带标签来源通过相应的经检查根判定、执行编辑判定或在线扩展判定推导出 \((H_c^+,\mathcal C,\eta^-,\eta)\)；每个 \(a\in\mathsf{Req}_u\) 都有经检查的完整目标 \(\mathsf{Lift}_u\) 见证。
 \item \emph{Promise coherence.}
 % 承诺一致性。
 \(\widehat B=\widehat B^\dagger_{H_c,u}\ne\varnothing\), \(W=\Pref(\pi_2\widehat B)\), and the stored certificate passed \(\mathsf{Verify}_Z(W,\pi_2\widehat B,\widehat B)\) at its source cut.
@@ -163,8 +167,8 @@ Each target epoch deterministically minted at the current cut for a registered r
 \end{definition}
 The full system starts from one empty genesis, accepts a checked finite registration containing only contracts, schemas, policy, and authenticated identity rows, and then performs root installation to construct empty receipt/cursor/outbox state, the first epoch, its certificate, and its monitor.
 % 完整系统从唯一的空起源状态开始，接受一个只包含契约、模式、策略和经认证标识行的经检查有限注册，随后执行根安装，以构造空的回执/游标/发件箱状态、第一个纪元及其证书和监控器。
-Registration cannot supply runtime fields, while every later cut is produced by a six-edit derivation or an authenticated additive live extension.
-% 注册过程不能提供运行时字段，而此后的每个切点都由六种编辑推导之一或一次经认证的仅追加在线扩展产生。
+Registration cannot supply runtime fields, while every later cut is produced by an execution-edit derivation or an authenticated additive live extension.
+% 注册过程不能提供运行时字段，而此后的每个切点都由执行编辑推导或一次经认证的仅追加在线扩展产生。
 
 \paragraph{Atomic protected use}
 % 原子受保护使用
@@ -220,12 +224,16 @@ Here \(\Dispatch\) is the durable local outbox release, not evidence of exactly-
 % 原子判定与安装
 At its linearization point, the kernel ignores caller-supplied target and epoch data, sets \(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), and re-runs \(\mathsf{Derive}(\Theta_S(u))\) from the current state.
 % 在其线性化点，内核忽略调用方提供的目标与纪元数据，令 \(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并根据当前状态重新执行 \(\mathsf{Derive}(\Theta_S(u))\)。
-\(\mathsf{VerifyInv}\) accepts exactly a current \(\gamma\), undefined derivation, and canonical failed-check transcript, while \(\mathsf{VerifyRej}\) accepts exactly a current \(\gamma\), defined derivation, empty fixed point, and canonical elimination chain; their read-only transactions emit the corresponding \(\mathsf{Invalid}\) or \(\mathsf{Reject}\) label and preserve state.
+\(\mathsf{VerifyInv}\) accepts exactly a current \(\gamma\), an undefined derivation, and a canonical failed-check transcript.
+% \(\mathsf{VerifyInv}\) 恰好接受当前 \(\gamma\)、未定义推导和规范失败检查记录。
+In contrast, \(\mathsf{VerifyRej}\) accepts exactly a current \(\gamma\), a defined derivation, an empty fixed point, and a canonical elimination chain.
+% 相比之下，\(\mathsf{VerifyRej}\) 恰好接受当前 \(\gamma\)、已定义推导、空不动点和规范淘汰链。
+Both read-only transactions preserve state and emit the corresponding \(\mathsf{Invalid}\) or \(\mathsf{Reject}\) label.
 % \(\mathsf{VerifyInv}\) 恰好接受当前 \(\gamma\)、未定义推导与规范检查失败记录，而 \(\mathsf{VerifyRej}\) 恰好接受当前 \(\gamma\)、已定义推导、空不动点与规范淘汰链；它们的只读事务发出相应的 \(\mathsf{Invalid}\) 或 \(\mathsf{Reject}\) 标签并保持状态。
 For the positive case, write \(\mathsf{Derive}(\Theta_S(u))=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
 % 对于正面情形，记 \(\mathsf{Derive}(\Theta_S(u))=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
-\(\mathsf{ReCut}(S,u,Z)\) is undefined without this root, six-edit, or live-extension derivation and otherwise recomputes the right-hand side of \cref{eq:cut-seal}.
-% 若无这一根推导、六种编辑推导或在线扩展推导，则 \(\mathsf{ReCut}(S,u,Z)\) 未定义；否则，它重新计算 \cref{eq:cut-seal} 的右侧。
+\(\mathsf{ReCut}(S,u,Z)\) is undefined without this root, execution-edit, or live-extension derivation and otherwise recomputes the right-hand side of \cref{eq:cut-seal}.
+% 若无这一根推导、执行编辑推导或在线扩展推导，则 \(\mathsf{ReCut}(S,u,Z)\) 未定义；否则，它重新计算 \cref{eq:cut-seal} 的右侧。
 \(\mathsf{Verify}_Z(W,B,\widehat B)\) holds exactly when the trusted checker (1) recomputes \(\widehat B_0\) and every fixed-point iteration, (2) verifies all ranked removal causes and surviving coverage witnesses, (3) checks the stabilized \(\widehat B\ne\varnothing\), (4) reconstructs \(B=\pi_2\widehat B\) and \(W=\Pref(B)\), (5) establishes \(\mathsf{prog}_Z\cong\mathsf{Can}(W,B)\), and (6) verifies the program seal.
 % 当且仅当可信检查器执行以下操作时，\(\mathsf{Verify}_Z(W,B,\widehat B)\) 成立：(1) 重新计算 \(\widehat B_0\) 及每次不动点迭代；(2) 验证全部带秩的移除原因和幸存覆盖见证；(3) 检查稳定后的 \(\widehat B\ne\varnothing\)；(4) 重建 \(B=\pi_2\widehat B\) 与 \(W=\Pref(B)\)；(5) 建立 \(\mathsf{prog}_Z\cong\mathsf{Can}(W,B)\)；以及 (6) 验证程序封印。
 Installation requires
@@ -290,8 +298,8 @@ Pure \(\mathsf{Compile}\) is meta-level.
 \begin{lemma}[History-cut linearization]
 % 历史切点线性化
 \label{lem:cut-linearization}
-In every reachable well-formed compiled state, a visible admission verdict and a protected use in the same policy domain have a unique order and decision cut.
-% 在每个可达的良构编译状态中，同一策略域内的一项可见准入判定与一次受保护使用具有唯一顺序和决策切点。
+In every reachable well-formed compiled state, a visible edit verdict and a protected use in the same policy domain have a unique order and decision cut.
+% 在每个可达的良构编译状态中，同一策略域内的一项可见编辑判定与一次受保护使用具有唯一顺序和决策切点。
 If the use commits first, that seal cannot install.
 % 若该使用先提交，则该封印无法安装。
 If \Install commits first, the old use cannot resolve \Fresh or \Alias.
