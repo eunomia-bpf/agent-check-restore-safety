@@ -59,26 +59,30 @@ Each such outcome must remain required, already be satisfied by the recorded exe
 % 每个这类结果都必须继续作为要求、已经由所记录的执行满足，或由提出该要求的同一权限方明确移除。
 Existing Agent recovery systems implement particular edits, while existing synthesis methods assume that the possible executions and completion conditions are already known.
 % 现有 Agent 恢复系统实现特定编辑，而现有综合方法假定可能执行及完成条件已经给定。
-Neither derives the full safety requirement of a requested edit from the execution record.
-% 二者都不会从执行记录中推导出一次请求的编辑所需的完整安全条件。
+Neither derives the full safety requirement of a requested edit from the current authenticated state.
+% 二者都不会从当前认证状态中推导出一次请求的编辑所需的完整安全条件。
 We present an exact theory and an executable checker.
 % 我们提出一套精确理论以及一个可执行检查器。
-Given a registered workflow, its authenticated record, and a requested edit, the checker constructs every complete execution allowed by the workflow and policy.
-% 给定一个已注册工作流、其经认证记录以及请求的编辑，检查器构造工作流和策略允许的每种完整执行。
+Given a registered workflow, its current authenticated state, and a requested edit, the checker constructs every complete execution allowed by the workflow and policy.
+% 给定一个已注册工作流、其当前认证状态以及请求的编辑，检查器构造工作流和策略允许的每种完整执行。
 It removes an execution whenever one of its partial executions would leave a still-required outcome with no safe way to finish.
 % 如果某个完整执行的部分过程会让仍然需要实现的结果失去安全完成方式，检查器就删除该完整执行。
 If nothing remains, the checker returns a finite, independently checkable explanation that no safe implementation exists.
 % 如果没有完整执行留下，检查器返回一份有限且可独立检查的说明，证明不存在安全实现。
 Otherwise, the remaining executions define the most permissive runtime monitor that enforces the edit.
 % 否则，剩余执行定义了强制执行该编辑且限制最少的运行时监控器。
-For Fork, Restore, Merge, and later workflow extensions, our main theorem proves that the checker accepts exactly when such a safe implementation exists.
-% 对 Fork、Restore、Merge 以及后续工作流扩展，我们的主定理证明，当且仅当这种安全实现存在时，检查器才会接受。
-The same theorem proves atomic installation despite racing calls, identifies the workflow structure, call-to-action links, prior authorizations, and monitor version that every exact checker needs, and proves that the installed runtime has the same Agent-visible behavior as an ideal atomic machine.
-% 同一定理还证明调用竞态下的原子安装，确定每个精确检查器都需要的工作流结构、调用到动作的关联、既有授权和监控器版本，并证明已安装运行时与理想原子机器具有相同的 Agent 可见行为。
+For all six registered Fork, Restore, and Merge edits and authenticated registered extensions, our main theorem proves that the checker accepts exactly when such a safe implementation exists.
+% 对全部六种已注册的 Fork、Restore 和 Merge 编辑以及经认证的已注册扩展，我们的主定理证明，当且仅当这种安全实现存在时，检查器才会接受。
+The same theorem proves atomic installation despite racing calls and identifies the workflow structure, call-position-to-action-ID relation, prior authorizations, and monitor version that every exact checker needs.
+% 同一定理还证明调用竞态下的原子安装，并确定每个精确检查器都需要的工作流结构、调用位置到动作标识的关系、既有授权和监控器版本。
+It also proves that the installed runtime and an ideal atomic machine have the same Agent-visible behavior.
+% 它还证明已安装运行时与理想原子机器具有相同的 Agent 可见行为。
 The security invariant is preserved by every runtime transition and therefore holds after every finite execution.
 % 安全不变量由每个运行时转移保持，因此在每段有限执行之后都成立。
-Six Lean modules mechanize registration, all six edit rules, atomic monitor installation, call--installation races, and preservation across finite executions; 19 paper-specific tests and measurements over 2--128 outcomes exercise the executable checker.
-% 六个 Lean 模块机械化注册、全部六种编辑规则、监控器原子安装、调用—安装竞态以及有限执行上的安全保持；19 项论文专用测试与覆盖 2--128 个结果的测量检验可执行检查器。
+Six Lean modules mechanize registration, all six edit rules, atomic monitor installation, call--installation races, and preservation across finite executions.
+% 六个 Lean 模块机械化注册、全部六种编辑规则、监控器原子安装、调用—安装竞态以及有限执行上的安全保持。
+Nineteen paper-specific tests and measurements over 2--128 outcomes exercise the executable checker.
+% 十九项论文专用测试与覆盖 2--128 个结果的测量检验可执行检查器。
 \end{abstract}
 
 \input{sections/introduction}

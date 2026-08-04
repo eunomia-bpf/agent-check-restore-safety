@@ -28,8 +28,8 @@ The runtime records that order, and the remote service supplies an authenticated
 
 The problem is that a checkpoint contains only part of the information needed to decide whether an edit is safe.
 % 问题在于，检查点只包含决定一次编辑是否安全所需的部分信息。
-The controller must also know four things: which outcomes remain required, which call positions refer to the same protected action, which actions have already been authorized, and which runtime version governs a call that overlaps the edit.
-% 控制器还必须知道四件事：哪些结果仍然是要求、哪些调用位置指向同一个受控动作、哪些动作已经获得授权，以及哪个运行时版本管理与编辑重叠的调用。
+The controller must also know four things: which outcomes remain required, which call positions refer to the same protected action, which actions have already been authorized, and which monitor version governs a call that overlaps the edit.
+% 控制器还必须知道四件事：哪些结果仍然是要求、哪些调用位置指向同一个受控动作、哪些动作已经获得授权，以及哪个监控器版本管理与编辑重叠的调用。
 Each can change the correct answer.
 % 每一项都可能改变正确答案。
 The controller cannot recover all four from equal workspaces, an execution trace alone, an authorization log alone, or a replacement workflow proposed by the Agent.
@@ -66,9 +66,9 @@ The checker must enforce this condition without forbidding additional safe behav
 Third, the answer must take effect atomically with calls that overlap the edit and remain valid if the runtime or machine stops unexpectedly and later recovers.
 % 第三，该答案必须与重叠编辑的调用原子排序，并在运行时或机器意外停止后恢复时继续有效。
 
-We give an exact checker for execution edits: it accepts exactly when a safe implementation exists.
-% 我们给出一个针对执行编辑的精确检查器：它当且仅当安全实现存在时才接受。
-For a requested edit, the controller uses the registered workflow and current authenticated state to construct every allowed completed execution.
+We give an exact checker for execution edits that accepts exactly when a safe implementation exists.
+% 我们给出一个针对执行编辑的精确检查器，它当且仅当安全实现存在时才接受。
+For a requested edit, the controller uses the registered workflow and current authenticated state to construct every allowed complete execution.
 % 对于一次编辑请求，控制器使用已注册工作流和当前认证状态构造所有允许的完整执行。
 It removes an execution whenever one of its partial executions would leave a still-required outcome with no safe completion.
 % 如果某个完整执行的部分过程会让仍然要求实现的结果失去安全完成方式，检查器就删除该完整执行。
@@ -89,11 +89,15 @@ After Restore, the repeated approval call reuses the earlier authorization recor
 % 贡献
 We contribute one end-to-end theorem connecting the original Agent workflow, the requested execution edit, the exact checker, and the installed runtime.
 % 我们贡献一个端到端定理，将原始 Agent 工作流、请求的执行编辑、精确检查器与已安装运行时连接起来。
-For Fork, Restore, Merge, and later workflow extensions, a safe implementation exists exactly when the checker leaves a nonempty set of executions, its monitor can be installed, and an ideal atomic machine permits the same edit.
-% 对 Fork、Restore、Merge 以及后续工作流扩展，当且仅当检查器留下非空执行集合、其监控器能够安装且理想原子机器允许同一次编辑时，安全实现才存在。
-The theorem also proves that every exact checker needs the workflow structure, the mapping from call positions to protected actions, prior authorizations, and the current monitor version, and that the concrete runtime has the same Agent-visible behavior as the ideal machine (\cref{sec:model,sec:admission,sec:enforcement,sec:results}).
-% 该定理还证明，每个精确检查器都需要工作流结构、调用位置到受控动作的映射、既有授权和当前监控器版本，并证明具体运行时与理想机器具有相同的 Agent 可见行为（\cref{sec:model,sec:admission,sec:enforcement,sec:results}）。
+For all six registered Fork, Restore, and Merge edits and authenticated registered extensions, a safe implementation exists exactly when the checker leaves a nonempty set of executions, its monitor can be installed, and an ideal atomic machine permits the same edit.
+% 对全部六种已注册的 Fork、Restore 和 Merge 编辑以及经认证的已注册扩展，当且仅当检查器留下非空执行集合、其监控器能够安装且理想原子机器允许同一次编辑时，安全实现才存在。
+The theorem also proves that every exact checker needs the workflow structure, call-position-to-action-ID relation, prior authorizations, and current monitor version (\cref{sec:model,sec:admission,sec:results}).
+% 该定理还证明，每个精确检查器都需要工作流结构、调用位置到动作标识的关系、既有授权和当前监控器版本（\cref{sec:model,sec:admission,sec:results}）。
+The concrete runtime and ideal machine have the same Agent-visible behavior (\cref{sec:enforcement,sec:results}).
+% 具体运行时与理想机器具有相同的 Agent 可见行为（\cref{sec:enforcement,sec:results}）。
 The security invariant is inductive across edits, protected calls, installation races, returns, and recovery, so it holds after every finite execution.
 % 安全不变量在编辑、受控调用、安装竞态、返回与恢复上均为归纳不变量，因此在每段有限执行之后都成立。
-Six Lean modules mechanize registration, all six edit rules, atomic monitor installation, call--installation races, and preservation across finite executions; 19 paper-specific tests and measurements over 2--128 outcomes exercise the executable checker.
-% 六个 Lean 模块机械化注册、全部六种编辑规则、监控器原子安装、调用—安装竞态以及有限执行上的安全保持；19 项论文专用测试与覆盖 2--128 个结果的测量检验可执行检查器。
+Six Lean modules mechanize registration, all six edit rules, atomic monitor installation, call--installation races, and preservation across finite executions.
+% 六个 Lean 模块机械化注册、全部六种编辑规则、监控器原子安装、调用—安装竞态以及有限执行上的安全保持。
+Nineteen paper-specific tests and measurements over 2--128 outcomes exercise the executable checker.
+% 十九项论文专用测试与覆盖 2--128 个结果的测量检验可执行检查器。

@@ -4,18 +4,22 @@
 
 The theorem connects authenticated edit derivation, exact checking, monitor construction, atomic installation, and every later runtime step.
 % 该定理连接经认证编辑推导、精确检查、监控器构造、原子安装以及此后的每个运行时步骤。
-Its central clause says that the checker accepts if and only if a safe implementation exists; the other clauses establish faithful registration, necessary state information, repeated use, and runtime correctness.
-% 其核心条款表明，当且仅当安全实现存在时，检查器才会接受；其余条款建立忠实注册、必要状态信息、重复使用与运行时正确性。
+Its central clause says that the checker accepts if and only if a safe implementation exists.
+% 其核心条款表明，当且仅当安全实现存在时，检查器才会接受。
+The other clauses establish faithful registration, necessary state information, repeated use, and runtime correctness.
+% 其余条款建立忠实注册、必要状态信息、重复使用与运行时正确性。
 
 Fix \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
 % 固定 \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
-An \emph{installed realization} is a pair \((M,\widehat B_M)\) whose generated and marked languages realize \((H,u)\) as in \cref{def:realization}, installed atomically at \(\eta^+\) while \(\eta^-\) is closed and all target monitor entries and tokens are replaced.
-% \emph{已安装实现}是二元组 \((M,\widehat B_M)\)，其生成语言与标记语言按 \cref{def:realization} 实现 \((H,u)\)，并在关闭 \(\eta^-\) 且替换全部目标监控器入口与令牌的同时原子安装到 \(\eta^+\)。
+An \emph{installed safe implementation} is a pair \((M,\widehat B_M)\) whose generated and marked languages realize \((H,u)\) as in \cref{def:safe-implementation}.
+% \emph{已安装实现}是二元组 \((M,\widehat B_M)\)，其生成语言与标记语言按 \cref{def:safe-implementation} 实现 \((H,u)\)。
+Installation atomically places the pair at \(\eta^+\), closes \(\eta^-\), and replaces all target monitor entries and tokens.
+% 安装将该二元组原子置于 \(\eta^+\)、关闭 \(\eta^-\)，并替换全部目标监控器入口与令牌。
 
 \paragraph{Information required end to end}
 % 端到端所需的信息
-At a checked source snapshot, \(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) joins workflow structure and schemas (\(\mathbf P\)), call--action ID (\(\mathbf I\)), effect progress (\(\mathbf E\)), and monitor-version and installation coordinates (\(\mathbf C\)).
-% 在经检查源状态快照处，\(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) 连接工作流结构与模式（\(\mathbf P\)）、调用—动作标识（\(\mathbf I\)）、效果进度（\(\mathbf E\)），以及监控器版本与安装坐标（\(\mathbf C\)）。
+At a checked source snapshot, \(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) joins four relations: (1) workflow structure and schemas (\(\mathbf P\)), (2) call-position-to-action-ID links (\(\mathbf I\)), (3) authorization and execution progress (\(\mathbf E\)), and (4) monitor-version and installation coordinates (\(\mathbf C\)).
+% 在经检查源状态快照处，\(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) 连接四类关系：(1) 工作流结构与模式（\(\mathbf P\)）；(2) 调用位置到动作标识的链接（\(\mathbf I\)）；(3) 授权与执行进展（\(\mathbf E\)）；(4) 监控器版本与安装坐标（\(\mathbf C\)）。
 For every well-typed decide or install query \((V,q)\in\mathcal Q_{\rm sec}\), compare private names up to consistent renaming and define an equivariant information map \(f\) to be exact when
 % 对每个良好定型的判定或安装查询 \((V,q)\in\mathcal Q_{\rm sec}\)，私有名称按一致重命名比较，并在下列条件成立时称等变信息映射 \(f\) 是精确的：
 \[
@@ -27,8 +31,10 @@ For every well-typed decide or install query \((V,q)\in\mathcal Q_{\rm sec}\), c
 =[\mathsf{Ans}(V,q)]_{\cong}.
 \end{aligned}
 \]
-Projection \(\pi_J\) keeps \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\) and deletes dependent fields; \(\mathsf{TargetOnly}\) keeps only caller-proposed target data.
-% 投影 \(\pi_J\) 保留 \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\) 并删除依赖字段；\(\mathsf{TargetOnly}\) 只保留调用方提出的目标数据。
+Projection \(\pi_J\) keeps \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\) and deletes dependent fields.
+% 投影 \(\pi_J\) 保留 \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\) 并删除依赖字段。
+\(\mathsf{TargetOnly}\) keeps only caller-proposed target data.
+% \(\mathsf{TargetOnly}\) 只保留调用方提出的目标数据。
 \Cref{app:evidence} gives the exact dependencies and proves a representation-independent semantic-information lower bound.
 % \Cref{app:evidence} 给出精确依赖关系，并证明一个与表示无关的语义信息下界。
 
@@ -36,10 +42,10 @@ Projection \(\pi_J\) keeps \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C
 % 要求实现结果的保留
 \[
 \begin{aligned}
-\mathsf{Preserve}(H,u,\widehat B)
+\mathsf{PreservesRequired}(H,u,\widehat B)
 &\Longleftrightarrow
-\forall a\in\mathsf{Req}_u.\ \exists t\in O_{H,u},b,\\[-2pt]
-&\qquad \mathsf{Lift}_u(t,a)\land(t,b)\in\widehat B .
+\forall a\in\mathsf{StillRequired}_u.\ \exists t\in O_{H,u},b,\\[-2pt]
+&\qquad \mathsf{Covers}_u(t,a)\land(t,b)\in\widehat B .
 \end{aligned}
 \]
 Thus every required source outcome appears in an accepted target outcome.
@@ -49,8 +55,10 @@ Thus every required source outcome appears in an accepted target outcome.
 % 可见运行时行为
 \(\mathcal O_{\rm api}\) exposes snapshot-bound edit answers, installed edits, protected-call answers, dispatch, settlement, and authenticated returns, while hiding only internal work, Save, stale attempts, and recovered crashes.
 % \(\mathcal O_{\rm api}\) 暴露绑定状态快照的编辑答案、已安装编辑、受控调用答案、派发、结算与经认证返回，同时只隐藏内部工作、Save、过期尝试与恢复后的崩溃。
-\(\mathcal B\) matches ideal and compiled states on \(\mathsf{AgentSec}\) and these visible fields; \cref{app:bisimulation} gives the full relation.
-% \(\mathcal B\) 在 \(\mathsf{AgentSec}\) 与这些可见字段上匹配理想状态和编译后状态；\cref{app:bisimulation} 给出完整关系。
+\(\mathcal B\) matches ideal and compiled states on \(\mathsf{AgentSec}\) and these visible fields.
+% \(\mathcal B\) 在 \(\mathsf{AgentSec}\) 与这些可见字段上匹配理想状态和编译后状态。
+\Cref{app:bisimulation} gives the full relation.
+% \Cref{app:bisimulation} 给出完整关系。
 
 \begin{theorem}[Exact Edit-Safety]
 % 精确编辑安全
@@ -66,17 +74,19 @@ Then they hold for every \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) a
 % 忠实注册。
 \(\mathsf{CheckReg}(\mathcal W,R)\) accepts iff stored \(\lambda\) witnesses \(\mathcal W\sqsubseteq_\lambda R\).
 % 当且仅当所存 \(\lambda\) 见证 \(\mathcal W\sqsubseteq_\lambda R\) 时，\(\mathsf{CheckReg}(\mathcal W,R)\) 才接受。
-On acceptance, the source workflow's protected-call traces and \(\mathsf{BRuns}(R)\) are order-isomorphic and preserve outcomes, action IDs, \Fresh/\Alias, the safety answer, and the most permissive monitor; malformed registrations fail before startup.
-% 接受时，源工作流的受控调用轨迹与 \(\mathsf{BRuns}(R)\) 序同构，并保持结果、动作标识、\Fresh/\Alias、安全答案与限制最少的监控器；不合格的注册在启动前失败。
+On acceptance, the source workflow's protected-call traces and \(\mathsf{BRuns}(R)\) are order-isomorphic and preserve outcomes, action IDs, \Fresh/\Alias, the safety answer, and the most permissive monitor.
+% 接受时，源工作流的受控调用轨迹与 \(\mathsf{BRuns}(R)\) 序同构，并保持结果、动作标识、\Fresh/\Alias、安全答案与限制最少的监控器。
+Malformed registrations fail before startup.
+% 不合格的注册在启动前失败。
 
 \item \textbf{Exact checking and construction.}
 % 精确检查与构造。
-The ideal and compiled machines return the same mutually exclusive and exhaustive answer for \(\Theta=\Theta_S(u)\): undefined derivation gives state-preserving \(\mathsf{Invalid}\), and \(\widehat B^\dagger_\delta=\varnothing\) gives state-preserving \(\mathsf{Reject}\) with no installed realization.
+The ideal and compiled machines return the same mutually exclusive and exhaustive answer for \(\Theta=\Theta_S(u)\): undefined derivation gives state-preserving \(\mathsf{Invalid}\), and \(\widehat B^\dagger_\delta=\varnothing\) gives state-preserving \(\mathsf{Reject}\) with no installed safe implementation.
 % 对于 \(\Theta=\Theta_S(u)\)，理想机与编译后机器返回相同且互斥穷尽的答案：未定义推导给出保持状态的 \(\mathsf{Invalid}\)，而 \(\widehat B^\dagger_\delta=\varnothing\) 给出保持状态的 \(\mathsf{Reject}\)，且不存在已安装实现。
-Otherwise, for \(Y=\mathsf{Compile}(\Theta)\), nonempty \(\widehat B^\dagger_\delta\), existence of an installed realization, \(\mathsf{Ready}(S,u,Y)\), and an \(\mathsf{AgentSec}\)-preserving installed successor are equivalent.
+Otherwise, for \(Y=\mathsf{Compile}(\Theta)\), nonempty \(\widehat B^\dagger_\delta\), existence of an installed safe implementation, \(\mathsf{Ready}(S,u,Y)\), and an \(\mathsf{AgentSec}\)-preserving installed successor are equivalent.
 % 否则，对于 \(Y=\mathsf{Compile}(\Theta)\)，\(\widehat B^\dagger_\delta\) 非空、已安装实现存在、\(\mathsf{Ready}(S,u,Y)\) 成立，以及存在保持 \(\mathsf{AgentSec}\) 的已安装后继，这四项彼此等价。
-The largest execution family satisfies \(\mathsf{Preserve}\), retains recorded evidence for every already-satisfied source outcome, and records every authorized removal.
-% 最大执行族满足 \(\mathsf{Preserve}\)，保留每个已满足源结果的记录证据，并记录每项获授权移除。
+The largest execution family satisfies \(\mathsf{PreservesRequired}\), retains recorded evidence for every already-satisfied source outcome, and records every authorized removal.
+% 最大执行族满足 \(\mathsf{PreservesRequired}\)，保留每个已满足源结果的记录证据，并记录每项获授权移除。
 
 \item \textbf{Each of four state relations is necessary for exact answers.}
 % 四类状态关系中的每一类都是精确答案所必需的。
@@ -88,8 +98,8 @@ J=\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}.
 \]
 Every exact decision-and-installation information map distinguishes every separating state--query pair in \cref{tab:projection-pairs}.
 % 每个精确信息映射都区分 \cref{tab:projection-pairs} 中的每对分离状态—查询对。
-Maps that erase the call-to-effect link or the link between authorization records and action IDs, as well as \(\mathsf{TargetOnly}\), are inexact.
-% 擦除调用到动作标识关系、授权记录到动作标识关系的信息映射以及 \(\mathsf{TargetOnly}\) 都不精确。
+Maps that erase the call-position-to-action-ID relation or the authorization-record-to-action-ID relation, as well as \(\mathsf{TargetOnly}\), are inexact.
+% 擦除调用位置到动作标识关系、授权记录到动作标识关系的信息映射以及 \(\mathsf{TargetOnly}\) 都不精确。
 Generalized nonblocking can serve as an exact solver only after the trusted controller derives the workflow and outcome-specific completion conditions.
 % 只有在可信控制器推导出工作流以及特定于结果的完成条件之后，广义非阻塞才能作为精确求解器。
 
@@ -100,10 +110,12 @@ Every enabled event preserves \(\mathsf{AgentSec}\), so the theorem applies afte
 
 \item \textbf{Runtime correctness.}
 % 运行时正确性。
-\(\mathcal B\) is a divergence-insensitive weak bisimulation under \(\mathsf{obs}_{\rm api}\), so every good pair satisfies \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\).
-% \(\mathcal B\) 在 \(\mathsf{obs}_{\rm api}\) 下是发散不敏感弱互模拟，因此每个良好对均满足 \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\)。
-The observation records snapshot-bound answers, replacement authorization tokens, and returns; time, fairness, and post-\(\Dispatch\) networking are environmental behavior, and disjoint domains compose asynchronously.
-% 该观测记录绑定状态快照的答案、替代授权令牌与返回；时间、公平性与 \(\Dispatch\) 之后的网络行为属于环境行为，互不相交的域异步组合。
+\(\mathcal B\) is a divergence-insensitive weak bisimulation under \(\mathsf{obs}_{\rm api}\), so every pair related by \(\mathcal B\) satisfies \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\).
+% \(\mathcal B\) 在 \(\mathsf{obs}_{\rm api}\) 下是发散不敏感弱互模拟，因此由 \(\mathcal B\) 关联的每对状态均满足 \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\)。
+The observation records snapshot-bound answers, replacement authorization tokens, and returns.
+% 该观测记录绑定状态快照的答案、替代授权令牌与返回。
+Time, fairness, and post-\(\Dispatch\) networking are environmental behavior, and disjoint domains compose asynchronously.
+% 时间、公平性与 \(\Dispatch\) 之后的网络行为属于环境行为，互不相交的域异步组合。
 \end{enumerate}
 \end{theorem}
 
@@ -111,9 +123,15 @@ The observation records snapshot-bound answers, replacement authorization tokens
 % 证明路线
 Registration reflection follows by enumerating the finite protected-call traces and checking their order- and identity-preserving correspondence.
 % 注册反射通过枚举有限受控调用轨迹并检查其保持次序与标识的对应关系得到。
-Exact checking follows from schema fidelity and the greatest-fixed-point argument: every safe implementation is contained in the computed family, and a nonempty computed family compiles to an implementation.
-% 精确检查由模式保真性与最大不动点论证得到：每个安全实现都包含于计算出的执行族中，而非空的计算执行族可以编译为实现。
-Four explicit pairs of checked states prove the information result; induction over the runtime rules proves repeated use; and a case analysis over edits, protected calls, installation races, returns, and recovery establishes the weak bisimulation.
-% 四对显式经检查状态证明信息结果；对运行时规则作归纳证明重复使用；对编辑、受控调用、安装竞态、返回与恢复作分类讨论建立弱互模拟。
+Schema fidelity and the greatest-fixed-point argument prove exact checking.
+% 模式保真性与最大不动点论证证明精确检查。
+Every safe implementation is contained in the computed family, and a nonempty computed family compiles to an implementation.
+% 每个安全实现都包含于计算出的执行族中，而非空的计算执行族可以编译为实现。
+Four explicit pairs of checked states prove the information result.
+% 四对显式经检查状态证明信息结果。
+Induction over the runtime rules proves repeated use.
+% 对运行时规则作归纳证明重复使用。
+A case analysis over edits, protected calls, installation races, returns, and recovery establishes the weak bisimulation.
+% 对编辑、受控调用、安装竞态、返回与恢复作分类讨论建立弱互模拟。
 The appendix gives the complete witnesses and case proofs.
 % 附录给出完整见证与分类证明。

@@ -1,37 +1,37 @@
-Recall the permission-label alphabet \(\mathcal U\) and regular prefix-closed policy \(\mathcal A\subseteq\mathcal U^*\).
-% 回顾权限标签字母表 \(\mathcal U\) 和正则前缀闭合策略 \(\mathcal A\subseteq\mathcal U^*\)。
-For the authenticated authorization log \(\Delta\), \(\mathsf{lab}(\Delta)\in\mathcal A\) is its permission trace and \(D_\Delta\) is the set of action IDs that already have authorization records.
-% 对于经认证授权日志 \(\Delta\)，\(\mathsf{lab}(\Delta)\in\mathcal A\) 是其权限轨迹，\(D_\Delta\) 是已经具有授权记录的动作标识集合。
-Fix \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\) and write \(\mathsf{src}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\).
-% 固定 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并记 \(\mathsf{src}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\)。
-When defined, the tagged root, execution-edit, or registered-extension derivation is unique.
-% 带标签的根、执行编辑或已注册扩展推导在有定义时是唯一的。
+Recall the authorization-label alphabet \(\mathcal U\) and regular prefix-closed policy \(\mathcal A\subseteq\mathcal U^*\).
+% 回顾授权标签字母表 \(\mathcal U\) 和正则前缀闭合策略 \(\mathcal A\subseteq\mathcal U^*\)。
+For authorization log \(\Delta\), \(\mathsf{lab}(\Delta)\in\mathcal A\) is its label sequence and \(D_\Delta\) is the set of action IDs that already have authorization records.
+% 对于授权日志 \(\Delta\)，\(\mathsf{lab}(\Delta)\in\mathcal A\) 是其标签序列，\(D_\Delta\) 是已经具有授权记录的动作标识集合。
+Fix \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\) and write \(\mathsf{state}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\).
+% 固定 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并记 \(\mathsf{state}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\)。
+Initial installation, each execution edit, and each later registered extension have a unique derived state.
+% 初始安装、每种执行编辑和每次后续注册扩展都具有唯一的派生状态。
 Write \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
 % 记为 \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
 Root derivation additionally requires that \(\mathsf{CheckReg}(\mathcal W,R)\) accept.
 % 根推导还要求 \(\mathsf{CheckReg}(\mathcal W,R)\) 接受。
 An execution edit has \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) and uses the unique execution-edit judgment.
 % 执行编辑满足 \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) 并使用唯一的执行编辑判定。
-\(\mathsf{Extend}(\xi)\) uses the authenticated judgment in \cref{sec:model}.
-% \(\mathsf{Extend}(\xi)\) 使用 \cref{sec:model} 中的认证判定。
+\(\mathsf{Extend}(\xi)\) adds authenticated edit-rule, call, outcome-authority, and policy entries while preserving the current workflow, its progress, and all earlier authorizations; \cref{app:registered-extension} gives the judgment.
+% \(\mathsf{Extend}(\xi)\) 添加经认证的编辑规则、调用、结果权限和策略条目，同时保留当前工作流、其进展及所有先前授权；该判定见 \cref{app:registered-extension}。
 Let \(\rho_u\) be the authenticated target registry in \(H_u\), let \(O_{H,u}=O_{\mathcal C_u}\), and use \(H'=H_u\) and \(\rho'=\rho_u\) where earlier notation is convenient.
 % 令 \(\rho_u\) 为 \(H_u\) 中经认证的目标注册表，令 \(O_{H,u}=O_{\mathcal C_u}\)，并在沿用先前记法更方便时使用 \(H'=H_u\) 和 \(\rho'=\rho_u\)。
-All languages below depend on \(\Theta\), the schema registry, \(\rho_u\), and target policy \(\mathcal A_u\), but not on the dispatch queue \(\mathsf{out}\).
-% 下文所有语言均依赖于 \(\Theta\)、模式注册表、\(\rho_u\) 与目标策略 \(\mathcal A_u\)，但不依赖派发队列 \(\mathsf{out}\)。
-The executable checker nevertheless binds \(\mathsf{out}\) into the authenticated source snapshot used for installation.
-% 可执行检查器仍会把 \(\mathsf{out}\) 绑定到安装所用的认证源状态快照中。
-We write only \(H,u\) where the remaining parameters are fixed.
-% 当其余参数固定时，我们仅写作 \(H,u\)。
+The execution sets below use \(\Theta\), the edit-rule registry, \(\rho_u\), and target policy \(\mathcal A_u\).
+% 下文执行集合使用 \(\Theta\)、编辑规则注册表、\(\rho_u\) 和目标策略 \(\mathcal A_u\)。
+The state fingerprint used at installation additionally includes queued requests \(\mathsf{out}\), so a concurrent release changes the final check.
+% 安装时使用的状态指纹还包括排队请求 \(\mathsf{out}\)，因此并发发出请求会改变最终检查结果。
+We abbreviate the fixed parameters by writing \(H,u\).
+% 我们用 \(H,u\) 简写固定参数。
 
-\subsection{\Fresh and \Alias resolution}
-% \Fresh 与 \Alias 解析
+\subsection{New and Reused Authorizations}
+% 新授权与授权复用
 
-Resolution never erases an call position retained by the derived contract.
-% 解析绝不会擦除派生契约所保留的调用位置。
-Starting with \(D_0=D_\Delta\), the deterministic transducer \(\Resolve^{\rho_u}_\Delta\) maps a raw word \(w=x_1\cdots x_n\) to a resolved word \(z_1\cdots z_n\).
-% 从 \(D_0=D_\Delta\) 开始，确定性转换器 \(\Resolve^{\rho_u}_\Delta\) 将原始词 \(w=x_1\cdots x_n\) 映射为已解析词 \(z_1\cdots z_n\)。
-For \(d_i=q^{\rho_u}_{\rm eff}(x_i)\),
-% 对于 \(d_i=q^{\rho_u}_{\rm eff}(x_i)\)，定义 \(z_i\) 如下：
+Function \(\Resolve^{\rho_u}_\Delta\) keeps every call position and annotates it as creating a new authorization or reusing an earlier one.
+% 函数 \(\Resolve^{\rho_u}_\Delta\) 保留每个调用位置，并标注它是创建新授权还是复用先前授权。
+Starting with \(D_0=D_\Delta\), it maps call sequence \(w=x_1\cdots x_n\) to annotated sequence \(z_1\cdots z_n\).
+% 从 \(D_0=D_\Delta\) 开始，它把调用序列 \(w=x_1\cdots x_n\) 映射为带标注序列 \(z_1\cdots z_n\)。
+For \(d_i=q^{\rho_u}_{\rm act}(x_i)\),
+% 对于 \(d_i=q^{\rho_u}_{\rm act}(x_i)\)，定义 \(z_i\) 如下：
 \begin{equation}
 \label{eq:resolve}
  z_i=
@@ -42,43 +42,43 @@ For \(d_i=q^{\rho_u}_{\rm eff}(x_i)\),
        \quad D_i=D_{i-1}.
  \end{cases}
 \end{equation}
-The permission projection erases \Alias symbols and maps each \Fresh symbol to its action ID's permission label.
-% 权限投影会擦除 \Alias 符号，并将每个 \Fresh 符号映射到其动作标识的权限标签。
+\(\mathsf{auth}\) keeps the authorization label of each new authorization and contributes nothing for reuse.
+% \(\mathsf{auth}\) 保留每次新授权的授权标签，而授权复用不贡献标签。
 \[
  \mathsf{auth}(\Fresh(x,d))=\ell_{\rho_u}(d),\qquad
  \mathsf{auth}(\Alias(x,d))=\epsilon .
 \]
-For resolved \(z\), \(\mathsf{raw}(z)\) drops the \Fresh/\Alias mode and action ID but preserves the ordered call position identifiers.
-% 对于已解析的 \(z\)，\(\mathsf{raw}(z)\) 会去除 \Fresh/\Alias 模式和动作标识，但保留有序调用位置标识符。
-A \Retry repeats the same normalized request and adds no call position.
-% \Retry 重复同一个规范化请求，不增加任何调用位置。
-Restored call positions sharing an action ID remain distinct and may resolve differently.
-% 共享同一动作标识的恢复调用位置仍彼此有别，并且可能得到不同的解析结果。
+For annotated \(z\), \(\mathsf{raw}(z)\) drops the new/reuse annotation and action ID while preserving the ordered call-position IDs.
+% 对于带标注的 \(z\)，\(\mathsf{raw}(z)\) 去除新建/复用标注和动作标识，同时保留有序调用位置标识。
+A \Retry repeats the same canonical request and adds no call position.
+% \Retry 重复同一个规范请求，不增加任何调用位置。
+Restored call positions sharing an action ID remain distinct; the first creates the record and later positions reuse it.
+% 共享同一动作标识的恢复调用位置仍彼此有别；第一个位置创建记录，后续位置复用该记录。
 
-\begin{lemma}[Resolution]
-% 解析
+\begin{lemma}[New/reuse classification]
+% 新建/复用分类
 \label{lem:resolution}
-\(\Resolve^{\rho_u}_\Delta\) is deterministic, length preserving, and prefix compatible.
-% \(\Resolve^{\rho_u}_\Delta\) 是确定性的、保持长度的，并且与前缀兼容。
-Its \Fresh projection contains each action ID at most once outside \(D_\Delta\), while its call position projection is exactly the input word.
-% 在 \(D_\Delta\) 之外，其 \Fresh 投影至多包含每个动作标识一次，而其调用位置投影恰好就是输入词。
-Moreover, if \(\Resolve^{\rho_u}_\Delta(rv)=zv'\), then \(z=\Resolve^{\rho_u}_\Delta(r)\) and \(v'=\Resolve^{\rho_u}_{\Delta_z}(v)\), where \(\Delta_z\) extends \(\Delta\) by the \Fresh events of \(z\).
-% 此外，若 \(\Resolve^{\rho_u}_\Delta(rv)=zv'\)，则 \(z=\Resolve^{\rho_u}_\Delta(r)\) 且 \(v'=\Resolve^{\rho_u}_{\Delta_z}(v)\)，其中 \(\Delta_z\) 通过加入 \(z\) 的 \Fresh 事件来扩展 \(\Delta\)。
+\(\Resolve^{\rho_u}_\Delta\) is deterministic, preserves length, and gives the same annotations on every shared prefix.
+% \(\Resolve^{\rho_u}_\Delta\) 是确定性的、保持长度，并在每个共享前缀上给出相同标注。
+Among positions annotated as new, each action ID occurs at most once outside \(D_\Delta\), while the call-position projection is exactly the input sequence.
+% 在标注为新授权的位置中，\(D_\Delta\) 之外的每个动作标识至多出现一次，而调用位置投影恰为输入序列。
+Moreover, if \(\Resolve^{\rho_u}_\Delta(rv)=zv'\), then \(z=\Resolve^{\rho_u}_\Delta(r)\) and \(v'=\Resolve^{\rho_u}_{\Delta_z}(v)\), where \(\Delta_z\) extends \(\Delta\) by the new authorizations in \(z\).
+% 此外，若 \(\Resolve^{\rho_u}_\Delta(rv)=zv'\)，则 \(z=\Resolve^{\rho_u}_\Delta(r)\) 且 \(v'=\Resolve^{\rho_u}_{\Delta_z}(v)\)，其中 \(\Delta_z\) 通过加入 \(z\) 中的新授权来扩展 \(\Delta\)。
 \end{lemma}
 \begin{proof}
-Induction on input length shows that the transducer emits one prefix-determined output symbol per input symbol and updates \(D_i\) only for \Fresh.
-% 对输入长度作归纳表明，该转换器为每个输入符号发出一个由前缀决定的输出符号，并且仅在 \Fresh 时更新 \(D_i\)。
-Set membership ensures one \Fresh emission per action ID.
-% 集合成员关系确保每个动作标识仅产生一次 \Fresh。
+Induction on input length shows that the function emits one prefix-determined annotation per input symbol and updates \(D_i\) exactly when it creates a new authorization.
+% 对输入长度作归纳表明，该函数为每个输入符号产生一个由前缀决定的标注，并且恰在创建新授权时更新 \(D_i\)。
+Set membership ensures at most one new authorization per action ID.
+% 集合成员关系确保每个动作标识至多创建一次新授权。
 Both cases retain \(x_i\).
 % 两种情形都会保留 \(x_i\)。
-Splitting after \(r\) gives the streaming equation.
-% 在 \(r\) 之后拆分即可得到流式等式。
+Splitting after \(r\) gives the stated composition equation.
+% 在 \(r\) 之后拆分即可得到所述组合等式。
 \end{proof}
-Thus a retry changes neither the resolved call record nor the permission trace, although its successful API reply is observable as \(\mathsf{Return}(t,[v]_{\cong})\).
-% 因而，重试既不改变已解析调用记录，也不改变权限轨迹，但其成功 API 回复仍可观测为 \(\mathsf{Return}(t,[v]_{\cong})\)。
-A copied call position that resolves as \Alias advances the call record without changing the permission trace.
-% 解析为 \Alias 的复制调用位置会推进调用记录，但不会改变权限轨迹。
+Thus a retry changes neither the processed-call record nor the authorization-label sequence, although its successful API reply is observable as \(\mathsf{Return}(t,[v]_{\cong})\).
+% 因而，重试既不改变已处理调用记录，也不改变授权标签序列，但其成功 API 回复仍可观测为 \(\mathsf{Return}(t,[v]_{\cong})\)。
+A copied call position that reuses an authorization advances the processed-call record without changing the label sequence.
+% 复用授权的复制调用位置会推进已处理调用记录，但不会改变标签序列。
 
 \subsection{Safe Completion After Every Prefix}
 % 每个前缀之后的安全完成
@@ -86,7 +86,7 @@ A copied call position that resolves as \Alias advances the call record without 
 \subsubsection{Largest family safe after every prefix}
 % 每个前缀之后都安全的最大执行族
 
-For each derived outcome \(o\in O_{H,u}\), define all of its completed executions and the subset allowed by policy.
+For each derived outcome \(o\in O_{H,u}\), define all of its complete executions and the subset allowed by policy.
 % 对每个推导出的结果 \(o\in O_{H,u}\)，定义其全部完整执行以及策略允许的子集。
 \begin{equation}
 \label{eq:safe-completions}
@@ -103,19 +103,21 @@ For a resolved prefix \(z\), let
  \{o\mid \mathsf{raw}(z)\preceq_{\rm pref}w
 		          \text{ for some }w\in\Lin(p_o)\}.
 \]
-Relation \(\mathsf{Preserve}\) requires every source outcome that is neither completed nor authorized for removal to have a checked lift into \(\widehat B\); \cref{app:spc} gives its full definition.
-% 关系 \(\mathsf{Preserve}\) 要求每个既未完成、也未获授权移除的源结果在 \(\widehat B\) 中都有经检查的提升；\cref{app:spc} 给出完整定义。
+Relation \(\mathsf{PreservesRequired}\) requires every source outcome that is neither completed nor authorized for removal to have a checked lift into \(\widehat B\).
+% 关系 \(\mathsf{PreservesRequired}\) 要求每个既未完成、也未获授权移除的源结果在 \(\widehat B\) 中都有经检查的提升。
+\Cref{app:spc} gives its full definition.
+% \Cref{app:spc} 给出完整定义。
 
-\begin{definition}[Indexed realization]
+\begin{definition}[Safe implementation]
 % 带索引实现
-\label{def:realization}
+\label{def:safe-implementation}
 A generated language and indexed marked family \((L,\widehat B)\) realize \((H,u)\) when all conditions below hold.
 % 当下列全部条件成立时，生成语言和带索引的标记族 \((L,\widehat B)\) 实现 \((H,u)\)。
 \begin{enumerate}[leftmargin=*,itemsep=1pt]
  \item \(\widehat B\ne\varnothing\);
 % \(\widehat B\) 非空；
- \item \emph{source and target fidelity:} \(\mathsf{Preserve}(H,u,\widehat B)\), \(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\), and \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\);
-% 源与目标忠实性：\(\mathsf{Preserve}(H,u,\widehat B)\)、\(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\)，且 \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\)。
+ \item \emph{source and target fidelity:} \(\mathsf{PreservesRequired}(H,u,\widehat B)\), \(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\), and \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\);
+% 源与目标忠实性：\(\mathsf{PreservesRequired}(H,u,\widehat B)\)、\(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\)，且 \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\)。
  \item \emph{policy safety:} \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A_u\) for every \(z\in L\);
 % 策略安全性：对每个 \(z\in L\)，均有 \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A_u\)。
  \item \emph{completion nonblocking:} \(L=\Pref(\pi_2\widehat B)\); and
@@ -129,7 +131,7 @@ Checking each outcome separately is insufficient.
 % 单独检查每个结果并不充分。
 After a partial execution shared by several outcomes, every outcome still compatible with that partial execution must retain a policy-safe completion.
 % 在多个结果共享的一段部分执行之后，每个仍与该部分执行兼容的结果都必须保留一条策略安全的完成路径。
-The operator below removes exactly the completed executions that violate this condition.
+The operator below removes exactly the complete executions that violate this condition.
 % 下列算子恰好删除违反这一条件的完整执行。
 Put
 % 令 \(\widehat B_0\) 如下：
@@ -181,37 +183,37 @@ At \(z=\epsilon\), nonemptiness covers every required outcome.
 The existential quantifier chooses a call order without assuming fairness, and the universal condition keeps every compatible outcome completable after every prefix.
 % 存在量词在不假设公平性的情况下选择调用顺序，而全称条件保证每个兼容结果在每个前缀之后仍可完成。
 
-\begin{lemma}[Largest safe realization]
+\begin{lemma}[Most-permissive safe implementation]
 % 最大安全实现
-\label{lem:greatest-realization}
-A realization exists iff \(\mathsf{SafeEdit}(H,u)\).
+\label{lem:most-permissive}
+A safe implementation exists iff \(\mathsf{SafeEdit}(H,u)\).
 % 当且仅当 \(\mathsf{SafeEdit}(H,u)\) 成立时，实现存在。
-When the edit is safe, \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) is a realization, and every realization \((L,\widehat B)\) satisfies \(\widehat B\subseteq\widehat B^\dagger_{H,u}\) and \(L\subseteq W^\dagger_{H,u}\).
+When the edit is safe, \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) is a safe implementation, and every safe implementation \((L,\widehat B)\) satisfies \(\widehat B\subseteq\widehat B^\dagger_{H,u}\) and \(L\subseteq W^\dagger_{H,u}\).
 % 当编辑安全时，\((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) 是一个实现，并且每个实现 \((L,\widehat B)\) 都满足 \(\widehat B\subseteq\widehat B^\dagger_{H,u}\) 和 \(L\subseteq W^\dagger_{H,u}\)。
 \end{lemma}
 \begin{proof}
-Fidelity, completion nonblocking, and safety place any realization's indexed marked family inside \(\widehat B_0\).
+Fidelity, completion nonblocking, and safety place any safe implementation's indexed marked family inside \(\widehat B_0\).
 % 忠实性、完成非阻塞性和安全性使任意实现的带索引标记族包含于 \(\widehat B_0\)。
 Persistent coverage makes it post-fixed, so monotonicity and finite Knaster--Tarski place it inside \(\widehat B^\dagger\), and projected prefixes give \(L\subseteq W^\dagger\).
 % 持续覆盖使其成为后不动点，因此由单调性和有限 Knaster--Tarski 可知其包含于 \(\widehat B^\dagger\)，而投影前缀给出 \(L\subseteq W^\dagger\)。
 Conversely, \(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) supplies persistent coverage.
 % 反之，\(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) 提供持续覆盖。
-Together with checked lifts, this coverage establishes \(\mathsf{Preserve}\) at \(\epsilon\).
-% 该覆盖与经检查的提升共同在 \(\epsilon\) 处建立 \(\mathsf{Preserve}\)。
+Together with checked lifts, this coverage establishes \(\mathsf{PreservesRequired}\) at \(\epsilon\).
+% 该覆盖与经检查的提升共同在 \(\epsilon\) 处建立 \(\mathsf{PreservesRequired}\)。
 The inclusion \(\widehat B^\dagger\subseteq\widehat B_0\) supplies target fidelity and safe marked words, while prefix closure of \(\mathcal A_u\) supplies prefix safety.
 % 包含关系 \(\widehat B^\dagger\subseteq\widehat B_0\) 提供目标忠实性和安全标记词，而 \(\mathcal A_u\) 的前缀闭包提供前缀安全性。
 Finally, \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) supplies nonblocking.
 % 最后，\(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) 提供非阻塞性。
-Hence the fixed point is a realization exactly when nonempty.
+Hence the fixed point is a safe implementation exactly when nonempty.
 % 因此，该不动点恰在非空时构成实现。
 \end{proof}
 
-\(\mathsf{GReal}(\Theta;L,\widehat B)\) denotes a realization containing every other one componentwise, and its unique witness is \(\mathsf{Spec}(\Theta)\).
-% \(\mathsf{GReal}(\Theta;L,\widehat B)\) 表示一个按分量包含其他所有实现的实现，其唯一见证记为 \(\mathsf{Spec}(\Theta)\)。
-\Cref{lem:greatest-realization} proves that this witness exists exactly when \(\widehat B^\dagger_{H,u}\ne\varnothing\) and then equals \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\).
-% \Cref{lem:greatest-realization} 证明该见证恰在 \(\widehat B^\dagger_{H,u}\ne\varnothing\) 时存在，并且此时等于 \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\)。
+\(\mathsf{MaxSafe}(\Theta;L,\widehat B)\) denotes a safe implementation that contains every other safe implementation componentwise, and its unique witness is \(\mathsf{SafeBehavior}(\Theta)\).
+% \(\mathsf{MaxSafe}(\Theta;L,\widehat B)\) 表示一个按分量包含其他所有实现的实现，其唯一见证记为 \(\mathsf{SafeBehavior}(\Theta)\)。
+\Cref{lem:most-permissive} proves that this witness exists exactly when \(\widehat B^\dagger_{H,u}\ne\varnothing\) and then equals \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\).
+% \Cref{lem:most-permissive} 证明该见证恰在 \(\widehat B^\dagger_{H,u}\ne\varnothing\) 时存在，并且此时等于 \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\)。
 
-\subsubsection{Outcome-Wise Checking Counterexample}
+\subsubsection{Why Outcome-by-Outcome Checking Fails}
 % 逐结果检查的反例
 
 \Cref{sec:lifecycle} introduced the contract \(X\otimes(Y\oplus Z)\) under policy \(\Pref\{yx,xz\}\).
@@ -270,8 +272,8 @@ Complete mediation makes \Fresh/\Alias controllable.
 % 完全中介使 \Fresh/\Alias 可控。
 Uncontrollable resolved events compose this construction with the standard supremal-controllable refinement.
 % 不可控的已解析事件将该构造与标准的上确界可控精化相组合。
-Our theory additionally constructs the most permissive Agent monitor or an impossibility certificate, carries the result through atomic installation, and proves that neither a caller-proposed workflow nor its traces contain enough information to reproduce the derivation.
-% 我们的理论还构造限制最少的 Agent 监控器或不可能性证书，将结果贯穿原子安装，并证明调用方提出的工作流及其轨迹都不包含足以复现该推导的信息。
+Our theory additionally constructs the most permissive Agent monitor or a rejection certificate, carries the result through atomic installation, and proves that neither a caller-proposed workflow nor its traces contain enough information to reproduce the derivation.
+% 我们的理论还构造限制最少的 Agent 监控器或拒绝证书，将结果贯穿原子安装，并证明调用方提出的工作流及其轨迹都不包含足以复现该推导的信息。
 
 \subsubsection{Rejection Certificates}
 % 拒绝证书
@@ -280,7 +282,7 @@ Each removed \((o_{\rm rem},b)\) records its rank \(i\), a prefix \(z\preceq b\)
 % 每个被移除的 \((o_{\rm rem},b)\) 记录其秩 \(i\)、前缀 \(z\preceq b\) 与未覆盖的 \(o_{\rm miss}\in\mathsf{Compat}(z)\)。
 Induction shows that every post-fixed \(P\) is contained in every \(\widehat B_i\).
 % 归纳表明每个后不动点 \(P\) 都包含于每个 \(\widehat B_i\)。
-An empty final family therefore excludes every realization, and installation recomputes the ranked rejection certificate and the remaining witnesses.
+An empty final family therefore excludes every safe implementation, and installation recomputes the ranked rejection certificate and the remaining witnesses.
 % 因此，最终执行族为空会排除每个实现，而安装会重新计算带秩拒绝证书和剩余见证。
 
 \subsubsection{Residual Coherence}
@@ -313,8 +315,10 @@ where
 % 证明概要。
 Streaming resolution gives raw recoverability, the authorization-log equality, and equality of the source and residual candidate families.
 % 流式解析给出原始词可恢复性、授权日志等式，以及源候选族与残余候选族之间的等式。
-Residualizing \(\widehat B^\dagger\) gives a post-fixed family for the successor, while prefixing any successor post-fixed family by \(z\) gives one for the source; greatestness yields the fixed-point equality, and \(\Pref(B)/z=\Pref(B/z)\) yields the generated-language equality.
-% 对 \(\widehat B^\dagger\) 取残余会得到后继实例的后不动点族，而在任意后继后不动点族前加 \(z\) 会得到源实例的后不动点族；最大性给出不动点等式，且 \(\Pref(B)/z=\Pref(B/z)\) 给出生成语言等式。
+Residualizing \(\widehat B^\dagger\) gives a post-fixed family for the successor, while prefixing any successor post-fixed family by \(z\) gives one for the source.
+% 对 \(\widehat B^\dagger\) 取残余会得到后继实例的后不动点族，而在任意后继后不动点族前加 \(z\) 会得到源实例的后不动点族。
+Greatestness yields the fixed-point equality, and \(\Pref(B)/z=\Pref(B/z)\) yields the generated-language equality.
+% 最大性给出不动点等式，且 \(\Pref(B)/z=\Pref(B/z)\) 给出生成语言等式。
 The full proof is in \cref{app:residual-coherence-proof}.
 % 完整证明见 \cref{app:residual-coherence-proof}。
 \end{proof}
@@ -324,8 +328,8 @@ Thus every accepted prefix retains a safe completion for every residual outcome 
 \subsubsection{Checker Outputs}
 % 检查器输出
 
-The checker returns \(\mathsf{Invalid}\) when derivation fails, \(\mathsf{Reject}\) with a ranked impossibility certificate when the fixed point is empty, and \(\mathsf{Installable}\) with the greatest realization otherwise.
-% 当推导失败时，检查器返回 \(\mathsf{Invalid}\)；当不动点为空时，返回带秩不可能性证书的 \(\mathsf{Reject}\)；否则返回携带最大实现的 \(\mathsf{Installable}\)。
+The checker returns \(\mathsf{Invalid}\) when derivation fails, \(\mathsf{Reject}\) with a ranked rejection certificate when the fixed point is empty, and \(\mathsf{Installable}\) with the greatest safe implementation otherwise.
+% 当推导失败时，检查器返回 \(\mathsf{Invalid}\)；当不动点为空时，返回带秩拒绝证书的 \(\mathsf{Reject}\)；否则返回携带最大实现的 \(\mathsf{Installable}\)。
 Each answer carries a fingerprint of the complete authenticated state that was checked.
 % 每个答案都携带所检查完整认证状态的指纹。
 \Cref{app:certificate-payloads} gives the exact payloads and verification rules.

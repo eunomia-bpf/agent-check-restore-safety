@@ -23,8 +23,8 @@ In either outcome, payment authorization must precede shipment authorization:
 \end{equation}
 where \(x_i^p\) and \(x_i^s\) are payment and shipment call positions.
 % 其中，\(x_i^p\) 和 \(x_i^s\) 分别是付款调用位置和发货调用位置。
-Each \(x\) identifies one call position in the workflow.
-% 每个 \(x\) 标识工作流中的一个调用位置。
+A \emph{call position} \(x\) identifies a particular protected call in the workflow.
+% \emph{调用位置} \(x\) 标识工作流中的一次特定受控调用。
 An action ID \(d\) identifies the protected action and one-use permission behind that position.
 % 动作标识 \(d\) 指明该位置背后的受控动作和一次性权限。
 
@@ -109,7 +109,7 @@ The exact verdict is \emph{Reject}, even though an outcome-by-outcome check woul
 \subsection{Installation Races}
 % 安装竞态
 
-\Cref{fig:two-histories} separates the active workflow, the authorization log, and the monitor version that must change atomically.
+\Cref{fig:two-histories} separates the current workflow, the authorization log, and the monitor version that must change atomically.
 % \Cref{fig:two-histories} 区分当前工作流、授权日志以及必须原子变更的监控器版本。
 
 \begin{figure*}[t]
@@ -123,7 +123,7 @@ The exact verdict is \emph{Reject}, even though an outcome-by-outcome check woul
       stale/.style={-{Latex[length=1.5mm]},thick,dashed},
       lab/.style={font=\scriptsize\bfseries,anchor=east}
     ]
-    \node[lab] at (0,2.15) {active workflow};
+    \node[lab] at (0,2.15) {current workflow};
     \node[node] (b0) at (0.65,2.15) {$b_0$};
     \node[node] (al) at (1.85,2.15) {$x_a$};
     \node[box] (f) at (3.1,2.15) {choice\\Fork};
@@ -149,7 +149,7 @@ The exact verdict is \emph{Reject}, even though an outcome-by-outcome check woul
     \draw[stale] (bb) to[bend left=17]
       node[below] {other branch disabled} (ms);
 
-    \node[lab] at (0,0.65) {recorded calls and authorization labels};
+    \node[lab] at (0,0.65) {recorded calls and permission trace};
     \node[node] (r) at (0.65,0.65) {$r$};
     \node[node] (a) at (3.05,0.65) {$a$};
     \node[node] (pa) at (6.05,0.65) {$p_L$};
@@ -169,7 +169,7 @@ The exact verdict is \emph{Reject}, even though an outcome-by-outcome check woul
     \draw[arr] (ef) -- node[above] {atomic swap} (ea);
     \draw[arr] (ea) -- node[above] {atomic swap} (ej);
   \end{tikzpicture}
-  \caption{Fork, Restore, and Merge change the active workflow but do not erase recorded calls.
+  \caption{Fork, Restore, and Merge change the current workflow but do not erase recorded calls.
   % Fork、Restore 和 Merge 会改变当前工作流，但不会抹去已经记录的调用。
   Restore creates a new call position while preserving its authenticated action ID.
   % Restore 会创建新的调用位置，同时保留其认证动作标识。
@@ -199,8 +199,10 @@ A later Restore of \(k\) creates a new approval call position \(x_a'\), but both
 % 随后 Restore 到 \(k\) 会创建新的审批调用位置 \(x_a'\)，但两个审批调用位置都指向同一个动作标识 \(d_a\)。
 The restored call position is a new workflow position but retains action ID \(d_a\).
 % 恢复出的调用位置是一个新的工作流位置，但保留动作标识 \(d_a\)。
-Because \(d_a\) already has an authorization record, executing \(x_a'\) reuses it: the restored branch advances past approval without creating another authorization record.
-% 由于 \(d_a\) 已有授权记录，执行 \(x_a'\) 会复用该记录：恢复后的分支越过审批，但不会创建另一条授权记录。
+Because \(d_a\) already has an authorization record, executing \(x_a'\) reuses that record.
+% 由于 \(d_a\) 已有授权记录，执行 \(x_a'\) 会复用该记录。
+The restored branch therefore advances past approval without creating another authorization record.
+% 因此，恢复后的分支越过审批，而不会创建另一条授权记录。
 A concurrent Merge or Restore result computed before that progress is now out of date even though the authorization log has not changed.
 % 即使授权日志没有变化，在该进展之前计算的并发 Merge 或 Restore 结果也已经过期。
 The installation check must therefore compare both the authorization log and the ordered record \(\chi\) of executed call positions.
@@ -210,7 +212,7 @@ For this \(\mathsf{RestoreLive}\) request, the checker either installs the deriv
 
 Together, these executions give the paper's end-to-end safety rule.
 % 这些执行共同给出本文的端到端安全规则。
-An edit preserves every outcome still required by the authenticated state; every allowed step obeys policy and can still reach a complete execution; every required outcome compatible with those steps still has a safe way to finish; and the resulting monitor and authorization tokens take effect atomically with concurrent calls.
-% 一次编辑必须保留认证状态仍要求实现的每个结果；每个获准步骤都遵守策略且仍能到达完整执行；每个与这些步骤兼容的要求实现结果仍有安全完成方式；所得监控器与授权令牌相对于并发调用原子生效。
+An edit satisfies this rule when (1) it preserves every outcome still required by the authenticated state, (2) every allowed step obeys policy and can still reach a complete execution, (3) every required outcome compatible with those steps still has a safe way to finish, and (4) the resulting monitor and authorization tokens take effect atomically with concurrent calls.
+% 当一次编辑满足以下条件时，它符合该规则：(1) 保留认证状态仍要求实现的每个结果；(2) 每个获准步骤都遵守策略且仍能到达完整执行；(3) 每个与这些步骤兼容的要求实现结果仍有安全完成方式；(4) 所得监控器与授权令牌相对于并发调用原子生效。
 \Cref{sec:model} states this rule precisely, and \cref{sec:admission} constructs the exact checker.
 % \Cref{sec:model} 精确定义这一规则，\cref{sec:admission} 则构造精确检查器。

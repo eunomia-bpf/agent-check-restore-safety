@@ -4,14 +4,20 @@
 
 \paragraph{Recovery, workflow update, and synthesis}
 % 恢复、工作流更新与综合
-Output-commit recovery reconstructs a fixed computation; generalized nonblocking and Live Synthesis solve supplied transition systems and completion conditions; workflow inheritance and dynamic controller update connect supplied old and new specifications~\cite{strom1985optimistic,elnozahy2002rollback,dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,vanderaalst2002inheritance,nahabedian2020dynamic,amram2022dynamic}.
-% 输出提交恢复重建固定计算；广义非阻塞与 Live Synthesis 求解给定的转移系统及完成条件；工作流继承与动态控制器更新连接给定的新旧规范~\cite{strom1985optimistic,elnozahy2002rollback,dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,vanderaalst2002inheritance,nahabedian2020dynamic,amram2022dynamic}。
-Our controller derives the edited workflow, protected-effect aliases, still-required outcomes, completion conditions, and replacement set directly from the authenticated Agent record, then installs the exact most-permissive monitor under fresh and alias races.
-% 我们的控制器直接从经认证的 Agent 记录推导编辑后的工作流、受控效果别名、仍要求实现的结果、完成条件与替换集合，继而在新授权与别名竞态下安装精确且限制最少的监控器。
+Output-commit recovery reconstructs a fixed computation.
+% 输出提交恢复重建固定计算。
+Generalized nonblocking and Live Synthesis solve supplied transition systems and completion conditions, while workflow inheritance and dynamic controller update connect supplied old and new specifications~\cite{strom1985optimistic,elnozahy2002rollback,dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,vanderaalst2002inheritance,nahabedian2020dynamic,amram2022dynamic}.
+% 广义非阻塞与 Live Synthesis 求解给定的转移系统及完成条件，而工作流继承与动态控制器更新连接给定的新旧规范~\cite{strom1985optimistic,elnozahy2002rollback,dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,vanderaalst2002inheritance,nahabedian2020dynamic,amram2022dynamic}。
+Our controller derives the edited workflow, action-ID reuse, still-required outcomes, completion conditions, and monitor replacement directly from the authenticated execution record.
+% 我们的控制器直接从经认证的执行记录推导编辑后的工作流、动作标识复用、仍要求实现的结果、完成条件与监控器替换。
+It then installs the exact most-permissive monitor despite races between installation and either new authorization or authorization reuse.
+% 随后，即使安装与新授权或授权复用发生竞态，它仍会安装精确且限制最少的监控器。
 
 \paragraph{Agent recovery mechanisms}
 % Agent 恢复机制
 ACRFence blocks replay after Restore, DART selects checkpoints, Atomix delays settlement, and Rebound makes rollback atomic and auditable~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}.
 % ACRFence 阻止 Restore 后重放，DART 选择检查点，Atomix 延迟结算，而 Rebound 使回滚具有原子性与可审计性~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}。
-Our theorem subsumes these concerns in one exact criterion for all six derived Agent edits, adds an impossibility certificate and irredundant-state lower bound, and carries the result through atomic installation and arbitrary finite execution.
-% 我们的定理以适用于全部六种派生 Agent 编辑的统一精确判据涵盖这些问题，进一步给出不可能性证书与不可约状态下界，并把结果贯穿原子安装与任意有限执行。
+Our theorem gives one exact criterion for all six derived Agent edits, a rejection certificate, and a lower bound proving that all four state relations are necessary.
+% 我们的定理为全部六种派生 Agent 编辑给出统一精确判据、拒绝证书，以及证明四类状态关系均为必要条件的下界。
+It carries these results through atomic installation and arbitrary finite execution.
+% 它把这些结果贯穿原子安装与任意有限执行。

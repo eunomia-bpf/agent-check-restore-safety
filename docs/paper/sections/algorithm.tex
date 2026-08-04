@@ -2,8 +2,8 @@
 % 运行时强制执行
 \label{sec:enforcement}
 
-The safety checker produces either an impossibility certificate or the largest safe family of completed executions.
-% 安全检查器生成不可能性证书或最大的安全完整执行族。
+The safety checker produces either a rejection certificate or the largest safe family of complete executions.
+% 安全检查器生成拒绝证书或最大的安全完整执行族。
 The trusted installation service turns a nonempty family into runtime enforcement in three steps.
 % 可信安装服务分三步将非空执行族转化为运行时强制执行。
 It builds a monitor for the family's partial executions, binds that monitor to the authenticated source snapshot, and atomically installs it under a new monitor version.
@@ -12,13 +12,15 @@ The protocol serializes every overlapping protected call either before or after 
 % 该协议将每个重叠的受控调用完整地排列在安装之前或之后。
 The proof compares this implementation with an ideal machine that installs an accepted specification in one atomic step and admits exactly its resolved prefixes.
 % 证明将该实现与一台理想机比较；理想机以一个原子步骤安装被接受的规范，并且只接纳该规范的已解析前缀。
-The ideal transition system and the field-level implementation rules appear in \cref{sec:ideal,tab:app-event-matrix}; this section gives the monitor construction, the installed-state invariant, and the installation boundary needed by the main theorem.
-% 理想转移系统与字段级实现规则见 \cref{sec:ideal,tab:app-event-matrix}；本节给出主定理所需的监控器构造、安装后状态不变量与安装边界。
+The ideal transition system and the field-level implementation rules appear in \cref{sec:ideal,tab:app-event-matrix}.
+% 理想转移系统与字段级实现规则见 \cref{sec:ideal,tab:app-event-matrix}。
+This section gives the monitor construction, installed-state invariant, and installation boundary needed by the main theorem.
+% 本节给出主定理所需的监控器构造、安装后状态不变量与安装边界。
 
-\subsection{Canonical Call position-Sensitive Monitor}
-% 规范的调用位置敏感监控器
+\subsection{Canonical Call-Position Monitor}
+% 规范调用位置监控器
 
-The greatest realization has the finite, canonically installable projected pair \((W,B)=(W^\dagger_{H,u},B^\dagger_{H,u})\).
+The greatest safe implementation has the finite, canonically installable projected pair \((W,B)=(W^\dagger_{H,u},B^\dagger_{H,u})\).
 % 最大实现具有有限且可规范安装的投影对 \((W,B)=(W^\dagger_{H,u},B^\dagger_{H,u})\)。
 For \(L/z=\{v\mid zv\in L\}\), use residual states \(q_z=(W^\dagger/z,B^\dagger/z)\).
 % 对于 \(L/z=\{v\mid zv\in L\}\)，使用残余状态 \(q_z=(W^\dagger/z,B^\dagger/z)\)。
@@ -38,7 +40,7 @@ Every state is reachable and is marked exactly when \(\epsilon\in B^\dagger/z\).
 Each transition symbol \(a\) contains call position \(x\), action ID \(d\), and its \Fresh or \Alias mode, so one call position cannot use another position's monitor entry.
 % 每个转移符号 \(a\) 都包含调用位置 \(x\)、动作标识 \(d\) 以及 \Fresh/\Alias 模式，因此一个调用位置无法使用另一个位置的监控器入口。
 
-\begin{lemma}[Exact compiled realization]
+\begin{lemma}[Exact compiled safe implementation]
 % 精确的编译实现
 \label{lem:compiled-language}
 The generated and marked languages of the program in \cref{eq:canonical-program} are exactly \((W^\dagger_{H,u},B^\dagger_{H,u})\).
@@ -64,17 +66,19 @@ If any protected call has committed since compilation, the candidate is stale an
 % 如果编译之后已有任何受控调用提交，则候选已过期且不会安装任何内容。
 Otherwise, one policy-domain transaction closes the old monitor version, activates the canonical monitor, replaces every current call position binding and authorization token, and only then exposes the successful edit answer.
 % 否则，一个策略域事务会关闭旧监控器版本、激活规范监控器、替换每个当前调用位置的绑定与授权令牌，然后才暴露成功编辑答案。
-Protected calls verify their call position, action ID, normalized request, authorization token, and current monitor transition in the same transaction that records progress.
-% 受控调用在记录进度的同一事务中验证其调用位置、动作标识、规范化请求、授权令牌与当前监控器转移。
-A \Fresh call creates one authorization record and queues the normalized request; an \Alias call advances the workflow by linking to the existing record without extending the permission trace.
-% \Fresh 调用创建一条授权记录并将规范化请求入队；\Alias 调用通过链接到已有记录推进工作流，而不扩展权限轨迹。
+Protected calls verify their call position, action ID, canonical request, authorization token, and current monitor transition in the same transaction that records progress.
+% 受控调用在记录进度的同一事务中验证其调用位置、动作标识、规范请求、授权令牌与当前监控器转移。
+A \Fresh call creates one authorization record and queues the canonical request.
+% \Fresh 调用创建一条授权记录并将规范请求入队。
+An \Alias call advances the workflow by linking to the existing record without extending the permission trace.
+% \Alias 调用通过链接到已有记录推进工作流，而不扩展权限轨迹。
 
 \paragraph{Installed-state invariant}
 % 安装后状态不变量
-We write \(\mathsf{AgentSec}(S;c,r)\) when five conditions hold: the installed workflow and its required outcomes come from the checked edit; the stored nonempty execution family is the checker's largest safe family; the workflow, authorization log, queue, and checkpoints match the executed prefix \(r\); the current monitor is exactly the derivative after \(r\); and exactly one monitor version is active, with one current entry and authorization token for every remaining call position.
-% 当以下五项条件成立时，记作 \(\mathsf{AgentSec}(S;c,r)\)：已安装工作流及其要求实现的结果来自经检查编辑；已存非空执行族是检查器得到的最大安全执行族；工作流、授权日志、队列和检查点与已执行前缀 \(r\) 一致；当前监控器恰为执行 \(r\) 后的导数；且恰有一个监控器版本处于活动状态，并为每个剩余调用位置提供一个当前入口和授权令牌。
-For a submitted tool request, one transaction verifies the call position, action ID, normalized request, authorization token, current monitor version, and enabled monitor transition before recording any progress.
-% 对于提交的工具请求，一个事务会先验证调用位置、动作标识、规范化请求、授权令牌、当前监控器版本以及已启用的监控器转移，然后才记录任何进展。
+We write \(\mathsf{AgentSec}(S;c,r)\) when five conditions hold: (1) the installed workflow and its required outcomes come from the checked edit; (2) the stored nonempty execution family is the checker's largest safe family; (3) the workflow, authorization log, queue, and checkpoints match the executed prefix \(r\); (4) the current monitor is exactly the derivative after \(r\); and (5) exactly one monitor version is active, with one current entry and authorization token for every remaining call position.
+% 当以下五项条件成立时，记作 \(\mathsf{AgentSec}(S;c,r)\)：(1) 已安装工作流及其要求实现的结果来自经检查编辑；(2) 已存非空执行族是检查器得到的最大安全执行族；(3) 工作流、授权日志、队列和检查点与已执行前缀 \(r\) 一致；(4) 当前监控器恰为执行 \(r\) 后的导数；(5) 恰有一个监控器版本处于活动状态，并为每个剩余调用位置提供一个当前入口和授权令牌。
+For a submitted tool request, one transaction verifies the call position, action ID, canonical request, authorization token, current monitor version, and enabled monitor transition before recording any progress.
+% 对于提交的工具请求，一个事务会先验证调用位置、动作标识、规范请求、授权令牌、当前监控器版本以及已启用的监控器转移，然后才记录任何进展。
 The same transaction either creates the authorization record and queues the request, or records reuse of an existing authorization and return value.
 % 同一事务随后要么创建授权记录并将请求入队，要么记录对已有授权及返回值的复用。
 
@@ -106,8 +110,10 @@ If the call commits first, its recorded progress changes the checked-state finge
 % 若调用先提交，其记录的进展会改变经检查状态指纹。
 If installation commits first, it closes the old monitor version, so the old authorization token fails.
 % 若安装先提交，它会关闭旧监控器版本，因此旧授权令牌无法通过验证。
-Atomicity excludes a partial third outcome; independent domains commute.
-% 原子性排除了部分完成的第三种结果；独立域中的步骤彼此可交换。
+Atomicity excludes a partial third outcome.
+% 原子性排除了部分完成的第三种结果。
+Independent domains commute.
+% 独立域中的步骤彼此可交换。
 \end{proof}
 
 \subsection{Trust Boundary}
