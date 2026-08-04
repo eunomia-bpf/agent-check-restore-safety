@@ -88,15 +88,15 @@ J=\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}.
 \]
 Every exact decision-and-installation information map distinguishes every separating state--query pair in \cref{tab:projection-pairs}.
 % 每个精确信息映射都区分 \cref{tab:projection-pairs} 中的每对分离状态—查询对。
-Maps that erase call-to-effect or receipt-to-effect identity and \(\mathsf{TargetOnly}\) are inexact.
-% 擦除调用到效果标识关系、回执到效果标识关系的信息映射以及 \(\mathsf{TargetOnly}\) 都不精确。
+Maps that erase the call-to-effect link or the link between authorization records and effect identities, as well as \(\mathsf{TargetOnly}\), are inexact.
+% 擦除调用到效果标识关系、授权记录到效果标识关系的信息映射以及 \(\mathsf{TargetOnly}\) 都不精确。
 Generalized nonblocking can serve as an exact solver only after the trusted controller derives the workflow and outcome-specific completion conditions.
 % 只有在可信控制器推导出工作流以及特定于结果的完成条件之后，广义非阻塞才能作为精确求解器。
 
 \item \textbf{Repeated use.}
 % 重复使用。
-Every enabled event preserves \(\mathsf{AgentSec}\), so the theorem applies after every finite reachable sequence of edits, registered extensions, protected calls, receipt updates, installations, and crashes, without a uniform execution-length bound.
-% 每个启用事件都保持 \(\mathsf{AgentSec}\)，因此该定理适用于由编辑、已注册扩展、受控调用、回执更新、安装和崩溃组成的每个有限可达序列，而无需统一的执行长度上界。
+Every enabled event preserves \(\mathsf{AgentSec}\), so the theorem applies after every finite reachable sequence of edits, registered extensions, protected calls, authorization-log updates, installations, and crashes, without a uniform execution-length bound.
+% 每个启用事件都保持 \(\mathsf{AgentSec}\)，因此该定理适用于由编辑、已注册扩展、受控调用、授权日志更新、安装和崩溃组成的每个有限可达序列，而无需统一的执行长度上界。
 
 \item \textbf{Runtime correctness.}
 % 运行时正确性。
@@ -107,5 +107,5 @@ The observation includes snapshot-bound answers, replacement authorization token
 \end{enumerate}
 \end{theorem}
 
-The appendix proves all five clauses and supplies the separating witnesses and durable simulation.
-% 附录证明全部五项条款，并给出分离见证与持久模拟。
+The appendix proves all five clauses and supplies the separating witnesses and runtime simulation.
+% 附录证明全部五项条款，并给出分离见证与运行时模拟。

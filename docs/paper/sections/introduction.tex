@@ -15,8 +15,8 @@ An execution edit does not undo earlier tool calls.
 % 执行编辑不会撤销先前的工具调用。
 In our running procurement example, the Agent saves checkpoint \(k\) before approval.
 % 在贯穿全文的采购例子中，Agent 在审批前保存检查点 \(k\)。
-The approval is later authorized once, creating a receipt that survives Restore.
-% 审批随后只获得一次授权，并创建一条不会被 Restore 删除的回执。
+The approval is later authorized once, creating an authorization record that Restore does not delete.
+% 审批随后只获得一次授权，并创建一条 Restore 不会删除的授权记录。
 Restoring \(k\) creates another approval call in the workflow, but it must not authorize the same approval again.
 % Restore 到 \(k\) 会在工作流中创建另一个审批调用，但不得再次授权同一审批。
 A concurrent Merge can cause a similar error by selecting supplier \(L\) after a supplier-\(R\) payment has already been authorized.
@@ -30,8 +30,8 @@ The controller must also know four things: which outcomes remain required, which
 % 控制器还必须知道四件事：哪些结果仍然是要求、哪些调用位置指向同一个受控动作、哪些动作已经获得授权，以及哪个运行时版本管理与编辑重叠的调用。
 Each can change the correct answer.
 % 每一项都可能改变正确答案。
-The controller cannot recover all four from equal workspaces, an execution trace alone, a receipt log alone, or a replacement workflow proposed by the Agent.
-% 控制器无法仅从相同工作区、单独的执行轨迹、单独的回执日志，或 Agent 提出的替代工作流中恢复全部四项信息。
+The controller cannot recover all four from equal workspaces, an execution trace alone, an authorization log alone, or a replacement workflow proposed by the Agent.
+% 控制器无法仅从相同工作区、单独的执行轨迹、单独的授权日志，或 Agent 提出的替代工作流中恢复全部四项信息。
 
 Existing approaches cover parts of this problem but do not derive its complete safety condition.
 % 现有方法覆盖了该问题的部分环节，却没有推导其完整安全条件。
@@ -61,13 +61,13 @@ Second, after every allowed partial execution, every outcome that is still requi
 % 第二，在每段允许的部分执行之后，每个仍被要求且仍有可能实现的结果都必须保留安全完成方式。
 The checker must enforce this condition without forbidding additional safe behavior.
 % 检查器必须执行这一条件，同时不能额外禁止安全行为。
-Third, the answer must take effect atomically with respect to calls that overlap the edit or a crash.
-% 第三，该答案必须相对于与编辑或崩溃重叠的调用原子生效。
+Third, the answer must take effect atomically with respect to calls that overlap the edit or a runtime or machine failure followed by recovery (a crash).
+% 第三，该答案必须相对于与编辑重叠的调用，或运行时、机器意外停止后再恢复的情形（简称崩溃），原子生效。
 
 We give an exact checker for execution edits: under the stated model, it accepts exactly when a safe implementation exists.
 % 我们给出一个针对执行编辑的精确检查器：在本文模型下，它当且仅当安全实现存在时才接受。
-For a requested edit, the controller uses the registered workflow, authenticated execution record, receipt log, dispatch queue, policy, and current monitor version to construct every allowed completed execution.
-% 对于一次编辑请求，控制器使用已注册工作流、经认证执行记录、回执日志、派发队列、策略和当前监控器版本，构造所有允许的完整执行。
+For a requested edit, the controller uses the registered workflow, authenticated execution record, authorization log, dispatch queue, policy, and current monitor version to construct every allowed completed execution.
+% 对于一次编辑请求，控制器使用已注册工作流、经认证执行记录、授权日志、派发队列、策略和当前监控器版本，构造所有允许的完整执行。
 It removes an execution whenever one of its partial executions would leave a still-required outcome with no safe completion.
 % 如果某个完整执行的部分过程会让仍然要求实现的结果失去安全完成方式，检查器就删除该完整执行。
 If no execution remains, the controller returns a finite proof that no safe implementation exists.
@@ -80,8 +80,8 @@ Every overlapping call is therefore governed entirely by either the old monitor 
 % 因此，每个重叠调用都完全由旧监控器或新监控器管理。
 \Cref{sec:lifecycle} follows this process through one procurement execution containing Fork, Merge, two races, and Restore.
 % \Cref{sec:lifecycle} 通过一个包含 Fork、Merge、两类竞态与 Restore 的采购执行展示这一过程。
-After Restore, the repeated approval call follows the earlier receipt instead of authorizing the approval again.
-% Restore 之后，重复的审批调用沿用先前的回执，而不会再次授权该审批。
+After Restore, the repeated approval call reuses the earlier authorization record instead of authorizing the approval again.
+% Restore 之后，重复的审批调用复用先前的授权记录，而不会再次授权该审批。
 
 \paragraph{Contributions}
 % 贡献
@@ -93,5 +93,5 @@ The theorem also proves that deleting any of four recorded relations changes som
 % 该定理还证明，删除四类记录关系中的任一类都会改变某个精确判定或安装答案，并且具体运行时与理想机器具有相同的可见行为（\cref{sec:model,sec:admission,sec:kernel,sec:results}）。
 Every supported event preserves the security invariant, so the theorem applies again after every finite reachable execution.
 % 每个受支持事件都保持安全不变量，因此该定理能在每个有限可达执行之后再次应用。
-Five kernel-checked Lean modules, 19 paper-specific executable tests, and bounded performance measurements validate the fixed-point checker core and selected transition lemmas.
-% 五个经内核检查的 Lean 模块、19 项论文专用可执行测试和有界性能测量验证了不动点检查器核心与选定转移引理。
+Five kernel-checked Lean modules, 19 paper-specific executable tests, and measurements over 2--128 outcomes validate the executable fixed-point checker and its modeled edit-installation races.
+% 五个经内核检查的 Lean 模块、19 项论文专用可执行测试以及覆盖 2--128 个结果的测量，验证了可执行不动点检查器及其建模的编辑安装竞态。

@@ -1,5 +1,5 @@
-\section{Building and Installing the Runtime Monitor}
-% 构造并安装运行时监控器
+\section{Runtime Enforcement}
+% 运行时强制执行
 \label{sec:kernel}
 
 The safety checker produces either an impossibility certificate or the largest safe family of completed executions.
@@ -8,11 +8,15 @@ The installation kernel turns a nonempty family into runtime enforcement in thre
 % 安装内核分三步将非空执行族转化为运行时强制执行。
 It builds a monitor for the family's partial executions, binds that monitor to the authenticated source snapshot, and atomically installs it under a new monitor version.
 % 它为该执行族的部分执行构造监控器，将监控器绑定到认证源状态快照，并在新的监控器版本下原子安装。
-The rules below serialize every overlapping protected call either before or after installation.
-% 下列规则将每个重叠的受控调用完整地排列在安装之前或之后。
+The protocol serializes every overlapping protected call either before or after installation.
+% 该协议将每个重叠的受控调用完整地排列在安装之前或之后。
+The proof compares this implementation with an ideal machine that installs an accepted specification in one atomic step and admits exactly its resolved prefixes.
+% 证明将该实现与一台理想机比较；理想机以一个原子步骤安装被接受的规范，并且只接纳该规范的已解析前缀。
+The ideal transition system and the field-level implementation rules appear in \cref{sec:ideal,tab:app-event-matrix}; the main text retains only the monitor construction and the installation boundary.
+% 理想转移系统与字段级实现规则见 \cref{sec:ideal,tab:app-event-matrix}；正文只保留监控器构造与安装边界。
 
-\subsection{Building an occurrence-sensitive monitor}
-% 构造发生项敏感监控器
+\subsection{Canonical Occurrence-Sensitive Monitor}
+% 规范的发生项敏感监控器
 
 The greatest realization has the finite, canonically installable projected pair \((W,B)=(W^\dagger_{H,u},B^\dagger_{H,u})\).
 % 最大实现具有有限且可规范安装的投影对 \((W,B)=(W^\dagger_{H,u},B^\dagger_{H,u})\)。
@@ -73,8 +77,8 @@ For \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), the checker returns 
 The bounded implementation may instead return \(\mathsf{ResourceLimit}(b,n)\), which installs nothing and proves neither safety nor impossibility.
 % 有界实现可能改为返回 \(\mathsf{ResourceLimit}(b,n)\)，它不安装任何内容，也不证明安全性或不可能性。
 
-\subsection{Installation kernel}
-% 安装内核
+\subsection{Atomic Installation}
+% 原子安装
 
 The compiled state for one policy domain is
 % 一个策略域的编译状态为
@@ -105,8 +109,8 @@ The state is well formed, \(c=\mathsf{cert}(\eta)\), its origin derives the inst
 % \(\widehat B=\widehat B^\dagger_{H_c,u}\ne\varnothing\)、\(W=\Pref(\pi_2\widehat B)\)，且 \(Z\) 在 \(\mathsf{src}_c\) 处验证二者。
 \item \emph{Execution coherence.}
 % 执行一致性。
-\((H.G,H.T)=\mathsf{HRes}((H_c^+.G,H_c^+.T),r)\), \(H.\chi=H_c^+.\chi r\), and receipts, queue entries, return links, and checkpoints match \(r\) and advance only monotonically.
-% \((H.G,H.T)=\mathsf{HRes}((H_c^+.G,H_c^+.T),r)\)、\(H.\chi=H_c^+.\chi r\)，且回执、队列条目、返回链接和检查点都与 \(r\) 一致并仅单调推进。
+\((H.G,H.T)=\mathsf{HRes}((H_c^+.G,H_c^+.T),r)\), \(H.\chi=H_c^+.\chi r\), and authorization records, queue entries, return links, and checkpoints match \(r\) and advance only monotonically.
+% \((H.G,H.T)=\mathsf{HRes}((H_c^+.G,H_c^+.T),r)\)、\(H.\chi=H_c^+.\chi r\)，且授权记录、队列条目、返回链接和检查点都与 \(r\) 一致并仅单调推进。
 \item \emph{Monitor coherence.}
 % 监控器一致性。
 \(\mathsf{prog}(\eta)\cong\mathsf{Can}(W,\pi_2\widehat B)\), and \(\mathsf q(\eta)\) is its derivative after \(r\).
@@ -128,8 +132,8 @@ For \(x\) bound to monitor entry \(j\) in version \(\eta\), \(\mathsf{VerifyToke
 % 对于版本 \(\eta\) 中绑定到监控器入口 \(j\) 的 \(x\)，\(\mathsf{VerifyToken}(h,\rho(x),j,d,m^\circ)\) 验证调用授权服务、作用域、监控器入口、效果标识、谱系和签名摘要，并要求 \(m^\circ=\mathsf{inv}_\rho(d)\)。
 Set \(a=\Fresh(x,d)\) if \(d\notin D_\Delta\), otherwise \(a=\Alias(x,d)\), and let \(\Use_x(m)=\mathsf{Use}(x,j,h,m)\).
 % 若 \(d\notin D_\Delta\)，则令 \(a=\Fresh(x,d)\)，否则令 \(a=\Alias(x,d)\)，并令 \(\Use_x(m)=\mathsf{Use}(x,j,h,m)\)。
-Its sole durable transition is the rule below.
-% 其唯一持久转移是下列规则。
+Its sole state-changing transition is the rule below.
+% 其唯一改变状态的转移是下列规则。
 \begin{equation}
 \label{eq:use-rule}
 \frac{
@@ -156,17 +160,17 @@ The paired update \(\mathsf{HStep}((G,T),a)\) removes \(x\), records any choice,
  \mathsf q(\eta)&:=q'.
 \end{aligned}
 \]
-In addition, \Fresh appends the immutable labeled receipt and ordered dispatch-queue item \((d,\mathsf{inv}_\rho(d))\), never an unchecked caller buffer.
-% 此外，\Fresh 追加不可变的带标签回执和有序派发队列条目 \((d,\mathsf{inv}_\rho(d))\)，绝不存储未经检查的调用方缓冲区。
-\Alias records the effect identity's durable return link without changing \(\Delta\), and all other fields remain unchanged.
-% \Alias 记录该效果标识的持久返回链接且不改变 \(\Delta\)，其余字段保持不变。
+In addition, \Fresh appends the immutable labeled authorization record and ordered dispatch-queue item \((d,\mathsf{inv}_\rho(d))\), never an unchecked caller buffer.
+% 此外，\Fresh 追加不可变的带标签授权记录和有序派发队列条目 \((d,\mathsf{inv}_\rho(d))\)，绝不存储未经检查的调用方缓冲区。
+\Alias records the effect identity's stored return link without changing \(\Delta\), and all other fields remain unchanged.
+% \Alias 记录该效果标识的已存返回链接且不改变 \(\Delta\)，其余字段保持不变。
 
-An authenticated \Retry follows the archived \(\chi\)-to-receipt link for the same normalized request and returns any stable value without changing state.
-% 经认证的 \Retry 沿同一规范化请求的归档 \(\chi\)-到-回执链接执行，并在不改变状态的情况下返回任何稳定值。
+An authenticated \Retry follows the archived link from \(\chi\) to the authorization record for the same normalized request and returns any stable value without changing state.
+% 经认证的 \Retry 沿 \(\chi\) 到同一规范化请求授权记录的归档链接执行，并在不改变状态的情况下返回任何稳定值。
 For unresolved \(x\), \cref{eq:use-rule} applies exactly when all premises hold, while a missing transition, invalid authorization token, unbound occurrence, disabled branch, or closed monitor version returns \(\mathsf{deny}(x)\) without changing state.
 % 对未解析的 \(x\)，当且仅当全部前提成立时才应用 \cref{eq:use-rule}，而缺失转移、无效授权令牌、未绑定发生项、禁用分支或已关闭监控器版本都会返回 \(\mathsf{deny}(x)\) 且不改变状态。
-\Dispatch durably releases the oldest queued request, settlement fills its return record, and neither implies exactly-once execution by a remote service.
-% \Dispatch 持久释放最早排队请求，结算填充其返回记录，而二者都不意味着远程服务恰好执行一次。
+\Dispatch records the release of the oldest queued request, settlement fills its return record, and neither implies exactly-once execution by a remote service.
+% \Dispatch 记录最早排队请求的发出，结算填充其返回记录，而二者都不意味着远程服务恰好执行一次。
 
 \subsubsection{Answer verification and atomic installation}
 % 答案验证与原子安装
@@ -213,8 +217,8 @@ It then applies
  \mathsf{cert}(\eta^+)&:=c^+.
 \end{aligned}
 \]
-Only after activation does the transaction expose \(\mathcal H_u^+\) and emit \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\); old tokens then fail, while \Retry still follows its archived receipt link.
-% 只有激活之后，事务才暴露 \(\mathcal H_u^+\) 并发出 \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\)；此后旧令牌失效，而 \Retry 仍沿其归档回执链接执行。
+Only after activation does the transaction expose \(\mathcal H_u^+\) and emit \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\); old tokens then fail, while \Retry still follows its archived authorization-record link.
+% 只有激活之后，事务才暴露 \(\mathcal H_u^+\) 并发出 \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\)；此后旧令牌失效，而 \Retry 仍沿其归档授权记录链接执行。
 A stale candidate emits no answer and must be recomputed from the current source snapshot.
 % 过期候选不会发出答案，必须根据当前源状态快照重新计算。
 

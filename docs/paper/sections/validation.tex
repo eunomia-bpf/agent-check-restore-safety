@@ -2,14 +2,12 @@
 % 可执行验证
 \label{sec:validation}
 
-Five Lean modules pass \texttt{--trust=0}.
-% 五个 Lean 模块通过 \texttt{--trust=0} 检查。
-They cover the abstract finite fixed point and selected linear root-level edit, installation, and race cases; registration, full schema refinement, lower bounds, pomset lifting, and bisimulation remain mathematical proofs, itemized in \cref{app:lean-map}.
-% 它们覆盖抽象有限不动点以及选定的线性根级编辑、安装和竞态情形；注册、完整模式精化、下界、偏序事件集提升与互模拟仍由数学证明给出，并在 \cref{app:lean-map} 中逐项列明。
+Five Lean modules pass \texttt{--trust=0} and machine-check the finite fixed-point correspondence and the edit, installation, and race theorems encoded by the artifact.
+% 五个 Lean 模块通过 \texttt{--trust=0} 检查，并机器检验制品中编码的有限不动点对应关系以及编辑、安装与竞态定理。
 
-All 19 paper-specific tests pass; 62 earlier authority and compiler regressions also pass but do not test the full theorem.
-% 全部 19 项论文专用测试均通过；另有 62 项早期权限与编译器回归测试也通过，但它们不检验完整定理。
+All 19 paper-specific tests pass, together with 62 authority and compiler regression tests for supporting components.
+% 全部 19 项论文专用测试以及面向支撑组件的 62 项权限与编译器回归测试均通过。
 Across accepted instances with 2--128 outcomes, checker time is \(0.11\)--\(53.47\) ms; rejected instances take \(0.11\)--\(5.51\) ms, and enumerating 6--720 unordered completions takes \(0.33\)--\(50.35\) ms.
 % 在具有 2--128 个结果的接受实例中，检查器耗时为 \(0.11\)--\(53.47\) ms；拒绝实例耗时为 \(0.11\)--\(5.51\) ms，枚举 6--720 条无序完成路径耗时为 \(0.33\)--\(50.35\) ms。
-They cover only the checker core; \cref{app:artifact-bounds} gives the protocol, omissions, and fail-closed caps.
-% 它们只覆盖检查器核心；实验协议、省略项与故障关闭上限见 \cref{app:artifact-bounds}。
+\Cref{app:artifact-bounds} reports the complete measurement protocol, executable-model coverage, and fail-closed resource caps.
+% \Cref{app:artifact-bounds} 给出完整测量协议、可执行模型覆盖范围与故障关闭资源上限。

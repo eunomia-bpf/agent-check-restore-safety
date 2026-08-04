@@ -1,17 +1,17 @@
-\section{Model and Edit Derivation}
-% 模型与编辑推导
+\section{Model and Security Objective}
+% 模型与安全目标
 \label{sec:model}
 
 The model separates unrestricted internal Agent reasoning from tool calls whose effects pass through a trusted runtime monitor.
 % 该模型将不受限制的 Agent 内部推理与效果必须经过可信运行时监控器的工具调用分开。
 Such a call must identify its registered position in the workflow, present an authorization token, and submit a concrete tool request.
 % 这类调用必须标明它在工作流中的已注册位置、提供授权令牌，并提交具体工具请求。
-The monitor decides whether the call may use a new authorization, reuse an earlier authorization through its receipt, or make no progress.
-% 监控器决定该调用能否使用新的授权、通过已有回执复用先前授权，或不得推进。
+The monitor decides whether the call may use a new authorization, reuse an authorization already recorded in the log, or make no progress.
+% 监控器决定该调用能否使用新的授权、复用日志中已经记录的授权，或不得推进。
 Each modeled state covers one policy domain.
 % 每个建模状态涵盖一个策略域。
-Domains with disjoint protected actions, receipt logs, and policies compose by product.
-% 受控动作、回执日志和策略彼此不相交的域通过乘积组合。
+Domains with disjoint protected actions, authorization logs, and policies compose by product.
+% 受控动作、授权日志和策略彼此不相交的域通过乘积组合。
 Every state snapshot is finite, although an execution may contain an unbounded number of snapshots.
 % 每个状态快照都是有限的，但一次执行可以包含数量不受固定上界约束的快照。
 The definitions below first describe the required outcomes and then the authenticated record needed to preserve them across edits.
@@ -28,8 +28,8 @@ An \emph{occurrence} \(x\) identifies one position for a protected tool call in 
 % \emph{发生项} \(x\) 标识工作流中一次受控工具调用的位置。
 An \emph{effect identity} \(d\) identifies the one protected action and one-use permission behind that position.
 % \emph{效果标识} \(d\) 标识该调用位置背后的受控动作与一次性权限。
-The first authorized use of an effect identity creates a receipt.
-% 一个效果标识首次获得授权使用时会创建回执。
+The first authorized use of an effect identity creates an authorization record.
+% 一个效果标识首次获得授权使用时会创建授权记录。
 After Fork or Restore, several occurrences may refer to the same effect identity.
 % Fork 或 Restore 之后，多个发生项可能指向同一个效果标识。
 A monitor entry \(j\) belongs to one monitor version \(\eta\).
@@ -38,8 +38,8 @@ An authorization token \(h\) binds an occurrence to its monitor entry, effect id
 % 授权令牌 \(h\) 将发生项绑定到监控器入口、效果标识、作用域和规范化工具请求 \(m^\circ\)。
 \emph{Lineage} is the certified ancestry preserved when an edit carries or copies a workflow region.
 % \emph{谱系}是编辑携带或复制工作流区域时保留的认证祖先关系。
-\(T,\Delta,\chi\) denote the active workflow, receipt log, and ordered record of resolved occurrences.
-% \(T,\Delta,\chi\) 分别表示当前工作流、回执日志和已解析发生项的有序记录。
+\(T,\Delta,\chi\) denote the active workflow, authorization log, and ordered record of resolved occurrences.
+% \(T,\Delta,\chi\) 分别表示当前工作流、授权日志和已解析发生项的有序记录。
 An edit takes effect at an atomic installation point, which also replaces the policy domain's monitor version.
 % 一次编辑在原子安装点生效，该安装点同时替换策略域的监控器版本。
 Registry \(\rho\) authenticates each occurrence's monitor entry and token.
@@ -158,8 +158,8 @@ The immutable records form a directed acyclic graph (DAG) whose edges record typ
      \mid \mathsf{jbar}(T,T)
      \mid T;T .
 \]
-\(s\in\{\mathsf{open},L,R\}\) records an unresolved choice or the arm that made durable progress, and \(g\) groups exclusive or jointly active siblings.
-% \(s\in\{\mathsf{open},L,R\}\) 记录尚未解决的选择或已取得持久进展的分支，\(g\) 则将互斥或共同活动的同级项分组。
+\(s\in\{\mathsf{open},L,R\}\) records an unresolved choice or the arm that made recorded progress, and \(g\) groups exclusive or jointly active siblings.
+% \(s\in\{\mathsf{open},L,R\}\) 记录尚未解决的选择或已记录进展的分支，\(g\) 则将互斥或共同活动的同级项分组。
 \(\sem{T}\) uses both arms of an open choice and only the selected arm thereafter.
 % \(\sem{T}\) 对开放选择使用两个分支，此后仅使用选中的分支。
 It interprets parallel and \(\mathsf{jbar}\) with \(\otimes\), and sequence with \(\triangleright\).
@@ -221,8 +221,8 @@ Because \(\chi\) records authorization and workflow progress rather than remote 
 % \(\mathsf{Save}(k,b)\) 是显式检查点转移，而非第七种执行编辑，并要求 \(k\) 为新标识且 \(b\) 可寻址。
 A trusted transaction stores an authenticated copy of continuation \(b\)'s remaining contract \(\mathcal C_b\), completed-occurrence cursor \(\chi_b\), and relevant call and outcome-authority rows.
 % 一个可信事务存储延续 \(b\) 的剩余契约 \(\mathcal C_b\)、已完成发生项游标 \(\chi_b\) 以及相关调用记录与结果权限记录的认证副本。
-The checkpoint check requires \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\), and the transaction advances \(\nu\) without changing the active workflow, receipts, bindings, monitor versions, or permission trace.
-% 检查点检查要求 \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\)，且该事务推进 \(\nu\) 而不改变当前工作流、回执、绑定、监控器版本或权限轨迹。
+The checkpoint check requires \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\), and the transaction advances \(\nu\) without changing the active workflow, authorization records, bindings, monitor versions, or permission trace.
+% 检查点检查要求 \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\)，且该事务推进 \(\nu\) 而不改变当前工作流、授权记录、绑定、监控器版本或权限轨迹。
 Both machines take this \(\tau\)-transition, which makes a concurrent installation stale because installation authenticates \(H\).
 % 两台机器都执行该 \(\tau\)-转移；由于安装过程认证 \(H\)，该转移会使并发安装过期。
 Restore accepts only records created by this rule.
@@ -267,33 +267,33 @@ Every edge and introduced contract is justified by one immutable schema at versi
 % 每条边和每个引入的契约都由版本 \(\zeta\) 的一个不可变模式提供依据。
 Every current, checkpoint, or schema occurrence, effect identity, monitor entry, lineage, and scope belongs to \(\omega\).
 % 当前状态、检查点或模式中的每个发生项、效果标识、监控器入口、谱系和作用域都属于 \(\omega\)。
-Effect identities, receipt logs, and policies of distinct domains are disjoint, and an edit never crosses a domain.
-% 不同域的效果标识、回执日志和策略互不相交，并且编辑绝不跨域。
+Effect identities, authorization logs, and policies of distinct domains are disjoint, and an edit never crosses a domain.
+% 不同域的效果标识、授权日志和策略互不相交，并且编辑绝不跨域。
 \end{enumerate}
 The installation kernel additionally requires that the policy domain's one current monitor version is active.
 % 安装内核还要求策略域唯一的当前监控器版本处于活动状态。
 \end{definition}
 
-\subsubsection{Receipt log and security core}
-% 回执日志与安全核心
+\subsubsection{Authorization log and security core}
+% 授权日志与安全核心
 
-Outside \(H\), the model stores policy version \(\kappa\), a regular prefix-closed permission policy \(\mathcal A\subseteq\mathcal U^*\) over label alphabet \(\mathcal U\), append-only receipt log \(\Delta\), and ordered dispatch queue \(\mathsf{out}\).
-% 在 \(H\) 之外，模型还存储策略版本 \(\kappa\)、定义在标签字母表 \(\mathcal U\) 上的正则前缀闭合权限策略 \(\mathcal A\subseteq\mathcal U^*\)、仅追加回执日志 \(\Delta\) 和有序派发队列 \(\mathsf{out}\)。
-Receipt creation is append-only.
-% 回执创建仅可追加。
-Settlement advances receipt phases and fills durable return records with stable return values.
-% 结算会推进回执阶段，并用稳定返回值填充持久返回记录。
-Each receipt binds its effect identity, immutable normalized tool request, creator occurrence, and permission label.
-% 每条回执都绑定其效果标识、不可变规范化工具请求、创建者发生项和权限标签。
-Each record in \(\chi\) points to its own \Fresh receipt or, for \Alias, an earlier receipt, making retry and \Alias return lookup functions of \((\chi,\Delta)\).
-% \(\chi\) 中的每条记录都指向其自身的 \Fresh 回执；若为 \Alias，则指向更早的回执，从而使重试和 \Alias 结果查找成为 \((\chi,\Delta)\) 的函数。
-\(\mathsf{lab}(\Delta)\) is the permission trace: the ordered labels of receipt-creating calls.
-% \(\mathsf{lab}(\Delta)\) 是权限轨迹，即创建回执的调用标签按顺序组成的序列。
+Outside \(H\), the model stores policy version \(\kappa\), a regular prefix-closed permission policy \(\mathcal A\subseteq\mathcal U^*\) over label alphabet \(\mathcal U\), append-only authorization log \(\Delta\), and ordered dispatch queue \(\mathsf{out}\).
+% 在 \(H\) 之外，模型还存储策略版本 \(\kappa\)、定义在标签字母表 \(\mathcal U\) 上的正则前缀闭合权限策略 \(\mathcal A\subseteq\mathcal U^*\)、仅追加授权日志 \(\Delta\) 和有序派发队列 \(\mathsf{out}\)。
+Authorization records can only be appended.
+% 授权记录只能追加。
+Settlement advances an authorization record's status and fills its return record with a stable return value.
+% 结算会推进授权记录的状态，并用稳定返回值填充其返回记录。
+Each authorization record binds its effect identity, immutable normalized tool request, creator occurrence, and permission label.
+% 每条授权记录都绑定其效果标识、不可变规范化工具请求、创建者发生项和权限标签。
+Each entry in \(\chi\) points to the authorization record created by its \Fresh event or, for \Alias, to an earlier authorization record, making retry and \Alias return lookup functions of \((\chi,\Delta)\).
+% \(\chi\) 中的每个条目都指向其 \Fresh 事件创建的授权记录；若为 \Alias，则指向更早的授权记录，从而使重试和 \Alias 结果查找成为 \((\chi,\Delta)\) 的函数。
+\(\mathsf{lab}(\Delta)\) is the permission trace: the ordered labels of calls that create authorization records.
+% \(\mathsf{lab}(\Delta)\) 是权限轨迹，即创建授权记录的调用标签按顺序组成的序列。
 Restore may reconstruct workspace payload but never restores \(\Delta\).
 % Restore 可以重建工作区载荷，但绝不会恢复 \(\Delta\)。
 
-A security core \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) is \emph{well formed} when \(H\) is well formed, \(\mathsf{lab}(\Delta)\in\mathcal A\), each effect identity has at most one \Fresh receipt, each \Fresh record names its unique receipt, each \Alias record names an earlier receipt, the receipt log, dispatch queue, and policy are scoped to \(\omega\), and the queue preserves \Fresh order.
-% 当 \(H\) 良构、\(\mathsf{lab}(\Delta)\in\mathcal A\)、每个效果标识至多有一条 \Fresh 回执、每条 \Fresh 记录指明其唯一回执、每条 \Alias 记录指明一条更早回执、回执日志、派发队列和策略均限定于 \(\omega\)，且该队列保持 \Fresh 次序时，安全核心 \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) 是\emph{良构的}。
+A security core \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) is \emph{well formed} when \(H\) is well formed, \(\mathsf{lab}(\Delta)\in\mathcal A\), each effect identity has at most one authorization record created by \Fresh, each \Fresh entry names that record, each \Alias entry names an earlier authorization record, the authorization log, dispatch queue, and policy are scoped to \(\omega\), and the queue preserves \Fresh order.
+% 当 \(H\) 良构、\(\mathsf{lab}(\Delta)\in\mathcal A\)、每个效果标识至多有一条由 \Fresh 创建的授权记录、每个 \Fresh 条目指明该记录、每个 \Alias 条目指明一条更早的授权记录、授权日志、派发队列和策略均限定于 \(\omega\)，且该队列保持 \Fresh 次序时，安全核心 \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) 是\emph{良构的}。
 This joint invariant is assumed below.
 % 下文假定这一联合不变量成立。
 
@@ -302,14 +302,14 @@ This joint invariant is assumed below.
 
 The adversary controls Agent output, edit requests, tool arguments, copied workspace, retries, stale authorization tokens, and scheduling, including races between calls and edits.
 % 对手控制 Agent 输出、编辑请求、工具参数、复制的工作区、重试、过期授权令牌和调度，包括调用与编辑之间的竞态。
-It cannot forge registries, the checkpoint directed acyclic graph (DAG), effect-identity certificates, policy, or receipt log.
-% 它无法伪造注册表、检查点有向无环图（DAG）、效果标识证书、策略或回执日志。
+It cannot forge registries, the checkpoint directed acyclic graph (DAG), effect-identity certificates, policy, or authorization log.
+% 它无法伪造注册表、检查点有向无环图（DAG）、效果标识证书、策略或授权日志。
 The policy authority signs policies, outcome requirements, and authorized removals; the call authorization service registers protected calls, effect identities, and authorization tokens.
 % 策略权限方签署策略、结果要求和获授权移除；调用授权服务注册受控调用、效果标识和授权令牌。
 The trusted controller derives and checks each edit, while the installation kernel re-verifies the answer and atomically replaces the monitor.
 % 可信控制器推导并检查每次编辑，而安装内核重新验证答案并原子替换监控器。
-These roles, the authenticated registries and receipt log, certificate verifier, atomic rules, and complete mediation form the trusted computing base (TCB).
-% 这些角色、经认证的注册表与回执日志、证书验证器、原子规则和完全中介共同构成可信计算基（TCB）。
+These roles, the authenticated registries and authorization log, certificate verifier, atomic rules, and complete mediation form the trusted computing base (TCB).
+% 这些角色、经认证的注册表与授权日志、证书验证器、原子规则和完全中介共同构成可信计算基（TCB）。
 Within one policy domain, this TCB completely mediates every protected call and provides a linearizable, crash-stable transaction for every modeled state change and visible edit answer.
 % 在一个策略域内，该 TCB 完全中介每次受控调用，并为每项已建模状态变更和可见编辑答案提供可线性化且崩溃稳定的事务。
 A recovered labeled transition system (LTS) state shows each transaction entirely uncommitted or committed according to whether its linearization point occurred.
@@ -324,8 +324,8 @@ The resulting finite registered call model \(R\) remains unchanged while that sn
 % 由此得到的有限已注册调用模型 \(R\) 在检查该状态快照期间保持不变。
 Unmatched calls fail closed.
 % 不匹配的调用以关闭方式失败。
-The platform supplies authenticated \(\mathcal W,R\), edit schemas, normalization rules, policy, checkpoints, and one consistent snapshot of the receipt log and dispatch queue.
-% 平台提供经认证的 \(\mathcal W,R\)、编辑模式、规范化规则、策略、检查点，以及回执日志与派发队列的一致状态快照。
+The platform supplies authenticated \(\mathcal W,R\), edit schemas, normalization rules, policy, checkpoints, and one consistent snapshot of the authorization log and dispatch queue.
+% 平台提供经认证的 \(\mathcal W,R\)、编辑模式、规范化规则、策略、检查点，以及授权日志与派发队列的一致状态快照。
 From these inputs and an identifier-only Agent request, the controller derives the edited workflow, required outcomes, resolved calls, fixed point, monitor, certificate, monitor version, and authorization tokens.
 % 控制器根据这些输入与 Agent 仅含标识符的请求推导编辑后的工作流、要求实现的结果、已解析调用、不动点、监控器、证书、监控器版本和授权令牌。
 The Agent may supply or weaken none of these derived objects.
@@ -333,19 +333,48 @@ The Agent may supply or weaken none of these derived objects.
 
 A boundary-finite typed Agent workflow has only finitely many distinct protected-call traces that reach an outcome.
 % 边界有限的类型化 Agent 工作流只有有限多条能够到达结果的不同受控调用轨迹。
-\(\mathsf{CheckReg}\) accepts a finite registered call model only when it faithfully represents the outcomes, call order, effect identities, and receipt behavior of that workflow.
-% 仅当有限的已注册调用模型忠实表示该工作流的结果、调用次序、效果标识与回执行为时，\(\mathsf{CheckReg}\) 才会接受它。
-The model stores these traces as outcome-indexed runs \(\mathsf{BRuns}(R)\) and a map \(\lambda\) from source traces; write \(\mathcal W\sqsubseteq_\lambda R\) when \(\lambda\) is a bijection preserving outcomes, call-to-effect identity, order, outcome authority, and receipt evolution.
-% 该模型把这些轨迹存为带结果索引的执行 \(\mathsf{BRuns}(R)\)，并存储从源轨迹出发的映射 \(\lambda\)；当 \(\lambda\) 是保持结果、调用到效果标识关系、次序、结果权限和回执演化的双射时，记作 \(\mathcal W\sqsubseteq_\lambda R\)。
+\(\mathsf{CheckReg}\) accepts a finite registered call model only when it faithfully represents the outcomes, call order, effect identities, and first-time authorization records of that workflow.
+% 仅当有限的已注册调用模型忠实表示该工作流的结果、调用次序、效果标识与首次授权记录时，\(\mathsf{CheckReg}\) 才会接受它。
+The model stores these traces as outcome-indexed runs \(\mathsf{BRuns}(R)\) and a map \(\lambda\) from source traces; write \(\mathcal W\sqsubseteq_\lambda R\) when \(\lambda\) is a bijection preserving outcomes, the mapping from call positions to effect identities, order, outcome authority, and authorization-log updates.
+% 该模型把这些轨迹存为带结果索引的执行 \(\mathsf{BRuns}(R)\)，并存储从源轨迹出发的映射 \(\lambda\)；当 \(\lambda\) 是保持结果、调用位置到效果标识的映射、次序、结果权限和授权日志更新的双射时，记作 \(\mathcal W\sqsubseteq_\lambda R\)。
 \Cref{def:registration-refinement,lem:registration-reflection} give the exact finite check and proof.
 % \Cref{def:registration-refinement,lem:registration-reflection} 给出精确的有限检查与证明。
 The theory neither infers natural-language contracts nor equates local commit with remote physical exactly-once execution, which additionally requires an idempotent or queryable sink.
 % 该理论既不推断自然语言契约，也不把本地提交等同于远端物理恰好一次执行；后者还要求接收端具有幂等性或可查询性。
 
-\subsection{Six Execution-Edit Rules}
-% 六条执行编辑规则
+\subsection{Security Objective}
+% 安全目标
 
-\subsubsection{Edit Certificates}
+The security objective is fixed independently of the checker that will implement it.
+% 安全目标独立于随后实现它的检查器而确定。
+For an edit derived from an authenticated source snapshot, a safe realization must satisfy four requirements.
+% 对于从认证源状态快照派生的编辑，安全实现必须满足四项要求。
+First, it preserves every source outcome that is neither already satisfied nor explicitly authorized for removal, and every admitted execution belongs to the derived target workflow.
+% 第一，它保留每个既未满足、也未被明确授权移除的源结果，并且每段获准执行都属于派生目标工作流。
+Second, every admitted prefix is allowed by the policy after accounting for authorization records already present in the append-only log.
+% 第二，在计入仅追加日志中已经存在的授权记录后，每个获准前缀都满足策略。
+Third, each admitted prefix extends to a complete admitted execution.
+% 第三，每个获准前缀都能扩展为一段完整的获准执行。
+Fourth, every outcome still compatible with an admitted prefix retains such a completion.
+% 第四，每个仍与获准前缀兼容的结果都保留这样一条完成路径。
+The last requirement rules out the prefix-unsafe example in \cref{sec:lifecycle}, even though each outcome has a safe trace in isolation.
+% 最后一项要求排除 \cref{sec:lifecycle} 中的前缀不安全示例，尽管其中每个结果单独看都具有一条安全轨迹。
+\Cref{def:realization} states these requirements as an indexed language relation; \cref{lem:greatest-realization} then shows that the checker computes its greatest member rather than defining safety by its own output.
+% \Cref{def:realization} 将这些要求表述为带索引语言关系；随后 \cref{lem:greatest-realization} 证明检查器计算该关系的最大成员，而不是用自身输出来定义安全。
+
+\section{Exact Checking of Execution Edits}
+% 执行编辑的精确检查
+\label{sec:admission}
+
+The checker first derives the only admissible target workflow from the authenticated source and the requested edit.
+% 检查器首先从认证源状态与所请求编辑中推导唯一可接受的目标工作流。
+It then resolves call occurrences against existing authorization records and removes precisely those complete executions that violate the security objective after some prefix.
+% 随后，它根据已有授权记录解析调用发生项，并精确移除那些在某个前缀之后违反安全目标的完整执行。
+
+\subsection{Edit Derivation and Outcome Preservation}
+% 编辑推导与结果保留
+
+\subsubsection{Edit certificates}
 % 编辑证书
 
 The six disjoint constructors of \(\mathsf{Edit}_6\) are exactly the typed operation signatures in \cref{tab:history-rules}.
@@ -424,8 +453,8 @@ It holds exactly when every named current object belongs to \(\mathsf{addr}(T)\)
 % 当且仅当每个具名当前对象属于 \(\mathsf{addr}(T)\)、每个引入对象仍限定于 \(\omega\)、源指纹匹配、\cref{tab:history-rules} 中适用的 \(\mathcal P_u\)、不交覆盖和 \(\mathsf{Lift}_u\) 要求成立、任何移除均获授权且 \(\sem{T'}\) 有定义时，该判定才成立。
 Authorized removal is confined to the unselected arm of a typed \(\mathsf{MergeSelect}\) or the current continuation of \(\mathsf{RestoreReplace}\), using the exact authority-bound sets below rather than Agent declarations.
 % 获授权移除仅限于类型化 \(\mathsf{MergeSelect}\) 中未被选择的分支，或 \(\mathsf{RestoreReplace}\) 的当前延续，并使用下文与权限方绑定的精确集合，而不接受 Agent 声明。
-\subsubsection{Preserving required outcomes}
-% 保留要求实现的结果
+\subsubsection{Required-outcome preservation}
+% 要求实现结果的保留
 
 The source row itself, rather than a caller-proposed target, determines every outcome that the edit must account for.
 % 每个编辑必须处理的结果由源规则本身确定，而不是由调用方提出的目标确定。
@@ -534,15 +563,15 @@ other arm removed\\
 \end{tabular}
 \end{table*}
 
-In an open choice, the first \Fresh or \Alias atomically selects its arm and disables later occurrences from the other, so \(\mathsf{MergeSelect}(g,w,\sigma)\) has no derivation after any durable progress on the unselected arm, including receipt-silent progress.
-% 在开放选择中，第一个 \Fresh 或 \Alias 会原子选择其分支并禁用另一分支的后续发生项，因此未被选择的分支取得任何持久进展后，\(\mathsf{MergeSelect}(g,w,\sigma)\) 都没有可用推导，包括未产生回执的进展。
+In an open choice, the first \Fresh or \Alias atomically selects its arm and disables later occurrences from the other, so \(\mathsf{MergeSelect}(g,w,\sigma)\) has no derivation after any recorded progress on the unselected arm, including progress that creates no authorization record.
+% 在开放选择中，第一个 \Fresh 或 \Alias 会原子选择其分支并禁用另一分支的后续发生项，因此未被选择的分支取得任何已记录进展后，\(\mathsf{MergeSelect}(g,w,\sigma)\) 都没有可用推导，包括未创建授权记录的进展。
 \(\mathsf{MergeJoin}\) replaces the addressable \(\parallel_g\) node with \(\mathsf{jbar}\), removes \(g\) from the addressable workflow, and prevents the same pair from being joined again.
 % \(\mathsf{MergeJoin}\) 以 \(\mathsf{jbar}\) 替换可寻址的 \(\parallel_g\) 节点，将 \(g\) 从可寻址工作流中移除，并防止同一对分支再次合并。
 
 The model replaces the monitor for the whole policy domain rather than disabling only selected monitor entries, so every current entry in \(H\) belongs to \(\eta^-=\eta\).
 % 该模型替换整个策略域的监控器，而不是只禁用选定的监控器入口，因此 \(H\) 中的每个当前入口都属于 \(\eta^-=\eta\)。
-\subsubsection{Replacing the Monitor Version}
-% 替换监控器版本
+\subsubsection{Monitor-version replacement}
+% 监控器版本替换
 
 The execution-edit judgment is the least relation generated by one row of \cref{tab:history-rules} inside a well-typed single-hole context \(\mathcal E\), followed by the common update below; no other execution-edit derivation exists.
 % 执行编辑判定是如下最小关系：在良类型单孔上下文 \(\mathcal E\) 中应用 \cref{tab:history-rules} 的一行，再执行下述公共更新；不存在其他执行编辑推导。
@@ -608,12 +637,12 @@ The common poststate establishes well-formedness and binds every current target 
 % 公共后状态建立良构性，并将每个当前目标发生项绑定到 \(\eta^+\)；完整论证见 \cref{app:schema-fidelity-proof}。
 \end{proof}
 
-\subsection{Registered extension}
-% 已注册扩展
+\subsection{Supporting Authenticated Registry Growth}
+% 辅助性的认证注册表增长
 
 A registered extension is not a seventh execution edit: it adds finite authenticated schema, registry, outcome-authority, and policy entries without changing the current workflow or its required outcomes.
 % 已注册扩展不是第七种执行编辑：它增加有限且经认证的模式、注册表、结果权限与策略条目，但不改变当前工作流及其要求实现的结果。
-It preserves every existing identifier, effect identity, outcome-authority row, receipt, and normalization rule, authorizes no removal, and conservatively extends the policy, \(\mathcal A\subseteq\mathcal A^+\).
-% 它保持每个现有标识、效果标识、结果权限记录、回执与规范化规则，不授权任何移除，并保守扩展策略，即 \(\mathcal A\subseteq\mathcal A^+\)。
+It preserves every existing identifier, effect identity, outcome-authority row, authorization record, and normalization rule, authorizes no removal, and conservatively extends the policy, \(\mathcal A\subseteq\mathcal A^+\).
+% 它保持每个现有标识、效果标识、结果权限记录、授权记录与规范化规则，不授权任何移除，并保守扩展策略，即 \(\mathcal A\subseteq\mathcal A^+\)。
 Under a fresh \(\eta^+\), it refreshes every current monitor entry and authorization token and uses the same safety checker and atomic installation as an execution edit; \cref{app:registered-extension} gives the exact judgment.
 % 在新的 \(\eta^+\) 下，它刷新每个当前监控器入口与授权令牌，并使用与执行编辑相同的安全检查器和原子安装；精确判定见 \cref{app:registered-extension}。

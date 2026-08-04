@@ -1,22 +1,7 @@
-\section{Exact Safety Check for Execution Edits}
-% 执行编辑的精确安全检查
-\label{sec:admission}
-
-The preceding section derives an edited workflow from the authenticated execution record and requested edit.
-% 前一节从经认证执行记录和请求的编辑中推导编辑后的工作流。
-This section decides whether that workflow has a policy-safe implementation that preserves every still-possible required outcome.
-% 本节判定该工作流是否存在满足策略且保留每个仍可能且仍要求实现结果的安全实现。
-It first determines whether each copied call needs a new receipt or reuses an existing one.
-% 它首先确定每个复制调用需要新回执还是复用已有回执。
-It then computes the largest family of completed executions that remains safe after every partial execution.
-% 随后，它计算在每段部分执行之后都保持安全的最大完整执行族。
-Finally, it presents the ideal atomic execution machine used to prove the installed runtime correct in \cref{sec:kernel}.
-% 最后，它给出用于在 \cref{sec:kernel} 中证明已安装运行时正确的理想原子执行机。
-
 Recall the permission-label alphabet \(\mathcal U\) and regular prefix-closed policy \(\mathcal A\subseteq\mathcal U^*\).
 % 回顾权限标签字母表 \(\mathcal U\) 和正则前缀闭合策略 \(\mathcal A\subseteq\mathcal U^*\)。
-For the authenticated receipt log \(\Delta\), \(\mathsf{lab}(\Delta)\in\mathcal A\) is its permission trace and \(D_\Delta\) is the set of effect identities that already have receipts.
-% 对于经认证回执日志 \(\Delta\)，\(\mathsf{lab}(\Delta)\in\mathcal A\) 是其权限轨迹，\(D_\Delta\) 是已经具有回执的效果标识集合。
+For the authenticated authorization log \(\Delta\), \(\mathsf{lab}(\Delta)\in\mathcal A\) is its permission trace and \(D_\Delta\) is the set of effect identities that already have authorization records.
+% 对于经认证授权日志 \(\Delta\)，\(\mathsf{lab}(\Delta)\in\mathcal A\) 是其权限轨迹，\(D_\Delta\) 是已经具有授权记录的效果标识集合。
 Fix \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\) and write \(\mathsf{src}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\).
 % 固定 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并记 \(\mathsf{src}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\)。
 When defined, the tagged root, execution-edit, or registered-extension derivation is unique.
@@ -235,8 +220,8 @@ The next example has two outcomes, and each has a safe complete execution when c
 % 下一个例子有两个结果，单独考虑时，每个结果都有一条安全的完整执行。
 Nevertheless, no monitor can safely expose both executions because one shared first step leaves the other outcome unable to finish.
 % 然而，任何监控器都无法安全地同时提供这两条执行，因为其中一个共享的第一步会使另一个结果无法完成。
-Let singleton contracts \(X,Y,Z\) contain \(x_o,y_o,z_o\), and let the target registry map them to distinct effect identities \(d_x,d_y,d_z\) that do not yet have receipts and have labels \(x,y,z\), respectively.
-% 令单元素契约 \(X,Y,Z\) 分别包含 \(x_o,y_o,z_o\)，并令目标注册表将它们映射到尚无回执且标签分别为 \(x,y,z\) 的不同效果标识 \(d_x,d_y,d_z\)。
+Let singleton contracts \(X,Y,Z\) contain \(x_o,y_o,z_o\), and let the target registry map them to distinct effect identities \(d_x,d_y,d_z\) that do not yet have authorization records and have labels \(x,y,z\), respectively.
+% 令单元素契约 \(X,Y,Z\) 分别包含 \(x_o,y_o,z_o\)，并令目标注册表将它们映射到尚无授权记录且标签分别为 \(x,y,z\) 的不同效果标识 \(d_x,d_y,d_z\)。
 Write \(\bar x=\Fresh(x_o,d_x)\), \(\bar y=\Fresh(y_o,d_y)\), and \(\bar z=\Fresh(z_o,d_z)\).
 % 记 \(\bar x=\Fresh(x_o,d_x)\)、\(\bar y=\Fresh(y_o,d_y)\)、\(\bar z=\Fresh(z_o,d_z)\)。
 
@@ -290,8 +275,8 @@ For strictness, the preceding instance has the marker-nonblocking projected pair
 
 \Cref{prop:outcome-necessary} gives the exact interface to generalized nonblocking~\cite{dequeiroz2005multitasking,malik2008generalised}.
 % \Cref{prop:outcome-necessary} 给出与广义非阻塞之间的精确接口~\cite{dequeiroz2005multitasking,malik2008generalised}。
-After the trusted controller derives \(\alpha_o,\omega_o\) from the requested edit, authorized removals, effect identities, receipts, and source snapshot, a generalized-nonblocking solver computes the same largest family.
-% 在可信控制器根据请求的编辑、获授权移除、效果标识、回执和源状态快照推导出 \(\alpha_o,\omega_o\) 之后，广义非阻塞求解器会计算同一个最大执行族。
+After the trusted controller derives \(\alpha_o,\omega_o\) from the requested edit, authorized removals, effect identities, authorization records, and source snapshot, a generalized-nonblocking solver computes the same largest family.
+% 在可信控制器根据请求的编辑、获授权移除、效果标识、授权记录和源状态快照推导出 \(\alpha_o,\omega_o\) 之后，广义非阻塞求解器会计算同一个最大执行族。
 Complete mediation makes \Fresh/\Alias controllable.
 % 完全中介使 \Fresh/\Alias 可控。
 Deployments with uncontrollable resolved events need the usual supremal-controllable refinement.
@@ -334,8 +319,8 @@ where
 \end{lemma}
 \begin{proof}[Proof sketch]
 % 证明概要。
-Streaming resolution gives raw recoverability, the receipt-log equality, and equality of the source and residual candidate families.
-% 流式解析给出原始词可恢复性、回执日志等式，以及源候选族与残余候选族之间的等式。
+Streaming resolution gives raw recoverability, the authorization-log equality, and equality of the source and residual candidate families.
+% 流式解析给出原始词可恢复性、授权日志等式，以及源候选族与残余候选族之间的等式。
 Residualizing \(\widehat B^\dagger\) gives a post-fixed family for the successor, while prefixing any successor post-fixed family by \(z\) gives one for the source; greatestness yields the fixed-point equality, and \(\Pref(B)/z=\Pref(B/z)\) yields the generated-language equality.
 % 对 \(\widehat B^\dagger\) 取残余会得到后继实例的后不动点族，而在任意后继后不动点族前加 \(z\) 会得到源实例的后不动点族；最大性给出不动点等式，且 \(\Pref(B)/z=\Pref(B/z)\) 给出生成语言等式。
 The full proof is in \cref{app:residual-coherence-proof}.
@@ -357,42 +342,3 @@ Consequently, a valid registered extension cannot remove a currently required ou
 \end{lemma}
 The proof is in \cref{app:live-extension-proof}.
 % 证明见 \cref{app:live-extension-proof}。
-
-\subsection{The ideal atomic execution machine}
-% 理想原子执行机
-\label{sec:ideal}
-
-An ideal state \(I=(\kappa,H,\Delta,\mathsf{out},\mathcal A,c,r)\), with \(c=(H_c,u,L^*,\widehat B^*)\), keeps only the authenticated execution data, current monitor version and entries, installed specification, and resolved prefix.
-% 理想状态 \(I=(\kappa,H,\Delta,\mathsf{out},\mathcal A,c,r)\)，其中 \(c=(H_c,u,L^*,\widehat B^*)\)，只保留认证执行数据、当前监控器版本与入口、已安装规范和已解析前缀。
-It omits compilation, monitor representation, transaction phases, authenticators, preloading, and installation microsteps.
-% 它省略编译、监控器表示、事务阶段、认证器、预加载和安装微步骤。
-
-\paragraph{Edit transition}
-% 编辑转移
-For current \(\Theta_I(u)\), an undefined derivation gives state-preserving \(\mathsf{Invalid}\), while a defined derivation with no \(\mathsf{GReal}\) witness gives state-preserving \(\mathsf{Reject}\).
-% 对当前 \(\Theta_I(u)\)，未定义推导给出保持状态的 \(\mathsf{Invalid}\)，而存在推导但没有 \(\mathsf{GReal}\) 见证时给出保持状态的 \(\mathsf{Reject}\)。
-Otherwise \(\mathsf{Derive}(\Theta_I(u))\) supplies the target and monitor version, and independently defined \(\mathsf{Spec}(\Theta_I(u))=(L^*,\widehat B^*)\) enables one atomic \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\) that installs them and resets \(r\) to \(\epsilon\).
-% 否则，\(\mathsf{Derive}(\Theta_I(u))\) 给出目标和监控器版本，而独立定义的 \(\mathsf{Spec}(\Theta_I(u))=(L^*,\widehat B^*)\) 启用一个原子 \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\)，安装二者并将 \(r\) 重置为 \(\epsilon\)。
-All three answers bind the same current source-snapshot token and are mutually exclusive and exhaustive.
-% 三类答案都绑定同一个当前源状态快照令牌，并且彼此互斥且穷尽。
-
-\paragraph{Protected call}
-% 受控调用
-For submitted tool request \(m\), an enabled \(x\) passes the ideal guard exactly when its current entry and authorization token bind effect identity \(d\), \(\mathsf{canon}_\kappa(m)=\mathsf{inv}_\rho(d)\), and \(ra\in L^*\), where receipts choose \(a=\Fresh(x,d)\) or \(\Alias(x,d)\).
-% 对于提交的工具请求 \(m\)，当且仅当已启用的 \(x\) 的当前入口与授权令牌绑定效果标识 \(d\)、\(\mathsf{canon}_\kappa(m)=\mathsf{inv}_\rho(d)\) 且 \(ra\in L^*\) 时，它才通过理想守卫，其中回执决定 \(a=\Fresh(x,d)\) 还是 \(\Alias(x,d)\)。
-One atomic transition applies \(\mathsf{HStep}\), appends \(a\) to \(\chi\), advances \(\nu\), removes \(x\)'s binding, and sets \(r:=ra\); \Fresh also creates the labeled receipt and queues the normalized request, whereas \Alias links to the existing return record.
-% 一个原子转移应用 \(\mathsf{HStep}\)、将 \(a\) 追加到 \(\chi\)、推进 \(\nu\)、移除 \(x\) 的绑定并令 \(r:=ra\)；\Fresh 还会创建带标签回执并将规范化请求入队，而 \Alias 则链接到已有返回记录。
-Any failed premise returns \(\mathsf{deny}(x)\) without changing state or inventing a return value.
-% 任一前提失败都会返回 \(\mathsf{deny}(x)\)，且既不改变状态也不虚构返回值。
-
-\paragraph{Retry, release, and crash}
-% 重试、释放与崩溃
-\(\mathsf{Save}\), authenticated retry, \(\Dispatch\), settlement, and recovered crash have the same durable behavior as their compiled rules in \cref{tab:app-event-matrix}; compiler computation is absent.
-% \(\mathsf{Save}\)、经认证重试、\(\Dispatch\)、结算和恢复后的崩溃具有与 \cref{tab:app-event-matrix} 中编译规则相同的持久行为；编译器计算不在其中。
-This least-generated LTS makes no claim about external-network completion order after \(\Dispatch\).
-% 这一最小生成的 LTS 不对 \(\Dispatch\) 之后外部网络的完成顺序作任何主张。
-
-By \cref{lem:greatest-realization}, every reachable partial execution of the ideal machine retains a policy-safe completion until the next edit transition changes the workflow contract.
-% 根据 \cref{lem:greatest-realization}，理想机的每段可达部分执行都会保留一条策略安全完成路径，直到下一次编辑转移改变工作流契约。
-The next sections implement this machine without consulting the full completion set at every call.
-% 后续章节实现该机器，而无需在每次调用时查询完整完成路径集合。
