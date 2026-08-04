@@ -59,8 +59,8 @@ Thus every required source outcome appears in an accepted target outcome.
 % 可见运行时行为
 \(\mathcal O_{\rm api}\) includes edit answers tied to the checked record, edits put into effect, protected-call answers, released requests, completion updates, and returned values.
 % \(\mathcal O_{\rm api}\) 包括与所检查记录对应的编辑答案、已经生效的编辑、受控调用答案、已发出请求、完成更新和返回值。
-It hides internal computation, Save, stale candidates, and restart bookkeeping.
-% 它隐藏内部计算、Save、过期候选结果和重启记录工作。
+It hides internal computation, Checkpoint, stale candidates, and restart bookkeeping.
+% 它隐藏内部计算、Checkpoint、过期候选结果和重启记录工作。
 \[
 \mathsf{obs}_{\rm api}(\ell)=
 \begin{cases}
@@ -89,14 +89,18 @@ Malformed registrations fail before startup.
 
 For the remaining results, assume accepted registration, trusted checking of every protected call, and linearizable transactions that remain atomic after a restart within each policy domain.
 % 对于其余结果，假设注册已通过、每次受控调用都由可信组件检查，并且每个策略域内的可线性化事务在重启后仍保持原子性。
+\(\mathsf{Checkpoint}(k,b)\) succeeds exactly when \(k\) is fresh, \(b\) is current, and the stored work matches the branch's remaining registered work: \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\).
+% 当且仅当 \(k\) 是新的检查点标识、\(b\) 是当前分支，且所存工作与该分支剩余的已注册工作匹配时，\(\mathsf{Checkpoint}(k,b)\) 才成功：\(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\)。
+A successful Checkpoint preserves \(\mathsf{AgentSec}\) without changing the current workflow or any earlier authorization.
+% 成功的 Checkpoint 保持 \(\mathsf{AgentSec}\)，且不改变当前工作流或任何先前授权。
 Let \(\mathsf{Ext}=\{\mathsf{Extend}(\xi)\mid \xi\text{ is verified}\}\).
 % 令 \(\mathsf{Ext}=\{\mathsf{Extend}(\xi)\mid \xi\text{ 已通过验证}\}\)。
-They hold for every \(u\in\mathsf{Edit}_6\uplus\mathsf{Ext}\) at every finite reachable \(\mathsf{AgentSec}\) state.
-% 它们对每个有限可达 \(\mathsf{AgentSec}\) 状态上的每个 \(u\in\mathsf{Edit}_6\uplus\mathsf{Ext}\) 成立。
+The theorems below hold for every \(u\in\mathsf{Edit}_6\uplus\mathsf{Ext}\) at every finite reachable \(\mathsf{AgentSec}\) state.
+% 下列定理对每个有限可达 \(\mathsf{AgentSec}\) 状态上的每个 \(u\in\mathsf{Edit}_6\uplus\mathsf{Ext}\) 成立。
 
-\begin{theorem}[Exact Edit-Safety]
-% 精确编辑安全
-\label{thm:exact-history}
+\begin{theorem}[Exact Safety Checking]
+% 精确安全检查
+\label{thm:exact-checking}
 The ideal and runtime machines return the same mutually exclusive and exhaustive answer for \(\Theta=\Theta_S(u)\).
 % 对于 \(\Theta=\Theta_S(u)\)，理想机与运行时机器返回相同且互斥穷尽的答案。
 Undefined derivation gives state-preserving \(\mathsf{Invalid}\).

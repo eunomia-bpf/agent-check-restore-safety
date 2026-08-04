@@ -303,6 +303,24 @@ inductive RegisteredEditRequest where
       (rule : EditRuleId)
 deriving DecidableEq, Repr
 
+/-- Authenticated edit-schema payload.  It contains registered workflow
+suffixes but no retirement-authorization Boolean; destructive authorization
+is derived from signed registry rows by the operational layer. -/
+inductive RegisteredEditSchema where
+  | forkChoice (request : RequestId) (target : BranchName)
+      (leftSuffix rightSuffix : List Occurrence)
+  | forkParallel (request : RequestId) (target : BranchName)
+      (leftSuffix rightSuffix : List Occurrence)
+  | restoreReplace (request : RequestId) (target : BranchName)
+      (checkpoint : CheckpointId)
+  | restoreLive (request : RequestId) (target : BranchName)
+      (checkpoint : CheckpointId)
+  | mergeSelect (request : RequestId) (target : GroupName)
+      (winner : Side) (joinSuffix : List Occurrence)
+  | mergeJoin (request : RequestId) (target : GroupName)
+      (joinSuffix : List Occurrence)
+deriving DecidableEq, Repr
+
 def EditRequest.requestId : EditRequest → RequestId
   | .forkChoice request _ _ _ => request
   | .forkParallel request _ _ _ => request
@@ -342,6 +360,52 @@ def RegisteredEditRequest.kind : RegisteredEditRequest → EditKind
   | .restoreLive .. => .restoreLive
   | .mergeSelect .. => .mergeSelect
   | .mergeJoin .. => .mergeJoin
+
+/-- Match the caller-visible identifiers of a public request against one
+authenticated suffix-bearing schema. -/
+def RegisteredEditRequest.matchesSchema :
+    RegisteredEditRequest → RegisteredEditSchema → Bool
+  | .forkChoice request target _,
+      .forkChoice request' target' _ _ =>
+      decide (request = request' ∧ target = target')
+  | .forkParallel request target _,
+      .forkParallel request' target' _ _ =>
+      decide (request = request' ∧ target = target')
+  | .restoreReplace request target checkpoint _,
+      .restoreReplace request' target' checkpoint' =>
+      decide
+        (request = request' ∧ target = target' ∧ checkpoint = checkpoint')
+  | .restoreLive request target checkpoint _,
+      .restoreLive request' target' checkpoint' =>
+      decide
+        (request = request' ∧ target = target' ∧ checkpoint = checkpoint')
+  | .mergeSelect request target winner _,
+      .mergeSelect request' target' winner' _ =>
+      decide
+        (request = request' ∧ target = target' ∧ winner = winner')
+  | .mergeJoin request target _, .mergeJoin request' target' _ =>
+      decide (request = request' ∧ target = target')
+  | _, _ => false
+
+/-- Resolve an authenticated schema to the original structural editor.  The
+destructive authorization bit is supplied by the operational registry, never
+by the Agent-facing request or by the schema itself. -/
+def RegisteredEditSchema.toEditRequest
+    (schema : RegisteredEditSchema)
+    (retirementAuthorized : Bool) : EditRequest :=
+  match schema with
+  | .forkChoice request target leftSuffix rightSuffix =>
+      .forkChoice request target leftSuffix rightSuffix
+  | .forkParallel request target leftSuffix rightSuffix =>
+      .forkParallel request target leftSuffix rightSuffix
+  | .restoreReplace request target checkpoint =>
+      .restoreReplace request target checkpoint retirementAuthorized
+  | .restoreLive request target checkpoint =>
+      .restoreLive request target checkpoint
+  | .mergeSelect request target winner joinSuffix =>
+      .mergeSelect request target winner joinSuffix retirementAuthorized
+  | .mergeJoin request target joinSuffix =>
+      .mergeJoin request target joinSuffix
 
 /-- A public request matches an authenticated internal rule result exactly
 when all caller-visible identifiers agree.  The suffixes are intentionally

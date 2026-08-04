@@ -12,6 +12,7 @@ import AuthorityContinuity.RedemptionCommitment
 import AuthorityContinuity.RedemptionDomainFrontier
 import AuthorityContinuity.AgentHistoryAdmission.RegistrationRefinement
 import AuthorityContinuity.AgentHistoryAdmission.CompilationBridge
+import AuthorityContinuity.AgentHistoryAdmission.InformationLowerBound
 import AuthorityContinuity.AgentHistoryAdmission.PaperTheorems
 
 /-!
@@ -635,8 +636,20 @@ installed live-extension closure. -/
 #check AgentHistoryAdmission.CompilationBridge.compiler_admit_exists_secure_install
 #print axioms AgentHistoryAdmission.CompilationBridge.compiler_admit_exists_secure_install
 
+#check AgentHistoryAdmission.CompilationBridge.compileInstallCandidate_installs_editedContract
+#print axioms AgentHistoryAdmission.CompilationBridge.compileInstallCandidate_installs_editedContract
+
 #check AgentHistoryAdmission.CompilationBridge.validInstallCandidate_entails_admission
 #print axioms AgentHistoryAdmission.CompilationBridge.validInstallCandidate_entails_admission
+
+#check AgentHistoryAdmission.OperationalSemantics.checkEditObligations_iff
+#print axioms AgentHistoryAdmission.OperationalSemantics.checkEditObligations_iff
+
+#check AgentHistoryAdmission.OperationalSemantics.deriveAuthenticatedEdit_iff
+#print axioms AgentHistoryAdmission.OperationalSemantics.deriveAuthenticatedEdit_iff
+
+#check AgentHistoryAdmission.OperationalSemantics.editedContractAt_spec
+#print axioms AgentHistoryAdmission.OperationalSemantics.editedContractAt_spec
 
 #check AgentHistoryAdmission.OperationalSemantics.kernelTrace_preserves_agentSec
 #print axioms AgentHistoryAdmission.OperationalSemantics.kernelTrace_preserves_agentSec
@@ -673,5 +686,25 @@ installed live-extension closure. -/
 
 #check AgentHistoryAdmission.PaperTheorems.fresh_alias_installation_serialized
 #print axioms AgentHistoryAdmission.PaperTheorems.fresh_alias_installation_serialized
+
+/-! Representation-independent execution-record information lower bound. -/
+
+#check AgentHistoryAdmission.InformationLowerBound.answerSignature_exact
+#print axioms AgentHistoryAdmission.InformationLowerBound.answerSignature_exact
+
+#check AgentHistoryAdmission.InformationLowerBound.exactView_iff_refines_answerSignature
+#print axioms AgentHistoryAdmission.InformationLowerBound.exactView_iff_refines_answerSignature
+
+#check AgentHistoryAdmission.InformationLowerBound.exactView_separates_answer_pair
+#print axioms AgentHistoryAdmission.InformationLowerBound.exactView_separates_answer_pair
+
+#check AgentHistoryAdmission.InformationLowerBound.fourFactor_exactView_injective
+#print axioms AgentHistoryAdmission.InformationLowerBound.fourFactor_exactView_injective
+
+#check AgentHistoryAdmission.InformationLowerBound.fourFactor_exactView_card_lower_bound
+#print axioms AgentHistoryAdmission.InformationLowerBound.fourFactor_exactView_card_lower_bound
+
+#check AgentHistoryAdmission.InformationLowerBound.exactView_separates_each_dimension
+#print axioms AgentHistoryAdmission.InformationLowerBound.exactView_separates_each_dimension
 
 end AuthorityContinuity

@@ -213,8 +213,8 @@ For each current workflow call \(x\), \(\beta(x)=(j,\eta)\) records the rule ent
 \(\chi\) records authorization and workflow progress, while the remote service records completion and the returned value.
 % \(\chi\) 记录授权与工作流进展，而远端服务记录动作完成及其返回值。
 
-\(\mathsf{Save}(k,b)\) creates a checkpoint for a current branch \(b\) under a fresh checkpoint ID \(k\).
-% \(\mathsf{Save}(k,b)\) 使用新的检查点标识 \(k\) 为当前分支 \(b\) 创建检查点。
+\(\mathsf{Checkpoint}(k,b)\) creates a checkpoint for a current branch \(b\) under a fresh checkpoint ID \(k\).
+% \(\mathsf{Checkpoint}(k,b)\) 使用新的检查点标识 \(k\) 为当前分支 \(b\) 创建检查点。
 A trusted transaction stores a protected copy of branch \(b\)'s remaining contract \(\mathcal C_b\), ordered progress record \(\chi_b\), relevant calls, and signed outcome requirements.
 % 可信事务存储分支 \(b\) 的剩余契约 \(\mathcal C_b\)、有序进展记录 \(\chi_b\)、相关调用以及经签名的结果要求，并保护这些内容不被修改。
 The checkpoint check requires \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\), and the transaction advances \(\mathsf{ver}\) without changing the current workflow, authorization records, \(\beta\), the active rule version, or the authorization sequence.
@@ -241,8 +241,10 @@ Every ID that an edit may name has a unique context decomposition, and every nod
 % 编辑可以指明的每个标识都有唯一的上下文分解，且 \(\mathsf{heads}(T)\) 中的每个节点当前都是极大节点。
 Every checkpoint names an immutable node and stores copies of its remaining contract and ordered progress record.
 % 每个检查点都指明一个不可变节点，并存储其剩余契约与有序进展记录的副本。
-Every original or edit-introduced outcome has exactly one signed policy authority, preserved when the controller carries, copies, or checkpoints it.
-% 每个原始结果或编辑引入的结果都恰有一个经签名的策略权限方，并在控制器携带、复制或保存该结果时得到保留。
+Every original or edit-introduced outcome has exactly one signed policy authority.
+% 每个原始结果或编辑引入的结果都恰有一个经签名的策略权限方。
+The controller preserves that authority when it carries or copies the outcome or stores it in a checkpoint.
+% 控制器在携带、复制该结果或将其存入检查点时保留这一权限方。
 \item \emph{Identity and progress.}
 % \emph{标识与进展。}
 Workflow-call IDs and the \(j\) identifiers in \(\beta\) are unique, while workflow calls that refer to the same action agree on the trusted controller, scope, canonical request, digest, and source region.
@@ -322,8 +324,8 @@ The runtime rejects any call that does not match the registered model.
 % 运行时拒绝任何不匹配已注册模型的调用。
 The platform supplies workflow \(\mathcal W\), finite model \(\mathcal R\), edit rules, request-normalization rules, policy, checkpoints, authorization log, and queued requests in one protected execution record.
 % 平台在一份受保护的执行记录中提供工作流 \(\mathcal W\)、有限模型 \(\mathcal R\)、编辑规则、请求规范化规则、策略、检查点、授权日志和排队请求。
-From these inputs and an Agent request naming an edit and its objects, the controller derives the edited workflow, required outcomes, the authorization decision for each call, the safe execution set or rejection proof, and the rule entry and authorization token for each remaining call.
-% 控制器根据这些输入以及指明编辑及其对象的 Agent 请求，推导编辑后的工作流、要求实现的结果、每个调用的授权判定、安全执行集合或拒绝证明，以及每个剩余调用所用的规则入口和授权令牌。
+From the execution record and an Agent request naming an edit and its objects, the controller derives the edited workflow, required outcomes, authorization decision for each call, safe execution set or rejection proof, and the rule entry and authorization token for each remaining call.
+% 控制器根据执行记录以及指明编辑及其对象的 Agent 请求，推导编辑后的工作流、要求实现的结果、每个调用的授权判定、安全执行集合或拒绝证明，以及每个剩余调用所用的规则入口和授权令牌。
 Every derived object therefore comes from the execution record rather than Agent-supplied semantics.
 % 因此，每个派生对象都来自执行记录，而不是 Agent 提供的语义。
 
@@ -377,10 +379,10 @@ It then decides whether each workflow call creates or reuses an authorization re
 \subsubsection{Checking an edit rule}
 % 检查编辑规则
 
-The six disjoint constructors of \(\mathsf{Edit}_6\) are exactly the typed operation signatures in \cref{tab:history-rules}.
-% \(\mathsf{Edit}_6\) 的六个互不相交构造器恰为 \cref{tab:history-rules} 中带类型的操作签名。
-\(\mathsf{Save}\), the initial rule update, later rule registration, and protected calls use their own transitions.
-% \(\mathsf{Save}\)、初始规则更新、后续规则注册及受控调用分别使用各自的转移。
+Fork, Restore, and Merge have the six disjoint constructors of \(\mathsf{Edit}_6\) shown in \cref{tab:history-rules}.
+% Fork、Restore 和 Merge 具有 \cref{tab:history-rules} 所示的六个互不相交的 \(\mathsf{Edit}_6\) 构造器。
+\(\mathsf{Checkpoint}\), the initial rule update, later rule registration, and protected calls use their own transitions.
+% \(\mathsf{Checkpoint}\)、初始规则更新、后续规则注册及受控调用分别使用各自的转移。
 
 An Agent request \(u\) names an edit kind, current object IDs, and edit-rule ID \(\sigma\).
 % Agent 请求 \(u\) 指明编辑种类、当前对象标识和编辑规则标识 \(\sigma\)。
@@ -389,8 +391,12 @@ Registry \(\Sigma_\zeta\) records the expected source and checkpoint patterns fo
 
 The checker constructs explicit preservation maps for every region that the rule carries or copies.
 % 检查器为规则携带或复制的每个区域构造显式保持映射。
-For source contract \(\mathcal C\), target region \(\mathcal D\), and parent map \(\mu:X_{\mathcal D}\to X_{\mathcal C}\), write \(\mathcal C\preccurlyeq_\mu\mathcal D\) exactly when \(\mu\) is a global bijection, some surjection \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\) satisfies the conditions below for every target outcome \(v\), and \(\mu\) preserves actions and source regions.
-% 对于源契约 \(\mathcal C\)、目标区域 \(\mathcal D\) 和父映射 \(\mu:X_{\mathcal D}\to X_{\mathcal C}\)，当且仅当 \(\mu\) 是全局双射、存在满射 \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\) 使下列条件对每个目标结果 \(v\) 成立，且 \(\mu\) 保持动作和来源区域时，记作 \(\mathcal C\preccurlyeq_\mu\mathcal D\)。
+Consider a source contract \(\mathcal C\), target region \(\mathcal D\), and parent map \(\mu:X_{\mathcal D}\to X_{\mathcal C}\).
+% 考虑源契约 \(\mathcal C\)、目标区域 \(\mathcal D\) 和父映射 \(\mu:X_{\mathcal D}\to X_{\mathcal C}\)。
+Write \(\mathcal C\preccurlyeq_\mu\mathcal D\) when \(\mu\) is a global bijection and preserves actions and source regions.
+% 当 \(\mu\) 是保持动作与来源区域的全局双射时，记作 \(\mathcal C\preccurlyeq_\mu\mathcal D\)。
+The relation also requires a surjection \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\) that satisfies the conditions below for every target outcome \(v\).
+% 该关系还要求存在满射 \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\)，并对每个目标结果 \(v\) 满足下列条件。
 \[
 \begin{aligned}
  x\in X_{p_v}
@@ -399,8 +405,8 @@ For source contract \(\mathcal C\), target region \(\mathcal D\), and parent map
    &\Longleftrightarrow \mu(x)\prec_{\pi(v)}\mu(y).
 \end{aligned}
 \]
-Global bijection and workflow call--outcome membership equivalence prevent splitting a source workflow call shared across outcomes into outcome-specific target workflow calls.
-% 全局双射和工作流调用--结果成员关系等价防止将跨结果共享的源工作流调用拆分为特定于结果的目标工作流调用。
+Because \(\mu\) is one global bijection and preserves which outcomes contain each call, it cannot split a source call shared by several outcomes into separate target calls.
+% 由于 \(\mu\) 是一个全局双射并保持每个调用属于哪些结果，它无法把多个结果共享的源调用拆成不同的目标调用。
 
 For candidate \(T'\), let \(R_u\) index the disjoint regions carried or copied inside the replaced subtree.
 % 对候选 \(T'\)，令 \(R_u\) 索引被替换子树中互不相交的携带或复制区域。
@@ -444,7 +450,7 @@ Define the outcomes that remain required and the target outcomes that cover them
 \end{equation}
 For \(a=(r,o)\in\mathsf{EditedRequired}_u\), \(\mathsf{Covers}_u(t,a)\) denotes the relation above.
 % 对 \(a=(r,o)\in\mathsf{EditedRequired}_u\)，\(\mathsf{Covers}_u(t,a)\) 表示上述关系。
-The checker also requires \(\forall a\in\mathsf{StillRequired}_u.\ \exists t\in O_{\sem{T'}}.\ \mathsf{Covers}_u(t,a)\): every required source outcome has a complete target outcome, shared workflow calls remain shared, and inherited calls remain distinguished from steps added by the edit rule.
+The checker also requires \(\forall a\in\mathsf{StillRequired}_u.\ \exists t\in O_{\sem{T'}}.\ \mathsf{Covers}_u(t,a)\): every required source outcome has a complete target outcome, shared workflow calls remain shared, and inherited calls remain distinct from steps added by the edit rule.
 % 检查器还要求 \(\forall a\in\mathsf{StillRequired}_u.\ \exists t\in O_{\sem{T'}}.\ \mathsf{Covers}_u(t,a)\)：每个要求实现的源结果都有完整目标结果，共享工作流调用保持共享，继承调用与编辑规则添加的步骤保持区分。
 
 The edit-rule check uses the following judgment.
@@ -452,8 +458,8 @@ The edit-rule check uses the following judgment.
 \[
 \Sigma_\zeta;H\vdash_{\rm edit}u\Rightarrow(T',\mathcal P_u)
 \]
-It holds exactly when every named object belongs to \(\mathsf{addr}(T)\), every introduced object belongs to \(\omega\), the source pattern matches, the applicable preservation maps and disjoint cover hold, every still-required outcome is covered, every removal carries the proper authority, and \(\sem{T'}\) is defined.
-% 当且仅当每个具名对象属于 \(\mathsf{addr}(T)\)、每个引入对象属于 \(\omega\)、源状态模式匹配、适用的保持映射与不交覆盖成立、每个仍然要求实现的结果都被覆盖、每次移除都具有适当权限且 \(\sem{T'}\) 有定义时，该判定才成立。
+It holds exactly when every named object belongs to \(\mathsf{addr}(T)\), every introduced object belongs to \(\omega\), the source pattern matches, the preservation maps and disjoint cover hold, every still-required outcome is covered, every removal carries the proper authority, and \(\sem{T'}\) is defined.
+% 当且仅当每个具名对象属于 \(\mathsf{addr}(T)\)、每个引入对象属于 \(\omega\)、源状态模式匹配、保持映射与不交覆盖成立、每个仍然要求实现的结果都被覆盖、每次移除都具有适当权限且 \(\sem{T'}\) 有定义时，该判定才成立。
 The policy authority may authorize removal of the unselected arm of a typed \(\mathsf{MergeSelect}\) or the current branch of \(\mathsf{RestoreReplace}\), using the signed sets defined below.
 % 策略权限方可以授权移除类型化 \(\mathsf{MergeSelect}\) 中未被选择的分支，或 \(\mathsf{RestoreReplace}\) 的当前分支，并使用下文定义的签名集合。
 \subsubsection{Required-outcome preservation}
@@ -515,8 +521,8 @@ New identifiers and the target rule version \(\eta^+\) are deterministically all
 % 新标识和目标规则版本 \(\eta^+\) 由 \((\omega,\zeta,\mathsf{ver},u,\mathsf{role})\) 确定性分配。
 \(\mathsf{role}\) identifies which operation argument receives each new ID.
 % \(\mathsf{role}\) 标识每个新标识属于哪个操作参数。
-Write \(\mathsf{Copy}_r(\mathcal C)\) for the proof tuple \((\mathcal C,\mathsf{clone}_r(\mathcal C),\mu_r,\pi_r)\), and \(\mathsf{Keep}(\mathcal C)\) for \((\mathcal C,\mathsf{carry}(\mathcal C),\mu,\pi)\).
-% 将证明元组 \((\mathcal C,\mathsf{clone}_r(\mathcal C),\mu_r,\pi_r)\) 记为 \(\mathsf{Copy}_r(\mathcal C)\)，并将 \((\mathcal C,\mathsf{carry}(\mathcal C),\mu,\pi)\) 记为 \(\mathsf{Keep}(\mathcal C)\)。
+Write \(\mathsf{Copy}_r(\mathcal C)\) for \((\mathcal C,\mathsf{clone}_r(\mathcal C),\mu_r,\pi_r)\), and \(\mathsf{Keep}(\mathcal C)\) for \((\mathcal C,\mathsf{carry}(\mathcal C),\mu,\pi)\).
+% 将 \((\mathcal C,\mathsf{clone}_r(\mathcal C),\mu_r,\pi_r)\) 记为 \(\mathsf{Copy}_r(\mathcal C)\)，并将 \((\mathcal C,\mathsf{carry}(\mathcal C),\mu,\pi)\) 记为 \(\mathsf{Keep}(\mathcal C)\)。
 Each abbreviation asserts the corresponding \(\preccurlyeq_\mu\) relation.
 % 每个缩写都断言相应的 \(\preccurlyeq_\mu\) 关系。
 For a current workflow \(T_0\), \(\mathsf{Keep}(T_0)\) abbreviates \(\mathsf{Keep}(\sem{T_0})\) and has target contract \(\sem{\mathsf{carry}(T_0)}\).
@@ -526,8 +532,8 @@ Every \(b\) or \(g\) named below must lie in \(\mathsf{addr}(T)\).
 
 \begin{table*}[t]
 \centering
-\caption{The six Agent execution edits.
-% 六种 Agent 执行编辑。
+\caption{The six workflow-changing forms of Fork, Restore, and Merge.
+% Fork、Restore 和 Merge 改变工作流的六种形式。
 \(E_\sigma^\bullet\) is derived from the registered edit rule in \(\Sigma_\zeta\).}
 % \(E_\sigma^\bullet\) 从 \(\Sigma_\zeta\) 中已注册的编辑规则派生。
 \label{tab:history-rules}
@@ -634,8 +640,8 @@ For well-formed \(H\), the judgment in \cref{eq:derived-cut} is deterministic.
 % 对于良构的 \(H\)，\cref{eq:derived-cut} 中的判定是确定性的。
 If it derives \(H'\), then \(H'\) is well formed.
 % 如果它推导出 \(H'\)，则 \(H'\) 是良构的。
-It preserves required outcomes and their signed authorities, retaining evidence for every satisfied outcome and every still-required source outcome except a signed authorized removal.
-% 它保留要求实现的结果及其签名权限，保留每个已满足结果和每个仍然要求实现的源结果的证据，签名授权移除除外。
+It preserves required outcomes and their signed authorities, retaining a record for every satisfied outcome and every still-required source outcome except a signed authorized removal.
+% 它保留要求实现的结果及其签名权限，并为每个已满足结果和每个仍然要求实现的源结果保留记录，已签名的授权移除除外。
 The surrounding-workflow identity map and family \(\mathcal P_u\) preserve which calls refer to the same action, source regions, the authority for each outcome, and causal order.
 % 周围工作流恒等映射和族 \(\mathcal P_u\) 保持哪些调用指向同一个动作、来源区域、每个结果的权限方以及因果次序。
 For every \(a\in\mathsf{StillRequired}_u\), some complete target outcome \(t\) satisfies \(\mathsf{Covers}_u(t,a)\), including every unchanged outcome outside the edited region.
@@ -645,8 +651,10 @@ Every current target workflow call \(x\) has \(\beta'(x)=(j_x^+,\eta^+)\) and an
 \end{lemma}
 \begin{proof}[Proof sketch]
 % 证明概要。
-The six cases use the copy/keep bijections and surrounding-workflow identity map to preserve action sharing, source regions, and order and to construct every \(\mathsf{Covers}_u\) witness.
-% 六种情况使用复制/保留双射和周围工作流恒等映射来保持动作共享、来源区域和次序，并构造每个 \(\mathsf{Covers}_u\) 见证。
+The six cases use the copy/keep bijections and surrounding-workflow identity map to preserve action sharing, source regions, and order.
+% 六种情况使用复制/保留双射和周围工作流恒等映射来保持动作共享、来源区域和次序。
+They also construct a target outcome satisfying each required \(\mathsf{Covers}_u\) relation.
+% 它们还为每个要求成立的 \(\mathsf{Covers}_u\) 关系构造一个目标结果。
 The common state update establishes well-formedness and sets \(\beta'(x)=(j_x^+,\eta^+)\) for every current target workflow call.
 % 公共状态更新建立良构性，并为每个当前目标工作流调用设置 \(\beta'(x)=(j_x^+,\eta^+)\)。
 \Cref{app:schema-fidelity-proof} gives the full argument.

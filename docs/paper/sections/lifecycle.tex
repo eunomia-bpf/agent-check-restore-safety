@@ -154,8 +154,10 @@ A concurrent Merge or Restore result computed before that progress is now out of
 % 即使授权日志没有变化，在该进展之前计算的并发 Merge 或 Restore 结果也已经过期。
 The final check must therefore compare both the authorization log and the ordered record \(\chi\) of executed workflow calls.
 % 因此，最终检查必须同时比较授权日志和记录已执行工作流调用顺序的 \(\chi\)。
-For this \(\mathsf{RestoreLive}\) request, the checker either puts the newly computed rules into effect or returns a rejection proof.
-% 对于该 \(\mathsf{RestoreLive}\) 请求，检查器要么使新计算出的规则生效，要么返回拒绝证明。
+For this \(\mathsf{RestoreLive}\) request, the runtime puts the newly computed rules into effect only if the execution record is unchanged.
+% 对于该 \(\mathsf{RestoreLive}\) 请求，运行时仅在执行记录未改变时使新计算出的规则生效。
+Otherwise, it discards the outdated result and checks the request again against the current record.
+% 否则，运行时丢弃已过期的结果，并根据当前记录重新检查该请求。
 
 Together, these executions give the paper's end-to-end safety rule.
 % 这些执行共同给出本文的端到端安全规则。

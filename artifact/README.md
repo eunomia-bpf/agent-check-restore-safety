@@ -38,6 +38,14 @@ implementation may safely omit optional behavior without being confused with
 a GateClone over-approximation.  Its seal certifies structural history
 admission only; it deliberately does not authorize an external effect.
 
+The Lean model additionally separates an Agent-facing edit request from its
+authenticated edit-schema row.  The request names only the operation, live
+objects, and a rule identifier.  Registered suffixes come from the schema;
+destructive authorization is derived from signed removal rows.  The resulting
+edited contract carries the target outcomes and linearizations together with
+the `StillRequired` partition and `Covers` witnesses, is checked by
+`CompilerAns`, and is the exact contract stored by atomic installation.
+
 `exact_history_realization.py` is a bounded executable model of the paper's
 unified Agent-history contract.  It enumerates indexed causal completions,
 performs length-preserving fresh/alias resolution, and computes the finite

@@ -73,9 +73,10 @@ structure AuthorityId where
   value : Nat
 deriving DecidableEq, Repr
 
-/-- Authenticated edit-rule row.  The internal `resolved` edit is the only
-place where registered suffixes and destructive-row authority bits occur.
-The Agent-facing `RegisteredEditRequest` contains none of these fields.
+/-- Authenticated edit-rule row.  The schema stores registered suffixes but no
+destructive-authority Boolean.  That Boolean is derived from the authenticated
+signature rows below.  The Agent-facing `RegisteredEditRequest` contains
+neither suffixes nor signatures.
 
 `targetOutcomes` and `targetLinearizations` are the registered indexed
 contract \(\mathcal C_u\).  `satisfied` and signed removal rows determine
@@ -83,12 +84,18 @@ which source outcomes remain required; `covers` maps a target outcome to the
 source outcomes it preserves. -/
 structure AuthenticatedEditRule (Outcome : Type uOutcome) where
   id : EditRuleId
-  resolved : EditRequest
+  schema : RegisteredEditSchema
   targetOutcomes : Finset Outcome
   targetLinearizations : Outcome → Finset (List Occurrence)
   satisfied : Finset Outcome
   covers : Finset (Outcome × Outcome)
   removalSignatures : Finset (Outcome × AuthorityId)
+
+/-- Structural edit resolved from the authenticated schema.  Destructive
+authority is true exactly when the registry contains a signed removal row. -/
+def AuthenticatedEditRule.resolvedEdit
+    (rule : AuthenticatedEditRule Outcome) : EditRequest :=
+  rule.schema.toEditRequest rule.removalSignatures.Nonempty
 
 /-- A rule row can answer a public request only when its stable identifier and
 all caller-visible object identifiers agree. -/
@@ -96,7 +103,7 @@ def AuthenticatedEditRule.matches
     (rule : AuthenticatedEditRule Outcome)
     (request : RegisteredEditRequest) : Bool :=
   decide (rule.id = request.ruleId) &&
-    request.matchesResolved rule.resolved
+    request.matchesSchema rule.schema
 
 /-- Deterministically resolve an Agent-facing request against the authenticated
 registry.  Registry validity below prevents duplicate rule identifiers. -/
@@ -137,7 +144,7 @@ def RegisteredSlice.lookupEditRule
 def RegisteredSlice.resolveEdit
     (slice : RegisteredSlice Outcome Label)
     (request : RegisteredEditRequest) : Option EditRequest :=
-  (slice.lookupEditRule request).map (·.resolved)
+  (slice.lookupEditRule request).map (·.resolvedEdit)
 
 def contractAt (slice : RegisteredSlice Outcome Label)
     (durableReceiptCells : List Cell) : Contract Outcome Label where
@@ -237,8 +244,8 @@ theorem checkEditObligations_iff
     simp only [checkEditObligations, Bool.and_eq_true,
       decide_eq_true_eq] at checked
     rcases checked with
-      ⟨targetNonempty, targetLanguage_eq, satisfied_subset,
-        signatures_registered, promised_partition, covers_bounded,
+      ⟨⟨⟨⟨⟨⟨targetNonempty, targetLanguage_eq⟩, satisfied_subset⟩,
+        signatures_registered⟩, promised_partition⟩, covers_bounded⟩,
         stillRequired_covered⟩
     exact {
       targetNonempty := targetNonempty
@@ -250,10 +257,16 @@ theorem checkEditObligations_iff
       stillRequired_covered := stillRequired_covered
     }
   · intro obligations
-    simp [checkEditObligations, obligations.targetNonempty,
-      obligations.targetLanguage_eq, obligations.satisfied_subset,
-      obligations.signatures_registered, obligations.promised_partition,
-      obligations.covers_bounded, obligations.stillRequired_covered]
+    simp only [checkEditObligations, Bool.and_eq_true,
+      decide_eq_true_eq]
+    exact
+      ⟨⟨⟨⟨⟨⟨obligations.targetNonempty,
+        obligations.targetLanguage_eq⟩,
+        obligations.satisfied_subset⟩,
+        obligations.signatures_registered⟩,
+        obligations.promised_partition⟩,
+        obligations.covers_bounded⟩,
+        obligations.stillRequired_covered⟩
 
 /-- The indexed edited contract \(\mathcal C_u\) carried by an authenticated
 rule, with the current durable receipt cut transported unchanged. -/
@@ -275,17 +288,17 @@ def deriveAuthenticatedEdit
     (history : History)
     (request : RegisteredEditRequest) : Option History := do
   let rule ← slice.lookupEditRule request
-  deriveEdit history rule.resolved
+  deriveEdit history rule.resolvedEdit
 
-/-- Independent relational account of authenticated edit derivation. -/
-def AuthenticatedHistoryDerivation
+/-- Independently checkable evidence for authenticated edit derivation. -/
+structure AuthenticatedHistoryDerivation
     (slice : RegisteredSlice Outcome Label)
     (source : History)
     (request : RegisteredEditRequest)
-    (target : History) : Prop :=
-  ∃ rule,
-    slice.lookupEditRule request = some rule ∧
-      HistoryDerivation source rule.resolved target
+    (target : History) where
+  rule : AuthenticatedEditRule Outcome
+  lookup : slice.lookupEditRule request = some rule
+  structural : HistoryDerivation source rule.resolvedEdit target
 
 theorem deriveAuthenticatedEdit_iff
     (slice : RegisteredSlice Outcome Label)
@@ -293,13 +306,35 @@ theorem deriveAuthenticatedEdit_iff
     (request : RegisteredEditRequest)
     (target : History) :
     deriveAuthenticatedEdit slice source request = some target ↔
-      AuthenticatedHistoryDerivation slice source request target := by
+      Nonempty
+        (AuthenticatedHistoryDerivation slice source request target) := by
   simp only [deriveAuthenticatedEdit]
   cases lookup : slice.lookupEditRule request with
   | none =>
-      simp [lookup, AuthenticatedHistoryDerivation]
+      constructor
+      · intro impossible
+        simp [lookup] at impossible
+      · intro authenticated
+        obtain ⟨evidence⟩ := authenticated
+        have impossible : False := by
+          have registered := evidence.lookup
+          rw [lookup] at registered
+          simpa using registered
+        exact impossible.elim
   | some rule =>
-      simp [lookup, AuthenticatedHistoryDerivation, deriveEdit_iff]
+      constructor
+      · intro derived
+        exact ⟨⟨rule, lookup, deriveEdit_sound derived⟩⟩
+      · intro authenticated
+        obtain ⟨evidence⟩ := authenticated
+        have registered :
+            (some rule : Option (AuthenticatedEditRule Outcome)) =
+              some evidence.rule :=
+          lookup.symm.trans evidence.lookup
+        have sameRule : rule = evidence.rule :=
+          Option.some.inj registered
+        cases sameRule
+        exact deriveEdit_complete evidence.structural
 
 /-- Compute the contract checked for one concrete authenticated edit. -/
 def editedContractAt
@@ -309,7 +344,7 @@ def editedContractAt
     (request : RegisteredEditRequest)
     (target : History) : Option (Contract Outcome Label) := do
   let rule ← slice.lookupEditRule request
-  let derived ← deriveEdit source rule.resolved
+  let derived ← deriveEdit source rule.resolvedEdit
   if derived = target ∧ checkEditObligations slice rule target then
     some (rule.targetContract slice durableReceiptCells)
   else
@@ -330,8 +365,9 @@ theorem editedContractAt_spec
         some contract) :
     ∃ rule,
       slice.lookupEditRule request = some rule ∧
-      deriveEdit source rule.resolved = some target ∧
+      deriveEdit source rule.resolvedEdit = some target ∧
       contract = rule.targetContract slice durableReceiptCells ∧
+      rule.targetLanguage = target.frontier.rawLanguage ∧
       slice.promised =
         rule.stillRequired slice ∪
           (rule.satisfied ∪ rule.authorizedRemovals slice) ∧
@@ -346,7 +382,7 @@ theorem editedContractAt_spec
   | none =>
       simp [lookup] at edited
   | some rule =>
-      cases derive : deriveEdit source rule.resolved with
+      cases derive : deriveEdit source rule.resolvedEdit with
       | none =>
           simp [lookup, derive] at edited
       | some derived =>
@@ -362,18 +398,21 @@ theorem editedContractAt_spec
               contract = rule.targetContract slice durableReceiptCells := by
             simpa [lookup, derive, accepted] using edited.symm
           refine ⟨rule, rfl, ?_, contractEq,
-            obligations.promised_partition, ?_, ?_⟩
+            obligations.targetLanguage_eq, obligations.promised_partition,
+            ?_, ?_⟩
           · simpa [accepted.1] using derive
           · intro sourceOutcome sourceMember
             have projected :
                 sourceOutcome ∈ rule.covers.image Prod.snd :=
               obligations.stillRequired_covered sourceMember
-            obtain ⟨pair, pairMember, pairSnd⟩ :=
+            obtain ⟨⟨targetOutcome, coveredSource⟩, pairMember, pairSnd⟩ :=
               Finset.mem_image.1 projected
-            refine ⟨pair.1, ?_, ?_⟩
+            simp only [Prod.snd] at pairSnd
+            subst coveredSource
+            refine ⟨targetOutcome, ?_, ?_⟩
             have bounded := obligations.covers_bounded pairMember
             exact (Finset.mem_product.1 bounded).1
-            simpa [AuthenticatedEditRule.Covers, pairSnd] using pairMember
+            exact pairMember
           · intro sourceOutcome member
             exact (Finset.mem_filter.1 member).2
 
@@ -422,7 +461,6 @@ structure RegisteredSlice.Valid
   contractValid : ValidInstance (contractAt slice [])
   greatestNonempty :
     (greatestPostfixed (contractAt slice [])).Nonempty
-  editRuleIdsNodup : slice.editRuleIds.Nodup
 
 /-- Authenticated append-only control-plane growth.  The active contract's
 topology, resolution map, and labels retain exactly their old meanings.
@@ -435,10 +473,6 @@ structure RegisteredSlice.StaticExtends
   linearizations_eq : target.linearizations = source.linearizations
   cellOf_eq : target.cellOf = source.cellOf
   labelOf_eq : target.labelOf = source.labelOf
-  outcomeAuthority_eq :
-    target.outcomeAuthority = source.outcomeAuthority
-  editRules_mono :
-    ∀ rule ∈ source.editRules, rule ∈ target.editRules
   schemas_mono :
     source.registeredSchemas ⊆ target.registeredSchemas
   identityRows_mono :
@@ -1123,12 +1157,13 @@ structure InstallCandidate
     [DecidableEq Outcome] [DecidableEq Label] where
   capturedHistory : History
   parentEpoch : RuntimeName
-  request : EditRequest
+  request : RegisteredEditRequest
   specification :
     CutSpecification (Outcome := Outcome) (Label := Label)
   source_eq : specification.source = some capturedHistory
   derivation :
-    HistoryDerivation capturedHistory request specification.target
+    AuthenticatedHistoryDerivation specification.slice capturedHistory
+      request specification.target
 
 def InstallCandidate.ValidFor
     [DecidableEq Outcome] [DecidableEq Label]
@@ -1727,49 +1762,49 @@ inductive KernelStep
       KernelStep state (.aliasUse token)
         (aliasUsePost state token postHistory)
   | installForkChoice
-      {state candidate request target leftSuffix rightSuffix}
+      {state candidate request target rule}
       (shape :
         candidate.request =
-          .forkChoice request target leftSuffix rightSuffix)
+          .forkChoice request target rule)
       (valid : candidate.ValidFor state) :
       KernelStep state (.installForkChoice candidate)
         (installPost state candidate)
   | installForkParallel
-      {state candidate request target leftSuffix rightSuffix}
+      {state candidate request target rule}
       (shape :
         candidate.request =
-          .forkParallel request target leftSuffix rightSuffix)
+          .forkParallel request target rule)
       (valid : candidate.ValidFor state) :
       KernelStep state (.installForkParallel candidate)
         (installPost state candidate)
   | installRestoreReplace
-      {state candidate request target checkpoint retirementAuthorized}
+      {state candidate request target checkpoint rule}
       (shape :
         candidate.request =
-          .restoreReplace request target checkpoint retirementAuthorized)
+          .restoreReplace request target checkpoint rule)
       (valid : candidate.ValidFor state) :
       KernelStep state (.installRestoreReplace candidate)
         (installPost state candidate)
   | installRestoreLive
-      {state candidate request target checkpoint}
+      {state candidate request target checkpoint rule}
       (shape :
         candidate.request =
-          .restoreLive request target checkpoint)
+          .restoreLive request target checkpoint rule)
       (valid : candidate.ValidFor state) :
       KernelStep state (.installRestoreLive candidate)
         (installPost state candidate)
   | installMergeSelect
-      {state candidate request target winner suffix retirementAuthorized}
+      {state candidate request target winner rule}
       (shape :
         candidate.request =
-          .mergeSelect request target winner suffix retirementAuthorized)
+          .mergeSelect request target winner rule)
       (valid : candidate.ValidFor state) :
       KernelStep state (.installMergeSelect candidate)
         (installPost state candidate)
   | installMergeJoin
-      {state candidate request target suffix}
+      {state candidate request target rule}
       (shape :
-        candidate.request = .mergeJoin request target suffix)
+        candidate.request = .mergeJoin request target rule)
       (valid : candidate.ValidFor state) :
       KernelStep state (.installMergeJoin candidate)
         (installPost state candidate)
@@ -1914,22 +1949,22 @@ theorem six_edits_closed
     (valid : candidate.ValidFor state) :
     ∃ event, KernelStep state event (installPost state candidate) := by
   cases shape : candidate.request with
-  | forkChoice request target leftSuffix rightSuffix =>
+  | forkChoice request target rule =>
       exact ⟨.installForkChoice candidate,
         .installForkChoice shape valid⟩
-  | forkParallel request target leftSuffix rightSuffix =>
+  | forkParallel request target rule =>
       exact ⟨.installForkParallel candidate,
         .installForkParallel shape valid⟩
-  | restoreReplace request target checkpoint retirementAuthorized =>
+  | restoreReplace request target checkpoint rule =>
       exact ⟨.installRestoreReplace candidate,
         .installRestoreReplace shape valid⟩
-  | restoreLive request target checkpoint =>
+  | restoreLive request target checkpoint rule =>
       exact ⟨.installRestoreLive candidate,
         .installRestoreLive shape valid⟩
-  | mergeSelect request target winner suffix retirementAuthorized =>
+  | mergeSelect request target winner rule =>
       exact ⟨.installMergeSelect candidate,
         .installMergeSelect shape valid⟩
-  | mergeJoin request target suffix =>
+  | mergeJoin request target rule =>
       exact ⟨.installMergeJoin candidate,
         .installMergeJoin shape valid⟩
 

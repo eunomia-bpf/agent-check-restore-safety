@@ -70,7 +70,7 @@ theorem six_edit_derivation_exact
 /-- Compilation is an explicit kernel event: preloading records the candidate
 in inactive metadata and preserves the complete installed-state invariant. -/
 theorem compilation_preload_preserves_agentSec
-    {Outcome : Type uOutcome} {Label : Type uLabel}
+    {Outcome : Type} {Label : Type}
     [DecidableEq Outcome] [DecidableEq Label]
     {state : InstalledState (Outcome := Outcome) (Label := Label)}
     (secure : AgentSec state)
@@ -86,32 +86,37 @@ theorem compilation_preload_preserves_agentSec
 compiler admission construct an atomic installation whose successor and every
 finite continuation satisfy `AgentSec`. -/
 theorem exact_edit_installs_trace_safe_monitor
-    {Outcome : Type uOutcome} {Label : Type uLabel}
+    {Outcome : Type} {Label : Type}
     [DecidableEq Outcome] [DecidableEq Label]
     (state : InstalledState (Outcome := Outcome) (Label := Label))
     (secure : AgentSec state)
-    {request : EditRequest} {target : History}
-    (derived : deriveEdit state.history request = some target)
-    (admitted : CompilerAns (currentContract state) = .admit)
+    {request : RegisteredEditRequest} {target : History}
+    {contract : Contract Outcome Label}
+    (edited : editedContract state request target = some contract)
+    (admitted : CompilerAns contract = .admit)
     (fresh : FreshEditAllocation state request)
-    (running : state.availability = .running) :
+    (running : state.availability = RuntimeAvailability.running) :
     ∃ (candidate : InstallCandidate (Outcome := Outcome) (Label := Label))
       (event : KernelEvent (Outcome := Outcome) (Label := Label)),
       candidate =
           compileInstallCandidate state secure
-            (deriveEdit_sound derived) admitted
+            edited admitted
             (historyDerivation_preserves_wellFormed secure.core_schema.1
-              (deriveEdit_sound derived)) ∧
+              (editedContract_authenticatedDerivation state
+                edited).structural) ∧
         candidate.ValidFor state ∧
         KernelStep state event (installPost state candidate) ∧
         ∀ post, KernelTrace (installPost state candidate) post →
           AgentSec post := by
-  let derivation : HistoryDerivation state.history request target :=
-    deriveEdit_sound derived
+  let derivation :
+      AuthenticatedHistoryDerivation state.specification.slice state.history
+        request target :=
+    editedContract_authenticatedDerivation state edited
   have targetWellFormed : target.WellFormed :=
-    historyDerivation_preserves_wellFormed secure.core_schema.1 derivation
+    historyDerivation_preserves_wellFormed secure.core_schema.1
+      derivation.structural
   obtain ⟨candidate, event, candidateEq, valid, step, postSecure⟩ :=
-    compiler_admit_exists_secure_install state secure derivation admitted
+    compiler_admit_exists_secure_install state secure edited admitted
       targetWellFormed fresh running
   refine ⟨candidate, event, ?_, valid, step, ?_⟩
   · simpa [derivation, targetWellFormed] using candidateEq
@@ -122,7 +127,7 @@ theorem exact_edit_installs_trace_safe_monitor
 a prior Fresh or Alias makes the prepared installation stale, while a prior
 installation closes the old epoch and turns the old use into a denial. -/
 theorem fresh_alias_installation_serialized
-    {Outcome : Type uOutcome} {Label : Type uLabel}
+    {Outcome : Type} {Label : Type}
     [DecidableEq Outcome] [DecidableEq Label]
     {state : InstalledState (Outcome := Outcome) (Label := Label)}
     {candidate : InstallCandidate (Outcome := Outcome) (Label := Label)}

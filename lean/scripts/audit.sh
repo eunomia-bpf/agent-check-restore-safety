@@ -196,6 +196,16 @@ frozen_constants=(
   compilation_preload_preserves_agentSec
   exact_edit_installs_trace_safe_monitor
   fresh_alias_installation_serialized
+  compileInstallCandidate_installs_editedContract
+  checkEditObligations_iff
+  deriveAuthenticatedEdit_iff
+  editedContractAt_spec
+  answerSignature_exact
+  exactView_iff_refines_answerSignature
+  exactView_separates_answer_pair
+  fourFactor_exactView_injective
+  fourFactor_exactView_card_lower_bound
+  exactView_separates_each_dimension
 )
 
 # Named executable controls are elaborated through `AuthorityContinuity.Main`.

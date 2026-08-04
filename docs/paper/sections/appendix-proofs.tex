@@ -2,8 +2,8 @@
 % 补充证明附录
 \label{app:proofs}
 
-This appendix instantiates the proof objects used by \cref{thm:exact-history} over finite registered call models and atomic policy-domain rule versions.
-% 本附录在有限已注册调用模型与原子策略域规则版本上实例化 \cref{thm:exact-history} 使用的证明对象。
+This appendix instantiates the proof objects used by \cref{thm:exact-checking} over finite registered call models and atomic policy-domain rule versions.
+% 本附录在有限已注册调用模型与原子策略域规则版本上实例化 \cref{thm:exact-checking} 使用的证明对象。
 Independent domains retain the product interpretation stated in the paper.
 % 独立域仍采用正文所述的乘积解释。
 
@@ -305,8 +305,9 @@ For \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), define
    \mathsf{enc}(\mathsf{request},\omega,\zeta,\kappa,
    H,\Delta,\mathsf{out},\mathcal A,u)).
 \]
-When \(\mathsf{Derive}(\Theta)\) is defined, also define
-% 当 \(\mathsf{Derive}(\Theta)\) 有定义时，另定义
+When \(\mathsf{Derive}(\Theta)\) is defined and
+\(\widehat B^\dagger_{H,u}\ne\varnothing\), also define
+% 当 \(\mathsf{Derive}(\Theta)\) 有定义且 \(\widehat B^\dagger_{H,u}\ne\varnothing\) 时，另定义
 \[
 \begin{aligned}
 \mathsf{aut}_Z
@@ -606,7 +607,7 @@ Omitted & Record pair & Correct answers\\
 \(V^0\): safe;
 \(V^1\): \(\mathsf{Invalid}\) because the mode is wrong.\\
 \(\mathbf I\) &
-\(q_{\mathbf I}=\mathsf{Decide}(\mathsf{RestoreLive}(b_L,k,\sigma_{\mathbf I}))\) after safe empty-root/ForkChoice/Save;
+\(q_{\mathbf I}=\mathsf{Decide}(\mathsf{RestoreLive}(b_L,k,\sigma_{\mathbf I}))\) after safe empty-root/ForkChoice/Checkpoint;
 \(\Delta=\epsilon,\mathcal A=\Pref\{a\}\);
 \(q^0_{\rm act}(x)=q^0_{\rm act}(y)=d_0\);
 \(q^1_{\rm act}(x)=d_0\ne d_1=q^1_{\rm act}(y)\);
@@ -616,12 +617,12 @@ two \Fresh reject \(aa\).\\
 \(\mathbf E\) &
 \(u_{\mathbf E}=\mathsf{RestoreReplace}(b_L,k,\sigma_{\mathbf E})\),
 \(q_{\mathbf E}=\mathsf{TryUpdate}(u_{\mathbf E},Y_0)\);
-\(Y_0\) is checked at \(V^0\) after safe empty-root/ForkChoice/Save/\Fresh;
+\(Y_0\) is checked at \(V^0\) after safe empty-root/ForkChoice/Checkpoint/\Fresh;
 \(V^0\xrightarrow{\Dispatch(d)}V^1\), changing only whether a queued request was released. &
 \(V^0\): rules take effect;
 \(V^1\): \(\mathsf{NoCommit}\) because the checked record changed.\\
 \(\mathsf{Drop}_{ra}\) &
-\(q_{\neg ar}=\mathsf{Decide}(\mathsf{RestoreReplace}(b_L,k,\sigma_{\neg ar}))\) after safe empty-root/ForkChoice/Save/\Fresh;
+\(q_{\neg ar}=\mathsf{Decide}(\mathsf{RestoreReplace}(b_L,k,\sigma_{\neg ar}))\) after safe empty-root/ForkChoice/Checkpoint/\Fresh;
 \(q_{\rm act}(x)=d\), \(\mathcal A=\Pref\{a\}\);
 same calls \(\{c,x\}\), records \(\{p\}\), and actions \(\{d,e\}\);
 \((q_{\rm act}(c),p)=(d,d)\) in \(V^0\), \((e,e)\) in \(V^1\). &
@@ -729,8 +730,8 @@ Only the initial rule update creates a root origin, and every successful later u
 
 The following finite pairs use private names except for each displayed request and authorization label.
 % 下列有限记录对除所显示的请求和授权标签外均使用私有名称。
-Each state is reached from \(\mathsf S_\emptyset\) by the stated registration, initial rule update, Save, protected-call, and edit steps.
-% 每个状态都从 \(\mathsf S_\emptyset\) 经由所述注册、初始规则更新、Save、受控调用和编辑步骤到达。
+Each state is reached from \(\mathsf S_\emptyset\) by the stated registration, initial rule update, Checkpoint, protected-call, and edit steps.
+% 每个状态都从 \(\mathsf S_\emptyset\) 经由所述注册、初始规则更新、Checkpoint、受控调用和编辑步骤到达。
 
 \paragraph{\(\mathbf P\): workflow structure}
 % \(\mathbf P\)：工作流结构
@@ -784,8 +785,8 @@ From the \(\mathbf 1\) root now in force, the common Fork rule derives \(b_L{:}X
 % 从已经生效的 \(\mathbf 1\) 根出发，公共 Fork 规则派生 \(b_L{:}X\oplus_g^{\mathsf{open}}b_R{:}Y\)。
 Each outcome uses one protected action, so both Fork updates are safe under \(\Pref\{a\}\).
 % 每个结果使用一个受控动作，所以两次 Fork 更新在 \(\Pref\{a\}\) 下都是安全的。
-Save \(b_R\) before progress and issue the common query \(q_{\mathbf I}=\mathsf{Decide}(\mathsf{RestoreLive}(b_L,k,\sigma_{\mathbf I}))\).
-% 在取得进展前保存 \(b_R\)，再发出公共查询 \(q_{\mathbf I}=\mathsf{Decide}(\mathsf{RestoreLive}(b_L,k,\sigma_{\mathbf I}))\)。
+Create a checkpoint for \(b_R\) before progress and issue the common query \(q_{\mathbf I}=\mathsf{Decide}(\mathsf{RestoreLive}(b_L,k,\sigma_{\mathbf I}))\).
+% 在取得进展前为 \(b_R\) 创建检查点，再发出公共查询 \(q_{\mathbf I}=\mathsf{Decide}(\mathsf{RestoreLive}(b_L,k,\sigma_{\mathbf I}))\)。
 Up to clone renaming, the target is \((X\otimes Y_k)\oplus Y\).
 % 在克隆重命名意义下，目标为 \((X\otimes Y_k)\oplus Y\)。
 In \(V_{\mathbf I}^0\), the left outcome uses one \Fresh and one \Alias on \(d_0\), while the bypass outcome uses one \Fresh, so every outcome has authorization sequence \(a\).
@@ -803,8 +804,8 @@ Let \(C,X\) be singleton contracts with workflow calls \(c,x\), let \(q_{\rm act
 % 令 \(C,X\) 为分别具有工作流调用 \(c,x\) 的单元素契约，令 \(q_{\rm act}(c)=q_{\rm act}(x)=d\)，并以 \(a\) 标记 \(d\)。
 From the safe \(\mathbf 1\) root, a checked Fork update puts \(b_L{:}C\oplus_g^{\mathsf{open}}b_R{:}X\) into effect.
 % 从安全的 \(\mathbf 1\) 根出发，一次经检查的 Fork 更新使 \(b_L{:}C\oplus_g^{\mathsf{open}}b_R{:}X\) 生效。
-Save \(b_R\), then use \(c\) to complete the left arm, create authorization record \(p\), and queue its protected request.
-% 保存 \(b_R\)，再使用 \(c\) 完成左侧分支、创建授权记录 \(p\)，并将其受控请求加入队列。
+Create a checkpoint for \(b_R\), then use \(c\) to complete the left arm, create authorization record \(p\), and queue its protected request.
+% 为 \(b_R\) 创建检查点，再使用 \(c\) 完成左侧分支、创建授权记录 \(p\)，并将其受控请求加入队列。
 At the resulting \(V_{\mathbf E}^0\), check \(u_{\mathbf E}=\mathsf{RestoreReplace}(b_L,k,\sigma_{\mathbf E})\) to obtain \(Y_0\).
 % 在所得 \(V_{\mathbf E}^0\) 处，检查 \(u_{\mathbf E}=\mathsf{RestoreReplace}(b_L,k,\sigma_{\mathbf E})\) 并得到 \(Y_0\)。
 Its clone of \(x\) reuses \(d\), so the update is safe under \(\mathcal A=\Pref\{a\}\).
@@ -818,8 +819,8 @@ For the same request \(q_{\mathbf E}=\mathsf{TryUpdate}(u_{\mathbf E},Y_0)\), th
 % \(\mathsf{Drop}_{ra}\)：先前授权指向哪个动作
 For a separate pair, keep the common active row \(q_{\rm act}(x)=d\), creator \(c\), authorization record \(p\), and protected actions \(d,e\) labeled \(a\), but set \(q_{\rm act}(c)=d\) and \(p\mapsto d\) in \(V_{\neg ar}^0\), versus \(q_{\rm act}(c)=e\) and \(p\mapsto e\) in \(V_{\neg ar}^1\).
 % 对于另一对状态，保持共同的当前记录 \(q_{\rm act}(x)=d\)、创建者 \(c\)、授权记录 \(p\) 以及以 \(a\) 标记的受控动作 \(d,e\)，但在 \(V_{\neg ar}^0\) 中令 \(q_{\rm act}(c)=d\) 且 \(p\mapsto d\)，在 \(V_{\neg ar}^1\) 中令 \(q_{\rm act}(c)=e\) 且 \(p\mapsto e\)。
-Both states follow the same safe empty-root/ForkChoice/Save/\Fresh shape above, have authorization sequence \(a\), and use the common query \(q_{\neg ar}=\mathsf{Decide}(\mathsf{RestoreReplace}(b_L,k,\sigma_{\neg ar}))\).
-% 两个状态都遵循上述安全的空根/ForkChoice/Save/\Fresh 形状，具有授权序列 \(a\)，并使用共同查询 \(q_{\neg ar}=\mathsf{Decide}(\mathsf{RestoreReplace}(b_L,k,\sigma_{\neg ar}))\)。
+Both states follow the same safe empty-root/ForkChoice/Checkpoint/\Fresh shape above, have authorization sequence \(a\), and use the common query \(q_{\neg ar}=\mathsf{Decide}(\mathsf{RestoreReplace}(b_L,k,\sigma_{\neg ar}))\).
+% 两个状态都遵循上述安全的空根/ForkChoice/Checkpoint/\Fresh 形状，具有授权序列 \(a\)，并使用共同查询 \(q_{\neg ar}=\mathsf{Decide}(\mathsf{RestoreReplace}(b_L,k,\sigma_{\neg ar}))\)。
 The cloned \(x_k\) is \(\Alias(x_k,d)\) in \(V_{\neg ar}^0\), but \(\Fresh(x_k,d)\) produces forbidden word \(aa\) in \(V_{\neg ar}^1\).
 % 克隆的 \(x_k\) 在 \(V_{\neg ar}^0\) 中为 \(\Alias(x_k,d)\)，而在 \(V_{\neg ar}^1\) 中，\(\Fresh(x_k,d)\) 会产生被禁止的权限词 \(aa\)。
 The two records contain the same creator, authorization record, workflow call, and protected actions, and both retain \(x\mapsto d\).
@@ -862,14 +863,14 @@ Every exact checker input must distinguish all five pairs.
 \end{proposition}
 
 \begin{proof}
-\Cref{lem:app-boot} gives the common initial state, and the traces above use only modeled Save, protected-call, execution-edit, and rule-update steps.
-% \Cref{lem:app-boot} 给出共同初始状态，而上述轨迹只使用已建模的 Save、受控调用、执行编辑和规则更新步骤。
+\Cref{lem:app-boot} gives the common initial state, and the traces above use only modeled Checkpoint, protected-call, execution-edit, and rule-update steps.
+% \Cref{lem:app-boot} 给出共同初始状态，而上述轨迹只使用已建模的 Checkpoint、受控调用、执行编辑和规则更新步骤。
 For the two correspondence pairs, the empty root completes with \(\epsilon\), and each Fork arm has a one-\Fresh completion labeled \(a\).
 % 对于两组对应关系记录对，空根以 \(\epsilon\) 完成，并且每个 Fork 分支都具有一条标签为 \(a\) 的单次 \Fresh 完成路径。
 Hence every displayed state before its request is reachable under \(\Pref\{a\}\).
 % 因此，每个显示的请求前状态在 \(\Pref\{a\}\) 下均可达。
-Open choice enables the Save steps, and the active automata enable each stated left-arm \Fresh before that arm becomes a completed, still-addressable continuation.
-% 开放选择启用这些 Save 步骤，而已生效自动机会在左侧分支成为已完成但仍可寻址的延续之前启用各个所述左侧分支 \Fresh。
+Open choice enables the Checkpoint steps, and the active automata enable each stated left-arm \Fresh before that arm becomes a completed, still-addressable continuation.
+% 开放选择启用这些 Checkpoint 步骤，而已生效自动机会在左侧分支成为已完成但仍可寻址的延续之前启用各个所述左侧分支 \Fresh。
 For the \(\mathbf E\) pair, \(\Dispatch\) preserves \(\mathbf P,\mathbf I,\mathbf C\) but changes the checked record, giving a successful update versus \(\mathsf{NoCommit}\).
 % 对于 \(\mathbf E\) 记录对，\(\Dispatch\) 保持 \(\mathbf P,\mathbf I,\mathbf C\)，但改变经检查的记录，从而分别得到成功更新与 \(\mathsf{NoCommit}\)。
 The displayed edit-rule and resolution calculations give the other opposite answers.
@@ -922,8 +923,8 @@ Any failed premise returns \(\mathsf{deny}(x)\) without changing state or invent
 
 \paragraph{Checkpoint, retry, release, and restart}
 % 检查点、重试、发出请求与重新启动
-\(\mathsf{Save}\), authenticated retry, \(\Dispatch\), completion updates, and restart after a stop have the state changes in \cref{tab:app-event-matrix}.
-% \(\mathsf{Save}\)、经认证重试、\(\Dispatch\)、完成状态更新以及停止后的重新启动具有 \cref{tab:app-event-matrix} 中给出的状态变更。
+\(\mathsf{Checkpoint}\), authenticated retry, \(\Dispatch\), completion updates, and restart after a stop have the state changes in \cref{tab:app-event-matrix}.
+% \(\mathsf{Checkpoint}\)、经认证重试、\(\Dispatch\)、完成状态更新以及停止后的重新启动具有 \cref{tab:app-event-matrix} 中给出的状态变更。
 This least-generated LTS represents post-\(\Dispatch\) external-network completion as environmental behavior.
 % 这一最小生成的 LTS 把 \(\Dispatch\) 之后的外部网络完成表示为环境行为。
 
@@ -1136,7 +1137,7 @@ Verified \(\mathsf{Invalid}\) or \(\mathsf{Reject}\) &
 Return the failed derivation or rejection proof; no runtime-state change. &
 \((c,r)\) &
 All clauses unchanged; \(\gamma\) ties the answer to the checked execution record.\\
-\(\mathsf{Save}\) &
+\(\mathsf{Checkpoint}\) &
 Record the current continuation and progress in an authenticated checkpoint; advance \(\mathsf{ver}\). &
 \((c,r)\) &
 \(A_1\): immutable well-typed extension.
@@ -1217,8 +1218,8 @@ Associativity of language quotients gives
  (\Gamma_b/\mathsf{raw}(\chi_b))/x
  =\Gamma_b/\mathsf{raw}(\chi_ba).
 \]
-Thus the updated leaf and any later Save remain synchronized with \(G\).
-% 因此，更新后的叶节点以及此后的任何 Save 都与 \(G\) 保持同步。
+Thus the updated leaf and any later Checkpoint remain synchronized with \(G\).
+% 因此，更新后的叶节点以及此后的任何 Checkpoint 都与 \(G\) 保持同步。
 For a successful edit transition, \cref{lem:history-derivation,lem:live-extension,lem:app-spec-bridge,lem:runtime-language,lem:cut-linearization} establish the third row for all six edit rules and registered extension.
 % 对于成功编辑转移，\cref{lem:history-derivation,lem:live-extension,lem:app-spec-bridge,lem:runtime-language,lem:cut-linearization} 为六条编辑规则与已注册扩展建立表中的第三行。
 Each remaining rule changes only the fields shown in the matrix, and its row checks every invariant clause whose fields change.
@@ -1420,8 +1421,8 @@ An authenticated retry, authorization-data retrieval, or result delivery leaves 
 % \(\Dispatch(d)\) 对相同的最早排队请求启用，并产生相同的可观测发出更新。
 \(\mathsf{Settle}(d,[v]_{\cong})\) is enabled for the same authorization record and produces the same stable result and normalized update.
 % \(\mathsf{Settle}(d,[v]_{\cong})\) 对相同授权记录启用，并产生相同的稳定结果与规范化更新。
-\(\mathsf{Save}\) takes matching \(\tau\)-steps.
-% \(\mathsf{Save}\) 执行匹配的 \(\tau\) 步。
+\(\mathsf{Checkpoint}\) takes matching \(\tau\)-steps.
+% \(\mathsf{Checkpoint}\) 执行匹配的 \(\tau\) 步。
 Runtime preload and internal \(\mathsf{NoCommit}\) results are \(\tau\)-steps matched by zero ideal steps because \(\alpha_S\) omits inactive prepared data and \(\mathsf{obs}_{\rm api}\) hides internal controller results.
 % 运行时预加载与内部 \(\mathsf{NoCommit}\) 结果是由零个理想步骤匹配的 \(\tau\) 步，因为 \(\alpha_S\) 忽略非活动的准备数据，而 \(\mathsf{obs}_{\rm api}\) 隐藏内部控制器结果。
 Stopping and restarting is matched by a \(\tau\) self-loop on each committed-state machine by \cref{lem:app-restart}.
@@ -1441,8 +1442,8 @@ For every step from either side, the corresponding case constructs a path with o
 % 对任一侧的每一步，对应情形都会构造一条观测为 \(\mathsf{obs}_{\rm api}(\ell)\) 的路径，以及一个通过该表中见证相关的后继。
 The construction is symmetric because the ideal and runtime automata accept the same protected calls, while runtime-only steps preserve their common visible state.
 % 该构造是对称的，因为理想自动机与运行时自动机接受相同的受控调用，而仅属于运行时的步骤保持二者共同的可见状态。
-Arbitrary repetition of silent preload, internal \(\mathsf{NoCommit}\), Save, or restart steps is ignored, which is precisely divergence-insensitive weak matching.
-% 任意重复的静默预加载、内部 \(\mathsf{NoCommit}\)、Save 或重新启动步骤均被忽略，这恰是发散不敏感弱匹配。
+Arbitrary repetition of silent preload, internal \(\mathsf{NoCommit}\), Checkpoint, or restart steps is ignored, which is precisely divergence-insensitive weak matching.
+% 任意重复的静默预加载、内部 \(\mathsf{NoCommit}\)、Checkpoint 或重新启动步骤均被忽略，这恰是发散不敏感弱匹配。
 \end{proof}
 
 \subsection{Executable-Artifact Evaluation}

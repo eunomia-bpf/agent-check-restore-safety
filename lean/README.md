@@ -46,6 +46,11 @@ a completed check.
 | `PaperTheorems.compilation_preload_preserves_agentSec` | Compilation preloading is an explicit kernel transition that records inactive candidate metadata and preserves `AgentSec`. |
 | `PaperTheorems.exact_edit_installs_trace_safe_monitor` | An admitted derived edit constructs a valid atomic installation whose every finite continuation preserves `AgentSec`. |
 | `PaperTheorems.fresh_alias_installation_serialized` | Fresh use, alias use, and installation admit exactly the two durable orders: prior use stales the candidate; prior installation denies the old use. |
+| `OperationalSemantics.editedContractAt_spec` | Successful authenticated editing returns the registered edited contract, partitions source promises into satisfied/authorized-removed/still-required outcomes, supplies a `Covers` witness for each still-required outcome, and authenticates each removal. |
+| `CompilationBridge.compileInstallCandidate_installs_editedContract` | The compiler checks the edited contract and atomic installation stores that same contract. |
+| `InformationLowerBound.exactView_iff_refines_answerSignature` | An arbitrary record representation is exact exactly when it refines equality of all checker answers; no raw field layout is assumed. |
+| `InformationLowerBound.fourFactor_exactView_card_lower_bound` | Every finite exact view of independent promise, identity, edit, and current-cut answer dimensions has at least 16 answer classes. |
+| `InformationLowerBound.exactView_separates_each_dimension` | Every exact view separates an answer-changing pair for each of the four dimensions. |
 | `checkAC_sound` | The executable finite AC checker implies semantic authority continuity. |
 | `guardClosure_iff` | Membership in the exact promotion guard is equivalent to old membership plus the promoted load bound. |
 | `simulation_preserves_ac` | A certified target whose configurations project to no-heavier solvent source configurations satisfies AC. |

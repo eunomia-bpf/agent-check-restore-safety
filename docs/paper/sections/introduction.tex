@@ -4,8 +4,8 @@
 
 Tool-using Agent runtimes can change an execution while it is in progress.
 % 使用工具的 Agent 运行时可以在执行过程中改变后续执行。
-They let an Agent Fork an execution into alternatives, Restore an earlier checkpoint, and Merge branches~\cite{codexappserver,claudesessions,claudecheckpoint,wang2026fork,wu2026crab,zhang2026agentlibos}.
-% 它们允许 Agent 将一次执行 Fork 为多个备选方案、Restore 到较早的检查点，并 Merge 多个分支~\cite{codexappserver,claudesessions,claudecheckpoint,wang2026fork,wu2026crab,zhang2026agentlibos}。
+They let an Agent Checkpoint an execution, Fork it into alternatives, Restore an earlier checkpoint, and Merge branches~\cite{codexappserver,claudesessions,claudecheckpoint,wang2026fork,wu2026crab,zhang2026agentlibos}.
+% 它们允许 Agent Checkpoint 一次执行、将其 Fork 为多个备选方案、Restore 到较早的检查点，并 Merge 多个分支~\cite{codexappserver,claudesessions,claudecheckpoint,wang2026fork,wu2026crab,zhang2026agentlibos}。
 These operations support exploration, recovery, and reuse without restarting the task.
 % 这些操作支持探索、恢复与复用，而无需重新开始任务。
 We call them \emph{execution edits} because they change which parts of the workflow will run next.
@@ -90,8 +90,8 @@ After Restore, the repeated approval call reuses the earlier authorization recor
 \begin{enumerate}[leftmargin=*,itemsep=2pt,topsep=2pt]
 \item \textbf{Safety model.}
 % \textbf{安全模型。}
-We define safety for Agent Fork, Restore, and Merge from the execution record rather than from a replacement workflow proposed by the Agent.
-% 我们根据执行记录而不是 Agent 提出的替代工作流，定义 Agent Fork、Restore 和 Merge 的安全性。
+We define safety for Agent Checkpoint, Fork, Restore, and Merge from the execution record rather than from a replacement workflow proposed by the Agent.
+% 我们根据执行记录而不是 Agent 提出的替代工作流，定义 Agent Checkpoint、Fork、Restore 和 Merge 的安全性。
 The model preserves past actions and every still-required outcome, and it proves that every exact checker needs the four facts identified above.
 % 该模型保留过去的动作和每个仍要求实现的结果，并证明每个精确检查器都需要上述四类事实。
 
@@ -99,8 +99,8 @@ The model preserves past actions and every still-required outcome, and it proves
 % \textbf{精确检查与运行时实现。}
 We construct an executable checker that returns either every safe way for the edit to proceed or a proof that none exists.
 % 我们构造一个可执行检查器，它返回该编辑安全推进的全部方式，或者返回不存在安全方式的证明。
-For all six registered edits and later registered extensions, the checker accepts exactly when a safe runtime implementation exists.
-% 对全部六种已注册编辑及后续注册扩展，检查器当且仅当安全运行时实现存在时才接受。
+Checkpoint has an exact local check, and each of the six registered workflow-changing forms is accepted exactly when a safe runtime implementation exists.
+% Checkpoint 具有精确的局部检查，而六种已注册的工作流变更形式都当且仅当安全运行时实现存在时才被接受。
 The runtime puts the result into effect atomically, preserves safety across repeated edits and restarts, and has the same Agent-visible behavior as an ideal atomic machine.
 % 运行时使判定结果原子生效，在重复编辑与重新启动过程中保持安全，并与理想原子机器具有相同的 Agent 可见行为。
 

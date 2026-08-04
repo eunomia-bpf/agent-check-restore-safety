@@ -6,9 +6,9 @@ Safe execution editing has an exact criterion.
 % 安全执行编辑具有一个精确判据。
 Past protected actions remain unchanged, and every still-required outcome retains a policy-safe completion.
 % 过去的受控动作保持不变，并且每个仍要求实现的结果都保留一条策略安全的完成路径。
-For every registered Fork, Restore, Merge, or extension, our checker computes every safe continuation or returns a finite proof that no safe runtime implementation exists.
-% 对于每项已注册的 Fork、Restore、Merge 或扩展，我们的检查器计算全部安全继续方式，或者返回一份有限证明，说明不存在安全运行时实现。
-The Exact Edit-Safety theorem connects this exact decision to the four necessary parts of the execution record, the atomic rule update, repeated execution edits, and equivalence with an ideal atomic machine.
-% 精确编辑安全定理把这一精确判定与执行记录中四个必要部分、原子规则更新、重复执行编辑以及同理想原子机器的等价性连接起来。
-It provides a formal foundation for Agent runtimes that support Fork, Restore, and Merge.
-% 它为支持 Fork、Restore 和 Merge 的 Agent 运行时提供形式化基础。
+For Checkpoint and every registered Fork, Restore, Merge, or extension, our checker either verifies the operation directly, computes every safe continuation, or returns a finite proof that no safe runtime implementation exists.
+% 对于 Checkpoint 以及每项已注册的 Fork、Restore、Merge 或扩展，我们的检查器会直接验证该操作、计算全部安全继续方式，或者返回一份有限证明，说明不存在安全运行时实现。
+The Exact Safety Checking theorem connects this exact decision to the four necessary parts of the execution record, the atomic rule update, repeated execution edits, and equivalence with an ideal atomic machine.
+% 精确安全检查定理把这一精确判定与执行记录中四个必要部分、原子规则更新、重复执行编辑以及同理想原子机器的等价性连接起来。
+It provides a formal foundation for Agent runtimes that support Checkpoint, Fork, Restore, and Merge.
+% 它为支持 Checkpoint、Fork、Restore 和 Merge 的 Agent 运行时提供形式化基础。
