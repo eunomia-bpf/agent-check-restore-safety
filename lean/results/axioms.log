@@ -1844,23 +1844,20 @@ AuthorityContinuity.AgentHistoryAdmission.RegistrationRefinement.compiled_admiss
 'AuthorityContinuity.AgentHistoryAdmission.RegistrationRefinement.compiled_admission_preserved' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
-AuthorityContinuity.AgentHistoryAdmission.CompilationBridge.compiler_admit_exists_secure_install.{u_1, u_2}
-  {Outcome : Type u_1} {Label : Type u_2} [DecidableEq Outcome] [DecidableEq Label]
-  (state : AgentHistoryAdmission.OperationalSemantics.InstalledState)
+AuthorityContinuity.AgentHistoryAdmission.CompilationBridge.compiler_admit_exists_secure_install {Outcome Label : Type}
+  [DecidableEq Outcome] [DecidableEq Label] (state : AgentHistoryAdmission.OperationalSemantics.InstalledState)
   (secure : AgentHistoryAdmission.OperationalSemantics.AgentSec state)
-  {request : AgentHistoryAdmission.HistoryStructure.EditRequest}
+  {request : AgentHistoryAdmission.HistoryStructure.RegisteredEditRequest}
   {target : AgentHistoryAdmission.HistoryStructure.History}
-  (derivation : AgentHistoryAdmission.HistoryStructure.HistoryDerivation state.history request target)
-  (admitted :
-    AgentHistoryAdmission.FiniteCore.CompilerAns (AgentHistoryAdmission.CompilationBridge.currentContract state) =
-      AgentHistoryAdmission.FiniteCore.Ans.admit)
+  {contract : AgentHistoryAdmission.OperationalSemantics.Contract Outcome Label}
+  (edited : AgentHistoryAdmission.CompilationBridge.editedContract state request target = some contract)
+  (admitted : AgentHistoryAdmission.FiniteCore.CompilerAns contract = AgentHistoryAdmission.FiniteCore.Ans.admit)
   (targetWellFormed : target.WellFormed)
   (fresh : AgentHistoryAdmission.CompilationBridge.FreshEditAllocation state request)
   (running : state.availability = AgentHistoryAdmission.OperationalSemantics.RuntimeAvailability.running) :
   ∃ candidate event,
     candidate =
-        AgentHistoryAdmission.CompilationBridge.compileInstallCandidate state secure derivation admitted
-          targetWellFormed ∧
+        AgentHistoryAdmission.CompilationBridge.compileInstallCandidate state secure edited admitted targetWellFormed ∧
       candidate.ValidFor state ∧
         AgentHistoryAdmission.OperationalSemantics.KernelStep state event
             (AgentHistoryAdmission.OperationalSemantics.installPost state candidate) ∧
@@ -1869,8 +1866,25 @@ AuthorityContinuity.AgentHistoryAdmission.CompilationBridge.compiler_admit_exist
 'AuthorityContinuity.AgentHistoryAdmission.CompilationBridge.compiler_admit_exists_secure_install' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
-AuthorityContinuity.AgentHistoryAdmission.CompilationBridge.validInstallCandidate_entails_admission.{u_1, u_2}
-  {Outcome : Type u_1} {Label : Type u_2} [DecidableEq Outcome] [DecidableEq Label]
+AuthorityContinuity.AgentHistoryAdmission.CompilationBridge.compileInstallCandidate_installs_editedContract
+  {Outcome Label : Type} [DecidableEq Outcome] [DecidableEq Label]
+  (state : AgentHistoryAdmission.OperationalSemantics.InstalledState)
+  (secure : AgentHistoryAdmission.OperationalSemantics.AgentSec state)
+  {request : AgentHistoryAdmission.HistoryStructure.RegisteredEditRequest}
+  {target : AgentHistoryAdmission.HistoryStructure.History}
+  {contract : AgentHistoryAdmission.OperationalSemantics.Contract Outcome Label}
+  (edited : AgentHistoryAdmission.CompilationBridge.editedContract state request target = some contract)
+  (admitted : AgentHistoryAdmission.FiniteCore.CompilerAns contract = AgentHistoryAdmission.FiniteCore.Ans.admit)
+  (targetWellFormed : target.WellFormed) :
+  (AgentHistoryAdmission.OperationalSemantics.installPost state
+          (AgentHistoryAdmission.CompilationBridge.compileInstallCandidate state secure edited admitted
+            targetWellFormed)).specification.contract =
+    contract
+'AuthorityContinuity.AgentHistoryAdmission.CompilationBridge.compileInstallCandidate_installs_editedContract' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.CompilationBridge.validInstallCandidate_entails_admission
+  {Outcome Label : Type} [DecidableEq Outcome] [DecidableEq Label]
   {state : AgentHistoryAdmission.OperationalSemantics.InstalledState}
   {candidate : AgentHistoryAdmission.OperationalSemantics.InstallCandidate} (_valid : candidate.ValidFor state) :
   (AgentHistoryAdmission.FiniteCore.greatestPostfixed candidate.specification.contract).Nonempty ∧
@@ -1879,18 +1893,69 @@ AuthorityContinuity.AgentHistoryAdmission.CompilationBridge.validInstallCandidat
 'AuthorityContinuity.AgentHistoryAdmission.CompilationBridge.validInstallCandidate_entails_admission' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
-AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.kernelTrace_preserves_agentSec.{u_1, u_2}
-  {Outcome : Type u_1} {Label : Type u_2} [DecidableEq Outcome] [DecidableEq Label]
-  {initial post : AgentHistoryAdmission.OperationalSemantics.InstalledState}
+AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.checkEditObligations_iff.{u_1, u_2} {Outcome : Type u_2}
+  [DecidableEq Outcome] {Label : Type u_1}
+  (slice : AgentHistoryAdmission.OperationalSemantics.RegisteredSlice Outcome Label)
+  (rule : AgentHistoryAdmission.OperationalSemantics.AuthenticatedEditRule Outcome)
+  (target : AgentHistoryAdmission.HistoryStructure.History) :
+  AgentHistoryAdmission.OperationalSemantics.checkEditObligations slice rule target = true ↔
+    AgentHistoryAdmission.OperationalSemantics.AuthenticatedEditRule.Obligations slice rule target
+'AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.checkEditObligations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.deriveAuthenticatedEdit_iff.{u_1} {Outcome : Type}
+  [DecidableEq Outcome] {Label : Type u_1}
+  (slice : AgentHistoryAdmission.OperationalSemantics.RegisteredSlice Outcome Label)
+  (source : AgentHistoryAdmission.HistoryStructure.History)
+  (request : AgentHistoryAdmission.HistoryStructure.RegisteredEditRequest)
+  (target : AgentHistoryAdmission.HistoryStructure.History) :
+  AgentHistoryAdmission.OperationalSemantics.deriveAuthenticatedEdit slice source request = some target ↔
+    Nonempty (AgentHistoryAdmission.OperationalSemantics.AuthenticatedHistoryDerivation slice source request target)
+'AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.deriveAuthenticatedEdit_iff' depends on axioms: [propext,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.editedContractAt_spec {Outcome : Type}
+  [DecidableEq Outcome] {Label : Type}
+  (slice : AgentHistoryAdmission.OperationalSemantics.RegisteredSlice Outcome Label)
+  (durableReceiptCells : List AgentHistoryAdmission.HistoryStructure.Cell)
+  (source : AgentHistoryAdmission.HistoryStructure.History)
+  (request : AgentHistoryAdmission.HistoryStructure.RegisteredEditRequest)
+  (target : AgentHistoryAdmission.HistoryStructure.History)
+  (contract : AgentHistoryAdmission.OperationalSemantics.Contract Outcome Label)
+  (edited :
+    AgentHistoryAdmission.OperationalSemantics.editedContractAt slice durableReceiptCells source request target =
+      some contract) :
+  ∃ rule,
+    slice.lookupEditRule request = some rule ∧
+      AgentHistoryAdmission.HistoryStructure.deriveEdit source rule.resolvedEdit = some target ∧
+        contract =
+            AgentHistoryAdmission.OperationalSemantics.AuthenticatedEditRule.targetContract slice rule
+              durableReceiptCells ∧
+          rule.targetLanguage = target.frontier.rawLanguage ∧
+            slice.promised =
+                AgentHistoryAdmission.OperationalSemantics.AuthenticatedEditRule.stillRequired slice rule ∪
+                  (rule.satisfied ∪
+                    AgentHistoryAdmission.OperationalSemantics.AuthenticatedEditRule.authorizedRemovals slice rule) ∧
+              (∀
+                  sourceOutcome ∈
+                    AgentHistoryAdmission.OperationalSemantics.AuthenticatedEditRule.stillRequired slice rule,
+                  ∃ targetOutcome ∈ rule.targetOutcomes, rule.Covers targetOutcome sourceOutcome) ∧
+                ∀
+                  sourceOutcome ∈
+                    AgentHistoryAdmission.OperationalSemantics.AuthenticatedEditRule.authorizedRemovals slice rule,
+                  (sourceOutcome, slice.outcomeAuthority sourceOutcome) ∈ rule.removalSignatures
+'AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.editedContractAt_spec' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.kernelTrace_preserves_agentSec {Outcome Label : Type}
+  [DecidableEq Outcome] [DecidableEq Label] {initial post : AgentHistoryAdmission.OperationalSemantics.InstalledState}
   (secure : AgentHistoryAdmission.OperationalSemantics.AgentSec initial)
   (trace : AgentHistoryAdmission.OperationalSemantics.KernelTrace initial post) :
   AgentHistoryAdmission.OperationalSemantics.AgentSec post
 'AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.kernelTrace_preserves_agentSec' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
-AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.live_extension_closed.{u_1, u_2} {Outcome : Type u_1}
-  {Label : Type u_2} [DecidableEq Outcome] [DecidableEq Label]
-  {state : AgentHistoryAdmission.OperationalSemantics.InstalledState}
+AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.live_extension_closed {Outcome Label : Type}
+  [DecidableEq Outcome] [DecidableEq Label] {state : AgentHistoryAdmission.OperationalSemantics.InstalledState}
   (candidate : AgentHistoryAdmission.OperationalSemantics.LiveExtensionCandidate) (valid : candidate.ValidFor state) :
   AgentHistoryAdmission.OperationalSemantics.KernelStep state
     (AgentHistoryAdmission.OperationalSemantics.KernelEvent.installLiveExtension candidate)
@@ -1898,9 +1963,8 @@ AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.live_extension_cl
 'AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.live_extension_closed' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
-AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.live_extension_preserves_agentSec.{u_1, u_2}
-  {Outcome : Type u_1} {Label : Type u_2} [DecidableEq Outcome] [DecidableEq Label]
-  {state : AgentHistoryAdmission.OperationalSemantics.InstalledState}
+AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.live_extension_preserves_agentSec {Outcome Label : Type}
+  [DecidableEq Outcome] [DecidableEq Label] {state : AgentHistoryAdmission.OperationalSemantics.InstalledState}
   (candidate : AgentHistoryAdmission.OperationalSemantics.LiveExtensionCandidate)
   (secure : AgentHistoryAdmission.OperationalSemantics.AgentSec state) (valid : candidate.ValidFor state) :
   AgentHistoryAdmission.OperationalSemantics.AgentSec
@@ -1908,9 +1972,8 @@ AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.live_extension_pr
 'AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.live_extension_preserves_agentSec' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
-AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.fresh_before_live_extension_stale.{u_1, u_2}
-  {Outcome : Type u_1} {Label : Type u_2} [DecidableEq Outcome] [DecidableEq Label]
-  {state post : AgentHistoryAdmission.OperationalSemantics.InstalledState}
+AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.fresh_before_live_extension_stale {Outcome Label : Type}
+  [DecidableEq Outcome] [DecidableEq Label] {state post : AgentHistoryAdmission.OperationalSemantics.InstalledState}
   {token : AgentHistoryAdmission.OperationalSemantics.UseToken}
   {candidate : AgentHistoryAdmission.OperationalSemantics.LiveExtensionCandidate}
   (use :
@@ -1920,9 +1983,8 @@ AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.fresh_before_live
 'AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.fresh_before_live_extension_stale' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
-AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.alias_before_live_extension_stale.{u_1, u_2}
-  {Outcome : Type u_1} {Label : Type u_2} [DecidableEq Outcome] [DecidableEq Label]
-  {state post : AgentHistoryAdmission.OperationalSemantics.InstalledState}
+AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.alias_before_live_extension_stale {Outcome Label : Type}
+  [DecidableEq Outcome] [DecidableEq Label] {state post : AgentHistoryAdmission.OperationalSemantics.InstalledState}
   {token : AgentHistoryAdmission.OperationalSemantics.UseToken}
   {candidate : AgentHistoryAdmission.OperationalSemantics.LiveExtensionCandidate}
   (use :
@@ -1932,8 +1994,8 @@ AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.alias_before_live
 'AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.alias_before_live_extension_stale' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
-AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.live_extension_before_old_use_denied.{u_1, u_2}
-  {Outcome : Type u_1} {Label : Type u_2} [DecidableEq Outcome] [DecidableEq Label]
+AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.live_extension_before_old_use_denied
+  {Outcome Label : Type} [DecidableEq Outcome] [DecidableEq Label]
   {state : AgentHistoryAdmission.OperationalSemantics.InstalledState}
   {candidate : AgentHistoryAdmission.OperationalSemantics.LiveExtensionCandidate}
   {token : AgentHistoryAdmission.OperationalSemantics.UseToken} (valid : candidate.ValidFor state)
@@ -1948,3 +2010,140 @@ AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.live_extension_be
 'AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.live_extension_before_old_use_denied' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.PaperTheorems.exact_checker_iff_realization.{uOutcome, uOccurrence, uCell,
+    uLabel}
+  {Outcome : Type uOutcome} {Occurrence : Type uOccurrence} {Cell : Type uCell} {Label : Type uLabel}
+  [DecidableEq Outcome] [DecidableEq Occurrence] [DecidableEq Cell] [DecidableEq Label]
+  (input : AgentHistoryAdmission.FiniteCore.Instance Outcome Occurrence Cell Label) :
+  AgentHistoryAdmission.FiniteCore.CompilerAns input = AgentHistoryAdmission.FiniteCore.Ans.admit ↔
+    ∃ language family, AgentHistoryAdmission.FiniteCore.ValidRealization input language family
+'AuthorityContinuity.AgentHistoryAdmission.PaperTheorems.exact_checker_iff_realization' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.PaperTheorems.registered_workflow_exact_admission.{uOutcome, uLabel,
+    uInvocation}
+  {Outcome : Type uOutcome} {Invocation : Type uInvocation} {Label : Type uLabel} [DecidableEq Outcome]
+  [DecidableEq Invocation] [DecidableEq Label]
+  (workflow : AgentHistoryAdmission.RegistrationRefinement.WorkflowIR Outcome Invocation Label)
+  (wellFormed : workflow.WellFormed) (durableReceiptCells : List AgentHistoryAdmission.HistoryStructure.Cell) :
+  AgentHistoryAdmission.RegistrationRefinement.checkRegistration workflow workflow.compile = true ∧
+    (∀ (occurrence : AgentHistoryAdmission.HistoryStructure.Occurrence),
+        workflow.callFor occurrence ∈ workflow.mediatedCalls ↔
+          (occurrence, workflow.compile.cellOf occurrence) ∈ workflow.compile.authenticatedIdentityRows) ∧
+      (AgentHistoryAdmission.FiniteCore.CompilerAns
+            (AgentHistoryAdmission.OperationalSemantics.contractAt workflow.compile durableReceiptCells) =
+          AgentHistoryAdmission.FiniteCore.Ans.admit ↔
+        ∃ language family,
+          AgentHistoryAdmission.FiniteCore.ValidRealization (workflow.contract durableReceiptCells) language family)
+'AuthorityContinuity.AgentHistoryAdmission.PaperTheorems.registered_workflow_exact_admission' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.PaperTheorems.six_edit_derivation_exact
+  {history post : AgentHistoryAdmission.HistoryStructure.History}
+  {request : AgentHistoryAdmission.HistoryStructure.EditRequest} :
+  AgentHistoryAdmission.HistoryStructure.deriveEdit history request = some post ↔
+    AgentHistoryAdmission.HistoryStructure.HistoryDerivation history request post
+'AuthorityContinuity.AgentHistoryAdmission.PaperTheorems.six_edit_derivation_exact' depends on axioms: [propext,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.PaperTheorems.compilation_preload_preserves_agentSec {Outcome Label : Type}
+  [DecidableEq Outcome] [DecidableEq Label] {state : AgentHistoryAdmission.OperationalSemantics.InstalledState}
+  (secure : AgentHistoryAdmission.OperationalSemantics.AgentSec state)
+  (candidate : AgentHistoryAdmission.OperationalSemantics.InstallCandidate) :
+  AgentHistoryAdmission.OperationalSemantics.KernelStep state
+      (AgentHistoryAdmission.OperationalSemantics.KernelEvent.preload candidate)
+      (AgentHistoryAdmission.OperationalSemantics.preloadPost state candidate) ∧
+    AgentHistoryAdmission.OperationalSemantics.AgentSec
+      (AgentHistoryAdmission.OperationalSemantics.preloadPost state candidate)
+'AuthorityContinuity.AgentHistoryAdmission.PaperTheorems.compilation_preload_preserves_agentSec' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.PaperTheorems.exact_edit_installs_trace_safe_monitor {Outcome Label : Type}
+  [DecidableEq Outcome] [DecidableEq Label] (state : AgentHistoryAdmission.OperationalSemantics.InstalledState)
+  (secure : AgentHistoryAdmission.OperationalSemantics.AgentSec state)
+  {request : AgentHistoryAdmission.HistoryStructure.RegisteredEditRequest}
+  {target : AgentHistoryAdmission.HistoryStructure.History}
+  {contract : AgentHistoryAdmission.OperationalSemantics.Contract Outcome Label}
+  (edited : AgentHistoryAdmission.CompilationBridge.editedContract state request target = some contract)
+  (admitted : AgentHistoryAdmission.FiniteCore.CompilerAns contract = AgentHistoryAdmission.FiniteCore.Ans.admit)
+  (fresh : AgentHistoryAdmission.CompilationBridge.FreshEditAllocation state request)
+  (running : state.availability = AgentHistoryAdmission.OperationalSemantics.RuntimeAvailability.running) :
+  ∃ candidate event,
+    candidate = AgentHistoryAdmission.CompilationBridge.compileInstallCandidate state secure edited admitted ⋯ ∧
+      candidate.ValidFor state ∧
+        AgentHistoryAdmission.OperationalSemantics.KernelStep state event
+            (AgentHistoryAdmission.OperationalSemantics.installPost state candidate) ∧
+          ∀ (post : AgentHistoryAdmission.OperationalSemantics.InstalledState),
+            AgentHistoryAdmission.OperationalSemantics.KernelTrace
+                (AgentHistoryAdmission.OperationalSemantics.installPost state candidate) post →
+              AgentHistoryAdmission.OperationalSemantics.AgentSec post
+'AuthorityContinuity.AgentHistoryAdmission.PaperTheorems.exact_edit_installs_trace_safe_monitor' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.PaperTheorems.fresh_alias_installation_serialized {Outcome Label : Type}
+  [DecidableEq Outcome] [DecidableEq Label] {state : AgentHistoryAdmission.OperationalSemantics.InstalledState}
+  {candidate : AgentHistoryAdmission.OperationalSemantics.InstallCandidate}
+  {token : AgentHistoryAdmission.OperationalSemantics.UseToken} (valid : candidate.ValidFor state)
+  (oldEpoch : token.epoch = state.activeEpoch) :
+  (∀ (post : AgentHistoryAdmission.OperationalSemantics.InstalledState),
+      AgentHistoryAdmission.OperationalSemantics.KernelStep state
+          (AgentHistoryAdmission.OperationalSemantics.KernelEvent.freshUse token) post →
+        ¬candidate.ValidFor post) ∧
+    (∀ (post : AgentHistoryAdmission.OperationalSemantics.InstalledState),
+        AgentHistoryAdmission.OperationalSemantics.KernelStep state
+            (AgentHistoryAdmission.OperationalSemantics.KernelEvent.aliasUse token) post →
+          ¬candidate.ValidFor post) ∧
+      ¬AgentHistoryAdmission.OperationalSemantics.UseGuard
+            (AgentHistoryAdmission.OperationalSemantics.installPost state candidate) token ∧
+        AgentHistoryAdmission.OperationalSemantics.KernelStep
+          (AgentHistoryAdmission.OperationalSemantics.installPost state candidate)
+          (AgentHistoryAdmission.OperationalSemantics.KernelEvent.denial token)
+          (AgentHistoryAdmission.OperationalSemantics.denialPost
+            (AgentHistoryAdmission.OperationalSemantics.installPost state candidate) token)
+'AuthorityContinuity.AgentHistoryAdmission.PaperTheorems.fresh_alias_installation_serialized' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.InformationLowerBound.answerSignature_exact.{u_1, u_2, u_3}
+  {Record : Sort u_1} {Query : Sort u_2} {Answer : Sort u_3} (answer : Record → Query → Answer) :
+  AgentHistoryAdmission.InformationLowerBound.ExactView answer
+    (AgentHistoryAdmission.InformationLowerBound.answerSignature answer)
+'AuthorityContinuity.AgentHistoryAdmission.InformationLowerBound.answerSignature_exact' does not depend on any axioms
+AuthorityContinuity.AgentHistoryAdmission.InformationLowerBound.exactView_iff_refines_answerSignature.{u_1, u_2, u_3,
+    u_4}
+  {Record : Sort u_1} {Query : Sort u_2} {Answer : Sort u_3} {View : Sort u_4} (answer : Record → Query → Answer)
+  (view : Record → View) :
+  AgentHistoryAdmission.InformationLowerBound.ExactView answer view ↔
+    ∀ (left right : Record),
+      view left = view right →
+        AgentHistoryAdmission.InformationLowerBound.answerSignature answer left =
+          AgentHistoryAdmission.InformationLowerBound.answerSignature answer right
+'AuthorityContinuity.AgentHistoryAdmission.InformationLowerBound.exactView_iff_refines_answerSignature' depends on axioms: [Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.InformationLowerBound.exactView_separates_answer_pair.{u_1, u_2, u_3, u_4}
+  {Record : Sort u_1} {Query : Sort u_2} {Answer : Sort u_3} {View : Sort u_4} (answer : Record → Query → Answer)
+  (view : Record → View) (exact : AgentHistoryAdmission.InformationLowerBound.ExactView answer view)
+  {left right : Record} {query : Query} (different : answer left query ≠ answer right query) : view left ≠ view right
+'AuthorityContinuity.AgentHistoryAdmission.InformationLowerBound.exactView_separates_answer_pair' does not depend on any axioms
+AuthorityContinuity.AgentHistoryAdmission.InformationLowerBound.fourFactor_exactView_injective.{u_1} {View : Sort u_1}
+  (view : AgentHistoryAdmission.InformationLowerBound.FourFactorRecord → View)
+  (exact :
+    AgentHistoryAdmission.InformationLowerBound.ExactView AgentHistoryAdmission.InformationLowerBound.fourFactorAnswer
+      view) :
+  Function.Injective view
+'AuthorityContinuity.AgentHistoryAdmission.InformationLowerBound.fourFactor_exactView_injective' depends on axioms: [Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.InformationLowerBound.fourFactor_exactView_card_lower_bound.{u_1}
+  {View : Type u_1} [Fintype View] (view : AgentHistoryAdmission.InformationLowerBound.FourFactorRecord → View)
+  (exact :
+    AgentHistoryAdmission.InformationLowerBound.ExactView AgentHistoryAdmission.InformationLowerBound.fourFactorAnswer
+      view) :
+  16 ≤ Fintype.card View
+'AuthorityContinuity.AgentHistoryAdmission.InformationLowerBound.fourFactor_exactView_card_lower_bound' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.InformationLowerBound.exactView_separates_each_dimension.{u_1}
+  {View : Sort u_1} (view : AgentHistoryAdmission.InformationLowerBound.FourFactorRecord → View)
+  (exact :
+    AgentHistoryAdmission.InformationLowerBound.ExactView AgentHistoryAdmission.InformationLowerBound.fourFactorAnswer
+      view)
+  (dimension : AgentHistoryAdmission.InformationLowerBound.RecordDimension) :
+  view AgentHistoryAdmission.InformationLowerBound.allFalse ≠
+    view (AgentHistoryAdmission.InformationLowerBound.singleTrue dimension)
+'AuthorityContinuity.AgentHistoryAdmission.InformationLowerBound.exactView_separates_each_dimension' does not depend on any axioms
