@@ -75,8 +75,8 @@ An \Alias call advances the workflow by linking to the existing record without e
 
 \paragraph{Invariant after the rule update}
 % 规则更新后的不变量
-We write \(\mathsf{AgentSec}(S;c,r)\) when five conditions hold: (1) the installed workflow and its required outcomes come from the checked edit; (2) the stored nonempty execution family is the checker's largest safe family; (3) the workflow, authorization log, queue, and checkpoints match the executed prefix \(r\); (4) the automaton is in exactly the state reached after \(r\); and (5) exactly one rule version is active, with one rule entry and authorization token for every remaining workflow call.
-% 当以下五项条件成立时，记作 \(\mathsf{AgentSec}(S;c,r)\)：(1) 已安装工作流及其要求实现的结果来自经检查编辑；(2) 已存非空执行族是检查器得到的最大安全执行族；(3) 工作流、授权日志、队列和检查点与已执行前缀 \(r\) 一致；(4) 自动机恰处于执行 \(r\) 后到达的状态；(5) 恰有一个规则版本处于活动状态，并为每个剩余工作流调用提供一个规则入口和授权令牌。
+We write \(\mathsf{AgentSec}(S;c,r)\) when five conditions hold: (1) the workflow now in force and its required outcomes come from the checked edit; (2) the stored nonempty execution family is the checker's largest safe family; (3) the workflow, authorization log, queue, and checkpoints match the executed prefix \(r\); (4) the automaton is in exactly the state reached after \(r\); and (5) exactly one rule version is active, with one rule entry and authorization token for every remaining workflow call.
+% 当以下五项条件成立时，记作 \(\mathsf{AgentSec}(S;c,r)\)：(1) 当前生效的工作流及其要求实现的结果来自经检查编辑；(2) 已存非空执行族是检查器得到的最大安全执行族；(3) 工作流、授权日志、队列和检查点与已执行前缀 \(r\) 一致；(4) 自动机恰处于执行 \(r\) 后到达的状态；(5) 恰有一个规则版本处于活动状态，并为每个剩余工作流调用提供一个规则入口和授权令牌。
 For a submitted tool request, one transaction verifies the workflow call, action, canonical request, authorization token, active rule version, and enabled automaton transition before recording any progress.
 % 对于提交的工具请求，一个事务会先验证工作流调用、动作、规范请求、授权令牌、当前规则版本以及已启用的自动机转移，然后才记录任何进展。
 The same transaction either creates the authorization record and queues the request, or records reuse of an existing authorization record and its return value.
@@ -84,6 +84,11 @@ The same transaction either creates the authorization record and queues the requ
 
 \paragraph{Final check}
 % 最终检查
+For current state \(S\), write
+\(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)
+for the safety-check instance obtained from its current components.
+% 对当前状态 \(S\)，将由其当前分量得到的安全检查实例记为
+% \(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)。
 Write \(\mathsf{Ready}(S,u,Y)\) when the service re-derives \(u\) from the current execution record, recomputes the same nonempty fixed point and automaton carried by \(Y\), confirms that the record has not changed since \(Y\) was computed, confirms that the old rule version is current, and confirms that the new version is inactive.
 % 当服务根据当前执行记录重新推导 \(u\)、重新计算出 \(Y\) 所携带的同一非空不动点与自动机、确认计算 \(Y\) 之后执行记录未发生变化、确认旧规则版本仍为当前版本并确认新版本尚未激活时，记作 \(\mathsf{Ready}(S,u,Y)\)。
 If these checks pass, one transaction closes the old version, activates the new automaton, replaces every current rule entry and authorization token, and then exposes the successful edit answer.
@@ -98,8 +103,8 @@ The complete state updates, retries, request release, completion updates, and re
 \label{lem:cut-linearization}
 In every reachable well-formed runtime state, a visible edit answer and a protected call in the same policy domain have a unique order at the atomic rule update.
 % 在每个可达的良构运行时状态中，同一策略域内的一项可见编辑答案与一次受控调用在原子规则更新处具有唯一顺序。
-If the call commits first, it changes the execution record, so the earlier result cannot install.
-% 若调用先提交，它会改变执行记录，因此先前的结果无法安装。
+If the call commits first, it changes the execution record, so the earlier result cannot take effect.
+% 若调用先提交，它会改变执行记录，因此先前的结果无法生效。
 If \Install commits first, the old call cannot resolve \Fresh or \Alias.
 % 若 \Install 先提交，则旧调用无法解析 \Fresh 或 \Alias。
 Steps in independent domains commute by product semantics.

@@ -17,7 +17,7 @@ It computes every safe continuation and puts the corresponding rules into effect
 % Agent 恢复机制
 ACRFence blocks replay after Restore, DART selects checkpoints, Atomix delays external actions until commit, and Rebound makes rollback atomic and auditable~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}.
 % ACRFence 阻止 Restore 后重放，DART 选择检查点，Atomix 把外部动作推迟到提交时执行，而 Rebound 使回滚具有原子性与可审计性~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}。
-Our theorem gives one exact criterion for all six derived Agent edits, a rejection certificate, and a lower bound proving that all four parts of the execution record are necessary.
-% 我们的定理为全部六种派生 Agent 编辑给出统一精确判据、拒绝证书，以及证明执行记录四个部分均为必要条件的下界。
-It carries these results through atomic installation and arbitrary finite execution.
-% 它把这些结果贯穿原子安装与任意有限执行。
+Our theorem gives one exact criterion for all six derived Agent edits, a rejection proof, and a lower bound proving that all four parts of the execution record are necessary.
+% 我们的定理为全部六种派生 Agent 编辑给出统一精确判据、拒绝证明，以及证明执行记录四个部分均为必要条件的下界。
+It carries these results through the atomic rule update and arbitrary finite execution.
+% 它把这些结果贯穿原子规则更新与任意有限执行。

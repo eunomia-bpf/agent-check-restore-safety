@@ -10,10 +10,10 @@ Six Lean modules pass \texttt{--trust=0} and prove the claims used by the paper.
 % \path{registered_workflow_exact_admission} 组合类型化注册、对每次受控调用的可信检查以及精确编辑检查。
 \path{six_edit_derivation_exact} proves the executable derivation sound and complete for all six edit rules.
 % \path{six_edit_derivation_exact} 证明可执行推导对全部六种编辑规则既可靠又完备。
-\path{exact_edit_installs_trace_safe_monitor} constructs an atomic installation whose every finite continuation preserves \(\mathsf{AgentSec}\).
-% \path{exact_edit_installs_trace_safe_monitor} 构造一次原子安装，并证明其每段有限延续均保持 \(\mathsf{AgentSec}\)。
-\path{fresh_alias_installation_serialized} proves both possible orders between a protected call and installation.
-% \path{fresh_alias_installation_serialized} 证明受控调用与安装之间两种可能的先后顺序。
+\path{exact_edit_installs_trace_safe_monitor} constructs an atomic rule update whose every finite continuation preserves \(\mathsf{AgentSec}\).
+% \path{exact_edit_installs_trace_safe_monitor} 构造一次原子规则更新，并证明其每段有限延续均保持 \(\mathsf{AgentSec}\)。
+\path{fresh_alias_installation_serialized} proves both possible orders between a protected call and that update.
+% \path{fresh_alias_installation_serialized} 证明受控调用与该更新之间两种可能的先后顺序。
 \path{compilation_preload_preserves_agentSec} models preparation as an explicit transition and proves that preparing an inactive candidate preserves the same invariant.
 % \path{compilation_preload_preserves_agentSec} 把准备过程建模为显式转移，并证明准备尚未激活的候选结果会保持同一不变量。
 

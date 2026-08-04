@@ -24,16 +24,18 @@ The atomic rule update activates this automaton at \(\eta^+\), closes \(\eta^-\)
 
 \paragraph{What the checker must know}
 % 检查器必须知道什么
-Write \(V=\mathsf{Sec}(S;c,r)=(\mathbf P,\mathbf I,\mathbf E,\mathbf C)\) for four parts of the checked record: (1) the workflow and its required outcomes, (2) which calls refer to the same action, (3) earlier authorizations and call progress, and (4) which rules govern a call that overlaps the atomic rule update.
-% 令 \(V=\mathsf{Sec}(S;c,r)=(\mathbf P,\mathbf I,\mathbf E,\mathbf C)\) 表示所检查记录的四个部分：(1) 工作流及其要求实现的结果，(2) 哪些调用指向同一个动作，(3) 先前的授权与调用进展，以及 (4) 哪组规则管理与原子规则更新重叠的调用。
+Write \(V=\mathsf{Sec}(S;c,r)
+=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) for four parts of the checked record: (1) the workflow and its required outcomes, (2) which calls refer to the same action, (3) earlier authorizations and call progress, and (4) which rules govern a call that overlaps the atomic rule update.
+% 令 \(V=\mathsf{Sec}(S;c,r)
+% =\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) 表示所检查记录的四个部分：(1) 工作流及其要求实现的结果，(2) 哪些调用指向同一个动作，(3) 先前的授权与调用进展，以及 (4) 哪组规则管理与原子规则更新重叠的调用。
 Suppose a checker receives only some function \(f(V)\) of this record.
 % 假设检查器只能得到该记录的某个函数 \(f(V)\)。
 The function is exact if any two records that it makes indistinguishable always give the same answer to every common decision or rule-update request.
 % 如果该函数无法区分的任意两份记录，对每个共同的判定或规则更新请求都给出相同答案，那么该函数是精确的。
 Internal identifiers may be renamed consistently because their spelling cannot affect the answer.
 % 内部标识可以一致重命名，因为它们的具体拼写不能影响答案。
-For \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), \(\mathsf{Keep}_J\) gives the checker exactly the parts named by \(J\).
-% 对于 \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\)，\(\mathsf{Keep}_J\) 恰好向检查器提供 \(J\) 指明的部分。
+For \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), \(\pi_J\) gives the checker exactly the parts named by \(J\).
+% 对于 \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\)，\(\pi_J\) 恰好向检查器提供 \(J\) 指明的部分。
 \Cref{app:evidence} gives four pairs of records showing that each part of \(V\) is necessary.
 % \Cref{app:evidence} 给出四对记录，证明 \(V\) 的每个部分都是必需的。
 
@@ -52,8 +54,8 @@ Thus every required source outcome appears in an accepted target outcome.
 
 \paragraph{Visible runtime behavior}
 % 可见运行时行为
-\(\mathcal O_{\rm api}\) includes edit answers tied to the checked record, installed edits, protected-call answers, released requests, completion updates, and returned values.
-% \(\mathcal O_{\rm api}\) 包括与所检查记录对应的编辑答案、已安装编辑、受控调用答案、已发出请求、完成更新和返回值。
+\(\mathcal O_{\rm api}\) includes edit answers tied to the checked record, edits put into effect, protected-call answers, released requests, completion updates, and returned values.
+% \(\mathcal O_{\rm api}\) 包括与所检查记录对应的编辑答案、已经生效的编辑、受控调用答案、已发出请求、完成更新和返回值。
 It hides internal computation, Save, stale candidates, and restart bookkeeping.
 % 它隐藏内部计算、Save、过期候选结果和重启记录工作。
 \(\mathcal B\) matches ideal and runtime states on \(\mathsf{AgentSec}\) and these visible fields.
@@ -87,8 +89,8 @@ Undefined derivation gives state-preserving \(\mathsf{Invalid}\).
 % 未定义推导给出保持状态的 \(\mathsf{Invalid}\)。
 For defined \(\delta=\mathsf{Derive}(\Theta)\), \(\widehat B^\dagger_{H,u}=\varnothing\) gives state-preserving \(\mathsf{Reject}\) with no safe runtime implementation.
 % 对有定义的 \(\delta=\mathsf{Derive}(\Theta)\)，\(\widehat B^\dagger_{H,u}=\varnothing\) 给出保持状态的 \(\mathsf{Reject}\)，且不存在安全运行时实现。
-Otherwise, for \(Y=\mathsf{Compile}(\Theta)\), nonempty \(\widehat B^\dagger_{H,u}\), existence of a safe runtime implementation, \(\mathsf{Ready}(S,u,Y)\), and an \(\mathsf{AgentSec}\)-preserving installed successor are equivalent.
-% 否则，对于 \(Y=\mathsf{Compile}(\Theta)\)，\(\widehat B^\dagger_{H,u}\) 非空、安全运行时实现存在、\(\mathsf{Ready}(S,u,Y)\) 成立，以及存在保持 \(\mathsf{AgentSec}\) 的已安装后继，这四项彼此等价。
+Otherwise, for \(Y=\mathsf{Compile}(\Theta)\), nonempty \(\widehat B^\dagger_{H,u}\), existence of a safe runtime implementation, \(\mathsf{Ready}(S,u,Y)\), and a successor that puts the edit into effect while preserving \(\mathsf{AgentSec}\) are equivalent.
+% 否则，对于 \(Y=\mathsf{Compile}(\Theta)\)，\(\widehat B^\dagger_{H,u}\) 非空、安全运行时实现存在、\(\mathsf{Ready}(S,u,Y)\) 成立，以及存在使编辑生效并保持 \(\mathsf{AgentSec}\) 的后继，这四项彼此等价。
 The largest execution family satisfies \(\mathsf{PreservesRequired}\), records every already-satisfied source outcome, and records every authorized removal.
 % 最大执行族满足 \(\mathsf{PreservesRequired}\)，记录每个已满足的源结果以及每项获准移除。
 \end{theorem}
@@ -115,8 +117,8 @@ Generalized nonblocking can serve as an exact solver only after the trusted cont
 \begin{theorem}[Repeated-Use Safety]
 % 重复使用安全
 \label{thm:repeated-use}
-Every enabled event preserves \(\mathsf{AgentSec}\), so the theorem applies after every finite reachable sequence of edits, registered extensions, protected calls, authorization updates, installations, stops, and restarts.
-% 每个启用事件都保持 \(\mathsf{AgentSec}\)，因此该定理适用于由编辑、已注册扩展、受控调用、授权更新、安装、停止和重启组成的每个有限可达序列。
+Every enabled event preserves \(\mathsf{AgentSec}\), so the theorem applies after every finite reachable sequence of edits, registered extensions, protected calls, authorization updates, rule updates, stops, and restarts.
+% 每个启用事件都保持 \(\mathsf{AgentSec}\)，因此该定理适用于由编辑、已注册扩展、受控调用、授权更新、规则更新、停止和重启组成的每个有限可达序列。
 \end{theorem}
 
 \begin{theorem}[Runtime Correctness]
@@ -140,7 +142,7 @@ Four explicit pairs of execution records prove the information result.
 % 四对显式执行记录证明信息结果。
 Induction over the runtime rules proves repeated use.
 % 对运行时规则作归纳证明重复使用。
-A case analysis over edits, protected calls, installation races, returns, and recovery establishes the weak bisimulation.
-% 对编辑、受控调用、安装竞态、返回与恢复作分类讨论建立弱互模拟。
+A case analysis over edits, protected calls, races with the rule update, returns, and recovery establishes the weak bisimulation.
+% 对编辑、受控调用、与规则更新的竞态、返回与恢复作分类讨论建立弱互模拟。
 The appendix gives the complete witnesses and case proofs.
 % 附录给出完整见证与分类证明。
