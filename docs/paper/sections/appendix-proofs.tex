@@ -538,7 +538,7 @@ The four parts of the record are as follows.
 % \(\mathbf I\) 记录哪些工作流调用指向同一个受控动作，以及每个动作的请求、策略标签、作用域、来源区域、当前规则入口和授权数据。
 \(\mathbf E\) records processed calls, current and saved progress, prior authorizations, retries, returned values, queued requests, and the current policy state.
 % \(\mathbf E\) 记录已经处理的调用、当前与已保存进展、先前授权、重试、返回值、排队请求和当前策略状态。
-\(\mathbf C\) records the policy, edit-rule, execution-record, and active-rule versions, together with the internal namespace and the digest checked before new rules take effect.
+\(\mathbf C\) records the policy version, edit-rule version, execution record version, and active rule version, together with the internal namespace and the digest checked before new rules take effect.
 % \(\mathbf C\) 记录策略版本、编辑规则版本、执行记录版本、当前规则版本、内部命名空间以及新规则生效前检查的摘要。
 Encodings, digests, authorization sequences, and returned proof data are computed from these four parts rather than treated as additional facts.
 % 编码、摘要、授权序列和返回的证明数据都由这四个部分计算得出，而不是额外的事实。
@@ -1379,9 +1379,9 @@ Both machines emit \(\mathsf{deny}(x)\), preserve state, and remain related.
 
 \paragraph{Races between a protected call and a rule update}
 % 受控调用与规则更新之间的竞态
-Protected calls and rule updates serialize on the same execution-record and rule-version entries.
-% 受控调用与规则更新会在相同的执行记录条目和规则版本条目上串行化。
-If a \Fresh use commits first, it changes \((G,T,\Delta,\chi,\mathsf{ver},\mathsf{out})\), all of which are covered by the checked-record digest, so the prepared rule update becomes stale.
+Protected calls and rule updates serialize on the same execution record and active rule version.
+% 受控调用与规则更新会在同一执行记录和当前规则版本上串行化。
+If a \Fresh use commits first, it changes \((G,T,\Delta,\chi,\mathsf{ver},\mathsf{out})\), all of which are covered by the digest of the checked record, so the prepared rule update becomes stale.
 % 如果 \Fresh 使用先提交，它会改变 \((G,T,\Delta,\chi,\mathsf{ver},\mathsf{out})\)，这些字段都由经检查记录的摘要覆盖，因此已准备的规则更新会过期。
 If an \Alias use commits first, it changes \((G,T,\chi,\mathsf{ver})\) even though \(\Delta\) and the request queue are unchanged, so the prepared rule update again becomes stale.
 % 如果 \Alias 使用先提交，即使 \(\Delta\) 和请求队列不变，它仍会改变 \((G,T,\chi,\mathsf{ver})\)，因此已准备的规则更新同样会过期。

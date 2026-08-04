@@ -105,23 +105,25 @@ For defined \(\delta=\mathsf{Derive}(\Theta)\), \(\widehat B^\dagger_{H,u}=\varn
 % 对有定义的 \(\delta=\mathsf{Derive}(\Theta)\)，\(\widehat B^\dagger_{H,u}=\varnothing\) 给出保持状态的 \(\mathsf{Reject}\)，且不存在安全运行时实现。
 Otherwise, for \(Y=\mathsf{Compile}(\Theta)\), nonempty \(\widehat B^\dagger_{H,u}\), existence of a safe runtime implementation, \(\mathsf{Ready}(S,u,Y)\), and a successor that puts the edit into effect while preserving \(\mathsf{AgentSec}\) are equivalent.
 % 否则，对于 \(Y=\mathsf{Compile}(\Theta)\)，\(\widehat B^\dagger_{H,u}\) 非空、安全运行时实现存在、\(\mathsf{Ready}(S,u,Y)\) 成立，以及存在使编辑生效并保持 \(\mathsf{AgentSec}\) 的后继，这四项彼此等价。
-The largest execution family satisfies \(\mathsf{PreservesRequired}\); the derived record retains the evidence for every already-satisfied source outcome and every authorized removal.
-% 最大执行族满足 \(\mathsf{PreservesRequired}\)；派生记录保留每个已满足源结果以及每项获准移除的证据。
+The largest execution family satisfies \(\mathsf{PreservesRequired}\), and the derived record identifies every already-satisfied source outcome and every authorized removal.
+% 最大执行族满足 \(\mathsf{PreservesRequired}\)，且派生记录标识每个已满足源结果和每项获准移除。
 \end{theorem}
 
-\begin{theorem}[Necessary State Information]
-% 必要状态信息
+\begin{theorem}[Necessary Record Information]
+% 必要记录信息
 \label{thm:necessary-state}
 The full record is sufficient.
 % 完整记录是充分的。
 If any one of the four parts is omitted, two records become indistinguishable even though the correct answer differs.
 % 如果省略这四个部分中的任何一个，两份记录就会变得无法区分，但它们的正确答案不同。
 \[
-\mathsf{Exact}(\pi_J)\Longleftrightarrow
+\mathsf{Exact}(\mathsf{Keep}_J)\Longleftrightarrow
 J=\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}.
 \]
-The four pairs in \cref{tab:projection-pairs} witness these opposite answers.
-% \Cref{tab:projection-pairs} 中的四对记录见证这些相反答案。
+The first four pairs in \cref{tab:projection-pairs} witness omission of \(\mathbf P,\mathbf I,\mathbf E,\mathbf C\).
+% \Cref{tab:projection-pairs} 中的前四组记录对分别见证省略 \(\mathbf P,\mathbf I,\mathbf E,\mathbf C\) 的后果。
+The fifth shows that retaining authorization records and actions without recording which ones correspond is also insufficient.
+% 第五组表明，仅保留授权记录与动作而不记录它们之间的对应关系同样不够。
 In particular, a checker is not exact if it forgets which calls or authorization records refer to the same action, or if it sees only the target workflow proposed by the caller.
 % 特别地，如果检查器忘记哪些调用或授权记录指向同一个动作，或者只看到调用方提出的目标工作流，它就不是精确的。
 Generalized nonblocking can serve as an exact solver only after the trusted controller derives the workflow and outcome-specific completion conditions.
