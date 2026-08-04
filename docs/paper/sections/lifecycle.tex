@@ -2,8 +2,17 @@
 % 执行编辑安全
 \label{sec:lifecycle}
 
-Consider an Agent operating an approval workflow that authorizes at most one order.
-% 考虑一个运行审批工作流且至多获授权下单一次的 Agent。
+Imagine an Agent buying one laptop for a school.
+% 设想一个为学校购买一台笔记本电脑的 Agent。
+It reserves the budget, saves checkpoint \(k\), receives one purchase approval, and then compares suppliers \(L\) and \(R\).
+% 它预留预算、保存检查点 \(k\)、取得一次购买审批，然后比较供应商 \(L\) 和 \(R\)。
+A careless Restore or Merge could request approval twice, pay both suppliers, or permit shipment before the selected supplier is paid.
+% 欠考虑的 Restore 或 Merge 可能重复请求审批、同时向两个供应商付款，或在向选定供应商付款前就允许发货。
+A safe execution approves the purchase once, pays exactly one supplier, and permits shipment only after that payment.
+% 安全执行只批准一次购买，只向一个供应商付款，并且仅在付款后允许发货。
+
+We formalize this story as an approval workflow that authorizes at most one order.
+% 我们把这个故事形式化为一个至多获授权下单一次的审批工作流。
 The Agent reserves the budget and saves checkpoint \(k\) before approval.
 % Agent 预留预算，并在审批前保存检查点 \(k\)。
 The approval is then authorized once, creating an authorization record that Restore does not delete.
@@ -21,20 +30,20 @@ In either outcome, payment authorization must precede shipment authorization:
  o_R&:\ x_R^p\prec x_R^s ,
 \end{split}
 \end{equation}
-where \(x_i^p\) and \(x_i^s\) are payment and shipment workflow calls.
-% 其中，\(x_i^p\) 和 \(x_i^s\) 分别是付款工作流调用和发货工作流调用。
-A \emph{workflow call} \(x\) identifies a particular protected call in the workflow.
-% \emph{工作流调用} \(x\) 标识工作流中的一次特定受控调用。
-An protected action \(d\) identifies the protected action and one-use permission behind that position.
-% 受控动作 \(d\) 指明该位置背后的受控动作和一次性权限。
+where \(x_i^p\) and \(x_i^s\) are payment and shipment call positions.
+% 其中，\(x_i^p\) 和 \(x_i^s\) 分别是付款调用位置和发货调用位置。
+A \emph{call position} \(x\) identifies a particular protected call in the workflow.
+% \emph{调用位置} \(x\) 标识工作流中的一次特定受控调用。
+An \emph{action ID} \(d\) identifies the protected action shared by one or more call positions and links them to one authorization record.
+% \emph{动作标识} \(d\) 标识由一个或多个调用位置共享的受控动作，并将这些位置关联到同一授权记录。
 
-The two shipment calls share one protected action:
-% 两个发货调用共享一个受控动作：
+The two shipment calls share one action ID:
+% 两个发货调用共享一个动作标识：
 \[
  q_{\rm act}(x_L^s)=q_{\rm act}(x_R^s)=d_s.
 \]
-The two payment calls instead have different protected actions \(d_L^p\) and \(d_R^p\).
-% 两个付款调用则具有不同的受控动作 \(d_L^p\) 和 \(d_R^p\)。
+The two payment calls instead have different action IDs \(d_L^p\) and \(d_R^p\).
+% 两个付款调用则具有不同的动作标识 \(d_L^p\) 和 \(d_R^p\)。
 
 The authorization log \(\Delta\) records newly authorized actions in order.
 % 授权日志 \(\Delta\) 按顺序记录新获得授权的动作。
@@ -55,8 +64,8 @@ The Agent sends \(u=\mathsf{ForkChoice}(b,\sigma)\), which names a current branc
 % Agent 发送 \(u=\mathsf{ForkChoice}(b,\sigma)\)，其中指明一个当前分支和一条已注册编辑规则。
 The trusted controller constructs the edited workflow from the execution record.
 % 可信控制器根据执行记录构造编辑后的工作流。
-It also derives the outcomes that remain required and the protected action behind every workflow call.
-% 控制器还推导仍然要求实现的结果，以及每个工作流调用背后的受控动作。
+It also derives the outcomes that remain required and the action ID for every call position.
+% 控制器还推导仍然要求实现的结果，以及每个调用位置对应的动作标识。
 
 Write \(M_o\) for the ways to complete outcome \(o\) while obeying the policy.
 % 以 \(M_o\) 表示遵守策略并完成结果 \(o\) 的方式。

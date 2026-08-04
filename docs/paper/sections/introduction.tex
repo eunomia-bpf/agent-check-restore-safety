@@ -2,8 +2,8 @@
 % 引言
 \label{sec:introduction}
 
-Tool-using Agent runtimes no longer follow only one linear plan.
-% 使用工具的 Agent 运行时不再只遵循一条线性计划。
+Tool-using Agent runtimes can change an execution while it is in progress.
+% 使用工具的 Agent 运行时可以在执行过程中改变后续执行。
 They let an Agent Fork an execution into alternatives, Restore an earlier checkpoint, and Merge branches~\cite{codexappserver,claudesessions,claudecheckpoint,wang2026fork,wu2026crab,zhang2026agentlibos}.
 % 它们允许 Agent 将一次执行 Fork 为多个备选方案、Restore 到较早的检查点，并 Merge 多个分支~\cite{codexappserver,claudesessions,claudecheckpoint,wang2026fork,wu2026crab,zhang2026agentlibos}。
 These operations support exploration, recovery, and reuse without restarting the task.
@@ -11,29 +11,27 @@ These operations support exploration, recovery, and reuse without restarting the
 We call them \emph{execution edits} because they change which parts of the workflow will run next.
 % 我们把它们称为\emph{执行编辑}，因为它们会改变工作流接下来执行哪些部分。
 
-An execution edit does not undo earlier tool calls.
-% 执行编辑不会撤销先前的工具调用。
-Suppose an Agent saves checkpoint \(k\) before a protected approval.
-% 设一个 Agent 在受控审批前保存检查点 \(k\)。
-The approval is later authorized once, creating an authorization record that Restore does not delete.
-% 审批随后只获得一次授权，并创建一条 Restore 不会删除的授权记录。
-Restoring \(k\) creates another approval call in the workflow, but it must not authorize the same approval again.
-% Restore 到 \(k\) 会在工作流中创建另一个审批调用，但不得再次授权同一审批。
-A concurrent Merge can cause a similar error by selecting supplier \(L\) after a supplier-\(R\) payment has already been authorized.
-% 并发的 Merge 也会造成类似错误，例如在供应商 \(R\) 的付款已经获得授权后再选择供应商 \(L\)。
-An edit can therefore restore the saved program state yet violate authorization or release order.
-% 因此，一次编辑即使恢复了保存的程序状态，仍可能违反授权或发出顺序。
-The runtime records that order, and the remote service supplies an authenticated completion record when the action finishes.
-% 运行时记录这一顺序，远端服务在动作完成时提供认证完成记录。
+Consider an Agent buying one laptop for a school.
+% 考虑一个为学校购买一台笔记本电脑的 Agent。
+Before asking the school to approve the purchase, it saves checkpoint \(k\).
+% 在请求学校批准购买之前，它保存检查点 \(k\)。
+The school approves one purchase, and the Agent later chooses supplier \(R\) and authorizes payment.
+% 学校批准一次购买，随后 Agent 选择供应商 \(R\) 并授权付款。
+The Agent then restores \(k\) to compare supplier \(L\) and merges the \(L\) branch into the current execution.
+% 随后 Agent Restore 到 \(k\) 以比较供应商 \(L\)，并把 \(L\) 分支 Merge 到当前执行中。
+If the runtime sees only the restored workspace, it may request the same approval again or continue with \(L\) even though payment to \(R\) is already authorized~\cite{zheng2026acrfence}.
+% 如果运行时只看到恢复后的工作区，它可能再次请求同一审批，或在已经授权向 \(R\) 付款后继续选择 \(L\)~\cite{zheng2026acrfence}。
+Either result violates the intended workflow: the first repeats a one-time approval, and the second combines incompatible supplier actions.
+% 两种结果都会违反预期工作流：前者重复一次性审批，后者组合彼此不相容的供应商动作。
 
-The problem is that a checkpoint contains only part of the information needed to decide whether an edit is safe.
-% 问题在于，检查点只包含决定一次编辑是否安全所需的部分信息。
-The controller must also know four things: which outcomes remain required, which workflow calls refer to the same protected action, which actions have already been authorized, and which monitor version governs a call that overlaps the edit.
-% 控制器还必须知道四件事：哪些结果仍然是要求、哪些工作流调用指向同一个受控动作、哪些动作已经获得授权，以及哪个监控器版本管理与编辑重叠的调用。
-Each can change the correct answer.
-% 每一项都可能改变正确答案。
-The controller cannot recover all four from equal workspaces, an execution trace alone, an authorization log alone, or a replacement workflow proposed by the Agent.
-% 控制器无法仅从相同工作区、单独的执行轨迹、单独的授权日志，或 Agent 提出的替代工作流中恢复全部四项信息。
+Detecting this failure requires more than the restored checkpoint.
+% 检测这种失败所需的信息不止恢复后的检查点。
+The execution record contains the current workflow, checkpoints, call--action map, prior authorizations, queued requests, and current monitor version.
+% 执行记录包含当前工作流、检查点、调用—动作映射、既有授权、排队请求和当前监控器版本。
+Each field can change the correct answer.
+% 每个字段都可能改变正确答案。
+Equal workspaces, an execution trace alone, an authorization log alone, or a replacement workflow proposed by the Agent cannot reconstruct this record.
+% 相同工作区、单独的执行轨迹、单独的授权日志，或 Agent 提出的替代工作流都无法重建该记录。
 
 Existing approaches cover parts of this problem but do not derive its complete safety condition.
 % 现有方法覆盖了该问题的部分环节，却没有推导其完整安全条件。
