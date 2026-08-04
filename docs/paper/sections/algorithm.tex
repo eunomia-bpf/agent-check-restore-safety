@@ -105,8 +105,8 @@ In every reachable well-formed runtime state, a visible edit answer and a protec
 % 在每个可达的良构运行时状态中，同一策略域内的一项可见编辑答案与一次受控调用在原子规则更新处具有唯一顺序。
 If the call commits first, it changes the execution record, so the earlier result cannot take effect.
 % 若调用先提交，它会改变执行记录，因此先前的结果无法生效。
-If \Install commits first, the old call cannot resolve \Fresh or \Alias.
-% 若 \Install 先提交，则旧调用无法解析 \Fresh 或 \Alias。
+If the rule update commits first, the old call cannot resolve \Fresh or \Alias.
+% 若规则更新先提交，则旧调用无法解析 \Fresh 或 \Alias。
 Steps in independent domains commute by product semantics.
 % 独立域中的步骤依据乘积语义可交换。
 \end{lemma}
