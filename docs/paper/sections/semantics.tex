@@ -14,7 +14,7 @@ Root derivation additionally requires that \(\mathsf{CheckReg}(\mathcal W,\mathc
 % 根推导还要求 \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) 接受。
 An execution edit has \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) and uses the unique execution-edit judgment.
 % 执行编辑满足 \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) 并使用唯一的执行编辑判定。
-\(\mathsf{Extend}(\xi)\) adds authenticated edit-rule, call, outcome-authority, and policy entries while preserving the current workflow, its progress, and all earlier authorizations.
+\(\mathsf{Extend}(\xi)\) adds authenticated edit-rule, call, result-authority, and policy entries while preserving the current workflow, its progress, and all earlier authorizations.
 % \(\mathsf{Extend}(\xi)\) 添加经认证的编辑规则、调用、结果权限和策略条目，同时保留当前工作流、其进展及所有先前授权。
 \Cref{app:registered-extension} gives the judgment.
 % 该判定见 \cref{app:registered-extension}。
@@ -89,10 +89,10 @@ A copied workflow call that reuses an authorization record advances the processe
 \subsection{Safe Completion After Every Prefix}
 % 每个前缀之后的安全完成
 
-\subsubsection{Computing all safe behavior}
-% 计算全部安全行为
+\subsubsection{Computing the largest safe execution set}
+% 计算最大安全执行集合
 
-For each derived outcome \(o\in O_{H,u}\), define all of its complete executions and the subset allowed by policy.
+For each derived result \(o\in O_{H,u}\), define all of its complete executions and the subset allowed by policy.
 % 对每个推导出的结果 \(o\in O_{H,u}\)，定义其全部完整执行以及策略允许的子集。
 \begin{equation}
 \label{eq:safe-completions}
@@ -109,7 +109,7 @@ For an annotated prefix \(z\), let
  \{o\mid \mathsf{raw}(z)\preceq_{\rm pref}w
 		          \text{ for some }w\in\Lin(p_o)\}.
 \]
-\(\mathsf{PreservesRequired}(H,u,\widehat B)\) means that every outcome in \(\mathsf{StillRequired}_u\) is covered by some target outcome represented in \(\widehat B\):
+\(\mathsf{PreservesRequired}(H,u,\widehat B)\) means that every result in \(\mathsf{StillRequired}_u\) is covered by some target result represented in \(\widehat B\):
 % \(\mathsf{PreservesRequired}(H,u,\widehat B)\) 表示 \(\mathsf{StillRequired}_u\) 中的每个结果都被 \(\widehat B\) 所表示的某个目标结果覆盖：
 \[
  \forall a\in\mathsf{StillRequired}_u.\quad
@@ -119,25 +119,27 @@ For an annotated prefix \(z\), let
 \begin{definition}[Safe execution set]
 % 安全执行集合
 \label{def:safe-execution-set}
-A safe execution set is a pair \((L,\widehat B)\), where \(L\) contains allowed partial executions and \(\widehat B\) contains allowed complete executions labeled by outcome, satisfying the conditions below.
+A safe execution set is a pair \((L,\widehat B)\), where \(L\) contains allowed partial executions and \(\widehat B\) contains allowed complete executions labeled by result, satisfying the conditions below.
 % 安全执行集合是二元组 \((L,\widehat B)\)，其中 \(L\) 包含获准的部分执行，\(\widehat B\) 包含按结果标记的获准完整执行，并满足下列条件。
+At the laptop Fork, for example, \(\widehat B\) contains the \(L\) and \(R\) payment--shipment executions labeled by \(o_L\) and \(o_R\), while \(L\) contains their prefixes.
+% 例如，在笔记本电脑的 Fork 处，\(\widehat B\) 包含分别由 \(o_L\) 和 \(o_R\) 标记的 \(L\) 与 \(R\) 付款--发货执行，而 \(L\) 包含这些执行的前缀。
 \begin{enumerate}[leftmargin=*,itemsep=1pt]
  \item \(\widehat B\ne\varnothing\);
 % \(\widehat B\) 非空；
- \item \emph{workflow and outcomes:} \(\mathsf{PreservesRequired}(H,u,\widehat B)\), \(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\), and \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\);
+ \item \emph{workflow and results:} \(\mathsf{PreservesRequired}(H,u,\widehat B)\), \(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\), and \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\);
 % 工作流与结果：\(\mathsf{PreservesRequired}(H,u,\widehat B)\)、\(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\)，且 \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\)。
  \item \emph{policy:} \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A_u\) for every \(z\in L\);
 % 策略：对每个 \(z\in L\)，均有 \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A_u\)。
  \item \emph{some completion after every prefix:} \(L=\Pref(\pi_2\widehat B)\); and
 % 每个前缀之后都有某种完成方式：\(L=\Pref(\pi_2\widehat B)\)；并且
- \item \emph{every compatible outcome remains completable:} for every \(z\in L\) and \(o\in\mathsf{Compat}(z)\), some \((o,y)\in\widehat B\) extends \(z\).
+ \item \emph{every compatible result remains completable:} for every \(z\in L\) and \(o\in\mathsf{Compat}(z)\), some \((o,y)\in\widehat B\) extends \(z\).
 % 每个兼容结果仍可完成：对于每个 \(z\in L\) 和 \(o\in\mathsf{Compat}(z)\)，都存在某个 \((o,y)\in\widehat B\) 扩展 \(z\)。
 \end{enumerate}
 \end{definition}
 
-Checking each outcome separately is insufficient.
+Checking each result separately is insufficient.
 % 单独检查每个结果并不充分。
-After a partial execution shared by several outcomes, every outcome still compatible with that partial execution must retain a policy-safe completion.
+After a partial execution shared by several results, every result still compatible with that partial execution must retain a policy-safe completion.
 % 在多个结果共享的一段部分执行之后，每个仍与该部分执行兼容的结果都必须保留一条策略安全的完成路径。
 The operator below removes exactly the complete executions that violate this condition.
 % 下列算子恰好删除违反这一条件的完整执行。
@@ -184,9 +186,9 @@ Since \(\widehat B_1\subseteq\widehat B_0\), repeated application removes execut
  \end{cases}
 \end{equation}
 \end{definition}
-At \(z=\epsilon\), the fixed-point condition retains a completion for every target outcome, and the checked coverage maps cover every required source outcome.
+At \(z=\epsilon\), the fixed-point condition retains a completion for every target result, and the checked coverage maps cover every required source result.
 % 在 \(z=\epsilon\) 处，不动点条件为每个目标结果保留一条完成路径，经过检查的覆盖映射则覆盖每个要求实现的源结果。
-The existential quantifier chooses a call order, and the universal condition keeps every compatible outcome completable after every prefix.
+The existential quantifier chooses a call order, and the universal condition keeps every compatible result completable after every prefix.
 % 存在量词选择调用次序，而全称条件保证每个兼容结果在每个前缀之后仍可完成。
 
 \begin{lemma}[Largest safe execution set]
@@ -198,11 +200,11 @@ When the edit is safe, \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) is a safe 
 % 当编辑安全时，\((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) 是安全执行集合，并且每个安全执行集合 \((L,\widehat B)\) 都满足 \(\widehat B\subseteq\widehat B^\dagger_{H,u}\) 和 \(L\subseteq W^\dagger_{H,u}\)。
 \end{lemma}
 \begin{proof}
-The workflow, outcome, and policy conditions place every safe execution set's complete executions inside \(\widehat B_0\).
+The workflow, result, and policy conditions place every safe execution set's complete executions inside \(\widehat B_0\).
 % 工作流、结果和策略条件使每个安全执行集合的完整执行都包含于 \(\widehat B_0\)。
 The final condition makes this set post-fixed, so monotonicity and finite Knaster--Tarski place it inside \(\widehat B^\dagger\), and projected prefixes give \(L\subseteq W^\dagger\).
 % 最后一项条件使该集合成为后不动点，因此由单调性和有限 Knaster--Tarski 可知其包含于 \(\widehat B^\dagger\)，而投影前缀给出 \(L\subseteq W^\dagger\)。
-Conversely, \(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) keeps every compatible outcome completable.
+Conversely, \(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) keeps every compatible result completable.
 % 反之，\(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) 保证每个兼容结果仍可完成。
 At the empty prefix, this condition and the checked coverage witnesses from \cref{lem:history-derivation} establish \(\mathsf{PreservesRequired}\).
 % 在空前缀处，该条件与 \cref{lem:history-derivation} 中经检查的覆盖见证共同建立 \(\mathsf{PreservesRequired}\)。
@@ -221,7 +223,7 @@ When such a pair exists, write its unique value as \(\mathsf{SafeBehavior}(\Thet
 \Cref{lem:largest-safe-family} proves that this witness exists exactly when \(\widehat B^\dagger_{H,u}\ne\varnothing\) and then equals \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\).
 % \Cref{lem:largest-safe-family} 证明该见证恰在 \(\widehat B^\dagger_{H,u}\ne\varnothing\) 时存在，并且此时等于 \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\)。
 
-\subsubsection{Why Outcome-by-Outcome Checking Fails}
+\subsubsection{Why Result-by-Result Checking Fails}
 % 逐结果检查的反例
 
 \Cref{sec:lifecycle} introduced the contract \(X\otimes(Y\oplus Z)\) under policy \(\Pref\{yx,xz\}\).
@@ -232,14 +234,14 @@ The candidate family initially contains \(\bar y\bar x\) and \(\bar x\bar z\).
 % 初始候选族包含 \(\bar y\bar x\) 与 \(\bar x\bar z\)。
 The first fixed-point iteration removes \(\bar x\bar z\).
 % 第一次不动点迭代移除 \(\bar x\bar z\)。
-The second iteration removes \(\bar y\bar x\), because after the first removal the empty prefix no longer has a completion for the \(X\otimes Z\) outcome.
+The second iteration removes \(\bar y\bar x\), because after the first removal the empty prefix no longer has a completion for the \(X\otimes Z\) result.
 % 第二次迭代移除 \(\bar y\bar x\)，因为第一次移除后，空前缀不再为 \(X\otimes Z\) 结果保留完成路径。
 The empty fixed point is the formal reason the exact checker rejects.
 % 空不动点就是精确检查器拒绝该编辑的形式原因。
 
 \begin{proposition}[Exact correspondence with generalized nonblocking]
 % 与广义非阻塞的精确对应
-\label{prop:outcome-necessary}
+\label{prop:result-necessary}
 For nonempty \(\widehat B\subseteq\widehat B_0\), let \(\mathcal T_{\widehat B}\) be the prefix trie of \(L_{\widehat B}=\Pref(\pi_2\widehat B)\).
 % 对于非空的 \(\widehat B\subseteq\widehat B_0\)，令 \(\mathcal T_{\widehat B}\) 为 \(L_{\widehat B}=\Pref(\pi_2\widehat B)\) 的前缀字典树。
 Mark state \(z\) by \(\mathsf{possible}_o\) exactly when \(o\in\mathsf{Compat}(z)\), and mark state \(y\) by \(\mathsf{done}_o\) exactly when \((o,y)\in\widehat B\).
@@ -255,7 +257,7 @@ Then
  (\mathsf{possible}_o,\mathsf{done}_o)\text{-nonblocking}.
 \end{gathered}
 \]
-Consequently, if \(\widehat B^\dagger\) is nonempty, it is the largest nonempty completion subfamily of \(\widehat B_0\) satisfying these outcome-specific nonblocking conditions.
+Consequently, if \(\widehat B^\dagger\) is nonempty, it is the largest nonempty completion subfamily of \(\widehat B_0\) satisfying these result-specific nonblocking conditions.
 % 因此，若 \(\widehat B^\dagger\) 非空，则它是 \(\widehat B_0\) 中满足这些特定于结果的非阻塞条件的最大非空完成路径子族。
 If it is empty, no nonempty subfamily satisfies the conditions.
 % 若它为空，则没有任何非空子族满足这些条件。
@@ -273,12 +275,12 @@ For strictness, the preceding instance has the marker-nonblocking projected pair
 % 关于严格性，前述实例具有标记非阻塞的投影二元组 \((\Pref\{\bar y\bar x,\bar x\bar z\}, \{\bar y\bar x,\bar x\bar z\})\)，但其带索引不动点为空。
 \end{proof}
 
-\Cref{prop:outcome-necessary} relates the fixed point to generalized nonblocking after the trusted runtime has derived the outcome-specific completion conditions~\cite{dequeiroz2005multitasking,malik2008generalised}.
-% \Cref{prop:outcome-necessary} 表明，在可信运行时推导出各结果的完成条件之后，该不动点与广义非阻塞相对应~\cite{dequeiroz2005multitasking,malik2008generalised}。
+\Cref{prop:result-necessary} relates the fixed point to generalized nonblocking after the trusted runtime has derived the result-specific completion conditions~\cite{dequeiroz2005multitasking,malik2008generalised}.
+% \Cref{prop:result-necessary} 表明，在可信运行时推导出各结果的完成条件之后，该不动点与广义非阻塞相对应~\cite{dequeiroz2005multitasking,malik2008generalised}。
 The trusted runtime derives those conditions from the requested edit, authorized removals, actions, authorization records, and the execution record.
 % 可信运行时根据请求的编辑、获准移除、动作、授权记录和执行记录推导这些条件。
-It also decides whether each protected call creates or reuses an authorization, computes every safe continuation or a rejection proof, and puts an accepted result into effect atomically.
-% 它还判断每个受控调用是创建还是复用授权，计算全部安全继续方式或拒绝证明，并使接受的结果原子生效。
+It also decides whether each tool call creates or reuses an authorization, computes the largest safe execution set or a rejection proof, and puts an accepted result into effect atomically.
+% 它还判断每个工具调用是创建还是复用授权，计算最大安全执行集合或拒绝证明，并使接受的结果原子生效。
 
 \subsubsection{Rejection Proofs}
 % 拒绝证明
@@ -329,7 +331,7 @@ Greatestness yields the fixed-point equality, and \(\Pref(B)/z=\Pref(B/z)\) yiel
 The full proof is in \cref{app:residual-coherence-proof}.
 % 完整证明见 \cref{app:residual-coherence-proof}。
 \end{proof}
-Thus every accepted prefix retains a safe completion for every outcome that remains compatible with that prefix.
+Thus every accepted prefix retains a safe completion for every result that remains compatible with that prefix.
 % 因此，每个被接受的前缀都会为仍与该前缀兼容的每个结果保留一条安全完成路径。
 
 \subsubsection{Checker Outputs}
@@ -345,5 +347,5 @@ Each answer includes a digest of the execution record that was checked.
 % \Cref{app:returned-data} 给出精确返回数据与验证规则。
 \Cref{prop:app-output-complexity} proves an output-sensitive \(O(D+n\Lambda+|\mathcal G_{\rm cov}|+V_B\log(2+V_B))\)-time, \(O(D+\Lambda+|\mathcal G_{\rm cov}|)\)-space bound.
 % \Cref{prop:app-output-complexity} 证明一种输出敏感的 \(O(D+n\Lambda+|\mathcal G_{\rm cov}|+V_B\log(2+V_B))\) 时间、\(O(D+\Lambda+|\mathcal G_{\rm cov}|)\) 空间界。
-Exponential growth occurs only in explicitly emitted linearizations and pairs linking prefixes to required outcomes.
+Exponential growth occurs only in explicitly emitted linearizations and pairs linking prefixes to required results.
 % 指数增长只出现在显式输出的线性化以及连接前缀与要求实现结果的二元组中。

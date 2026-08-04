@@ -11,10 +11,8 @@ A careless Restore or Merge could request approval twice, pay both suppliers, or
 A safe execution approves the purchase once, pays exactly one supplier, and permits shipment only after that payment.
 % 安全执行只批准一次购买，只向一个供应商付款，并且仅在付款后允许发货。
 
-We call the resulting task structure an \emph{approval workflow}.
-% 我们把由此得到的任务结构称为\emph{审批工作流}。
-It records which tool calls may occur, in what order, and which results count as completion.
-% 它记录哪些工具调用可以发生、调用次序以及哪些结果算作完成。
+The resulting \emph{workflow} records which calls may occur, in what order, and which results count as completion.
+% 由此得到的\emph{工作流}记录哪些调用可以发生、调用次序以及哪些结果算作完成。
 In this example, it authorizes at most one purchase.
 % 在本例中，它至多授权一次采购。
 The Agent reserves the budget and saves checkpoint \(k\) before approval.
@@ -23,12 +21,12 @@ The approval is then authorized once, creating an authorization record that Rest
 % 审批随后只获得一次授权，并创建一条 Restore 不会删除的授权记录。
 The Agent next requests a Fork between suppliers \(L\) and \(R\).
 % Agent 随后请求在供应商 \(L\) 和 \(R\) 之间执行 Fork。
-The workflow allows two outcomes: order from \(L\) or order from \(R\).
+The workflow allows two results: order from \(L\) or order from \(R\).
 % 工作流允许两种结果：向 \(L\) 下单或向 \(R\) 下单。
-In either outcome, payment authorization must precede shipment authorization:
+In either result, payment authorization must precede shipment authorization:
 % 在任一结果中，付款授权都必须先于发货授权：
 \begin{equation}
-\label{eq:running-outcomes}
+\label{eq:running-results}
 \begin{split}
  o_L&:\ x_L^p\prec x_L^s,\\
  o_R&:\ x_R^p\prec x_R^s ,
@@ -36,10 +34,10 @@ In either outcome, payment authorization must precede shipment authorization:
 \end{equation}
 where \(x_i^p\) and \(x_i^s\) are payment and shipment calls.
 % 其中，\(x_i^p\) 和 \(x_i^s\) 分别是付款调用和发货调用。
-A \emph{workflow call} \(x\) is one place in this structure where the runtime can invoke a protected tool.
-% \emph{工作流调用} \(x\) 是该结构中运行时可以调用受控工具的一个位置。
-The function \(q_{\rm act}(x)=d\) records which protected action the call refers to.
-% 函数 \(q_{\rm act}(x)=d\) 记录该调用指向哪个受控动作。
+A \emph{workflow call} \(x\) is one place in this structure where the runtime can invoke a tool.
+% \emph{工作流调用} \(x\) 是该结构中运行时可以调用工具的一个位置。
+The function \(q_{\rm act}(x)=d\) records which tool action the call refers to.
+% 函数 \(q_{\rm act}(x)=d\) 记录该调用指向哪个工具动作。
 Calls that refer to the same action share one authorization record.
 % 指向同一个动作的调用共享一条授权记录。
 
@@ -61,21 +59,23 @@ At the Fork request, \(\mathsf{lab}(\Delta)=ra\).
 % 在 Fork 请求处，\(\mathsf{lab}(\Delta)=ra\)。
 The policy allows prefixes of \(rap_Ls\) and \(rap_Rs\), but never both payments or a payment before approval.
 % 策略允许 \(rap_Ls\) 和 \(rap_Rs\) 的前缀，但绝不允许两笔付款都发生，也不允许付款先于审批。
-Although the supplier outcomes are exclusive, both must still have a safe way to finish when the Fork is checked.
+Although the supplier results are exclusive, both must still have a safe way to finish when the Fork is checked.
 % 尽管两个供应商结果互斥，但在检查 Fork 时，二者都必须仍有安全完成方式。
 
 \subsection{Accepted and Rejected Forks}
 % 被接受与被拒绝的 Fork
 The Agent sends \(u=\mathsf{ForkChoice}(b,\sigma)\), which names a current branch and a registered edit rule.
 % Agent 发送 \(u=\mathsf{ForkChoice}(b,\sigma)\)，其中指明一个当前分支和一条已注册编辑规则。
+Here, the rule identified by \(\sigma\) turns branch \(b\) into the exclusive supplier-\(L\) and supplier-\(R\) copies shown below.
+% 在这里，\(\sigma\) 指明的规则把分支 \(b\) 变为下文所示的供应商 \(L\) 与供应商 \(R\) 互斥副本。
 The trusted runtime constructs the edited workflow from the execution record.
 % 可信运行时根据执行记录构造编辑后的工作流。
-It also derives the outcomes that remain required and the action referred to by every workflow call.
+It also derives the results that remain required and the action referred to by every workflow call.
 % 可信运行时还推导仍然要求实现的结果，以及每个工作流调用所指向的动作。
 
-Write \(M_o\) for the ways to complete outcome \(o\) while obeying the policy.
+Write \(M_o\) for the ways to complete result \(o\) while obeying the policy.
 % 以 \(M_o\) 表示遵守策略并完成结果 \(o\) 的方式。
-Each outcome has one allowed call order:
+Each result has one allowed call order:
 % 每个结果都有一种允许的调用顺序：
 \[
 \begin{aligned}
@@ -87,23 +87,23 @@ Thus \(M_{o_L}=\{z_L\}\) and \(M_{o_R}=\{z_R\}\).
 % 因此，\(M_{o_L}=\{z_L\}\) 且 \(M_{o_R}=\{z_R\}\)。
 These sequences contain the calls after the edit, while the existing log contributes the earlier prefix \(ra\).
 % 这些序列包含编辑后的调用，而现有日志提供先前的前缀 \(ra\)。
-Each supplier outcome is preserved, and every permitted prefix can still finish safely.
+Each supplier result is preserved, and every permitted prefix can still finish safely.
 % 每个供应商结果都得到保留，且每个获准前缀仍能安全完成。
-The verdict is therefore \emph{Accept} because both supplier outcomes remain possible, every permitted prefix is policy safe, and each such prefix can still reach a complete outcome.
+The verdict is therefore \(\mathsf{Accepted}\) because both supplier results remain possible, every permitted prefix is policy safe, and each such prefix can still reach a complete result.
 % 因而判定为\emph{接受}，因为两个供应商结果仍然可能，每个获准前缀都满足策略，且每个这样的前缀仍能到达完整结果。
 If policy excludes \(rap_Rs\), then \(M_{o_R}=\varnothing\), and the Fork is rejected because pruning supplier \(R\) would change its meaning.
 % 如果策略排除 \(rap_Rs\)，则 \(M_{o_R}=\varnothing\)，并且该 Fork 会被拒绝，因为剪除供应商 \(R\) 将改变其含义。
 Rejection returns a proof listing the order in which completions were removed and the reason for each removal, rather than letting the Agent weaken the requested edit.
 % 拒绝会返回一份证明，列出完成路径的移除顺序及每次移除的原因，而不会让 Agent 弱化请求的编辑。
-The verdict in this variant is \emph{Reject} because accepting only the surviving \(L\) branch would drop the \(R\) branch without authorization.
+The verdict in this variant is \(\mathsf{Reject}\) because accepting only the surviving \(L\) branch would drop the \(R\) branch without authorization.
 % 该变体的判定为\emph{拒绝}，因为只接受保留下来的 \(L\) 分支会在未经授权的情况下删除 \(R\) 分支。
 
 \subsection{Why Safe Endpoints Are Not Enough}
 % 为什么安全终点仍然不够
 
-The previous rejection is visible at the start because one outcome has no safe completion.
+The previous rejection is visible at the start because one result has no safe completion.
 % 前述拒绝在起点即可看出，因为其中一个结果没有安全完成路径。
-A harder failure occurs when every outcome is initially safe in isolation, but no single set of runtime rules can keep all of them completable.
+A harder failure occurs when every result is initially safe in isolation, but no single set of runtime rules can keep all of them completable.
 % 更困难的失败情形是：每个结果单独看起初都安全，但不存在一组运行时规则能让它们始终均可完成。
 Let \(X,Y,Z\) be single-call contracts with authorization labels \(x,y,z\), respectively, and consider
 % 令 \(X,Y,Z\) 分别为授权标签为 \(x,y,z\) 的单调用契约，并考虑
@@ -112,15 +112,15 @@ Let \(X,Y,Z\) be single-call contracts with authorization labels \(x,y,z\), resp
   \qquad\text{under}\qquad
   \mathcal A=\Pref\{yx,xz\}.
 \]
-The two outcomes have safe complete traces \(yx\) and \(xz\).
+The two results have safe complete traces \(yx\) and \(xz\).
 % 两个结果分别具有安全完整轨迹 \(yx\) 和 \(xz\)。
-However, executing the shared \(x\) call first keeps the \(X\otimes Y\) outcome possible while leaving only the forbidden continuation \(xy\).
+However, executing the shared \(x\) call first keeps the \(X\otimes Y\) result possible while leaving only the forbidden continuation \(xy\).
 % 然而，若先执行共享的 \(x\) 调用，\(X\otimes Y\) 结果仍然可能，但只剩下被禁止的后续轨迹 \(xy\)。
-Allowing \(x\) is therefore unsafe, while forbidding \(x\) destroys the \(X\otimes Z\) outcome.
+Allowing \(x\) is therefore unsafe, while forbidding \(x\) destroys the \(X\otimes Z\) result.
 % 因而，允许 \(x\) 并不安全，而禁止 \(x\) 又会破坏 \(X\otimes Z\) 结果。
-The exact verdict is \emph{Reject}, even though an outcome-by-outcome check would accept.
+The exact verdict is \(\mathsf{Reject}\), even though an result-by-result check would accept.
 % 精确判定为\emph{拒绝}，尽管逐结果检查会接受。
-\Cref{sec:exact-check} detects this failure by repeatedly removing executions that leave some required outcome with no safe completion.
+\Cref{sec:exact-check} detects this failure by repeatedly removing executions that leave some required result with no safe completion.
 % \Cref{sec:exact-check} 通过反复移除会使某个要求实现的结果失去安全完成方式的执行来检测这一失败。
 
 \subsection{Calls During the Atomic Rule Update}
@@ -165,7 +165,7 @@ Otherwise, it discards the outdated result and checks the request again against 
 
 Together, these executions give the paper's end-to-end safety rule.
 % 这些执行共同给出本文的端到端安全规则。
-An edit satisfies this rule when (1) it preserves every outcome still required by the execution record, (2) every allowed step obeys policy and can still reach a complete execution, (3) every required outcome that remains possible after those steps still has a safe way to finish, and (4) the new rules and authorization tokens take effect atomically with concurrent calls.
+An edit satisfies this rule when (1) it preserves every result still required by the execution record, (2) every allowed step obeys policy and can still reach a complete execution, (3) every required result that remains possible after those steps still has a safe way to finish, and (4) the new rules and authorization tokens take effect atomically with concurrent calls.
 % 当一次编辑满足以下条件时，它符合该规则：(1) 保留执行记录仍要求实现的每个结果；(2) 每个获准步骤都遵守策略且仍能到达完整执行；(3) 每个在这些步骤之后仍然可能实现的要求结果都保留安全完成方式；(4) 新规则与授权令牌相对于并发调用原子生效。
 \Cref{sec:model} states this rule precisely, and \cref{sec:exact-check} constructs the exact checker.
 % \Cref{sec:model} 精确定义这一规则，\cref{sec:exact-check} 则构造精确检查器。

@@ -15,7 +15,7 @@ When defined, write
 % 当推导有定义时，记
 % \(\delta=\mathsf{Derive}(\Theta)
 %  =(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
-A \emph{safe runtime implementation} is an automaton \(M\) together with complete executions \(\widehat B_M\) labeled by outcome.
+A \emph{safe runtime implementation} is an automaton \(M\) together with complete executions \(\widehat B_M\) labeled by result.
 % \emph{安全运行时实现}由自动机 \(M\) 和按结果标记的完整执行 \(\widehat B_M\) 组成。
 The partial and complete executions of \(M\) must form a safe execution set as defined in \cref{def:safe-execution-set}.
 % \(M\) 的部分执行与完整执行必须构成 \cref{def:safe-execution-set} 定义的安全执行集合。
@@ -25,7 +25,7 @@ The atomic rule update activates this automaton at \(\eta^+\), closes \(\eta^-\)
 \paragraph{What the checker must know}
 % 检查器必须知道什么
 Write \(V=\mathsf{Sec}(S;c,r)
-=({\mathbf P},{\mathbf I},{\mathbf E},{\mathbf C})\) for four parts of the checked record: (1) the workflow and its required outcomes, (2) which calls refer to the same action, (3) earlier authorizations and call progress, and (4) which rules govern a call that overlaps the atomic rule update.
+=({\mathbf P},{\mathbf I},{\mathbf E},{\mathbf C})\) for four parts of the checked record: (1) the workflow and its required results, (2) which calls refer to the same action, (3) earlier authorizations and call progress, and (4) which rules govern a call that overlaps the atomic rule update.
 % 令 \(V=\mathsf{Sec}(S;c,r)
 % =({\mathbf P},{\mathbf I},{\mathbf E},{\mathbf C})\) 表示所检查记录的四个部分：(1) 工作流及其要求实现的结果，(2) 哪些调用指向同一个动作，(3) 先前的授权与调用进展，以及 (4) 哪组规则管理与原子规则更新重叠的调用。
 Suppose a checker receives only some function \(f(V)\) of this record.
@@ -34,6 +34,8 @@ The function is exact if any two records that it makes indistinguishable always 
 % 如果该函数无法区分的任意两份记录，对每个共同的判定或规则更新请求都给出相同答案，那么该函数是精确的。
 Write \(\mathsf{Exact}(f)\) for this property.
 % 将这一性质记为 \(\mathsf{Exact}(f)\)。
+For example, a view that erases the active rule version can conflate a prepared update that may commit with the same update in a state where it must return \(\mathsf{NoCommit}\).
+% 例如，删除当前规则版本的视图可能会混淆两种状态：同一项已准备更新在一种状态中可以提交，而在另一种状态中必须返回 \(\mathsf{NoCommit}\)。
 Internal identifiers may be renamed consistently because their spelling cannot affect the answer.
 % 内部标识可以一致重命名，因为它们的具体拼写不能影响答案。
 For \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), \(\mathsf{Keep}_J\) gives the checker exactly the parts named by \(J\).
@@ -41,7 +43,7 @@ For \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), \(\mathsf{Keep}_J
 \Cref{app:record-information} gives one record pair for each part and a fifth pair for the correspondence between earlier authorizations and actions.
 % \Cref{app:record-information} 为每个部分给出一组记录对，并为先前授权与动作之间的对应关系给出第五组记录对。
 
-\paragraph{Required-outcome preservation}
+\paragraph{Required-result preservation}
 % 要求实现结果的保留
 \[
 \begin{aligned}
@@ -52,13 +54,13 @@ For \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), \(\mathsf{Keep}_J
 \mathsf{Covers}_u(t,a).
 \end{aligned}
 \]
-Thus every required source outcome appears in an accepted target outcome.
+Thus every required source result appears in an accepted target result.
 % 因而，每个要求实现的源结果都出现在某个被接受的目标结果中。
 
 \paragraph{Visible runtime behavior}
 % 可见运行时行为
-\(\mathcal O_{\rm api}\) includes edit answers tied to the checked record, edits put into effect, protected-call answers, released requests, completion updates, and returned values.
-% \(\mathcal O_{\rm api}\) 包括与所检查记录对应的编辑答案、已经生效的编辑、受控调用答案、已发出请求、完成更新和返回值。
+\(\mathcal O_{\rm api}\) includes edit answers tied to the checked record, edits put into effect, tool-call answers, released requests, completion updates, and returned values.
+% \(\mathcal O_{\rm api}\) 包括与所检查记录对应的编辑答案、已经生效的编辑、工具调用答案、已发出请求、完成更新和返回值。
 It hides internal computation, Checkpoint, stale candidates, and restart bookkeeping.
 % 它隐藏内部计算、Checkpoint、过期候选结果和重启记录工作。
 \[
@@ -81,14 +83,14 @@ Write \(S\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I\) when \(S\) and \(I\) ar
 For finite-state \(\mathcal W\) and finite \(\mathcal R\),
 \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) accepts iff the stored \(\lambda\) witnesses \(\mathcal W\sqsubseteq_\lambda\mathcal R\).
 % 当且仅当所存 \(\lambda\) 见证 \(\mathcal W\sqsubseteq_\lambda\mathcal R\) 时，\(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) 才接受。
-On acceptance, the source workflow's protected-call traces and \(\mathsf{BRuns}(\mathcal R)\) are order-isomorphic and preserve outcomes, actions, \Fresh/\Alias, the safety answer, and the largest safe execution set.
-% 接受时，源工作流的受控调用轨迹与 \(\mathsf{BRuns}(\mathcal R)\) 序同构，并保持结果、动作、\Fresh/\Alias、安全答案与最大安全执行集合。
+On acceptance, the source workflow's tool-call traces and \(\mathsf{BRuns}(\mathcal R)\) are order-isomorphic and preserve results, actions, \Fresh/\Alias, the safety answer, and the largest safe execution set.
+% 接受时，源工作流的工具调用轨迹与 \(\mathsf{BRuns}(\mathcal R)\) 序同构，并保持结果、动作、\Fresh/\Alias、安全答案与最大安全执行集合。
 Malformed registrations fail before startup.
 % 不合格的注册在启动前失败。
 \end{theorem}
 
-For the remaining results, assume accepted registration, trusted checking of every protected call, and linearizable transactions that remain atomic after a restart within each policy domain.
-% 对于其余结果，假设注册已通过、每次受控调用都由可信组件检查，并且每个策略域内的可线性化事务在重启后仍保持原子性。
+For the remaining results, assume accepted registration, trusted checking of every tool call, and linearizable transactions that remain atomic after a restart within each policy domain.
+% 对于其余结果，假设注册已通过、每次工具调用都由可信组件检查，并且每个策略域内的可线性化事务在重启后仍保持原子性。
 \(\mathsf{Checkpoint}(k,b)\) succeeds exactly when \(k\) is fresh, \(b\) is current, and the stored work matches the branch's remaining registered work: \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\).
 % 当且仅当 \(k\) 是新的检查点标识、\(b\) 是当前分支，且所存工作与该分支剩余的已注册工作匹配时，\(\mathsf{Checkpoint}(k,b)\) 才成功：\(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\)。
 A successful Checkpoint preserves \(\mathsf{AgentSec}\) without changing the current workflow or any earlier authorization.
@@ -109,8 +111,8 @@ For defined \(\delta=\mathsf{Derive}(\Theta)\), \(\widehat B^\dagger_{H,u}=\varn
 % 对有定义的 \(\delta=\mathsf{Derive}(\Theta)\)，\(\widehat B^\dagger_{H,u}=\varnothing\) 给出保持状态的 \(\mathsf{Reject}\)，且不存在安全运行时实现。
 Otherwise, for \(Y=\mathsf{Check}(\Theta)\), nonempty \(\widehat B^\dagger_{H,u}\), existence of a safe runtime implementation, \(\mathsf{Ready}(S,u,Y)\), and a successor that puts the edit into effect while preserving \(\mathsf{AgentSec}\) are equivalent.
 % 否则，对于 \(Y=\mathsf{Check}(\Theta)\)，\(\widehat B^\dagger_{H,u}\) 非空、安全运行时实现存在、\(\mathsf{Ready}(S,u,Y)\) 成立，以及存在使编辑生效并保持 \(\mathsf{AgentSec}\) 的后继，这四项彼此等价。
-The largest execution family satisfies \(\mathsf{PreservesRequired}\), and the derived record identifies every already-satisfied source outcome and every authorized removal.
-% 最大执行族满足 \(\mathsf{PreservesRequired}\)，且派生记录标识每个已满足源结果和每项获准移除。
+The complete-execution component of the largest safe execution set satisfies \(\mathsf{PreservesRequired}\), and the derived record identifies every already-satisfied source result and every authorized removal.
+% 最大安全执行集合的完整执行分量满足 \(\mathsf{PreservesRequired}\)，且派生记录标识每个已满足源结果和每项获准移除。
 \end{theorem}
 
 \begin{theorem}[Necessary Record Information]
@@ -118,8 +120,8 @@ The largest execution family satisfies \(\mathsf{PreservesRequired}\), and the d
 \label{thm:necessary-state}
 The full record is sufficient.
 % 完整记录是充分的。
-If any one of the four parts is omitted, two records become indistinguishable even though the correct answer differs.
-% 如果省略这四个部分中的任何一个，两份记录就会变得无法区分，但它们的正确答案不同。
+If any one of the four parts is omitted wholesale while the others are retained, two records become indistinguishable even though the correct answer differs.
+% 如果完整省略这四个部分中的任何一个而保留其余部分，两份记录就会变得无法区分，但它们的正确答案不同。
 \[
 \mathsf{Exact}(\mathsf{Keep}_J)\Longleftrightarrow
 J=\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}.
@@ -130,7 +132,7 @@ The \(\mathsf{Drop}_{ra}\) row shows that retaining authorization records and ac
 % \(\mathsf{Drop}_{ra}\) 行表明，仅保留授权记录与动作而不记录它们之间的对应关系同样不够。
 In particular, a checker is not exact if it forgets which calls or authorization records refer to the same action, or if it sees only the caller's description of what should happen next.
 % 特别地，如果检查器忘记哪些调用或授权记录指向同一个动作，或者只看到调用方对后续执行的描述，它就不是精确的。
-Generalized nonblocking can serve as an exact solver only after the trusted runtime derives the workflow and outcome-specific completion conditions.
+Generalized nonblocking can serve as an exact solver only after the trusted runtime derives the workflow and result-specific completion conditions.
 % 只有在可信运行时推导出工作流以及特定于结果的完成条件之后，广义非阻塞才能作为精确求解器。
 \end{theorem}
 
@@ -139,8 +141,8 @@ Generalized nonblocking can serve as an exact solver only after the trusted runt
 \label{thm:repeated-use}
 Every enabled event preserves \(\mathsf{AgentSec}\).
 % 每个启用事件都保持 \(\mathsf{AgentSec}\)。
-Therefore, the guarantees hold after every finite reachable sequence of edits, registered extensions, protected calls, authorization updates, rule updates, stops, and restarts.
-% 因此，这些保证在由编辑、已注册扩展、受控调用、授权更新、规则更新、停止和重启组成的每个有限可达序列之后仍然成立。
+Therefore, the guarantees hold after every finite reachable sequence of edits, registered extensions, tool calls, authorization updates, rule updates, stops, and restarts.
+% 因此，这些保证在由编辑、已注册扩展、工具调用、授权更新、规则更新、停止和重启组成的每个有限可达序列之后仍然成立。
 \end{theorem}
 
 \begin{theorem}[Runtime Correctness]
@@ -154,8 +156,8 @@ The observation records edit answers tied to the checked record, new authorizati
 
 \paragraph{Proof roadmap}
 % 证明路线
-Registration reflection follows by enumerating the finite protected-call traces and checking their order- and identity-preserving correspondence.
-% 注册反射通过枚举有限受控调用轨迹并检查其保持次序与标识的对应关系得到。
+Registration reflection follows by enumerating the finite tool-call traces and checking their order- and identity-preserving correspondence.
+% 注册反射通过枚举有限工具调用轨迹并检查其保持次序与标识的对应关系得到。
 The edit-rule checks and greatest-fixed-point argument prove exact checking.
 % 编辑规则检查与最大不动点论证证明精确检查。
 Every safe execution set is contained in the computed family, and a nonempty computed family yields a safe runtime implementation.
@@ -164,7 +166,7 @@ Five explicit pairs of execution records prove the information result.
 % 五组显式执行记录对证明信息结果。
 Induction over the runtime rules proves repeated use.
 % 对运行时规则作归纳证明重复使用。
-A case analysis over edits, protected calls, races with the rule update, returns, and restarts establishes the weak bisimulation.
-% 对编辑、受控调用、与规则更新的竞态、返回与重新启动作分类讨论建立弱互模拟。
+A case analysis over edits, tool calls, races with the rule update, returns, and restarts establishes the weak bisimulation.
+% 对编辑、工具调用、与规则更新的竞态、返回与重新启动作分类讨论建立弱互模拟。
 The appendix gives the complete case proofs.
 % 附录给出完整的分类证明。
