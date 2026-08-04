@@ -30,25 +30,27 @@ In either outcome, payment authorization must precede shipment authorization:
  o_R&:\ x_R^p\prec x_R^s ,
 \end{split}
 \end{equation}
-where \(x_i^p\) and \(x_i^s\) are payment and shipment call positions.
-% 其中，\(x_i^p\) 和 \(x_i^s\) 分别是付款调用位置和发货调用位置。
-A \emph{call position} \(x\) identifies a particular protected call in the workflow.
-% \emph{调用位置} \(x\) 标识工作流中的一次特定受控调用。
-An \emph{action ID} \(d\) identifies the protected action shared by one or more call positions and links them to one authorization record.
-% \emph{动作标识} \(d\) 标识由一个或多个调用位置共享的受控动作，并将这些位置关联到同一授权记录。
+where \(x_i^p\) and \(x_i^s\) are payment and shipment calls.
+% 其中，\(x_i^p\) 和 \(x_i^s\) 分别是付款调用和发货调用。
+A \emph{workflow call} \(x\) is one place where the workflow can invoke a protected tool.
+% \emph{工作流调用} \(x\) 是工作流可以调用受控工具的一个位置。
+The function \(q_{\rm act}(x)=d\) records which external action the call refers to.
+% 函数 \(q_{\rm act}(x)=d\) 记录该调用指向哪个外部动作。
+Calls that refer to the same action share one authorization record.
+% 指向同一个动作的调用共享一条授权记录。
 
-The two shipment calls share one action ID:
-% 两个发货调用共享一个动作标识：
+In this example, both shipment calls authorize the same one-order shipment:
+% 在这个例子中，两个发货调用都授权同一笔订单的发货：
 \[
  q_{\rm act}(x_L^s)=q_{\rm act}(x_R^s)=d_s.
 \]
-The two payment calls instead have different action IDs \(d_L^p\) and \(d_R^p\).
-% 两个付款调用则具有不同的动作标识 \(d_L^p\) 和 \(d_R^p\)。
+The two payment calls instead refer to different actions \(d_L^p\) and \(d_R^p\).
+% 两个付款调用则指向不同的动作 \(d_L^p\) 和 \(d_R^p\)。
 
 The authorization log \(\Delta\) records newly authorized actions in order.
 % 授权日志 \(\Delta\) 按顺序记录新获得授权的动作。
-The notation \(\mathsf{lab}(\Delta)\) keeps only their permission labels.
-% 记号 \(\mathsf{lab}(\Delta)\) 只保留这些效果的权限标签。
+The notation \(\mathsf{lab}(\Delta)\) keeps only their authorization labels.
+% 记号 \(\mathsf{lab}(\Delta)\) 只保留这些动作的授权标签。
 Budget reservation contributes \(r\), approval contributes \(a\), the two payments contribute \(p_L\) and \(p_R\), and shipment contributes \(s\).
 % 预算预留贡献 \(r\)，审批贡献 \(a\)，两种付款分别贡献 \(p_L\) 和 \(p_R\)，发货贡献 \(s\)。
 At the Fork request, \(\mathsf{lab}(\Delta)=ra\).
@@ -64,8 +66,8 @@ The Agent sends \(u=\mathsf{ForkChoice}(b,\sigma)\), which names a current branc
 % Agent 发送 \(u=\mathsf{ForkChoice}(b,\sigma)\)，其中指明一个当前分支和一条已注册编辑规则。
 The trusted controller constructs the edited workflow from the execution record.
 % 可信控制器根据执行记录构造编辑后的工作流。
-It also derives the outcomes that remain required and the action ID for every call position.
-% 控制器还推导仍然要求实现的结果，以及每个调用位置对应的动作标识。
+It also derives the outcomes that remain required and the action referred to by every workflow call.
+% 控制器还推导仍然要求实现的结果，以及每个工作流调用所指向的动作。
 
 Write \(M_o\) for the ways to complete outcome \(o\) while obeying the policy.
 % 以 \(M_o\) 表示遵守策略并完成结果 \(o\) 的方式。
@@ -79,16 +81,18 @@ Each outcome has one allowed call order:
 \]
 Thus \(M_{o_L}=\{z_L\}\) and \(M_{o_R}=\{z_R\}\).
 % 因此，\(M_{o_L}=\{z_L\}\) 且 \(M_{o_R}=\{z_R\}\)。
+These sequences contain the calls after the edit, while the existing log contributes the earlier prefix \(ra\).
+% 这些序列包含编辑后的调用，而现有日志提供先前的前缀 \(ra\)。
 Each supplier outcome is preserved, and every permitted prefix can still finish safely.
 % 每个供应商结果都得到保留，且每个获准前缀仍能安全完成。
-The verdict is therefore \emph{Accept}: both supplier outcomes remain possible, every permitted prefix is policy safe, and each such prefix can still reach a complete outcome.
-% 因而判定为\emph{接受}：两个供应商结果仍然可能，每个获准前缀都满足策略，且每个这样的前缀仍能到达完整结果。
+The verdict is therefore \emph{Accept} because both supplier outcomes remain possible, every permitted prefix is policy safe, and each such prefix can still reach a complete outcome.
+% 因而判定为\emph{接受}，因为两个供应商结果仍然可能，每个获准前缀都满足策略，且每个这样的前缀仍能到达完整结果。
 If policy excludes \(rap_Rs\), then \(M_{o_R}=\varnothing\), and the Fork is rejected because pruning supplier \(R\) would change its meaning.
 % 如果策略排除 \(rap_Rs\)，则 \(M_{o_R}=\varnothing\)，并且该 Fork 会被拒绝，因为剪除供应商 \(R\) 将改变其含义。
 Rejection returns a certificate listing the order in which completions were removed and the reason for each removal, rather than letting the Agent weaken the requested edit.
 % 拒绝会返回一份证书，列出完成路径的移除顺序及每次移除的原因，而不会让 Agent 弱化请求的编辑。
-The verdict in this variant is \emph{Reject}: checking only the surviving \(L\) branch would silently weaken the requested Fork.
-% 该变体的判定为\emph{拒绝}：只检查保留下来的 \(L\) 分支会悄然削弱所请求的 Fork。
+The verdict in this variant is \emph{Reject} because checking only the surviving \(L\) branch would silently weaken the requested Fork.
+% 该变体的判定为\emph{拒绝}，因为只检查保留下来的 \(L\) 分支会悄然削弱所请求的 Fork。
 
 \subsection{Why Safe Endpoints Are Not Enough}
 % 为什么安全终点仍然不够
@@ -97,8 +101,8 @@ The previous rejection is visible at the start because one outcome has no safe c
 % 前述拒绝在起点即可看出，因为其中一个结果没有安全完成路径。
 A harder failure occurs when every outcome is initially safe in isolation, but no single monitor can keep all of them completable.
 % 更困难的失败情形是：每个结果单独看起初都安全，但不存在一个监控器能让它们始终均可完成。
-Let \(X,Y,Z\) be single-call contracts with permission labels \(x,y,z\), respectively, and consider
-% 令 \(X,Y,Z\) 分别为权限标签为 \(x,y,z\) 的单调用契约，并考虑
+Let \(X,Y,Z\) be single-call contracts with authorization labels \(x,y,z\), respectively, and consider
+% 令 \(X,Y,Z\) 分别为授权标签为 \(x,y,z\) 的单调用契约，并考虑
 \[
   X\otimes(Y\oplus Z)
   \qquad\text{under}\qquad
@@ -108,15 +112,15 @@ The two outcomes have safe complete traces \(yx\) and \(xz\).
 % 两个结果分别具有安全完整轨迹 \(yx\) 和 \(xz\)。
 However, executing the shared \(x\) call first keeps the \(X\otimes Y\) outcome possible while leaving only the forbidden continuation \(xy\).
 % 然而，若先执行共享的 \(x\) 调用，\(X\otimes Y\) 结果仍然可能，但只剩下被禁止的后续轨迹 \(xy\)。
-A monitor that exposes \(x\) is therefore unsafe, while a monitor that removes \(x\) destroys the \(X\otimes Z\) outcome.
-% 因而，暴露 \(x\) 的监控器不安全，而移除 \(x\) 的监控器又会破坏 \(X\otimes Z\) 结果。
+A monitor that allows \(x\) is therefore unsafe, while a monitor that forbids \(x\) destroys the \(X\otimes Z\) outcome.
+% 因而，允许 \(x\) 的监控器不安全，而禁止 \(x\) 的监控器又会破坏 \(X\otimes Z\) 结果。
 The exact verdict is \emph{Reject}, even though an outcome-by-outcome check would accept.
 % 精确判定为\emph{拒绝}，尽管逐结果检查会接受。
 \Cref{sec:admission} detects this failure by repeatedly removing executions that create such a bad prefix.
 % \Cref{sec:admission} 通过反复移除会产生此类危险前缀的执行来检测这一失败。
 
-\subsection{Installation Races}
-% 安装竞态
+\subsection{Calls During Monitor Installation}
+% 监控器安装期间的调用
 
 \Cref{fig:two-histories} separates the current workflow, the authorization log, and the monitor version that must change atomically.
 % \Cref{fig:two-histories} 区分当前工作流、授权日志以及必须原子变更的监控器版本。
@@ -150,7 +154,7 @@ The exact verdict is \emph{Reject}, even though an outcome-by-outcome check woul
     \draw[arr] (ba) -- (ms);
     \draw[arr] (ms) -- (bl);
     \draw[stale] (b0.north) -- (0.65,3.18) --
-      node[above] {checkpoint copy: new call, same protected action}
+      node[above] {checkpoint copy: new call, same action}
       (8.35,3.18) -- (rl.north);
     \draw[arr] (rl) -- (cl);
     \draw[arr] (bl) -- (jn);
@@ -158,7 +162,7 @@ The exact verdict is \emph{Reject}, even though an outcome-by-outcome check woul
     \draw[stale] (bb) to[bend left=17]
       node[below] {other branch disabled} (ms);
 
-    \node[lab] at (0,0.65) {recorded calls and permission trace};
+    \node[lab] at (0,0.65) {recorded calls and authorization order};
     \node[node] (r) at (0.65,0.65) {$r$};
     \node[node] (a) at (3.05,0.65) {$a$};
     \node[node] (pa) at (6.05,0.65) {$p_L$};
@@ -180,8 +184,8 @@ The exact verdict is \emph{Reject}, even though an outcome-by-outcome check woul
   \end{tikzpicture}
   \caption{Fork, Restore, and Merge change the current workflow but do not erase recorded calls.
   % Fork、Restore 和 Merge 会改变当前工作流，但不会抹去已经记录的调用。
-  Restore creates a new workflow call while preserving its authenticated protected action.
-  % Restore 会创建新的工作流调用，同时保留其认证受控动作。
+  Restore creates a new workflow call that refers to the same action as the original call.
+% Restore 会创建一个新的工作流调用，该调用与原调用指向同一个动作。
   The atomic installation point orders both creation and reuse of an authorization record against the monitor-version change.}
   % 原子安装点确定授权记录的创建或复用与监控器版本变更之间的先后顺序。
   \label{fig:two-histories}
@@ -193,8 +197,8 @@ After the shared approval and before either payment, the Agent requests \(\maths
 % 在共享审批之后、任一付款之前，Agent 请求 \(\mathsf{MergeSelect}(g,L,\sigma)\)。
 If the payment call \(x_R^p\) from the old supplier-\(R\) branch is authorized first, it selects \(R\) and changes \(\mathsf{lab}(\Delta)\) from \(ra\) to \(rap_R\).
 % 如果旧供应商 \(R\) 分支的付款调用 \(x_R^p\) 先获得授权，它就会选择 \(R\)，并将 \(\mathsf{lab}(\Delta)\) 从 \(ra\) 改为 \(rap_R\)。
-Selecting \(L\) must therefore be re-derived and rejected.
-% 因此，选择 \(L\) 必须重新推导并被拒绝。
+The controller must therefore check the Merge again and reject it.
+% 因此，控制器必须重新检查该 Merge 并拒绝它。
 If the Merge installation occurs first, it closes the old monitor version and gives every current call a new authorization token before any later \(x_R^p\) can be authorized.
 % 如果 Merge 先安装，它会关闭旧监控器版本，并在后续任何 \(x_R^p\) 获得授权之前为每个当前调用提供新的授权令牌。
 Leaving the old monitor version active would allow both payments.
@@ -204,10 +208,10 @@ Leaving the old monitor version active would allow both payments.
 % 安装期间的授权复用
 Now consider the Restore that keeps both branches in \cref{fig:two-histories}.
 % 现在考虑 \cref{fig:two-histories} 中保留两个分支的 Restore。
-A later Restore of \(k\) creates a new approval workflow call \(x_a'\), but both approval workflow calls refer to the same protected action \(d_a\).
-% 随后 Restore 到 \(k\) 会创建新的审批工作流调用 \(x_a'\)，但两个审批工作流调用都指向同一个受控动作 \(d_a\)。
-The restored workflow call is a new workflow position but retains protected action \(d_a\).
-% 恢复出的工作流调用是一个新的工作流位置，但保留受控动作 \(d_a\)。
+A later Restore of \(k\) creates a new approval call \(x_a'\), but both approval calls refer to the same action \(d_a\).
+% 随后 Restore 到 \(k\) 会创建新的审批调用 \(x_a'\)，但两个审批调用都指向同一个动作 \(d_a\)。
+The restored call is new, while the underlying action remains \(d_a\).
+% 恢复出的调用是新的，而底层动作仍是 \(d_a\)。
 Because \(d_a\) already has an authorization record, executing \(x_a'\) reuses that record.
 % 由于 \(d_a\) 已有授权记录，执行 \(x_a'\) 会复用该记录。
 The restored branch therefore advances past approval without creating another authorization record.
@@ -221,7 +225,7 @@ For this \(\mathsf{RestoreLive}\) request, the checker either installs the deriv
 
 Together, these executions give the paper's end-to-end safety rule.
 % 这些执行共同给出本文的端到端安全规则。
-An edit satisfies this rule when (1) it preserves every outcome still required by the execution record, (2) every allowed step obeys policy and can still reach a complete execution, (3) every required outcome compatible with those steps still has a safe way to finish, and (4) the resulting monitor and authorization tokens take effect atomically with concurrent calls.
-% 当一次编辑满足以下条件时，它符合该规则：(1) 保留执行记录仍要求实现的每个结果；(2) 每个获准步骤都遵守策略且仍能到达完整执行；(3) 每个与这些步骤兼容的要求实现结果仍有安全完成方式；(4) 所得监控器与授权令牌相对于并发调用原子生效。
+An edit satisfies this rule when (1) it preserves every outcome still required by the execution record, (2) every allowed step obeys policy and can still reach a complete execution, (3) every required outcome that remains possible after those steps still has a safe way to finish, and (4) the resulting monitor and authorization tokens take effect atomically with concurrent calls.
+% 当一次编辑满足以下条件时，它符合该规则：(1) 保留执行记录仍要求实现的每个结果；(2) 每个获准步骤都遵守策略且仍能到达完整执行；(3) 每个在这些步骤之后仍然可能实现的要求结果都保留安全完成方式；(4) 所得监控器与授权令牌相对于并发调用原子生效。
 \Cref{sec:model} states this rule precisely, and \cref{sec:admission} constructs the exact checker.
 % \Cref{sec:model} 精确定义这一规则，\cref{sec:admission} 则构造精确检查器。
