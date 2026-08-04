@@ -31,10 +31,9 @@ builds the library, executes all `#print axioms` commands in
 `results/axioms.log`, rejects `sorryAx` and every dependency outside
 `propext`, `Quot.sound`, and `Classical.choice`, and finally replays
 `AuthorityContinuity.Main` with `leanchecker --fresh`.
-For the current observation-arity additions, the controller module and the
-complete `Audit.lean` elaboration/axiom allowlist pass.  A full fresh replay of
-the root was resource-incomplete on the development host and is not claimed as
-a completed check.
+For the current history-admission and information-lower-bound additions, the
+complete `Audit.lean` elaboration/axiom allowlist and the full fresh replay of
+`AuthorityContinuity.Main` pass.
 
 ## Frozen paper-facing theorem matrix
 
