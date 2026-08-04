@@ -42,8 +42,10 @@ Our key idea is that a history edit must not make old facts or unfinished promis
 % 我们的关键思想是：历史编辑不能让旧事实或尚未完成的承诺消失。
 After an edit, every old promise must still be required, have durable evidence that it was completed, or have been explicitly canceled by the authority that created it.
 % 编辑之后，每项旧承诺都必须继续有效、已有持久证据证明其完成，或已由创建它的权限方明确取消。
-The Agent chooses only a registered operation; the trusted controller determines which promises and past effects carry into the result.
+The Agent chooses only a registered operation.
 % Agent 只能选择一项已注册操作；可信控制器决定哪些承诺与既往效果必须带入结果。
+The trusted controller determines which promises and past effects carry into the result.
+% 可信控制器决定哪些承诺与既往效果必须带入结果。
 The Agent therefore cannot obtain a favorable answer by proposing a weaker version of its own past.
 % 因此，Agent 无法通过提出一个更弱的自身过去来获得有利判定。
 
@@ -62,12 +64,16 @@ For a requested edit, the controller takes the checked workflow, authenticated h
 % 对于一次编辑请求，控制器接收经检查的工作流、经认证历史、回执、待处理效果、策略与当前运行时版本，并推导所有合法完整执行。
 It repeatedly removes any execution having a prefix after which one still-possible promised result can no longer finish safely.
 % 它反复删除这样的执行：在该执行的某个前缀之后，某个仍可能且已承诺的结果再也无法安全完成。
-If no execution remains, the controller returns a finite proof that every implementation must fail; otherwise, the survivors define the most permissive safe monitor.
+If no execution remains, the controller returns a finite proof that every implementation must fail.
 % 如果没有执行留下，控制器返回一份有限证明，说明所有实现都必然失败；否则，留下的执行定义最宽松的安全监控器。
+Otherwise, the survivors define the most permissive safe monitor.
+% 否则，留下的执行定义最宽松的安全监控器。
 Before installation, the runtime recomputes the answer from the current history and atomically replaces the old monitor, forcing every racing call to occur either before or after the edit.
 % 安装之前，运行时根据当前历史重新计算判定并原子替换旧监控器，迫使每个竞态调用发生在编辑之前或之后。
-\Cref{sec:lifecycle} applies this process to one procurement history across Fork, Merge, two races, and Restore; the restored approval reuses its earlier receipt rather than producing a second effect.
+\Cref{sec:lifecycle} applies this process to one procurement history across Fork, Merge, two races, and Restore.
 % \Cref{sec:lifecycle} 将这一过程应用于一段依次经历 Fork、Merge、两类竞态与 Restore 的采购历史；恢复后的审批复用先前回执，而不会产生第二个效果。
+The restored approval reuses its earlier receipt rather than producing a second effect.
+% 恢复后的审批复用先前回执，而不会产生第二个效果。
 
 \paragraph{Contributions}
 % 贡献

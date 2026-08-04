@@ -44,8 +44,12 @@ The authority policy allows prefixes of \(rap_Ls\) and \(rap_Rs\), but no trace 
 
 \paragraph{End-to-end security compilation}
 % 端到端安全编译
-The Agent submits only \(u=\mathsf{ForkChoice}(b,\sigma)\); the trusted controller snapshots \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\), where \(\mathsf{out}\) is the ordered durable dispatch outbox, and re-derives the target, outcome obligations, and effect identities from the authenticated history and registered schema.
+The Agent submits only \(u=\mathsf{ForkChoice}(b,\sigma)\).
 % Agent 仅提交 \(u=\mathsf{ForkChoice}(b,\sigma)\)；可信控制器快照 \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\)，其中 \(\mathsf{out}\) 是持久化且有序的派发发件箱，并从经认证历史和已注册模式重新推导目标、结果义务与效果标识。
+The trusted controller snapshots \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\), where \(\mathsf{out}\) is the ordered durable dispatch outbox.
+% 可信控制器快照 \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\)，其中 \(\mathsf{out}\) 是持久化且有序的派发发件箱。
+It then re-derives the target, outcome obligations, and effect identities from the authenticated history and registered schema.
+% 随后，控制器从经认证历史和已注册模式重新推导目标、结果义务与效果标识。
 Write \(M_o\) for outcome \(o\)'s policy-safe resolved completions.
 % 以 \(M_o\) 表示结果 \(o\) 的策略安全已解析完成路径。
 At this cut, each outcome has exactly one causal linearization, and the two linearizations resolve to
@@ -64,8 +68,10 @@ The installed monitor then admits only these prefixes and classifies each protec
 % 随后，已安装监控器只接纳这些前缀，并将每个受保护调用归类为新的 \Fresh 效果、复用回执的 \Alias 或拒绝。
 If policy excludes \(rap_Rs\), then \(M_{o_R}=\varnothing\), and the Fork is rejected because pruning supplier \(R\) would change its meaning.
 % 如果策略排除 \(rap_Rs\)，则 \(M_{o_R}=\varnothing\)，并且该 Fork 会被拒绝，因为剪除供应商 \(R\) 将改变其含义。
-Rejection returns the ranked elimination chain rather than letting the Agent weaken the target; \cref{sec:admission} gives the shared-prefix case where every outcome starts safe but no family remains prefix-robust.
+Rejection returns the ranked elimination chain rather than letting the Agent weaken the target.
 % 拒绝会返回带秩淘汰链，而不允许 Agent 弱化目标；\cref{sec:admission} 给出了共享前缀情形：每个结果开始时都安全，但没有任何完成族保持前缀鲁棒。
+\Cref{sec:admission} gives the shared-prefix case where every outcome starts safe but no family remains prefix-robust.
+% \Cref{sec:admission} 给出了共享前缀情形：每个结果开始时都安全，但没有任何完成族保持前缀鲁棒。
 
 \paragraph{Live growth without a reset}
 % 无需重置的在线增长
@@ -75,8 +81,10 @@ While the same procurement history remains live, the Agent may name only a recor
 % \(\mathsf{Extend}(\xi)\) 仅做追加且在前沿上保持恒等：它保留每个当前结果、发生项、单元、回执、检查点、游标、发件箱条目与因果边，同时追加新的模式和注册表行。
 The old policy embeds in the successor policy, so the current residual fixed point remains post-fixed and no promised outcome can disappear.
 % 旧策略嵌入后继策略，因此当前残余不动点仍为后不动点，任何已承诺结果都不能消失。
-The controller recompiles the monitor and atomically rotates the domain epoch, after which a later edit may cite the new schema without bootstrap; the Agent cannot rebind an old invocation or weaken a live obligation.
+The controller recompiles the monitor and atomically rotates the domain epoch.
 % 控制器重新编译监控器并原子轮换整个域的纪元，此后后续编辑可以引用新模式而无需引导；Agent 不能重新绑定旧调用或弱化活跃义务。
+A later edit may then cite the new schema without bootstrap, but the Agent cannot rebind an old invocation or weaken a live obligation.
+% 此后，后续编辑可以引用新模式而无需引导，但 Agent 不能重新绑定旧调用或弱化活跃义务。
 
 \begin{figure*}[t]
   \centering
