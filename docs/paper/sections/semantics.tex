@@ -13,7 +13,7 @@ It then computes the largest family of completed executions that remains safe af
 Finally, it presents the ideal atomic execution machine used to prove the installed runtime correct in \cref{sec:kernel}.
 % 最后，它给出用于在 \cref{sec:kernel} 中证明已安装运行时正确的理想原子执行机。
 
-Recall the authority-label alphabet \(\mathcal U\) and regular prefix-closed policy \(\mathcal A\subseteq\mathcal U^*\).
+Recall the permission-label alphabet \(\mathcal U\) and regular prefix-closed policy \(\mathcal A\subseteq\mathcal U^*\).
 % 回顾权限标签字母表 \(\mathcal U\) 和正则前缀闭合策略 \(\mathcal A\subseteq\mathcal U^*\)。
 For the authenticated receipt log \(\Delta\), \(\mathsf{lab}(\Delta)\in\mathcal A\) is its permission trace and \(D_\Delta\) is the set of effect identities that already have receipts.
 % 对于经认证回执日志 \(\Delta\)，\(\mathsf{lab}(\Delta)\in\mathcal A\) 是其权限轨迹，\(D_\Delta\) 是已经具有回执的效果标识集合。
@@ -90,10 +90,10 @@ Both cases retain \(x_i\).
 Splitting after \(r\) gives the streaming equation.
 % 在 \(r\) 之后拆分即可得到流式等式。
 \end{proof}
-Thus a retry stutters in the resolved causal and authority histories, although its successful API reply is observable as \(\mathsf{Return}(t,[v]_{\cong})\).
-% 因而，重试在已解析因果历史与权限历史中表现为停顿，但其成功 API 回复仍可观测为 \(\mathsf{Return}(t,[v]_{\cong})\)。
-A copied occurrence that resolves as \Alias stutters only in the authority history because it advances causal history without changing the authority word.
-% 解析为 \Alias 的复制发生项只在权限历史中表现为停顿，因为它会推进因果历史而不改变权限词。
+Thus a retry changes neither the resolved call record nor the permission trace, although its successful API reply is observable as \(\mathsf{Return}(t,[v]_{\cong})\).
+% 因而，重试既不改变已解析调用记录，也不改变权限轨迹，但其成功 API 回复仍可观测为 \(\mathsf{Return}(t,[v]_{\cong})\)。
+A copied occurrence that resolves as \Alias advances the call record without changing the permission trace.
+% 解析为 \Alias 的复制发生项会推进调用记录，但不会改变权限轨迹。
 
 \subsection{Safe Completion After Every Prefix}
 % 每个前缀之后的安全完成
@@ -327,8 +327,8 @@ where
 \(\widehat B/z=\{(o,v)\mid(o,zv)\in\widehat B\}\).
 \end{lemma}
 \begin{proof}
-Because \(z\) prefixes a projected member of \(\widehat B^\dagger\), raw recoverability and streaming in \cref{lem:resolution} give the recoverability and receipt-ledger equalities.
-% 因为 \(z\) 是 \(\widehat B^\dagger\) 某个投影成员的前缀，\cref{lem:resolution} 中的原始词可恢复性和流式性质给出可恢复性等式与回执账本等式。
+Because \(z\) prefixes a projected member of \(\widehat B^\dagger\), raw recoverability and streaming in \cref{lem:resolution} give the recoverability and receipt-log equalities.
+% 因为 \(z\) 是 \(\widehat B^\dagger\) 某个投影成员的前缀，\cref{lem:resolution} 中的原始词可恢复性和流式性质给出可恢复性等式与回执日志等式。
 The indexed residual removes exactly that raw prefix, retains every compatible outcome identity, and gives
 % 带索引残余恰好移除该原始前缀，保留每个兼容结果标识，并给出
 \[
@@ -381,8 +381,8 @@ It omits compilation, the monitor representation, transaction phases, authentica
 % 它省略编译、监控器表示、事务阶段、认证器、预加载和安装微步骤。
 An ideal state is \(I=(\kappa,H,\Delta,\mathsf{out},\mathcal A,c,r)\), where \(c=(H_c,u,L^*,\widehat B^*)\).
 % 理想状态为 \(I=(\kappa,H,\Delta,\mathsf{out},\mathcal A,c,r)\)，其中 \(c=(H_c,u,L^*,\widehat B^*)\)。
-\(H.\eta\) and \(H.\beta\) are its current abstract epoch and live bindings.
-% \(H.\eta\) 与 \(H.\beta\) 是其当前抽象纪元与活跃绑定。
+\(H.\eta\) is its current abstract monitor version, and \(H.\beta\) binds current occurrences to monitor entries.
+% \(H.\eta\) 是其当前抽象监控器版本，\(H.\beta\) 将当前发生项绑定到监控器入口。
 
 \paragraph{Edit transition}
 % 编辑转移
@@ -412,8 +412,8 @@ Exactly when \(ra\in L^*\), one atomic transition applies \(\mathsf{HStep}((G,T)
 \Alias changes neither field.
 % \Alias 不改变这两个字段。
 
-An invalid occurrence, gate, handle, or invocation, a disabled branch, or \(ra\notin L^*\) fails the guard and returns \(\mathsf{deny}(x)\) without changing state.
-% 无效的发生项、门、句柄或调用、禁用分支或 \(ra\notin L^*\) 会使守卫失败，并返回 \(\mathsf{deny}(x)\) 且不改变状态。
+An invalid occurrence, monitor entry, authorization token, or normalized request, a disabled branch, or \(ra\notin L^*\) fails the guard and returns \(\mathsf{deny}(x)\) without changing state.
+% 无效的发生项、监控器入口、授权令牌或规范化请求、禁用分支或 \(ra\notin L^*\) 会使守卫失败，并返回 \(\mathsf{deny}(x)\) 且不改变状态。
 \Alias binds the restored occurrence to the effect identity's durable return record.
 % \Alias 将恢复的发生项绑定到该效果标识的持久返回记录。
 It advances the workflow without inventing a return value that the original call has not yet produced.
@@ -427,8 +427,8 @@ An authenticated retry of the same tool request follows its \(\chi\)-to-receipt 
 % 对同一工具请求的认证重试沿其从 \(\chi\) 到回执的链接，为同一持久返回记录发出 \(\mathsf{Return}(t,[v]_{\cong})\)，且不改变执行记录。
 An unauthenticated lookup or a lookup with different arguments is denied.
 % 未经认证的查找或参数不同的查找会被拒绝。
-\Dispatch releases exactly the stored invocation in the oldest prepared outbox item and marks that item released, making the release trace a prefix of \Fresh preparation order.
-% \Dispatch 恰好释放最早已准备发件箱条目中存储的调用并将该条目标记为已释放，使释放轨迹成为 \Fresh 准备次序的前缀。
+\Dispatch releases exactly the stored normalized request in the oldest prepared dispatch-queue item and marks that item released, making the release trace a prefix of \Fresh preparation order.
+% \Dispatch 恰好释放最早已准备派发队列条目中存储的规范化请求并将该条目标记为已释放，使释放轨迹成为 \Fresh 准备次序的前缀。
 Settlement emits \(\mathsf{Settle}(d,[v]_{\cong})\), advances a receipt's phase, and fills its durable return record with the stable return value.
 % 结算发出 \(\mathsf{Settle}(d,[v]_{\cong})\)，推进回执阶段，并以稳定返回值填充其持久返回记录。
 It changes neither the execution record nor the permission trace.

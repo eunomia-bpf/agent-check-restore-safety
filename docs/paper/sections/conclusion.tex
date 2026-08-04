@@ -2,13 +2,17 @@
 % 结论
 \label{sec:conclusion}
 
-Agents that Fork, Restore, or Merge an execution require a safety decision that accounts for both logical control state and irreversible external progress.
-% 对执行进行 Fork、Restore 或 Merge 的 Agent 需要一种同时考虑逻辑控制状态与不可逆外部进展的安全判定。
-Our checker derives this decision from a checked workflow, authenticated history, durable receipts, and the requested edit.
-% 我们的检查器从经检查的工作流、经认证历史、持久回执和所请求的编辑中推导这一判定。
-Its greatest fixed point yields the most permissive safe monitor when the edit is realizable, while an empty fixed point yields a finite impossibility certificate.
-% 当编辑可实现时，其最大不动点给出最宽松的安全监控器；当不动点为空时，则给出有限不可能性证书。
-The characterization theorem connects this safety result to atomic installation, identifies the history information required for exact decisions, and preserves the characterization across finite sequences of edits, protected calls, crashes, and additive extensions.
-% 刻画定理将该安全判定连接到原子安装，识别精确判定所需的历史信息，并在由编辑、受保护调用、崩溃和仅追加扩展组成的有限序列中保持该刻画。
-The Lean modules and executable tests validate the finite checked core and its explicit compiler.
-% Lean 模块与可执行测试验证了有限检查核心及其显式编译器。
+Agent runtimes that Fork, Restore, or Merge an execution must account for both the workflow they change and calls that have already been authorized.
+% 对执行进行 Fork、Restore 或 Merge 的 Agent 运行时必须同时考虑被改变的工作流和已经获得授权的调用。
+Our checker derives the safety answer from a validated workflow, its authenticated execution record, the receipt log, and the requested edit.
+% 我们的检查器从经验证工作流、其认证执行记录、回执日志和请求的编辑中推导安全答案。
+When the edit is safe, the greatest fixed point yields the most permissive monitor.
+% 当编辑安全时，最大不动点给出限制最少的监控器。
+When it is unsafe, the empty fixed point yields a finite proof that no implementation can satisfy the requirements.
+% 当编辑不安全时，空不动点给出有限证明，说明没有实现能够满足要求。
+The Exact Edit-Safety theorem connects this decision to atomic installation and identifies the four kinds of recorded information required by any exact checker.
+% 精确编辑安全定理将该判定连接到原子安装，并识别出任何精确检查器所需的四类记录信息。
+Every supported event preserves \(\mathsf{AgentSec}\), so the theorem applies again after every finite reachable sequence of edits, calls, crashes, and registered extensions.
+% 每个受支持事件都保持 \(\mathsf{AgentSec}\)，因此该定理能在由编辑、调用、崩溃和已注册扩展组成的每个有限可达序列之后再次应用。
+The Lean modules and executable tests validate the finite decision procedure and its implementation.
+% Lean 模块与可执行测试验证了有限判定过程及其实现。

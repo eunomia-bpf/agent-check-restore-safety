@@ -80,63 +80,75 @@ It quotients private names but preserves public bytes.
 \begin{theorem}[Exact Edit-Safety]
 % 精确编辑安全
 \label{thm:exact-history}
-Under \cref{sec:model}'s boundary, clause 1 holds for every finite-state \(\mathcal W\) and finite \(R\).
-% 在 \cref{sec:model} 的边界下，第 1 条对每个有限状态 \(\mathcal W\) 与有限 \(R\) 成立，第 2--5 条对每个满足 \(\mathsf{AgentSec}\) 的有限可达状态上的每个 \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) 成立；注册接受蕴含边界有限性。
-Clauses 2--5 hold for every \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) at every finite reachable state satisfying \(\mathsf{AgentSec}\).
-% 第 2--5 条对每个满足 \(\mathsf{AgentSec}\) 的有限可达状态上的每个 \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) 成立。
-Registration acceptance entails boundary-finiteness.
-% 注册接受蕴含边界有限性。
+Clause~1 holds for every finite-state \(\mathcal W\) and finite \(R\).
+% 第 1 条对每个有限状态 \(\mathcal W\) 与有限 \(R\) 成立。
+For Clauses~2--5, assume that registration has been accepted, every resolved protected use is completely mediated and controllable, and every modeled state change within one policy domain uses a crash-stable linearizable transaction.
+% 对于第 2--5 条，假设注册已经通过、每次已解析受控使用都受到完全中介且可控，并且一个策略域内每项已建模状态变更都使用崩溃稳定且可线性化的事务。
+Then the clauses hold for every \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) at every finite reachable state satisfying \(\mathsf{AgentSec}\).
+% 此时，第 2--5 条对每个满足 \(\mathsf{AgentSec}\) 的有限可达状态上的每个 \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) 成立。
+Registration acceptance entails the boundary-finiteness required by the checker.
+% 注册通过蕴含检查器所需的边界有限性。
 \begin{enumerate}[leftmargin=*,itemsep=0pt]
-\item \textbf{Registration reflection.}
-% 注册反射。
+\item \textbf{Faithful registration.}
+% 忠实注册。
 \(\mathsf{CheckReg}(\mathcal W,R)\) accepts iff stored \(\lambda\) witnesses \(\mathcal W\sqsubseteq_\lambda R\).
-% 当且仅当所存 \(\lambda\) 见证 \(\mathcal W\sqsubseteq_\lambda R\) 时，\(\mathsf{CheckReg}(\mathcal W,R)\) 才接受；此时模 \(\equiv_\partial\) 的源执行与 \(\mathsf{BRuns}(R)\) 序同构，并保持结果、次序、单元、\Fresh/\Alias、准入与最大监控器，而缺失承诺、不一致单元或未经中介的持久边会在引导前被拒绝。
-Source executions modulo \(\equiv_\partial\) are then order-isomorphic to \(\mathsf{BRuns}(R)\), preserving outcomes, order, cells, \Fresh/\Alias, the safety decision, and the greatest monitor.
-% 此时模 \(\equiv_\partial\) 的源执行与 \(\mathsf{BRuns}(R)\) 序同构，并保持结果、次序、单元、\Fresh/\Alias、安全判定与最大监控器。
-Missing promises, inconsistent cells, or unmediated durable edges reject before bootstrap.
-% 缺失承诺、不一致单元或未经中介的持久边会在引导前被拒绝。
+% 当且仅当所存 \(\lambda\) 见证 \(\mathcal W\sqsubseteq_\lambda R\) 时，\(\mathsf{CheckReg}(\mathcal W,R)\) 才接受。
+Source executions modulo \(\equiv_\partial\) are then order-isomorphic to \(\mathsf{BRuns}(R)\), preserving outcomes, order, effect identities, \Fresh/\Alias, the safety answer, and the most permissive monitor.
+% 此时模 \(\equiv_\partial\) 的源执行与 \(\mathsf{BRuns}(R)\) 序同构，并保持结果、次序、效果标识、\Fresh/\Alias、安全答案与限制最少的监控器。
+\(\mathsf{CheckReg}\) rejects before runtime startup if a required outcome is missing, effect identities are inconsistent, or a state-changing edge is not mediated.
+% 如果缺失要求实现的结果、效果标识不一致，或某条状态变更边未被中介，\(\mathsf{CheckReg}\) 会在运行时启动前拒绝。
 
-\item \textbf{Exact compilation.}
-% 精确编译。
-For \(\Theta=\Theta_S(u)\), both machines share one trichotomy bound to the same decision cut.
-% 对于 \(\Theta=\Theta_S(u)\)，两台机器共享一种绑定切点的三分判定：未定义推导给出经验证且保持状态的 \(\mathsf{Invalid}\)；唯一 \(\delta\) 满足 \(\widehat B^\dagger_\delta=\varnothing\) 时给出经验证且保持状态的 \(\mathsf{Reject}\)，且不存在精确实现；否则令 \(Y=\mathsf{Compile}(\Theta)\)，并令 \(c_\delta^+\) 为经检查记录。
+\item \textbf{Exact checking and construction.}
+% 精确检查与构造。
+For \(\Theta=\Theta_S(u)\), the ideal and compiled machines return the same one of three answers for the same source snapshot.
+% 对于 \(\Theta=\Theta_S(u)\)，理想机与编译后机器针对同一源状态快照返回相同的三类答案之一。
 An undefined derivation gives a verified, state-preserving \(\mathsf{Invalid}\).
 % 未定义推导给出经验证且保持状态的 \(\mathsf{Invalid}\)。
-A unique \(\delta\) with \(\widehat B^\dagger_\delta=\varnothing\) gives a verified, state-preserving \(\mathsf{Reject}\) and no installed atomic realization.
-% 唯一 \(\delta\) 满足 \(\widehat B^\dagger_\delta=\varnothing\) 时给出经验证且保持状态的 \(\mathsf{Reject}\)，且不存在精确实现。
+A unique \(\delta\) with \(\widehat B^\dagger_\delta=\varnothing\) gives a verified, state-preserving \(\mathsf{Reject}\) and no installed realization.
+% 唯一 \(\delta\) 满足 \(\widehat B^\dagger_\delta=\varnothing\) 时给出经验证且保持状态的 \(\mathsf{Reject}\)，且不存在已安装实现。
 Otherwise, let \(Y=\mathsf{Compile}(\Theta)\) and \(c_\delta^+\) be the checked record.
 % 否则，令 \(Y=\mathsf{Compile}(\Theta)\)，并令 \(c_\delta^+\) 为经检查记录。
-In this positive case, the following conditions are equivalent: (1) \(\widehat B^\dagger_\delta\ne\varnothing\), (2) an installed atomic realization exists, (3) \(\mathsf{Ready}(S,u,Y)\) holds, and (4) an \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\) successor satisfies \(\mathsf{AgentSec}(S^+;c_\delta^+,\epsilon)\).
-% 在正面情形中，\(\widehat B^\dagger_\delta\ne\varnothing\)、精确实现存在、\(\mathsf{Ready}(S,u,Y)\) 以及存在满足 \(\mathsf{AgentSec}(S^+;c_\delta^+,\epsilon)\) 的 \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\) 后继彼此等价；最大见证与规范监控器满足 \(\mathsf{SPC}\)，而该边保留 \(\mathsf{Done}_{H,u}\) 的证据并记录 \(\mathsf{Dec}_{H,u}\)。
-The greatest witness and canonical monitor satisfy \(\mathsf{SPC}\), while the edge retains \(\mathsf{Done}_{H,u}\)'s evidence and records \(\mathsf{Dec}_{H,u}\).
-% 最大见证与规范监控器满足 \(\mathsf{SPC}\)，而该边保留 \(\mathsf{Done}_{H,u}\) 的证据并记录 \(\mathsf{Dec}_{H,u}\)。
-The three verdict classes are mutually exclusive and exhaustive at the same decision cut.
-% 三类判定在同一决策切点上互斥且穷尽。
+In this positive case, the following conditions are equivalent: (1) \(\widehat B^\dagger_\delta\ne\varnothing\), (2) an installed realization exists, (3) \(\mathsf{Ready}(S,u,Y)\) holds, and (4) an \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\) successor satisfies \(\mathsf{AgentSec}(S^+;c_\delta^+,\epsilon)\).
+% 在正面情形中，\(\widehat B^\dagger_\delta\ne\varnothing\)、已安装实现存在、\(\mathsf{Ready}(S,u,Y)\) 成立，以及存在满足 \(\mathsf{AgentSec}(S^+;c_\delta^+,\epsilon)\) 的 \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\) 后继，四者彼此等价。
+The largest execution family and its monitor satisfy \(\mathsf{Preserve}\).
+% 最大执行族及其监控器满足 \(\mathsf{Preserve}\)。
+The installed edit retains evidence for \(\mathsf{Completed}_{H,u}\) and records \(\mathsf{Removed}_{H,u}\).
+% 已安装编辑保留 \(\mathsf{Completed}_{H,u}\) 的证据并记录 \(\mathsf{Removed}_{H,u}\)。
+The three answer classes are mutually exclusive and exhaustive for that source snapshot.
+% 三类答案对于该源状态快照互斥且穷尽。
 
-\item \textbf{Factor tightness.}
-% 因子紧致性。
-The full join is sufficient, and every proper factor projection is insufficient:
-% 完整连接充分而每个真因子投影均不充分：\(\mathsf{Exact}(\pi_J)\Longleftrightarrow J=\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\)。
+\item \textbf{All four state components are necessary.}
+% 四类状态信息全部必要。
+The full information view is sufficient, and discarding any component is insufficient:
+% 完整信息视图是充分的，而丢弃任何一类信息都不充分：
 \[
 \mathsf{Exact}(\pi_J)\Longleftrightarrow
 J=\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}.
 \]
-Every exact abstraction distinguishes \cref{tab:projection-pairs}; incidence erasures and caller-proposed target-only \(\tau_{\rm tgt}\) remain inexact, while generalized nonblocking becomes exact after trusted target/marking derivation.
-% 每个精确抽象都区分 \cref{tab:projection-pairs}；关联擦除与调用方提出的仅目标 \(\tau_{\rm tgt}\) 仍不精确，而广义非阻塞在可信目标/标记派生之后变得精确。
+Every exact information map distinguishes every separating state pair in \cref{tab:projection-pairs}.
+% 每个精确信息映射都区分 \cref{tab:projection-pairs} 中的每对分离状态。
+Maps that erase call-to-effect or receipt-to-effect identity and \(\mathsf{TargetOnly}\) are inexact.
+% 擦除调用到效果标识关系、回执到效果标识关系的信息映射以及 \(\mathsf{TargetOnly}\) 都不精确。
+Generalized nonblocking can serve as an exact solver only after the trusted controller derives the workflow and outcome-specific completion conditions.
+% 只有在可信控制器推导出工作流以及特定于结果的完成条件之后，广义非阻塞才能作为精确求解器。
 
-\item \textbf{Sequence closure.}
-% 序列闭包。
+\item \textbf{Repeated use.}
+% 重复使用。
 Every enabled fully parameterized event induces the corresponding partial derivative on the private-name equivalence classes of \(\mathsf{Sec}\) and preserves \(\mathsf{AgentSec}\).
 % 每个启用且参数完整的事件都在安全状态轨道上诱导相应的偏导数，并保持 \(\mathsf{AgentSec}\)。
-Iteration covers every finite prefix of edits, live extension, protected use, ledger, installation, and crash, with finite cuts but no uniform history-length bound.
-% 迭代覆盖编辑、在线扩展、受保护使用、账本、安装与崩溃组成的每个有限前缀；每个切点有限，但不存在统一历史长度界。
+Therefore, the theorem applies again after every finite reachable sequence of execution edits, registered extensions, protected calls, receipt-log updates, installations, and crashes.
+% 因此，该定理能在由执行编辑、已注册扩展、受控调用、回执日志更新、安装和崩溃组成的每个有限可达序列之后再次应用。
+Each source snapshot is finite, but there is no uniform bound on execution length.
+% 每个源状态快照都是有限的，但执行长度没有统一上界。
 
-\item \textbf{Durable Agent-API realization.}
-% 持久 Agent API 实现。
+\item \textbf{Runtime correctness.}
+% 运行时正确性。
 \(\mathcal R\) is a divergence-insensitive weak bisimulation under \(\mathsf{obs}_{\rm api}\), so every good pair satisfies \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\).
 % \(\mathcal R\) 在 \(\mathsf{obs}_{\rm api}\) 下是发散不敏感弱互模拟，因此每个良好对均满足 \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\)。
-The observation includes verdicts tied to the authenticated history cut, bundles, and results, but excludes time, fairness, and post-\(\Dispatch\) networking.
-% \(\mathcal R\) 在 \(\mathsf{obs}_{\rm api}\) 下是发散不敏感弱互模拟，所以每个良好对都满足 \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\)，其中包括绑定切点的判定、包与结果，但不包括时间、公平性与 \(\Dispatch\) 后网络行为。
+The observation includes edit answers tied to the authenticated source snapshot, replacement authorization tokens, and return values.
+% 该观测包括绑定认证源状态快照的编辑答案、替代授权令牌与返回值。
+It excludes time, fairness, and networking after \(\Dispatch\).
+% 它不包括时间、公平性与 \(\Dispatch\) 之后的网络行为。
 Disjoint domains compose asynchronously.
 % 互不相交的域异步组合。
 \end{enumerate}
@@ -144,8 +156,10 @@ Disjoint domains compose asynchronously.
 
 \begin{proof}[Proof sketch]
 % 证明概要。
-Schema conservation and finite-checker reflection prove Clause~1, fixed-point reasoning proves Clause~2, opposite-answer pairs prove Clause~3, and event induction together with durable simulation proves Clauses~4 and~5.
-% 模式守恒与有限检查器反射证明第 1 条，不动点推理证明第 2 条，相反答案对证明第 3 条，事件归纳证明第 4 条和第 5 条。
+Schema preservation and finite-checker reflection prove Clause~1.
+% 模式保留与有限检查器反射证明第 1 条。
+Fixed-point reasoning proves Clause~2, separating state pairs prove Clause~3, and event induction together with durable simulation proves Clauses~4 and~5.
+% 不动点推理证明第 2 条，分离状态对证明第 3 条，事件归纳与持久模拟证明第 4 条和第 5 条。
 The appendix supplies the witnesses and durable simulation.
 % 模式守恒、有限检查器反射、不动点与事件归纳以及答案相反配对证明这些条款；附录给出全部见证与持久模拟。
 \end{proof}

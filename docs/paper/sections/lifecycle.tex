@@ -25,8 +25,8 @@ where \(x_i^p\) and \(x_i^s\) are payment and shipment occurrences.
 % 其中，\(x_i^p\) 和 \(x_i^s\) 分别是付款发生项和发货发生项。
 An occurrence identifies one call position in the workflow.
 % 发生项标识工作流中的一个调用位置。
-An effect identity identifies the protected action and one-use permission behind that position; the formulas call it a cell \(d\).
-% 效果标识指明该位置背后的受控动作和一次性权限；公式中将其称为单元 \(d\)。
+An effect identity \(d\) identifies the protected action and one-use permission behind that position.
+% 效果标识 \(d\) 指明该位置背后的受控动作和一次性权限。
 
 The two shipment calls share one effect identity:
 % 两个发货调用共享一个效果标识：
@@ -124,7 +124,7 @@ A \emph{policy domain} is the set of protected actions governed by one policy, o
     \node[node] (bb) at (4.45,1.68) {$R$};
     \node[box] (ms) at (5.95,2.62) {select\\Merge};
     \node[node] (bl) at (7.25,2.62) {$b_L$};
-    \node[box] (rl) at (8.35,1.68) {live\\Restore $k$};
+    \node[box] (rl) at (8.35,1.68) {Restore $k$\\and continue};
     \node[node] (cl) at (9.75,1.68) {$x_a'$};
     \node[box] (jn) at (11.15,2.15) {join\\Merge};
     \draw[arr] (b0) -- node[above] {$k$} (al);
@@ -140,7 +140,7 @@ A \emph{policy domain} is the set of protected actions governed by one policy, o
     \draw[arr] (bl) -- (jn);
     \draw[arr] (cl) -- (jn);
     \draw[stale] (bb) to[bend left=17]
-      node[below] {loser gates close} (ms);
+      node[below] {other branch disabled} (ms);
 
     \node[lab] at (0,0.65) {recorded calls and permission trace};
     \node[node] (r) at (0.65,0.65) {$r$};
@@ -186,8 +186,8 @@ Leaving the old monitor version active would allow both payments.
 
 \paragraph{The \Alias race}
 % \Alias 竞态
-Now consider the live Restore in \cref{fig:two-histories}.
-% 现在考虑 \cref{fig:two-histories} 中的活跃 Restore。
+Now consider the Restore that keeps both continuations in \cref{fig:two-histories}.
+% 现在考虑 \cref{fig:two-histories} 中保留两条延续的 Restore。
 Copying checkpoint \(k\) creates a new approval occurrence \(x_a'\) with a new monitor entry and authorization token, but it retains effect identity \(d_a\).
 % 复制检查点 \(k\) 会创建新的审批发生项 \(x_a'\) 以及新的监控器入口和授权令牌，但它保留效果标识 \(d_a\)。
 Because \(d_a\) already has a receipt, executing \(x_a'\) is an \Alias: the restored branch advances past approval without creating another receipt.

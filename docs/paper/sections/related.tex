@@ -5,20 +5,24 @@
 \paragraph{Recovery and rollback}
 % 恢复与回滚
 Output-commit recovery delays effects until state commits and reconstructs a fixed computation after failure.
-% 输出提交恢复将效果延迟到状态提交后，并在故障后重建固定计算；它不对带索引结果与共享权限下改变拓扑的 Agent 编辑作准入判定~\cite{strom1985optimistic,elnozahy2002rollback}。
-It does not admit topology-changing Agent edits under indexed outcomes and shared authority~\cite{strom1985optimistic,elnozahy2002rollback}.
-% 它不对带索引结果与共享权限下改变拓扑的 Agent 编辑作准入判定~\cite{strom1985optimistic,elnozahy2002rollback}。
+% 输出提交恢复将效果延迟到状态提交后，并在故障后重建固定计算。
+It does not decide whether an Agent may safely change its branch and checkpoint structure while several outcomes share one-use permissions~\cite{strom1985optimistic,elnozahy2002rollback}.
+% 它不判定 Agent 能否在多个结果共享一次性权限时安全改变其分支和检查点结构~\cite{strom1985optimistic,elnozahy2002rollback}。
 
 \paragraph{Supervisory control and synthesis}
 % 监督控制与综合
-Generalized nonblocking and live synthesis consume supplied plants and markings or old specifications and executions.
-% 广义非阻塞与 Live Synthesis 使用给定的被控对象/标记或旧规范/执行；我们的理论则在最大安装之前，从经认证的 Agent 历史派生六类编辑义务以及必要且充分的准入状态~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live}。
-Our checker instead derives the obligations of all six edits and the necessary-and-sufficient condition for an exact safety decision from authenticated Agent history before installation~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live}.
-% 相比之下，我们的检查器在安装之前从经认证的 Agent 历史派生六类编辑的义务以及精确安全判定所需的条件~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live}。
+Generalized nonblocking starts from a supplied transition system, called the plant, and supplied completion conditions, called markings.
+% 广义非阻塞从给定的转移系统（称为被控对象）和给定的完成条件（称为标记）出发。
+Live Synthesis similarly starts from an old specification and an execution~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live}.
+% Live Synthesis 类似地从旧规范和一次执行出发~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live}。
+Our checker instead derives the edited workflow, every required outcome, and the necessary-and-sufficient safety condition for all six edits from the authenticated execution record before installation.
+% 相比之下，我们的检查器在安装之前从认证执行记录中推导编辑后的工作流、每个要求实现的结果，以及全部六种编辑的必要且充分安全条件。
 
 \paragraph{Agent recovery mechanisms}
 % Agent 恢复机制
-ACRFence, DART, Atomix, and Rebound fence post-Restore replay, choose preserving checkpoints, settle after frontiers, or make rollback atomic and auditable.
-% ACRFence/DART/Atomix/Rebound 隔离 Restore 后的重放、选择保持既有工作的检查点、在前沿之后结算，或使回滚具有原子性与可审计性，但它们使用给定的日志、范围、类别、前沿或策略~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}。
-These mechanisms take logs, scopes, classes, frontiers, or policies as inputs rather than deriving the exact safety condition from an authenticated execution record~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}.
-% 这些机制将日志、范围、类别、前沿或策略作为输入，而不是从经认证的执行记录中推导精确安全条件~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}。
+ACRFence blocks replayed effects after Restore, and DART selects checkpoints that preserve earlier work.
+% ACRFence 阻止 Restore 后重放效果，DART 选择能够保留先前工作的检查点。
+Atomix delays settlement until its required branch boundary, while Rebound makes rollback atomic and auditable~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}.
+% Atomix 将结算推迟到其要求的分支边界，而 Rebound 使回滚具有原子性与可审计性~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}。
+These mechanisms take logs, scopes, call classes, branch boundaries, or policies as inputs rather than deriving the full safety condition of an execution edit from its authenticated record.
+% 这些机制将日志、作用域、调用类别、分支边界或策略作为输入，而不是从执行的认证记录中推导一次执行编辑的完整安全条件。
