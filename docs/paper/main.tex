@@ -34,8 +34,8 @@
 
 \title{When Are Agent Execution Edits Safe?\\
 % Agent 执行编辑何时安全？
-An Exact Characterization of Fork, Restore, and Merge}
-% Fork、Restore 与 Merge 的精确刻画
+An Exact Theory of Fork, Restore, and Merge}
+% Fork、Restore 与 Merge 的精确理论
 
 \author{}
 
@@ -43,34 +43,36 @@ An Exact Characterization of Fork, Restore, and Merge}
 \maketitle
 
 \begin{abstract}
-Tool-using Agents support Fork, Restore, and Merge so that an execution can explore alternatives or recover without starting over.
-% 使用工具的 Agent 支持 Fork、Restore 和 Merge，使执行能够探索备选路径或从故障中恢复，而无需从头开始。
-These execution edits rewind logical control state, but they do not rewind an approval, payment, message, or one-use authority already committed to the world.
-% 这些执行编辑会倒转逻辑控制状态，却不会撤销已经提交到现实世界的审批、付款、消息或一次性权限。
-An edit can therefore duplicate an effect, erase a promised outcome, or race an old call.
-% 这些执行编辑会倒转逻辑控制状态，却不会撤销已经提交到现实世界的审批、付款、消息或一次性权限；因此，一次编辑可能重复效果、抹去已承诺结果，或与旧调用发生竞态。
-A safe edit must therefore account for both what the original execution has already done and what it still owes.
-% 因此，一次安全编辑必须同时考虑原执行已经完成的事情和仍然负有的责任。
-Each old promise must remain required after the edit, have durable evidence of completion, or be explicitly canceled by the authority that created it.
-% 每项旧承诺都必须在编辑后继续有效、已有持久证据证明其完成，或由创建它的权限方明确取消。
-Existing Agent recovery systems implement particular edits, while existing synthesis methods choose behavior after a model and its goals have been supplied.
-% 现有 Agent 恢复系统实现特定编辑，而现有综合方法在模型及其目标已经给定后选择行为；二者都不会从经认证历史中推导一次编辑的精确要求。
-Neither derives the exact requirements of an edit from authenticated history.
-% 二者都不会从经认证历史中推导一次编辑的精确要求。
-We give a decision procedure that starts from a checked workflow and authenticated runtime state, derives the legal futures, and repeatedly removes any future whose prefix would strand a result that the edit still promises.
-% 我们给出一种判定过程：它从经检查的工作流和经认证的运行时状态出发，推导合法未来，并反复删除那些会在某个前缀后使编辑仍然承诺的结果无路可走的未来。
+Tool-using Agent runtimes support Fork, Restore, and Merge so that an execution can explore alternatives or recover without starting over.
+% 使用工具的 Agent 运行时支持 Fork、Restore 和 Merge，使执行能够探索备选路径或从故障中恢复，而无需从头开始。
+These execution edits rewind logical control state, but they do not erase durable receipts, locally released requests, or authority already consumed by protected calls.
+% 这些执行编辑会倒转逻辑控制状态，却不会抹去持久回执、已在本地释放的请求，或受保护调用已经消耗的权限。
+An edit can therefore duplicate an action, abandon a required outcome, or race a call that began under the old execution.
+% 因此，一次编辑可能重复动作、放弃仍有义务实现的结果，或与旧执行下已经开始的调用发生竞态。
+A safe edit must account for both what the original execution has already done and what it still owes.
+% 一次安全编辑必须同时考虑原执行已经完成的事情和仍然负有的义务。
+Every prior obligation must remain required, have durable evidence of completion, or appear in the exact retirement set certified by its issuer.
+% 每项先前义务都必须继续有效、已有持久证据证明其完成，或出现在由其发行方认证的精确退役集合中。
+Existing Agent recovery systems implement particular edits, while existing synthesis methods choose behavior after a model and its completion conditions have been supplied.
+% 现有 Agent 恢复系统实现特定编辑，而现有综合方法在模型及其完成条件已经给定后选择行为。
+Neither derives from authenticated history exactly what a requested edit must preserve.
+% 二者都不会从经认证历史中推导出一次请求的编辑必须精确保留什么。
+We give an edit checker that starts from a registered workflow and authenticated runtime state, derives all legal completed executions, and removes any execution whose prefix would leave a still-required outcome without a safe completion.
+% 我们给出一种编辑检查器：它从已注册工作流和经认证的运行时状态出发，推导所有合法完整执行，并删除任何会在某个前缀后使仍有义务实现的结果失去安全完成方式的执行。
 If nothing remains, the procedure returns a finite proof that no implementation can meet the requirements.
 % 如果没有未来留下，该过程返回一份有限证明，说明任何实现都无法满足要求；否则，留下的未来会被编译成可强制执行的最大安全行为集合。
 Otherwise, the survivors compile into the largest enforceable set of safe behaviors.
 % 否则，留下的未来会被编译成可强制执行的最大安全行为集合。
-For all six registered execution edits and authenticated additive extensions, our main theorem proves that this procedure succeeds exactly when some implementation can enforce policy, preserve the edit's meaning, and keep every still-possible outcome able to finish.
-% 对全部六种已注册执行编辑和经认证的仅追加扩展，我们的主定理证明：当且仅当某个实现能够执行策略、保持编辑含义并让每个仍可能的结果都可完成时，该过程才会成功。
+For all six registered execution edits and authenticated additive extensions, our main theorem proves that the checker accepts exactly when some implementation can enforce policy, preserve the edit's meaning, and keep every still-possible outcome able to finish.
+% 对全部六种已注册执行编辑和经认证的仅追加扩展，我们的主定理证明：当且仅当某个实现能够执行策略、保持编辑含义并让每个仍可能的结果都可完成时，检查器才会接受。
 The theorem also proves that the resulting monitor can be installed atomically despite racing calls.
 % 定理还证明，所得监控器能够在调用竞态下原子安装。
-It identifies the history information that no exact decision can discard, remains valid through every finite sequence of operations, and connects the installed runtime to an ideal atomic machine.
-% 该定理还识别出任何精确判定都不能丢弃的历史信息，在操作组成的每个有限序列中保持成立，并将已安装运行时连接到理想原子机器；五个经内核检查的 Lean 模块、81 项可执行测试与一项有界扩展性研究验证了有限检查核心和显式过程。
-Five kernel-checked Lean modules, 81 executable tests, and a bounded scaling study validate the finite checked core and explicit procedure.
-% 五个经内核检查的 Lean 模块、81 项可执行测试与一项有界扩展性研究验证了有限检查核心和显式过程。
+It identifies the authenticated information that no exact checker can discard and connects the installed runtime to an ideal atomic machine.
+% 该定理还识别出任何精确检查器都不能丢弃的认证信息，并将已安装运行时连接到理想原子机器。
+Every supported event preserves the security invariant, so the theorem applies again after every finite reachable prefix.
+% 每个受支持事件都保持安全不变量，因此该定理能在每个有限可达前缀之后再次应用。
+Five kernel-checked Lean modules, 81 executable tests, and bounded performance measurements validate the finite checked core, critical examples, and executable checker.
+% 五个经内核检查的 Lean 模块、81 项可执行测试和有界性能测量验证了有限检查核心、关键例子与可执行检查器。
 \end{abstract}
 
 \input{sections/introduction}
@@ -81,11 +83,11 @@ Five kernel-checked Lean modules, 81 executable tests, and a bounded scaling stu
 \input{sections/results}
 \input{sections/validation}
 \input{sections/related}
+\input{sections/discussion}
 \input{sections/conclusion}
 
 \clearpage
 \appendices
-\input{sections/discussion}
 \input{sections/appendix-proofs}
 
 \clearpage
