@@ -8,8 +8,8 @@ Output-commit recovery reconstructs a fixed computation.
 % 输出提交恢复重建固定计算。
 Generalized nonblocking and Live Synthesis solve supplied transition systems and completion conditions, while workflow inheritance and dynamic controller update connect supplied old and new specifications~\cite{strom1985optimistic,elnozahy2002rollback,dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,vanderaalst2002inheritance,nahabedian2020dynamic,amram2022dynamic}.
 % 广义非阻塞与 Live Synthesis 求解给定的转移系统及完成条件，而工作流继承与动态控制器更新连接给定的新旧规范~\cite{strom1985optimistic,elnozahy2002rollback,dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,vanderaalst2002inheritance,nahabedian2020dynamic,amram2022dynamic}。
-Our controller derives the edited workflow, action-ID reuse, still-required outcomes, completion conditions, and monitor replacement directly from the execution record.
-% 我们的控制器直接从经认证的执行记录推导编辑后的工作流、动作标识复用、仍要求实现的结果、完成条件与监控器替换。
+Our controller derives the edited workflow, protected-action reuse, still-required outcomes, completion conditions, and monitor replacement directly from the execution record.
+% 我们的控制器直接从经认证的执行记录推导编辑后的工作流、受控动作复用、仍要求实现的结果、完成条件与监控器替换。
 It then installs the exact most-permissive monitor despite races between installation and either new authorization or authorization reuse.
 % 随后，即使安装与新授权或授权复用发生竞态，它仍会安装精确且限制最少的监控器。
 

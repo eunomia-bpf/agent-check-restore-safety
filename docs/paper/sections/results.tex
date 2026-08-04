@@ -18,8 +18,8 @@ Installation atomically places the pair at \(\eta^+\), closes \(\eta^-\), and re
 
 \paragraph{Information required end to end}
 % 端到端所需的信息
-At a checked source snapshot, \(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) joins four relations: (1) workflow structure and schemas (\(\mathbf P\)), (2) call-position-to-action-ID links (\(\mathbf I\)), (3) authorization and execution progress (\(\mathbf E\)), and (4) monitor-version and installation coordinates (\(\mathbf C\)).
-% 在经检查源状态快照处，\(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) 连接四类关系：(1) 工作流结构与模式（\(\mathbf P\)）；(2) 调用位置到动作标识的链接（\(\mathbf I\)）；(3) 授权与执行进展（\(\mathbf E\)）；(4) 监控器版本与安装坐标（\(\mathbf C\)）。
+At a checked source snapshot, \(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) joins four relations: (1) workflow structure and schemas (\(\mathbf P\)), (2) the call--action map (\(\mathbf I\)), (3) authorization and execution progress (\(\mathbf E\)), and (4) monitor-version and installation coordinates (\(\mathbf C\)).
+% 在经检查源状态快照处，\(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) 连接四类关系：(1) 工作流结构与模式（\(\mathbf P\)）；(2) 调用—动作映射（\(\mathbf I\)）；(3) 授权与执行进展（\(\mathbf E\)）；(4) 监控器版本与安装坐标（\(\mathbf C\)）。
 For every well-typed decide or install query \((V,q)\in\mathcal Q_{\rm sec}\), compare private names up to consistent renaming and define an equivariant information map \(f\) to be exact when
 % 对每个良好定型的判定或安装查询 \((V,q)\in\mathcal Q_{\rm sec}\)，私有名称按一致重命名比较，并在下列条件成立时称等变信息映射 \(f\) 是精确的：
 \[
@@ -74,8 +74,8 @@ Then they hold for every \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) a
 % 忠实注册。
 \(\mathsf{CheckReg}(\mathcal W,R)\) accepts iff stored \(\lambda\) witnesses \(\mathcal W\sqsubseteq_\lambda R\).
 % 当且仅当所存 \(\lambda\) 见证 \(\mathcal W\sqsubseteq_\lambda R\) 时，\(\mathsf{CheckReg}(\mathcal W,R)\) 才接受。
-On acceptance, the source workflow's protected-call traces and \(\mathsf{BRuns}(R)\) are order-isomorphic and preserve outcomes, action IDs, \Fresh/\Alias, the safety answer, and the most permissive monitor.
-% 接受时，源工作流的受控调用轨迹与 \(\mathsf{BRuns}(R)\) 序同构，并保持结果、动作标识、\Fresh/\Alias、安全答案与限制最少的监控器。
+On acceptance, the source workflow's protected-call traces and \(\mathsf{BRuns}(R)\) are order-isomorphic and preserve outcomes, protected actions, \Fresh/\Alias, the safety answer, and the most permissive monitor.
+% 接受时，源工作流的受控调用轨迹与 \(\mathsf{BRuns}(R)\) 序同构，并保持结果、受控动作、\Fresh/\Alias、安全答案与限制最少的监控器。
 Malformed registrations fail before startup.
 % 不合格的注册在启动前失败。
 
@@ -98,8 +98,8 @@ J=\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}.
 \]
 Every exact decision-and-installation information map distinguishes every separating state--query pair in \cref{tab:projection-pairs}.
 % 每个精确信息映射都区分 \cref{tab:projection-pairs} 中的每对分离状态—查询对。
-Maps that erase the call-position-to-action-ID relation or the authorization-record-to-action-ID relation, as well as \(\mathsf{TargetOnly}\), are inexact.
-% 擦除调用位置到动作标识关系、授权记录到动作标识关系的信息映射以及 \(\mathsf{TargetOnly}\) 都不精确。
+Maps that erase the call--action map or the authorization-record--action map, as well as \(\mathsf{TargetOnly}\), are inexact.
+% 擦除调用—动作映射、授权记录—动作映射的信息映射以及 \(\mathsf{TargetOnly}\) 都不精确。
 Generalized nonblocking can serve as an exact solver only after the trusted controller derives the workflow and outcome-specific completion conditions.
 % 只有在可信控制器推导出工作流以及特定于结果的完成条件之后，广义非阻塞才能作为精确求解器。
 

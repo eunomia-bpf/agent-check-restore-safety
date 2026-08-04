@@ -18,7 +18,7 @@ This section gives the monitor construction, installed-state invariant, and inst
 % 本节给出主定理所需的监控器构造、安装后状态不变量与安装边界。
 
 \subsection{Canonical Call-Position Monitor}
-% 规范调用位置监控器
+% 规范工作流调用监控器
 
 The greatest safe implementation has the finite, canonically installable projected pair \((W,B)=(W^\dagger_{H,u},B^\dagger_{H,u})\).
 % 最大实现具有有限且可规范安装的投影对 \((W,B)=(W^\dagger_{H,u},B^\dagger_{H,u})\)。
@@ -37,8 +37,8 @@ Call this monitor automaton \(\mathsf{Can}(W,B)\).
 % 将该监控器自动机记作 \(\mathsf{Can}(W,B)\)。
 Every state is reachable and is marked exactly when \(\epsilon\in B^\dagger/z\).
 % 每个状态均可达，并且恰在 \(\epsilon\in B^\dagger/z\) 时被标记。
-Each transition symbol \(a\) contains call position \(x\), action ID \(d\), and its \Fresh or \Alias mode, so one call position cannot use another position's monitor entry.
-% 每个转移符号 \(a\) 都包含调用位置 \(x\)、动作标识 \(d\) 以及 \Fresh/\Alias 模式，因此一个调用位置无法使用另一个位置的监控器入口。
+Each transition symbol \(a\) contains workflow call \(x\), protected action \(d\), and its \Fresh or \Alias mode, so one workflow call cannot use another position's monitor entry.
+% 每个转移符号 \(a\) 都包含工作流调用 \(x\)、受控动作 \(d\) 以及 \Fresh/\Alias 模式，因此一个工作流调用无法使用另一个位置的监控器入口。
 
 \begin{lemma}[Exact compiled safe implementation]
 % 精确的编译实现
@@ -64,10 +64,10 @@ At installation, the service re-derives the edit and recomputes the fixed point 
 % 安装时，该服务根据当前执行记录重新推导编辑并重新计算不动点。
 If any protected call has committed since compilation, the candidate is stale and installs nothing.
 % 如果编译之后已有任何受控调用提交，则候选已过期且不会安装任何内容。
-Otherwise, one policy-domain transaction closes the old monitor version, activates the canonical monitor, replaces every current call position binding and authorization token, and only then exposes the successful edit answer.
-% 否则，一个策略域事务会关闭旧监控器版本、激活规范监控器、替换每个当前调用位置的绑定与授权令牌，然后才暴露成功编辑答案。
-Protected calls verify their call position, action ID, canonical request, authorization token, and current monitor transition in the same transaction that records progress.
-% 受控调用在记录进度的同一事务中验证其调用位置、动作标识、规范请求、授权令牌与当前监控器转移。
+Otherwise, one policy-domain transaction closes the old monitor version, activates the canonical monitor, replaces every current workflow call binding and authorization token, and only then exposes the successful edit answer.
+% 否则，一个策略域事务会关闭旧监控器版本、激活规范监控器、替换每个当前工作流调用的绑定与授权令牌，然后才暴露成功编辑答案。
+Protected calls verify their workflow call, protected action, canonical request, authorization token, and current monitor transition in the same transaction that records progress.
+% 受控调用在记录进度的同一事务中验证其工作流调用、受控动作、规范请求、授权令牌与当前监控器转移。
 A \Fresh call creates one authorization record and queues the canonical request.
 % \Fresh 调用创建一条授权记录并将规范请求入队。
 An \Alias call advances the workflow by linking to the existing record without extending the permission trace.
@@ -75,10 +75,10 @@ An \Alias call advances the workflow by linking to the existing record without e
 
 \paragraph{Installed-state invariant}
 % 安装后状态不变量
-We write \(\mathsf{AgentSec}(S;c,r)\) when five conditions hold: (1) the installed workflow and its required outcomes come from the checked edit; (2) the stored nonempty execution family is the checker's largest safe family; (3) the workflow, authorization log, queue, and checkpoints match the executed prefix \(r\); (4) the current monitor is exactly the derivative after \(r\); and (5) exactly one monitor version is active, with one current entry and authorization token for every remaining call position.
-% 当以下五项条件成立时，记作 \(\mathsf{AgentSec}(S;c,r)\)：(1) 已安装工作流及其要求实现的结果来自经检查编辑；(2) 已存非空执行族是检查器得到的最大安全执行族；(3) 工作流、授权日志、队列和检查点与已执行前缀 \(r\) 一致；(4) 当前监控器恰为执行 \(r\) 后的导数；(5) 恰有一个监控器版本处于活动状态，并为每个剩余调用位置提供一个当前入口和授权令牌。
-For a submitted tool request, one transaction verifies the call position, action ID, canonical request, authorization token, current monitor version, and enabled monitor transition before recording any progress.
-% 对于提交的工具请求，一个事务会先验证调用位置、动作标识、规范请求、授权令牌、当前监控器版本以及已启用的监控器转移，然后才记录任何进展。
+We write \(\mathsf{AgentSec}(S;c,r)\) when five conditions hold: (1) the installed workflow and its required outcomes come from the checked edit; (2) the stored nonempty execution family is the checker's largest safe family; (3) the workflow, authorization log, queue, and checkpoints match the executed prefix \(r\); (4) the current monitor is exactly the derivative after \(r\); and (5) exactly one monitor version is active, with one current entry and authorization token for every remaining workflow call.
+% 当以下五项条件成立时，记作 \(\mathsf{AgentSec}(S;c,r)\)：(1) 已安装工作流及其要求实现的结果来自经检查编辑；(2) 已存非空执行族是检查器得到的最大安全执行族；(3) 工作流、授权日志、队列和检查点与已执行前缀 \(r\) 一致；(4) 当前监控器恰为执行 \(r\) 后的导数；(5) 恰有一个监控器版本处于活动状态，并为每个剩余工作流调用提供一个当前入口和授权令牌。
+For a submitted tool request, one transaction verifies the workflow call, protected action, canonical request, authorization token, current monitor version, and enabled monitor transition before recording any progress.
+% 对于提交的工具请求，一个事务会先验证工作流调用、受控动作、规范请求、授权令牌、当前监控器版本以及已启用的监控器转移，然后才记录任何进展。
 The same transaction either creates the authorization record and queues the request, or records reuse of an existing authorization and return value.
 % 同一事务随后要么创建授权记录并将请求入队，要么记录对已有授权及返回值的复用。
 

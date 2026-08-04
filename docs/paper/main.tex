@@ -73,8 +73,8 @@ Otherwise, the remaining executions define the most permissive runtime monitor t
 % 否则，剩余执行定义了强制执行该编辑且限制最少的运行时监控器。
 For all six registered Fork, Restore, and Merge edits and authenticated registered extensions, our main theorem proves that the checker accepts exactly when such a safe implementation exists.
 % 对全部六种已注册的 Fork、Restore 和 Merge 编辑以及经认证的已注册扩展，我们的主定理证明，当且仅当这种安全实现存在时，检查器才会接受。
-The same theorem proves atomic installation despite racing calls and identifies the workflow structure, call-position-to-action-ID relation, prior authorizations, and monitor version that every exact checker needs.
-% 同一定理还证明调用竞态下的原子安装，并确定每个精确检查器都需要的工作流结构、调用位置到动作标识的关系、既有授权和监控器版本。
+The same theorem proves atomic installation despite racing calls and identifies the workflow structure, call--action map, prior authorizations, and monitor version that every exact checker needs.
+% 同一定理还证明调用竞态下的原子安装，并确定每个精确检查器都需要的工作流结构、调用—动作映射、既有授权和监控器版本。
 It also proves that the installed runtime and an ideal atomic machine have the same Agent-visible behavior.
 % 它还证明已安装运行时与理想原子机器具有相同的 Agent 可见行为。
 The security invariant is preserved by every runtime transition and therefore holds after every finite execution.

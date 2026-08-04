@@ -1,7 +1,7 @@
 Recall the authorization-label alphabet \(\mathcal U\) and regular prefix-closed policy \(\mathcal A\subseteq\mathcal U^*\).
 % 回顾授权标签字母表 \(\mathcal U\) 和正则前缀闭合策略 \(\mathcal A\subseteq\mathcal U^*\)。
-For authorization log \(\Delta\), \(\mathsf{lab}(\Delta)\in\mathcal A\) is its label sequence and \(D_\Delta\) is the set of action IDs that already have authorization records.
-% 对于授权日志 \(\Delta\)，\(\mathsf{lab}(\Delta)\in\mathcal A\) 是其标签序列，\(D_\Delta\) 是已经具有授权记录的动作标识集合。
+For authorization log \(\Delta\), \(\mathsf{lab}(\Delta)\in\mathcal A\) is its label sequence and \(D_\Delta\) is the set of protected actions that already have authorization records.
+% 对于授权日志 \(\Delta\)，\(\mathsf{lab}(\Delta)\in\mathcal A\) 是其标签序列，\(D_\Delta\) 是已经具有授权记录的受控动作集合。
 Fix \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\) and write \(\mathsf{state}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\).
 % 固定 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并记 \(\mathsf{state}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\)。
 Initial installation, each execution edit, and each later registered extension have a unique derived state.
@@ -26,8 +26,8 @@ We abbreviate the fixed parameters by writing \(H,u\).
 \subsection{New and Reused Authorizations}
 % 新授权与授权复用
 
-Function \(\Resolve^{\rho_u}_\Delta\) keeps every call position and annotates it as creating a new authorization or reusing an earlier one.
-% 函数 \(\Resolve^{\rho_u}_\Delta\) 保留每个调用位置，并标注它是创建新授权还是复用先前授权。
+Function \(\Resolve^{\rho_u}_\Delta\) keeps every workflow call and annotates it as creating a new authorization or reusing an earlier one.
+% 函数 \(\Resolve^{\rho_u}_\Delta\) 保留每个工作流调用，并标注它是创建新授权还是复用先前授权。
 Starting with \(D_0=D_\Delta\), it maps call sequence \(w=x_1\cdots x_n\) to annotated sequence \(z_1\cdots z_n\).
 % 从 \(D_0=D_\Delta\) 开始，它把调用序列 \(w=x_1\cdots x_n\) 映射为带标注序列 \(z_1\cdots z_n\)。
 For \(d_i=q^{\rho_u}_{\rm act}(x_i)\),
@@ -48,28 +48,28 @@ For \(d_i=q^{\rho_u}_{\rm act}(x_i)\),
  \mathsf{auth}(\Fresh(x,d))=\ell_{\rho_u}(d),\qquad
  \mathsf{auth}(\Alias(x,d))=\epsilon .
 \]
-For annotated \(z\), \(\mathsf{raw}(z)\) drops the new/reuse annotation and action ID while preserving the ordered call-position IDs.
-% 对于带标注的 \(z\)，\(\mathsf{raw}(z)\) 去除新建/复用标注和动作标识，同时保留有序调用位置标识。
-A \Retry repeats the same canonical request and adds no call position.
-% \Retry 重复同一个规范请求，不增加任何调用位置。
-Restored call positions sharing an action ID remain distinct; the first creates the record and later positions reuse it.
-% 共享同一动作标识的恢复调用位置仍彼此有别；第一个位置创建记录，后续位置复用该记录。
+For annotated \(z\), \(\mathsf{raw}(z)\) drops the new/reuse annotation and protected action while preserving the ordered workflow-call IDs.
+% 对于带标注的 \(z\)，\(\mathsf{raw}(z)\) 去除新建/复用标注和受控动作，同时保留有序工作流调用标识。
+A \Retry repeats the same canonical request and adds no workflow call.
+% \Retry 重复同一个规范请求，不增加任何工作流调用。
+Restored workflow calls sharing an protected action remain distinct; the first creates the record and later positions reuse it.
+% 共享同一受控动作的恢复工作流调用仍彼此有别；第一个位置创建记录，后续位置复用该记录。
 
 \begin{lemma}[New/reuse classification]
 % 新建/复用分类
 \label{lem:resolution}
 \(\Resolve^{\rho_u}_\Delta\) is deterministic, preserves length, and gives the same annotations on every shared prefix.
 % \(\Resolve^{\rho_u}_\Delta\) 是确定性的、保持长度，并在每个共享前缀上给出相同标注。
-Among positions annotated as new, each action ID occurs at most once outside \(D_\Delta\), while the call-position projection is exactly the input sequence.
-% 在标注为新授权的位置中，\(D_\Delta\) 之外的每个动作标识至多出现一次，而调用位置投影恰为输入序列。
+Among positions annotated as new, each protected action occurs at most once outside \(D_\Delta\), while the workflow-call projection is exactly the input sequence.
+% 在标注为新授权的位置中，\(D_\Delta\) 之外的每个受控动作至多出现一次，而工作流调用投影恰为输入序列。
 Moreover, if \(\Resolve^{\rho_u}_\Delta(rv)=zv'\), then \(z=\Resolve^{\rho_u}_\Delta(r)\) and \(v'=\Resolve^{\rho_u}_{\Delta_z}(v)\), where \(\Delta_z\) extends \(\Delta\) by the new authorizations in \(z\).
 % 此外，若 \(\Resolve^{\rho_u}_\Delta(rv)=zv'\)，则 \(z=\Resolve^{\rho_u}_\Delta(r)\) 且 \(v'=\Resolve^{\rho_u}_{\Delta_z}(v)\)，其中 \(\Delta_z\) 通过加入 \(z\) 中的新授权来扩展 \(\Delta\)。
 \end{lemma}
 \begin{proof}
 Induction on input length shows that the function emits one prefix-determined annotation per input symbol and updates \(D_i\) exactly when it creates a new authorization.
 % 对输入长度作归纳表明，该函数为每个输入符号产生一个由前缀决定的标注，并且恰在创建新授权时更新 \(D_i\)。
-Set membership ensures at most one new authorization per action ID.
-% 集合成员关系确保每个动作标识至多创建一次新授权。
+Set membership ensures at most one new authorization per protected action.
+% 集合成员关系确保每个受控动作至多创建一次新授权。
 Both cases retain \(x_i\).
 % 两种情形都会保留 \(x_i\)。
 Splitting after \(r\) gives the stated composition equation.
@@ -77,8 +77,8 @@ Splitting after \(r\) gives the stated composition equation.
 \end{proof}
 Thus a retry changes neither the processed-call record nor the permission trace, although its successful API reply is observable as \(\mathsf{Return}(t,[v]_{\cong})\).
 % 因而，重试既不改变已处理调用记录，也不改变权限轨迹，但其成功 API 回复仍可观测为 \(\mathsf{Return}(t,[v]_{\cong})\)。
-A copied call position that reuses an authorization record advances the processed-call record without changing the permission trace.
-% 复用授权记录的复制调用位置会推进已处理调用记录，但不会改变权限轨迹。
+A copied workflow call that reuses an authorization record advances the processed-call record without changing the permission trace.
+% 复用授权记录的复制工作流调用会推进已处理调用记录，但不会改变权限轨迹。
 
 \subsection{Safe Completion After Every Prefix}
 % 每个前缀之后的安全完成
@@ -266,8 +266,8 @@ For strictness, the preceding instance has the marker-nonblocking projected pair
 
 \Cref{prop:outcome-necessary} identifies the precise generalized-nonblocking problem produced by an Agent execution edit~\cite{dequeiroz2005multitasking,malik2008generalised}.
 % \Cref{prop:outcome-necessary} 确定 Agent 执行编辑所产生的精确广义非阻塞问题~\cite{dequeiroz2005multitasking,malik2008generalised}。
-The controller derives \(\alpha_o,\omega_o\) from the requested edit, signed removals, action IDs, authorization records, and the execution record; generalized nonblocking then computes the same largest execution set.
-% 控制器根据请求的编辑、签名移除、动作标识、授权记录和执行记录推导 \(\alpha_o,\omega_o\)；随后，广义非阻塞计算相同的最大执行集合。
+The controller derives \(\alpha_o,\omega_o\) from the requested edit, signed removals, protected actions, authorization records, and the execution record; generalized nonblocking then computes the same largest execution set.
+% 控制器根据请求的编辑、签名移除、受控动作、授权记录和执行记录推导 \(\alpha_o,\omega_o\)；随后，广义非阻塞计算相同的最大执行集合。
 Because every protected call is mediated, the controller decides every new/reuse transition.
 % 由于每次受控调用都受到中介，控制器决定每次新建/复用转移。
 The Agent-specific theory characterizes the entire transformation: it derives the problem from the execution record, decides the edit exactly, produces the most permissive monitor or an impossibility certificate, installs the result atomically, and proves the information necessary for any exact checker.
