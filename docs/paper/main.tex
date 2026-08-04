@@ -43,36 +43,42 @@ An Exact Theory of Fork, Restore, and Merge}
 \maketitle
 
 \begin{abstract}
-Tool-using Agent runtimes support Fork, Restore, and Merge so that an execution can explore alternatives or recover without starting over.
-% 使用工具的 Agent 运行时支持 Fork、Restore 和 Merge，使执行能够探索备选路径或从故障中恢复，而无需从头开始。
-These execution edits rewind logical control state, but they do not erase durable receipts, locally released requests, or authority already consumed by protected calls.
-% 这些执行编辑会倒转逻辑控制状态，却不会抹去持久回执、已在本地释放的请求，或受保护调用已经消耗的权限。
-An edit can therefore duplicate an action, abandon a required outcome, or race a call that began under the old execution.
-% 因此，一次编辑可能重复动作、放弃仍有义务实现的结果，或与旧执行下已经开始的调用发生竞态。
-A safe edit must account for both what the original execution has already done and what it still owes.
-% 一次安全编辑必须同时考虑原执行已经完成的事情和仍然负有的义务。
-Every prior obligation must remain required, have durable evidence of completion, or appear in the exact retirement set certified by its issuer.
-% 每项先前义务都必须继续有效、已有持久证据证明其完成，或出现在由其发行方认证的精确退役集合中。
-Existing Agent recovery systems implement particular edits, while existing synthesis methods choose behavior after a model and its completion conditions have been supplied.
-% 现有 Agent 恢复系统实现特定编辑，而现有综合方法在模型及其完成条件已经给定后选择行为。
-Neither derives from authenticated history exactly what a requested edit must preserve.
-% 二者都不会从经认证历史中推导出一次请求的编辑必须精确保留什么。
-We give an edit checker that starts from a registered workflow and authenticated runtime state, derives all legal completed executions, and removes any execution whose prefix would leave a still-required outcome without a safe completion.
-% 我们给出一种编辑检查器：它从已注册工作流和经认证的运行时状态出发，推导所有合法完整执行，并删除任何会在某个前缀后使仍有义务实现的结果失去安全完成方式的执行。
-If nothing remains, the procedure returns a finite proof that no implementation can meet the requirements.
-% 如果没有未来留下，该过程返回一份有限证明，说明任何实现都无法满足要求；否则，留下的未来会被编译成可强制执行的最大安全行为集合。
-Otherwise, the survivors compile into the largest enforceable set of safe behaviors.
-% 否则，留下的未来会被编译成可强制执行的最大安全行为集合。
-For all six registered execution edits and authenticated additive extensions, our main theorem proves that the checker accepts exactly when some implementation can enforce policy, preserve the edit's meaning, and keep every still-possible outcome able to finish.
-% 对全部六种已注册执行编辑和经认证的仅追加扩展，我们的主定理证明：当且仅当某个实现能够执行策略、保持编辑含义并让每个仍可能的结果都可完成时，检查器才会接受。
-The theorem also proves that the resulting monitor can be installed atomically despite racing calls.
-% 定理还证明，所得监控器能够在调用竞态下原子安装。
-It identifies the authenticated information that no exact checker can discard and connects the installed runtime to an ideal atomic machine.
-% 该定理还识别出任何精确检查器都不能丢弃的认证信息，并将已安装运行时连接到理想原子机器。
-Every supported event preserves the security invariant, so the theorem applies again after every finite reachable prefix.
-% 每个受支持事件都保持安全不变量，因此该定理能在每个有限可达前缀之后再次应用。
-Five kernel-checked Lean modules, 81 executable tests, and bounded performance measurements validate the finite checked core, critical examples, and executable checker.
-% 五个经内核检查的 Lean 模块、81 项可执行测试和有界性能测量验证了有限检查核心、关键例子与可执行检查器。
+Agent runtimes can Fork an execution, Restore a checkpoint, or Merge branches without restarting a task.
+% Agent 运行时可以 Fork 一次执行、Restore 一个检查点或 Merge 多个分支，而无需重新开始任务。
+We call these operations \emph{execution edits} because they change which parts of the workflow will run next.
+% 我们把这些操作称为\emph{执行编辑}，因为它们会改变工作流接下来执行哪些部分。
+An edit cannot undo a tool call that has already been authorized or released.
+% 一次编辑无法撤销已经获得授权或已经发出的工具调用。
+A careless edit can therefore perform the same action twice, drop work that the workflow still requires, or overlap with a call that began before the edit.
+% 因此，一次欠考虑的编辑可能重复执行同一动作、丢弃工作流仍然要求的工作，或与编辑前已经开始的调用重叠。
+We ask when an execution edit can be implemented safely.
+% 我们研究执行编辑在什么条件下能够被安全实现。
+Our answer preserves every outcome that was required before the edit.
+% 我们的答案保留编辑前要求实现的每个结果。
+Each such outcome must remain required, already have a recorded completion, or be explicitly removed by the same policy authority that required it.
+% 每个这类结果都必须继续作为要求、已经有完成记录，或由提出该要求的同一策略权限方明确移除。
+Existing Agent recovery systems implement particular edits, while existing synthesis methods assume that the possible executions and completion conditions are already known.
+% 现有 Agent 恢复系统实现特定编辑，而现有综合方法假定可能执行及完成条件已经给定。
+Neither derives the full safety requirement of a requested edit from the execution record.
+% 二者都不会从执行记录中推导出一次请求的编辑所需的完整安全条件。
+We present an exact theory and an executable checker.
+% 我们提出一套精确理论以及一个可执行检查器。
+Given a registered workflow, its authenticated record, and a requested edit, the checker constructs every complete execution allowed by the workflow and policy.
+% 给定一个已注册工作流、其经认证记录以及请求的编辑，检查器构造工作流和策略允许的每种完整执行。
+It removes an execution whenever one of its partial executions would leave a still-required outcome with no safe way to finish.
+% 如果某个完整执行的部分过程会让仍然需要实现的结果失去安全完成方式，检查器就删除该完整执行。
+If nothing remains, the checker returns a finite proof that no safe implementation exists.
+% 如果没有完整执行留下，检查器返回一份有限证明，说明不存在安全实现。
+Otherwise, the remaining executions define the most permissive runtime monitor that enforces the edit.
+% 否则，剩余执行定义了强制执行该编辑且限制最少的运行时监控器。
+For all six registered execution edits and registered extensions, our main theorem proves that the checker accepts exactly when such a safe implementation exists.
+% 对全部六种已注册执行编辑和已注册扩展，我们的主定理证明，当且仅当这种安全实现存在时，检查器才会接受。
+The same theorem proves atomic installation despite racing calls, identifies the four kinds of recorded information required by any exact checker, and relates the installed runtime to an ideal atomic machine.
+% 同一定理还证明了调用竞态下的原子安装，识别出任何精确检查器都必须记录的四类信息，并将已安装运行时与理想原子机器联系起来。
+Every supported event preserves the security invariant, so the theorem applies again after every finite reachable execution.
+% 每个受支持事件都保持安全不变量，因此该定理能在每个有限可达执行之后再次应用。
+Five kernel-checked Lean modules, 81 executable tests, and bounded performance measurements validate the finite checker, critical examples, and executable artifact.
+% 五个经内核检查的 Lean 模块、81 项可执行测试和有界性能测量验证了有限检查器、关键例子与可执行制品。
 \end{abstract}
 
 \input{sections/introduction}
@@ -83,7 +89,6 @@ Five kernel-checked Lean modules, 81 executable tests, and bounded performance m
 \input{sections/results}
 \input{sections/validation}
 \input{sections/related}
-\input{sections/discussion}
 \input{sections/conclusion}
 
 \clearpage

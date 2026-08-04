@@ -2,86 +2,96 @@
 % 引言
 \label{sec:introduction}
 
-Tool-using Agents no longer execute only one linear plan.
-% 使用工具的 Agent 不再只执行一条线性计划。
-Modern runtimes let an Agent Fork live continuations, Restore a checkpoint, and Merge descendants~\cite{codexappserver,claudesessions,claudecheckpoint,wang2026fork,wu2026crab,zhang2026agentlibos}.
-% 现代运行时允许 Agent Fork 活跃延续、Restore 检查点并 Merge 后代~\cite{codexappserver,claudesessions,claudecheckpoint,wang2026fork,wu2026crab,zhang2026agentlibos}。
-These operations support exploration, recovery, and reuse without restarting the whole task.
-% 这些操作支持探索、恢复与复用，而无需重新开始整个任务。
-Together, these operations make an Agent's live execution structure editable.
-% 这些操作共同使 Agent 的活跃执行结构可以被编辑。
+Tool-using Agent runtimes no longer follow only one linear plan.
+% 使用工具的 Agent 运行时不再只遵循一条线性计划。
+They let an Agent Fork an execution into alternatives, Restore an earlier checkpoint, and Merge branches~\cite{codexappserver,claudesessions,claudecheckpoint,wang2026fork,wu2026crab,zhang2026agentlibos}.
+% 它们允许 Agent 将一次执行 Fork 为多个备选方案、Restore 到较早的检查点，并 Merge 多个分支~\cite{codexappserver,claudesessions,claudecheckpoint,wang2026fork,wu2026crab,zhang2026agentlibos}。
+These operations support exploration, recovery, and reuse without restarting the task.
+% 这些操作支持探索、恢复与复用，而无需重新开始任务。
+We call them \emph{execution edits} because they change which parts of the workflow will run next.
+% 我们把它们称为\emph{执行编辑}，因为它们会改变工作流接下来执行哪些部分。
 
-However, the world does not rewind when the Agent edits its execution.
-% 然而，当 Agent 编辑其执行时，现实世界不会随之倒转。
-In our running procurement example, the Agent saves checkpoint \(k\) before approval, the approval later commits, and a Restore of \(k\) creates a new logical approval occurrence while the old receipt remains.
-% 在贯穿全文的采购例子中，Agent 在审批前保存检查点 \(k\)，审批随后提交，而对 \(k\) 的 Restore 会创建一个新的逻辑审批发生项，同时旧回执仍然存在。
-Treating that occurrence as new can repeat the approval, while selecting supplier \(L\) in a Merge as an old supplier-\(R\) payment commits can authorize both branches.
-% 将该发生项视为全新调用可能重复审批，而在旧供应商 \(R\) 的付款提交时通过 Merge 选择供应商 \(L\)，则可能同时授权两个分支。
-A checkpoint-correct edit can therefore be security-wrong.
-% 因此，一次对检查点而言正确的编辑，在安全性上仍可能错误。
+An execution edit does not undo earlier tool calls.
+% 执行编辑不会撤销先前的工具调用。
+In our running procurement example, the Agent saves checkpoint \(k\) before approval.
+% 在贯穿全文的采购例子中，Agent 在审批前保存检查点 \(k\)。
+The approval later uses its one-use permission and leaves a completion record.
+% 审批随后使用其一次性权限并留下完成记录。
+Restoring \(k\) creates another approval call in the workflow, but it must not authorize the same approval again.
+% Restore 到 \(k\) 会在工作流中创建另一个审批调用，但不得再次授权同一审批。
+A concurrent Merge can cause a similar error by selecting supplier \(L\) after a supplier-\(R\) payment has already been authorized.
+% 并发的 Merge 也会造成类似错误，例如在供应商 \(R\) 的付款已经获得授权后再选择供应商 \(L\)。
+An edit can therefore restore the saved program state and still be unsafe.
+% 因此，一次编辑即使正确恢复了保存的程序状态，仍然可能不安全。
 
-The root cause is that a checkpoint records only part of the facts that determine whether an edit is safe.
-% 根因在于，检查点只记录了决定一次编辑是否安全的部分事实。
-The controller must also know which outcomes the old execution still promises, which logical calls refer to the same irreversible action, which effects have already advanced, and the exact moment at which the edit takes effect.
-% 控制器还必须知道旧执行仍然承诺哪些结果、哪些逻辑调用指向同一个不可逆动作、哪些效果已经推进，以及编辑生效的精确时刻。
-Each fact can change the correct decision.
-% 每项事实都可能改变正确判定。
-None can be reconstructed from workspace equality, a trace or receipt ledger alone, or a new target proposed by the caller.
-% 这些事实都无法仅从工作区相等性、单独的轨迹或回执账本，或者调用方提出的新目标中恢复。
+The problem is that a checkpoint contains only part of the information needed to decide whether an edit is safe.
+% 问题在于，检查点只包含决定一次编辑是否安全所需的部分信息。
+The controller must also know four things: which outcomes remain required, which call positions refer to the same protected action, which actions have already been authorized, and which runtime version governs a call that overlaps the edit.
+% 控制器还必须知道四件事：哪些结果仍然是要求、哪些调用位置指向同一个受控动作、哪些动作已经获得授权，以及哪个运行时版本管理与编辑重叠的调用。
+Each can change the correct answer.
+% 每一项都可能改变正确答案。
+The controller cannot recover all four from equal workspaces, an execution trace alone, a receipt log alone, or a replacement workflow proposed by the Agent.
+% 控制器无法仅从相同工作区、单独的执行轨迹、单独的回执日志，或 Agent 提出的替代工作流中恢复全部四项信息。
 
-Existing approaches cover pieces of this problem but do not derive its complete safety condition.
+Existing approaches cover parts of this problem but do not derive its complete safety condition.
 % 现有方法覆盖了该问题的部分环节，却没有推导其完整安全条件。
 Agent systems provide branching, staged effects, transactions, or recovery checks~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart}.
 % Agent 系统提供分支、分阶段效果、事务或恢复检查~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart}。
 Control and synthesis choose behavior after a model of possible executions and desired final states has been supplied~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,aceto2018suppressions}.
 % 控制与综合方法则在可能执行及期望最终状态的模型已经给定后选择行为~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,aceto2018suppressions}。
-Neither line of work by itself derives, from an authenticated execution record, everything that a particular edit must preserve before that edit can be installed.
-% 这两类工作本身都不会从经认证的执行记录中推导出某次具体编辑在安装前必须保留的全部内容。
+Neither line of work derives from a recorded execution everything that a particular edit must preserve before it takes effect.
+% 这两类工作都不会从已有执行记录中推导出某次具体编辑在生效前必须保留的全部内容。
 
-Our key idea is that an execution edit must not make old facts or unfinished promises disappear.
-% 我们的关键思想是：执行编辑不能让旧事实或尚未完成的承诺消失。
-After an edit, every old promise must still be required, have durable evidence that it was completed, or have been explicitly canceled by the authority that created it.
-% 编辑之后，每项旧承诺都必须继续有效、已有持久证据证明其完成，或已由创建它的权限方明确取消。
-The Agent chooses only a registered operation.
-% Agent 只能选择一项已注册操作；可信控制器决定哪些承诺与既往效果必须带入结果。
-The trusted controller determines which promises and past effects carry into the result.
-% 可信控制器决定哪些承诺与既往效果必须带入结果。
-The Agent therefore cannot obtain a favorable answer by proposing a weaker version of its own past.
-% 因此，Agent 无法通过提出一个更弱的自身过去来获得有利判定。
+Our key idea is that an execution edit must preserve both past actions and still-required outcomes.
+% 我们的关键思想是：执行编辑必须同时保留过去的动作和仍然要求实现的结果。
+Every outcome required before the edit must remain required, already have a recorded completion, or be explicitly removed by the same policy authority that required it.
+% 编辑前要求实现的每个结果都必须继续作为要求、已经有完成记录，或由提出该要求的同一策略权限方明确移除。
+The Agent selects only a registered edit.
+% Agent 只能选择一项已注册编辑。
+The trusted controller derives the edited workflow and the requirements it inherits from the recorded execution.
+% 可信控制器从已有执行记录中推导编辑后的工作流以及它继承的要求。
+The Agent therefore cannot obtain a favorable answer by submitting a replacement workflow that hides inconvenient facts.
+% 因此，Agent 无法通过提交一个隐藏不利事实的替代工作流来获得有利答案。
 
-Realizing this insight requires solving three coupled problems.
-% 实现这一洞见需要解决三个相互耦合的问题。
-First, calls copied by Fork or Restore may still refer to the same real-world action, so the controller must distinguish a genuinely new effect from reuse of an earlier result.
-% 第一，由 Fork 或 Restore 复制的调用仍可能指向同一个现实动作，因此控制器必须区分真正的新效果与对旧结果的复用。
-Second, at every allowed partial execution, each result that is still possible must retain a safe way to finish, without forbidding more behavior than safety requires.
-% 第二，在每段允许的部分执行处，每个仍然可能的结果都必须保留一条安全完成路径，同时不能禁止超出安全所需的行为。
-Third, the answer must take effect atomically with respect to old calls, including calls that race the edit or survive a crash.
-% 第三，该判定必须相对于旧调用原子生效，包括与编辑竞态或跨越崩溃存活的调用。
+This idea creates three technical problems.
+% 这一思想带来三个技术问题。
+First, calls copied by Fork or Restore may refer to the same protected action, so the controller must distinguish a new action from reuse of an earlier call and return value.
+% 第一，由 Fork 或 Restore 复制的调用可能指向同一个受控动作，因此控制器必须区分新动作与对先前调用及返回值的复用。
+Second, after every allowed partial execution, every outcome that is still required and still possible must retain a safe way to finish.
+% 第二，在每段允许的部分执行之后，每个仍被要求且仍有可能实现的结果都必须保留安全完成方式。
+The checker must enforce this condition without forbidding additional safe behavior.
+% 检查器必须执行这一条件，同时不能额外禁止安全行为。
+Third, the answer must take effect atomically with respect to calls that overlap the edit or a crash.
+% 第三，该答案必须相对于与编辑或崩溃重叠的调用原子生效。
 
 We give an exact checker for execution edits.
 % 我们给出一个针对执行编辑的精确检查器。
-For a requested edit, the controller takes the checked workflow, authenticated history, receipts, pending effects, policy, and current runtime version, and derives all legal completed executions.
-% 对于一次编辑请求，控制器接收经检查的工作流、经认证历史、回执、待处理效果、策略与当前运行时版本，并推导所有合法完整执行。
-It repeatedly removes any execution having a prefix after which one still-possible promised result can no longer finish safely.
-% 它反复删除这样的执行：在该执行的某个前缀之后，某个仍可能且已承诺的结果再也无法安全完成。
-If no execution remains, the controller returns a finite proof that every implementation must fail.
-% 如果没有执行留下，控制器返回一份有限证明，说明所有实现都必然失败；否则，留下的执行定义最宽松的安全监控器。
-Otherwise, the survivors define the most permissive safe monitor.
-% 否则，留下的执行定义最宽松的安全监控器。
-Before installation, the runtime recomputes the answer from the current history and atomically replaces the old monitor, forcing every racing call to occur either before or after the edit.
-% 安装之前，运行时根据当前历史重新计算判定并原子替换旧监控器，迫使每个竞态调用发生在编辑之前或之后。
-\Cref{sec:lifecycle} applies this process to one procurement history across Fork, Merge, two races, and Restore.
-% \Cref{sec:lifecycle} 将这一过程应用于一段依次经历 Fork、Merge、两类竞态与 Restore 的采购历史；恢复后的审批复用先前回执，而不会产生第二个效果。
-The restored approval reuses its earlier receipt rather than producing a second effect.
-% 恢复后的审批复用先前回执，而不会产生第二个效果。
+For a requested edit, the controller uses the registered workflow, recorded calls and edits, completion records, pending calls, policy, and current monitor version to construct every allowed completed execution.
+% 对于一次编辑请求，控制器使用已注册工作流、已记录的调用与编辑、完成记录、待处理调用、策略和当前监控器版本，构造所有允许的完整执行。
+It removes an execution whenever one of its partial executions would leave a still-required outcome with no safe completion.
+% 如果某个完整执行的部分过程会让仍然要求实现的结果失去安全完成方式，检查器就删除该完整执行。
+If no execution remains, the controller returns a finite proof that no safe implementation exists.
+% 如果没有完整执行留下，控制器返回一份有限证明，说明不存在安全实现。
+Otherwise, the remaining executions define the most permissive safe monitor.
+% 否则，剩余执行定义限制最少的安全监控器。
+Before the edit takes effect, the runtime checks the current recorded state again and atomically replaces the old monitor.
+% 编辑生效之前，运行时再次检查当前记录状态并原子替换旧监控器。
+Every overlapping call is therefore governed entirely by either the old monitor or the new one.
+% 因此，每个重叠调用都完全由旧监控器或新监控器管理。
+\Cref{sec:lifecycle} follows this process through one procurement execution containing Fork, Merge, two races, and Restore.
+% \Cref{sec:lifecycle} 通过一个包含 Fork、Merge、两类竞态与 Restore 的采购执行展示这一过程。
+After Restore, the repeated approval call reuses the earlier completion record instead of authorizing the approval again.
+% Restore 之后，重复的审批调用复用先前的完成记录，而不会再次授权该审批。
 
 \paragraph{Contributions}
 % 贡献
-We contribute one end-to-end theorem connecting the original Agent workflow, the requested execution edit, the exact decision procedure, and the installed runtime.
-% 我们贡献一个端到端定理，将原始 Agent 工作流、请求的执行编辑、精确判定过程与已安装运行时连接起来。
-For all six registered execution edits and authenticated additive extensions, a safe implementation exists exactly when the procedure leaves a nonempty set of executions, exactly when its monitor can be installed, and exactly when an ideal atomic machine permits the same edit.
-% 对全部六种已注册执行编辑和经认证的仅追加扩展，当且仅当该过程留下非空执行集合、其监控器能够安装且理想原子机器允许同一次编辑时，安全实现才存在。
-The theorem also proves that every category of history information used by the procedure is necessary, that the result remains valid after every finite sequence of operations, and that the concrete runtime has the same visible behavior as the ideal machine (\cref{sec:model,sec:admission,sec:kernel,sec:results}).
-% 该定理还证明，判定过程使用的每类历史信息都不可缺少，结果在操作组成的每个有限序列之后仍然成立，并且具体运行时与理想机器具有相同的可见行为（\cref{sec:model,sec:admission,sec:kernel,sec:results}）。
-Five kernel-checked Lean modules, 81 executable tests, and a bounded scaling study validate the finite checked core, critical examples, and explicit decision procedure.
-% 五个经内核检查的 Lean 模块、81 项可执行测试与一项有界扩展性研究验证了有限检查核心、关键例子和显式判定过程。
+We contribute one end-to-end theorem connecting the original Agent workflow, the requested execution edit, the exact checker, and the installed runtime.
+% 我们贡献一个端到端定理，将原始 Agent 工作流、请求的执行编辑、精确检查器与已安装运行时连接起来。
+For all six registered execution edits and registered extensions, a safe implementation exists exactly when the checker leaves a nonempty set of executions, its monitor can be installed, and an ideal atomic machine permits the same edit.
+% 对全部六种已注册执行编辑和已注册扩展，当且仅当检查器留下非空执行集合、其监控器能够安装且理想原子机器允许同一次编辑时，安全实现才存在。
+The theorem also proves that all four kinds of recorded information used by the checker are necessary and that the concrete runtime has the same visible behavior as the ideal machine (\cref{sec:model,sec:admission,sec:kernel,sec:results}).
+% 该定理还证明，检查器使用的四类记录信息都不可缺少，并且具体运行时与理想机器具有相同的可见行为（\cref{sec:model,sec:admission,sec:kernel,sec:results}）。
+Every supported event preserves the security invariant, so the theorem applies again after every finite reachable execution.
+% 每个受支持事件都保持安全不变量，因此该定理能在每个有限可达执行之后再次应用。
+Five kernel-checked Lean modules, 81 executable tests, and bounded performance measurements validate the finite checker, critical examples, and executable artifact.
+% 五个经内核检查的 Lean 模块、81 项可执行测试和有界性能测量验证了有限检查器、关键例子与可执行制品。
