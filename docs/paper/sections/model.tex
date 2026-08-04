@@ -28,18 +28,18 @@ We call this the \emph{execution record}; the trusted runtime protects it from A
 % 基本对象
 We capitalize \emph{Agent} for the untrusted principal requesting execution edits.
 % 我们将请求执行编辑的不受信任主体称为 \emph{Agent}。
-An \emph{workflow call} \(x\) identifies one position for a protected tool call in the workflow.
+An \emph{call position} \(x\) identifies one position for a protected tool call in the workflow.
 % \emph{工作流调用} \(x\) 标识工作流中一次受控工具调用的位置。
-An \emph{protected action} \(d\) groups the workflow calls that share one protected action and one authorization record.
+An \emph{action ID} \(d\) groups the call positions that share one protected action and one authorization record.
 % \emph{受控动作} \(d\) 将共享同一受控动作和同一授权记录的工作流调用归为一组。
 The first authorized use creates that record; positions copied by Fork or Restore later reuse it.
 % 第一次获授权使用会创建该记录；Fork 或 Restore 随后复制出的工作流调用会复用它。
 The workflow record also stores the certified origin of each region copied by an edit.
 % 工作流记录还保存编辑所复制的每个区域的认证来源。
-\(T,\Delta,\chi\) denote the current workflow, authorization log, and ordered record of processed workflow calls.
+\(T,\Delta,\chi\) denote the current workflow, authorization log, and ordered record of processed call positions.
 % \(T,\Delta,\chi\) 分别表示当前工作流、授权日志和已处理工作流调用的有序记录。
 
-A pomset \(p=(X_p,\prec_p)\) is a finite set of workflow calls with a strict partial order.
+A pomset \(p=(X_p,\prec_p)\) is a finite set of call positions with a strict partial order.
 % 偏序事件集 \(p=(X_p,\prec_p)\) 是带有严格偏序的有限工作流调用集合。
 Its linearizations \(\Lin(p)\) are the words containing each member of \(X_p\) once and respecting \(\prec_p\).
 % 它的线性化 \(\Lin(p)\) 是各包含 \(X_p\) 中每个成员一次且遵循 \(\prec_p\) 的序列。
@@ -59,14 +59,14 @@ We require the runtime to distinguish completion from continuation.
 \]
 This condition permits incomparable traces and different outcomes with the same trace, so it does not require deterministic outcomes.
 % 该条件允许不可比较的轨迹以及共享同一轨迹的不同结果，因此并不要求结果具有确定性。
-It requires a registered workflow call whenever continuing after a shared partial execution performs more work.
+It requires a registered call position whenever continuing after a shared partial execution performs more work.
 % 如果在一段共享的部分执行之后继续会执行更多工作，该条件要求存在一个已注册工作流调用来表示继续。
-The interface represents a choice between stopping and continuing by an authenticated terminal workflow call handled by the controller.
+The interface represents a choice between stopping and continuing by an authenticated terminal call position handled by the controller.
 % 该接口通过由控制器处理的认证终止工作流调用表示停止与继续之间的选择。
 
 Contracts use the three partial constructors below.
 % 契约使用下列三个偏构造器。
-Each constructor requires operands with disjoint workflow calls and preserves the condition that no complete call sequence is a strict prefix of another.
+Each constructor requires operands with disjoint call positions and preserves the condition that no complete call sequence is a strict prefix of another.
 % 每个构造器都要求操作数的工作流调用互不相交，并保持“任何完整调用序列都不是另一完整调用序列真前缀”这一条件。
 \begin{equation}
 \label{eq:contract-algebra}
@@ -83,7 +83,7 @@ Each constructor requires operands with disjoint workflow calls and preserves th
  p_{(o,v)}&=p_o\triangleright p_v.
 \end{aligned}
 \end{equation}
-Before adding a registered or copied operand, the controller deterministically assigns fresh workflow-call IDs and extends \(\rho\) while retaining the authenticated protected actions.
+Before adding a registered or copied operand, the controller deterministically assigns fresh call-position IDs and extends \(\rho\) while retaining the authenticated action IDs.
 % 在加入已注册或复制的操作数之前，控制器确定性地分配新的工作流调用标识并扩展 \(\rho\)，同时保留认证受控动作。
 Well-formedness already makes carried operands disjoint.
 % 良构性已经保证被携带的操作数互不相交。
@@ -91,11 +91,11 @@ In \cref{eq:contract-algebra}, \(\uplus\) adds no cross-order and \(\trianglerig
 % 在 \cref{eq:contract-algebra} 中，\(\uplus\) 不添加跨操作数次序，\(\triangleright\) 将 \(p\) 的每个事件置于 \(q\) 的每个事件之前，而选择使用带标签的结果索引不交并，并行和顺序则使用笛卡尔积。
 Consequently, choice retains each arm's full indexed family, parallel pairs outcomes while permitting every causal linearization, and sequence adds a barrier.
 % 因此，选择保留每个分支的完整带索引结果族，并行对结果配对并允许每种因果线性化，而顺序添加一道屏障。
-After call prefix \(w\), \(\mathcal C/w\) retains each outcome whose pomset has a linearization prefixed by \(w\), then removes the workflow calls in \(w\) and their order edges.
+After call prefix \(w\), \(\mathcal C/w\) retains each outcome whose pomset has a linearization prefixed by \(w\), then removes the call positions in \(w\) and their order edges.
 % 在调用前缀 \(w\) 之后，\(\mathcal C/w\) 保留其偏序事件集存在以 \(w\) 为前缀的线性化的每个结果，再移除 \(w\) 中的工作流调用及其次序边。
 The expression is undefined if no outcome remains.
 % 若没有索引保留，则其无定义。
-This operational ``remaining contract'' preserves outcome and workflow call identity.
+This operational ``remaining contract'' preserves outcome and call position identity.
 % 这一“剩余契约”的操作定义会保留结果标识和工作流调用标识。
 
 \begin{lemma}[Completion remains unambiguous]
@@ -135,7 +135,7 @@ Its node IDs, base contracts, signed outcome authorities, and typed edit records
 % 其中的节点标识、基础契约、经签名的结果权限及类型化编辑记录永不改变。
 Each branch node \(b\) carries an immutable registered base contract \(\Gamma_b\).
 % 每个分支节点 \(b\) 携带一个不可变的已注册基础契约 \(\Gamma_b\)。
-Its ordered progress record \(\chi_b\) lists the workflow calls already processed on that branch.
+Its ordered progress record \(\chi_b\) lists the call positions already processed on that branch.
 % 其有序进展记录 \(\chi_b\) 列出该分支上已经处理的工作流调用。
 The immutable records form a directed acyclic graph (DAG) whose edges record typed Fork, Restore, and Merge operations.
 % 这些不可变记录形成一个有向无环图（DAG），其边记录类型化的 Fork、Restore 和 Merge 操作。
@@ -165,15 +165,15 @@ Set \(\mathsf{heads}(b{:}\mathcal C)=\{b\}\).
 % 令 \(\mathsf{heads}(b{:}\mathcal C)=\{b\}\)。
 An open choice makes both arms current, a selected choice makes its winner current, parallel and \(\mathsf{join}\) make both arms current, and sequence makes its left operand current until completion and then its right.
 % 开放选择使两个分支均为当前分支，已选选择使胜出分支成为当前分支，并行和 \(\mathsf{join}\) 使两个分支均为当前分支，而顺序先使左操作数成为当前部分直至其完成，再切换到右操作数。
-Completing a workflow call updates the work remaining at its leaf without deleting the recorded structure.
+Completing a call position updates the work remaining at its leaf without deleting the recorded structure.
 % 完成一个工作流调用会更新其叶节点仍需执行的工作，但不会删除已记录结构。
 Because sequence checks \(\mathsf{complete}\), it retains completed outcomes from its left operand, so an isolated completed leaf remains available for a later Fork or Restore.
 % 由于顺序检查 \(\mathsf{complete}\)，它会保留左操作数中的已完成结果，因此孤立的已完成叶节点仍可供后续 Fork 或 Restore 使用。
 Joining removes \(g\) immediately but keeps its continuation behind a barrier until both arms complete.
 % Join 会立即移除 \(g\)，但在两个分支都完成之前，将其延续保持在屏障之后。
-A workflow call is enabled when it is minimal in some pomset of \(\sem{T}\).
+A call position is enabled when it is minimal in some pomset of \(\sem{T}\).
 % 当一个工作流调用在 \(\sem{T}\) 的某个偏序事件集中为极小元时，它即被启用。
-Disjoint workflow calls and unique context decomposition give every enabled \(x\) a unique current leaf \(\mathsf{leaf}_T(x)=b\).
+Disjoint call positions and unique context decomposition give every enabled \(x\) a unique current leaf \(\mathsf{leaf}_T(x)=b\).
 % 工作流调用互不重叠以及上下文分解的唯一性，使每个已启用的 \(x\) 都具有唯一的当前叶节点 \(\mathsf{leaf}_T(x)=b\)。
 For \(a\in\{\Fresh(x,d),\Alias(x,d)\}\), define the paired execution update
 % 对于 \(a\in\{\Fresh(x,d),\Alias(x,d)\}\)，定义成对执行更新
@@ -198,11 +198,11 @@ Write \(\mathcal C_k=\mathsf{contract}(K(k))\) for the remaining contract stored
 % 将检查点 \(k\) 存储的剩余契约记为 \(\mathcal C_k=\mathsf{contract}(K(k))\)。
 \(\Sigma_\zeta\) is an immutable, versioned registry of typed edit rules.
 % \(\Sigma_\zeta\) 是不可变且带版本的类型化编辑规则注册表。
-\(\rho\) records, for each workflow call, its monitor entry, protected action, authorization token, certified origin, scope, canonical tool request, and request digest.
+\(\rho\) records, for each call position, its monitor entry, action ID, authorization token, certified origin, scope, canonical tool request, and request digest.
 % \(\rho\) 为每个工作流调用记录其监控器入口、受控动作、授权令牌、认证来源、作用域、规范工具请求和请求摘要。
-For each current workflow call \(x\), binding \(\beta(x)=(j,\eta)\) names its monitor entry and version.
+For each current call position \(x\), binding \(\beta(x)=(j,\eta)\) names its monitor entry and version.
 % 对于每个当前工作流调用 \(x\)，绑定 \(\beta(x)=(j,\eta)\) 指明其监控器入口和版本。
-\(\chi\) records processed workflow calls in order, including whether each created or reused an authorization record, and \(\nu\) is the state version.
+\(\chi\) records processed call positions in order, including whether each created or reused an authorization record, and \(\nu\) is the state version.
 % \(\chi\) 按顺序记录已处理的工作流调用，包括每个位置是创建还是复用授权记录；\(\nu\) 是状态版本。
 Because \(\chi\) records authorization and workflow progress, the remote service may still need to supply a completion record and return value.
 % 由于 \(\chi\) 记录授权和工作流进展，远端服务可能仍需提供完成记录和返回值。
@@ -239,15 +239,15 @@ Every original or edit-introduced outcome has exactly one signed policy authorit
 % 每个原始结果或编辑引入的结果都恰有一个经签名的策略权限方，并在控制器携带、复制或保存该结果时得到保留。
 \item \emph{Identity and progress.}
 % \emph{标识与进展。}
-Workflow-call and monitor-entry IDs are unique, while workflow calls with the same protected action agree on the call authorization service, scope, canonical request, digest, and certified origin.
+Call-position and monitor-entry IDs are unique, while call positions with the same action ID agree on the call authorization service, scope, canonical request, digest, and certified origin.
 % 工作流调用标识和监控器入口标识是唯一的，而共享同一受控动作的工作流调用在调用授权服务、作用域、规范请求、摘要和认证来源上保持一致。
-Processed workflow calls are downward closed in their pomset, consistent with every choice status, and absent from the remaining workflow.
+Processed call positions are downward closed in their pomset, consistent with every choice status, and absent from the remaining workflow.
 % 已处理工作流调用在其偏序事件集中向下闭合，与每个选择状态一致，并且不出现在剩余工作流中。
 \item \emph{Current workflow.}
 % \emph{当前工作流。}
-\(\operatorname{dom}(\beta)=X_{\sem T}\), and every current workflow call \(x\) has exactly one authenticated binding \(\beta(x)=(j_x,\eta)\) to the domain's single current monitor version.
+\(\operatorname{dom}(\beta)=X_{\sem T}\), and every current call position \(x\) has exactly one authenticated binding \(\beta(x)=(j_x,\eta)\) to the domain's single current monitor version.
 % \(\operatorname{dom}(\beta)=X_{\sem T}\)，且每个当前工作流调用 \(x\) 都恰有一个经认证的绑定 \(\beta(x)=(j_x,\eta)\)，指向该域唯一的当前监控器版本。
-Every current leaf \(b{:}\mathcal C\) equals its immutable registered contract \(\Gamma_b\) after removing the workflow calls recorded in \(\chi_b\); the caller cannot replace it with a smaller outcome set.
+Every current leaf \(b{:}\mathcal C\) equals its immutable registered contract \(\Gamma_b\) after removing the call positions recorded in \(\chi_b\); the caller cannot replace it with a smaller outcome set.
 % 每个当前叶节点 \(b{:}\mathcal C\) 都等于其不可变已注册契约 \(\Gamma_b\) 移除 \(\chi_b\) 中所记录工作流调用后的结果；调用方无法把它替换为更小的结果集合。
 Every constructor in \(T\) is defined, so no complete sequence in any subtree is a strict prefix of another.
 % \(T\) 中的每个构造器都有定义，因此任何子树中的完整序列都不是另一完整序列的真前缀。
@@ -255,7 +255,7 @@ Every constructor in \(T\) is defined, so no complete sequence in any subtree is
 % \emph{编辑规则与域。}
 Every edge and introduced contract follows one immutable edit rule at version \(\zeta\).
 % 每条边和每个引入的契约都遵循版本 \(\zeta\) 的一条不可变编辑规则。
-Every current, checkpoint, or rule-introduced workflow call, protected action, monitor entry, certified origin, and scope belongs to \(\omega\).
+Every current, checkpoint, or rule-introduced call position, action ID, monitor entry, certified origin, and scope belongs to \(\omega\).
 % 当前状态、检查点或规则引入的每个工作流调用、受控动作、监控器入口、认证来源和作用域都属于 \(\omega\)。
 Protected actions, authorization logs, and policies of distinct domains are disjoint, and an edit never crosses a domain.
 % 不同域的受控动作、授权日志和策略互不相交，并且编辑绝不跨域。
@@ -273,7 +273,7 @@ Authorization records can only be appended.
 % 授权记录只能追加。
 A completion update advances an authorization record's status and fills its return record with a stable return value.
 % 完成更新会推进授权记录的状态，并用稳定返回值填充其返回记录。
-Each authorization record binds its protected action, immutable canonical tool request, creator workflow call, and permission label.
+Each authorization record binds its action ID, immutable canonical tool request, creator call position, and permission label.
 % 每条授权记录都绑定其受控动作、不可变规范工具请求、创建者工作流调用和权限标签。
 Each entry in \(\chi\) points either to the authorization record it created or to the earlier record it reused, so \((\chi,\Delta)\) determines retry and return lookup.
 % \(\chi\) 中的每个条目都指向它创建的授权记录或它复用的较早记录，因此 \((\chi,\Delta)\) 决定重试与返回值查找。
@@ -282,7 +282,7 @@ Each entry in \(\chi\) points either to the authorization record it created or t
 Restore may reconstruct workspace payload but never restores \(\Delta\).
 % Restore 可以重建工作区载荷，但绝不会恢复 \(\Delta\)。
 
-The full state \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) is \emph{well formed} when \(H\) is well formed, \(\mathsf{lab}(\Delta)\in\mathcal A\), each protected action has at most one authorization record, each processed call names the record it created or reused, the authorization log, request queue, and policy belong to \(\omega\), and the queue preserves the order of new authorizations.
+The full state \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) is \emph{well formed} when \(H\) is well formed, \(\mathsf{lab}(\Delta)\in\mathcal A\), each action ID has at most one authorization record, each processed call names the record it created or reused, the authorization log, request queue, and policy belong to \(\omega\), and the queue preserves the order of new authorizations.
 % 当 \(H\) 良构、\(\mathsf{lab}(\Delta)\in\mathcal A\)、每个受控动作至多有一条授权记录、每个已处理调用都指明它创建或复用的记录、授权日志/请求队列/策略均属于 \(\omega\)，且队列保持新授权的顺序时，完整状态 \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) 是\emph{良构的}。
 All definitions and results below quantify over such well-formed states.
 % 下文所有定义与结果均量化于这样的良构状态。
@@ -292,11 +292,11 @@ All definitions and results below quantify over such well-formed states.
 
 The adversary controls Agent output, edit requests, tool arguments, copied workspace, retries, stale authorization tokens, and scheduling, including races between calls and edits.
 % 对手控制 Agent 输出、编辑请求、工具参数、复制的工作区、重试、过期授权令牌和调度，包括调用与编辑之间的竞态。
-It cannot forge registries, the checkpoint directed acyclic graph (DAG), authenticated protected-action mappings, policy, or authorization log.
+It cannot forge registries, the checkpoint directed acyclic graph (DAG), authenticated action-ID mappings, policy, or authorization log.
 % 它无法伪造注册表、检查点有向无环图（DAG）、经认证的受控动作映射、策略或授权日志。
 The policy authority signs policies, outcome requirements, and authorized removals.
 % 策略权限方签署策略、结果要求和获授权移除。
-The call authorization service registers protected calls, protected actions, and authorization tokens.
+The call authorization service registers protected calls, action IDs, and authorization tokens.
 % 调用授权服务注册受控调用、受控动作和授权令牌。
 The trusted controller derives and checks each edit, while the trusted installation service re-verifies the answer and atomically replaces the monitor.
 % 可信控制器推导并检查每次编辑，而可信安装服务重新验证答案并原子替换监控器。
@@ -308,7 +308,7 @@ After an unexpected stop and restart, each transaction appears entirely before o
 % 在意外停止并重新启动后，每项事务都完整呈现在线性化点之前或之后。
 Before the checker reads the execution record, the call authorization service may instantiate finitely many registered call templates.
 % 在检查器读取执行记录之前，调用授权服务可以实例化有限个已注册调用模板。
-For tool request \(m\), it computes canonical request \(m^\circ=\mathsf{canon}_\kappa(m)\), reuses an protected action certified for \(m^\circ\) or allocates a fresh one, and signs \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{origin})\) into the authenticated registry.
+For tool request \(m\), it computes canonical request \(m^\circ=\mathsf{canon}_\kappa(m)\), reuses an action ID certified for \(m^\circ\) or allocates a fresh one, and signs \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{origin})\) into the authenticated registry.
 % 对于工具请求 \(m\)，它计算规范请求 \(m^\circ=\mathsf{canon}_\kappa(m)\)，复用已认证用于 \(m^\circ\) 的受控动作或分配新标识，并把 \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{origin})\) 签入认证注册表。
 The resulting finite call model \(R\) remains unchanged while the checker evaluates that state.
 % 由此得到的有限调用模型 \(R\) 在检查器评估该状态期间保持不变。
@@ -323,11 +323,11 @@ Every derived object therefore comes from the execution record rather than Agent
 
 Registration turns the protected-call behavior of a typed Agent workflow into a finite call model \(R\).
 % 注册把类型化 Agent 工作流的受控调用行为转换为有限调用模型 \(R\)。
-\(\mathsf{CheckReg}\) verifies exact correspondence of outcomes, call order, protected actions, and first-time authorization records.
+\(\mathsf{CheckReg}\) verifies exact correspondence of outcomes, call order, action IDs, and first-time authorization records.
 % \(\mathsf{CheckReg}\) 验证结果、调用次序、受控动作及首次授权记录的精确对应关系。
 The model stores these traces as outcome-indexed runs \(\mathsf{BRuns}(R)\), together with a map \(\lambda\) from source traces.
 % 该模型把这些轨迹存为带结果索引的执行 \(\mathsf{BRuns}(R)\)，并存储从源轨迹出发的映射 \(\lambda\)。
-Write \(\mathcal W\sqsubseteq_\lambda R\) when \(\lambda\) is a bijection preserving outcomes, the mapping from workflow calls to protected actions, order, outcome authority, and authorization-log updates.
+Write \(\mathcal W\sqsubseteq_\lambda R\) when \(\lambda\) is a bijection preserving outcomes, the call--action map, order, outcome authority, and authorization-log updates.
 % 当 \(\lambda\) 是保持结果、工作流调用到受控动作的映射、次序、结果权限和授权日志更新的双射时，记作 \(\mathcal W\sqsubseteq_\lambda R\)。
 \Cref{def:registration-refinement,lem:registration-reflection} give the exact finite check and proof.
 % \Cref{def:registration-refinement,lem:registration-reflection} 给出精确的有限检查与证明。
@@ -362,7 +362,7 @@ The last requirement rejects the example in \cref{sec:lifecycle}, where separate
 
 The checker first derives the exact edited workflow from the execution record and the requested edit.
 % 检查器首先从执行记录与所请求编辑中推导精确的编辑后工作流。
-It then decides whether each workflow call creates or reuses an authorization record and removes precisely those complete executions that violate the security objective after some prefix.
+It then decides whether each call position creates or reuses an authorization record and removes precisely those complete executions that violate the security objective after some prefix.
 % 随后，它判断每个工作流调用创建还是复用授权记录，并精确移除那些在某个前缀之后违反安全目标的完整执行。
 
 \subsection{Constructing the Edited Workflow}
@@ -383,7 +383,7 @@ Registry \(\Sigma_\zeta\) binds \(\sigma\) to the expected source and checkpoint
 
 The checker constructs explicit preservation maps for every region that the rule carries or copies.
 % 检查器为规则携带或复制的每个区域构造显式保持映射。
-For source contract \(\mathcal C\), target region \(\mathcal D\), and parent map \(\mu:X_{\mathcal D}\to X_{\mathcal C}\), write \(\mathcal C\preccurlyeq_\mu\mathcal D\) exactly when \(\mu\) is a global bijection, some surjection \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\) satisfies the conditions below for every target outcome \(v\), and \(\mu\) preserves protected actions and certified origins.
+For source contract \(\mathcal C\), target region \(\mathcal D\), and parent map \(\mu:X_{\mathcal D}\to X_{\mathcal C}\), write \(\mathcal C\preccurlyeq_\mu\mathcal D\) exactly when \(\mu\) is a global bijection, some surjection \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\) satisfies the conditions below for every target outcome \(v\), and \(\mu\) preserves action IDs and certified origins.
 % 对于源契约 \(\mathcal C\)、目标区域 \(\mathcal D\) 和父映射 \(\mu:X_{\mathcal D}\to X_{\mathcal C}\)，当且仅当 \(\mu\) 是全局双射、存在满射 \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\) 使下列条件对每个目标结果 \(v\) 成立，且 \(\mu\) 保持受控动作和认证来源时，记作 \(\mathcal C\preccurlyeq_\mu\mathcal D\)。
 \[
 \begin{aligned}
@@ -393,16 +393,16 @@ For source contract \(\mathcal C\), target region \(\mathcal D\), and parent map
    &\Longleftrightarrow \mu(x)\prec_{\pi(v)}\mu(y).
 \end{aligned}
 \]
-Global bijection and workflow call--outcome membership equivalence prevent splitting a source workflow call shared across outcomes into outcome-specific target workflow calls.
+Global bijection and call position--outcome membership equivalence prevent splitting a source call position shared across outcomes into outcome-specific target call positions.
 % 全局双射和工作流调用--结果成员关系等价防止将跨结果共享的源工作流调用拆分为特定于结果的目标工作流调用。
 
 For candidate \(T'\), let \(R_u\) index the disjoint regions carried or copied inside the replaced subtree.
 % 对候选 \(T'\)，令 \(R_u\) 索引被替换子树中互不相交的携带或复制区域。
 \(\mathcal P_u=\{(\mathcal C_r,\mathcal D_r,\mu_r,\pi_r)\}_{r\in R_u}\) collects these preservation maps.
 % \(\mathcal P_u=\{(\mathcal C_r,\mathcal D_r,\mu_r,\pi_r)\}_{r\in R_u}\) 收集这些保持映射。
-A separate identity map verifies that the surrounding workflow preserves syntax, outcomes, workflow calls, protected actions, certified origins, and order.
+A separate identity map verifies that the surrounding workflow preserves syntax, outcomes, call positions, action IDs, certified origins, and order.
 % 另一个恒等映射验证周围工作流保持语法、结果、工作流调用、受控动作、认证来源和次序。
-Writing \(X_{\rm ctx}\) for its workflow calls and \(X_{\rm added(u)}\) for workflow calls added by the rule, the checker verifies the following disjoint cover.
+Writing \(X_{\rm ctx}\) for its call positions and \(X_{\rm added(u)}\) for call positions added by the rule, the checker verifies the following disjoint cover.
 % 将其工作流调用记为 \(X_{\rm ctx}\)，将规则添加的工作流调用记为 \(X_{\rm added(u)}\)，检查器验证下列不交覆盖。
 \[
  X_{\sem{T'}}=X_{\rm ctx}\uplus
@@ -438,7 +438,7 @@ Define the outcomes that remain required and the target outcomes that cover them
 \end{equation}
 For \(a=(r,o)\in\mathsf{EditedRequired}_u\), \(\mathsf{Covers}_u(t,a)\) denotes the relation above.
 % 对 \(a=(r,o)\in\mathsf{EditedRequired}_u\)，\(\mathsf{Covers}_u(t,a)\) 表示上述关系。
-The checker also requires \(\forall a\in\mathsf{StillRequired}_u.\ \exists t\in O_{\sem{T'}}.\ \mathsf{Covers}_u(t,a)\): every required source outcome has a complete target outcome, shared workflow calls remain shared, and inherited calls remain distinguished from steps added by the edit rule.
+The checker also requires \(\forall a\in\mathsf{StillRequired}_u.\ \exists t\in O_{\sem{T'}}.\ \mathsf{Covers}_u(t,a)\): every required source outcome has a complete target outcome, shared call positions remain shared, and inherited calls remain distinguished from steps added by the edit rule.
 % 检查器还要求 \(\forall a\in\mathsf{StillRequired}_u.\ \exists t\in O_{\sem{T'}}.\ \mathsf{Covers}_u(t,a)\)：每个要求实现的源结果都有完整目标结果，共享工作流调用保持共享，继承调用与编辑规则添加的步骤保持区分。
 
 The edit-rule check uses the following judgment.
@@ -484,14 +484,14 @@ and hence the exact disjoint partition
 \]
 This partition accounts for every source outcome and prevents an Agent request from silently dropping one.
 % 这一分解处理每个源结果，并防止 Agent 请求悄然删除其中任何一个。
-The preservation maps retain protected actions, certified origins, and order, while installation retains the recorded evidence for satisfied outcomes and the signed removal set.
+The preservation maps retain action IDs, certified origins, and order, while installation retains the recorded evidence for satisfied outcomes and the signed removal set.
 % 保持映射保留受控动作、认证来源和次序，而安装保留已满足结果的记录证据及签名移除集合。
 
 Let \(\mathcal E[-]\) be the current workflow with one editable region replaced by a hole.
 % 令 \(\mathcal E[-]\) 表示当前工作流中一个可编辑区域被孔替换后的结构。
-\(\mathsf{carry}\) preserves branch, outcome, and workflow-call IDs, pomset order, protected actions, signed outcome authorities, base contracts, ordered progress records, and nested choices.
+\(\mathsf{carry}\) preserves branch, outcome, and call-position IDs, pomset order, action IDs, signed outcome authorities, base contracts, ordered progress records, and nested choices.
 % \(\mathsf{carry}\) 保留分支、结果与工作流调用标识、偏序事件集次序、受控动作、经签名的结果权限、基础契约、有序进展记录和嵌套选择。
-\(\mathsf{clone}_r\) assigns fresh branch, outcome, and workflow-call IDs while preserving pomset order, protected actions, scope, digest, certified origin, and signed outcome authority.
+\(\mathsf{clone}_r\) assigns fresh branch, outcome, and call-position IDs while preserving pomset order, action IDs, scope, digest, certified origin, and signed outcome authority.
 % \(\mathsf{clone}_r\) 分配新的分支、结果和工作流调用标识，同时保持偏序事件集次序、受控动作、作用域、摘要、认证来源和经签名的结果权限。
 Each copied branch starts from its registered remaining contract with an empty progress record.
 % 每个复制分支从其已注册的剩余契约和空进展记录开始。
@@ -567,7 +567,7 @@ other arm removed\\
 \end{tabular}
 \end{table*}
 
-In an open choice, the first processed workflow call atomically selects its arm and disables later calls from the other arm, whether that first call creates or reuses an authorization record.
+In an open choice, the first processed call position atomically selects its arm and disables later calls from the other arm, whether that first call creates or reuses an authorization record.
 % 在开放选择中，第一个已处理工作流调用会原子选择其分支并禁用另一分支的后续调用，无论该调用创建还是复用授权记录。
 Consequently, \(\mathsf{MergeSelect}(g,w,\sigma)\) is valid precisely while the unselected arm has made no recorded progress.
 % 因此，\(\mathsf{MergeSelect}(g,w,\sigma)\) 恰在未选择分支尚无记录进展时有效。
@@ -583,7 +583,7 @@ The execution-edit judgment consists exactly of one row of \cref{tab:history-rul
 % 执行编辑判定恰由两步组成：在良类型工作流上下文 \(\mathcal E\) 中应用 \cref{tab:history-rules} 的一行，再执行下述状态更新。
 Let \(e_u\) contain the edit record and exactly the copied, added, and group nodes prescribed by \(T'\); carried node IDs remain unchanged.
 % 令 \(e_u\) 包含编辑记录以及恰由 \(T'\) 指定的复制节点、新增节点和组节点；被携带节点的标识保持不变。
-For every current target workflow call \(x\), the call authorization service deterministically creates \(j_x^+,h_x^+\), and \(\rho'\) preserves the protected action, certified origin, scope, digest, and retry information while refreshing monitor entries and authorization tokens.
+For every current target call position \(x\), the call authorization service deterministically creates \(j_x^+,h_x^+\), and \(\rho'\) preserves the action ID, certified origin, scope, digest, and retry information while refreshing monitor entries and authorization tokens.
 % 对每个当前目标工作流调用 \(x\)，调用授权服务确定性地创建 \(j_x^+,h_x^+\)，而 \(\rho'\) 保留受控动作、认证来源、作用域、摘要和重试信息，同时刷新监控器入口和授权令牌。
 Define
 % 定义
@@ -628,18 +628,18 @@ If it derives \(H'\), then \(H'\) is well formed.
 % 如果它推导出 \(H'\)，则 \(H'\) 是良构的。
 It preserves required outcomes and their signed authorities, retaining evidence for every satisfied outcome and every still-required source outcome except a signed authorized removal.
 % 它保留要求实现的结果及其签名权限，保留每个已满足结果和每个仍然要求实现的源结果的证据，签名授权移除除外。
-The surrounding-workflow identity map and family \(\mathcal P_u\) preserve global workflow-call sharing, protected actions, certified origins, outcome authorities, and causal order.
+The surrounding-workflow identity map and family \(\mathcal P_u\) preserve global call-position sharing, action IDs, certified origins, outcome authorities, and causal order.
 % 周围工作流恒等映射和族 \(\mathcal P_u\) 保持全局工作流调用共享、受控动作、认证来源、结果权限和因果次序。
 For every \(a\in\mathsf{StillRequired}_u\), some complete target outcome \(t\) satisfies \(\mathsf{Covers}_u(t,a)\), including every unchanged outcome outside the edited region.
 % 对每个 \(a\in\mathsf{StillRequired}_u\)，都存在某个完整目标结果 \(t\) 满足 \(\mathsf{Covers}_u(t,a)\)，其中包括编辑区域之外的每个不变结果。
-Every current target workflow call has a monitor entry and authorization token bound to \(\eta^+\).
+Every current target call position has a monitor entry and authorization token bound to \(\eta^+\).
 % 每个当前目标工作流调用都有绑定到 \(\eta^+\) 的监控器入口和授权令牌。
 \end{lemma}
 \begin{proof}[Proof sketch]
 % 证明概要。
-The six cases use the copy/keep bijections and surrounding-workflow identity map to preserve sharing, protected actions, certified origins, and order and to construct every \(\mathsf{Covers}_u\) witness.
+The six cases use the copy/keep bijections and surrounding-workflow identity map to preserve sharing, action IDs, certified origins, and order and to construct every \(\mathsf{Covers}_u\) witness.
 % 六种情况使用复制/保留双射和周围工作流恒等映射来保持共享、受控动作、认证来源和次序，并构造每个 \(\mathsf{Covers}_u\) 见证。
-The common state update establishes well-formedness and binds every current target workflow call to \(\eta^+\).
+The common state update establishes well-formedness and binds every current target call position to \(\eta^+\).
 % 公共状态更新建立良构性，并将每个当前目标工作流调用绑定到 \(\eta^+\)。
 \Cref{app:schema-fidelity-proof} gives the full argument.
 % 完整论证见 \cref{app:schema-fidelity-proof}。
