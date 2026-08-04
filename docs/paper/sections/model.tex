@@ -125,7 +125,7 @@ The workflow part of the execution record is
 % 执行记录中的工作流部分为
 \begin{equation}
 \label{eq:history-state}
- H=(\omega,G,T,K,\Sigma_\zeta,\rho,\beta,\chi,\nu,\eta).
+ H=(\omega,G,T,K,\Sigma_\zeta,\rho,\beta,\chi,\mathsf{ver},\eta).
 \end{equation}
 \(\omega\) identifies the policy domain, and \(\eta\) identifies the version of the rules currently in force.
 % \(\omega\) 标识策略域，\(\eta\) 标识当前生效规则的版本。
@@ -200,10 +200,10 @@ Write \(\mathcal C_k=\mathsf{contract}(K(k))\) for the remaining contract stored
 % \(\Sigma_\zeta\) 是不可变且带版本的类型化编辑规则注册表。
 \(\rho\) records, for each workflow call, its action, authorization token, source region, scope, canonical tool request, and request digest.
 % \(\rho\) 为每个工作流调用记录其动作、授权令牌、来源区域、作用域、规范工具请求和请求摘要。
-For each current workflow call \(x\), binding \(\beta(x)=(j,\eta)\) records the entry \(j\) and rule version \(\eta\) used to check it.
-% 对于每个当前工作流调用 \(x\)，绑定 \(\beta(x)=(j,\eta)\) 记录用于检查它的入口 \(j\) 和规则版本 \(\eta\)。
-\(\chi\) records processed workflow calls in order, including whether each created or reused an authorization record, and \(\nu\) is the state version.
-% \(\chi\) 按顺序记录已处理的工作流调用，包括每个位置是创建还是复用授权记录；\(\nu\) 是状态版本。
+For each current workflow call \(x\), \(\beta(x)=(j,\eta)\) records the rule entry \(j\) and version \(\eta\) used to check it.
+% 对于每个当前工作流调用 \(x\)，\(\beta(x)=(j,\eta)\) 记录用于检查它的规则入口 \(j\) 和版本 \(\eta\)。
+\(\chi\) records processed workflow calls in order, including whether each created or reused an authorization record, and \(\mathsf{ver}\) is the state version.
+% \(\chi\) 按顺序记录已处理的工作流调用，包括每个位置是创建还是复用授权记录；\(\mathsf{ver}\) 是状态版本。
 \(\chi\) records authorization and workflow progress, while the remote service records completion and the returned value.
 % \(\chi\) 记录授权与工作流进展，而远端服务记录动作完成及其返回值。
 
@@ -211,8 +211,8 @@ For each current workflow call \(x\), binding \(\beta(x)=(j,\eta)\) records the 
 % \(\mathsf{Save}(k,b)\) 使用新的检查点标识 \(k\) 为当前分支 \(b\) 创建检查点。
 A trusted transaction stores a protected copy of branch \(b\)'s remaining contract \(\mathcal C_b\), ordered progress record \(\chi_b\), relevant calls, and signed outcome requirements.
 % 可信事务存储分支 \(b\) 的剩余契约 \(\mathcal C_b\)、有序进展记录 \(\chi_b\)、相关调用以及经签名的结果要求，并保护这些内容不被修改。
-The checkpoint check requires \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\), and the transaction advances \(\nu\) without changing the current workflow, authorization records, call bindings, rule versions, or authorization sequence.
-% 检查点检查要求 \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\)，且该事务推进 \(\nu\) 而不改变当前工作流、授权记录、调用绑定、规则版本或授权序列。
+The checkpoint check requires \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\), and the transaction advances \(\mathsf{ver}\) without changing the current workflow, authorization records, \(\beta\), the active rule version, or the authorization sequence.
+% 检查点检查要求 \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\)，且该事务推进 \(\mathsf{ver}\) 而不改变当前工作流、授权记录、\(\beta\)、当前规则版本或授权序列。
 This internal transition changes \(H\), so an installation computed from the earlier state will fail its final state check.
 % 这一内部转移会改变 \(H\)，因此根据较早状态计算的安装将在最终状态检查时失败。
 Restore accepts only records created by this rule.
@@ -245,8 +245,8 @@ Processed workflow calls are downward closed in their pomset, consistent with ev
 % 已处理工作流调用在其偏序事件集中向下闭合，与每个选择状态一致，并且不出现在剩余工作流中。
 \item \emph{Current workflow.}
 % \emph{当前工作流。}
-\(\operatorname{dom}(\beta)=X_{\sem T}\), and every current workflow call \(x\) has exactly one protected binding \(\beta(x)=(j_x,\eta)\) to the domain's current rule version.
-% \(\operatorname{dom}(\beta)=X_{\sem T}\)，且每个当前工作流调用 \(x\) 都恰有一个受保护的绑定 \(\beta(x)=(j_x,\eta)\)，指向该域当前的规则版本。
+\(\operatorname{dom}(\beta)=X_{\sem T}\), and \(\beta\) maps every current workflow call \(x\) to exactly one entry \(j_x\) under the domain's current rule version \(\eta\).
+% \(\operatorname{dom}(\beta)=X_{\sem T}\)，且 \(\beta\) 把每个当前工作流调用 \(x\) 映射到当前规则版本 \(\eta\) 下唯一的入口 \(j_x\)。
 Every current leaf \(b{:}\mathcal C\) equals its immutable registered contract \(\Gamma_b\) after removing the workflow calls recorded in \(\chi_b\); the caller cannot replace it with a smaller outcome set.
 % 每个当前叶节点 \(b{:}\mathcal C\) 都等于其不可变已注册契约 \(\Gamma_b\) 移除 \(\chi_b\) 中所记录工作流调用后的结果；调用方无法把它替换为更小的结果集合。
 Every constructor in \(T\) is defined, so no complete sequence in any subtree is a strict prefix of another.
@@ -310,25 +310,25 @@ Before the checker reads the execution record, the trusted controller may instan
 % 在检查器读取执行记录之前，可信控制器可以实例化有限个已注册工具调用模板。
 For tool request \(m\), it computes canonical request \(m^\circ=\mathsf{canon}_\kappa(m)\), reuses an action certified for \(m^\circ\) or allocates a fresh one, and signs \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{origin})\) into the authenticated registry.
 % 对于工具请求 \(m\)，它计算规范请求 \(m^\circ=\mathsf{canon}_\kappa(m)\)，复用已认证用于 \(m^\circ\) 的受控动作或分配新标识，并把 \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{origin})\) 签入认证注册表。
-The resulting finite model \(R\) contains the workflow's protected calls and remains unchanged while the checker evaluates that execution record.
-% 由此得到的有限模型 \(R\) 包含工作流的受控调用，并在检查器评估该执行记录期间保持不变。
+The resulting finite model \(\mathcal R\) contains the workflow's protected calls and remains unchanged while the checker evaluates that execution record.
+% 由此得到的有限模型 \(\mathcal R\) 包含工作流的受控调用，并在检查器评估该执行记录期间保持不变。
 Unmatched calls fail closed.
 % 不匹配的调用以关闭方式失败。
-The platform supplies workflow \(\mathcal W\), finite model \(R\), edit rules, request-normalization rules, policy, checkpoints, authorization log, and queued requests in one protected execution record.
-% 平台在一份受保护的执行记录中提供工作流 \(\mathcal W\)、有限模型 \(R\)、编辑规则、请求规范化规则、策略、检查点、授权日志和排队请求。
-From these inputs and an Agent request naming an edit and its objects, the controller derives the edited workflow, required outcomes, the authorization decision for each call, the safe execution set or rejection certificate, and the new call bindings and authorization tokens.
-% 控制器根据这些输入以及指明编辑及其对象的 Agent 请求，推导编辑后的工作流、要求实现的结果、每个调用的授权判定、安全执行集合或拒绝证书，以及新的调用绑定和授权令牌。
+The platform supplies workflow \(\mathcal W\), finite model \(\mathcal R\), edit rules, request-normalization rules, policy, checkpoints, authorization log, and queued requests in one protected execution record.
+% 平台在一份受保护的执行记录中提供工作流 \(\mathcal W\)、有限模型 \(\mathcal R\)、编辑规则、请求规范化规则、策略、检查点、授权日志和排队请求。
+From these inputs and an Agent request naming an edit and its objects, the controller derives the edited workflow, required outcomes, the authorization decision for each call, the safe execution set or rejection certificate, and the rule entry and authorization token for each remaining call.
+% 控制器根据这些输入以及指明编辑及其对象的 Agent 请求，推导编辑后的工作流、要求实现的结果、每个调用的授权判定、安全执行集合或拒绝证书，以及每个剩余调用所用的规则入口和授权令牌。
 Every derived object therefore comes from the execution record rather than Agent-supplied semantics.
 % 因此，每个派生对象都来自执行记录，而不是 Agent 提供的语义。
 
-Registration turns the protected-call behavior of a typed Agent workflow into the finite model \(R\).
-% 注册把类型化 Agent 工作流的受控调用行为转换为有限模型 \(R\)。
+Registration turns the protected-call behavior of a typed Agent workflow into the finite model \(\mathcal R\).
+% 注册把类型化 Agent 工作流的受控调用行为转换为有限模型 \(\mathcal R\)。
 \(\mathsf{CheckReg}\) verifies exact correspondence of outcomes, call order, actions, and first-time authorization records.
 % \(\mathsf{CheckReg}\) 验证结果、调用次序、受控动作及首次授权记录的精确对应关系。
-The model stores these traces as outcome-indexed runs \(\mathsf{BRuns}(R)\), together with a map \(\lambda\) from source traces.
-% 该模型把这些轨迹存为带结果索引的执行 \(\mathsf{BRuns}(R)\)，并存储从源轨迹出发的映射 \(\lambda\)。
-Write \(\mathcal W\sqsubseteq_\lambda R\) when \(\lambda\) is a bijection preserving outcomes, which calls refer to the same action, call order, outcome authority, and authorization-log updates.
-% 当 \(\lambda\) 是保持结果、哪些调用指向同一个动作、调用次序、结果权限和授权日志更新的双射时，记作 \(\mathcal W\sqsubseteq_\lambda R\)。
+The model stores these traces as outcome-indexed runs \(\mathsf{BRuns}(\mathcal R)\), together with a map \(\lambda\) from source traces.
+% 该模型把这些轨迹存为带结果索引的执行 \(\mathsf{BRuns}(\mathcal R)\)，并存储从源轨迹出发的映射 \(\lambda\)。
+Write \(\mathcal W\sqsubseteq_\lambda\mathcal R\) when \(\lambda\) is a bijection preserving outcomes, which calls refer to the same action, call order, outcome authority, and authorization-log updates.
+% 当 \(\lambda\) 是保持结果、哪些调用指向同一个动作、调用次序、结果权限和授权日志更新的双射时，记作 \(\mathcal W\sqsubseteq_\lambda\mathcal R\)。
 \Cref{def:registration-refinement,lem:registration-reflection} give the exact finite check and proof.
 % \Cref{def:registration-refinement,lem:registration-reflection} 给出精确的有限检查与证明。
 Registered contracts enter through \(\mathsf{CheckReg}\), and an idempotent or queryable remote service supplies authenticated completion records for its actions.
@@ -339,8 +339,8 @@ Registered contracts enter through \(\mathsf{CheckReg}\), and an idempotent or q
 
 The security objective is fixed independently of the checker that will implement it.
 % 安全目标独立于随后实现它的检查器而确定。
-For an edit derived from the execution record, a safe implementation satisfies four requirements.
-% 对于从执行记录派生的编辑，安全实现满足四项要求。
+For an edit derived from the execution record, a safe execution set satisfies four requirements.
+% 对于从执行记录派生的编辑，安全执行集合满足四项要求。
 First, it preserves every source outcome that is neither already satisfied nor explicitly authorized for removal, and every admitted execution belongs to the derived target workflow.
 % 第一，它保留每个既未满足、也未被明确授权移除的源结果，并且每段获准执行都属于派生目标工作流。
 Second, every admitted prefix is allowed by the policy after accounting for authorization records already present in the append-only log.
@@ -351,10 +351,10 @@ Fourth, every outcome still compatible with an admitted prefix retains such a co
 % 第四，每个仍与获准前缀兼容的结果都保留这样一条完成路径。
 The last requirement rejects the example in \cref{sec:lifecycle}, where separately safe outcomes cannot remain safe under one set of runtime rules.
 % 最后一项要求拒绝 \cref{sec:lifecycle} 中的示例：分别安全的结果无法在同一组运行时规则下持续保持安全。
-\Cref{def:safe-implementation} states these requirements over outcome-indexed executions.
-% \Cref{def:safe-implementation} 在带结果索引的执行上表述这些要求。
-\Cref{lem:most-permissive} then proves that the checker computes the unique most-permissive safe implementation.
-% \Cref{lem:most-permissive} 随后证明检查器计算唯一且限制最少的安全实现。
+\Cref{def:safe-implementation} states these requirements over executions labeled by outcome.
+% \Cref{def:safe-implementation} 在按结果标记的执行上表述这些要求。
+\Cref{lem:most-permissive} then proves that the checker computes the largest safe execution set.
+% \Cref{lem:most-permissive} 随后证明检查器计算最大的安全执行集合。
 
 \section{Exact Checking of Execution Edits}
 % 执行编辑的精确检查
@@ -378,13 +378,13 @@ The six disjoint constructors of \(\mathsf{Edit}_6\) are exactly the typed opera
 
 An Agent request \(u\) names an edit kind, current object IDs, and edit-rule ID \(\sigma\).
 % Agent 请求 \(u\) 指明编辑种类、当前对象标识和编辑规则标识 \(\sigma\)。
-Registry \(\Sigma_\zeta\) binds \(\sigma\) to the expected source and checkpoint patterns, any workflow steps the edit adds, the registered source of copied regions, and the signed authority for each introduced outcome.
-% 注册表 \(\Sigma_\zeta\) 将 \(\sigma\) 绑定到预期的源状态与检查点模式、编辑添加的工作流步骤、复制区域的已注册来源，以及每个引入结果的签名权限方。
+Registry \(\Sigma_\zeta\) records the expected source and checkpoint patterns for \(\sigma\), any workflow steps the edit adds, the source region for each copy, and the authority that signs each introduced outcome.
+% 注册表 \(\Sigma_\zeta\) 记录 \(\sigma\) 预期的源状态与检查点模式、编辑添加的工作流步骤、每个副本的来源区域，以及为每个新结果签名的权限方。
 
 The checker constructs explicit preservation maps for every region that the rule carries or copies.
 % 检查器为规则携带或复制的每个区域构造显式保持映射。
-For source contract \(\mathcal C\), target region \(\mathcal D\), and parent map \(\mu:X_{\mathcal D}\to X_{\mathcal C}\), write \(\mathcal C\preccurlyeq_\mu\mathcal D\) exactly when \(\mu\) is a global bijection, some surjection \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\) satisfies the conditions below for every target outcome \(v\), and \(\mu\) preserves actions and registered sources.
-% 对于源契约 \(\mathcal C\)、目标区域 \(\mathcal D\) 和父映射 \(\mu:X_{\mathcal D}\to X_{\mathcal C}\)，当且仅当 \(\mu\) 是全局双射、存在满射 \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\) 使下列条件对每个目标结果 \(v\) 成立，且 \(\mu\) 保持受控动作和已注册来源时，记作 \(\mathcal C\preccurlyeq_\mu\mathcal D\)。
+For source contract \(\mathcal C\), target region \(\mathcal D\), and parent map \(\mu:X_{\mathcal D}\to X_{\mathcal C}\), write \(\mathcal C\preccurlyeq_\mu\mathcal D\) exactly when \(\mu\) is a global bijection, some surjection \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\) satisfies the conditions below for every target outcome \(v\), and \(\mu\) preserves actions and source regions.
+% 对于源契约 \(\mathcal C\)、目标区域 \(\mathcal D\) 和父映射 \(\mu:X_{\mathcal D}\to X_{\mathcal C}\)，当且仅当 \(\mu\) 是全局双射、存在满射 \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\) 使下列条件对每个目标结果 \(v\) 成立，且 \(\mu\) 保持动作和来源区域时，记作 \(\mathcal C\preccurlyeq_\mu\mathcal D\)。
 \[
 \begin{aligned}
  x\in X_{p_v}
@@ -400,8 +400,8 @@ For candidate \(T'\), let \(R_u\) index the disjoint regions carried or copied i
 % 对候选 \(T'\)，令 \(R_u\) 索引被替换子树中互不相交的携带或复制区域。
 \(\mathcal P_u=\{(\mathcal C_r,\mathcal D_r,\mu_r,\pi_r)\}_{r\in R_u}\) collects these preservation maps.
 % \(\mathcal P_u=\{(\mathcal C_r,\mathcal D_r,\mu_r,\pi_r)\}_{r\in R_u}\) 收集这些保持映射。
-A separate identity map verifies that the surrounding workflow preserves syntax, outcomes, workflow calls, actions, registered sources, and order.
-% 另一个恒等映射验证周围工作流保持语法、结果、工作流调用、受控动作、已注册来源和次序。
+A separate identity map verifies that the surrounding workflow preserves syntax, outcomes, workflow calls, actions, source regions, and order.
+% 另一个恒等映射验证周围工作流保持语法、结果、工作流调用、动作、来源区域和次序。
 Writing \(X_{\rm ctx}\) for its workflow calls and \(X_{\rm added(u)}\) for workflow calls added by the rule, the checker verifies the following disjoint cover.
 % 将其工作流调用记为 \(X_{\rm ctx}\)，将规则添加的工作流调用记为 \(X_{\rm added(u)}\)，检查器验证下列不交覆盖。
 \[
@@ -484,15 +484,15 @@ and hence the exact disjoint partition
 \]
 This partition accounts for every source outcome and prevents an Agent request from silently dropping one.
 % 这一分解处理每个源结果，并防止 Agent 请求悄然删除其中任何一个。
-The preservation maps retain actions, registered sources, and order, while installation retains the recorded evidence for satisfied outcomes and the signed removal set.
-% 保持映射保留受控动作、已注册来源和次序，而安装保留已满足结果的记录证据及签名移除集合。
+The preservation maps retain actions, source regions, and order, while installation retains the records for satisfied outcomes and authorized removals.
+% 保持映射保留动作、来源区域和次序，而安装保留已满足结果与获准移除的记录。
 
 Let \(\mathcal E[-]\) be the current workflow with one editable region replaced by a hole.
 % 令 \(\mathcal E[-]\) 表示当前工作流中一个可编辑区域被孔替换后的结构。
 \(\mathsf{carry}\) preserves branch, outcome, and workflow-call IDs, pomset order, actions, signed outcome authorities, base contracts, ordered progress records, and nested choices.
 % \(\mathsf{carry}\) 保留分支、结果与工作流调用标识、偏序事件集次序、受控动作、经签名的结果权限、基础契约、有序进展记录和嵌套选择。
-\(\mathsf{clone}_r\) assigns fresh branch, outcome, and workflow-call IDs while preserving pomset order, actions, scope, digest, registered source, and signed outcome authority.
-% \(\mathsf{clone}_r\) 分配新的分支、结果和工作流调用标识，同时保持偏序事件集次序、受控动作、作用域、摘要、已注册来源和经签名的结果权限。
+\(\mathsf{clone}_r\) assigns fresh branch, outcome, and workflow-call IDs while preserving pomset order, actions, scope, digest, source regions, and the authority for each outcome.
+% \(\mathsf{clone}_r\) 分配新的分支、结果和工作流调用标识，同时保持偏序事件集次序、动作、作用域、摘要、来源区域和每个结果的权限方。
 Each copied branch starts from its registered remaining contract with an empty progress record.
 % 每个复制分支从其已注册的剩余契约和空进展记录开始。
 Branches added by an edit rule likewise start from their registered contract and an empty progress record.
@@ -505,8 +505,8 @@ Define
  L_\sigma=\mathsf{clone}_L(\mathcal C)\triangleright E_\sigma^L,\qquad
  R_\sigma=\mathsf{clone}_R(\mathcal C)\triangleright E_\sigma^R .
 \]
-New identifiers and the target rule version \(\eta^+\) are deterministically allocated from \((\omega,\zeta,\nu,u,\mathsf{role})\).
-% 新标识和目标规则版本 \(\eta^+\) 由 \((\omega,\zeta,\nu,u,\mathsf{role})\) 确定性分配。
+New identifiers and the target rule version \(\eta^+\) are deterministically allocated from \((\omega,\zeta,\mathsf{ver},u,\mathsf{role})\).
+% 新标识和目标规则版本 \(\eta^+\) 由 \((\omega,\zeta,\mathsf{ver},u,\mathsf{role})\) 确定性分配。
 \(\mathsf{role}\) identifies which operation argument receives each new ID.
 % \(\mathsf{role}\) 标识每个新标识属于哪个操作参数。
 Write \(\mathsf{Copy}_r(\mathcal C)\) for the proof tuple \((\mathcal C,\mathsf{clone}_r(\mathcal C),\mu_r,\pi_r)\), and \(\mathsf{Keep}(\mathcal C)\) for \((\mathcal C,\mathsf{carry}(\mathcal C),\mu,\pi)\).
@@ -574,17 +574,19 @@ Consequently, \(\mathsf{MergeSelect}(g,w,\sigma)\) is valid precisely while the 
 \(\mathsf{MergeJoin}\) replaces the current \(\parallel_g\) node with \(\mathsf{join}\), removes \(g\) from the set of IDs an edit may name, and prevents the same pair from being joined again.
 % \(\mathsf{MergeJoin}\) 以 \(\mathsf{join}\) 替换当前 \(\parallel_g\) 节点，将 \(g\) 从编辑可指明的标识集合中移除，并防止同一对分支再次合并。
 
-Every edit replaces all runtime rules for its policy domain, and every current binding in \(H\) belongs to \(\eta^-=\eta\).
-% 每次编辑都会替换其策略域的全部运行时规则，且 \(H\) 中的每个当前绑定都属于 \(\eta^-=\eta\)。
-\subsubsection{Updating the runtime bindings}
-% 更新运行时绑定
+Every edit replaces all runtime rules for its policy domain, and \(\beta(x)\) uses \(\eta^-=\eta\) for every current call \(x\).
+% 每次编辑都会替换其策略域的全部运行时规则，且每个当前调用 \(x\) 的 \(\beta(x)\) 都使用 \(\eta^-=\eta\)。
+\subsubsection{Preparing calls for the new rules}
+% 为新规则准备调用
 
 The execution-edit judgment consists exactly of one row of \cref{tab:history-rules} applied inside the well-typed workflow context \(\mathcal E\), followed by the state update below.
 % 执行编辑判定恰由两步组成：在良类型工作流上下文 \(\mathcal E\) 中应用 \cref{tab:history-rules} 的一行，再执行下述状态更新。
 Let \(e_u\) contain the edit record and exactly the copied, added, and group nodes prescribed by \(T'\); carried node IDs remain unchanged.
 % 令 \(e_u\) 包含编辑记录以及恰由 \(T'\) 指定的复制节点、新增节点和组节点；被携带节点的标识保持不变。
-For every current target workflow call \(x\), the trusted controller deterministically creates \(j_x^+,h_x^+\), and \(\rho'\) preserves the action, source region, scope, digest, and retry information while refreshing call bindings and authorization tokens.
-% 对每个当前目标工作流调用 \(x\)，可信控制器确定性地创建 \(j_x^+,h_x^+\)，而 \(\rho'\) 保留动作、来源区域、作用域、摘要和重试信息，同时刷新调用绑定和授权令牌。
+For every current target workflow call \(x\), the trusted controller deterministically creates a rule entry \(j_x^+\) and authorization token \(h_x^+\).
+% 对每个当前目标工作流调用 \(x\)，可信控制器确定性地创建规则入口 \(j_x^+\) 和授权令牌 \(h_x^+\)。
+The updated record \(\rho'\) preserves the action, source region, scope, digest, and retry information.
+% 更新后的记录 \(\rho'\) 保留动作、来源区域、作用域、摘要和重试信息。
 Define
 % 定义
 \[
@@ -604,14 +606,14 @@ The complete judgment is shown below.
  \Sigma_\zeta;H\vdash u\Downarrow
    &(H',\mathcal C_{H,u},\eta^-,\eta^+),\\
  H'&=(\omega,G\mathbin{\cdot}e_u,T',K,\Sigma_\zeta,
-      \rho',\beta',\chi,\nu+1,\eta^+),\\
+      \rho',\beta',\chi,\mathsf{ver}+1,\eta^+),\\
  \mathcal C_{H,u}&=\sem{T'},\qquad \eta^-=\eta .
 \end{aligned}
 \end{equation}
 Here \(G\mathbin{\cdot}e_u\) retains earlier progress, outcome-authority records, and existing nodes, and initializes each copied or added branch from its remaining registered contract with inherited or rule-signed outcome authority and no progress.
 % 其中 \(G\mathbin{\cdot}e_u\) 保留先前进展、结果权限记录和已有节点，并从剩余已注册契约初始化每个复制或新增分支，同时赋予继承或规则签名的结果权限且进展为空。
-Thus an edit preserves \(K,\Sigma_\zeta,\chi\), appends one record of the edit and its target nodes, refreshes every current call binding and authorization token, and moves the domain to \(\eta^+\).
-% 因此，一次编辑保持 \(K,\Sigma_\zeta,\chi\)，追加一条编辑记录及其目标节点，刷新每个当前调用绑定和授权令牌，并将整个域迁移到 \(\eta^+\)。
+Thus an edit preserves \(K,\Sigma_\zeta,\chi\), appends one record of the edit and its target nodes, creates a new rule entry and authorization token for every current call, and moves the domain to \(\eta^+\).
+% 因此，一次编辑保持 \(K,\Sigma_\zeta,\chi\)，追加一条编辑记录及其目标节点，为每个当前调用创建新的规则入口和授权令牌，并将整个域迁移到 \(\eta^+\)。
 Table constructors determine new group modes, while carried nested modes remain unchanged.
 % 表中构造器决定新组模式，而被携带的嵌套模式保持不变。
 A nonexistent checkpoint, wrong group mode, nonmember winner, mismatched rule pattern, unauthorized removal, or undefined composition produces \(\mathsf{Invalid}\).
@@ -628,19 +630,19 @@ If it derives \(H'\), then \(H'\) is well formed.
 % 如果它推导出 \(H'\)，则 \(H'\) 是良构的。
 It preserves required outcomes and their signed authorities, retaining evidence for every satisfied outcome and every still-required source outcome except a signed authorized removal.
 % 它保留要求实现的结果及其签名权限，保留每个已满足结果和每个仍然要求实现的源结果的证据，签名授权移除除外。
-The surrounding-workflow identity map and family \(\mathcal P_u\) preserve global workflow-call sharing, actions, registered sources, outcome authorities, and causal order.
-% 周围工作流恒等映射和族 \(\mathcal P_u\) 保持全局工作流调用共享、受控动作、已注册来源、结果权限和因果次序。
+The surrounding-workflow identity map and family \(\mathcal P_u\) preserve which calls refer to the same action, source regions, the authority for each outcome, and causal order.
+% 周围工作流恒等映射和族 \(\mathcal P_u\) 保持哪些调用指向同一个动作、来源区域、每个结果的权限方以及因果次序。
 For every \(a\in\mathsf{StillRequired}_u\), some complete target outcome \(t\) satisfies \(\mathsf{Covers}_u(t,a)\), including every unchanged outcome outside the edited region.
 % 对每个 \(a\in\mathsf{StillRequired}_u\)，都存在某个完整目标结果 \(t\) 满足 \(\mathsf{Covers}_u(t,a)\)，其中包括编辑区域之外的每个不变结果。
-Every current target workflow call has a call binding and authorization token tied to \(\eta^+\).
-% 每个当前目标工作流调用都有绑定到 \(\eta^+\) 的调用绑定和授权令牌。
+Every current target workflow call \(x\) has \(\beta'(x)=(j_x^+,\eta^+)\) and an authorization token for \(j_x^+\).
+% 每个当前目标工作流调用 \(x\) 都有 \(\beta'(x)=(j_x^+,\eta^+)\) 以及用于 \(j_x^+\) 的授权令牌。
 \end{lemma}
 \begin{proof}[Proof sketch]
 % 证明概要。
-The six cases use the copy/keep bijections and surrounding-workflow identity map to preserve sharing, actions, registered sources, and order and to construct every \(\mathsf{Covers}_u\) witness.
-% 六种情况使用复制/保留双射和周围工作流恒等映射来保持共享、受控动作、已注册来源和次序，并构造每个 \(\mathsf{Covers}_u\) 见证。
-The common state update establishes well-formedness and binds every current target workflow call to \(\eta^+\).
-% 公共状态更新建立良构性，并将每个当前目标工作流调用绑定到 \(\eta^+\)。
+The six cases use the copy/keep bijections and surrounding-workflow identity map to preserve action sharing, source regions, and order and to construct every \(\mathsf{Covers}_u\) witness.
+% 六种情况使用复制/保留双射和周围工作流恒等映射来保持动作共享、来源区域和次序，并构造每个 \(\mathsf{Covers}_u\) 见证。
+The common state update establishes well-formedness and sets \(\beta'(x)=(j_x^+,\eta^+)\) for every current target workflow call.
+% 公共状态更新建立良构性，并为每个当前目标工作流调用设置 \(\beta'(x)=(j_x^+,\eta^+)\)。
 \Cref{app:schema-fidelity-proof} gives the full argument.
 % 完整论证见 \cref{app:schema-fidelity-proof}。
 \end{proof}
