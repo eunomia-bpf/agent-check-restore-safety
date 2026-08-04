@@ -1,68 +1,78 @@
-\section{Model and History Derivation}
-% Agent 历史语义
+\section{Model and Edit Derivation}
+% 模型与编辑推导
 \label{sec:model}
 
-The model separates unrestricted internal Agent reasoning from protected calls that may change durable state.
-% 该模型将不受限制的 Agent 内部推理与可能改变持久状态的受保护调用分开。
-A protected call must name a current registered occurrence, present an authenticated handle, and submit a concrete invocation.
-% 受保护调用必须指明当前已注册的发生项、提供经过认证的句柄并提交具体调用；成功的受保护使用是相应的状态变更监控器转移。
-A successful protected use is the corresponding state-changing monitor transition.
-% 成功的受保护使用是相应的状态变更监控器转移。
-Each state covers one policy domain, while domains with disjoint cells, receipt ledgers, and policies compose by product.
-% 每个状态涵盖一个策略域，而单元、回执账本和策略彼此不相交的域通过乘积组合。
-Every cut is finite, although a history may contain an unbounded number of cuts.
-% 每个切点都是有限的，但一段历史可以包含数量不受固定上界约束的切点。
-The definitions below first describe completion obligations and then introduce the authenticated history state needed to preserve them across edits.
-% 下文首先描述完成义务，随后引入在编辑过程中保持这些义务所需的经认证历史状态。
+The model separates unrestricted internal Agent reasoning from tool calls whose effects pass through a trusted runtime monitor.
+% 该模型将不受限制的 Agent 内部推理与效果必须经过可信运行时监控器的工具调用分开。
+Such a call must identify its registered position in the workflow, present an authorization token, and submit a concrete tool request.
+% 这类调用必须标明它在工作流中的已注册位置、提供授权令牌，并提交具体工具请求。
+The monitor decides whether the call may use a new authorization, reuse an earlier completion record, or make no progress.
+% 监控器决定该调用能否使用新的授权、复用先前的完成记录，或不得推进。
+Each modeled state covers one policy domain.
+% 每个建模状态涵盖一个策略域。
+Domains with disjoint protected actions, completion logs, and policies compose by product.
+% 受控动作、完成日志和策略彼此不相交的域通过乘积组合。
+Every state snapshot is finite, although an execution may contain an unbounded number of snapshots.
+% 每个状态快照都是有限的，但一次执行可以包含数量不受固定上界约束的快照。
+The definitions below first describe the required outcomes and then the authenticated record needed to preserve them across edits.
+% 下文首先描述要求实现的结果，随后定义在编辑过程中保留这些结果所需的认证记录。
 
-\subsection{Causal-completion contracts}
-% 因果完成契约
+\subsection{Workflow outcomes and call order}
+% 工作流结果与调用次序
 
 \paragraph{Typed runtime vocabulary}
 % 类型化运行时词汇
 We capitalize \emph{Agent} for the untrusted principal requesting execution edits.
 % 我们将请求执行编辑的不受信任主体称为 \emph{Agent}。
-A logical protected occurrence \(x\) is an invocation slot, and its protected \emph{use} is a monitor transition.
-% 一个逻辑受保护发生项 \(x\) 是一个调用槽，而它的受保护\emph{使用}是一次监控器转移。
-A semantic cell \(d\) is the irreversible effect and authority-redemption identity whose first redemption creates a receipt.
-% 语义单元 \(d\) 是不可逆的效果与权限兑付标识，其首次兑付会创建一条回执。
-A gate \(j\) is an epoch-bound monitor entry, and a handle \(h\) authenticates an occurrence's gate, cell, scope, and digest of a canonical invocation \(m^\circ\).
-% 门 \(j\) 是绑定到纪元的监控器入口，句柄 \(h\) 则认证发生项的门、单元、作用域以及规范调用 \(m^\circ\) 的摘要。
-\emph{Lineage} is certified ancestry preserved by carry and clone.
-% \emph{谱系}是经认证的祖先关系，由携带和克隆操作保持。
-\(T,\Delta,\chi\) denote the live structural frontier, receipt ledger, and resolved-occurrence trace.
-% \(T,\Delta,\chi\) 分别表示活跃结构前沿、回执账本和已解析发生项轨迹。
-A \emph{history cut} atomically installs a derived edit and replaces the policy-domain epoch.
-% \emph{历史切点}以原子方式安装派生编辑，并替换策略域纪元。
-Registry \(\rho\) authenticates each occurrence's gate and handle and maps it to \(q_{\rm cell}(x)=d\), immutable invocation \(\mathsf{inv}(d)=m^\circ\), and authority label \(\ell(d)\).
-% 注册表 \(\rho\) 认证每个发生项的门和句柄，并将其映射到 \(q_{\rm cell}(x)=d\)、不可变调用 \(\mathsf{inv}(d)=m^\circ\) 及权限标签 \(\ell(d)\)。
-Fork or Restore may map several occurrences to one cell.
-% Fork 或 Restore 可以将多个发生项映射到同一个单元。
+An \emph{occurrence} \(x\) identifies one position for a protected tool call in the workflow.
+% \emph{发生项} \(x\) 标识工作流中一次受控工具调用的位置。
+An \emph{effect identity} \(d\), called a cell in the formulas, identifies the one protected action and one-use permission behind that position.
+% \emph{效果标识} \(d\) 在公式中称为单元，它标识该调用位置背后的受控动作与一次性权限。
+The first authorized use of an effect identity creates a receipt.
+% 一个效果标识首次获得授权使用时会创建回执。
+After Fork or Restore, several occurrences may refer to the same effect identity.
+% Fork 或 Restore 之后，多个发生项可能指向同一个效果标识。
+A monitor entry \(j\) belongs to one monitor version \(\eta\).
+% 监控器入口 \(j\) 属于一个监控器版本 \(\eta\)。
+An authorization token \(h\) binds an occurrence to its monitor entry, effect identity, scope, and normalized tool request \(m^\circ\).
+% 授权令牌 \(h\) 将发生项绑定到监控器入口、效果标识、作用域和规范化工具请求 \(m^\circ\)。
+\emph{Lineage} is the certified ancestry preserved when an edit carries or copies a workflow region.
+% \emph{谱系}是编辑携带或复制工作流区域时保留的认证祖先关系。
+\(T,\Delta,\chi\) denote the active workflow, receipt log, and ordered record of resolved occurrences.
+% \(T,\Delta,\chi\) 分别表示当前工作流、回执日志和已解析发生项的有序记录。
+An edit takes effect at an atomic installation point, which also replaces the policy domain's monitor version.
+% 一次编辑在原子安装点生效，该安装点同时替换策略域的监控器版本。
+Registry \(\rho\) authenticates each occurrence's monitor entry and token.
+% 注册表 \(\rho\) 认证每个发生项的监控器入口和令牌。
+It maps the occurrence to \(q_{\rm cell}(x)=d\), immutable normalized request \(\mathsf{inv}(d)=m^\circ\), and permission label \(\ell(d)\).
+% 它将发生项映射到 \(q_{\rm cell}(x)=d\)、不可变的规范化请求 \(\mathsf{inv}(d)=m^\circ\) 和权限标签 \(\ell(d)\)。
 
 A pomset \(p=(X_p,\prec_p)\) is a finite set of occurrences with a strict partial order.
 % 偏序事件集 \(p=(X_p,\prec_p)\) 是带有严格偏序的有限发生项集合。
 Its linearizations \(\Lin(p)\) are the words containing each member of \(X_p\) once and respecting \(\prec_p\).
 % 它的线性化 \(\Lin(p)\) 是各包含 \(X_p\) 中每个成员一次且遵循 \(\prec_p\) 的序列。
-A \emph{causal-completion contract} \(\mathcal C=(O,\{p_o\}_{o\in O})\) is a finite nonempty \emph{indexed} family of pomsets.
-% \emph{因果完成契约} \(\mathcal C=(O,\{p_o\}_{o\in O})\) 是一个有限、非空且带\emph{索引}的偏序事件集族。
-Index \(o\) is a complete outcome identity, and it remains distinct even if two residual pomsets later become equal.
-% 索引 \(o\) 是完整的结果标识；即使两个残余偏序事件集之后变得相同，它们的索引仍保持不同。
+An \emph{indexed workflow contract} \(\mathcal C=(O,\{p_o\}_{o\in O})\) is a finite nonempty family of pomsets.
+% \emph{带索引的工作流契约} \(\mathcal C=(O,\{p_o\}_{o\in O})\) 是一个有限非空的偏序事件集族。
+Each index \(o\) names one allowed completion outcome.
+% 每个索引 \(o\) 命名一种允许的完成结果。
+Two outcomes remain distinct even if the calls still required for them later become identical.
+% 即使两个结果后来仍需执行的调用变得相同，它们仍保持不同。
 Write \(X_{\mathcal C}=\bigcup_{o\in O}X_{p_o}\) and \(\mathsf{CL}(\mathcal C)=\bigcup_{o\in O}\Lin(p_o)\).
 % 记 \(X_{\mathcal C}=\bigcup_{o\in O}X_{p_o}\) 且 \(\mathsf{CL}(\mathcal C)=\bigcup_{o\in O}\Lin(p_o)\)。
-We require \emph{completion observability}.
-% 我们要求满足\emph{完成可观测性}。
+We require the runtime to distinguish completion from continuation.
+% 我们要求运行时能够区分完成与继续执行。
 \[
  v,w\in\mathsf{CL}(\mathcal C)\ \land\
  v\preceq_{\rm pref}w \quad\Longrightarrow\quad v=w .
 \]
-This condition permits incomparable traces and different indices with the same trace, so it does not impose outcome determinism.
-% 该条件允许不可比较的轨迹以及共享同一轨迹的不同索引，因此并不强制结果具有确定性。
-It fixes the interface boundary by requiring a registered logical occurrence to distinguish stopping from continuing at a shared prefix.
-% 它要求通过已注册的逻辑发生项区分在共享前缀处停止还是继续，从而确定接口边界。
-An otherwise silent optional stop lies outside this boundary.
-% 否则不可见的可选停止不属于这一边界；部署可以将其暴露为一个经认证、由控制器本地处理且带回执的终止发生项，而不声称它构成远程效果。
-A deployment can expose such a stop as an authenticated, controller-local terminal occurrence with a receipt, without claiming a remote effect.
-% 部署可以将其暴露为一个经认证、由控制器本地处理且带回执的终止发生项，而不声称它构成远程效果。
+This condition permits incomparable traces and different outcomes with the same trace, so it does not require deterministic outcomes.
+% 该条件允许不可比较的轨迹以及共享同一轨迹的不同结果，因此并不要求结果具有确定性。
+It requires a registered occurrence whenever continuing after a shared partial execution performs more work.
+% 如果在一段共享的部分执行之后继续会执行更多工作，该条件要求存在一个已注册发生项来表示继续。
+An otherwise silent choice between stopping and continuing lies outside the interface.
+% 一个不产生可观察事件的停止或继续选择不属于该接口。
+A deployment may represent such a choice with an authenticated terminal occurrence handled by the controller, without claiming that a remote action occurred.
+% 部署可以用由控制器处理的认证终止发生项表示这种选择，而不声称远端动作已经发生。
 
 Contracts use the three partial constructors below.
 % 契约使用下列三个偏构造器。
@@ -83,8 +93,10 @@ Each constructor requires occurrence-disjoint operands and is defined only when 
  p_{(o,v)}&=p_o\triangleright p_v.
 \end{aligned}
 \end{equation}
-Before adding a registered or cloned operand, the history judgment deterministically renames its logical occurrences and extends \(\rho\) while retaining authenticated cell identities, and history well-formedness already makes carried operands disjoint.
-% 在加入已注册或克隆的操作数之前，历史判定会确定性地重命名其逻辑发生项并扩展 \(\rho\)，同时保留经认证的单元标识，而历史良构性已保证被携带操作数互不相交。
+Before adding a registered or copied operand, the edit derivation deterministically renames its occurrences and extends \(\rho\) while retaining their authenticated effect identities.
+% 在加入已注册或复制的操作数之前，编辑推导会确定性地重命名其发生项并扩展 \(\rho\)，同时保留其认证效果标识。
+Well-formedness already makes carried operands disjoint.
+% 良构性已经保证被携带的操作数互不相交。
 In \cref{eq:contract-algebra}, \(\uplus\) adds no cross-order and \(\triangleright\) orders every event of \(p\) before every event of \(q\), while choice uses a tagged union of outcome indices and parallel and sequence use Cartesian products.
 % 在 \cref{eq:contract-algebra} 中，\(\uplus\) 不添加跨操作数次序，\(\triangleright\) 将 \(p\) 的每个事件置于 \(q\) 的每个事件之前，而选择使用带标签的结果索引不交并，并行和顺序则使用笛卡尔积。
 Consequently, choice retains each arm's full indexed family, parallel pairs outcomes while permitting every causal linearization, and sequence adds a barrier.
@@ -366,7 +378,7 @@ Define
 % 定义
 \[
 \begin{aligned}
- \mathsf{Obl}_u&=\{(r,o)\mid r\in R_u,\ o\in O_{\mathcal C_r}\},\\
+ \mathsf{RegionReq}_u&=\{(r,o)\mid r\in R_u,\ o\in O_{\mathcal C_r}\},\\
  \mathsf{Lift}_u(t,r,o)&\Longleftrightarrow
    \exists v\in O_{\mathcal D_r}.\quad
    \mathsf{pr}^u_r(t)=v\ \land\ \pi_r(v)=o .
@@ -378,14 +390,14 @@ Define the single required-outcome set and its bypass lift by
 % 统一的必需结果集合及其绕过提升定义为
 \[
 \begin{aligned}
- \mathsf{Req}_u&=\mathsf{Obl}_u
+ \mathsf{Req}_u&=\mathsf{RegionReq}_u
    \uplus(\{\mathsf{ctx}\}\times O_{\rm byp}),\\
  \mathsf{Lift}_u(t,(\mathsf{ctx},o))
    &\Longleftrightarrow t=\iota^u_{\rm ctx}(o).
 \end{aligned}
 \]
-For regional \(a=(r,o)\in\mathsf{Obl}_u\), \(\mathsf{Lift}_u(t,a)\) denotes the relation above.
-% 对区域元素 \(a=(r,o)\in\mathsf{Obl}_u\)，\(\mathsf{Lift}_u(t,a)\) 表示上述关系。
+For regional \(a=(r,o)\in\mathsf{RegionReq}_u\), \(\mathsf{Lift}_u(t,a)\) denotes the relation above.
+% 对区域元素 \(a=(r,o)\in\mathsf{RegionReq}_u\)，\(\mathsf{Lift}_u(t,a)\) 表示上述关系。
 The checker also requires \(\forall a\in\mathsf{Req}_u.\ \exists t\in O_{\sem{T'}}.\ \mathsf{Lift}_u(t,a)\), ensuring a full-target lift for every required source outcome, no outcome-specific splitting of shared occurrences, and no inherited occurrence mislabeled as a suffix.
 % 检查器还要求 \(\forall a\in\mathsf{Req}_u.\ \exists t\in O_{\sem{T'}}.\ \mathsf{Lift}_u(t,a)\)，从而保证每个必需源结果都有完整目标提升、共享发生项不会按结果拆分，且继承发生项不会被误标为后缀。
 
@@ -394,33 +406,39 @@ The schema-verification phase checks the following judgment.
 \[
 \Sigma_\zeta;H\vdash_{\rm edit}u\Rightarrow(T',\mathcal P_u)
 \]
-It holds exactly when every named live object belongs to \(\mathsf{addr}(T)\), every introduced object remains scoped to \(\omega\), the source fingerprint matches, the applicable \(\mathcal P_u\), disjoint-cover, and \(\mathsf{Lift}_u\) obligations in \cref{tab:history-rules} hold, any retirement is authorized, and \(\sem{T'}\) is defined.
-% 当且仅当每个具名活跃对象属于 \(\mathsf{addr}(T)\)、每个引入对象仍限定于 \(\omega\)、源指纹匹配、\cref{tab:history-rules} 中适用的 \(\mathcal P_u\)、不交覆盖和 \(\mathsf{Lift}_u\) 义务成立、任何退役均获授权且 \(\sem{T'}\) 有定义时，该判定才成立。
-Retirement is confined to a typed \(\mathsf{MergeSelect}\)'s losing arm or to a \(\mathsf{RestoreReplace}\)'s current continuation that is complete or explicitly certified for retirement; the rule checks these edge facts rather than Agent declarations.
-% 退役仅限于类型化 \(\mathsf{MergeSelect}\) 的失败分支，或 \(\mathsf{RestoreReplace}\) 中已经完成或已被显式认证可退役的当前延续；该规则检查这些边事实，而不接受 Agent 的声明。
-Such a certificate is a policy-issuer-authenticated immutable record at version \(\zeta\) that binds \((\omega,\sigma)\), the exact source fingerprint, and exact retired outcome indices and occurrence lineages, and verifies that no other occurrence disappears.
-% 该证书是版本 \(\zeta\) 下由策略发行方认证的不可变记录，它绑定 \((\omega,\sigma)\)、精确源指纹以及精确的已退役结果索引和发生项谱系，并验证没有其他发生项消失。
+It holds exactly when every named current object belongs to \(\mathsf{addr}(T)\), every introduced object remains scoped to \(\omega\), the source fingerprint matches, the applicable \(\mathcal P_u\), disjoint cover, and \(\mathsf{Lift}_u\) requirements in \cref{tab:history-rules} hold, any removal is authorized, and \(\sem{T'}\) is defined.
+% 当且仅当每个具名当前对象属于 \(\mathsf{addr}(T)\)、每个引入对象仍限定于 \(\omega\)、源指纹匹配、\cref{tab:history-rules} 中适用的 \(\mathcal P_u\)、不交覆盖和 \(\mathsf{Lift}_u\) 要求成立、任何移除均获授权且 \(\sem{T'}\) 有定义时，该判定才成立。
+Authorized removal is confined to a typed \(\mathsf{MergeSelect}\)'s losing arm or to a \(\mathsf{RestoreReplace}\)'s current continuation that is complete or explicitly certified for removal.
+% 获授权的移除仅限于类型化 \(\mathsf{MergeSelect}\) 的失败分支，或 \(\mathsf{RestoreReplace}\) 中已经完成或已被显式认证可移除的当前延续。
+The rule checks these recorded facts rather than Agent declarations.
+% 该规则检查这些已有记录，而不接受 Agent 的声明。
+The removal certificate is an immutable record signed by the policy authority at version \(\zeta\).
+% 移除证书是策略权限方在版本 \(\zeta\) 下签名的不可变记录。
+It binds \((\omega,\sigma)\), the exact source fingerprint, the exact outcome indices and occurrence lineages that may be removed, and verifies that no other occurrence disappears.
+% 它绑定 \((\omega,\sigma)\)、精确源指纹以及可以移除的精确结果索引和发生项谱系，并验证没有其他发生项消失。
 Its certified set must equal the typed losing arm for MergeSelect or the current continuation for RestoreReplace.
 % 对于 MergeSelect，其认证集合必须等于类型化失败分支；对于 RestoreReplace，则必须等于当前延续。
-\subsubsection{Promise Conservation}
+\subsubsection{Preserving required outcomes}
+% 保留要求实现的结果
 
-Formally, a promise is a row-tagged source outcome.
-% 形式上，承诺是一个带行标签的源结果。
-\(\mathsf{Req}_u\) contains the promises still owed after removing outcomes that have already been discharged or explicitly declassified by their issuer.
-% \(\mathsf{Req}_u\) 包含去除已经履行或由发行方明确解密的结果后仍然负有的承诺。
-The occurrences of a promised outcome are the calls needed to realize it.
-% 一个已承诺结果中的发生项是实现该结果所需的调用。
+A row-tagged source outcome identifies one outcome that the edit must account for.
+% 带行标签的源结果标识编辑必须处理的一个结果。
+\(\mathsf{Req}_u\) contains those that must still be realized in the edited workflow.
+% \(\mathsf{Req}_u\) 包含编辑后的工作流仍然必须实现的结果。
+The occurrences of such an outcome are the calls needed to realize it.
+% 这类结果中的发生项是实现该结果所需的调用。
 
-Independently of \(T'\), let \(\mathsf{SrcProm}(H,u)\) be the row-tagged source outcomes, \(\mathsf{Done}_{H,u}\) those already discharged at the current cursor, and \(\mathsf{Dec}_{H,u}\) the exact issuer-certified pending retirement set.
-% 独立于 \(T'\)，令 \(\mathsf{SrcProm}(H,u)\) 为带行标签的源结果，\(\mathsf{Done}_{H,u}\) 为当前游标处已经履行的结果，并令 \(\mathsf{Dec}_{H,u}\) 为发行方精确认证的待处理退役集合。
-The checker enforces the \emph{source-promise conservation law}
+Independently of \(T'\), let \(\mathsf{SourceReq}(H,u)\) be all row-tagged source outcomes, \(\mathsf{Completed}_{H,u}\) those already completed at the current cursor, and \(\mathsf{Removed}_{H,u}\) the exact set whose removal the policy authority has signed.
+% 独立于 \(T'\)，令 \(\mathsf{SourceReq}(H,u)\) 为全部带行标签的源结果，\(\mathsf{Completed}_{H,u}\) 为当前游标处已经完成的结果，并令 \(\mathsf{Removed}_{H,u}\) 为策略权限方已经签名允许移除的精确集合。
+The checker enforces \emph{required-outcome preservation}:
 \[
-\mathsf{SrcProm}(H,u)=
-\mathsf{Req}_u\uplus\mathsf{Done}_{H,u}\uplus\mathsf{Dec}_{H,u}.
+\mathsf{SourceReq}(H,u)=
+\mathsf{Req}_u\uplus\mathsf{Completed}_{H,u}\uplus\mathsf{Removed}_{H,u}.
 \]
-Checked lifts preserve cell identity, lineage, and order.
-% 经检查的提升保持单元标识、谱系与次序。
-The history edge retains discharged evidence and records the declassification set, which the Agent cannot enlarge.
+Checked lifts preserve effect identity, lineage, and order.
+% 经检查的提升保持效果标识、谱系与次序。
+The installed edit retains completion evidence and records the authorized removal set, which the Agent cannot enlarge.
+% 已安装编辑保留完成证据并记录获授权的移除集合，而 Agent 无法扩大该集合。
 % 检查器执行\emph{源承诺守恒律} \(\mathsf{SrcProm}(H,u)=\mathsf{Req}_u\uplus\mathsf{Done}_{H,u}\uplus\mathsf{Dec}_{H,u}\)：提升保持单元、谱系和次序；该边保留已履行证据并记录解除集合，而 Agent 无法扩大该集合。
 
 Let \(\mathcal E[-]\) be a one-hole \emph{exposed} frontier context, so its hole has the addressability property above.
@@ -557,8 +575,8 @@ For well-formed \(H\), the judgment in \cref{eq:derived-cut} is deterministic.
 % 对于良构的 \(H\)，\cref{eq:derived-cut} 中的判定是确定性的。
 If it derives \(H'\), then \(H'\) is well formed.
 % 如果它推导出 \(H'\)，则 \(H'\) 是良构的。
-It satisfies source-promise conservation: discharged evidence remains durable, and no pending source lineage disappears outside the exact set \(\mathsf{Dec}_{H,u}\).
-% 它满足源承诺守恒：已履行义务的证据保持持久，且任何待处理源谱系都不会在精确集合 \(\mathsf{Dec}_{H,u}\) 之外消失。
+It preserves required outcomes: completion evidence remains recorded, and no pending source lineage disappears outside the exact set \(\mathsf{Removed}_{H,u}\).
+% 它保留要求实现的结果：完成证据保持记录，且任何待处理源谱系都不会在精确集合 \(\mathsf{Removed}_{H,u}\) 之外消失。
 The identity-preserved context and family \(\mathcal P_u\) preserve global occurrence sharing, cell, lineage, and causal order.
 % 由恒等映射保持的上下文和族 \(\mathcal P_u\) 会保持全局发生项共享、单元、谱系和因果次序。
 For every \(a\in\mathsf{Req}_u\), some full target outcome \(t\) satisfies \(\mathsf{Lift}_u(t,a)\), including the identity lift of every bypassing context outcome.
@@ -581,34 +599,36 @@ Finally, \(\beta'\) and \(\mathcal H_u^+\) establish handoff totality at \(\eta^
 % 最后，\(\beta'\) 和 \(\mathcal H_u^+\) 在 \(\eta^+\) 上建立交接完备性。
 \end{proof}
 
-\subsection{Authenticated live extension}
-% 经认证的在线扩展
+\subsection{Registered extension}
+% 已注册扩展
 
-Online growth is a trusted control-plane edge, not a seventh execution edit.
-% 在线增长是一条可信控制面边，而不是第七种执行编辑。
+A registered extension adds new schemas and policy entries without changing the current workflow or its required outcomes.
+% 已注册扩展在不改变当前工作流及其要求实现结果的情况下增加新的模式与策略条目。
+It is not a seventh execution edit.
+% 它不是第七种执行编辑。
 The Agent may name only an immutable record \(\xi\) binding the exact predecessor schema, registry, and policy roots to finite disjoint additions \(D_\Sigma,D_\rho\) and a successor policy \(\mathcal A^+\).
 % Agent 只能指名一个不可变记录 \(\xi\)，该记录将精确的前驱模式、注册表和策略根绑定到有限且不交的新增集合 \(D_\Sigma,D_\rho\) 以及后继策略 \(\mathcal A^+\)。
 Both issuers authenticate \(\xi\).
 % 两个发行方都认证 \(\xi\)。
-Existing schema identifiers, occurrence--cell and invocation rows, labels, scopes, lineages, receipts, and canonicalization rules retain their meanings.
-% 现有模式标识、发生项--单元与调用行、标签、作用域、谱系、回执和规范化规则保持原有含义。
+Existing schema identifiers, occurrence--effect-identity and invocation rows, labels, scopes, lineages, receipts, and normalization rules retain their meanings.
+% 现有模式标识、发生项--效果标识与调用行、标签、作用域、谱系、回执和规范化规则保持原有含义。
 New identifiers are fresh, finite, domain-scoped, foreign-key closed, and completion-observable.
 % 新标识是新鲜、有限、域限定、外键闭合且完成可观测的。
-The record contains no cursor, receipt, outbox, epoch, result, monitor, or installed certificate.
-% 两类发行方都认证 \(\xi\)；旧模式标识、发生项--单元/调用行、标签、作用域、谱系、回执与规范化规则都精确保留原义；新标识是新鲜、有限、域内、外键闭合且完成可观测的；该记录不包含游标、回执、发件箱、纪元、结果、监控器或已安装证书。
+The record contains no cursor, receipt, dispatch-queue entry, monitor version, return value, monitor, or installed certificate.
+% 该记录不包含游标、回执、派发队列条目、监控器版本、返回值、监控器或已安装证书。
 The successor policy is regular and prefix closed and conservatively extends the old policy, \(\mathcal A\subseteq\mathcal A^+\).
 % 后继策略是正则且前缀闭合的，并保守扩展旧策略，即 \(\mathcal A\subseteq\mathcal A^+\)。
 
-For fresh \(\eta^+\), refresh every live gate and handle but leave the live frontier unchanged:
-% 对于新鲜的 \(\eta^+\)，刷新每个活跃门和句柄，但保持活跃前沿不变：
+For fresh \(\eta^+\), refresh every current monitor entry and authorization token but leave the active workflow unchanged:
+% 对于新鲜的 \(\eta^+\)，刷新每个当前监控器入口和授权令牌，但保持当前工作流不变：
 \[
 \begin{aligned}
  H_\xi^+
    &= (\omega,G,T,K,\Sigma_{\zeta^+},\rho^+,\beta^+,
        \chi,\nu+1,\eta^+),\\
  \mathcal C_\xi&=\sem T,\qquad
- \mathsf{SrcProm}(H,\xi)=\mathsf{Req}_\xi=O_{\sem T},\\
- \mathsf{Done}_{H,\xi}&=\mathsf{Dec}_{H,\xi}=\varnothing,\qquad
+ \mathsf{SourceReq}(H,\xi)=\mathsf{Req}_\xi=O_{\sem T},\\
+ \mathsf{Completed}_{H,\xi}&=\mathsf{Removed}_{H,\xi}=\varnothing,\qquad
  \mathsf{Lift}_\xi(t,o)\Longleftrightarrow t=o .
 \end{aligned}
 \]
@@ -618,7 +638,7 @@ The checked judgment
 (\kappa,H,\mathcal A)\vdash\mathsf{Extend}(\xi)\Downarrow
   (\kappa^+,H_\xi^+,\mathcal A^+,\mathcal C_\xi,\eta,\eta^+)
 \]
-preserves \(G,T,K,\chi,\Delta,\mathsf{out}\), every current outcome, occurrence, cell, lineage, and causal edge, and authorizes no retirement.
-% 保持 \(G,T,K,\chi,\Delta,\mathsf{out}\)、每个当前结果、发生项、单元、谱系与因果边，并且不授权任何退役。
-It appends one authenticated version edge and then uses the same edit checker and atomic epoch installation as an execution edit.
-% 它追加一条经认证的版本边，随后使用与执行编辑相同的编辑检查器和原子纪元安装。
+preserves \(G,T,K,\chi,\Delta,\mathsf{out}\), every current outcome, occurrence, effect identity, lineage, and causal edge, and authorizes no removal.
+% 它保持 \(G,T,K,\chi,\Delta,\mathsf{out}\)、每个当前结果、发生项、效果标识、谱系与因果边，并且不授权任何移除。
+It appends one authenticated version record and then uses the same checker and atomic monitor installation as an execution edit.
+% 它追加一条经认证的版本记录，随后使用与执行编辑相同的检查器和原子监控器安装。
