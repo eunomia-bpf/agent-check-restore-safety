@@ -26,8 +26,8 @@ All sets in this subsection are indexed sets, so two equal resolved words belong
 &\hspace{32mm}\mathsf{Lift}_u(t,a)\land(t,b)\in\widehat B .
 \end{aligned}
 \]
-Here \(\mathsf{Removed}_{H,u}\) contains the typed losing-arm outcomes for \(\mathsf{MergeSelect}\) or the current-role outcomes of a pending certified \(\mathsf{RestoreReplace}\).
-% 此处 \(\mathsf{Removed}_{H,u}\) 包含 \(\mathsf{MergeSelect}\) 的类型化失败分支结果，或待处理且经认证的 \(\mathsf{RestoreReplace}\) 的当前角色结果。
+Here \(\mathsf{Removed}_{H,u}\) contains the typed unselected-arm outcomes for \(\mathsf{MergeSelect}\) or the current-role outcomes of a pending certified \(\mathsf{RestoreReplace}\).
+% 此处 \(\mathsf{Removed}_{H,u}\) 包含 \(\mathsf{MergeSelect}\) 中未被选择分支的类型化结果，或待处理且经认证的 \(\mathsf{RestoreReplace}\) 的当前角色结果。
 \(\mathsf{Completed}_{H,u}\) contains the completed current role of \(\mathsf{RestoreReplace}\).
 % \(\mathsf{Completed}_{H,u}\) 包含 \(\mathsf{RestoreReplace}\) 已完成的当前角色。
 Both sets are empty for every other row and for a registered extension.
@@ -104,6 +104,7 @@ The second combines that lemma with \cref{lem:compiled-language}.
 Fix the unit-cost symbolic-checker model with constant-time finite-map lookup and policy-automaton transitions.
 % 固定单位代价的符号检查器模型，其中有限映射查询与策略自动机转移均为常数时间。
 Let
+% 令
 \[
 \begin{aligned}
 D&=\lvert\Theta\rvert_{\rm chk},&
@@ -137,6 +138,52 @@ Each candidate and each incidence in \(\mathcal G_{\rm cov}\) is processed at mo
 Store one rank and cause per removed candidate rather than copied sets, and construct \(\mathsf{Can}(W,B)\) by bottom-up sorting of finite-trie derivative signatures in \(O(V_B\log(2+V_B))\) time.
 % 对每个被删除候选只存储一项秩与原因而不复制集合，并通过自底向上排序有限字典树的导数签名，在 \(O(V_B\log(2+V_B))\) 时间内构造 \(\mathsf{Can}(W,B)\)。
 \end{proof}
+
+\subsection{Exact Certificate Payloads}
+% 精确证书载荷
+\label{app:certificate-payloads}
+
+Let \(\mathsf{enc}\) be canonical and length-delimited, with \(\kappa\) authenticating \(\mathcal A\).
+% 令 \(\mathsf{enc}\) 为规范且带长度分隔的编码，并由 \(\kappa\) 认证 \(\mathcal A\)。
+The symbolic LTS uses domain-separated injective authenticated constructors \(\mathsf{Seal}_{\rm prog}\) and \(\mathsf{Seal}_{\rm cut}\), so equal seals have equal payloads.
+% 符号 LTS 使用域分离、单射且经认证的构造器 \(\mathsf{Seal}_{\rm prog}\) 和 \(\mathsf{Seal}_{\rm cut}\)，因此相同封印具有相同载荷。
+For \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), define
+% 对于 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，定义
+\[
+\begin{aligned}
+\gamma(\Theta)
+ &=\mathsf{Seal}_{\rm cut}(
+   \mathsf{enc}(\mathsf{request},\omega,\zeta,\kappa,
+   H,\Delta,\mathsf{out},\mathcal A,u)),\\
+H_{\mathsf{prog}}
+ &=\mathsf{Seal}_{\rm prog}(
+   \mathsf{enc}(\mathsf{prog}_Z,\widehat B^\dagger_{H,u})).
+\end{aligned}
+\]
+The source-snapshot seal is
+% 源状态快照封印为
+\begin{equation}
+\label{eq:cut-seal}
+\begin{split}
+ \mathsf{cut}_Z=
+ \mathsf{Seal}_{\rm cut}(\mathsf{enc}(&\omega,\zeta,\kappa,H,\Delta,
+     \mathsf{out},u,\mathcal C_{H,u},\\[-2pt]
+     &H_{\mathsf{prog}},\eta^-,\eta^+)).
+\end{split}
+\end{equation}
+Because \(H\) contains \(\chi,\nu,\rho,\beta\), this seal binds workflow progress, record version, registry state, monitor-entry/version bindings, the receipt log, and the dispatch queue.
+% 由于 \(H\) 包含 \(\chi,\nu,\rho,\beta\)，该封印会绑定工作流推进、记录版本、注册表状态、监控器入口/版本绑定、回执日志和派发队列。
+The verifier re-derives the schema judgment and complete indexed fixed point, reconstructs \((W^\dagger,B^\dagger)\), verifies both seals, and checks the full automaton isomorphism
+% 验证器重新推导模式判定与完整的带索引不动点，重建 \((W^\dagger,B^\dagger)\)，验证两个封印，并检查下列完整自动机同构：
+\[
+ \mathsf{prog}_Z\cong\mathsf{Can}(W^\dagger,B^\dagger),
+\]
+including its initial state, marking, and every labeled transition.
+% 该同构包括初始状态、标记及每个带标签转移。
+Canonical encoding order makes \(\mathsf{Invalid}\), \(\mathsf{Reject}\), and \(\mathsf{Installable}\) unique and equivariant.
+% 规范编码顺序使 \(\mathsf{Invalid}\)、\(\mathsf{Reject}\) 与 \(\mathsf{Installable}\) 均唯一且保持等变性。
+A byte implementation may use signatures or collision-resistant digests over \(\mathsf{enc}\), yielding computational refinement up to forgery or collision, while exact bisimulation uses the symbolic constructors.
+% 字节级实现可对 \(\mathsf{enc}\) 使用签名或抗碰撞摘要，从而得到除伪造或碰撞外的计算精化，而精确互模拟使用符号构造器。
 
 \begin{proof}[Proof of \cref{lem:live-extension}]
 % \cref{lem:live-extension} 的证明
@@ -236,12 +283,12 @@ This definition prevents an erased fact from surviving inside a seal, digest, ar
 
 The incidence-erasure projection \(\pi_{\neg oc}\) starts from the full view, deletes the occurrence--effect-identity relation, and applies the same dependency deletion while retaining the occurrence and effect-identity marginals.
 % 关联擦除投影 \(\pi_{\neg oc}\) 从完整视图出发，删除发生项--效果标识关系，并应用相同的依赖删除，同时保留发生项和效果标识边际记录。
-The projection \(\pi_{\neg rc}\) analogously deletes receipt--effect-identity incidence and every path that reconstructs it, including receipt--creator, cursor--receipt, and archived creator--effect-identity paths, while retaining the receipt, creator, occurrence, and effect-identity marginals.
-% 投影 \(\pi_{\neg rc}\) 类似地删除回执--效果标识关联以及每条可重建该关联的路径，包括回执--创建者、游标--回执和归档创建者--效果标识路径，同时保留回执、创建者、发生项和效果标识边际记录。
+The projection \(\pi_{\neg rc}\) analogously deletes receipt--effect-identity incidence and every path that reconstructs it, including receipt--creator, cursor--receipt, archived creator--effect-identity paths, and every degree, count, or adjacency summary derived from those paths, while retaining the receipt, creator, occurrence, and effect-identity marginals.
+% 投影 \(\pi_{\neg rc}\) 类似地删除回执--效果标识关联以及每条可重建该关联的路径，包括回执--创建者、游标--回执、已归档创建者--效果标识路径，以及从这些路径派生的每项度数、计数或邻接摘要，同时保留回执、创建者、发生项和效果标识边际记录。
 State views are compared modulo a sort-preserving bijection on private keys that fixes all public keys.
 % 状态视图在保持类型的私有键双射意义下比较，该双射固定全部公开键。
-For a common literal query \(q\), write \(V\cong_qV'\) when the witnessing bijection additionally fixes \(\mathsf{supp}(q)\) pointwise; equivalently, \(\langle V,q\rangle_{\cong}=\langle V',q\rangle_{\cong}\).
-% 对共同的字面查询 \(q\)，当见证双射还逐点固定 \(\mathsf{supp}(q)\) 时，记 \(V\cong_qV'\)；等价地，\(\langle V,q\rangle_{\cong}=\langle V',q\rangle_{\cong}\)。
+For possibly different literal queries \(q,q'\), write \((V,q)\cong(V',q')\) when one such bijection maps the full syntax of \(q\) to that of \(q'\); equivalently, \(\langle V,q\rangle_{\cong}=\langle V',q'\rangle_{\cong}\).
+% 对可能不同的字面查询 \(q,q'\)，若某个这样的双射把 \(q\) 的完整语法映射为 \(q'\) 的完整语法，则记作 \((V,q)\cong(V',q')\)；等价地，\(\langle V,q\rangle_{\cong}=\langle V',q'\rangle_{\cong}\)。
 
 \begin{lemma}[Projection is well defined]
 % 投影良定义性
@@ -266,19 +313,19 @@ Canonical recomposition is equivariant because it is a typed constructor over ex
 \begin{lemma}[Representation-independent observational separation]
 % 与表示无关的观测分离
 \label{lem:app-observational-separation}
-Let \(V_0,V_1\) be finite valid full views and let \(q\) be a typed query.
-% 令 \(V_0,V_1\) 为有限有效完整视图，并令 \(q\) 为带类型查询。
-If \([\mathsf{Ans}(V_0,q)]_{\cong}\ne[\mathsf{Ans}(V_1,q)]_{\cong}\), then every exact information map \(f\) satisfies \(f(V_0)\not\cong_q f(V_1)\).
-% 若 \([\mathsf{Ans}(V_0,q)]_{\cong}\ne[\mathsf{Ans}(V_1,q)]_{\cong}\)，则每个精确信息映射 \(f\) 都满足 \(f(V_0)\not\cong_q f(V_1)\)。
-The claim applies to arbitrary encodings and is not a minimal-table or unique-representation claim.
-% 该结论适用于任意编码，并不声称表的数量最少或表示方式唯一。
+Let \(V_0,V_1\) be finite valid full views and let \(q_0,q_1\) be typed queries.
+% 令 \(V_0,V_1\) 为有限有效完整视图，并令 \(q_0,q_1\) 为带类型查询。
+If \([\mathsf{Ans}(V_0,q_0)]_{\cong}\ne[\mathsf{Ans}(V_1,q_1)]_{\cong}\), then every exact information map \(f\) distinguishes the joint inputs: \((f(V_0),q_0)\not\cong(f(V_1),q_1)\).
+% 若 \([\mathsf{Ans}(V_0,q_0)]_{\cong}\ne[\mathsf{Ans}(V_1,q_1)]_{\cong}\)，则每个精确信息映射 \(f\) 都会区分联合输入：\((f(V_0),q_0)\not\cong(f(V_1),q_1)\)。
+The claim applies to arbitrary encodings; it is not a claim about a minimal table layout or a unique representation.
+% 该结论适用于任意编码；它不主张某种表布局最小，也不主张表示方式唯一。
 \end{lemma}
 
 \begin{proof}
-Assume toward contradiction that \(f(V_0)\cong_q f(V_1)\).
-% 反设 \(f(V_0)\cong_q f(V_1)\)。
-The joint decoder inputs \(\langle f(V_0),q\rangle_{\cong}\) and \(\langle f(V_1),q\rangle_{\cong}\) then coincide.
-% 此时，联合解码器输入 \(\langle f(V_0),q\rangle_{\cong}\) 与 \(\langle f(V_1),q\rangle_{\cong}\) 相同。
+Assume toward contradiction that \((f(V_0),q_0)\cong(f(V_1),q_1)\).
+% 反设 \((f(V_0),q_0)\cong(f(V_1),q_1)\)。
+The joint decoder inputs \(\langle f(V_0),q_0\rangle_{\cong}\) and \(\langle f(V_1),q_1\rangle_{\cong}\) then coincide.
+% 此时，联合解码器输入 \(\langle f(V_0),q_0\rangle_{\cong}\) 与 \(\langle f(V_1),q_1\rangle_{\cong}\) 相同。
 Exactness forces equal answer orbits, contradicting the premise.
 % 精确性迫使答案轨道相等，与前提矛盾。
 \end{proof}
@@ -294,9 +341,9 @@ Erased & Full-view pair & Exact answers\\
 \midrule
 \multicolumn{3}{@{}l}{\(u_R(\mathcal C):=\mathsf{RestoreReplace}(b,k,\sigma)\) with \(\mathcal C_k=\mathcal C\).}\\
 \(\mathbf P\) &
-\(q_{\mathbf P}=\mathsf{MergeSelect}(g,L,\sigma)\);
-\(T^0=b_x{:}X\oplus_g^{\rm open}b_y{:}Y\),
-\(T^1=b_x{:}X\parallel_g b_y{:}Y\); otherwise equal. &
+\(q_{\mathbf P}^i=\mathsf{MergeSelect}(g_i,L,\sigma)\);
+\(T^0=b_x{:}X\oplus_{g_0}^{\rm open}b_y{:}Y\),
+\(T^1=b_x{:}X\parallel_{g_1} b_y{:}Y\); joint inputs are isomorphic after erasure. &
 \(V^0\): realize; \(V^1\): \(\mathsf{Invalid}\) (wrong mode).\\
 \(\mathbf I\) &
 \(q_{\mathbf I}=\mathsf{RestoreLive}(b_L,k,\sigma_{\mathbf I})\) after safe empty-root/ForkChoice/Save;
@@ -304,7 +351,7 @@ Erased & Full-view pair & Exact answers\\
 \(q^0_{\rm cell}(x)=q^0_{\rm cell}(y)=d_0\);
 \(q^1_{\rm cell}(x)=d_0\ne d_1=q^1_{\rm cell}(y)\);
 \(\ell(d_0)=\ell(d_1)=a\). &
-\(X\parallel Y_k\): one \Fresh, accept;
+\((X\otimes Y_k)\oplus Y\): one \Fresh, accept;
 two \Fresh reject \(aa\).\\
 \(\mathbf E\) &
 \(q_{\mathbf E}=\mathsf{TryInstall}(u_R(x),Y_0)\);
@@ -315,8 +362,8 @@ two \Fresh reject \(aa\).\\
 \(\pi_{\neg rc}\) &
 \(q_{\neg rc}=u_R(x)\) after safe empty-root/ForkChoice/Save/\Fresh;
 \(q_{\rm cell}(x)=d\), \(\mathcal A=\Pref\{a\}\);
-same marginals \(\{p\},\{d,e\}\);
-\(p\mapsto d\) in \(V^0\), \(p\mapsto e\) in \(V^1\). &
+same marginals \(\{c,x\},\{p\},\{d,e\}\);
+\((q_{\rm cell}(c),p)=(d,d)\) in \(V^0\), \((e,e)\) in \(V^1\). &
 \(\Alias(x_k,d)\): accept;
 \(\Fresh(x_k,d)\): reject \(aa\).\\
 \(\mathbf C\) &
@@ -333,6 +380,21 @@ name supplies agree off the monitor-version sort, while current monitor version,
 \subsection{Bootstrap States and Explicit Separation Pairs}
 % 引导状态与显式分离对
 \label{app:boot-pairs}
+
+\begin{definition}[Checked registration refinement]
+% 经检查的注册精化
+\label{def:registration-refinement}
+A boundary-finite typed Agent workflow \(\mathcal W\) is a finite-state outcome-labeled LTS whose complete paths end at outcome terminals and whose \(\tau\)-erased protected-call projections \(\partial e=(o,s_1\cdots s_n)\) form finitely many classes under equality \(\equiv_\partial\).
+% 边界有限的类型化 Agent 工作流 \(\mathcal W\) 是一个带结果标签的有限状态 LTS；其完整路径终止于结果终点，并且经 \(\tau\) 擦除的受控调用投影 \(\partial e=(o,s_1\cdots s_n)\) 在相等关系 \(\equiv_\partial\) 下形成有限多个等价类。
+\(\mathsf{CheckReg}\) rejects any reachable and terminal-co-reachable strongly connected component containing a protected-call edge, permits erased \(\tau\)-cycles, and then enumerates the finite classes.
+% \(\mathsf{CheckReg}\) 拒绝任何既可达、又可到达终止点且包含受控调用边的强连通分量，允许被擦除的 \(\tau\) 环，随后枚举有限等价类。
+\(R\) stores a candidate map \(\lambda\), and \(\mathsf{BRuns}(R)\) is the finite outcome-indexed language obtained by linearizing its registered root pomsets and labeling every occurrence by its protected \Use.
+% \(R\) 存储候选映射 \(\lambda\)，而 \(\mathsf{BRuns}(R)\) 是通过线性化其已注册根偏序事件集，并以受保护 \Use 标记每个发生项而得到的有限结果索引语言。
+\(\mathcal W\sqsubseteq_\lambda R\) means that \(\lambda\) induces a bijection from boundary classes to \(\mathsf{BRuns}(R)\) that preserves outcomes, incidence, and order.
+% \(\mathcal W\sqsubseteq_\lambda R\) 表示 \(\lambda\) 从边界等价类到 \(\mathsf{BRuns}(R)\) 诱导一个保持结果、关联与次序的双射。
+The check also requires effect identities to be exactly the equivalence classes of normalized requests, requires \(\lambda\) to be total, unique, and free of raw instructions, and requires receipt evolution to commute with \(\Resolve\) without dropping a required outcome, call site, or receipt.
+% 该检查还要求效果标识恰好对应规范化请求的等价类，要求 \(\lambda\) 全定义、唯一且不包含原始指令，并要求回执演化与 \(\Resolve\) 交换且不丢弃要求实现的结果、调用位置或回执。
+\end{definition}
 
 Every separation proof follows the same recipe.
 % 每个分离证明都遵循同一方法。
@@ -364,11 +426,11 @@ The correspondence preserves indexed outcomes, causal order, canonical invocatio
 \end{lemma}
 \begin{proof}
 The productive-SCC test terminates because the state graph is finite.
-% 有效强连通分量检查因状态图有限而终止。
+% 可产出强连通分量检查因状态图有限而终止。
 A productive SCC containing a durable-site edge can be pumped before an outcome, producing projected words of unbounded length.
-% 含有持久位置边的有效强连通分量可以在到达结果前被反复遍历，从而产生长度无界的投影词。
+% 含有持久位置边的可产出强连通分量可以在到达结果前被反复遍历，从而产生长度无界的投影词。
 Conversely, if no productive SCC contains such an edge, every productive SCC is boundary-silent, and contracting them yields a DAG with a finite enumerable projected language.
-% 反之，若任何有效强连通分量都不含此类边，则每个有效强连通分量在边界上静默，收缩它们会得到具有有限可枚举投影语言的 DAG。
+% 反之，若任何可产出强连通分量都不含此类边，则每个可产出强连通分量在边界上静默，收缩它们会得到具有有限可枚举投影语言的 DAG。
 The checker compares that language with \(\mathsf{BRuns}(R)\) and directly decides outcome/site incidence, order, effect-identity attestation, total unique registration, raw-bypass exclusion, and prefix receipt commutation.
 % 检查器将该语言与 \(\mathsf{BRuns}(R)\) 比较，并直接判定结果/位置关联关系、次序、效果标识证明、全定义唯一注册、原始绕过排除与前缀回执交换性。
 Therefore it accepts exactly the semantic conjunction defining \(\mathcal W\sqsubseteq_\lambda R\), rather than an oracle restatement.
@@ -410,21 +472,21 @@ Each displayed state is reached from \(\mathsf S_\emptyset\) by the stated regis
 % \(\mathbf P\)：工作流结构
 Let \(X\) and \(Y\) be singleton contracts with distinct occurrences \(x\) and \(y\), a shared effect identity, and a universal residual policy.
 % 令 \(X\) 和 \(Y\) 为具有不同发生项 \(x\) 与 \(y\)、共享效果标识和全称残余策略的单元素契约。
-From the same registered singleton root, checked initial installation followed by \(\mathsf{ForkChoice}\) reaches \(V_{\mathbf P}^0\), while the corresponding \(\mathsf{ForkParallel}\) trace reaches \(V_{\mathbf P}^1\).
-% 从同一个已注册单元素根出发，经检查的初始安装随后执行 \(\mathsf{ForkChoice}\) 会到达 \(V_{\mathbf P}^0\)，而对应的 \(\mathsf{ForkParallel}\) 轨迹会到达 \(V_{\mathbf P}^1\)。
+From the same registered singleton root, checked initial installation followed by \(\mathsf{ForkChoice}\) reaches \(V_{\mathbf P}^0\) with private group \(g_0\), while the corresponding \(\mathsf{ForkParallel}\) trace reaches \(V_{\mathbf P}^1\) with private group \(g_1\).
+% 从同一个已注册单元素根出发，经检查的初始安装随后执行 \(\mathsf{ForkChoice}\) 会到达具有私有组 \(g_0\) 的 \(V_{\mathbf P}^0\)，而对应的 \(\mathsf{ForkParallel}\) 轨迹会到达具有私有组 \(g_1\) 的 \(V_{\mathbf P}^1\)。
 The two views differ only in
 % 两个视图仅在下式中不同：
 \[
- V_{\mathbf P}^0.T=b_L{:}X\oplus_g^{\mathsf{open}}b_R{:}Y,
+ V_{\mathbf P}^0.T=b_L{:}X\oplus_{g_0}^{\mathsf{open}}b_R{:}Y,
  \qquad
- V_{\mathbf P}^1.T=b_L{:}X\parallel_g b_R{:}Y .
+ V_{\mathbf P}^1.T=b_L{:}X\parallel_{g_1} b_R{:}Y .
 \]
-Use the same registered \(\mathsf{MergeSelect}\) schema and query \(q_{\mathbf P}=\mathsf{MergeSelect}(g,L,\sigma)\).
-% 使用相同的已注册 \(\mathsf{MergeSelect}\) 模式和查询 \(q_{\mathbf P}=\mathsf{MergeSelect}(g,L,\sigma)\)。
+Use the same registered \(\mathsf{MergeSelect}\) schema with \(q_{\mathbf P}^i=\mathsf{MergeSelect}(g_i,L,\sigma)\).
+% 使用同一个已注册 \(\mathsf{MergeSelect}\) 模式，并令 \(q_{\mathbf P}^i=\mathsf{MergeSelect}(g_i,L,\sigma)\)。
 The choice view has a unique edit derivation and a nonempty one-step greatest realization, whereas the parallel view has no \(\mathsf{MergeSelect}\) derivation because its group mode is wrong.
 % 选择视图具有唯一的编辑推导和非空的一步最大实现，而并行视图由于组模式错误而没有 \(\mathsf{MergeSelect}\) 推导。
-Deleting \(\mathbf P\) removes the constructor tag and every authenticator depending on it, leaving isomorphic retained views.
-% 删除 \(\mathbf P\) 会移除构造器标签及依赖它的每个认证器，从而留下同构的保留视图。
+Deleting \(\mathbf P\) removes the constructor tag and every authenticator depending on it; the private renaming \(g_0\mapsto g_1\) then makes the retained state--query pairs isomorphic.
+% 删除 \(\mathbf P\) 会移除构造器标签及依赖它的每个认证器；此时私有重命名 \(g_0\mapsto g_1\) 会使保留的状态—查询对同构。
 
 \paragraph{Bootstrap convention for the incidence pairs}
 % 关联对的引导约定
@@ -482,14 +544,18 @@ For the common literal \(q_{\mathbf E}=\mathsf{TryInstall}(u_{\mathbf E},Y_0)\),
 
 \paragraph{\(\pi_{\neg rc}\): receipt--effect-identity incidence}
 % \(\pi_{\neg rc}\)：回执--效果标识关联
-For a separate pair, retain \(q_{\rm cell}(x)=d\) and effect identities \(d,e\) labeled \(a\), but let the archived creator bind \(p\mapsto d\) in \(V_{\neg rc}^0\) and \(p\mapsto e\) in \(V_{\neg rc}^1\).
-% 对于另一对状态，保持 \(q_{\rm cell}(x)=d\) 以及以 \(a\) 标记的效果标识 \(d,e\)，但令归档创建者在 \(V_{\neg rc}^0\) 中绑定 \(p\mapsto d\)，在 \(V_{\neg rc}^1\) 中绑定 \(p\mapsto e\)。
+For a separate pair, keep the common active row \(q_{\rm cell}(x)=d\), creator \(c\), receipt \(p\), and effect identities \(d,e\) labeled \(a\), but set \(q_{\rm cell}(c)=d\) and \(p\mapsto d\) in \(V_{\neg rc}^0\), versus \(q_{\rm cell}(c)=e\) and \(p\mapsto e\) in \(V_{\neg rc}^1\).
+% 对于另一对状态，保持共同的当前记录 \(q_{\rm cell}(x)=d\)、创建者 \(c\)、回执 \(p\) 以及以 \(a\) 标记的效果标识 \(d,e\)，但在 \(V_{\neg rc}^0\) 中令 \(q_{\rm cell}(c)=d\) 且 \(p\mapsto d\)，在 \(V_{\neg rc}^1\) 中令 \(q_{\rm cell}(c)=e\) 且 \(p\mapsto e\)。
 Both states follow the same safe empty-root/ForkChoice/Save/\Fresh shape above, have permission trace \(a\), and use the common query \(q_{\neg rc}=\mathsf{RestoreReplace}(b_L,k,\sigma_{\neg rc})\).
 % 两个状态都遵循上述安全的空根/ForkChoice/Save/\Fresh 形状，具有权限轨迹 \(a\)，并使用共同查询 \(q_{\neg rc}=\mathsf{RestoreReplace}(b_L,k,\sigma_{\neg rc})\)。
 The cloned \(x_k\) is \(\Alias(x_k,d)\) in \(V_{\neg rc}^0\), but \(\Fresh(x_k,d)\) produces forbidden word \(aa\) in \(V_{\neg rc}^1\).
 % 克隆的 \(x_k\) 在 \(V_{\neg rc}^0\) 中为 \(\Alias(x_k,d)\)，而在 \(V_{\neg rc}^1\) 中，\(\Fresh(x_k,d)\) 会产生被禁止的权限词 \(aa\)。
-Here the only differing occurrence--effect-identity row belongs to the archived receipt creator; \(\pi_{\neg rc}\) explicitly deletes that reconstructing path together with receipt--effect-identity incidence, leaving isomorphic retained views with equal receipt, occurrence, and effect-identity marginals.
-% 此处唯一不同的发生项--效果标识记录属于已归档的回执创建者；\(\pi_{\neg rc}\) 会连同回执--效果标识关联显式删除这条重建路径，从而留下具有相等回执、发生项和效果标识边际记录的同构保留视图。
+The two views have the same creator, receipt, occurrence, and effect-identity marginals and the same retained incidence \(x\mapsto d\).
+% 两个视图具有相同的创建者、回执、发生项与效果标识边际记录，也具有相同的保留关联 \(x\mapsto d\)。
+\(\pi_{\neg rc}\) deletes the differing archived row for \(c\), the receipt incidence, and every derived reconstruction path, so the retained views are isomorphic.
+% \(\pi_{\neg rc}\) 删除 \(c\) 的不同归档记录、回执关联以及每条派生重建路径，因此保留视图彼此同构。
+This proves the necessity of semantic receipt--effect-identity incidence, not of any particular receipt-table column.
+% 这证明了语义上的回执--效果标识关联是必要的，而不是声称某个特定回执表列不可或缺。
 
 \paragraph{\(\mathbf C\): installation coordinates}
 % \(\mathbf C\)：安装坐标
@@ -900,4 +966,4 @@ The theorem uses the uncapped finite semantic compiler.
 % 定理使用无上限的有限语义编译器。
 
 No step in this proof infers a natural-language contract, provides fairness, disables only part of one domain, or strengthens local queued-request release into remote exactly-once execution.
-% 本证明中的任何步骤都不推断自然语言契约、不提供公平性、不只禁用单个域的一部分，也不把本地排队请求释放强化为远程恰好一次执行。
+% 本证明中的任何步骤都不推断自然语言契约、不提供公平性、不会仅禁用单个域的一部分，也不把本地排队请求释放强化为远程恰好一次执行。

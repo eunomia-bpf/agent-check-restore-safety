@@ -51,8 +51,8 @@ The automaton is the paired-language derivative construction~\cite{brzozowski196
 % 该自动机是成对语言的导数构造~\cite{brzozowski1964derivatives}。
 \end{proof}
 
-For \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), let \(\gamma(\Theta)=\mathsf{Seal}_{\rm cut}(\mathsf{enc}(\mathsf{request},\omega,\zeta,\kappa,H,\Delta,\mathsf{out},\mathcal A,u))\) bind an answer to its source snapshot.
-% 对于 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，令 \(\gamma(\Theta)=\mathsf{Seal}_{\rm cut}(\mathsf{enc}(\mathsf{request},\omega,\zeta,\kappa,H,\Delta,\mathsf{out},\mathcal A,u))\) 将答案绑定到其源状态快照。
+For \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), the checker returns exactly one of
+% 对于 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，检查器恰好返回下列一种结果：
 \[
 \begin{aligned}
 \mathsf{CheckOutput}(\Theta)::={}&\mathsf{Invalid}([\gamma,C_{\rm str}]_{\cong})
@@ -60,58 +60,18 @@ For \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), let \(\gamma(\Theta)
 &\mid\mathsf{Installable}(\delta,W^\dagger,\widehat B^\dagger,Z).
 \end{aligned}
 \]
-\(\mathsf{Compile}(\Theta)\) returns \(\mathsf{Invalid}\) with a verified invalid-edit transcript if derivation is undefined.
-% 若推导未定义，\(\mathsf{Compile}(\Theta)\) 返回带经验证无效编辑记录的 \(\mathsf{Invalid}\)。
-It returns \(\mathsf{Reject}\) with the complete ranked rejection certificate if \(\widehat B^\dagger=\varnothing\).
-% 若 \(\widehat B^\dagger=\varnothing\)，它返回带完整带秩拒绝证书的 \(\mathsf{Reject}\)。
-Otherwise, it returns \(\mathsf{Installable}\) with the unique \(\delta\), coverage witnesses, monitor automaton \(\mathsf{prog}_Z=\mathsf{Can}(W^\dagger,B^\dagger)\), and
-% 否则，它返回带唯一 \(\delta\)、覆盖见证、监控器自动机 \(\mathsf{prog}_Z=\mathsf{Can}(W^\dagger,B^\dagger)\) 以及下述内容的 \(\mathsf{Installable}\)
+\(\mathsf{Invalid}\) carries a verified undefined-derivation transcript, \(\mathsf{Reject}\) carries the complete ranked elimination certificate, and \(\mathsf{Installable}\) carries the unique derivation, coverage witnesses, canonical monitor, and
+% \(\mathsf{Invalid}\) 携带经验证的未定义推导记录，\(\mathsf{Reject}\) 携带完整的带秩淘汰证书，而 \(\mathsf{Installable}\) 携带唯一推导、覆盖见证、规范监控器以及
 \[
  Z=(\omega,\zeta,\kappa_Z,\mathsf{cut}_Z,u,
     H_{\mathsf{prog}},\eta^-,\eta^+),
 \]
-where \(\kappa_Z=\kappa\), \(H_c=H\) is the authenticated source record, and the edit derivation creates \(\eta^+\).
-% 其中 \(\kappa_Z=\kappa\)，\(H_c=H\) 是认证源记录，而编辑推导创建 \(\eta^+\)。
-Canonical encoding order makes all three finite checker outputs unique and equivariant.
-% 规范编码顺序使三种有限检查器输出均唯一且保持等变性。
+\(Z\) authenticates the complete source snapshot, the derived target, the monitor, and both old and new monitor versions.
+% \(Z\) 认证完整源状态快照、派生目标、监控器以及新旧监控器版本。
+\Cref{app:certificate-payloads} gives the exact payloads and proves that all three finite outputs are unique and equivariant.
+% \Cref{app:certificate-payloads} 给出精确载荷，并证明三种有限输出均唯一且保持等变性。
 The bounded implementation may instead return \(\mathsf{ResourceLimit}(b,n)\), which installs nothing and proves neither safety nor impossibility.
 % 有界实现可能改为返回 \(\mathsf{ResourceLimit}(b,n)\)，它不安装任何内容，也不证明安全性或不可能性。
-
-Let \(\mathsf{enc}\) be canonical and length-delimited, with \(\kappa\) authenticating \(\mathcal A\).
-% 令 \(\mathsf{enc}\) 为规范且带长度分隔的编码，并由 \(\kappa\) 认证 \(\mathcal A\)。
-The symbolic LTS uses domain-separated injective authenticated constructors \(\mathsf{Seal}_{\rm prog}\) and \(\mathsf{Seal}_{\rm cut}\), so equal seals have equal payloads.
-% 符号 LTS 使用域分离、单射且经认证的构造器 \(\mathsf{Seal}_{\rm prog}\) 和 \(\mathsf{Seal}_{\rm cut}\)，因此相同封印具有相同载荷。
-Define
-% 定义
-\[
- H_{\mathsf{prog}}=
- \mathsf{Seal}_{\rm prog}(
-   \mathsf{enc}(\mathsf{prog}_Z,\widehat B^\dagger_{H,u})).
-\]
-The source-snapshot seal is
-% 源状态快照封印为
-\begin{equation}
-\label{eq:cut-seal}
-\begin{split}
- \mathsf{cut}_Z=
- \mathsf{Seal}_{\rm cut}(\mathsf{enc}(&\omega,\zeta,\kappa,H,\Delta,
-     \mathsf{out},u,\mathcal C_{H,u},\\[-2pt]
-     &H_{\mathsf{prog}},\eta^-,\eta^+)).
-\end{split}
-\end{equation}
-Because \(H\) contains \(\chi,\nu,\rho,\beta\), the source-snapshot seal binds workflow progress, record version, registry state, and monitor-entry/version bindings.
-% 由于 \(H\) 包含 \(\chi,\nu,\rho,\beta\)，该源状态快照封印绑定工作流推进、记录版本、注册表状态和监控器入口/版本绑定。
-It also binds the receipt log and dispatch queue directly.
-% 它还直接绑定回执日志与派发队列。
-Search and inactive preloading remain untrusted because the installation checker re-derives the schema judgment and complete indexed fixed point, reconstructs \((W^\dagger,B^\dagger)\), verifies both seals, and checks
-% 搜索和非活跃预加载仍不受信任，因为安装检查器会重新推导模式判定和完整的带索引不动点，重建 \((W^\dagger,B^\dagger)\)，验证两个封印，并检查
-\[
- \mathsf{prog}_Z\cong\mathsf{Can}(W^\dagger,B^\dagger),
-\]
-as a full automaton isomorphism preserving the initial state, marking, and every labeled transition.
-% 其是否为保持初始状态、标记及每个带标签转移的完整自动机同构。
-A byte implementation may use signatures or collision-resistant digests over \(\mathsf{enc}\), yielding computational refinement up to forgery or collision, while exact bisimulation uses the symbolic constructors.
-% 字节级实现可对 \(\mathsf{enc}\) 使用签名或抗碰撞摘要，从而得到除伪造或碰撞外的计算精化，而精确互模拟使用符号构造器。
 
 \subsection{Installation kernel}
 % 安装内核
@@ -124,63 +84,41 @@ S=(\kappa,H,\Delta,\mathsf{out},\mathcal A,
 \]
 where \(\mathsf{phase}\) records whether each monitor version \(\eta\) is unallocated (\(\bot\)), inactive, active, or closed.
 % 其中 \(\mathsf{phase}\) 记录每个监控器版本 \(\eta\) 是未分配（\(\bot\)）、非活动、活动还是已关闭。
-Reserve \(u=\mathsf{Root}(R,n)\) for bootstrap only.
-% 保留 \(u=\mathsf{Root}(R,n)\) 仅用于引导。
-The root rule is enabled only when \(\mathsf{CheckReg}(\mathcal W,R)\) accepts a finite-state boundary-finite typed Agent workflow \(\mathcal W\) and finite registered call model \(R\).
-% 只有当 \(\mathsf{CheckReg}(\mathcal W,R)\) 接受有限状态且边界有限的类型化 Agent 工作流 \(\mathcal W\) 与有限已注册调用模型 \(R\) 时，根规则才启用。
-The deterministic judgment \(\mathsf{Reg}(R,n)\vdash\mathsf{Root}\Downarrow(H_R^+,\mathcal C_R,\bot,\eta_R)\) constructs \(\mathsf{src}_R^-=(\kappa,H_R^-,\epsilon,\epsilon,\mathcal A)\) from registered call model \(R\) and private namespace \(n\), with empty progress, checkpoints, bindings, and monitor version, sets \(\mathsf{Req}_{\mathsf{Root}}\) to \(R\)'s root outcomes, and defines \(\mathsf{Lift}_{\mathsf{Root}}(t,o)\Longleftrightarrow t=o\).
-% 确定性判定 \(\mathsf{Reg}(R,n)\vdash\mathsf{Root}\Downarrow(H_R^+,\mathcal C_R,\bot,\eta_R)\) 从已注册调用模型 \(R\) 和私有命名空间 \(n\) 构造 \(\mathsf{src}_R^-=(\kappa,H_R^-,\epsilon,\epsilon,\mathcal A)\)，其中进度、检查点、绑定和监控器版本均为空；它将 \(\mathsf{Req}_{\mathsf{Root}}\) 设为 \(R\) 的根结果，并定义 \(\mathsf{Lift}_{\mathsf{Root}}(t,o)\Longleftrightarrow t=o\)。
-The checked record \(\mathsf{cert}(\eta)=c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\) contains source snapshot \(\mathsf{src}_c=(\kappa,H_c,\Delta_c,\mathsf{out}_c,\mathcal A)\), target state \(H_c^+\) before any protected call, and ideal projection \(\mathsf{icut}(c)=(H_c,u,W,\widehat B)\).
-% 经检查记录 \(\mathsf{cert}(\eta)=c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\) 包含源状态快照 \(\mathsf{src}_c=(\kappa,H_c,\Delta_c,\mathsf{out}_c,\mathcal A)\)、任何受控调用前的目标状态 \(H_c^+\)，以及理想投影 \(\mathsf{icut}(c)=(H_c,u,W,\widehat B)\)。
-Its tagged origin is the checked root judgment exactly when \(u=\mathsf{Root}(R,n)\) and \(\mathsf{src}_c=\mathsf{src}_R^-\); otherwise it is the checked derivation of one of the six execution edits or a registered extension.
-% 当且仅当 \(u=\mathsf{Root}(R,n)\) 且 \(\mathsf{src}_c=\mathsf{src}_R^-\) 时，其带标签来源为经检查根判定；否则，它是六种执行编辑之一或已注册扩展的经检查推导。
-Its indexed family appears only in the proof, while \(W^\dagger\), \(B^\dagger\), and the seal are checked enforcement data.
-% 其带索引族只出现在证明中，而 \(W^\dagger\)、\(B^\dagger\) 和封印是经检查的强制执行数据。
-\(\mathsf{Gen}(P,q)\) and \(\mathsf{Mark}(P,q)\) denote \(P\)'s generated and marked languages from \(q\).
-% \(\mathsf{Gen}(P,q)\) 和 \(\mathsf{Mark}(P,q)\) 表示 \(P\) 从 \(q\) 出发的生成语言和标记语言。
+The bootstrap rule runs only after \(\mathsf{CheckReg}(\mathcal W,R)\) accepts, and its exact construction appears in \cref{app:boot-pairs}.
+% 引导规则只在 \(\mathsf{CheckReg}(\mathcal W,R)\) 接受后运行，其精确构造见 \cref{app:boot-pairs}。
+Each installed version stores \(c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\): the authenticated source snapshot, derived target, edit, safe language, indexed family, and checked certificate.
+% 每个已安装版本都存储 \(c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\)：认证源状态快照、派生目标、编辑、安全语言、带索引执行族和经检查证书。
 
 \begin{definition}[Agent security-state invariant]
 % Agent 安全状态不变量
 \label{def:agent-sec}
 For \(c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\) and resolved \(r\), \(\mathsf{AgentSec}(S;c,r)\) holds exactly when the following clauses hold.
 % 对 \(c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\) 和已解析词 \(r\)，当且仅当下列条款成立时，\(\mathsf{AgentSec}(S;c,r)\) 成立。
-\begin{enumerate}[leftmargin=*,itemsep=1pt]
+\begin{enumerate}[leftmargin=*,itemsep=0pt,topsep=1pt]
 \item \emph{Core and schema coherence.}
 % 核心与模式一致性。
-The current security state is well formed, \(c=\mathsf{cert}(\eta)\), and the tagged origin derives \((H_c^+,\mathcal C,\eta^-,\eta)\) by its corresponding checked root, execution-edit, or registered-extension judgment; each \(a\in\mathsf{Req}_u\) has a checked full-target \(\mathsf{Lift}_u\) witness.
-% 当前安全状态良构，\(c=\mathsf{cert}(\eta)\)，且带标签来源通过相应的经检查根判定、执行编辑判定或已注册扩展判定推导出 \((H_c^+,\mathcal C,\eta^-,\eta)\)；每个 \(a\in\mathsf{Req}_u\) 都有经检查的完整目标 \(\mathsf{Lift}_u\) 见证。
+The state is well formed, \(c=\mathsf{cert}(\eta)\), its origin derives the installed target, and every \(a\in\mathsf{Req}_u\) has a checked \(\mathsf{Lift}_u\) witness.
+% 状态良构，\(c=\mathsf{cert}(\eta)\)，其来源推导出已安装目标，且每个 \(a\in\mathsf{Req}_u\) 都有经检查的 \(\mathsf{Lift}_u\) 见证。
 \item \emph{Required-outcome coherence.}
 % 要求实现结果的一致性。
-\(\widehat B=\widehat B^\dagger_{H_c,u}\ne\varnothing\), \(W=\Pref(\pi_2\widehat B)\), and the stored certificate passed \(\mathsf{Verify}_Z(W,\pi_2\widehat B,\widehat B)\) at its source snapshot.
-% \(\widehat B=\widehat B^\dagger_{H_c,u}\ne\varnothing\)、\(W=\Pref(\pi_2\widehat B)\)，并且所存证书已在其源状态快照处通过 \(\mathsf{Verify}_Z(W,\pi_2\widehat B,\widehat B)\)。
+\(\widehat B=\widehat B^\dagger_{H_c,u}\ne\varnothing\), \(W=\Pref(\pi_2\widehat B)\), and \(Z\) verifies both at \(\mathsf{src}_c\).
+% \(\widehat B=\widehat B^\dagger_{H_c,u}\ne\varnothing\)、\(W=\Pref(\pi_2\widehat B)\)，且 \(Z\) 在 \(\mathsf{src}_c\) 处验证二者。
 \item \emph{Execution coherence.}
 % 执行一致性。
-\((H.G,H.T)=\mathsf{HRes}((H_c^+.G,H_c^+.T),r)\), \(H.\chi=H_c^+.\chi\,r\), \(\mathsf{lab}(\Delta)=\mathsf{lab}(\Delta_c)\mathsf{auth}(r)\), and each occurrence in \(r\) appears once in \(\chi\).
-% \((H.G,H.T)=\mathsf{HRes}((H_c^+.G,H_c^+.T),r)\)，\(H.\chi=H_c^+.\chi\,r\)，\(\mathsf{lab}(\Delta)=\mathsf{lab}(\Delta_c)\mathsf{auth}(r)\)，且 \(r\) 中每个发生项都在 \(\chi\) 中出现一次。
-Each \Fresh has its unique receipt and ordered dispatch-queue entry, each \Alias names an earlier receipt, receipt phases and releases advance only monotonically, and \(K\) differs from \(H_c^+.K\) only by authenticated \(\mathsf{Save}\) extensions.
-% 每个 \Fresh 都有其唯一回执和有序派发队列条目，每个 \Alias 都指明更早的回执，回执阶段和释放仅单调推进，且 \(K\) 与 \(H_c^+.K\) 的差异仅为经认证的 \(\mathsf{Save}\) 扩展。
+\((H.G,H.T)=\mathsf{HRes}((H_c^+.G,H_c^+.T),r)\), \(H.\chi=H_c^+.\chi r\), and receipts, queue entries, return links, and checkpoints match \(r\) and advance only monotonically.
+% \((H.G,H.T)=\mathsf{HRes}((H_c^+.G,H_c^+.T),r)\)、\(H.\chi=H_c^+.\chi r\)，且回执、队列条目、返回链接和检查点都与 \(r\) 一致并仅单调推进。
 \item \emph{Monitor coherence.}
 % 监控器一致性。
-For \(B=\pi_2\widehat B\), checked installation gives \(\mathsf{prog}(\eta)\cong\mathsf{Can}(W,B)\) and makes \(\mathsf q(\eta)\) correspond to canonical derivative \(q_r=(W/r,B/r)\).
-% 对 \(B=\pi_2\widehat B\)，经检查的安装给出 \(\mathsf{prog}(\eta)\cong\mathsf{Can}(W,B)\)，并使 \(\mathsf q(\eta)\) 对应规范导数 \(q_r=(W/r,B/r)\)。
+\(\mathsf{prog}(\eta)\cong\mathsf{Can}(W,\pi_2\widehat B)\), and \(\mathsf q(\eta)\) is its derivative after \(r\).
+% \(\mathsf{prog}(\eta)\cong\mathsf{Can}(W,\pi_2\widehat B)\)，且 \(\mathsf q(\eta)\) 是其在 \(r\) 之后的导数。
 \item \emph{Monitor-version coherence.}
 % 监控器版本一致性。
-Only \(\eta\) is active.
-% 仅 \(\eta\) 处于活跃状态。
-Each current occurrence has exactly one authenticated monitor entry and authorization token bound to \(\eta\).
-% 每个当前发生项都具有绑定到 \(\eta\) 的唯一认证监控器入口和授权令牌。
-Inactive monitor versions expose no authorization token.
-% 非活动监控器版本不暴露授权令牌。
-Closed monitor versions never reactivate.
-% 已关闭监控器版本永不重新激活。
-Each target monitor version deterministically minted from the current source snapshot for a registered request is unallocated or inactive and unbound.
-% 根据当前源状态快照为已注册请求确定性生成的每个目标监控器版本都未分配，或处于非活动且未绑定状态。
+Only \(\eta\) is active; it owns exactly one authenticated entry and token for each current occurrence, while inactive or closed versions expose none.
+% 只有 \(\eta\) 处于活动状态；它为每个当前发生项拥有唯一认证入口和令牌，而非活动或已关闭版本不暴露任何令牌。
 \end{enumerate}
 \end{definition}
-The full system starts from one empty initial state, accepts a checked finite registration containing only contracts, schemas, policy, and authenticated identity rows, and then performs root installation to construct empty receipt, cursor, and dispatch-queue state together with the first monitor version, its certificate, and its monitor.
-% 完整系统从唯一的空初始状态开始，接受一个只包含契约、模式、策略和经认证标识行的经检查有限注册，随后执行根安装，以构造空的回执、游标和派发队列状态，以及第一个监控器版本、其证书和监控器。
-Registration cannot supply runtime fields, while every later installed state is produced by an execution-edit derivation or a registered extension.
-% 注册过程不能提供运行时字段，而此后的每个已安装状态都由执行编辑推导或已注册扩展产生。
+The full invariant and every preserving transition are enumerated in \cref{tab:app-event-matrix}.
+% 完整不变量及其每种保持转移均列于 \cref{tab:app-event-matrix}。
 
 \paragraph{Atomic protected call}
 % 原子受控调用
@@ -205,10 +143,8 @@ Its sole durable transition is the rule below.
 \end{gathered}}
 {S\xrightarrow{\Use_x(m)/a}S'} .
 \end{equation}
-The unique structured residual \(T/(x,a)\) removes \(x\) from its leaf contract, selects the containing arm beneath an open choice, and preserves every workflow constructor.
-% 唯一结构化残余 \(T/(x,a)\) 从其叶契约移除 \(x\)，在开放选择下选中包含 \(x\) 的分支，并保留每个工作流构造器。
-The paired update \(\mathsf{HStep}((G,T),a)\) also appends \(a\) to the unique current branch cursor.
-% 成对更新 \(\mathsf{HStep}((G,T),a)\) 还会把 \(a\) 追加到唯一的当前分支游标。
+The paired update \(\mathsf{HStep}((G,T),a)\) removes \(x\), records any choice, preserves the other workflow constructors, and appends \(a\) to its branch cursor.
+% 成对更新 \(\mathsf{HStep}((G,T),a)\) 移除 \(x\)、记录任何选择、保留其他工作流构造器，并将 \(a\) 追加到其分支游标。
 \(\mathsf{Advance}(S,x,a,q')\) changes exactly the fields below.
 % \(\mathsf{Advance}(S,x,a,q')\) 仅修改下列字段。
 \[
@@ -225,35 +161,25 @@ In addition, \Fresh appends the immutable labeled receipt and ordered dispatch-q
 \Alias records the effect identity's durable return link without changing \(\Delta\), and all other fields remain unchanged.
 % \Alias 记录该效果标识的持久返回链接且不改变 \(\Delta\)，其余字段保持不变。
 
-An already-resolved \(x\) is a \Retry exactly when \(\mathsf{VerifyRetry}(h,x,j,d,m^\circ,\chi,\Delta)\) authenticates the same normalized tool request through the archived \(\chi\)-to-receipt link.
-% 已解析的 \(x\) 当且仅当 \(\mathsf{VerifyRetry}(h,x,j,d,m^\circ,\chi,\Delta)\) 通过归档的从 \(\chi\) 到回执链接认证同一规范化工具请求时才构成 \Retry。
-If the linked return record contains stable value \(v\) under its authenticated reply token \(t\), success is the state-preserving observable transition \(S\xrightarrow{\mathsf{Return}(t,[v]_{\cong})}S\).
-% 若所链接的返回记录在其认证回复令牌 \(t\) 下包含稳定值 \(v\)，则成功是保持状态的可观测转移 \(S\xrightarrow{\mathsf{Return}(t,[v]_{\cong})}S\)。
+An authenticated \Retry follows the archived \(\chi\)-to-receipt link for the same normalized request and returns any stable value without changing state.
+% 经认证的 \Retry 沿同一规范化请求的归档 \(\chi\)-到-回执链接执行，并在不改变状态的情况下返回任何稳定值。
 For unresolved \(x\), \cref{eq:use-rule} applies exactly when all premises hold, while a missing transition, invalid authorization token, unbound occurrence, disabled branch, or closed monitor version returns \(\mathsf{deny}(x)\) without changing state.
 % 对未解析的 \(x\)，当且仅当全部前提成立时才应用 \cref{eq:use-rule}，而缺失转移、无效授权令牌、未绑定发生项、禁用分支或已关闭监控器版本都会返回 \(\mathsf{deny}(x)\) 且不改变状态。
-\Dispatch releases exactly the stored normalized tool request in the oldest dispatch-queue item.
-% \Dispatch 恰好释放最早派发队列条目中存储的规范化工具请求。
-Settlement preserves \(\mathsf{AgentSec}\) and its permission trace, and crash is a state self-loop.
-% 结算保持 \(\mathsf{AgentSec}\) 及其权限轨迹，而崩溃是状态自环。
-Here \(\Dispatch\) is the durable local release of a queued request, not evidence of exactly-once execution by a remote service.
-% 此处的 \(\Dispatch\) 是排队请求的持久本地释放，而不是远程服务恰好执行一次的证据。
+\Dispatch durably releases the oldest queued request, settlement fills its return record, and neither implies exactly-once execution by a remote service.
+% \Dispatch 持久释放最早排队请求，结算填充其返回记录，而二者都不意味着远程服务恰好执行一次。
 
 \subsubsection{Answer verification and atomic installation}
 % 答案验证与原子安装
 At its linearization point, the kernel ignores any caller-supplied replacement workflow or monitor version, sets \(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), and re-runs \(\mathsf{Derive}(\Theta_S(u))\) from the current state.
 % 在其线性化点，内核忽略调用方提供的任何替代工作流或监控器版本，令 \(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并根据当前状态重新执行 \(\mathsf{Derive}(\Theta_S(u))\)。
-\(\mathsf{VerifyInv}\) accepts exactly a current \(\gamma\), an undefined derivation, and a verified invalid-edit transcript.
-% \(\mathsf{VerifyInv}\) 恰好接受当前 \(\gamma\)、未定义推导和经验证无效编辑记录。
-In contrast, \(\mathsf{VerifyRej}\) accepts exactly a current \(\gamma\), a defined derivation, an empty fixed point, and a ranked rejection certificate.
-% 相比之下，\(\mathsf{VerifyRej}\) 恰好接受当前 \(\gamma\)、已定义推导、空不动点和带秩拒绝证书。
-Both read-only transactions preserve state and emit the corresponding \(\mathsf{Invalid}\) or \(\mathsf{Reject}\) label.
-% \(\mathsf{VerifyInv}\) 恰好接受当前 \(\gamma\)、未定义推导与规范检查失败记录，而 \(\mathsf{VerifyRej}\) 恰好接受当前 \(\gamma\)、已定义推导、空不动点与规范淘汰链；它们的只读事务发出相应的 \(\mathsf{Invalid}\) 或 \(\mathsf{Reject}\) 标签并保持状态。
+It returns state-preserving \(\mathsf{Invalid}\) exactly for a verified undefined derivation and \(\mathsf{Reject}\) exactly for a verified empty fixed point.
+% 它恰在验证到未定义推导时返回保持状态的 \(\mathsf{Invalid}\)，并恰在验证到空不动点时返回保持状态的 \(\mathsf{Reject}\)。
 For the positive case, write \(\mathsf{Derive}(\Theta_S(u))=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
 % 对于正面情形，记 \(\mathsf{Derive}(\Theta_S(u))=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
 \(\mathsf{ReCut}(S,u,Z)\) is undefined without this root, execution-edit, or registered-extension derivation and otherwise recomputes the right-hand side of \cref{eq:cut-seal}.
 % 若无这一根推导、执行编辑推导或已注册扩展推导，则 \(\mathsf{ReCut}(S,u,Z)\) 未定义；否则，它重新计算 \cref{eq:cut-seal} 的右侧。
-\(\mathsf{Verify}_Z(W,B,\widehat B)\) holds exactly when the trusted checker (1) recomputes \(\widehat B_0\) and every fixed-point iteration, (2) verifies all ranked removal causes and surviving coverage witnesses, (3) checks the stabilized \(\widehat B\ne\varnothing\), (4) reconstructs \(B=\pi_2\widehat B\) and \(W=\Pref(B)\), (5) establishes \(\mathsf{prog}_Z\cong\mathsf{Can}(W,B)\), and (6) verifies the program seal.
-% 当且仅当可信检查器执行以下操作时，\(\mathsf{Verify}_Z(W,B,\widehat B)\) 成立：(1) 重新计算 \(\widehat B_0\) 及每次不动点迭代；(2) 验证全部带秩的移除原因和幸存覆盖见证；(3) 检查稳定后的 \(\widehat B\ne\varnothing\)；(4) 重建 \(B=\pi_2\widehat B\) 与 \(W=\Pref(B)\)；(5) 建立 \(\mathsf{prog}_Z\cong\mathsf{Can}(W,B)\)；以及 (6) 验证程序封印。
+\(\mathsf{Verify}_Z\) recomputes the entire fixed point, its witnesses, \((W,B)\), the canonical monitor, and both seals.
+% \(\mathsf{Verify}_Z\) 重新计算完整不动点及其见证、\((W,B)\)、规范监控器和两个封印。
 Installation requires
 % 安装要求
 \begin{equation}
@@ -269,8 +195,8 @@ Installation requires
 \end{equation}
 \(\mathsf{Ready}(S,u,Y)\) holds when \(Y=\mathsf{Installable}(\delta,W^\dagger,\widehat B^\dagger,Z)\), the current derivation is \(\delta\), and all state-dependent premises of \cref{eq:install-premise} hold in \(S\).
 % 当 \(Y=\mathsf{Installable}(\delta,W^\dagger,\widehat B^\dagger,Z)\)、当前推导为 \(\delta\) 且 \cref{eq:install-premise} 的全部状态相关前提在 \(S\) 中成立时，\(\mathsf{Ready}(S,u,Y)\) 成立。
-If these premises hold, one domain transaction verifies that every target binding in \(H_u\) names a new monitor entry owned by \(\eta^+\) and every replacement triple in \(\mathcal H_u^+\) passes the authorization-token check against \(\rho_u\) and its registered effect identity.
-% 若这些前提成立，一个域事务便验证 \(H_u\) 中的每个目标绑定均指向由 \(\eta^+\) 拥有的新监控器入口，并验证 \(\mathcal H_u^+\) 中的每个替换三元组均依据 \(\rho_u\) 及其注册效果标识通过授权令牌检查。
+If these premises hold, one domain transaction verifies every target entry and authorization token.
+% 若这些前提成立，一个域事务便验证每个目标入口和授权令牌。
 Let \(c^+=(\mathsf{src}(\Theta_S(u)),H_u,u,W^\dagger,\widehat B^\dagger,Z)\).
 % 令 \(c^+=(\mathsf{src}(\Theta_S(u)),H_u,u,W^\dagger,\widehat B^\dagger,Z)\)。
 It then applies
@@ -287,35 +213,15 @@ It then applies
  \mathsf{cert}(\eta^+)&:=c^+.
 \end{aligned}
 \]
-The transaction preserves unrelated inactive or closed records, exposes \(\mathcal H_u^+\) only after \(\eta^+\) becomes active, and lets recovery retrieve a lost reply from the durable target registry.
-% 该事务保留无关的非活跃或已关闭记录，仅在 \(\eta^+\) 激活后公开 \(\mathcal H_u^+\)，并让恢复过程从持久目标注册表取回丢失的回复。
-Old authorization tokens for unresolved occurrences fail the refreshed registry and monitor-entry check, whereas same-invocation \Retry follows its archived \(\chi\)-to-receipt link.
-% 未解析发生项的旧授权令牌无法通过更新后的注册表与监控器入口检查，而同调用 \Retry 沿其已归档的从 \(\chi\) 到回执链接。
-Success is observed as \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\), returning the schema-determined authorization tokens up to consistent renaming of private identifiers.
-% 成功被观测为 \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\)，并在私有标识一致重命名的意义下返回由模式决定的授权令牌。
-A stale or malformed precomputed candidate emits no answer, is discarded as an internal stutter, and must be recomputed against the current source snapshot before any visible response.
-% 过期或畸形的预计算候选不会发出答案，而是作为内部停顿被丢弃，并且必须针对当前源状态快照重新计算后才能产生任何可见响应。
+Only after activation does the transaction expose \(\mathcal H_u^+\) and emit \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\); old tokens then fail, while \Retry still follows its archived receipt link.
+% 只有激活之后，事务才暴露 \(\mathcal H_u^+\) 并发出 \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\)；此后旧令牌失效，而 \Retry 仍沿其归档回执链接执行。
+A stale candidate emits no answer and must be recomputed from the current source snapshot.
+% 过期候选不会发出答案，必须根据当前源状态快照重新计算。
 
-\subsubsection{Auxiliary Kernel Transitions}
-% 其余规则
-\(\mathsf{Preload}(\eta,Z)\) is a \(\tau\)-step that may allocate an unallocated monitor version or change an inactive, unbound one, and it leaves that version inactive.
-% \(\mathsf{Preload}(\eta,Z)\) 是一个 \(\tau\) 步，它可以分配尚未分配的监控器版本或改变处于非活动且未绑定的版本，并使该版本保持非活动。
-A stale or malformed candidate attempt is a state-preserving \(\tau\)-step.
-% 过期或畸形的候选尝试是保持状态的 \(\tau\) 步。
-\(\mathsf{Save}\) takes the trusted checkpoint transition in \cref{sec:model}.
-% \(\mathsf{Save}\) 执行 \cref{sec:model} 中的可信检查点转移。
-Authenticated retry, authorization-token retrieval, and return delivery emit \(\mathsf{Return}(t,[v]_{\cong})\) without changing the security state.
-% 经认证的重试、授权令牌取回和返回交付发出 \(\mathsf{Return}(t,[v]_{\cong})\)，且不改变安全状态。
-Settlement emits \(\mathsf{Settle}(d,[v]_{\cong})\) and fills the corresponding durable return record.
-% 结算发出 \(\mathsf{Settle}(d,[v]_{\cong})\) 并填充相应的持久返回记录。
-Crash is a security-state self-loop.
-% 崩溃是安全状态自环。
-\(\Dispatch(d)\) is enabled only for the head of the dispatch queue and marks exactly that entry released.
-% \(\Dispatch(d)\) 仅对派发队列头部启用，并且仅将该条目标记为已释放。
-The compiled LTS is the least relation generated by \cref{eq:use-rule} and the visible \(\mathsf{Invalid}/\mathsf{Reject}/\mathsf{Edge}\), denial, preload, Save, retry/retrieval/delivery, \(\Dispatch\), settlement, stale-candidate, and crash rules above.
-% 编译后 LTS 是由 \cref{eq:use-rule} 与上述可见 \(\mathsf{Invalid}/\mathsf{Reject}/\mathsf{Edge}\)、使用拒绝、预加载、Save、重试/取回/交付、\(\Dispatch\)、结算、过期候选与崩溃规则生成的最小关系。
-Pure \(\mathsf{Compile}\) is meta-level.
-% 纯 \(\mathsf{Compile}\) 位于元层。
+\subsubsection{Other transitions}
+% 其他转移
+Preload, Save, retry, token retrieval, return delivery, \(\Dispatch\), settlement, stale candidates, and crash have exactly the state changes listed in \cref{tab:app-event-matrix}; pure \(\mathsf{Compile}\) is outside the LTS.
+% 预加载、Save、重试、令牌取回、返回交付、\(\Dispatch\)、结算、过期候选与崩溃恰具有 \cref{tab:app-event-matrix} 所列的状态变更；纯 \(\mathsf{Compile}\) 位于 LTS 之外。
 
 \begin{lemma}[Edit--call serialization]
 % 编辑--调用串行化

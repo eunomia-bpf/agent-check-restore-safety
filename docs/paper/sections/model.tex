@@ -325,25 +325,10 @@ From these inputs and an identifier-only Agent request, the controller derives t
 The Agent may supply or weaken none of these derived objects.
 % Agent 不得提供或弱化这些派生对象中的任何一个。
 
-\begin{definition}[Checked registration refinement]
-% 经检查的注册精化
-\label{def:registration-refinement}
-A boundary-finite typed Agent workflow \(\mathcal W\) is a finite-state outcome-labeled LTS whose complete paths end at outcome terminals and whose \(\tau\)-erased durable-site projections \(\partial e=(o,s_1\cdots s_n)\) form finitely many classes under equality \(\equiv_\partial\).
-% 边界有限的类型化 Agent 工作流 \(\mathcal W\) 是一个带结果标签的有限状态 LTS；其完整路径终止于结果终点，并且经 \(\tau\) 擦除的持久位置投影 \(\partial e=(o,s_1\cdots s_n)\) 在相等关系 \(\equiv_\partial\) 下形成有限多个等价类。
-\(\mathsf{CheckReg}\) decides this by rejecting any reachable and terminal-co-reachable strongly connected component containing a durable-site edge while permitting erased \(\tau\)-cycles, then enumerates the finite classes.
-% \(\mathsf{CheckReg}\) 通过拒绝任何既可达、又可到达终止点且包含持久位置边的强连通分量，同时允许被擦除的 \(\tau\) 环，来判定该性质，随后枚举有限等价类。
-\(R\) stores a candidate registration map \(\lambda\), and \(\mathsf{BRuns}(R)\) is the finite outcome-indexed language obtained by linearizing its registered root pomsets and labeling each occurrence by its protected \Use.
-% \(R\) 存储候选注册映射 \(\lambda\)，而 \(\mathsf{BRuns}(R)\) 是通过线性化其已注册根偏序事件集，并以受保护 \Use 标记每个发生项而得到的有限结果索引语言。
-\(\mathcal W\sqsubseteq_\lambda R\) means that \(\lambda\) induces a bijection from boundary classes to \(\mathsf{BRuns}(R)\) that preserves outcomes, incidence, and order.
-% \(\mathcal W\sqsubseteq_\lambda R\) 表示 \(\lambda\) 从边界等价类到 \(\mathsf{BRuns}(R)\) 诱导一个保持结果、关联与次序的双射。
-The finite checker also requires effect identities to be exactly the equivalence classes of normalized requests.
-% 有限检查器还要求效果标识恰好对应规范化请求的等价类。
-The registration map must be total, unique, and free of raw instructions, and receipt evolution must commute with \(\Resolve\) without dropping a required outcome, call site, or receipt.
-% 注册映射必须全定义、唯一且不包含原始指令，并且回执演化必须与 \(\Resolve\) 交换而不丢弃要求实现的结果、调用位置或回执。
-\end{definition}
-
-\Cref{thm:exact-history} proves checker reflection and a source-boundary/registered-realization bijection.
-% \Cref{thm:exact-history} 证明检查器反射以及源边界与注册实现之间的双射。
+\(\mathsf{CheckReg}\) accepts a finite registered call model only when it faithfully represents the outcome, order, effect identity, and receipt behavior of a boundary-finite typed Agent workflow.
+% 仅当有限的已注册调用模型忠实表示一个边界有限的类型化 Agent 工作流的结果、次序、效果标识与回执行为时，\(\mathsf{CheckReg}\) 才会接受它。
+\Cref{def:registration-refinement,thm:exact-history} give the exact check and prove a bijection between source executions at protected-call boundaries and registered executions.
+% \Cref{def:registration-refinement,thm:exact-history} 给出精确检查，并证明受控调用边界处的源执行与已注册执行之间存在双射。
 The theory neither infers natural-language contracts nor equates local commit with remote physical exactly-once execution, which additionally requires an idempotent or queryable sink.
 % 该理论既不推断自然语言契约，也不把本地提交等同于远端物理恰好一次执行；后者还要求接收端具有幂等性或可查询性。
 

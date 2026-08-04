@@ -33,10 +33,13 @@ States are compared up to consistent renaming of private identifiers.
 For an information map \(f\), define
 % 对于信息映射 \(f\)，定义
 \[
-\mathsf{Exact}(f)\Longleftrightarrow
-\exists D_f.\ \forall(V,q)\in\mathcal Q_{\rm sec}.\quad
-D_f(\langle f(V),q\rangle_{\cong})
+\begin{aligned}
+\mathsf{Exact}(f)
+&\Longleftrightarrow
+\exists D_f.\ \forall(V,q)\in\mathcal Q_{\rm sec},\\[-2pt]
+&\qquad D_f(\langle f(V),q\rangle_{\cong})
 =[\mathsf{Ans}(V,q)]_{\cong}.
+\end{aligned}
 \]
 Thus \(f\) is exact when some decoder can reproduce every correct answer from the retained information.
 % 因此，如果某个解码器能从保留的信息中复现每个正确答案，则 \(f\) 是精确的。
@@ -56,9 +59,9 @@ The main theorem uses the following compact condition from \cref{app:spc}:
 \[
 \begin{aligned}
 \mathsf{Preserve}(H,u,\widehat B)
-\Longleftrightarrow
-\forall a\in\mathsf{Req}_u.\ \exists t\in O_{H,u},b.\quad
-\mathsf{Lift}_u(t,a)\land(t,b)\in\widehat B .
+&\Longleftrightarrow
+\forall a\in\mathsf{Req}_u.\ \exists t\in O_{H,u},b,\\[-2pt]
+&\qquad \mathsf{Lift}_u(t,a)\land(t,b)\in\widehat B .
 \end{aligned}
 \]
 It says that every required source outcome appears in some accepted target outcome.
