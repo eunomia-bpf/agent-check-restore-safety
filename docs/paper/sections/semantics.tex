@@ -156,6 +156,8 @@ Otherwise,
 % \(\mathsf{Admit}(H,u)\) 固定 \(\Theta\) 与两个注册表。
 At \(z=\epsilon\), nonemptiness covers every outcome, while the existential chooses a linearization without fairness and the universal prefix condition prevents stranding.
 % 在 \(z=\epsilon\) 处，非空性覆盖每个结果，而存在量词在不要求公平性的情况下选择线性化，全称前缀条件则防止结果陷入无后续状态。
+Here \(\mathsf{SPC}\) is the source-lift coverage relation formalized in \cref{app:spc}.
+% 此处 \(\mathsf{SPC}\) 是 \cref{app:spc} 中形式化的源提升覆盖关系。
 
 \begin{definition}[Indexed realization]
 % 带索引实现
@@ -165,8 +167,8 @@ A generated language and indexed marked family \((L,\widehat B)\) realize \((H,u
 \begin{enumerate}[leftmargin=*,itemsep=1pt]
  \item \(\widehat B\ne\varnothing\);
 % \(\widehat B\) 非空；
- \item \emph{history fidelity:} \(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\) and \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\);
-% 历史忠实性：\(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\)，且 \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\)。
+ \item \emph{source/target fidelity:} \(\mathsf{SPC}(H,u,\widehat B)\), \(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\), and \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\);
+% 源/目标忠实性：\(\mathsf{SPC}(H,u,\widehat B)\)、\(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\)，且 \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\)。
  \item \emph{policy safety:} \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A_u\) for every \(z\in L\);
 % 策略安全性：对每个 \(z\in L\)，均有 \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A_u\)。
  \item \emph{completion nonblocking:} \(L=\Pref(\pi_2\widehat B)\); and
@@ -189,8 +191,8 @@ Fidelity, completion nonblocking, and safety place any realization's indexed mar
 % 忠实性、完成非阻塞性和安全性使任意实现的带索引标记族包含于 \(\widehat B_0\)。
 Persistent coverage makes it post-fixed, so monotonicity and finite Knaster--Tarski place it inside \(\widehat B^\dagger\), and projected prefixes give \(L\subseteq W^\dagger\).
 % 持续覆盖使其成为后不动点，因此由单调性和有限 Knaster--Tarski 可知其包含于 \(\widehat B^\dagger\)，而投影前缀给出 \(L\subseteq W^\dagger\)。
-Conversely, \(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) supplies persistent coverage, \(\widehat B^\dagger\subseteq\widehat B_0\) supplies fidelity and safe marked words, prefix closure of \(\mathcal A_u\) supplies prefix safety, and \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) supplies nonblocking.
-% 反之，\(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) 提供持续覆盖，\(\widehat B^\dagger\subseteq\widehat B_0\) 提供忠实性和安全标记词，\(\mathcal A_u\) 的前缀闭合性提供前缀安全性，而 \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) 提供非阻塞性。
+Conversely, \(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) supplies persistent coverage, which with checked lifts yields \(\mathsf{SPC}\) at \(\epsilon\); \(\widehat B^\dagger\subseteq\widehat B_0\) supplies target fidelity and safe marked words, prefix closure of \(\mathcal A_u\) supplies prefix safety, and \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) supplies nonblocking.
+% 反之，\(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) 提供持续覆盖，它与经检查的提升共同在 \(\epsilon\) 处建立 \(\mathsf{SPC}\)；\(\widehat B^\dagger\subseteq\widehat B_0\) 提供目标忠实性和安全标记词，\(\mathcal A_u\) 的前缀闭合性提供前缀安全性，而 \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) 提供非阻塞性。
 Hence the fixed point is a realization exactly when nonempty.
 % 因此，该不动点恰在非空时构成实现。
 \end{proof}

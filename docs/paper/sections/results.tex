@@ -36,8 +36,8 @@ Under \cref{sec:model}'s boundary, clause 1 holds for every finite-state \(\math
 % 精确编译。
 For \(\Theta=\Theta_S(u)\), both machines share one cut-bound trichotomy: undefined derivation gives verified state-preserving \(\mathsf{Invalid}\); a unique \(\delta\) with \(\widehat B^\dagger_\delta=\varnothing\) gives verified state-preserving \(\mathsf{Reject}\) and no exact realization; otherwise let \(Y=\mathsf{Compile}(\Theta)\) and \(c_\delta^+\) be the checked record.
 % 对于 \(\Theta=\Theta_S(u)\)，两台机器共享一种绑定切点的三分判定：未定义推导给出经验证且保持状态的 \(\mathsf{Invalid}\)；唯一 \(\delta\) 满足 \(\widehat B^\dagger_\delta=\varnothing\) 时给出经验证且保持状态的 \(\mathsf{Reject}\)，且不存在精确实现；否则令 \(Y=\mathsf{Compile}(\Theta)\)，并令 \(c_\delta^+\) 为经检查记录。
-In the positive case, \(\widehat B^\dagger_\delta\ne\varnothing\), existence of an exact realization, \(\mathsf{Ready}(S,u,Y)\), and an \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\) successor satisfying \(\mathsf{AgentSec}(S^+;c_\delta^+,\epsilon)\) are equivalent; the witness is greatest and its monitor canonical.
-% 在正面情形中，\(\widehat B^\dagger_\delta\ne\varnothing\)、精确实现存在、\(\mathsf{Ready}(S,u,Y)\) 以及存在满足 \(\mathsf{AgentSec}(S^+;c_\delta^+,\epsilon)\) 的 \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\) 后继彼此等价；该见证最大，且其监控器规范。
+In the positive case, \(\widehat B^\dagger_\delta\ne\varnothing\), existence of an exact realization, \(\mathsf{Ready}(S,u,Y)\), and an \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\) successor satisfying \(\mathsf{AgentSec}(S^+;c_\delta^+,\epsilon)\) are equivalent; the greatest witness and canonical monitor satisfy \(\mathsf{SPC}\), while the edge retains \(\mathsf{Done}_{H,u}\)'s evidence and records \(\mathsf{Dec}_{H,u}\).
+% 在正面情形中，\(\widehat B^\dagger_\delta\ne\varnothing\)、精确实现存在、\(\mathsf{Ready}(S,u,Y)\) 以及存在满足 \(\mathsf{AgentSec}(S^+;c_\delta^+,\epsilon)\) 的 \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\) 后继彼此等价；最大见证与规范监控器满足 \(\mathsf{SPC}\)，而该边保留 \(\mathsf{Done}_{H,u}\) 的证据并记录 \(\mathsf{Dec}_{H,u}\)。
 The three verdict classes are mutually exclusive and exhaustive at the same decision cut.
 % 三类判定在同一决策切点上互斥且穷尽。
 
@@ -66,6 +66,6 @@ Disjoint domains compose asynchronously.
 
 \begin{proof}[Proof sketch]
 % 证明概要。
-Finite-checker reflection, fixed-point and event induction, and opposite-answer pairs prove the clauses; the appendix gives all witnesses and the durable simulation.
-% 有限检查器反射、不动点与事件归纳以及答案相反配对证明这些条款；附录给出全部见证与持久模拟。
+Schema conservation, finite-checker reflection, fixed-point and event induction, and opposite-answer pairs prove the clauses; the appendix gives all witnesses and the durable simulation.
+% 模式守恒、有限检查器反射、不动点与事件归纳以及答案相反配对证明这些条款；附录给出全部见证与持久模拟。
 \end{proof}

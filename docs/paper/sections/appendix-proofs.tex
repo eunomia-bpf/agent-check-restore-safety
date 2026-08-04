@@ -17,6 +17,22 @@ Fix a well-formed admission instance \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mat
 % 固定一个良构的准入实例 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，其历史判定派生出 \(\delta=(H^+,\mathcal C,\eta^-,\eta^+)\)。
 All sets in this subsection are indexed sets, so two equal resolved words belonging to different outcomes remain different elements.
 % 本小节中的所有集合都是带索引集合，因此属于不同结果的两个相同已解析词仍是不同元素。
+\begin{definition}[Source-promise coverage]
+% 源承诺覆盖
+\label{app:spc}
+\[
+\begin{aligned}
+\mathsf{SPC}(H,u,\widehat B)
+&\Longleftrightarrow
+\forall a\in\mathsf{Req}_u.\ \exists t\in O_{H,u},b.\\[-2pt]
+&\hspace{32mm}\mathsf{Lift}_u(t,a)\land(t,b)\in\widehat B .
+\end{aligned}
+\]
+Here \(\mathsf{Dec}_{H,u}\) is the typed losing-arm outcomes for \(\mathsf{MergeSelect}\), or the current-role outcomes of a pending certified \(\mathsf{RestoreReplace}\); \(\mathsf{Done}_{H,u}\) is the completed current role of \(\mathsf{RestoreReplace}\); both are empty for every other row and for live extension.
+% 此处 \(\mathsf{Dec}_{H,u}\) 是 \(\mathsf{MergeSelect}\) 的类型化失败分支结果，或待处理且经认证的 \(\mathsf{RestoreReplace}\) 的当前角色结果；\(\mathsf{Done}_{H,u}\) 是 \(\mathsf{RestoreReplace}\) 已完成的当前角色；对于其余各行与在线扩展，二者均为空。
+Thus \(\mathsf{Req}_u=\mathsf{SrcProm}(H,u)\setminus(\mathsf{Done}_{H,u}\uplus\mathsf{Dec}_{H,u})\), so \(\mathsf{SPC}\) covers exactly the promises neither already discharged nor explicitly declassified.
+% 因此 \(\mathsf{Req}_u=\mathsf{SrcProm}(H,u)\setminus(\mathsf{Done}_{H,u}\uplus\mathsf{Dec}_{H,u})\)，所以 \(\mathsf{SPC}\) 恰好覆盖既未履行也未被显式解除的承诺。
+\end{definition}
 Let \(\mathfrak R_\Theta\) be the finite set of indexed realizations from \cref{def:realization}, ordered componentwise by
 % 令 \(\mathfrak R_\Theta\) 为 \cref{def:realization} 中有限的带索引实现集合，并按如下分量关系排序：
 \[
@@ -54,8 +70,8 @@ Taking projected prefixes yields \(L\subseteq W^\dagger\).
 
 Conversely, suppose \(\widehat B^\dagger\ne\varnothing\).
 % 反之，假设 \(\widehat B^\dagger\ne\varnothing\)。
-The fixed-point equality supplies persistent coverage, inclusion in \(\widehat B_0\) supplies fidelity and safe completed words, prefix closure of \(\mathcal A\) supplies safety for every generated prefix, and \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) supplies completion nonblocking.
-% 不动点等式提供持续覆盖，包含于 \(\widehat B_0\) 提供忠实性与安全完成词，\(\mathcal A\) 的前缀闭包为每个生成前缀提供安全性，而 \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) 提供完成非阻塞性。
+The fixed-point equality supplies persistent coverage and, at \(\epsilon\), composes with checked lifts to establish \(\mathsf{SPC}\); inclusion in \(\widehat B_0\) supplies target fidelity and safe completed words, prefix closure of \(\mathcal A\) supplies safety for every generated prefix, and \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) supplies completion nonblocking.
+% 不动点等式提供持续覆盖，并在 \(\epsilon\) 处与经检查的提升组合以建立 \(\mathsf{SPC}\)；包含于 \(\widehat B_0\) 提供目标忠实性与安全完成词，\(\mathcal A\) 的前缀闭包为每个生成前缀提供安全性，而 \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) 提供完成非阻塞性。
 Hence \((W^\dagger,\widehat B^\dagger)\in\mathfrak R_\Theta\), and the preceding containment makes it greatest.
 % 因此 \((W^\dagger,\widehat B^\dagger)\in\mathfrak R_\Theta\)，并且前述包含关系使其成为最大元素。
 If two greatest elements existed, each would contain the other componentwise, so they would be equal.
@@ -267,7 +283,7 @@ Erased & Full-view pair & Exact answers\\
 \(\mathbf P\) &
 \(q_{\mathbf P}=\mathsf{MergeSelect}(g,L,\sigma)\);
 \(T^0=x\oplus_g^{\rm open}y\), \(T^1=x\parallel_g y\); otherwise equal. &
-\(V^0\): realize; \(V^1\): reject mode.\\
+\(V^0\): realize; \(V^1\): \(\mathsf{Invalid}\) (wrong mode).\\
 \(\mathbf I\) &
 \(q_{\mathbf I}=\mathsf{RestoreLive}(b_L,k,\sigma_{\mathbf I})\) after safe empty-root/ForkChoice/Save;
 \(\Delta=\epsilon,\mathcal A=\Pref\{a\}\);
@@ -277,9 +293,15 @@ Erased & Full-view pair & Exact answers\\
 \(X\parallel Y_k\): one \Fresh admit;
 two \Fresh reject \(aa\).\\
 \(\mathbf E\) &
-\(q_{\mathbf E}=u_R(x)\) after safe empty-root/ForkChoice/Save/\Fresh;
+\(q_{\mathbf E}=\mathsf{TryInstall}(u_R(x),Y_0)\);
+\(Y_0\) is compiled at \(V^0\) after safe empty-root/ForkChoice/Save/\Fresh;
+\(V^0\xrightarrow{\Dispatch(d)}V^1\), changing only the release phase. &
+\(V^0\): install;
+\(V^1\): \(\mathsf{NoCommit}\) (stale cut).\\
+\(\pi_{\neg rc}\) &
+\(q_{\neg rc}=u_R(x)\) after safe empty-root/ForkChoice/Save/\Fresh;
 \(q_{\rm cell}(x)=d\), \(\mathcal A=\Pref\{a\}\);
-same marginals \(\{p\},\{d,e\}\), \(\ell(d)=\ell(e)=a\);
+same marginals \(\{p\},\{d,e\}\);
 \(p\mapsto d\) in \(V^0\), \(p\mapsto e\) in \(V^1\). &
 \(\Alias(x_k,d)\): admit;
 \(\Fresh(x_k,d)\): reject \(aa\).\\
@@ -289,8 +311,8 @@ name supplies agree off the epoch sort, while live epoch, ownership, and depende
 \(V^0\): install; \(V^1\): reject stale cut.\\
 \bottomrule
 \end{tabular}
-\caption{Factor-erasure pairs with isomorphic retained views and opposite exact answers.}
-% 因子擦除对具有同构的保留视图和相反的精确答案。
+\caption{Factor- and incidence-erasure pairs with isomorphic retained views and opposite exact answers.}
+% 因子与关联擦除对具有同构的保留视图和相反的精确答案。
 \label{tab:projection-pairs}
 \end{table}
 
@@ -424,24 +446,29 @@ The left outcome is compatible with \(\epsilon\), so the first \(\widehat\Phi\) 
 Erasing occurrence--cell incidence and its dependent rows makes the retained views isomorphic while preserving equal marginals.
 % 擦除发生项--单元关联及其依赖记录会使保留视图同构，同时保持相等的边际记录。
 
-\paragraph{\(\mathbf E\): receipt--cell incidence}
-% \(\mathbf E\)：回执--单元关联
-Let \(C,X\) be singleton contracts with occurrences \(c,x\), let \(q_{\rm cell}(x)=d\), and label cells \(d,e\) by \(a\).
-% 令 \(C,X\) 为分别具有发生项 \(c,x\) 的单元素契约，令 \(q_{\rm cell}(x)=d\)，并以 \(a\) 标记单元 \(d,e\)。
-From the safe \(\mathbf 1\) root, a common Fork schema installs \(b_L{:}C\oplus_g^{\mathsf{open}}b_R{:}X\), because each outcome again redeems one cell.
-% 从安全的 \(\mathbf 1\) 根出发，公共 Fork 模式安装 \(b_L{:}C\oplus_g^{\mathsf{open}}b_R{:}X\)，因为每个结果仍然只兑付一个单元。
-Save \(b_R\), then use \(c\) to select and complete the left arm and create receipt \(p\).
-% 保存 \(b_R\)，随后使用 \(c\) 选中并完成左侧分支，同时创建回执 \(p\)。
-The views have identical marginals and current authority word \(a\), but the archived creator binds \(p\mapsto d\) in \(V_{\mathbf E}^0\) and \(p\mapsto e\) in \(V_{\mathbf E}^1\).
-% 两个视图具有相同的边际记录与当前权限词 \(a\)，但归档创建者在 \(V_{\mathbf E}^0\) 中绑定 \(p\mapsto d\)，在 \(V_{\mathbf E}^1\) 中绑定 \(p\mapsto e\)。
-Issue \(q_{\mathbf E}=\mathsf{RestoreReplace}(b_L,k,\sigma_{\mathbf E})\).
-% 发出 \(q_{\mathbf E}=\mathsf{RestoreReplace}(b_L,k,\sigma_{\mathbf E})\)。
-The completed current continuation is eligible for retirement.
-% 已完成的当前延续可被退役。
-The cloned \(x_k\) is \(\Alias(x_k,d)\) in \(V_{\mathbf E}^0\), retaining authority word \(a\), but \(\Fresh(x_k,d)\) in \(V_{\mathbf E}^1\), producing forbidden word \(aa\).
-% 克隆的 \(x_k\) 在 \(V_{\mathbf E}^0\) 中为 \(\Alias(x_k,d)\)，从而保持权限词 \(a\)，但在 \(V_{\mathbf E}^1\) 中为 \(\Fresh(x_k,d)\)，从而产生被禁止的权限词 \(aa\)。
-The archived creator path is receipt-only, so deleting \(\mathbf E\), or receipt--cell incidence and every reconstructing path, leaves isomorphic equal marginals under both \(\pi_{\{\mathbf P,\mathbf I,\mathbf C\}}\) and \(\pi_{\neg rc}\).
-% 归档创建者路径仅供回执使用，因此删除 \(\mathbf E\)，或删除回执--单元关联及每条重建路径，会在 \(\pi_{\{\mathbf P,\mathbf I,\mathbf C\}}\) 与 \(\pi_{\neg rc}\) 下留下同构且相等的边际记录。
+\paragraph{\(\mathbf E\): mutable effect progress}
+% \(\mathbf E\)：可变效果进度
+Let \(C,X\) be singleton contracts with occurrences \(c,x\), let \(q_{\rm cell}(c)=q_{\rm cell}(x)=d\), and label \(d\) by \(a\).
+% 令 \(C,X\) 为分别具有发生项 \(c,x\) 的单元素契约，令 \(q_{\rm cell}(c)=q_{\rm cell}(x)=d\)，并以 \(a\) 标记 \(d\)。
+From the safe \(\mathbf 1\) root, a checked Fork installs \(b_L{:}C\oplus_g^{\mathsf{open}}b_R{:}X\); save \(b_R\), then use \(c\) to complete the left arm, create receipt \(p\), and prepare its outbox item.
+% 从安全的 \(\mathbf 1\) 根出发，一次经检查的 Fork 安装 \(b_L{:}C\oplus_g^{\mathsf{open}}b_R{:}X\)；保存 \(b_R\)，再使用 \(c\) 完成左侧分支、创建回执 \(p\) 并准备其发件箱条目。
+At the resulting \(V_{\mathbf E}^0\), compile \(u_{\mathbf E}=\mathsf{RestoreReplace}(b_L,k,\sigma_{\mathbf E})\) to the full package \(Y_0\); its clone of \(x\) aliases \(d\), so \(Y_0\) is installable under \(\mathcal A=\Pref\{a\}\).
+% 在所得 \(V_{\mathbf E}^0\) 处，将 \(u_{\mathbf E}=\mathsf{RestoreReplace}(b_L,k,\sigma_{\mathbf E})\) 编译为完整包 \(Y_0\)；其 \(x\) 的克隆会别名到 \(d\)，所以 \(Y_0\) 在 \(\mathcal A=\Pref\{a\}\) 下可安装。
+Let \(V_{\mathbf E}^0\xrightarrow{\Dispatch(d)}V_{\mathbf E}^1\), which changes only \(\mathbf E\)'s outbox-release phase and preserves \(\mathbf P,\mathbf I,\mathbf C\) literally.
+% 令 \(V_{\mathbf E}^0\xrightarrow{\Dispatch(d)}V_{\mathbf E}^1\)；该步骤仅改变 \(\mathbf E\) 的发件箱释放阶段，并逐字保持 \(\mathbf P,\mathbf I,\mathbf C\)。
+For the common literal \(q_{\mathbf E}=\mathsf{TryInstall}(u_{\mathbf E},Y_0)\), \(V_{\mathbf E}^0\) installs, whereas \(V_{\mathbf E}^1\) returns \(\mathsf{NoCommit}\) because the cut seal binds the outbox phase.
+% 对于共同字面查询 \(q_{\mathbf E}=\mathsf{TryInstall}(u_{\mathbf E},Y_0)\)，\(V_{\mathbf E}^0\) 完成安装，而 \(V_{\mathbf E}^1\) 返回 \(\mathsf{NoCommit}\)，因为切点封印绑定了发件箱阶段。
+
+\paragraph{\(\pi_{\neg rc}\): receipt--cell incidence}
+% \(\pi_{\neg rc}\)：回执--单元关联
+For a separate pair, retain \(q_{\rm cell}(x)=d\) and cells \(d,e\) labeled \(a\), but let the archived creator bind \(p\mapsto d\) in \(V_{\neg rc}^0\) and \(p\mapsto e\) in \(V_{\neg rc}^1\).
+% 对于另一对状态，保持 \(q_{\rm cell}(x)=d\) 以及以 \(a\) 标记的单元 \(d,e\)，但令归档创建者在 \(V_{\neg rc}^0\) 中绑定 \(p\mapsto d\)，在 \(V_{\neg rc}^1\) 中绑定 \(p\mapsto e\)。
+Both states follow the same safe empty-root/ForkChoice/Save/\Fresh shape above, have authority word \(a\), and use the common query \(q_{\neg rc}=\mathsf{RestoreReplace}(b_L,k,\sigma_{\neg rc})\).
+% 两个状态都遵循上述安全的空根/ForkChoice/Save/\Fresh 形状，具有权限词 \(a\)，并使用共同查询 \(q_{\neg rc}=\mathsf{RestoreReplace}(b_L,k,\sigma_{\neg rc})\)。
+The cloned \(x_k\) is \(\Alias(x_k,d)\) in \(V_{\neg rc}^0\), but \(\Fresh(x_k,d)\) produces forbidden word \(aa\) in \(V_{\neg rc}^1\).
+% 克隆的 \(x_k\) 在 \(V_{\neg rc}^0\) 中为 \(\Alias(x_k,d)\)，而在 \(V_{\neg rc}^1\) 中，\(\Fresh(x_k,d)\) 会产生被禁止的权限词 \(aa\)。
+Here the only differing occurrence--cell row belongs to the archived receipt creator; \(\pi_{\neg rc}\) explicitly deletes that reconstructing path together with receipt--cell incidence, leaving isomorphic retained views with equal receipt, occurrence, and cell marginals.
+% 此处唯一不同的发生项--单元记录属于已归档的回执创建者；\(\pi_{\neg rc}\) 会连同回执--单元关联显式删除这条重建路径，从而留下具有相等回执、发生项和单元边际记录的同构保留视图。
 
 \paragraph{\(\mathbf C\): history cut}
 % \(\mathbf C\)：历史切点
@@ -469,8 +496,8 @@ Each pair has \(q\)-isomorphic indicated projections and opposite answer orbits 
 % 每一对都具有关于 \(q\) 同构的指定投影，并对其共同字面查询给出相反的答案轨道。
 Therefore every proper factor projection, \(\pi_{\neg oc}\), and \(\pi_{\neg rc}\) is inexact.
 % 因此，每个真因子投影、\(\pi_{\neg oc}\) 和 \(\pi_{\neg rc}\) 都是不精确的。
-Every exact abstraction must distinguish all four pairs.
-% 每个精确抽象都必须区分全部四对。
+Every exact abstraction must distinguish all displayed pairs.
+% 每个精确抽象都必须区分所有显示的配对。
 \end{proposition}
 
 \begin{proof}
@@ -480,10 +507,10 @@ For the incidence pairs, the empty root completes with \(\epsilon\), and each in
 % 对于关联对，空根以 \(\epsilon\) 完成，并且每个已安装 Fork 分支都具有一条标签为 \(a\) 的单次 \Fresh 完成路径。
 Hence every displayed pre-query state is reachable under \(\Pref\{a\}\).
 % 因此，每个显示的查询前状态在 \(\Pref\{a\}\) 下均可达。
-Open choice enables both Save steps, and the \(\mathbf E\) monitor enables the stated left-arm \Fresh before that arm becomes a completed, still-addressable continuation.
-% 开放选择启用两次 Save，而 \(\mathbf E\) 监控器会在左侧分支成为已完成但仍可寻址的延续之前启用所述左侧分支 \Fresh。
-The displayed one-step schema and resolution calculations give the opposite answers.
-% 所显示的一步模式与解析计算给出相反答案。
+Open choice enables the Save steps, and the installed monitors enable each stated left-arm \Fresh before that arm becomes a completed, still-addressable continuation.
+% 开放选择启用这些 Save 步骤，而已安装监控器会在左侧分支成为已完成但仍可寻址的延续之前启用各个所述左侧分支 \Fresh。
+For the \(\mathbf E\) pair, \Dispatch preserves \(\mathbf P,\mathbf I,\mathbf C\) but changes an outbox phase bound by \(Y_0\)'s cut seal, giving install versus \(\mathsf{NoCommit}\); the displayed schema and resolution calculations give the other opposite answers.
+% 对于 \(\mathbf E\) 配对，\Dispatch 保持 \(\mathbf P,\mathbf I,\mathbf C\)，但改变 \(Y_0\) 的切点封印所绑定的发件箱阶段，从而分别得到安装与 \(\mathsf{NoCommit}\)；所显示的模式与解析计算给出其余相反答案。
 \Cref{lem:app-projection} and the specified private-name bijections, each pointwise fixing the common query support, give \(q\)-relative projection equality.
 % \Cref{lem:app-projection} 与所指定的私有名称双射给出关于 \(q\) 的投影相等性；每个双射都逐点固定共同查询的支撑。
 Any projection omitting at least one factor collapses the corresponding factor pair, while the two incidence erasures collapse their corresponding incidence pairs.

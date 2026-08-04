@@ -46,8 +46,8 @@ Exact Admission for Fork, Restore, and Merge}
 \begin{abstract}
 Tool-using Agents can Fork, Restore, and Merge executions whose irreversible effects do not rewind.
 % 使用工具的 Agent 可以 Fork、Restore 和 Merge 执行，而其中的不可逆效果不会随历史倒转。
-For a checked typed Agent workflow and an authenticated structural edit or live extension, the Agent Security-State Characterization Theorem proves that a policy-safe, history-faithful, completion-nonblocking realization exists exactly when the outcome-indexed completion family derived from Agent history has a nonempty greatest prefix-robust fixed point.
-% 对于一个经检查的类型化 Agent 工作流以及一次经认证的结构编辑或在线扩展，Agent 安全状态刻画定理证明，当且仅当从 Agent 历史推导出的结果索引完成族具有非空的前缀鲁棒最大不动点时，才存在策略安全、历史忠实且完成非阻塞的实现。
+For a checked typed Agent workflow and an authenticated edit or live extension, the Agent Security-State Characterization Theorem proves source-promise conservation and exact realizability: every source obligation is target-lifted, durably discharged, or named by an exact issuer-authenticated retirement set on the history edge; a policy-safe, history-faithful, completion-nonblocking realization exists exactly when the history-derived outcome family has a nonempty greatest prefix-robust fixed point.
+% 对于一个经检查的类型化 Agent 工作流以及一次经认证的编辑或在线扩展，Agent 安全状态刻画定理证明源承诺守恒与精确可实现性：每项源义务都被提升到目标、已经持久履行，或由历史边上的精确且经发行方认证的退役集合明确指名；当且仅当历史派生的结果族具有非空的前缀鲁棒最大不动点时，才存在策略安全、历史忠实且完成非阻塞的实现。
 The same theorem constructs the greatest monitor or a finite impossibility certificate and proves the information distinctions every exact compiler must preserve.
 % 同一定理构造最大监控器或有限不可能性证书，并证明每个精确编译器都必须保留的信息区分。
 It remains closed under arbitrary finite histories of the six edits, protected calls, and additive schema/policy extensions, and it refines the compiled monitor to an ideal atomic Agent-history machine at the modeled durable Agent API.

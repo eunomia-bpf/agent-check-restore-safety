@@ -14,8 +14,8 @@ History editing changes \emph{which past continuations can still produce a futur
 This paper asks the following question.
 % 本文提出以下问题。
 \begin{quote}
-\emph{When does an Agent history rewrite have a policy-safe, history-faithful, completion-nonblocking realization preserving every structurally promised outcome, and how can a reference monitor realize exactly that boundary while effects race the rewrite?}
-% Agent 历史重写何时具有一种策略安全、历史忠实且完成非阻塞的实现，能够保留每个结构性承诺的结果；当效应与重写发生竞态时，参考监控器又如何精确实现这一边界？
+\emph{When does an Agent history rewrite have a policy-safe, history-faithful, completion-nonblocking realization conserving every source promise as target-lifted, durably discharged, or exactly issuer-retired on the history edge, and how can a reference monitor realize that boundary while effects race the rewrite?}
+% Agent 历史重写何时具有一种策略安全、历史忠实且完成非阻塞的实现，使每项源承诺都被提升到目标、已经持久履行，或由发行方在历史边上精确退役；当效应与重写发生竞态时，参考监控器又如何实现该边界？
 \end{quote}
 
 \paragraph{One Restore, end to end}
@@ -66,8 +66,8 @@ For a structural edit, the Agent names only live objects and an immutable schema
 % 对于结构编辑，Agent 仅指名活对象和不可变模式。
 For online growth, it names only an authenticated extension-record identifier.
 % 对于在线增长，它仅指名一个经认证的扩展记录标识符。
-A trusted judgment derives the target and preserves outcomes, occurrences, cells, lineage, and causal order except under schema-authorized retirement.
-% 可信判定推导目标，并保持结果、发生项、单元、谱系和因果顺序，除非模式授权将其退役。
+The trusted derivation enforces this three-way conservation law and preserves cells, lineage, and order; the Agent cannot enlarge the edge-recorded retirement set.
+% 可信推导执行这一三分守恒律并保持单元、谱系和次序；Agent 无法扩大边上记录的退役集合。
 Resolution distinguishes \Fresh commitments from receipt-silent \Alias progress, and each cut replaces the whole policy-domain epoch to order old uses against target activation.
 % 解析区分 \Fresh 承诺与不产生回执的 \Alias 进展，而每个切点都会替换整个策略域纪元，从而确定旧使用与目标激活的次序。
 
@@ -75,7 +75,7 @@ Resolution distinguishes \Fresh commitments from receipt-silent \Alias progress,
 % 贡献
 We contribute one unified Agent History Admission Theory in which a checked typed effect boundary becomes the relational security state used by both exact admission and installation.
 % 我们提出一套统一的 Agent 历史准入理论，其中经检查的类型化效果边界转化为精确准入与安装共同使用的关系安全状态。
-For every \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\), the theorem establishes one equivalence among source-level safe realizability, a nonempty history-derived fixed point, successful installation, and an enabled ideal history edge.
-% 对每个 \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\)，该定理在源级安全可实现性、非空的历史派生不动点、成功安装和已启用的理想历史边之间建立一个统一等价关系。
+For every \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\), the theorem establishes this conservation law and one equivalence among source-level safe realizability, a nonempty history-derived fixed point, successful installation, and an enabled ideal history edge.
+% 对每个 \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\)，该定理建立这一守恒律，并在源级安全可实现性、非空的历史派生不动点、成功安装和已启用的理想历史边之间建立一个统一等价关系。
 Registration reflection, information lower bounds, sequence closure, and weak bisimulation show that the same equivalence is application-grounded, information-tight, stable under Agent evolution, and durably realizable (\cref{sec:model,sec:admission,sec:kernel,sec:results}).
 % 注册反射、信息下界、序列闭包与弱互模拟表明，同一等价关系以应用为基础、在信息上紧致、在 Agent 演化下稳定，并可持久实现（\cref{sec:model,sec:admission,sec:kernel,sec:results}）。

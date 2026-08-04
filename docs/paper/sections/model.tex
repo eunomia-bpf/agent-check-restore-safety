@@ -380,8 +380,10 @@ Such a certificate is a policy-issuer-authenticated immutable record at version 
 % 该证书是版本 \(\zeta\) 下由策略发行方认证的不可变记录，它绑定 \((\omega,\sigma)\)、精确源指纹以及精确的已退役结果索引和发生项谱系，并验证没有其他发生项消失。
 Its certified set must equal the typed losing arm for MergeSelect or the current continuation for RestoreReplace.
 % 对于 MergeSelect，其认证集合必须等于类型化失败分支；对于 RestoreReplace，则必须等于当前延续。
-Discharging that explicitly authorized set is a trusted schema decision, not a theorem that retirement was desirable.
-% 将该显式授权集合视为已履行义务是一项可信模式决策，而不是证明该退役值得执行的定理。
+Independently of \(T'\), let \(\mathsf{SrcProm}(H,u)\) be the row-tagged source outcomes, \(\mathsf{Done}_{H,u}\) those already discharged at the current cursor, and \(\mathsf{Dec}_{H,u}\) the exact issuer-certified pending retirement set.
+% 独立于 \(T'\)，令 \(\mathsf{SrcProm}(H,u)\) 为带行标签的源结果，\(\mathsf{Done}_{H,u}\) 为当前游标处已经履行的结果，并令 \(\mathsf{Dec}_{H,u}\) 为发行方精确认证的待处理退役集合。
+The checker enforces the \emph{source-promise conservation law} \(\mathsf{SrcProm}(H,u)=\mathsf{Req}_u\uplus\mathsf{Done}_{H,u}\uplus\mathsf{Dec}_{H,u}\): lifts preserve cell, lineage, and order; the edge retains discharged evidence and records the declassification set, which the Agent cannot enlarge.
+% 检查器执行\emph{源承诺守恒律} \(\mathsf{SrcProm}(H,u)=\mathsf{Req}_u\uplus\mathsf{Done}_{H,u}\uplus\mathsf{Dec}_{H,u}\)：提升保持单元、谱系和次序；该边保留已履行证据并记录解除集合，而 Agent 无法扩大该集合。
 
 Let \(\mathcal E[-]\) be a one-hole \emph{exposed} frontier context, so its hole has the addressability property above.
 % 令 \(\mathcal E[-]\) 为单孔的\emph{已暴露}前沿上下文，因此其孔具有上述可寻址性质。
@@ -515,8 +517,8 @@ For well-formed \(H\), the judgment in \cref{eq:derived-cut} is deterministic.
 % 对于良构的 \(H\)，\cref{eq:derived-cut} 中的判定是确定性的。
 If it derives \(H'\), then \(H'\) is well formed.
 % 如果它推导出 \(H'\)，则 \(H'\) 是良构的。
-No pending source lineage disappears except through schema-authorized retirement.
-% 除非通过模式授权的退役，否则不会有待处理的源谱系消失。
+It satisfies source-promise conservation: discharged evidence remains durable, and no pending source lineage disappears outside the exact set \(\mathsf{Dec}_{H,u}\).
+% 它满足源承诺守恒：已履行义务的证据保持持久，且任何待处理源谱系都不会在精确集合 \(\mathsf{Dec}_{H,u}\) 之外消失。
 The identity-preserved context and family \(\mathcal P_u\) preserve global occurrence sharing, cell, lineage, and causal order.
 % 由恒等映射保持的上下文和族 \(\mathcal P_u\) 会保持全局发生项共享、单元、谱系和因果次序。
 For every \(a\in\mathsf{Req}_u\), some full target outcome \(t\) satisfies \(\mathsf{Lift}_u(t,a)\), including the identity lift of every bypassing context outcome.
@@ -559,7 +561,8 @@ For fresh \(\eta^+\), refresh every live gate and handle but leave the live fron
    &= (\omega,G,T,K,\Sigma_{\zeta^+},\rho^+,\beta^+,
        \chi,\nu+1,\eta^+),\\
  \mathcal C_\xi&=\sem T,\qquad
- \mathsf{Req}_\xi=O_{\sem T},\qquad
+ \mathsf{SrcProm}(H,\xi)=\mathsf{Req}_\xi=O_{\sem T},\\
+ \mathsf{Done}_{H,\xi}&=\mathsf{Dec}_{H,\xi}=\varnothing,\qquad
  \mathsf{Lift}_\xi(t,o)\Longleftrightarrow t=o .
 \end{aligned}
 \]

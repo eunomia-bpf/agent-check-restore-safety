@@ -2,13 +2,11 @@
 % 相关工作
 \label{sec:related}
 
-Classic output-commit recovery buffers output until its producing state is committable and reconstructs a fixed computation after failure, but does not decide which topology-changing Agent-history edit preserves indexed outcomes and shared effect authority~\cite{strom1985optimistic,elnozahy2002rollback}.
-% 经典输出提交恢复将输出缓冲到其产生状态可提交之后，并在故障后重建固定计算，但不判定哪种改变拓扑的 Agent 历史编辑能够保持带索引结果与共享效果权限~\cite{strom1985optimistic,elnozahy2002rollback}。
+Output-commit recovery delays effects until state commits and reconstructs a fixed computation after failure; it does not admit topology-changing Agent edits under indexed outcomes and shared authority~\cite{strom1985optimistic,elnozahy2002rollback}.
+% 输出提交恢复将效果延迟到状态提交后，并在故障后重建固定计算；它不对带索引结果与共享权限下改变拓扑的 Agent 编辑作准入判定~\cite{strom1985optimistic,elnozahy2002rollback}。
 
-Multitasking/generalized-nonblocking control consumes a supplied plant and markings, while Live Synthesis carries obligations from a supplied old specification and execution; our construction instead derives the control instance from authenticated Agent history~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live}.
-% 多任务/广义非阻塞控制使用给定的被控对象与标记，而 Live Synthesis 从给定旧规范和执行中继承义务；我们的构造则从经认证的 Agent 历史派生控制实例~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live}。
+Generalized-nonblocking and Live Synthesis consume supplied plants/markings or old specifications/executions; ours derives six-edit obligations and necessary-and-sufficient admission state from authenticated Agent history before greatest installation~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live}.
+% 广义非阻塞与 Live Synthesis 使用给定的被控对象/标记或旧规范/执行；我们的理论则在最大安装之前，从经认证的 Agent 历史派生六类编辑义务以及必要且充分的准入状态~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live}。
 
-ACRFence/DART/Atomix/Rebound fence post-Restore replay, choose preserving checkpoints, settle after frontiers, or make rollback atomic and auditable~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}.
-% ACRFence/DART/Atomix/Rebound 隔离 Restore 后的重放、选择保持既有工作的检查点、在前沿之后结算，或使回滚具有原子性与可审计性~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}。
-Unlike their supplied logs/scopes/classes/frontiers/policies, ours derives six-edit obligations and necessary-and-sufficient state before greatest installation.
-% 不同于它们给定的日志/范围/类别/前沿/策略，我们的理论在最大安装之前派生六类编辑义务以及必要且充分的状态。
+ACRFence/DART/Atomix/Rebound fence post-Restore replay, choose preserving checkpoints, settle after frontiers, or make rollback atomic and auditable, but take supplied logs, scopes, classes, frontiers, or policies~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}.
+% ACRFence/DART/Atomix/Rebound 隔离 Restore 后的重放、选择保持既有工作的检查点、在前沿之后结算，或使回滚具有原子性与可审计性，但它们使用给定的日志、范围、类别、前沿或策略~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}。
