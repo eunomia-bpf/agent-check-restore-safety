@@ -190,6 +190,11 @@ frozen_constants=(
   two_cells_but_choice_accepts_at_most_one
   choice_is_not_productIndependent
   rollback_clone_double_accept_counterexample
+  exact_checker_iff_realization
+  registered_workflow_exact_admission
+  six_edit_derivation_exact
+  exact_edit_installs_trace_safe_monitor
+  fresh_alias_installation_serialized
 )
 
 # Named executable controls are elaborated through `AuthorityContinuity.Main`.

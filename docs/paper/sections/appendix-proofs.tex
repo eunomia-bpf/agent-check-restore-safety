@@ -879,6 +879,143 @@ By \cref{lem:greatest-realization}, every reachable partial execution of the ide
 The compiled runtime implements this machine without consulting the full completion set at every call.
 % 编译后运行时实现该机器，而无需在每次调用时查询完整完成路径集合。
 
+\subsection{Compiled State and Atomic Transitions}
+% 编译后状态与原子转移
+\label{app:compiled-transitions}
+
+For \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), the checker returns exactly one of
+% 对于 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，检查器恰好返回下列一种结果：
+\[
+\begin{aligned}
+\mathsf{CheckOutput}(\Theta)::={}&\mathsf{Invalid}([\gamma,C_{\rm str}]_{\cong})
+\mid\mathsf{Reject}([\gamma,C_{\rm fp}]_{\cong})\\
+&\mid\mathsf{Installable}(\delta,W^\dagger,\widehat B^\dagger,Z),
+\end{aligned}
+\]
+where
+% 其中
+\[
+ Z=(\omega,\zeta,\kappa_Z,\mathsf{cut}_Z,u,
+    H_{\mathsf{prog}},\eta^-,\eta^+).
+\]
+\(\mathsf{Invalid}\) carries a verified undefined-derivation transcript, \(\mathsf{Reject}\) carries the complete ranked elimination certificate, and \(\mathsf{Installable}\) carries the unique derivation, coverage witnesses, canonical monitor, and \(Z\).
+% \(\mathsf{Invalid}\) 携带经验证的未定义推导记录，\(\mathsf{Reject}\) 携带完整的带秩淘汰证书，而 \(\mathsf{Installable}\) 携带唯一推导、覆盖见证、规范监控器和 \(Z\)。
+\(Z\) authenticates the complete source snapshot, derived target, monitor, and both old and new monitor versions.
+% \(Z\) 认证完整源状态快照、派生目标、监控器以及新旧监控器版本。
+
+The compiled state for one policy domain is
+% 一个策略域的编译状态为
+\[
+S=(\kappa,H,\Delta,\mathsf{out},\mathcal A,
+    \mathsf{phase},\mathsf{bind},\mathsf{prog},\mathsf q,\mathsf{cert}),
+\]
+where \(\mathsf{phase}\) records whether each monitor version \(\eta\) is unallocated (\(\bot\)), inactive, active, or closed.
+% 其中 \(\mathsf{phase}\) 记录每个监控器版本 \(\eta\) 是未分配（\(\bot\)）、非活动、活动还是已关闭。
+The bootstrap rule runs only after \(\mathsf{CheckReg}(\mathcal W,R)\) accepts, and its exact construction appears in \cref{app:boot-pairs}.
+% 引导规则只在 \(\mathsf{CheckReg}(\mathcal W,R)\) 接受后运行，其精确构造见 \cref{app:boot-pairs}。
+Each installed version stores \(c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\): the authenticated source snapshot, derived target, edit, safe language, indexed family, and checked certificate.
+% 每个已安装版本都存储 \(c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\)：认证源状态快照、派生目标、编辑、安全语言、带索引执行族和经检查证书。
+
+\begin{definition}[Agent security-state invariant]
+% Agent 安全状态不变量
+\label{def:agent-sec}
+For \(c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\) and resolved \(r\), \(\mathsf{AgentSec}(S;c,r)\) holds exactly when the following clauses hold.
+% 对 \(c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\) 和已解析词 \(r\)，当且仅当下列条款成立时，\(\mathsf{AgentSec}(S;c,r)\) 成立。
+\begin{enumerate}[leftmargin=*,itemsep=0pt,topsep=1pt]
+\item \emph{Core and schema coherence.}
+% 核心与模式一致性。
+The state is well formed, \(c=\mathsf{cert}(\eta)\), its origin derives the installed target, and every required outcome has one authenticated authority and a checked \(\mathsf{Lift}_u\) witness.
+% 状态良构，\(c=\mathsf{cert}(\eta)\)，其来源推导出已安装目标，且每个要求实现的结果都有唯一经认证的权限方和经检查的 \(\mathsf{Lift}_u\) 见证。
+\item \emph{Required-outcome coherence.}
+% 要求实现结果的一致性。
+\(\widehat B=\widehat B^\dagger_{H_c,u}\ne\varnothing\), \(W=\Pref(\pi_2\widehat B)\), and \(Z\) verifies both at \(\mathsf{src}_c\).
+% \(\widehat B=\widehat B^\dagger_{H_c,u}\ne\varnothing\)、\(W=\Pref(\pi_2\widehat B)\)，且 \(Z\) 在 \(\mathsf{src}_c\) 处验证二者。
+\item \emph{Execution coherence.}
+% 执行一致性。
+\((H.G,H.T)=\mathsf{HRes}((H_c^+.G,H_c^+.T),r)\), \(H.\chi=H_c^+.\chi r\), and authorization records, queue entries, return links, and checkpoints match \(r\) and advance only monotonically.
+% \((H.G,H.T)=\mathsf{HRes}((H_c^+.G,H_c^+.T),r)\)、\(H.\chi=H_c^+.\chi r\)，且授权记录、队列条目、返回链接和检查点都与 \(r\) 一致并仅单调推进。
+\item \emph{Monitor coherence.}
+% 监控器一致性。
+\(\mathsf{prog}(\eta)\cong\mathsf{Can}(W,\pi_2\widehat B)\), and \(\mathsf q(\eta)\) is its derivative after \(r\).
+% \(\mathsf{prog}(\eta)\cong\mathsf{Can}(W,\pi_2\widehat B)\)，且 \(\mathsf q(\eta)\) 是其在 \(r\) 之后的导数。
+\item \emph{Monitor-version coherence.}
+% 监控器版本一致性。
+Only \(\eta\) is active, \(\mathsf{bind}|_{X_{\sem H.T}}=H.\beta\), and it owns exactly one authenticated entry and token for each current occurrence, while inactive or closed versions expose none.
+% 只有 \(\eta\) 处于活动状态，\(\mathsf{bind}|_{X_{\sem H.T}}=H.\beta\)，且它为每个当前发生项拥有唯一认证入口和令牌，而非活动或已关闭版本不暴露任何令牌。
+\end{enumerate}
+\end{definition}
+
+\paragraph{Atomic protected call}
+% 原子受控调用
+For submitted tool request \(m\), set \(m^\circ=\mathsf{canon}_\kappa(m)\).
+% 对于提交的工具请求 \(m\)，令 \(m^\circ=\mathsf{canon}_\kappa(m)\)。
+For \(x\) bound to monitor entry \(j\) in version \(\eta\), \(\mathsf{VerifyToken}(h,\rho(x),j,d,m^\circ)\) verifies the call authorization service, scope, monitor entry, effect identity, lineage, and signed digest and requires \(m^\circ=\mathsf{inv}_\rho(d)\).
+% 对于版本 \(\eta\) 中绑定到监控器入口 \(j\) 的 \(x\)，\(\mathsf{VerifyToken}(h,\rho(x),j,d,m^\circ)\) 验证调用授权服务、作用域、监控器入口、效果标识、谱系和签名摘要，并要求 \(m^\circ=\mathsf{inv}_\rho(d)\)。
+Set \(a=\Fresh(x,d)\) if \(d\notin D_\Delta\), otherwise \(a=\Alias(x,d)\), and let \(\Use_x(m)=\mathsf{Use}(x,j,h,m)\).
+% 若 \(d\notin D_\Delta\)，则令 \(a=\Fresh(x,d)\)，否则令 \(a=\Alias(x,d)\)，并令 \(\Use_x(m)=\mathsf{Use}(x,j,h,m)\)。
+Its sole state-changing transition is
+% 其唯一改变状态的转移为
+\begin{equation}
+\label{eq:use-rule}
+\frac{
+\begin{gathered}
+ x\text{ enabled in }T\quad
+ \mathsf{bind}(x)=(j,\eta)\\[-2pt]
+ \eta=H.\eta\quad
+ \mathsf{phase}(\eta)=\mathsf{active}\\[-2pt]
+ \mathsf{VerifyToken}(h,\rho(x),j,d,m^\circ)\quad
+ \mathsf q(\eta)\xrightarrow{a}_{\mathsf{prog}(\eta)}q'
+\end{gathered}}
+{S\xrightarrow{\Use_x(m)/a}S'} .
+\end{equation}
+The paired update \(\mathsf{HStep}((G,T),a)\) removes \(x\), records any choice, preserves the other workflow constructors, and appends \(a\) to its branch cursor.
+% 成对更新 \(\mathsf{HStep}((G,T),a)\) 移除 \(x\)、记录任何选择、保留其他工作流构造器，并将 \(a\) 追加到其分支游标。
+\(\mathsf{Advance}(S,x,a,q')\) changes exactly
+% \(\mathsf{Advance}(S,x,a,q')\) 仅修改
+\[
+\begin{aligned}
+ (H.G,H.T)&:=\mathsf{HStep}((G,T),a),&
+ H.\chi&:=\chi a,\\
+ H.\nu&:=\nu+1,& H.\beta&:=\beta\setminus\{x\},\\
+ \mathsf{bind}&:=\mathsf{bind}\setminus\{x\},&
+ \mathsf q(\eta)&:=q'.
+\end{aligned}
+\]
+In addition, \Fresh appends the immutable labeled authorization record and ordered dispatch-queue item \((d,\mathsf{inv}_\rho(d))\), never an unchecked caller buffer.
+% 此外，\Fresh 追加不可变的带标签授权记录和有序派发队列条目 \((d,\mathsf{inv}_\rho(d))\)，绝不存储未经检查的调用方缓冲区。
+\Alias records the effect identity's stored return link without changing \(\Delta\), and all other fields remain unchanged.
+% \Alias 记录该效果标识的已存返回链接且不改变 \(\Delta\)，其余字段保持不变。
+An authenticated \Retry follows the archived link from \(\chi\) to the authorization record for the same normalized request and returns any stable value without changing state.
+% 经认证的 \Retry 沿 \(\chi\) 到同一规范化请求授权记录的归档链接执行，并在不改变状态的情况下返回任何稳定值。
+
+\paragraph{Answer verification and atomic installation}
+% 答案验证与原子安装
+At its linearization point, the trusted installation service ignores any caller-supplied replacement workflow or monitor version, sets \(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), and re-runs \(\mathsf{Derive}(\Theta_S(u))\) from the current state.
+% 在其线性化点，可信安装服务忽略调用方提供的任何替代工作流或监控器版本，令 \(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并根据当前状态重新执行 \(\mathsf{Derive}(\Theta_S(u))\)。
+For a positive derivation, \(\mathsf{ReCut}(S,u,Z)\) recomputes the right-hand side of \cref{eq:cut-seal}, while \(\mathsf{Verify}_Z\) recomputes the fixed point, witnesses, canonical monitor, and both seals.
+% 对于正面推导，\(\mathsf{ReCut}(S,u,Z)\) 重新计算 \cref{eq:cut-seal} 的右侧，而 \(\mathsf{Verify}_Z\) 重新计算不动点、见证、规范监控器与两个封印。
+Installation requires
+% 安装要求
+\begin{equation}
+\label{eq:install-premise}
+\begin{gathered}
+ \kappa=\kappa_Z,\qquad
+ \mathsf{ReCut}(S,u,Z)=\mathsf{cut}_Z,\\
+ \mathsf{Verify}_Z(W^\dagger_{H,u},B^\dagger_{H,u},
+    \widehat B^\dagger_{H,u}),\\
+ H.\eta=\eta^-,\qquad
+ \mathsf{phase}(\eta^+)\in\{\bot,\mathsf{inactive}\}.
+\end{gathered}
+\end{equation}
+\(\mathsf{Ready}(S,u,Y)\) holds when \(Y=\mathsf{Installable}(\delta,W^\dagger,\widehat B^\dagger,Z)\), the current derivation is \(\delta\), and all state-dependent premises of \cref{eq:install-premise} hold.
+% 当 \(Y=\mathsf{Installable}(\delta,W^\dagger,\widehat B^\dagger,Z)\)、当前推导为 \(\delta\) 且 \cref{eq:install-premise} 的全部状态相关前提成立时，\(\mathsf{Ready}(S,u,Y)\) 成立。
+The committing domain transaction installs \((\kappa_u,H_u,\mathcal A_u)\), closes \(\eta^-\), activates \(\eta^+\), binds every target occurrence, installs the canonical program at \(q^0\), and stores the checked certificate.
+% 提交的域事务安装 \((\kappa_u,H_u,\mathcal A_u)\)、关闭 \(\eta^-\)、激活 \(\eta^+\)、绑定每个目标发生项、在 \(q^0\) 处安装规范程序并存储经检查证书。
+Only after activation does it expose \(\mathcal H_u^+\) and emit \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\); old tokens then fail, while \Retry still follows its archived authorization-record link.
+% 只有激活之后，它才暴露 \(\mathcal H_u^+\) 并发出 \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\)；此后旧令牌失效，而 \Retry 仍沿其归档授权记录链接执行。
+A stale candidate emits no answer and must be recomputed from the current source snapshot.
+% 过期候选不会发出答案，必须根据当前源状态快照重新计算。
+
 \subsection{Event Derivatives and Invariant Preservation}
 % 事件导数与不变量保持
 \label{app:event-preservation}
@@ -1213,8 +1350,8 @@ Crash is matched by a \(\tau\) self-loop on each recovered-state machine by \cre
 \end{theorem}
 
 \begin{proof}
-The least-generated rule sets in \cref{sec:ideal,sec:kernel} and \cref{tab:app-event-matrix} make the preceding cases exhaustive.
-% \cref{sec:ideal,sec:kernel} 中的最小生成规则集与 \cref{tab:app-event-matrix} 使前述情形具有穷尽性。
+The least-generated rule sets in \cref{sec:ideal,sec:enforcement} and \cref{tab:app-event-matrix} make the preceding cases exhaustive.
+% \cref{sec:ideal,sec:enforcement} 中的最小生成规则集与 \cref{tab:app-event-matrix} 使前述情形具有穷尽性。
 For every step from either side, the corresponding case constructs a path with observation \(\mathsf{obs}_{\rm api}(\ell)\) and a successor related by the witness in that matrix.
 % 对任一侧的每一步，对应情形都会构造一条观测为 \(\mathsf{obs}_{\rm api}(\ell)\) 的路径，以及一个通过该表中见证相关的后继。
 The construction is symmetric because successful ideal guards and successful compiled guards were shown equivalent, while implementation-only steps preserve the common abstraction.

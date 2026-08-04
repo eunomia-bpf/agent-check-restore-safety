@@ -1,11 +1,11 @@
 \section{Runtime Enforcement}
 % 运行时强制执行
-\label{sec:kernel}
+\label{sec:enforcement}
 
 The safety checker produces either an impossibility certificate or the largest safe family of completed executions.
 % 安全检查器生成不可能性证书或最大的安全完整执行族。
-The installation kernel turns a nonempty family into runtime enforcement in three steps.
-% 安装内核分三步将非空执行族转化为运行时强制执行。
+The trusted installation service turns a nonempty family into runtime enforcement in three steps.
+% 可信安装服务分三步将非空执行族转化为运行时强制执行。
 It builds a monitor for the family's partial executions, binds that monitor to the authenticated source snapshot, and atomically installs it under a new monitor version.
 % 它为该执行族的部分执行构造监控器，将监控器绑定到认证源状态快照，并在新的监控器版本下原子安装。
 The protocol serializes every overlapping protected call either before or after installation.
@@ -55,177 +55,30 @@ The automaton is the paired-language derivative construction~\cite{brzozowski196
 % 该自动机是成对语言的导数构造~\cite{brzozowski1964derivatives}。
 \end{proof}
 
-For \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), the checker returns exactly one of
-% 对于 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，检查器恰好返回下列一种结果：
-\[
-\begin{aligned}
-\mathsf{CheckOutput}(\Theta)::={}&\mathsf{Invalid}([\gamma,C_{\rm str}]_{\cong})
-\mid\mathsf{Reject}([\gamma,C_{\rm fp}]_{\cong})\\
-&\mid\mathsf{Installable}(\delta,W^\dagger,\widehat B^\dagger,Z).
-\end{aligned}
-\]
-\(\mathsf{Invalid}\) carries a verified undefined-derivation transcript, \(\mathsf{Reject}\) carries the complete ranked elimination certificate, and \(\mathsf{Installable}\) carries the unique derivation, coverage witnesses, canonical monitor, and
-% \(\mathsf{Invalid}\) 携带经验证的未定义推导记录，\(\mathsf{Reject}\) 携带完整的带秩淘汰证书，而 \(\mathsf{Installable}\) 携带唯一推导、覆盖见证、规范监控器以及
-\[
- Z=(\omega,\zeta,\kappa_Z,\mathsf{cut}_Z,u,
-    H_{\mathsf{prog}},\eta^-,\eta^+),
-\]
-\(Z\) authenticates the complete source snapshot, the derived target, the monitor, and both old and new monitor versions.
-% \(Z\) 认证完整源状态快照、派生目标、监控器以及新旧监控器版本。
-\Cref{app:certificate-payloads} gives the exact payloads and proves that all three finite outputs are unique and equivariant.
-% \Cref{app:certificate-payloads} 给出精确载荷，并证明三种有限输出均唯一且保持等变性。
+The checker returns \(\mathsf{Invalid}\) when derivation fails, \(\mathsf{Reject}\) with a ranked impossibility certificate when the fixed point is empty, and \(\mathsf{Installable}\) with the canonical monitor otherwise.
+% 当推导失败时，检查器返回 \(\mathsf{Invalid}\)；当不动点为空时，返回带秩不可能性证书的 \(\mathsf{Reject}\)；否则返回携带规范监控器的 \(\mathsf{Installable}\)。
+Each answer is bound to the complete authenticated source snapshot.
+% 每个答案都绑定完整的认证源状态快照。
+\Cref{app:certificate-payloads,app:compiled-transitions} gives the exact payloads and verification rules.
+% \Cref{app:certificate-payloads,app:compiled-transitions} 给出精确载荷与验证规则。
 The bounded implementation may instead return \(\mathsf{ResourceLimit}(b,n)\), which installs nothing and proves neither safety nor impossibility.
 % 有界实现可能改为返回 \(\mathsf{ResourceLimit}(b,n)\)，它不安装任何内容，也不证明安全性或不可能性。
 
 \subsection{Atomic Installation}
 % 原子安装
 
-The compiled state for one policy domain is
-% 一个策略域的编译状态为
-\[
-S=(\kappa,H,\Delta,\mathsf{out},\mathcal A,
-    \mathsf{phase},\mathsf{bind},\mathsf{prog},\mathsf q,\mathsf{cert}),
-\]
-where \(\mathsf{phase}\) records whether each monitor version \(\eta\) is unallocated (\(\bot\)), inactive, active, or closed.
-% 其中 \(\mathsf{phase}\) 记录每个监控器版本 \(\eta\) 是未分配（\(\bot\)）、非活动、活动还是已关闭。
-The bootstrap rule runs only after \(\mathsf{CheckReg}(\mathcal W,R)\) accepts, and its exact construction appears in \cref{app:boot-pairs}.
-% 引导规则只在 \(\mathsf{CheckReg}(\mathcal W,R)\) 接受后运行，其精确构造见 \cref{app:boot-pairs}。
-Each installed version stores \(c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\): the authenticated source snapshot, derived target, edit, safe language, indexed family, and checked certificate.
-% 每个已安装版本都存储 \(c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\)：认证源状态快照、派生目标、编辑、安全语言、带索引执行族和经检查证书。
-
-\begin{definition}[Agent security-state invariant]
-% Agent 安全状态不变量
-\label{def:agent-sec}
-For \(c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\) and resolved \(r\), \(\mathsf{AgentSec}(S;c,r)\) holds exactly when the following clauses hold.
-% 对 \(c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\) 和已解析词 \(r\)，当且仅当下列条款成立时，\(\mathsf{AgentSec}(S;c,r)\) 成立。
-\begin{enumerate}[leftmargin=*,itemsep=0pt,topsep=1pt]
-\item \emph{Core and schema coherence.}
-% 核心与模式一致性。
-The state is well formed, \(c=\mathsf{cert}(\eta)\), its origin derives the installed target, and every required outcome has one authenticated authority and a checked \(\mathsf{Lift}_u\) witness.
-% 状态良构，\(c=\mathsf{cert}(\eta)\)，其来源推导出已安装目标，且每个要求实现的结果都有唯一经认证的权限方和经检查的 \(\mathsf{Lift}_u\) 见证。
-\item \emph{Required-outcome coherence.}
-% 要求实现结果的一致性。
-\(\widehat B=\widehat B^\dagger_{H_c,u}\ne\varnothing\), \(W=\Pref(\pi_2\widehat B)\), and \(Z\) verifies both at \(\mathsf{src}_c\).
-% \(\widehat B=\widehat B^\dagger_{H_c,u}\ne\varnothing\)、\(W=\Pref(\pi_2\widehat B)\)，且 \(Z\) 在 \(\mathsf{src}_c\) 处验证二者。
-\item \emph{Execution coherence.}
-% 执行一致性。
-\((H.G,H.T)=\mathsf{HRes}((H_c^+.G,H_c^+.T),r)\), \(H.\chi=H_c^+.\chi r\), and authorization records, queue entries, return links, and checkpoints match \(r\) and advance only monotonically.
-% \((H.G,H.T)=\mathsf{HRes}((H_c^+.G,H_c^+.T),r)\)、\(H.\chi=H_c^+.\chi r\)，且授权记录、队列条目、返回链接和检查点都与 \(r\) 一致并仅单调推进。
-\item \emph{Monitor coherence.}
-% 监控器一致性。
-\(\mathsf{prog}(\eta)\cong\mathsf{Can}(W,\pi_2\widehat B)\), and \(\mathsf q(\eta)\) is its derivative after \(r\).
-% \(\mathsf{prog}(\eta)\cong\mathsf{Can}(W,\pi_2\widehat B)\)，且 \(\mathsf q(\eta)\) 是其在 \(r\) 之后的导数。
-\item \emph{Monitor-version coherence.}
-% 监控器版本一致性。
-Only \(\eta\) is active, \(\mathsf{bind}|_{X_{\sem H.T}}=H.\beta\), and it owns exactly one authenticated entry and token for each current occurrence, while inactive or closed versions expose none.
-% 只有 \(\eta\) 处于活动状态，\(\mathsf{bind}|_{X_{\sem H.T}}=H.\beta\)，且它为每个当前发生项拥有唯一认证入口和令牌，而非活动或已关闭版本不暴露任何令牌。
-\end{enumerate}
-\end{definition}
-The full invariant and every preserving transition are enumerated in \cref{tab:app-event-matrix}.
-% 完整不变量及其每种保持转移均列于 \cref{tab:app-event-matrix}。
-
-\paragraph{Atomic protected call}
-% 原子受控调用
-For submitted tool request \(m\), set \(m^\circ=\mathsf{canon}_\kappa(m)\).
-% 对于提交的工具请求 \(m\)，令 \(m^\circ=\mathsf{canon}_\kappa(m)\)。
-For \(x\) bound to monitor entry \(j\) in version \(\eta\), \(\mathsf{VerifyToken}(h,\rho(x),j,d,m^\circ)\) verifies the call authorization service, scope, monitor entry, effect identity, lineage, and signed digest and requires \(m^\circ=\mathsf{inv}_\rho(d)\).
-% 对于版本 \(\eta\) 中绑定到监控器入口 \(j\) 的 \(x\)，\(\mathsf{VerifyToken}(h,\rho(x),j,d,m^\circ)\) 验证调用授权服务、作用域、监控器入口、效果标识、谱系和签名摘要，并要求 \(m^\circ=\mathsf{inv}_\rho(d)\)。
-Set \(a=\Fresh(x,d)\) if \(d\notin D_\Delta\), otherwise \(a=\Alias(x,d)\), and let \(\Use_x(m)=\mathsf{Use}(x,j,h,m)\).
-% 若 \(d\notin D_\Delta\)，则令 \(a=\Fresh(x,d)\)，否则令 \(a=\Alias(x,d)\)，并令 \(\Use_x(m)=\mathsf{Use}(x,j,h,m)\)。
-Its sole state-changing transition is the rule below.
-% 其唯一改变状态的转移是下列规则。
-\begin{equation}
-\label{eq:use-rule}
-\frac{
-\begin{gathered}
- x\text{ enabled in }T\quad
- \mathsf{bind}(x)=(j,\eta)\\[-2pt]
- \eta=H.\eta\quad
- \mathsf{phase}(\eta)=\mathsf{active}\\[-2pt]
- \mathsf{VerifyToken}(h,\rho(x),j,d,m^\circ)\quad
- \mathsf q(\eta)\xrightarrow{a}_{\mathsf{prog}(\eta)}q'
-\end{gathered}}
-{S\xrightarrow{\Use_x(m)/a}S'} .
-\end{equation}
-The paired update \(\mathsf{HStep}((G,T),a)\) removes \(x\), records any choice, preserves the other workflow constructors, and appends \(a\) to its branch cursor.
-% 成对更新 \(\mathsf{HStep}((G,T),a)\) 移除 \(x\)、记录任何选择、保留其他工作流构造器，并将 \(a\) 追加到其分支游标。
-\(\mathsf{Advance}(S,x,a,q')\) changes exactly the fields below.
-% \(\mathsf{Advance}(S,x,a,q')\) 仅修改下列字段。
-\[
-\begin{aligned}
- (H.G,H.T)&:=\mathsf{HStep}((G,T),a),&
- H.\chi&:=\chi a,\\
- H.\nu&:=\nu+1,& H.\beta&:=\beta\setminus\{x\},\\
- \mathsf{bind}&:=\mathsf{bind}\setminus\{x\},&
- \mathsf q(\eta)&:=q'.
-\end{aligned}
-\]
-In addition, \Fresh appends the immutable labeled authorization record and ordered dispatch-queue item \((d,\mathsf{inv}_\rho(d))\), never an unchecked caller buffer.
-% 此外，\Fresh 追加不可变的带标签授权记录和有序派发队列条目 \((d,\mathsf{inv}_\rho(d))\)，绝不存储未经检查的调用方缓冲区。
-\Alias records the effect identity's stored return link without changing \(\Delta\), and all other fields remain unchanged.
-% \Alias 记录该效果标识的已存返回链接且不改变 \(\Delta\)，其余字段保持不变。
-
-An authenticated \Retry follows the archived link from \(\chi\) to the authorization record for the same normalized request and returns any stable value without changing state.
-% 经认证的 \Retry 沿 \(\chi\) 到同一规范化请求授权记录的归档链接执行，并在不改变状态的情况下返回任何稳定值。
-For unresolved \(x\), \cref{eq:use-rule} applies exactly when all premises hold, while a missing transition, invalid authorization token, unbound occurrence, disabled branch, or closed monitor version returns \(\mathsf{deny}(x)\) without changing state.
-% 对未解析的 \(x\)，当且仅当全部前提成立时才应用 \cref{eq:use-rule}，而缺失转移、无效授权令牌、未绑定发生项、禁用分支或已关闭监控器版本都会返回 \(\mathsf{deny}(x)\) 且不改变状态。
-\Dispatch records the release of the oldest queued request, settlement fills its return record, and neither implies exactly-once execution by a remote service.
-% \Dispatch 记录最早排队请求的发出，结算填充其返回记录，而二者都不意味着远程服务恰好执行一次。
-
-\subsubsection{Answer verification and atomic installation}
-% 答案验证与原子安装
-At its linearization point, the kernel ignores any caller-supplied replacement workflow or monitor version, sets \(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), and re-runs \(\mathsf{Derive}(\Theta_S(u))\) from the current state.
-% 在其线性化点，内核忽略调用方提供的任何替代工作流或监控器版本，令 \(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并根据当前状态重新执行 \(\mathsf{Derive}(\Theta_S(u))\)。
-It returns state-preserving \(\mathsf{Invalid}\) exactly for a verified undefined derivation and \(\mathsf{Reject}\) exactly for a verified empty fixed point.
-% 它恰在验证到未定义推导时返回保持状态的 \(\mathsf{Invalid}\)，并恰在验证到空不动点时返回保持状态的 \(\mathsf{Reject}\)。
-For the positive case, write \(\mathsf{Derive}(\Theta_S(u))=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
-% 对于正面情形，记 \(\mathsf{Derive}(\Theta_S(u))=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
-\(\mathsf{ReCut}(S,u,Z)\) is undefined without this root, execution-edit, or registered-extension derivation and otherwise recomputes the right-hand side of \cref{eq:cut-seal}.
-% 若无这一根推导、执行编辑推导或已注册扩展推导，则 \(\mathsf{ReCut}(S,u,Z)\) 未定义；否则，它重新计算 \cref{eq:cut-seal} 的右侧。
-\(\mathsf{Verify}_Z\) recomputes the entire fixed point, its witnesses, \((W,B)\), the canonical monitor, and both seals.
-% \(\mathsf{Verify}_Z\) 重新计算完整不动点及其见证、\((W,B)\)、规范监控器和两个封印。
-Installation requires
-% 安装要求
-\begin{equation}
-\label{eq:install-premise}
-\begin{gathered}
- \kappa=\kappa_Z,\qquad
- \mathsf{ReCut}(S,u,Z)=\mathsf{cut}_Z,\\
- \mathsf{Verify}_Z(W^\dagger_{H,u},B^\dagger_{H,u},
-    \widehat B^\dagger_{H,u}),\\
- H.\eta=\eta^-,\qquad
- \mathsf{phase}(\eta^+)\in\{\bot,\mathsf{inactive}\}.
-\end{gathered}
-\end{equation}
-\(\mathsf{Ready}(S,u,Y)\) holds when \(Y=\mathsf{Installable}(\delta,W^\dagger,\widehat B^\dagger,Z)\), the current derivation is \(\delta\), and all state-dependent premises of \cref{eq:install-premise} hold in \(S\).
-% 当 \(Y=\mathsf{Installable}(\delta,W^\dagger,\widehat B^\dagger,Z)\)、当前推导为 \(\delta\) 且 \cref{eq:install-premise} 的全部状态相关前提在 \(S\) 中成立时，\(\mathsf{Ready}(S,u,Y)\) 成立。
-If these premises hold, one domain transaction verifies every target entry and authorization token.
-% 若这些前提成立，一个域事务便验证每个目标入口和授权令牌。
-Let \(c^+=(\mathsf{src}(\Theta_S(u)),H_u,u,W^\dagger,\widehat B^\dagger,Z)\).
-% 令 \(c^+=(\mathsf{src}(\Theta_S(u)),H_u,u,W^\dagger,\widehat B^\dagger,Z)\)。
-It then applies
-% 随后应用
-\[
-\begin{aligned}
- \kappa&:=\kappa_u,& \mathcal A&:=\mathcal A_u,\\
- H&:=H_u,&
- \mathsf{phase}(\eta^-)&:=\mathsf{closed},\\
- \mathsf{phase}(\eta^+)&:=\mathsf{active},&
- \mathsf{bind}|_{X_{\sem{H_u.T}}}&:=H_u.\beta,\\
- \mathsf{prog}(\eta^+)&:=\mathsf{prog}_Z,&
- \mathsf q(\eta^+)&:=q^0,\\
- \mathsf{cert}(\eta^+)&:=c^+.
-\end{aligned}
-\]
-Only after activation does the transaction expose \(\mathcal H_u^+\) and emit \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\); old tokens then fail, while \Retry still follows its archived authorization-record link.
-% 只有激活之后，事务才暴露 \(\mathcal H_u^+\) 并发出 \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\)；此后旧令牌失效，而 \Retry 仍沿其归档授权记录链接执行。
-A stale candidate emits no answer and must be recomputed from the current source snapshot.
-% 过期候选不会发出答案，必须根据当前源状态快照重新计算。
-
-\subsubsection{Other transitions}
-% 其他转移
-Preload, Save, retry, token retrieval, return delivery, \(\Dispatch\), settlement, stale candidates, and crash have exactly the state changes listed in \cref{tab:app-event-matrix}; pure \(\mathsf{Compile}\) is outside the LTS.
-% 预加载、Save、重试、令牌取回、返回交付、\(\Dispatch\)、结算、过期候选与崩溃恰具有 \cref{tab:app-event-matrix} 所列的状态变更；纯 \(\mathsf{Compile}\) 位于 LTS 之外。
+At installation, the service re-derives the edit and recomputes the fixed point from the current authenticated snapshot.
+% 安装时，该服务根据当前认证快照重新推导编辑并重新计算不动点。
+If any protected call has committed since compilation, the candidate is stale and installs nothing.
+% 如果编译之后已有任何受控调用提交，则候选已过期且不会安装任何内容。
+Otherwise, one policy-domain transaction closes the old monitor version, activates the canonical monitor, replaces every current occurrence binding and authorization token, and only then exposes the successful edit answer.
+% 否则，一个策略域事务会关闭旧监控器版本、激活规范监控器、替换每个当前发生项的绑定与授权令牌，然后才暴露成功编辑答案。
+Protected calls verify their occurrence, effect identity, normalized request, authorization token, and current monitor transition in the same transaction that records progress.
+% 受控调用在记录进度的同一事务中验证其发生项、效果标识、规范化请求、授权令牌与当前监控器转移。
+A \Fresh call creates one authorization record and ordered dispatch item; an \Alias call advances the workflow by linking to the existing record without extending the permission trace.
+% \Fresh 调用创建一条授权记录和一个有序派发条目；\Alias 调用通过链接到已有记录推进工作流，而不扩展权限轨迹。
+The complete invariant, guarded call rule, installation preconditions, field updates, retries, dispatch, settlement, and crash behavior appear in \cref{app:compiled-transitions,tab:app-event-matrix}.
+% 完整不变量、带守卫调用规则、安装前提、字段更新、重试、派发、结算与崩溃行为见 \cref{app:compiled-transitions,tab:app-event-matrix}。
 
 \begin{lemma}[Edit--call serialization]
 % 编辑--调用串行化

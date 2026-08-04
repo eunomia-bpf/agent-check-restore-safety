@@ -12,6 +12,7 @@ import AuthorityContinuity.RedemptionCommitment
 import AuthorityContinuity.RedemptionDomainFrontier
 import AuthorityContinuity.AgentHistoryAdmission.RegistrationRefinement
 import AuthorityContinuity.AgentHistoryAdmission.CompilationBridge
+import AuthorityContinuity.AgentHistoryAdmission.PaperTheorems
 
 /-!
 # Frozen theorem audit
@@ -654,5 +655,20 @@ installed live-extension closure. -/
 
 #check AgentHistoryAdmission.OperationalSemantics.live_extension_before_old_use_denied
 #print axioms AgentHistoryAdmission.OperationalSemantics.live_extension_before_old_use_denied
+
+#check AgentHistoryAdmission.PaperTheorems.exact_checker_iff_realization
+#print axioms AgentHistoryAdmission.PaperTheorems.exact_checker_iff_realization
+
+#check AgentHistoryAdmission.PaperTheorems.registered_workflow_exact_admission
+#print axioms AgentHistoryAdmission.PaperTheorems.registered_workflow_exact_admission
+
+#check AgentHistoryAdmission.PaperTheorems.six_edit_derivation_exact
+#print axioms AgentHistoryAdmission.PaperTheorems.six_edit_derivation_exact
+
+#check AgentHistoryAdmission.PaperTheorems.exact_edit_installs_trace_safe_monitor
+#print axioms AgentHistoryAdmission.PaperTheorems.exact_edit_installs_trace_safe_monitor
+
+#check AgentHistoryAdmission.PaperTheorems.fresh_alias_installation_serialized
+#print axioms AgentHistoryAdmission.PaperTheorems.fresh_alias_installation_serialized
 
 end AuthorityContinuity

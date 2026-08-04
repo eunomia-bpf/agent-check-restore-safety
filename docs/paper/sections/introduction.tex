@@ -89,9 +89,9 @@ We contribute one end-to-end theorem connecting the original Agent workflow, the
 % 我们贡献一个端到端定理，将原始 Agent 工作流、请求的执行编辑、精确检查器与已安装运行时连接起来。
 For all six registered execution edits and registered extensions, a safe implementation exists exactly when the checker leaves a nonempty set of executions, its monitor can be installed, and an ideal atomic machine permits the same edit.
 % 对全部六种已注册执行编辑和已注册扩展，当且仅当检查器留下非空执行集合、其监控器能够安装且理想原子机器允许同一次编辑时，安全实现才存在。
-The theorem also proves that deleting any of four recorded relations changes some exact decision or installation answer, and that the concrete runtime has the same visible behavior as the ideal machine (\cref{sec:model,sec:admission,sec:kernel,sec:results}).
-% 该定理还证明，删除四类记录关系中的任一类都会改变某个精确判定或安装答案，并且具体运行时与理想机器具有相同的可见行为（\cref{sec:model,sec:admission,sec:kernel,sec:results}）。
+The theorem also proves that deleting any of four recorded relations changes some exact decision or installation answer, and that the concrete runtime has the same visible behavior as the ideal machine (\cref{sec:model,sec:admission,sec:enforcement,sec:results}).
+% 该定理还证明，删除四类记录关系中的任一类都会改变某个精确判定或安装答案，并且具体运行时与理想机器具有相同的可见行为（\cref{sec:model,sec:admission,sec:enforcement,sec:results}）。
 Every supported event preserves the security invariant, so the theorem applies again after every finite reachable execution.
 % 每个受支持事件都保持安全不变量，因此该定理能在每个有限可达执行之后再次应用。
-Five kernel-checked Lean modules, 19 paper-specific executable tests, and measurements over 2--128 outcomes validate the executable fixed-point checker and its modeled edit-installation races.
-% 五个经内核检查的 Lean 模块、19 项论文专用可执行测试以及覆盖 2--128 个结果的测量，验证了可执行不动点检查器及其建模的编辑安装竞态。
+Five Lean modules, 19 paper-specific executable tests, and measurements over 2--128 outcomes validate the executable fixed-point checker and its modeled edit-installation races.
+% 五个 Lean 模块、19 项论文专用可执行测试以及覆盖 2--128 个结果的测量，验证了可执行不动点检查器及其建模的编辑安装竞态。

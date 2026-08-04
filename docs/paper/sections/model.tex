@@ -270,8 +270,8 @@ Every current, checkpoint, or schema occurrence, effect identity, monitor entry,
 Effect identities, authorization logs, and policies of distinct domains are disjoint, and an edit never crosses a domain.
 % 不同域的效果标识、授权日志和策略互不相交，并且编辑绝不跨域。
 \end{enumerate}
-The installation kernel additionally requires that the policy domain's one current monitor version is active.
-% 安装内核还要求策略域唯一的当前监控器版本处于活动状态。
+The trusted installation service additionally requires that the policy domain's one current monitor version is active.
+% 可信安装服务还要求策略域唯一的当前监控器版本处于活动状态。
 \end{definition}
 
 \subsubsection{Authorization log and security core}
@@ -306,8 +306,8 @@ It cannot forge registries, the checkpoint directed acyclic graph (DAG), effect-
 % 它无法伪造注册表、检查点有向无环图（DAG）、效果标识证书、策略或授权日志。
 The policy authority signs policies, outcome requirements, and authorized removals; the call authorization service registers protected calls, effect identities, and authorization tokens.
 % 策略权限方签署策略、结果要求和获授权移除；调用授权服务注册受控调用、效果标识和授权令牌。
-The trusted controller derives and checks each edit, while the installation kernel re-verifies the answer and atomically replaces the monitor.
-% 可信控制器推导并检查每次编辑，而安装内核重新验证答案并原子替换监控器。
+The trusted controller derives and checks each edit, while the trusted installation service re-verifies the answer and atomically replaces the monitor.
+% 可信控制器推导并检查每次编辑，而可信安装服务重新验证答案并原子替换监控器。
 These roles, the authenticated registries and authorization log, certificate verifier, atomic rules, and complete mediation form the trusted computing base (TCB).
 % 这些角色、经认证的注册表与授权日志、证书验证器、原子规则和完全中介共同构成可信计算基（TCB）。
 Within one policy domain, this TCB completely mediates every protected call and provides a linearizable, crash-stable transaction for every modeled state change and visible edit answer.
