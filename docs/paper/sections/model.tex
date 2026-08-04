@@ -287,26 +287,30 @@ This joint invariant is assumed below.
 \subsection{Adversary and trusted boundary}
 % 对手与可信边界
 
-The adversary controls Agent output, operations, tool arguments, copied workspace, retries, stale seals, and scheduling, including use/edit races.
-% 对手控制 Agent 的输出、操作、工具参数、复制的工作区、重试、过期封印和调度，包括使用/编辑竞态。
-It cannot forge registries, the checkpoint/DAG store, cell certificates, policy, or the receipt ledger.
-% 它无法伪造注册表、检查点/DAG 存储、单元证书、策略或回执账本。
-The trusted computing base (TCB) includes the policy issuer and protected-call issuer and provides complete mediation and a linearizable, crash-stable transaction for every modeled durable mutation or visible edit verdict within a domain.
-% 可信计算基（TCB）包括策略发行方和受保护调用发行方，并为域内每项已建模的持久变更或可见编辑判定提供完全中介以及可线性化、崩溃稳定的事务。
+The adversary controls Agent output, edit requests, tool arguments, copied workspace, retries, stale authorization tokens, and scheduling, including races between calls and edits.
+% 对手控制 Agent 输出、编辑请求、工具参数、复制的工作区、重试、过期授权令牌和调度，包括调用与编辑之间的竞态。
+It cannot forge registries, the checkpoint directed acyclic graph (DAG), effect-identity certificates, policy, or receipt log.
+% 它无法伪造注册表、检查点有向无环图（DAG）、效果标识证书、策略或回执日志。
+The trusted computing base (TCB) includes the policy authority and protected-call authority.
+% 可信计算基（TCB）包括策略权限方和受控调用权限方。
+Within one policy domain, it completely mediates every protected use and provides a linearizable, crash-stable transaction for every modeled state change and visible edit answer.
+% 在一个策略域内，它完全中介每次受控使用，并为每项已建模状态变更和可见编辑答案提供可线性化且崩溃稳定的事务。
 A recovered labeled transition system (LTS) state shows each transaction entirely uncommitted or committed according to whether its linearization point occurred.
 % 恢复后的标号转移系统（LTS）状态根据事务的线性化点是否已经发生，将每项事务完整地呈现为未提交或已提交；任何事务都不会撕裂，而易失的编译器缓存不在模型中。
 No transaction is torn, and volatile compiler caches lie outside the model.
 % 任何事务都不会撕裂，而易失的编译器缓存不在模型中。
-Before a checked cut, the protected-call issuer may instantiate finitely many pre-authorized schema templates: for invocation \(m\), it computes \(m^\circ=\mathsf{canon}_\kappa(m)\), reuses only a cell certified for \(m^\circ\) or allocates a fresh cell, and signs \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{lineage})\) into the authenticated registry.
-% 在一个经检查的切点之前，受保护调用发行方可以实例化有限个预授权模式模板：对于调用 \(m\)，它计算 \(m^\circ=\mathsf{canon}_\kappa(m)\)，只复用已认证用于 \(m^\circ\) 的单元或分配新单元，并把 \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{lineage})\) 签入经认证的注册表。
-The resulting finite registry defines one registered protected-call slice \(R\), which remains immutable during a checked cut.
-% 由此得到的有限注册表定义一个注册受保护调用切片 \(R\)，该切片在一个经检查的切点期间保持不可变；不匹配的调用以关闭方式失败。
+Before the checker takes a source snapshot, the protected-call authority may instantiate finitely many pre-authorized schema templates.
+% 在检查器获取源状态快照之前，受控调用权限方可以实例化有限个预授权模式模板。
+For tool request \(m\), it computes normalized request \(m^\circ=\mathsf{canon}_\kappa(m)\), reuses only an effect identity certified for \(m^\circ\) or allocates a fresh one, and signs \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{lineage})\) into the authenticated registry.
+% 对于工具请求 \(m\)，它计算规范化请求 \(m^\circ=\mathsf{canon}_\kappa(m)\)，只复用已认证用于 \(m^\circ\) 的效果标识或分配新标识，并把 \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{lineage})\) 签入认证注册表。
+The resulting finite registered call model \(R\) remains unchanged while that snapshot is checked.
+% 由此得到的有限已注册调用模型 \(R\) 在检查该状态快照期间保持不变。
 Unmatched calls fail closed.
 % 不匹配的调用以关闭方式失败。
-The platform supplies authenticated \(\mathcal W,R\), schemas, canonicalization, policy, checkpoints, and the receipt/outbox cut.
-% 平台提供经认证的 \(\mathcal W,R\)、模式、规范化规则、策略、检查点与回执/发件箱切点。
-From these inputs and an identifier-only Agent request, the controller derives the target, obligations, resolution, fixed point, monitor, certificate, epoch, and handles.
-% 控制器根据这些输入与 Agent 仅含标识符的请求派生目标、义务、解析、不动点、监控器、证书、纪元和句柄。
+The platform supplies authenticated \(\mathcal W,R\), edit schemas, normalization rules, policy, checkpoints, and one consistent snapshot of the receipt log and dispatch queue.
+% 平台提供经认证的 \(\mathcal W,R\)、编辑模式、规范化规则、策略、检查点，以及回执日志与派发队列的一致状态快照。
+From these inputs and an identifier-only Agent request, the controller derives the edited workflow, required outcomes, resolved calls, fixed point, monitor, certificate, monitor version, and authorization tokens.
+% 控制器根据这些输入与 Agent 仅含标识符的请求推导编辑后的工作流、要求实现的结果、已解析调用、不动点、监控器、证书、监控器版本和授权令牌。
 The Agent may supply or weaken none of these derived objects.
 % Agent 不得提供或弱化这些派生对象中的任何一个。
 
@@ -317,12 +321,14 @@ A boundary-finite typed Agent workflow \(\mathcal W\) is a finite-state outcome-
 % 边界有限的类型化 Agent 工作流 \(\mathcal W\) 是一个带结果标签的有限状态 LTS；其完整路径终止于结果终点，并且经 \(\tau\) 擦除的持久位置投影 \(\partial e=(o,s_1\cdots s_n)\) 在相等关系 \(\equiv_\partial\) 下形成有限多个等价类。
 \(\mathsf{CheckReg}\) decides this by rejecting any reachable and terminal-co-reachable strongly connected component containing a durable-site edge while permitting erased \(\tau\)-cycles, then enumerates the finite classes.
 % \(\mathsf{CheckReg}\) 通过拒绝任何既可达、又可到达终止点且包含持久位置边的强连通分量，同时允许被擦除的 \(\tau\) 环，来判定该性质，随后枚举有限等价类。
-\(R\) stores a candidate lowering \(\lambda\), and \(\mathsf{BRuns}(R)\) is the finite outcome-indexed language obtained by linearizing its registered root pomsets and labeling each occurrence by its protected \Use.
-% \(R\) 存储候选降低映射 \(\lambda\)，而 \(\mathsf{BRuns}(R)\) 是通过线性化其已注册根偏序事件集，并以受保护 \Use 标记每个发生项而得到的有限结果索引语言。
+\(R\) stores a candidate registration map \(\lambda\), and \(\mathsf{BRuns}(R)\) is the finite outcome-indexed language obtained by linearizing its registered root pomsets and labeling each occurrence by its protected \Use.
+% \(R\) 存储候选注册映射 \(\lambda\)，而 \(\mathsf{BRuns}(R)\) 是通过线性化其已注册根偏序事件集，并以受保护 \Use 标记每个发生项而得到的有限结果索引语言。
 \(\mathcal W\sqsubseteq_\lambda R\) means that \(\lambda\) induces a bijection from boundary classes to \(\mathsf{BRuns}(R)\) that preserves outcomes, incidence, and order.
 % \(\mathcal W\sqsubseteq_\lambda R\) 表示 \(\lambda\) 从边界等价类到 \(\mathsf{BRuns}(R)\) 诱导一个保持结果、关联与次序的双射。
-The finite checker also requires cells to be exactly the canonical-invocation quotient, lowering to be total, unique, and raw-instruction free, and prefix receipt evolution to commute with \(\Resolve\) without dropping a promise, site, or receipt.
-% 有限检查器还要求单元恰为规范调用商、降低映射全定义且唯一并且不暴露原始指令，同时要求前缀回执演化与 \(\Resolve\) 交换而不丢弃任何承诺、位置或回执。
+The finite checker also requires effect identities to be exactly the equivalence classes of normalized requests.
+% 有限检查器还要求效果标识恰好对应规范化请求的等价类。
+The registration map must be total, unique, and free of raw instructions, and receipt evolution must commute with \(\Resolve\) without dropping a required outcome, call site, or receipt.
+% 注册映射必须全定义、唯一且不包含原始指令，并且回执演化必须与 \(\Resolve\) 交换而不丢弃要求实现的结果、调用位置或回执。
 \end{definition}
 
 \Cref{thm:exact-history} proves checker reflection and a source-boundary/registered-realization bijection.

@@ -2,21 +2,25 @@
 % 执行编辑的精确安全检查
 \label{sec:admission}
 
-The preceding section derives a target contract from the authenticated source history and requested edit.
-% 前一节从经认证的源历史与所请求的编辑中推导目标契约。
-This section decides whether that contract has a policy-safe implementation that preserves every still-possible outcome.
-% 本节判定该契约是否存在既满足策略安全、又保留每个仍可能结果的实现。
-It first resolves copied occurrences against durable receipts, then computes the greatest prefix-robust family of safe completions, and finally presents the ideal atomic machine used as the refinement target in \cref{sec:kernel}.
-% 本节首先根据持久回执解析复制的发生项，随后计算安全完成路径的最大前缀鲁棒族，最后给出 \cref{sec:kernel} 所用的理想原子机精化目标。
+The preceding section derives an edited workflow from the authenticated source record and requested edit.
+% 前一节从经认证源记录和请求的编辑中推导编辑后的工作流。
+This section decides whether that workflow has a policy-safe implementation that preserves every still-possible required outcome.
+% 本节判定该工作流是否存在满足策略且保留每个仍可能且仍要求实现结果的安全实现。
+It first determines whether each copied call needs a new receipt or reuses an existing one.
+% 它首先确定每个复制调用需要新回执还是复用已有回执。
+It then computes the largest family of completed executions that remains safe after every partial execution.
+% 随后，它计算在每段部分执行之后都保持安全的最大完整执行族。
+Finally, it presents the ideal atomic execution machine used to prove the installed runtime correct in \cref{sec:kernel}.
+% 最后，它给出用于在 \cref{sec:kernel} 中证明已安装运行时正确的理想原子执行机。
 
 Recall the authority-label alphabet \(\mathcal U\) and regular prefix-closed policy \(\mathcal A\subseteq\mathcal U^*\).
 % 回顾权限标签字母表 \(\mathcal U\) 和正则前缀闭合策略 \(\mathcal A\subseteq\mathcal U^*\)。
-For the authenticated receipt ledger \(\Delta\), write \(\mathsf{lab}(\Delta)\in\mathcal A\) for its authority word and \(D_\Delta\) for its receipted cells.
-% 对于经认证的回执账本 \(\Delta\)，用 \(\mathsf{lab}(\Delta)\in\mathcal A\) 表示其权限词，用 \(D_\Delta\) 表示其中已有回执的单元。
+For the authenticated receipt log \(\Delta\), \(\mathsf{lab}(\Delta)\in\mathcal A\) is its permission trace and \(D_\Delta\) is the set of effect identities that already have receipts.
+% 对于经认证回执日志 \(\Delta\)，\(\mathsf{lab}(\Delta)\in\mathcal A\) 是其权限轨迹，\(D_\Delta\) 是已经具有回执的效果标识集合。
 Fix \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\) and write \(\mathsf{src}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\).
 % 固定 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并记 \(\mathsf{src}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\)。
-When defined, the tagged root, execution-edit, or live-extension derivation is unique.
-% 带标签的根、执行编辑或在线扩展推导在有定义时是唯一的。
+When defined, the tagged root, execution-edit, or registered-extension derivation is unique.
+% 带标签的根、执行编辑或已注册扩展推导在有定义时是唯一的。
 Write \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
 % 记为 \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
 Root derivation additionally requires that \(\mathsf{CheckReg}(\mathcal W,R)\) accept.
@@ -27,10 +31,10 @@ An execution edit has \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) and uses t
 % \(\mathsf{Extend}(\xi)\) 使用 \cref{sec:model} 中的认证判定。
 Let \(\rho_u\) be the authenticated target registry in \(H_u\), let \(O_{H,u}=O_{\mathcal C_u}\), and use \(H'=H_u\) and \(\rho'=\rho_u\) where earlier notation is convenient.
 % 令 \(\rho_u\) 为 \(H_u\) 中经认证的目标注册表，令 \(O_{H,u}=O_{\mathcal C_u}\)，并在沿用先前记法更方便时使用 \(H'=H_u\) 和 \(\rho'=\rho_u\)。
-All languages below depend on \(\Theta\), the schema registry, \(\rho_u\), and target policy \(\mathcal A_u\), but are insensitive to \(\mathsf{out}\).
-% 下文所有语言均依赖于 \(\Theta\)、模式注册表、\(\rho_u\) 与目标策略 \(\mathcal A_u\)，但对 \(\mathsf{out}\) 不敏感。
-The executable compiler still binds \(\mathsf{out}\) into the exact installation cut.
-% 可执行编译器仍会把 \(\mathsf{out}\) 绑定到精确安装切点中。
+All languages below depend on \(\Theta\), the schema registry, \(\rho_u\), and target policy \(\mathcal A_u\), but not on the dispatch queue \(\mathsf{out}\).
+% 下文所有语言均依赖于 \(\Theta\)、模式注册表、\(\rho_u\) 与目标策略 \(\mathcal A_u\)，但不依赖派发队列 \(\mathsf{out}\)。
+The executable checker nevertheless binds \(\mathsf{out}\) into the authenticated source snapshot used for installation.
+% 可执行检查器仍会把 \(\mathsf{out}\) 绑定到安装所用的认证源状态快照中。
 We write only \(H,u\) where the remaining parameters are fixed.
 % 当其余参数固定时，我们仅写作 \(H,u\)。
 
@@ -39,48 +43,48 @@ We write only \(H,u\) where the remaining parameters are fixed.
 
 Resolution never erases an occurrence retained by the derived contract.
 % 解析绝不会擦除派生契约所保留的发生项。
-Starting with \(R_0=D_\Delta\), the deterministic transducer \(\Resolve^{\rho_u}_\Delta\) maps a raw word \(w=x_1\cdots x_n\) to a resolved word \(z_1\cdots z_n\).
-% 从 \(R_0=D_\Delta\) 开始，确定性转换器 \(\Resolve^{\rho_u}_\Delta\) 将原始词 \(w=x_1\cdots x_n\) 映射为已解析词 \(z_1\cdots z_n\)。
+Starting with \(D_0=D_\Delta\), the deterministic transducer \(\Resolve^{\rho_u}_\Delta\) maps a raw word \(w=x_1\cdots x_n\) to a resolved word \(z_1\cdots z_n\).
+% 从 \(D_0=D_\Delta\) 开始，确定性转换器 \(\Resolve^{\rho_u}_\Delta\) 将原始词 \(w=x_1\cdots x_n\) 映射为已解析词 \(z_1\cdots z_n\)。
 For \(d_i=q^{\rho_u}_{\rm cell}(x_i)\),
 % 对于 \(d_i=q^{\rho_u}_{\rm cell}(x_i)\)，定义 \(z_i\) 如下：
 \begin{equation}
 \label{eq:resolve}
  z_i=
  \begin{cases}
-  \Fresh(x_i,d_i), & d_i\notin R_{i-1},
-       \quad R_i=R_{i-1}\cup\{d_i\};\\
-  \Alias(x_i,d_i), & d_i\in R_{i-1},
-       \quad R_i=R_{i-1}.
+  \Fresh(x_i,d_i), & d_i\notin D_{i-1},
+       \quad D_i=D_{i-1}\cup\{d_i\};\\
+  \Alias(x_i,d_i), & d_i\in D_{i-1},
+       \quad D_i=D_{i-1}.
  \end{cases}
 \end{equation}
-The authority projection erases \Alias symbols and maps each \Fresh symbol to its cell's authority label.
-% 权限投影会擦除 \Alias 符号，并将每个 \Fresh 符号映射到其单元的权限标签。
+The permission projection erases \Alias symbols and maps each \Fresh symbol to its effect identity's permission label.
+% 权限投影会擦除 \Alias 符号，并将每个 \Fresh 符号映射到其效果标识的权限标签。
 \[
  \mathsf{auth}(\Fresh(x,d))=\ell_{\rho_u}(d),\qquad
  \mathsf{auth}(\Alias(x,d))=\epsilon .
 \]
-For resolved \(z\), \(\mathsf{raw}(z)\) drops the \Fresh/\Alias mode and cell but preserves ordered occurrence identifiers.
-% 对于已解析的 \(z\)，\(\mathsf{raw}(z)\) 会去除 \Fresh/\Alias 模式和单元，但保留有序的发生项标识符。
+For resolved \(z\), \(\mathsf{raw}(z)\) drops the \Fresh/\Alias mode and effect identity but preserves the ordered occurrence identifiers.
+% 对于已解析的 \(z\)，\(\mathsf{raw}(z)\) 会去除 \Fresh/\Alias 模式和效果标识，但保留有序发生项标识符。
 A \Retry repeats the same invocation and adds no occurrence.
 % \Retry 重复同一次调用，不增加任何发生项。
-Restored occurrences sharing a cell remain distinct and may resolve differently.
-% 共享同一单元的恢复发生项仍彼此有别，并且可能得到不同的解析结果。
+Restored occurrences sharing an effect identity remain distinct and may resolve differently.
+% 共享同一效果标识的恢复发生项仍彼此有别，并且可能得到不同的解析结果。
 
 \begin{lemma}[Resolution]
 % 解析
 \label{lem:resolution}
 \(\Resolve^{\rho_u}_\Delta\) is deterministic, length preserving, and prefix compatible.
 % \(\Resolve^{\rho_u}_\Delta\) 是确定性的、保持长度的，并且与前缀兼容。
-Its \Fresh projection contains each cell at most once outside \(D_\Delta\), while its occurrence projection is exactly the input word.
-% 在 \(D_\Delta\) 之外，其 \Fresh 投影至多包含每个单元一次，而其发生项投影恰好就是输入词。
+Its \Fresh projection contains each effect identity at most once outside \(D_\Delta\), while its occurrence projection is exactly the input word.
+% 在 \(D_\Delta\) 之外，其 \Fresh 投影至多包含每个效果标识一次，而其发生项投影恰好就是输入词。
 Moreover, if \(\Resolve^{\rho_u}_\Delta(rv)=zv'\), then \(z=\Resolve^{\rho_u}_\Delta(r)\) and \(v'=\Resolve^{\rho_u}_{\Delta_z}(v)\), where \(\Delta_z\) extends \(\Delta\) by the \Fresh events of \(z\).
 % 此外，若 \(\Resolve^{\rho_u}_\Delta(rv)=zv'\)，则 \(z=\Resolve^{\rho_u}_\Delta(r)\) 且 \(v'=\Resolve^{\rho_u}_{\Delta_z}(v)\)，其中 \(\Delta_z\) 通过加入 \(z\) 的 \Fresh 事件来扩展 \(\Delta\)。
 \end{lemma}
 \begin{proof}
-Induction on input length shows that the transducer emits one prefix-determined output symbol per input symbol and updates \(R_i\) only for \Fresh.
-% 对输入长度作归纳表明，该转换器为每个输入符号发出一个由前缀决定的输出符号，并且仅在 \Fresh 时更新 \(R_i\)。
-Set membership ensures one \Fresh emission per cell.
-% 集合成员关系确保每个单元仅产生一次 \Fresh。
+Induction on input length shows that the transducer emits one prefix-determined output symbol per input symbol and updates \(D_i\) only for \Fresh.
+% 对输入长度作归纳表明，该转换器为每个输入符号发出一个由前缀决定的输出符号，并且仅在 \Fresh 时更新 \(D_i\)。
+Set membership ensures one \Fresh emission per effect identity.
+% 集合成员关系确保每个效果标识仅产生一次 \Fresh。
 Both cases retain \(x_i\).
 % 两种情形都会保留 \(x_i\)。
 Splitting after \(r\) gives the streaming equation.
@@ -94,10 +98,11 @@ A copied occurrence that resolves as \Alias stutters only in the authority histo
 \subsection{Safe Completion After Every Prefix}
 % 每个前缀之后的安全完成
 
-\subsubsection{Greatest Prefix-Robust Fixed Point}
+\subsubsection{Largest family safe after every prefix}
+% 每个前缀之后都安全的最大执行族
 
-For each structurally derived outcome \(o\in O_{H,u}\), define its set of resolved completions and the corresponding safe subset.
-% 对每个结构化派生的结果 \(o\in O_{H,u}\)，定义其已解析完成路径的集合及相应的安全子集。
+For each derived outcome \(o\in O_{H,u}\), define all of its completed executions and the subset allowed by policy.
+% 对每个推导出的结果 \(o\in O_{H,u}\)，定义其全部完整执行以及策略允许的子集。
 \begin{equation}
 \label{eq:safe-completions}
 \begin{aligned}
@@ -106,8 +111,12 @@ For each structurally derived outcome \(o\in O_{H,u}\), define its set of resolv
    \mathsf{lab}(\Delta)\mathsf{auth}(z)\in\mathcal A_u\}.
 \end{aligned}
 \end{equation}
-Individual outcome safety is insufficient because a shared prefix can strand a contract-compatible outcome, so the safety check closes safe completions under every shared prefix.
-% 单个结果的安全性并不充分，因为共享前缀可能使一个与契约兼容的结果陷入无后续状态，因此安全检查要求安全完成路径集合在每个共享前缀下闭合。
+Checking each outcome separately is insufficient.
+% 单独检查每个结果并不充分。
+After a partial execution shared by several outcomes, every outcome still compatible with that partial execution must retain a policy-safe completion.
+% 在多个结果共享的一段部分执行之后，每个仍与该部分执行兼容的结果都必须保留一条策略安全的完成路径。
+The operator below removes exactly the completed executions that violate this condition.
+% 下列算子恰好删除违反这一条件的完整执行。
 For a resolved prefix \(z\), let
 % 对于已解析前缀 \(z\)，定义 \(\mathsf{Compat}(z)\) 如下：
 \[
@@ -150,23 +159,25 @@ Runtime uses \((W^\dagger,B^\dagger)\), while the checker and seal retain indexe
 \begin{definition}[Safe execution edit]
 % 安全执行编辑
 \label{def:admission}
-If \(\mathsf{Derive}(\Theta)\) is undefined, then \(\mathsf{Admit}(\Theta)\) is false.
-% 若 \(\mathsf{Derive}(\Theta)\) 无定义，则 \(\mathsf{Admit}(\Theta)\) 为假。
+If \(\mathsf{Derive}(\Theta)\) is undefined, then \(\mathsf{SafeEdit}(\Theta)\) is false.
+% 若 \(\mathsf{Derive}(\Theta)\) 无定义，则 \(\mathsf{SafeEdit}(\Theta)\) 为假。
 Otherwise,
 % 否则，
 \begin{equation}
 \label{eq:admission}
-\mathsf{Admit}(\Theta)
+\mathsf{SafeEdit}(\Theta)
  \quad\Longleftrightarrow\quad
  \widehat B^\dagger_{H,u}\ne\varnothing .
 \end{equation}
 \end{definition}
-\(\mathsf{Admit}(H,u)\) fixes \(\Theta\) and both registries.
-% \(\mathsf{Admit}(H,u)\) 固定 \(\Theta\) 与两个注册表。
-At \(z=\epsilon\), nonemptiness covers every outcome, while the existential chooses a linearization without fairness and the universal prefix condition prevents stranding.
-% 在 \(z=\epsilon\) 处，非空性覆盖每个结果，而存在量词在不要求公平性的情况下选择线性化，全称前缀条件则防止结果陷入无后续状态。
-Here \(\mathsf{SPC}\) requires every source outcome that is neither discharged nor issuer-declassified to have a checked lift into \(\widehat B\); \cref{app:spc} gives the full relation.
-% 此处 \(\mathsf{SPC}\) 是 \cref{app:spc} 中形式化的源提升覆盖关系。
+\(\mathsf{SafeEdit}(H,u)\) fixes \(\Theta\) and both registries.
+% \(\mathsf{SafeEdit}(H,u)\) 固定 \(\Theta\) 与两个注册表。
+At \(z=\epsilon\), nonemptiness covers every required outcome.
+% 在 \(z=\epsilon\) 处，非空性覆盖每个要求实现的结果。
+The existential quantifier chooses a call order without assuming fairness, and the universal condition keeps every compatible outcome completable after every prefix.
+% 存在量词在不假设公平性的情况下选择调用顺序，而全称条件保证每个兼容结果在每个前缀之后仍可完成。
+Relation \(\mathsf{Preserve}\) requires every source outcome that is neither completed nor authorized for removal to have a checked lift into \(\widehat B\); \cref{app:spc} gives its full definition.
+% 关系 \(\mathsf{Preserve}\) 要求每个既未完成、也未获授权移除的源结果在 \(\widehat B\) 中都有经检查的提升；\cref{app:spc} 给出完整定义。
 
 \begin{definition}[Indexed realization]
 % 带索引实现
@@ -176,8 +187,8 @@ A generated language and indexed marked family \((L,\widehat B)\) realize \((H,u
 \begin{enumerate}[leftmargin=*,itemsep=1pt]
  \item \(\widehat B\ne\varnothing\);
 % \(\widehat B\) 非空；
- \item \emph{source and target fidelity:} \(\mathsf{SPC}(H,u,\widehat B)\), \(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\), and \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\);
-% 源与目标忠实性：\(\mathsf{SPC}(H,u,\widehat B)\)、\(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\)，且 \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\)。
+ \item \emph{source and target fidelity:} \(\mathsf{Preserve}(H,u,\widehat B)\), \(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\), and \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\);
+% 源与目标忠实性：\(\mathsf{Preserve}(H,u,\widehat B)\)、\(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\)，且 \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\)。
  \item \emph{policy safety:} \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A_u\) for every \(z\in L\);
 % 策略安全性：对每个 \(z\in L\)，均有 \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A_u\)。
  \item \emph{completion nonblocking:} \(L=\Pref(\pi_2\widehat B)\); and
@@ -187,11 +198,11 @@ A generated language and indexed marked family \((L,\widehat B)\) realize \((H,u
 \end{enumerate}
 \end{definition}
 
-\begin{lemma}[Prefix-robust greatest realization]
-% 前缀鲁棒的最大实现
+\begin{lemma}[Largest safe realization]
+% 最大安全实现
 \label{lem:greatest-realization}
-A realization exists iff \(\mathsf{Admit}(H,u)\).
-% 当且仅当 \(\mathsf{Admit}(H,u)\) 成立时，实现存在。
+A realization exists iff \(\mathsf{SafeEdit}(H,u)\).
+% 当且仅当 \(\mathsf{SafeEdit}(H,u)\) 成立时，实现存在。
 When the edit is safe, \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) is a realization, and every realization \((L,\widehat B)\) satisfies \(\widehat B\subseteq\widehat B^\dagger_{H,u}\) and \(L\subseteq W^\dagger_{H,u}\).
 % 当编辑安全时，\((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) 是一个实现，并且每个实现 \((L,\widehat B)\) 都满足 \(\widehat B\subseteq\widehat B^\dagger_{H,u}\) 和 \(L\subseteq W^\dagger_{H,u}\)。
 \end{lemma}
@@ -202,12 +213,12 @@ Persistent coverage makes it post-fixed, so monotonicity and finite Knaster--Tar
 % 持续覆盖使其成为后不动点，因此由单调性和有限 Knaster--Tarski 可知其包含于 \(\widehat B^\dagger\)，而投影前缀给出 \(L\subseteq W^\dagger\)。
 Conversely, \(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) supplies persistent coverage.
 % 反之，\(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) 提供持续覆盖。
-Together with checked lifts, this coverage establishes \(\mathsf{SPC}\) at \(\epsilon\).
-% 该覆盖与经检查的提升共同在 \(\epsilon\) 处建立 \(\mathsf{SPC}\)。
+Together with checked lifts, this coverage establishes \(\mathsf{Preserve}\) at \(\epsilon\).
+% 该覆盖与经检查的提升共同在 \(\epsilon\) 处建立 \(\mathsf{Preserve}\)。
 The inclusion \(\widehat B^\dagger\subseteq\widehat B_0\) supplies target fidelity and safe marked words, while prefix closure of \(\mathcal A_u\) supplies prefix safety.
 % 包含关系 \(\widehat B^\dagger\subseteq\widehat B_0\) 提供目标忠实性和安全标记词，而 \(\mathcal A_u\) 的前缀闭包提供前缀安全性。
 Finally, \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) supplies nonblocking.
-% 反之，\(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) 提供持续覆盖，它与经检查的提升共同在 \(\epsilon\) 处建立 \(\mathsf{SPC}\)；\(\widehat B^\dagger\subseteq\widehat B_0\) 提供目标忠实性和安全标记词，\(\mathcal A_u\) 的前缀闭合性提供前缀安全性，而 \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) 提供非阻塞性。
+% 反之，\(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) 提供持续覆盖，它与经检查的提升共同在 \(\epsilon\) 处建立 \(\mathsf{Preserve}\)；\(\widehat B^\dagger\subseteq\widehat B_0\) 提供目标忠实性和安全标记词，\(\mathcal A_u\) 的前缀闭合性提供前缀安全性，而 \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) 提供非阻塞性。
 Hence the fixed point is a realization exactly when nonempty.
 % 因此，该不动点恰在非空时构成实现。
 \end{proof}

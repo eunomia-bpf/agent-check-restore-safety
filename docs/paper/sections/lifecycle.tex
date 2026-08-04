@@ -1,17 +1,19 @@
-\section{One Agent, Two Histories}
-% 一个 Agent，两段历史
+\section{A Procurement Edit, End to End}
+% 一个采购编辑的端到端过程
 \label{sec:lifecycle}
 
 Consider a procurement Agent authorized to place one order.
 % 考虑一个获授权只能下单一次的采购 Agent。
-It durably reserves the budget, making the receipt ledger's authority-label word, written \(\mathsf{lab}(\Delta)\), equal to \(r\), and saves checkpoint \(k\) before approval.
-% 它持久地预留预算，使回执账本的权限标签词（记作 \(\mathsf{lab}(\Delta)\)）等于 \(r\)，并在审批前保存检查点 \(k\)。
-Approval occurrence \(x_a\) then commits through cell \(d_a\), whose authority label is \(a\), so \(\mathsf{lab}(\Delta)=ra\).
-% 随后，审批发生项 \(x_a\) 通过单元 \(d_a\) 提交；该单元的权限标签为 \(a\)，因此 \(\mathsf{lab}(\Delta)=ra\)。
-The Agent requests a choice Fork between two suppliers, \(L\) and \(R\).
-% Agent 请求在供应商 \(L\) 和 \(R\) 之间执行一次选择型 Fork。
-Its registered causal-completion contract has exactly two indexed outcomes.
-% 其登记的因果完成契约恰好有两个带索引的结果。
+The Agent reserves the budget and saves checkpoint \(k\) before approval.
+% Agent 预留预算，并在审批前保存检查点 \(k\)。
+The approval then uses its one-use permission and leaves a completion record.
+% 审批随后使用其一次性权限并留下完成记录。
+The Agent next requests a Fork between suppliers \(L\) and \(R\).
+% Agent 随后请求在供应商 \(L\) 和 \(R\) 之间执行 Fork。
+The workflow allows two outcomes: order from \(L\) or order from \(R\).
+% 工作流允许两种结果：向 \(L\) 下单或向 \(R\) 下单。
+In either outcome, payment must precede shipment:
+% 在任一结果中，付款都必须先于发货：
 \begin{equation}
 \label{eq:running-outcomes}
 \begin{split}
@@ -21,43 +23,49 @@ Its registered causal-completion contract has exactly two indexed outcomes.
 \end{equation}
 where \(x_i^p\) and \(x_i^s\) are payment and shipment occurrences.
 % 其中，\(x_i^p\) 和 \(x_i^s\) 分别是付款发生项和发货发生项。
-The alternatives are exclusive, but both must have a safe completion at the cut.
-% 两个备选结果互斥，但二者在切点处都必须存在安全完成路径。
+An occurrence identifies one call position in the workflow.
+% 发生项标识工作流中的一个调用位置。
+An effect identity identifies the protected action and one-use permission behind that position; the formulas call it a cell \(d\).
+% 效果标识指明该位置背后的受控动作和一次性权限；公式中将其称为单元 \(d\)。
 
-An occurrence identifies one logical call slot.
-% 逻辑发生项不同于其所兑现权限对应的语义单元。
-A cell identifies the irreversible real-world action and one-use authority behind that slot.
-% 单元标识该调用槽背后的不可逆现实动作和一次性权限。
-Fork or Restore may create new occurrences that still point to the same cell.
-% Fork 或 Restore 可以创建仍指向同一单元的新发生项。
-The protected-call registry authenticates
-% 受保护调用注册表认证如下关系：
+The two shipment calls share one effect identity:
+% 两个发货调用共享一个效果标识：
 \[
  q_{\rm cell}(x_L^s)=q_{\rm cell}(x_R^s)=d_s.
 \]
-The two branch occurrences refer to the same shipment cell but receive distinct occurrence-bound handles after the Fork.
-% 两个分支发生项指向同一个发货单元，但在 Fork 后获得不同的发生项绑定句柄。
-Payments retain distinct cells \(d_L^p\) and \(d_R^p\).
-% 两笔付款保留不同的单元 \(d_L^p\) 和 \(d_R^p\)。
-The authority labels of \(d_s,d_L^p,d_R^p\) are \(s,p_L,p_R\), respectively.
-% \(d_s,d_L^p,d_R^p\) 的权限标签分别为 \(s,p_L,p_R\)。
-A later Restore of \(k\) creates approval occurrence \(x_a'\) with \(q_{\rm cell}(x_a')=d_a\).
-% 随后对 \(k\) 的 Restore 会创建审批发生项 \(x_a'\)，且 \(q_{\rm cell}(x_a')=d_a\)。
-The authority policy allows prefixes of \(rap_Ls\) and \(rap_Rs\), but no trace containing both payment labels or a payment before \(a\).
-% 权限策略允许 \(rap_Ls\) 和 \(rap_Rs\) 的前缀，但不允许同时包含两个付款标签的轨迹，也不允许在 \(a\) 之前出现付款的轨迹。
+The two payment calls instead have different effect identities \(d_L^p\) and \(d_R^p\).
+% 两个付款调用则具有不同的效果标识 \(d_L^p\) 和 \(d_R^p\)。
+A later Restore of \(k\) creates a new approval occurrence \(x_a'\), but both approval occurrences refer to the same effect identity \(d_a\).
+% 随后 Restore 到 \(k\) 会创建新的审批发生项 \(x_a'\)，但两个审批发生项都指向同一个效果标识 \(d_a\)。
 
-\paragraph{End-to-end security compilation}
-% 端到端安全编译
+The receipt log \(\Delta\) records newly authorized effects in order.
+% 回执日志 \(\Delta\) 按顺序记录新获得授权的效果。
+The notation \(\mathsf{lab}(\Delta)\) keeps only their permission labels.
+% 记号 \(\mathsf{lab}(\Delta)\) 只保留这些效果的权限标签。
+Budget reservation contributes \(r\), approval contributes \(a\), the two payments contribute \(p_L\) and \(p_R\), and shipment contributes \(s\).
+% 预算预留贡献 \(r\)，审批贡献 \(a\)，两种付款分别贡献 \(p_L\) 和 \(p_R\)，发货贡献 \(s\)。
+At the Fork request, \(\mathsf{lab}(\Delta)=ra\).
+% 在 Fork 请求处，\(\mathsf{lab}(\Delta)=ra\)。
+The policy allows prefixes of \(rap_Ls\) and \(rap_Rs\), but never both payments or a payment before approval.
+% 策略允许 \(rap_Ls\) 和 \(rap_Rs\) 的前缀，但绝不允许两笔付款同时发生，也不允许付款先于审批。
+Although the supplier outcomes are exclusive, both must still have a safe way to finish when the Fork is checked.
+% 尽管两个供应商结果互斥，但在检查 Fork 时，二者都必须仍有安全完成方式。
+
+\paragraph{How the checker handles the Fork}
+% 检查器如何处理 Fork
 The Agent submits only \(u=\mathsf{ForkChoice}(b,\sigma)\).
-% Agent 仅提交 \(u=\mathsf{ForkChoice}(b,\sigma)\)；可信控制器快照 \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\)，其中 \(\mathsf{out}\) 是持久化且有序的派发发件箱，并从经认证历史和已注册模式重新推导目标、结果义务与效果标识。
-The trusted controller snapshots \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\), where \(\mathsf{out}\) is the ordered durable dispatch outbox.
-% 可信控制器快照 \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\)，其中 \(\mathsf{out}\) 是持久化且有序的派发发件箱。
-It then re-derives the target, outcome obligations, and effect identities from the authenticated history and registered schema.
-% 随后，控制器从经认证历史和已注册模式重新推导目标、结果义务与效果标识。
-Write \(M_o\) for outcome \(o\)'s policy-safe resolved completions.
-% 以 \(M_o\) 表示结果 \(o\) 的策略安全已解析完成路径。
-At this cut, each outcome has exactly one causal linearization, and the two linearizations resolve to
-% 在此切点，每个结果恰有一条因果线性化路径，而这两条线性化路径解析为
+% Agent 只提交 \(u=\mathsf{ForkChoice}(b,\sigma)\)。
+The trusted controller, not the Agent, constructs the edited workflow from the registered edit schema.
+% 可信控制器而非 Agent 根据已注册编辑模式构造编辑后的工作流。
+It reads the workflow, authenticated execution record, receipt log, ordered dispatch queue, and policy, written \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\).
+% 它读取工作流、经认证执行记录、回执日志、有序派发队列和策略，记为 \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\)。
+From these records it derives the edited workflow, its required outcomes, and the effect identity behind every call position.
+% 控制器从这些记录中推导编辑后的工作流、要求实现的结果以及每个调用位置背后的效果标识。
+
+Write \(M_o\) for the policy-safe completions of outcome \(o\).
+% 以 \(M_o\) 表示结果 \(o\) 的策略安全完成路径。
+In this example, each outcome has one allowed call order:
+% 在本例中，每个结果都有一种允许的调用顺序：
 \[
 \begin{aligned}
  z_L&=\Fresh(x_L^p,d_L^p)\Fresh(x_L^s,d_s),\\
@@ -66,36 +74,36 @@ At this cut, each outcome has exactly one causal linearization, and the two line
 \]
 Thus \(M_{o_L}=\{z_L\}\), \(M_{o_R}=\{z_R\}\), and \(\widehat B^\dagger=\{(o_L,z_L),(o_R,z_R)\}\), with \(W^\dagger\) their prefix closure.
 % 因此，\(M_{o_L}=\{z_L\}\)、\(M_{o_R}=\{z_R\}\)，且 \(\widehat B^\dagger=\{(o_L,z_L),(o_R,z_R)\}\)，其中 \(W^\dagger\) 是它们的前缀闭包。
-The checker compiles \(\mathsf{Can}(W^\dagger,\pi_2\widehat B^\dagger)\), seals the exact source cut, and atomically installs the monitor and replacement handles at a fresh epoch.
-% 检查器编译 \(\mathsf{Can}(W^\dagger,\pi_2\widehat B^\dagger)\)，封印精确源切点，并在新纪元中原子安装监控器和替换句柄。
-The installed monitor then admits only these prefixes and classifies each protected call as a new \Fresh effect, a receipt-reusing \Alias, or a denial.
-% 随后，已安装监控器只接纳这些前缀，并将每个受保护调用归类为新的 \Fresh 效果、复用回执的 \Alias 或拒绝。
-\Fresh creates a cell's first receipt, whereas \Alias reuses that receipt while advancing a distinct occurrence.
-% \Fresh 创建单元的第一条回执，而 \Alias 在推进不同发生项时复用该回执。
+The checker builds monitor \(\mathsf{Can}(W^\dagger,\pi_2\widehat B^\dagger)\), binds the answer to this source snapshot, and atomically installs the monitor and replacement authorization tokens under a new monitor version.
+% 检查器构造监控器 \(\mathsf{Can}(W^\dagger,\pi_2\widehat B^\dagger)\)，将答案绑定到该源状态快照，并在新的监控器版本下原子安装监控器和替代授权令牌。
+The installed monitor allows only these partial executions.
+% 已安装监控器只允许这些部分执行。
+For each protected call, \Fresh means that the effect identity receives its first receipt, while \Alias means that another call position reuses the existing receipt.
+% 对每个受控调用，\Fresh 表示该效果标识获得第一条回执，而 \Alias 表示另一个调用位置复用已有回执。
 If policy excludes \(rap_Rs\), then \(M_{o_R}=\varnothing\), and the Fork is rejected because pruning supplier \(R\) would change its meaning.
 % 如果策略排除 \(rap_Rs\)，则 \(M_{o_R}=\varnothing\)，并且该 Fork 会被拒绝，因为剪除供应商 \(R\) 将改变其含义。
-Rejection returns the ranked elimination chain rather than letting the Agent weaken the target.
-% 拒绝会返回带秩淘汰链，而不允许 Agent 弱化目标；\cref{sec:admission} 给出了共享前缀情形：每个结果开始时都安全，但没有任何完成族保持前缀鲁棒。
-\Cref{sec:admission} gives the shared-prefix case where every outcome starts safe but no set of executions can preserve every still-compatible outcome after every shared prefix.
-% \Cref{sec:admission} 给出了共享前缀情形：每个结果开始时都安全，但没有任何完成族保持前缀鲁棒。
+Rejection returns a ranked certificate explaining which completions were removed and why, rather than letting the Agent weaken the requested edit.
+% 拒绝会返回一份带秩证书，解释哪些完成路径被删除以及删除原因，而不会让 Agent 弱化请求的编辑。
+\Cref{sec:admission} gives a harder case where each outcome initially has a safe completion, but every possible implementation eventually reaches a partial execution after which some still-possible outcome cannot finish safely.
+% \Cref{sec:admission} 给出一个更困难的情形：每个结果起初都有安全完成路径，但任何可能实现最终都会到达某段部分执行，此后某个仍可能的结果无法安全完成。
 
-\paragraph{Live growth without a reset}
-% 无需重置的在线增长
-While the same procurement history remains live, the Agent may name only a record \(\xi\) in which the protected-call and policy issuers authenticate new compensation schemas and policy words.
-% 在同一采购历史仍处于活跃状态时，Agent 只能指名一条记录 \(\xi\)，其中受保护调用发行方与策略发行方认证新的补偿模式和策略词。
-\(\mathsf{Extend}(\xi)\) is additive and identity-on-frontier: it preserves every current outcome, occurrence, cell, receipt, checkpoint, cursor, outbox item, and causal edge while appending fresh schema and registry rows.
-% \(\mathsf{Extend}(\xi)\) 仅做追加且在前沿上保持恒等：它保留每个当前结果、发生项、单元、回执、检查点、游标、发件箱条目与因果边，同时追加新的模式和注册表行。
-The old policy embeds in the successor policy, so the current residual fixed point remains post-fixed and no promised outcome can disappear.
-% 旧策略嵌入后继策略，因此当前残余不动点仍为后不动点，任何已承诺结果都不能消失。
-The controller recompiles the monitor and atomically rotates the domain epoch.
-% 控制器重新编译监控器并原子轮换整个域的纪元，此后后续编辑可以引用新模式而无需引导；Agent 不能重新绑定旧调用或弱化活跃义务。
-A later edit may then cite the new schema without bootstrap, but the Agent cannot rebind an old invocation or weaken a live obligation.
-% 此后，后续编辑可以引用新模式而无需引导，但 Agent 不能重新绑定旧调用或弱化活跃义务。
+\paragraph{Adding new rules without changing current requirements}
+% 在不改变当前要求的情况下增加新规则
+A registered extension \(\mathsf{Extend}(\xi)\) can add compensation schemas and policy entries while the procurement execution remains active.
+% 已注册扩展 \(\mathsf{Extend}(\xi)\) 可以在采购执行仍然活跃时增加补偿模式与策略条目。
+The protected-call and policy authorities must both sign \(\xi\).
+% 受控调用权限方与策略权限方都必须签署 \(\xi\)。
+The extension preserves every current outcome, call position, effect identity, receipt, checkpoint, cursor, dispatch-queue entry, and causal edge.
+% 该扩展保留每个当前结果、调用位置、效果标识、回执、检查点、游标、派发队列条目和因果边。
+It only appends new schema and registry rows and enlarges the policy.
+% 它只追加新的模式和注册表行，并扩大策略。
+The controller then rebuilds the monitor and atomically changes its version.
+% 控制器随后重新构造监控器并原子更改其版本。
+A later edit may use the new schema, but the Agent cannot change an earlier call or remove a currently required outcome.
+% 后续编辑可以使用新模式，但 Agent 无法改变先前调用或移除当前仍要求实现的结果。
 
-A \emph{policy domain} is the set of protected cells governed by one receipt ledger and policy.
-% \emph{策略域}是由同一回执账本和策略管理的一组受保护单元。
-Its epoch identifies the monitor version currently authorized for that set.
-% 策略域的纪元标识当前获准管理该集合的监控器版本。
+A \emph{policy domain} is the set of protected actions governed by one policy, one receipt log, and one monitor that is replaced atomically.
+% \emph{策略域}是由一个策略、一个回执日志和一个原子替换的监控器共同管理的一组受控动作。
 
 \begin{figure*}[t]
   \centering
@@ -108,7 +116,7 @@ Its epoch identifies the monitor version currently authorized for that set.
       stale/.style={-{Latex[length=1.5mm]},thick,dashed},
       lab/.style={font=\scriptsize\bfseries,anchor=east}
     ]
-    \node[lab] at (0,2.15) {logical history};
+    \node[lab] at (0,2.15) {active workflow};
     \node[node] (b0) at (0.65,2.15) {$b_0$};
     \node[node] (al) at (1.85,2.15) {$x_a$};
     \node[box] (f) at (3.1,2.15) {choice\\Fork};
@@ -126,7 +134,7 @@ Its epoch identifies the monitor version currently authorized for that set.
     \draw[arr] (ba) -- (ms);
     \draw[arr] (ms) -- (bl);
     \draw[stale] (b0.north) -- (0.65,3.18) --
-      node[above] {checkpoint clone: new occurrence, same cell}
+      node[above] {checkpoint copy: new call, same effect identity}
       (8.35,3.18) -- (rl.north);
     \draw[arr] (rl) -- (cl);
     \draw[arr] (bl) -- (jn);
@@ -134,7 +142,7 @@ Its epoch identifies the monitor version currently authorized for that set.
     \draw[stale] (bb) to[bend left=17]
       node[below] {loser gates close} (ms);
 
-    \node[lab] at (0,0.65) {receipt ledger and authority projection};
+    \node[lab] at (0,0.65) {recorded calls and permission trace};
     \node[node] (r) at (0.65,0.65) {$r$};
     \node[node] (a) at (3.05,0.65) {$a$};
     \node[node] (pa) at (6.05,0.65) {$p_L$};
@@ -145,7 +153,7 @@ Its epoch identifies the monitor version currently authorized for that set.
     \node[align=center] at (9.75,1.12)
       {\(\Alias(x_a',d_a)\)\\no new receipt};
 
-    \node[lab] at (0,-0.75) {policy-domain epoch};
+    \node[lab] at (0,-0.75) {current monitor version};
     \node[box] (e0) at (0.85,-0.75) {$\eta_0$};
     \node[box] (ef) at (3.7,-0.75) {$\eta_F:\ L,R$};
     \node[box] (ea) at (6.8,-0.75) {$\eta_L$};
@@ -154,12 +162,12 @@ Its epoch identifies the monitor version currently authorized for that set.
     \draw[arr] (ef) -- node[above] {atomic swap} (ea);
     \draw[arr] (ea) -- node[above] {atomic swap} (ej);
   \end{tikzpicture}
-  \caption{An Agent has an editable logical history, an append-only receipt ledger with an authority projection, and one current policy-domain epoch.
-  % Agent 拥有一段可编辑的逻辑历史、一个带权限投影的仅追加回执账本，以及一个当前策略域纪元。
-  Restore clones logical occurrences but preserves authenticated cell identity.
-  % Restore 会克隆逻辑发生项，但保留经过认证的单元标识。
-  A history cut must therefore order both receipt-changing \Fresh events and receipt-silent \Alias events against a policy-domain epoch swap.}
-  % 因此，历史切点必须确定会改变回执的 \Fresh 事件和不产生回执的 \Alias 事件相对于策略域纪元切换的顺序。
+  \caption{Fork, Restore, and Merge change the active workflow but do not erase recorded calls.
+  % Fork、Restore 和 Merge 会改变当前工作流，但不会抹去已经记录的调用。
+  Restore creates a new call position while preserving its authenticated effect identity.
+  % Restore 会创建新的调用位置，同时保留其认证效果标识。
+  The atomic installation point must order both a new authorization (\Fresh) and reuse of an earlier completion record (\Alias) against the monitor-version change.}
+  % 原子安装点必须确定新授权（\Fresh）和先前完成记录复用（\Alias）相对于监控器版本变更的顺序。
   \label{fig:two-histories}
 \end{figure*}
 
@@ -167,35 +175,37 @@ Its epoch identifies the monitor version currently authorized for that set.
 % \Fresh 竞态
 After the shared approval and before either payment, the Agent requests \(\mathsf{MergeSelect}(g,L,\sigma)\).
 % 在共享审批之后、任一付款之前，Agent 请求 \(\mathsf{MergeSelect}(g,L,\sigma)\)。
-If a protected use from the old supplier-\(R\) arm commits \(x_R^p\) first, that occurrence durably selects \(R\) and changes the receipt ledger's authority word \(\mathsf{lab}(\Delta)\) from \(ra\) to \(rap_R\).
-% 如果旧供应商 \(R\) 分支的一次受保护使用先提交 \(x_R^p\)，该发生项就会持久选择 \(R\)，并将回执账本的权限词 \(\mathsf{lab}(\Delta)\) 从 \(ra\) 改为 \(rap_R\)。
+If the payment call \(x_R^p\) from the old supplier-\(R\) branch is authorized first, it selects \(R\) and changes \(\mathsf{lab}(\Delta)\) from \(ra\) to \(rap_R\).
+% 如果旧供应商 \(R\) 分支的付款调用 \(x_R^p\) 先获得授权，它就会选择 \(R\)，并将 \(\mathsf{lab}(\Delta)\) 从 \(ra\) 改为 \(rap_R\)。
 Selecting \(L\) must therefore be re-derived and rejected.
 % 因此，选择 \(L\) 必须重新推导并被拒绝。
-If the Merge cut wins, it closes the current policy-domain epoch and rebinds every live gate before any later \(x_R^p\) can commit.
-% 如果 Merge 切点获胜，它会关闭当前策略域纪元，并在后续任何 \(x_R^p\) 提交之前重新绑定所有活跃门。
-Installing a new program while an old policy-domain epoch remains active permits both payments.
-% 在旧策略域纪元仍处于活跃状态时安装新程序，会使两笔付款都被允许。
+If the Merge installation occurs first, it closes the old monitor version and gives every current call a new authorization token before any later \(x_R^p\) can be authorized.
+% 如果 Merge 先安装，它会关闭旧监控器版本，并在后续任何 \(x_R^p\) 获得授权之前为每个当前调用提供新的授权令牌。
+Leaving the old monitor version active would allow both payments.
+% 让旧监控器版本继续有效会允许两笔付款。
 
 \paragraph{The \Alias race}
 % \Alias 竞态
 Now consider the live Restore in \cref{fig:two-histories}.
 % 现在考虑 \cref{fig:two-histories} 中的活跃 Restore。
-Cloning \(k\) creates a new logical approval occurrence \(x_a'\), a newly minted gate, and an authenticated handle, but retains cell \(d_a\).
-% 克隆 \(k\) 会创建新的逻辑审批发生项 \(x_a'\)、新铸造的门和经过认证的句柄，但会保留单元 \(d_a\)。
-Because \(d_a\) is already receipted, executing \(x_a'\) is an \Alias that advances the restored continuation past approval while leaving \(\Delta\) unchanged.
-% 由于 \(d_a\) 已有回执，执行 \(x_a'\) 是一次 \Alias：它推进已恢复的延续越过审批，同时保持 \(\Delta\) 不变。
-A concurrent join or replacement compiled before that progress is stale even though its receipt comparison still succeeds.
-% 在该进展之前编译的并发 join 或替换已失效，即使其回执比较仍然成功。
-The cut must therefore compare the resolved-occurrence trace \(\chi\) in addition to the receipt ledger.
-% 因此，除回执账本外，切点还必须比较已解析发生项轨迹 \(\chi\)。
-This is the page-one \(\mathsf{RestoreLive}\): the same compiler either installs its derived monitor under a fresh epoch or returns the fixed point's ranked rejection certificate.
-% 这就是第一页的 \(\mathsf{RestoreLive}\)：同一个编译器要么在新纪元下安装其派生监控器，要么返回不动点的带秩拒绝证书。
+Copying checkpoint \(k\) creates a new approval occurrence \(x_a'\) with a new monitor entry and authorization token, but it retains effect identity \(d_a\).
+% 复制检查点 \(k\) 会创建新的审批发生项 \(x_a'\) 以及新的监控器入口和授权令牌，但它保留效果标识 \(d_a\)。
+Because \(d_a\) already has a receipt, executing \(x_a'\) is an \Alias: the restored branch advances past approval without creating another receipt.
+% 由于 \(d_a\) 已有回执，执行 \(x_a'\) 是一次 \Alias：恢复后的分支越过审批，但不会创建另一条回执。
+A concurrent join or replacement computed before that progress is stale even though the receipt log has not changed.
+% 在该推进之前计算的并发 join 或替换已经过期，即使回执日志没有变化。
+The installation check must therefore compare the ordered occurrence record \(\chi\) as well as the receipt log.
+% 因此，安装检查除了比较回执日志外，还必须比较有序发生项记录 \(\chi\)。
+For this \(\mathsf{RestoreLive}\) request, the checker either installs the derived monitor under a new version or returns a ranked rejection certificate.
+% 对于该 \(\mathsf{RestoreLive}\) 请求，检查器要么在新版本下安装推导出的监控器，要么返回带秩拒绝证书。
 
 The example exposes the whole problem.
 % 这个例子揭示了完整的问题。
-Workspace equality cannot recover which branch relation is live, and receipt equality cannot detect \Alias progress.
-% 工作区相等性无法恢复哪个分支关系仍然活跃，而回执相等性无法检测 \Alias 进展。
-Cell equality cannot determine the required obligation projection, while a caller-supplied target automaton cannot certify any of these facts.
-% 单元相等性无法确定所需的义务投影，而调用者提供的目标自动机也无法认证这些事实。
-\Cref{sec:model} instead derives the target through a trusted history judgment.
-% 相比之下，\Cref{sec:model} 通过可信历史判定推导目标。
+Workspace equality does not reveal which branches remain active, and receipt equality does not reveal \Alias progress.
+% 工作区相等性无法揭示哪些分支仍然活跃，而回执相等性无法揭示 \Alias 推进。
+Effect-identity equality alone does not reveal which outcomes the edit must preserve.
+% 仅有效果标识相等性也无法揭示编辑必须保留哪些结果。
+A replacement monitor proposed by the Agent cannot certify any of these facts.
+% Agent 提出的替代监控器无法认证这些事实。
+\Cref{sec:model} therefore derives the edited workflow from the registered schema and authenticated execution record.
+% 因此，\Cref{sec:model} 从已注册模式和经认证执行记录中推导编辑后的工作流。
