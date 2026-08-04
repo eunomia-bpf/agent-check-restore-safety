@@ -1,0 +1,14 @@
+\section{Conclusion}
+% 结论
+\label{sec:conclusion}
+
+History-rewriting Agents require a safety decision that accounts for both logical control state and irreversible external progress.
+% 能够重写历史的 Agent 需要一种同时考虑逻辑控制状态与不可逆外部进展的安全判定。
+\sys derives this decision from a checked workflow, authenticated history, durable receipts, and the requested edit.
+% \sys 从经检查的工作流、经认证历史、持久回执和所请求的编辑中推导这一判定。
+Its greatest fixed point yields the most permissive safe monitor when the edit is realizable, while an empty fixed point yields a finite impossibility certificate.
+% 当编辑可实现时，其最大不动点给出最宽松的安全监控器；当不动点为空时，则给出有限不可能性证书。
+The characterization theorem connects this admission result to atomic installation, identifies the history information required for exact decisions, and preserves the result across finite histories of edits, protected calls, crashes, and additive extensions.
+% 刻画定理将该准入结果连接到原子安装，识别精确判定所需的历史信息，并在由编辑、受保护调用、崩溃和仅追加扩展组成的有限历史中保持该结果。
+The Lean modules and executable tests validate the finite checked core and its explicit compiler.
+% Lean 模块与可执行测试验证了有限检查核心及其显式编译器。

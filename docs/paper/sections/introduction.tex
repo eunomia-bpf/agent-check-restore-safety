@@ -56,7 +56,7 @@ Second, at every allowed partial execution, each result that is still possible m
 Third, the answer must take effect atomically with respect to old calls, including calls that race the edit or survive a crash.
 % 第三，该判定必须相对于旧调用原子生效，包括与编辑竞态或跨越崩溃存活的调用。
 
-We develop Agent History Admission, an exact decision procedure for this boundary.
+We develop \sys, an exact decision procedure for this boundary.
 % 我们提出 Agent 历史准入，即针对这一边界的精确判定过程。
 For a requested edit, the controller takes the checked workflow, authenticated history, receipts, pending effects, policy, and current runtime version, and derives all legal completed executions.
 % 对于一次编辑请求，控制器接收经检查的工作流、经认证历史、回执、待处理效果、策略与当前运行时版本，并推导所有合法完整执行。
@@ -69,7 +69,7 @@ Before installation, the runtime recomputes the answer from the current history 
 \Cref{sec:lifecycle} applies this process to one procurement history across Fork, Merge, two races, and Restore; the restored approval reuses its earlier receipt rather than producing a second effect.
 % \Cref{sec:lifecycle} 将这一过程应用于一段依次经历 Fork、Merge、两类竞态与 Restore 的采购历史；恢复后的审批复用先前回执，而不会产生第二个效果。
 
-\paragraph{Contribution}
+\paragraph{Contributions}
 % 贡献
 We contribute one end-to-end theorem connecting the original Agent workflow, the requested history edit, the exact decision procedure, and the installed runtime.
 % 我们贡献一个端到端定理，将原始 Agent 工作流、请求的历史编辑、精确判定过程与已安装运行时连接起来。

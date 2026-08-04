@@ -2,7 +2,15 @@
 % 可执行验证
 \label{sec:validation}
 
-Five Lean modules pass \texttt{--trust=0} with mapping in \cref{app:lean-map}; factor bounds, pomset lifting, and bisimulation remain mathematical.
+The executable validation checks the finite decision core and its correspondence to the formal development.
+% 可执行验证检查有限判定核心及其与形式化开发的对应关系。
+Five Lean modules pass \texttt{--trust=0}, with their theorem mapping listed in \cref{app:lean-map}.
 % 五个 Lean 模块通过 \texttt{--trust=0} 检查，映射见 \cref{app:lean-map}；因子下界、偏序事件集提升与互模拟仍由数学证明给出。
-Across 81 decision-kernel tests, five-process medians on 16-vCPU AMD EPYC 7R12 with CPython 3.12 are \(53.47\) ms for 128-outcome admission, \(5.51\) ms for rejection, and \(50.35\) ms for 720 unordered completions; over-cap cases fail closed.
+The factor bounds, pomset lifting, and bisimulation remain mathematical proofs rather than mechanized Lean results.
+% 因子下界、偏序事件集提升与互模拟仍为数学证明，而非 Lean 机械化结果。
+The explicit compiler also remains practical for the bounded instances exercised by the artifact.
+% 对制品所覆盖的有界实例，显式编译器也保持实用。
+Across 81 decision-kernel tests, five-process medians on a 16-vCPU AMD EPYC 7R12 with CPython 3.12 are \(53.47\) ms for 128-outcome admission, \(5.51\) ms for rejection, and \(50.35\) ms for 720 unordered completions.
 % 在 81 项判定内核测试中，使用 16 vCPU AMD EPYC 7R12 与 CPython 3.12 的五进程中位数分别为：128 个结果的准入 \(53.47\) ms、拒绝 \(5.51\) ms，以及 720 条无序完成路径 \(50.35\) ms；超过上限的情形关闭失败。
+Instances beyond the configured cap fail closed.
+% 超过配置上限的实例以关闭方式失败。

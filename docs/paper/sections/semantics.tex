@@ -2,6 +2,13 @@
 % 精确历史准入
 \label{sec:admission}
 
+The preceding section derives a target contract from the authenticated source history and requested edit.
+% 前一节从经认证的源历史与所请求的编辑中推导目标契约。
+This section decides whether that contract has a policy-safe implementation that preserves every still-possible outcome.
+% 本节判定该契约是否存在既满足策略安全、又保留每个仍可能结果的实现。
+It first resolves copied occurrences against durable receipts, then computes the greatest prefix-robust family of safe completions, and finally presents the ideal atomic machine used as the refinement target in \cref{sec:kernel}.
+% 本节首先根据持久回执解析复制的发生项，随后计算安全完成路径的最大前缀鲁棒族，最后给出 \cref{sec:kernel} 所用的理想原子机精化目标。
+
 Recall the authority-label alphabet \(\mathcal U\) and regular prefix-closed policy \(\mathcal A\subseteq\mathcal U^*\).
 % 回顾权限标签字母表 \(\mathcal U\) 和正则前缀闭合策略 \(\mathcal A\subseteq\mathcal U^*\)。
 For the authenticated receipt ledger \(\Delta\), write \(\mathsf{lab}(\Delta)\in\mathcal A\) for its authority word and \(D_\Delta\) for its receipted cells.

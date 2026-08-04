@@ -1,6 +1,13 @@
-\section{Compilation and Durable Refinement}
+\section{Monitor Compilation and Durable Installation}
 % 编译与持久精化
 \label{sec:kernel}
+
+Admission produces either an impossibility certificate or the greatest safe family of completed executions.
+% 准入过程生成不可能性证书或安全完整执行的最大集合。
+The durable kernel turns a nonempty family into enforcement in three steps: (1) compile its prefix closure into a canonical monitor, (2) bind the monitor to the authenticated source cut, and (3) atomically install it under a fresh epoch.
+% 持久内核分三步将非空集合转化为强制执行：(1) 将其前缀闭包编译为规范监控器，(2) 将监控器绑定到经认证的源切点，(3) 在新纪元下原子安装。
+The rules below make racing protected calls occur entirely before or after this installation boundary.
+% 下列规则使竞态的受保护调用完整地发生在该安装边界之前或之后。
 
 \subsection{Occurrence-sensitive compilation}
 % 发生项敏感编译

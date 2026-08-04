@@ -1,19 +1,17 @@
-\section{Agent History Semantics}
+\section{Model and History Derivation}
 % Agent 历史语义
 \label{sec:model}
 
-Each cut is finite, but histories may contain unboundedly many cuts.
-% 每个切点都是有限的，但历史所含切点的数量可以不受固定上界约束。
-One state covers one policy domain.
-% 一个状态涵盖一个策略域。
-Domains with disjoint cells, receipt ledgers, and policies compose by product.
-% 单元、回执账本和策略彼此不相交的域通过乘积进行组合。
-Internal reasoning remains unrestricted.
-% 内部推理不受限制。
-A protected call must name a current registered occurrence, present an authenticated handle, and submit a concrete invocation.
-% 受保护调用必须指明一个当前已注册的发生项、提供经过认证的句柄，并提交一项具体调用。
-A successful protected use is the monitor transition that may change durable state.
-% 一次成功的受保护使用即为可能改变持久状态的监控器转移。
+The model separates unrestricted internal Agent reasoning from protected calls that may change durable state.
+% 该模型将不受限制的 Agent 内部推理与可能改变持久状态的受保护调用分开。
+A protected call must name a current registered occurrence, present an authenticated handle, and submit a concrete invocation; a successful protected use is the corresponding state-changing monitor transition.
+% 受保护调用必须指明当前已注册的发生项、提供经过认证的句柄并提交具体调用；成功的受保护使用是相应的状态变更监控器转移。
+Each state covers one policy domain, while domains with disjoint cells, receipt ledgers, and policies compose by product.
+% 每个状态涵盖一个策略域，而单元、回执账本和策略彼此不相交的域通过乘积组合。
+Every cut is finite, although a history may contain an unbounded number of cuts.
+% 每个切点都是有限的，但一段历史可以包含数量不受固定上界约束的切点。
+The definitions below first describe completion obligations and then introduce the authenticated history state needed to preserve them across edits.
+% 下文首先描述完成义务，随后引入在编辑过程中保持这些义务所需的经认证历史状态。
 
 \subsection{Causal-completion contracts}
 % 因果完成契约

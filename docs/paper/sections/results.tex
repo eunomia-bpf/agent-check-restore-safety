@@ -1,8 +1,17 @@
-\section{Agent Security-State Characterization}
+\section{Main Characterization Theorem}
 % Agent 安全状态刻画
 \label{sec:results}
 
-For witness \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\), an independently defined \emph{exact atomic realization} is \((M,\widehat B_M)\) such that \((\mathsf{Gen}(M,q^0),\widehat B_M)\) realizes \((H,u)\) by \cref{def:realization}, \(\mathsf{Mark}(M,q^0)=\pi_2\widehat B_M\), and \(\delta\)'s exact-cut transaction atomically installs \((\kappa_u,H_u,\mathcal A_u,M)\) at \(\eta^+\), closes \(\eta^-\), binds target gates, and publishes replacement handles.
+The main theorem connects the preceding layers: authenticated derivation, exact admission, monitor compilation, and durable installation.
+% 主定理连接前述各层：经认证推导、精确准入、监控器编译与持久安装。
+It also characterizes which history information an exact implementation must retain and proves closure across finite executions.
+% 它还刻画精确实现必须保留哪些历史信息，并证明有限执行上的闭合性。
+
+Fix a derivation witness \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
+% 固定一个推导见证 \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
+An independently defined \emph{exact atomic realization} is a pair \((M,\widehat B_M)\) whose generated language realizes \((H,u)\) according to \cref{def:realization} and whose marked language is \(\pi_2\widehat B_M\).
+% 独立定义的\emph{精确原子实现}是一个二元组 \((M,\widehat B_M)\)，其生成语言按照 \cref{def:realization} 实现 \((H,u)\)，且其标记语言为 \(\pi_2\widehat B_M\)。
+The witness's exact-cut transaction must atomically install \((\kappa_u,H_u,\mathcal A_u,M)\) at \(\eta^+\), close \(\eta^-\), bind the target gates, and publish replacement handles.
 % 对于见证 \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)，独立定义的\emph{精确原子实现}是满足以下条件的 \((M,\widehat B_M)\)：\((\mathsf{Gen}(M,q^0),\widehat B_M)\) 按照 \cref{def:realization} 实现 \((H,u)\)，\(\mathsf{Mark}(M,q^0)=\pi_2\widehat B_M\)，且 \(\delta\) 的精确切点事务原子地在 \(\eta^+\) 安装 \((\kappa_u,H_u,\mathcal A_u,M)\)、关闭 \(\eta^-\)、绑定目标门并发布替换句柄。
 
 \paragraph{Relational evidence}
