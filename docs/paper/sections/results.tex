@@ -2,12 +2,12 @@
 % 形式保证
 \label{sec:results}
 
-The theorem connects derivation from the execution record, exact checking, finite enforcement, the atomic rule update, and every later runtime step.
-% 该定理连接从执行记录进行的推导、精确检查、有限执行规则、原子规则更新以及此后的每个运行时步骤。
-Its central clause says that the checker accepts if and only if a safe runtime implementation exists.
-% 其核心条款表明，当且仅当安全运行时实现存在时，检查器才会接受。
-The other clauses establish faithful registration, the information required for an exact answer, repeated use, and runtime correctness.
-% 其余条款建立忠实注册、精确答案所需的信息、重复使用与运行时正确性。
+The formal results connect derivation from the execution record, exact checking, finite enforcement, the atomic rule update, and every later runtime step.
+% 这些形式结果连接从执行记录进行的推导、精确检查、有限强制执行、原子规则更新以及此后的每个运行时步骤。
+Their central exactness result says that the checker accepts if and only if a safe runtime implementation exists.
+% 其中的核心精确性结果表明，当且仅当安全运行时实现存在时，检查器才会接受。
+The remaining results establish faithful registration, the information required for an exact answer, repeated use, and runtime correctness.
+% 其余结果建立忠实注册、精确答案所需的信息、重复使用与运行时正确性。
 
 When defined, write
 \(\delta=\mathsf{Derive}(\Theta)
@@ -17,8 +17,8 @@ When defined, write
 %  =(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
 A \emph{safe runtime implementation} is an automaton \(M\) together with complete executions \(\widehat B_M\) labeled by outcome.
 % \emph{安全运行时实现}由自动机 \(M\) 和按结果标记的完整执行 \(\widehat B_M\) 组成。
-The partial and complete executions of \(M\) must form a safe execution set as defined in \cref{def:safe-implementation}.
-% \(M\) 的部分执行与完整执行必须构成 \cref{def:safe-implementation} 定义的安全执行集合。
+The partial and complete executions of \(M\) must form a safe execution set as defined in \cref{def:safe-execution-set}.
+% \(M\) 的部分执行与完整执行必须构成 \cref{def:safe-execution-set} 定义的安全执行集合。
 The atomic rule update activates this automaton at \(\eta^+\), closes \(\eta^-\), and replaces the rule entries and authorization tokens for all target calls.
 % 原子规则更新在 \(\eta^+\) 激活该自动机、关闭 \(\eta^-\)，并替换全部目标调用的规则入口与授权令牌。
 
@@ -128,10 +128,10 @@ The four component-labeled rows in \cref{tab:record-pairs} witness omission of \
 % \Cref{tab:record-pairs} 中标有四个分量的记录对分别见证省略 \(\mathbf P,\mathbf I,\mathbf E,\mathbf C\) 的后果。
 The \(\mathsf{Drop}_{ra}\) row shows that retaining authorization records and actions without recording which ones correspond is also insufficient.
 % \(\mathsf{Drop}_{ra}\) 行表明，仅保留授权记录与动作而不记录它们之间的对应关系同样不够。
-In particular, a checker is not exact if it forgets which calls or authorization records refer to the same action, or if it sees only the target workflow proposed by the caller.
-% 特别地，如果检查器忘记哪些调用或授权记录指向同一个动作，或者只看到调用方提出的目标工作流，它就不是精确的。
-Generalized nonblocking can serve as an exact solver only after the trusted controller derives the workflow and outcome-specific completion conditions.
-% 只有在可信控制器推导出工作流以及特定于结果的完成条件之后，广义非阻塞才能作为精确求解器。
+In particular, a checker is not exact if it forgets which calls or authorization records refer to the same action, or if it sees only the caller's description of what should happen next.
+% 特别地，如果检查器忘记哪些调用或授权记录指向同一个动作，或者只看到调用方对后续执行的描述，它就不是精确的。
+Generalized nonblocking can serve as an exact solver only after the trusted runtime derives the workflow and outcome-specific completion conditions.
+% 只有在可信运行时推导出工作流以及特定于结果的完成条件之后，广义非阻塞才能作为精确求解器。
 \end{theorem}
 
 \begin{theorem}[Repeated-Use Safety]

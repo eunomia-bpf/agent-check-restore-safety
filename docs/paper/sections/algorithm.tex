@@ -4,18 +4,18 @@
 
 The safety checker produces either a rejection proof or the largest safe family of complete executions.
 % 安全检查器生成拒绝证明或最大的安全完整执行族。
-The trusted controller turns a nonempty family into rules checked before each tool call.
-% 可信控制器把非空执行族转化为每次工具调用之前检查的规则。
+The trusted runtime turns a nonempty family into rules checked before each tool call.
+% 可信运行时把非空执行族转化为每次工具调用之前检查的规则。
 It builds a finite automaton for the allowed partial executions, records which version of the execution record was checked, and atomically puts the new rules into effect.
 % 它为允许的部分执行构造有限自动机，记录检查时使用的执行记录版本，并使新规则原子生效。
 The protocol orders every overlapping protected call either before or after the atomic rule update.
 % 该协议将每个重叠的受控调用完整地排列在原子规则更新之前或之后。
 The proof compares this implementation with an ideal machine that puts an accepted result into effect in one atomic step and admits exactly its resolved prefixes.
 % 证明将该实现与一台理想机比较；理想机以一个原子步骤使接受的结果生效，并且只接纳该结果的已解析前缀。
-The ideal transition system and the field-level implementation rules appear in \cref{sec:ideal,tab:app-event-matrix}.
-% 理想转移系统与字段级实现规则见 \cref{sec:ideal,tab:app-event-matrix}。
-This section gives the automaton construction, the invariant after the rules change, and the atomic update used by the main theorem.
-% 本节给出主定理所需的自动机构造、规则改变后的不变量以及原子更新。
+The ideal transition system and the detailed runtime rules appear in \cref{sec:ideal,tab:app-event-matrix}.
+% 理想转移系统与详细运行时规则见 \cref{sec:ideal,tab:app-event-matrix}。
+This section gives the automaton construction, the invariant after the rules change, and the atomic update used by the formal guarantees in the next section.
+% 本节给出下一节形式保证所需的自动机构造、规则改变后的不变量以及原子更新。
 
 \subsection{Turning Safe Executions into Runtime Rules}
 % 把安全执行转化为运行时规则
@@ -41,7 +41,7 @@ Each transition symbol \(a\) contains workflow call \(x\), action \(d\), and its
 % 每个转移符号 \(a\) 都包含工作流调用 \(x\)、动作 \(d\) 以及 \Fresh/\Alias 模式，因此一个工作流调用无法使用另一个调用的规则入口。
 
 \begin{lemma}[Exact finite enforcement]
-% 精确的有限执行规则
+% 精确的有限强制执行
 \label{lem:runtime-language}
 The generated and marked languages of the automaton in \cref{eq:canonical-automaton} are exactly \((W^\dagger_{H,u},B^\dagger_{H,u})\).
 % \cref{eq:canonical-automaton} 中自动机的生成语言和标记语言恰为 \((W^\dagger_{H,u},B^\dagger_{H,u})\)。
@@ -60,8 +60,8 @@ The automaton is the paired-language derivative construction~\cite{brzozowski196
 \subsection{Atomic Rule Update}
 % 原子规则更新
 
-Before the rules change, the trusted controller re-derives the edit and recomputes the fixed point from the execution record.
-% 规则改变之前，可信控制器根据执行记录重新推导编辑并重新计算不动点。
+Before the rules change, the trusted runtime re-derives the edit and recomputes the fixed point from the execution record.
+% 规则改变之前，可信运行时根据执行记录重新推导编辑并重新计算不动点。
 If any protected call has committed since the candidate was computed, the candidate is stale and changes nothing.
 % 如果计算候选结果之后已有任何受控调用提交，则该候选结果已过期且不会改变任何内容。
 Otherwise, one policy-domain transaction closes the old rule version, activates the new automaton, replaces the rule entry and authorization token for every current workflow call, and only then exposes the successful edit answer.

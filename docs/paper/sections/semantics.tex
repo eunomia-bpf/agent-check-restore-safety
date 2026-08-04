@@ -4,22 +4,26 @@ For authorization log \(\Delta\), \(\mathsf{lab}(\Delta)\in\mathcal A\) is its a
 % 对于授权日志 \(\Delta\)，\(\mathsf{lab}(\Delta)\in\mathcal A\) 是其授权序列，\(D_\Delta\) 是已经具有授权记录的动作集合。
 Fix \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\) and write \(\mathsf{state}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\).
 % 固定 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并记 \(\mathsf{state}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\)。
-\(\mathsf{Derive}\) is partial; whenever the initial rule update, an execution edit, or a later registered extension is valid, it produces a unique derived record.
-% \(\mathsf{Derive}\) 是偏函数；当初始规则更新、执行编辑或后续注册扩展有效时，它产生唯一的派生记录。
+\(\mathsf{Derive}\) is partial.
+% \(\mathsf{Derive}\) 是偏函数。
+Whenever the initial rule update, an execution edit, or a later registered extension is valid, it produces a unique derived record.
+% 当初始规则更新、执行编辑或后续注册扩展有效时，它产生唯一的派生记录。
 When defined, write \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
 % 当有定义时，记 \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
 Root derivation additionally requires that \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) accept.
 % 根推导还要求 \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) 接受。
 An execution edit has \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) and uses the unique execution-edit judgment.
 % 执行编辑满足 \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) 并使用唯一的执行编辑判定。
-\(\mathsf{Extend}(\xi)\) adds authenticated edit-rule, call, outcome-authority, and policy entries while preserving the current workflow, its progress, and all earlier authorizations; \cref{app:registered-extension} gives the judgment.
-% \(\mathsf{Extend}(\xi)\) 添加经认证的编辑规则、调用、结果权限和策略条目，同时保留当前工作流、其进展及所有先前授权；该判定见 \cref{app:registered-extension}。
+\(\mathsf{Extend}(\xi)\) adds authenticated edit-rule, call, outcome-authority, and policy entries while preserving the current workflow, its progress, and all earlier authorizations.
+% \(\mathsf{Extend}(\xi)\) 添加经认证的编辑规则、调用、结果权限和策略条目，同时保留当前工作流、其进展及所有先前授权。
+\Cref{app:registered-extension} gives the judgment.
+% 该判定见 \cref{app:registered-extension}。
 Let \(\rho_u\) be the target registry in \(H_u\), let \(O_{H,u}=O_{\mathcal C_u}\), and use \(H'=H_u\) and \(\rho'=\rho_u\) where earlier notation is convenient.
 % 令 \(\rho_u\) 为 \(H_u\) 中的目标注册表，令 \(O_{H,u}=O_{\mathcal C_u}\)，并在沿用先前记法更方便时使用 \(H'=H_u\) 和 \(\rho'=\rho_u\)。
 The execution sets below use \(\Theta\), the edit-rule registry, \(\rho_u\), and target policy \(\mathcal A_u\).
 % 下文执行集合使用 \(\Theta\)、编辑规则注册表、\(\rho_u\) 和目标策略 \(\mathcal A_u\)。
-Before the rules change, the trusted controller checks the complete record again, including queued requests \(\mathsf{out}\), so a concurrent release makes an earlier answer stale.
-% 规则改变之前，可信控制器会再次检查完整记录，其中包括排队请求 \(\mathsf{out}\)，因此并发发出请求会使较早的判定结果过期。
+Before the rules change, the trusted runtime checks the complete record again, including queued requests \(\mathsf{out}\), so a concurrent release makes an earlier answer stale.
+% 规则改变之前，可信运行时会再次检查完整记录，其中包括排队请求 \(\mathsf{out}\)，因此并发发出请求会使较早的判定结果过期。
 We abbreviate the fixed parameters by writing \(H,u\).
 % 我们用 \(H,u\) 简写固定参数。
 
@@ -114,7 +118,7 @@ For an annotated prefix \(z\), let
 
 \begin{definition}[Safe execution set]
 % 安全执行集合
-\label{def:safe-implementation}
+\label{def:safe-execution-set}
 A safe execution set is a pair \((L,\widehat B)\), where \(L\) contains allowed partial executions and \(\widehat B\) contains allowed complete executions labeled by outcome, satisfying the conditions below.
 % 安全执行集合是二元组 \((L,\widehat B)\)，其中 \(L\) 包含获准的部分执行，\(\widehat B\) 包含按结果标记的获准完整执行，并满足下列条件。
 \begin{enumerate}[leftmargin=*,itemsep=1pt]
@@ -168,7 +172,7 @@ Since \(\widehat B_1\subseteq\widehat B_0\), repeated application removes execut
 \]
 \begin{definition}[Safe execution edit]
 % 安全执行编辑
-\label{def:safe-execution-set}
+\label{def:safe-execution-edit}
 \begin{equation}
 \label{eq:largest-safe-set}
 \mathsf{SafeEdit}(\Theta)
@@ -180,8 +184,8 @@ Since \(\widehat B_1\subseteq\widehat B_0\), repeated application removes execut
  \end{cases}
 \end{equation}
 \end{definition}
-At \(z=\epsilon\), nonemptiness covers every required outcome.
-% 在 \(z=\epsilon\) 处，非空性覆盖每个要求实现的结果。
+At \(z=\epsilon\), the fixed-point condition retains a completion for every target outcome, and the checked coverage maps cover every required source outcome.
+% 在 \(z=\epsilon\) 处，不动点条件为每个目标结果保留一条完成路径，经过检查的覆盖映射则覆盖每个要求实现的源结果。
 The existential quantifier chooses a call order, and the universal condition keeps every compatible outcome completable after every prefix.
 % 存在量词选择调用次序，而全称条件保证每个兼容结果在每个前缀之后仍可完成。
 
@@ -269,10 +273,10 @@ For strictness, the preceding instance has the marker-nonblocking projected pair
 % 关于严格性，前述实例具有标记非阻塞的投影二元组 \((\Pref\{\bar y\bar x,\bar x\bar z\}, \{\bar y\bar x,\bar x\bar z\})\)，但其带索引不动点为空。
 \end{proof}
 
-\Cref{prop:outcome-necessary} relates the fixed point to generalized nonblocking after the controller has derived the outcome-specific completion conditions~\cite{dequeiroz2005multitasking,malik2008generalised}.
-% \Cref{prop:outcome-necessary} 表明，在控制器推导出各结果的完成条件之后，该不动点与广义非阻塞相对应~\cite{dequeiroz2005multitasking,malik2008generalised}。
-The controller derives those conditions from the requested edit, authorized removals, actions, authorization records, and the execution record.
-% 控制器根据请求的编辑、获准移除、动作、授权记录和执行记录推导这些条件。
+\Cref{prop:outcome-necessary} relates the fixed point to generalized nonblocking after the trusted runtime has derived the outcome-specific completion conditions~\cite{dequeiroz2005multitasking,malik2008generalised}.
+% \Cref{prop:outcome-necessary} 表明，在可信运行时推导出各结果的完成条件之后，该不动点与广义非阻塞相对应~\cite{dequeiroz2005multitasking,malik2008generalised}。
+The trusted runtime derives those conditions from the requested edit, authorized removals, actions, authorization records, and the execution record.
+% 可信运行时根据请求的编辑、获准移除、动作、授权记录和执行记录推导这些条件。
 It also decides whether each protected call creates or reuses an authorization, computes every safe continuation or a rejection proof, and puts an accepted result into effect atomically.
 % 它还判断每个受控调用是创建还是复用授权，计算全部安全继续方式或拒绝证明，并使接受的结果原子生效。
 
@@ -285,8 +289,8 @@ Induction shows that every post-fixed \(P\) is contained in every \(\widehat B_i
 % 归纳表明每个后不动点 \(P\) 都包含于每个 \(\widehat B_i\)。
 An empty final family therefore proves that no safe execution set exists.
 % 因此，最终执行族为空证明不存在安全执行集合。
-Before the rule update, the trusted controller recomputes both the removal order and the remaining completions.
-% 规则更新之前，可信控制器会重新计算删除顺序与剩余完成路径。
+Before the rule update, the trusted runtime recomputes both the removal order and the remaining completions.
+% 规则更新之前，可信运行时会重新计算删除顺序与剩余完成路径。
 
 \subsubsection{Checking Again After a Permitted Prefix}
 % 在获准前缀之后再次检查

@@ -8,8 +8,8 @@ They let an Agent Checkpoint an execution, Fork it into alternatives, Restore an
 % 它们允许 Agent Checkpoint 一次执行、将其 Fork 为多个备选方案、Restore 到较早的检查点，并 Merge 多个分支~\cite{codexappserver,claudesessions,claudecheckpoint,wang2026fork,wu2026crab,zhang2026agentlibos}。
 These operations support exploration, recovery, and reuse without restarting the task.
 % 这些操作支持探索、恢复与复用，而无需重新开始任务。
-We call them \emph{execution edits} because they change which parts of the workflow will run next.
-% 我们把它们称为\emph{执行编辑}，因为它们会改变工作流接下来执行哪些部分。
+We call them \emph{execution edits} because they change what the Agent will do next.
+% 我们把它们称为\emph{执行编辑}，因为它们会改变 Agent 接下来做什么。
 
 Consider an Agent buying one laptop for a school.
 % 考虑一个为学校购买一台笔记本电脑的 Agent。
@@ -21,23 +21,21 @@ The Agent then restores \(k\) to compare supplier \(L\) and merges the \(L\) bra
 % 随后 Agent Restore 到 \(k\) 以比较供应商 \(L\)，并把 \(L\) 分支 Merge 到当前执行中。
 If the runtime sees only the restored workspace, it may request the same approval again or continue with \(L\) even though payment to \(R\) is already authorized~\cite{zheng2026acrfence}.
 % 如果运行时只看到恢复后的工作区，它可能再次请求同一审批，或在已经授权向 \(R\) 付款后继续选择 \(L\)~\cite{zheng2026acrfence}。
-Either result violates the intended workflow because the first repeats a one-time approval and the second combines incompatible supplier actions.
-% 两种结果都会违反预期工作流，因为前者重复一次性审批，后者组合彼此不相容的供应商动作。
+Either result breaks the school's purchasing rules because the first repeats a one-time approval and the second combines incompatible supplier actions.
+% 两种结果都会违反学校的采购规则，因为前者重复一次性审批，后者组合彼此不相容的供应商动作。
 
-The Agent is untrusted: it may request an edit that omits an earlier action or a result that the workflow still requires.
-% Agent 不受信任：它可能请求一次编辑，而该编辑省略先前的动作或工作流仍要求实现的结果。
-The trusted controller does not accept a workflow supplied by the Agent.
-% 可信控制器不接受由 Agent 提供的工作流。
-It derives the edited workflow from an execution record that the Agent cannot modify and checks every tool action governed by policy.
-% 它根据 Agent 无法修改的执行记录推导编辑后的工作流，并检查策略约束的每个工具动作。
-The security goal is to prevent an edit from authorizing a tool action forbidden by policy or discarding a result that the workflow still requires.
-% 安全目标是防止编辑授权策略禁止的工具动作，或丢弃工作流仍要求实现的结果。
-Enforcing this goal requires four facts: (1) the workflow and its required outcomes, (2) which calls refer to the same action, (3) earlier authorizations and call progress, and (4) which rules govern a call that overlaps the edit.
-% 执行这一目标需要四类事实：(1) 工作流及其要求实现的结果，(2) 哪些调用指向同一个动作，(3) 先前的授权与调用进展，以及 (4) 哪组规则管理与编辑重叠的调用。
-Each field can change the correct answer.
-% 每个字段都可能改变正确答案。
-Equal workspaces, an execution trace alone, an authorization log alone, or a workflow supplied by the Agent cannot reconstruct this record.
-% 相同工作区、单独的执行轨迹、单独的授权日志，或 Agent 提供的工作流都无法重建该记录。
+This example shows why the runtime cannot rely on the Agent's account of the execution: the Agent may request an edit that omits an earlier action or a result the task still requires.
+% 这个例子说明运行时为何不能依赖 Agent 对执行情况的描述：Agent 可能请求一次编辑，而该编辑省略先前的动作或任务仍要求实现的结果。
+The trusted runtime instead determines what may happen next from an execution record that the Agent cannot modify, and it checks every tool action against policy.
+% 可信运行时改为根据 Agent 无法修改的执行记录确定后续可以发生什么，并依据策略检查每个工具动作。
+Our security goal is therefore to prevent an edit from authorizing a tool action forbidden by policy or discarding a result that the task still requires.
+% 因此，我们的安全目标是防止编辑授权策略禁止的工具动作，或丢弃任务仍要求实现的结果。
+Meeting this goal requires four facts: (1) the task structure and its required results, (2) which calls refer to the same action, (3) earlier authorizations and call progress, and (4) which rules govern a call that overlaps the edit.
+% 实现这一目标需要四类事实：(1) 任务结构及其要求实现的结果，(2) 哪些调用指向同一个动作，(3) 先前的授权与调用进展，以及 (4) 哪组规则管理与编辑重叠的调用。
+Each fact can change the correct answer.
+% 每类事实都可能改变正确答案。
+The restored workspace, an execution trace alone, an authorization log alone, and the Agent's own description each omit information the checker may need.
+% 恢复后的工作区、单独的执行轨迹、单独的授权日志以及 Agent 自己的描述，都各自缺少检查器可能需要的信息。
 
 Existing approaches cover parts of this problem but do not derive its complete safety condition.
 % 现有方法覆盖了该问题的部分环节，却没有推导其完整安全条件。
@@ -48,44 +46,44 @@ Control and synthesis choose behavior after a model of possible executions and d
 Neither line of work derives from a recorded execution everything that a particular edit must preserve before it takes effect.
 % 这两类工作都不会从已有执行记录中推导出某次具体编辑在生效前必须保留的全部内容。
 
-Our key idea is that an execution edit must preserve both past actions and still-required outcomes.
+Our key idea is that an execution edit must preserve both past actions and results that are still required.
 % 我们的关键思想是：执行编辑必须同时保留过去的动作和仍然要求实现的结果。
-Every outcome required before the edit must remain required, already be satisfied by the recorded execution, or be explicitly removed by the same authority that required it.
+Every result required before the edit must remain required, already be satisfied by the recorded execution, or be explicitly removed by the same authority that required it.
 % 编辑前要求实现的每个结果都必须继续作为要求、已经由所记录的执行满足，或由提出该要求的同一权限方明确移除。
 The Agent identifies a registered edit.
 % Agent 指明一项已注册编辑。
-The platform authenticates the registered workflow, and the trusted controller derives the edited workflow and inherited requirements from that record rather than from Agent text.
-% 平台认证已注册工作流，可信控制器根据该记录而非 Agent 文本推导编辑后的工作流及其继承的要求。
-The Agent therefore cannot obtain a favorable answer by supplying a workflow that omits earlier actions or required outcomes.
-% 因此，Agent 无法通过提供一个省略先前动作或要求结果的工作流来获得有利答案。
+The trusted runtime checks the recorded task structure and determines from that record, rather than from Agent text, what may happen next and which requirements carry over.
+% 可信运行时检查已记录的任务结构，并根据该记录而非 Agent 文本确定后续可以发生什么以及哪些要求继续有效。
+The Agent therefore cannot obtain a favorable answer by describing an execution that omits earlier actions or required results.
+% 因此，Agent 无法通过描述一个省略先前动作或要求结果的执行来获得有利答案。
 
 This idea creates three technical problems.
 % 这一思想带来三个技术问题。
-First, calls copied by Fork or Restore may refer to the same underlying action, so the controller must distinguish a new authorization from reuse of an earlier authorization and return value.
-% 第一，由 Fork 或 Restore 复制的调用可能指向同一个底层动作，因此控制器必须区分新授权与对先前授权及返回值的复用。
-Second, after every allowed partial execution, every outcome that is still required and still possible must retain a safe way to finish.
+First, calls copied by Fork or Restore may refer to the same underlying action, so the runtime must distinguish a new authorization from reuse of an earlier authorization and return value.
+% 第一，由 Fork 或 Restore 复制的调用可能指向同一个底层动作，因此运行时必须区分新授权与对先前授权及返回值的复用。
+Second, after every allowed partial execution, every result that is still required and still possible must retain a safe way to finish.
 % 第二，在每段允许的部分执行之后，每个仍被要求且仍有可能实现的结果都必须保留安全完成方式。
 The checker must enforce this condition without forbidding additional safe behavior.
 % 检查器必须执行这一条件，同时不能额外禁止安全行为。
 Third, the answer must take effect atomically with calls that overlap the edit and remain valid if the runtime or machine stops unexpectedly and later recovers.
 % 第三，该答案必须与重叠编辑的调用原子排序，并在运行时或机器意外停止后恢复时继续有效。
 
-We give an exact checker that either computes every safe way for an edited workflow to continue or proves that every possible implementation is unsafe.
-% 我们给出一个精确检查器，它要么计算编辑后工作流安全继续执行的全部方式，要么证明每种可能实现都不安全。
-For a requested edit, the controller uses the registered workflow and current execution record to construct every allowed complete execution.
-% 对于一次编辑请求，控制器使用已注册工作流和当前执行记录构造所有允许的完整执行。
-It removes an execution whenever one of its partial executions would leave a still-required outcome with no safe completion.
+We give an exact checker that either computes every safe way for a requested operation to proceed or proves that every possible implementation is unsafe.
+% 我们给出一个精确检查器，它要么计算所请求操作安全推进的全部方式，要么证明每种可能实现都不安全。
+For a requested edit, the runtime uses the recorded task structure and current execution record to construct every allowed complete execution.
+% 对于一次编辑请求，运行时使用已记录的任务结构和当前执行记录构造所有允许的完整执行。
+It removes an execution whenever one of its partial executions would leave a still-required result with no safe completion.
 % 如果某个完整执行的部分过程会让仍然要求实现的结果失去安全完成方式，检查器就删除该完整执行。
-If no execution remains, the controller returns an independently checkable proof that no safe implementation exists.
-% 如果没有完整执行留下，控制器返回一份可独立检查的证明，说明不存在安全实现。
+If no execution remains, the runtime returns an independently checkable proof that no safe implementation exists.
+% 如果没有完整执行留下，运行时返回一份可独立检查的证明，说明不存在安全实现。
 Otherwise, the remaining executions contain every safe way for the edit to proceed.
 % 否则，剩余执行包含该编辑安全推进的全部方式。
 Before the edit takes effect, the runtime checks the current execution record again and atomically switches to the newly computed rules.
 % 编辑生效之前，运行时再次检查当前执行记录，并原子切换到新计算出的规则。
 Every overlapping call is therefore checked entirely under either the old rules or the new rules.
 % 因此，每个重叠调用都完全依据旧规则或新规则进行检查。
-\Cref{fig:two-histories} illustrates this process for an approval workflow containing Fork, Merge, Restore, and calls that overlap the atomic rule update.
-% \Cref{fig:two-histories} 用一个包含 Fork、Merge、Restore 以及与原子规则更新重叠调用的审批工作流展示这一过程。
+\Cref{fig:two-histories} illustrates this process for an approval task containing Fork, Merge, Restore, and calls that overlap the atomic rule update.
+% \Cref{fig:two-histories} 用一个包含 Fork、Merge、Restore 以及与原子规则更新重叠调用的审批任务展示这一过程。
 \Cref{sec:lifecycle} derives the example step by step.
 % \Cref{sec:lifecycle} 对该例逐步进行推导。
 After Restore, the repeated approval call reuses the earlier authorization record instead of authorizing the approval again.
@@ -96,9 +94,9 @@ After Restore, the repeated approval call reuses the earlier authorization recor
 \begin{enumerate}[leftmargin=*,itemsep=2pt,topsep=2pt]
 \item \textbf{Safety model.}
 % \textbf{安全模型。}
-We define safety for Agent Checkpoint, Fork, Restore, and Merge from the execution record rather than from a workflow supplied by the Agent.
-% 我们根据执行记录而不是 Agent 提供的工作流，定义 Agent Checkpoint、Fork、Restore 和 Merge 的安全性。
-The model preserves past actions and every still-required outcome, and it proves that every exact checker needs the four facts identified above.
+We define safety for Agent Checkpoint, Fork, Restore, and Merge from the execution record rather than letting the Agent choose what the edited execution contains.
+% 我们根据执行记录定义 Agent Checkpoint、Fork、Restore 和 Merge 的安全性，而不是让 Agent 决定编辑后的执行包含什么。
+The model preserves past actions and every still-required result, and it proves that every exact checker needs the four facts identified above.
 % 该模型保留过去的动作和每个仍要求实现的结果，并证明每个精确检查器都需要上述四类事实。
 
 \item \textbf{Exact checking and runtime implementation.}

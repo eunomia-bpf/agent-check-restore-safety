@@ -11,8 +11,12 @@ A careless Restore or Merge could request approval twice, pay both suppliers, or
 A safe execution approves the purchase once, pays exactly one supplier, and permits shipment only after that payment.
 % 安全执行只批准一次购买，只向一个供应商付款，并且仅在付款后允许发货。
 
-We formalize this story as an approval workflow that authorizes at most one order.
-% 我们把这个故事形式化为一个至多获授权下单一次的审批工作流。
+We call the resulting task structure an \emph{approval workflow}.
+% 我们把由此得到的任务结构称为\emph{审批工作流}。
+It records which tool calls may occur, in what order, and which results count as completion.
+% 它记录哪些工具调用可以发生、调用次序以及哪些结果算作完成。
+In this example, it authorizes at most one purchase.
+% 在本例中，它至多授权一次采购。
 The Agent reserves the budget and saves checkpoint \(k\) before approval.
 % Agent 预留预算，并在审批前保存检查点 \(k\)。
 The approval is then authorized once, creating an authorization record that Restore does not delete.
@@ -32,10 +36,10 @@ In either outcome, payment authorization must precede shipment authorization:
 \end{equation}
 where \(x_i^p\) and \(x_i^s\) are payment and shipment calls.
 % 其中，\(x_i^p\) 和 \(x_i^s\) 分别是付款调用和发货调用。
-A \emph{workflow call} \(x\) is one place where the workflow can invoke a protected tool.
-% \emph{工作流调用} \(x\) 是工作流可以调用受控工具的一个位置。
-The function \(q_{\rm act}(x)=d\) records which external action the call refers to.
-% 函数 \(q_{\rm act}(x)=d\) 记录该调用指向哪个外部动作。
+A \emph{workflow call} \(x\) is one place in this structure where the runtime can invoke a protected tool.
+% \emph{工作流调用} \(x\) 是该结构中运行时可以调用受控工具的一个位置。
+The function \(q_{\rm act}(x)=d\) records which protected action the call refers to.
+% 函数 \(q_{\rm act}(x)=d\) 记录该调用指向哪个受控动作。
 Calls that refer to the same action share one authorization record.
 % 指向同一个动作的调用共享一条授权记录。
 
@@ -64,10 +68,10 @@ Although the supplier outcomes are exclusive, both must still have a safe way to
 % 被接受与被拒绝的 Fork
 The Agent sends \(u=\mathsf{ForkChoice}(b,\sigma)\), which names a current branch and a registered edit rule.
 % Agent 发送 \(u=\mathsf{ForkChoice}(b,\sigma)\)，其中指明一个当前分支和一条已注册编辑规则。
-The trusted controller constructs the edited workflow from the execution record.
-% 可信控制器根据执行记录构造编辑后的工作流。
+The trusted runtime constructs the edited workflow from the execution record.
+% 可信运行时根据执行记录构造编辑后的工作流。
 It also derives the outcomes that remain required and the action referred to by every workflow call.
-% 控制器还推导仍然要求实现的结果，以及每个工作流调用所指向的动作。
+% 可信运行时还推导仍然要求实现的结果，以及每个工作流调用所指向的动作。
 
 Write \(M_o\) for the ways to complete outcome \(o\) while obeying the policy.
 % 以 \(M_o\) 表示遵守策略并完成结果 \(o\) 的方式。
@@ -131,8 +135,8 @@ After the shared approval and before either payment, the Agent requests \(\maths
 % 在共享审批之后、任一付款之前，Agent 请求 \(\mathsf{MergeSelect}(g,L,\sigma)\)。
 If the payment call \(x_R^p\) from the old supplier-\(R\) branch is authorized first, it selects \(R\) and changes \(\mathsf{lab}(\Delta)\) from \(ra\) to \(rap_R\).
 % 如果旧供应商 \(R\) 分支的付款调用 \(x_R^p\) 先获得授权，它就会选择 \(R\)，并将 \(\mathsf{lab}(\Delta)\) 从 \(ra\) 改为 \(rap_R\)。
-The controller must therefore check the Merge again and reject it.
-% 因此，控制器必须重新检查该 Merge 并拒绝它。
+The runtime must therefore check the Merge again and reject it.
+% 因此，运行时必须重新检查该 Merge 并拒绝它。
 If the Merge rule update occurs first, the old rules stop applying and every current call receives a new authorization token before any later \(x_R^p\) can be authorized.
 % 如果 Merge 的规则更新先发生，旧规则将停止生效，并在后续任何 \(x_R^p\) 获得授权之前为每个当前调用提供新的授权令牌。
 Leaving the old rules active would allow both payments.
