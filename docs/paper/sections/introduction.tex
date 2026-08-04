@@ -13,16 +13,16 @@ We call them \emph{execution edits} because they change which parts of the workf
 
 An execution edit does not undo earlier tool calls.
 % 执行编辑不会撤销先前的工具调用。
-In our running procurement example, the Agent saves checkpoint \(k\) before approval.
-% 在贯穿全文的采购例子中，Agent 在审批前保存检查点 \(k\)。
+Suppose an Agent saves checkpoint \(k\) before a protected approval.
+% 设一个 Agent 在受控审批前保存检查点 \(k\)。
 The approval is later authorized once, creating an authorization record that Restore does not delete.
 % 审批随后只获得一次授权，并创建一条 Restore 不会删除的授权记录。
 Restoring \(k\) creates another approval call in the workflow, but it must not authorize the same approval again.
 % Restore 到 \(k\) 会在工作流中创建另一个审批调用，但不得再次授权同一审批。
 A concurrent Merge can cause a similar error by selecting supplier \(L\) after a supplier-\(R\) payment has already been authorized.
 % 并发的 Merge 也会造成类似错误，例如在供应商 \(R\) 的付款已经获得授权后再选择供应商 \(L\)。
-An edit can therefore restore the saved program state yet violate authorization or release order; the theory does not equate that order with remote physical completion.
-% 因此，一次编辑即使恢复了保存的程序状态，仍可能违反授权或发出顺序；本理论不把这一顺序等同于远端物理完成顺序。
+An edit can therefore restore the saved program state yet violate authorization or release order; remote physical completion is represented by authenticated sink receipts.
+% 因此，一次编辑即使恢复了保存的程序状态，仍可能违反授权或发出顺序；远端物理完成由接收端认证回执表示。
 
 The problem is that a checkpoint contains only part of the information needed to decide whether an edit is safe.
 % 问题在于，检查点只包含决定一次编辑是否安全所需的部分信息。
@@ -64,8 +64,8 @@ The checker must enforce this condition without forbidding additional safe behav
 Third, the answer must take effect atomically with respect to calls that overlap the edit or a runtime or machine failure followed by recovery (a crash).
 % 第三，该答案必须相对于与编辑重叠的调用，或运行时、机器意外停止后再恢复的情形（简称崩溃），原子生效。
 
-We give an exact checker for execution edits: under the stated model, it accepts exactly when a safe implementation exists.
-% 我们给出一个针对执行编辑的精确检查器：在本文模型下，它当且仅当安全实现存在时才接受。
+We give an exact checker for registered finite execution edits: it accepts exactly when a safe implementation exists.
+% 我们给出一个针对已注册有限执行编辑的精确检查器：它当且仅当安全实现存在时才接受。
 For a requested edit, the controller uses the registered workflow, authenticated execution record, authorization log, dispatch queue, policy, and current monitor version to construct every allowed completed execution.
 % 对于一次编辑请求，控制器使用已注册工作流、经认证执行记录、授权日志、派发队列、策略和当前监控器版本，构造所有允许的完整执行。
 It removes an execution whenever one of its partial executions would leave a still-required outcome with no safe completion.
@@ -78,8 +78,8 @@ Before the edit takes effect, the runtime checks the current recorded state agai
 % 编辑生效之前，运行时再次检查当前记录状态并原子替换旧监控器。
 Every overlapping call is therefore governed entirely by either the old monitor or the new one.
 % 因此，每个重叠调用都完全由旧监控器或新监控器管理。
-\Cref{sec:lifecycle} follows this process through one procurement execution containing Fork, Merge, two races, and Restore.
-% \Cref{sec:lifecycle} 通过一个包含 Fork、Merge、两类竞态与 Restore 的采购执行展示这一过程。
+\Cref{sec:lifecycle} derives this process for a protected approval workflow containing Fork, Merge, both installation races, and Restore.
+% \Cref{sec:lifecycle} 针对一个包含 Fork、Merge、两类安装竞态与 Restore 的受控审批工作流推导这一过程。
 After Restore, the repeated approval call reuses the earlier authorization record instead of authorizing the approval again.
 % Restore 之后，重复的审批调用复用先前的授权记录，而不会再次授权该审批。
 
@@ -93,5 +93,5 @@ The theorem also proves that deleting any of four recorded relations changes som
 % 该定理还证明，删除四类记录关系中的任一类都会改变某个精确判定或安装答案，并且具体运行时与理想机器具有相同的可见行为（\cref{sec:model,sec:admission,sec:enforcement,sec:results}）。
 Every supported event preserves the security invariant, so the theorem applies again after every finite reachable execution.
 % 每个受支持事件都保持安全不变量，因此该定理能在每个有限可达执行之后再次应用。
-Five Lean modules, 19 paper-specific executable tests, and measurements over 2--128 outcomes validate the executable fixed-point checker and its modeled edit-installation races.
-% 五个 Lean 模块、19 项论文专用可执行测试以及覆盖 2--128 个结果的测量，验证了可执行不动点检查器及其建模的编辑安装竞态。
+Six Lean modules mechanize the end-to-end theorem spine; 19 paper-specific executable tests and measurements over 2--128 outcomes exercise the checker and edit-installation races.
+% 六个 Lean 模块机械化端到端定理主干；19 项论文专用可执行测试与覆盖 2--128 个结果的测量检验检查器及编辑安装竞态。

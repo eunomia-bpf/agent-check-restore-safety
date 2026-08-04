@@ -102,10 +102,18 @@ Every enabled event preserves \(\mathsf{AgentSec}\), so the theorem applies afte
 % 运行时正确性。
 \(\mathcal B\) is a divergence-insensitive weak bisimulation under \(\mathsf{obs}_{\rm api}\), so every good pair satisfies \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\).
 % \(\mathcal B\) 在 \(\mathsf{obs}_{\rm api}\) 下是发散不敏感弱互模拟，因此每个良好对均满足 \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\)。
-The observation includes snapshot-bound answers, replacement authorization tokens, and returns, but excludes time, fairness, and networking after \(\Dispatch\); disjoint domains compose asynchronously.
-% 该观测包括绑定状态快照的答案、替代授权令牌与返回，但不包括时间、公平性和 \(\Dispatch\) 之后的网络行为；互不相交的域异步组合。
+The observation records snapshot-bound answers, replacement authorization tokens, and returns; time, fairness, and post-\(\Dispatch\) networking are environmental behavior, and disjoint domains compose asynchronously.
+% 该观测记录绑定状态快照的答案、替代授权令牌与返回；时间、公平性与 \(\Dispatch\) 之后的网络行为属于环境行为，互不相交的域异步组合。
 \end{enumerate}
 \end{theorem}
 
-The appendix proves all five clauses and supplies the separating witnesses and runtime simulation.
-% 附录证明全部五项条款，并给出分离见证与运行时模拟。
+\paragraph{Proof roadmap}
+% 证明路线
+Registration reflection follows by enumerating the finite protected-call traces and checking their order- and identity-preserving correspondence.
+% 注册反射通过枚举有限受控调用轨迹并检查其保持次序与标识的对应关系得到。
+Exact checking follows from schema fidelity and the greatest-fixed-point argument: every safe implementation is contained in the computed family, and a nonempty computed family compiles to an implementation.
+% 精确检查由模式保真性与最大不动点论证得到：每个安全实现都包含于计算出的执行族中，而非空的计算执行族可以编译为实现。
+Four explicit pairs of checked states prove the information result; induction over the runtime rules proves repeated use; and a case analysis over edits, protected calls, installation races, returns, and recovery establishes the weak bisimulation.
+% 四对显式经检查状态证明信息结果；对运行时规则作归纳证明重复使用；对编辑、受控调用、安装竞态、返回与恢复作分类讨论建立弱互模拟。
+The appendix gives the complete witnesses and case proofs.
+% 附录给出完整见证与分类证明。

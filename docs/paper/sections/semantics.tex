@@ -96,12 +96,6 @@ For each derived outcome \(o\in O_{H,u}\), define all of its completed execution
    \mathsf{lab}(\Delta)\mathsf{auth}(z)\in\mathcal A_u\}.
 \end{aligned}
 \end{equation}
-Checking each outcome separately is insufficient.
-% 单独检查每个结果并不充分。
-After a partial execution shared by several outcomes, every outcome still compatible with that partial execution must retain a policy-safe completion.
-% 在多个结果共享的一段部分执行之后，每个仍与该部分执行兼容的结果都必须保留一条策略安全的完成路径。
-The operator below removes exactly the completed executions that violate this condition.
-% 下列算子恰好删除违反这一条件的完整执行。
 For a resolved prefix \(z\), let
 % 对于已解析前缀 \(z\)，定义 \(\mathsf{Compat}(z)\) 如下：
 \[
@@ -109,6 +103,34 @@ For a resolved prefix \(z\), let
  \{o\mid \mathsf{raw}(z)\preceq_{\rm pref}w
 		          \text{ for some }w\in\Lin(p_o)\}.
 \]
+Relation \(\mathsf{Preserve}\) requires every source outcome that is neither completed nor authorized for removal to have a checked lift into \(\widehat B\); \cref{app:spc} gives its full definition.
+% 关系 \(\mathsf{Preserve}\) 要求每个既未完成、也未获授权移除的源结果在 \(\widehat B\) 中都有经检查的提升；\cref{app:spc} 给出完整定义。
+
+\begin{definition}[Indexed realization]
+% 带索引实现
+\label{def:realization}
+A generated language and indexed marked family \((L,\widehat B)\) realize \((H,u)\) when all conditions below hold.
+% 当下列全部条件成立时，生成语言和带索引的标记族 \((L,\widehat B)\) 实现 \((H,u)\)。
+\begin{enumerate}[leftmargin=*,itemsep=1pt]
+ \item \(\widehat B\ne\varnothing\);
+% \(\widehat B\) 非空；
+ \item \emph{source and target fidelity:} \(\mathsf{Preserve}(H,u,\widehat B)\), \(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\), and \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\);
+% 源与目标忠实性：\(\mathsf{Preserve}(H,u,\widehat B)\)、\(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\)，且 \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\)。
+ \item \emph{policy safety:} \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A_u\) for every \(z\in L\);
+% 策略安全性：对每个 \(z\in L\)，均有 \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A_u\)。
+ \item \emph{completion nonblocking:} \(L=\Pref(\pi_2\widehat B)\); and
+% 完成非阻塞性：\(L=\Pref(\pi_2\widehat B)\)；并且
+ \item \emph{persistent outcome coverage:} for every \(z\in L\) and \(o\in\mathsf{Compat}(z)\), some \((o,b)\in\widehat B\) extends \(z\).
+% 持续的结果覆盖：对于每个 \(z\in L\) 和 \(o\in\mathsf{Compat}(z)\)，都存在某个 \((o,b)\in\widehat B\) 扩展 \(z\)。
+\end{enumerate}
+\end{definition}
+
+Checking each outcome separately is insufficient.
+% 单独检查每个结果并不充分。
+After a partial execution shared by several outcomes, every outcome still compatible with that partial execution must retain a policy-safe completion.
+% 在多个结果共享的一段部分执行之后，每个仍与该部分执行兼容的结果都必须保留一条策略安全的完成路径。
+The operator below removes exactly the completed executions that violate this condition.
+% 下列算子恰好删除违反这一条件的完整执行。
 Put
 % 令 \(\widehat B_0\) 如下：
 \[
@@ -138,9 +160,6 @@ Since \(\widehat B_1\subseteq\widehat B_0\), monotonicity yields a finite descen
  &W^\dagger_{H,u}&=\Pref(B^\dagger_{H,u}).
 \end{aligned}
 \]
-Runtime uses \((W^\dagger,B^\dagger)\), while the checker and seal retain indexed witness \(\widehat B^\dagger\).
-% 运行时使用 \((W^\dagger,B^\dagger)\)，而检查器与封印保留带索引见证 \(\widehat B^\dagger\)。
-
 \begin{definition}[Safe execution edit]
 % 安全执行编辑
 \label{def:admission}
@@ -161,27 +180,6 @@ At \(z=\epsilon\), nonemptiness covers every required outcome.
 % 在 \(z=\epsilon\) 处，非空性覆盖每个要求实现的结果。
 The existential quantifier chooses a call order without assuming fairness, and the universal condition keeps every compatible outcome completable after every prefix.
 % 存在量词在不假设公平性的情况下选择调用顺序，而全称条件保证每个兼容结果在每个前缀之后仍可完成。
-Relation \(\mathsf{Preserve}\) requires every source outcome that is neither completed nor authorized for removal to have a checked lift into \(\widehat B\); \cref{app:spc} gives its full definition.
-% 关系 \(\mathsf{Preserve}\) 要求每个既未完成、也未获授权移除的源结果在 \(\widehat B\) 中都有经检查的提升；\cref{app:spc} 给出完整定义。
-
-\begin{definition}[Indexed realization]
-% 带索引实现
-\label{def:realization}
-A generated language and indexed marked family \((L,\widehat B)\) realize \((H,u)\) when all conditions below hold.
-% 当下列全部条件成立时，生成语言和带索引的标记族 \((L,\widehat B)\) 实现 \((H,u)\)。
-\begin{enumerate}[leftmargin=*,itemsep=1pt]
- \item \(\widehat B\ne\varnothing\);
-% \(\widehat B\) 非空；
- \item \emph{source and target fidelity:} \(\mathsf{Preserve}(H,u,\widehat B)\), \(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\), and \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\);
-% 源与目标忠实性：\(\mathsf{Preserve}(H,u,\widehat B)\)、\(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\)，且 \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\)。
- \item \emph{policy safety:} \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A_u\) for every \(z\in L\);
-% 策略安全性：对每个 \(z\in L\)，均有 \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A_u\)。
- \item \emph{completion nonblocking:} \(L=\Pref(\pi_2\widehat B)\); and
-% 完成非阻塞性：\(L=\Pref(\pi_2\widehat B)\)；并且
- \item \emph{persistent outcome coverage:} for every \(z\in L\) and \(o\in\mathsf{Compat}(z)\), some \((o,b)\in\widehat B\) extends \(z\).
-% 持续的结果覆盖：对于每个 \(z\in L\) 和 \(o\in\mathsf{Compat}(z)\)，都存在某个 \((o,b)\in\widehat B\) 扩展 \(z\)。
-\end{enumerate}
-\end{definition}
 
 \begin{lemma}[Largest safe realization]
 % 最大安全实现
@@ -213,30 +211,21 @@ Hence the fixed point is a realization exactly when nonempty.
 \Cref{lem:greatest-realization} proves that this witness exists exactly when \(\widehat B^\dagger_{H,u}\ne\varnothing\) and then equals \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\).
 % \Cref{lem:greatest-realization} 证明该见证恰在 \(\widehat B^\dagger_{H,u}\ne\varnothing\) 时存在，并且此时等于 \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\)。
 
-\subsubsection{Why Checking Each Outcome Separately Fails}
-% 为什么逐个检查结果会失败
+\subsubsection{Outcome-Wise Checking Counterexample}
+% 逐结果检查的反例
 
-The next example has two outcomes, and each has a safe complete execution when considered alone.
-% 下一个例子有两个结果，单独考虑时，每个结果都有一条安全的完整执行。
-Nevertheless, no monitor can safely expose both executions because one shared first step leaves the other outcome unable to finish.
-% 然而，任何监控器都无法安全地同时提供这两条执行，因为其中一个共享的第一步会使另一个结果无法完成。
-Let singleton contracts \(X,Y,Z\) contain \(x_o,y_o,z_o\), and let the target registry map them to distinct effect identities \(d_x,d_y,d_z\) that do not yet have authorization records and have labels \(x,y,z\), respectively.
-% 令单元素契约 \(X,Y,Z\) 分别包含 \(x_o,y_o,z_o\)，并令目标注册表将它们映射到尚无授权记录且标签分别为 \(x,y,z\) 的不同效果标识 \(d_x,d_y,d_z\)。
-Write \(\bar x=\Fresh(x_o,d_x)\), \(\bar y=\Fresh(y_o,d_y)\), and \(\bar z=\Fresh(z_o,d_z)\).
-% 记 \(\bar x=\Fresh(x_o,d_x)\)、\(\bar y=\Fresh(y_o,d_y)\)、\(\bar z=\Fresh(z_o,d_z)\)。
-
-For \(\mathcal C=X\otimes(Y\oplus Z)\) and \(\mathcal A=\Pref\{yx,xz\}\), the \(X\otimes Y\) and \(X\otimes Z\) outcomes initially have safe completed executions \(\bar y\bar x\) and \(\bar x\bar z\), with permission traces \(yx\) and \(xz\).
-% 对于 \(\mathcal C=X\otimes(Y\oplus Z)\) 和 \(\mathcal A=\Pref\{yx,xz\}\)，\(X\otimes Y\) 与 \(X\otimes Z\) 结果最初分别具有安全完整执行 \(\bar y\bar x\) 和 \(\bar x\bar z\)，其权限轨迹为 \(yx\) 和 \(xz\)。
-The call \(x_o\) belongs to both outcomes, so after prefix \(\bar x\), the \(X\otimes Y\) outcome is still possible.
-% 调用 \(x_o\) 属于两个结果，因此在前缀 \(\bar x\) 之后，\(X\otimes Y\) 结果仍然可能发生。
-That outcome could now finish only as \(xy\), which the policy forbids.
-% 此时该结果只能以 \(xy\) 的顺序完成，而策略禁止这一顺序。
+\Cref{sec:lifecycle} introduced the contract \(X\otimes(Y\oplus Z)\) under policy \(\Pref\{yx,xz\}\).
+% \Cref{sec:lifecycle} 已介绍策略 \(\Pref\{yx,xz\}\) 下的契约 \(X\otimes(Y\oplus Z)\)。
+For its resolved calls, write \(\bar x=\Fresh(x_o,d_x)\), \(\bar y=\Fresh(y_o,d_y)\), and \(\bar z=\Fresh(z_o,d_z)\).
+% 对其已解析调用，记 \(\bar x=\Fresh(x_o,d_x)\)、\(\bar y=\Fresh(y_o,d_y)\) 和 \(\bar z=\Fresh(z_o,d_z)\)。
+The candidate family initially contains \(\bar y\bar x\) and \(\bar x\bar z\).
+% 初始候选族包含 \(\bar y\bar x\) 与 \(\bar x\bar z\)。
 The first fixed-point iteration removes \(\bar x\bar z\).
 % 第一次不动点迭代移除 \(\bar x\bar z\)。
 The second iteration removes \(\bar y\bar x\), because after the first removal the empty prefix no longer has a completion for the \(X\otimes Z\) outcome.
 % 第二次迭代移除 \(\bar y\bar x\)，因为第一次移除后，空前缀不再为 \(X\otimes Z\) 结果保留完成路径。
-Thus a checker that asks only whether each outcome has some safe complete execution accepts, but our exact check rejects because every candidate monitor exposes a bad partial execution.
-% 因此，只询问每个结果是否各自具有某条安全完整执行的检查器会接受，但我们的精确检查会拒绝，因为每个候选监控器都会暴露一段有问题的部分执行。
+The empty fixed point is the formal reason the exact checker rejects.
+% 空不动点就是精确检查器拒绝该编辑的形式原因。
 
 \begin{proposition}[Outcome-indexed nonblocking correspondence]
 % 结果索引的非阻塞对应关系
@@ -279,10 +268,13 @@ After the trusted controller derives \(\alpha_o,\omega_o\) from the requested ed
 % 在可信控制器根据请求的编辑、获授权移除、效果标识、授权记录和源状态快照推导出 \(\alpha_o,\omega_o\) 之后，广义非阻塞求解器会计算同一个最大执行族。
 Complete mediation makes \Fresh/\Alias controllable.
 % 完全中介使 \Fresh/\Alias 可控。
-Deployments with uncontrollable resolved events need the usual supremal-controllable refinement.
-% 具有不可控已解析事件的部署需要通常的上确界可控精化。
+Uncontrollable resolved events compose this construction with the standard supremal-controllable refinement.
+% 不可控的已解析事件将该构造与标准的上确界可控精化相组合。
 Our theory additionally constructs the most permissive Agent monitor or an impossibility certificate, carries the result through atomic installation, and proves that neither a caller-proposed workflow nor its traces contain enough information to reproduce the derivation.
 % 我们的理论还构造限制最少的 Agent 监控器或不可能性证书，将结果贯穿原子安装，并证明调用方提出的工作流及其轨迹都不包含足以复现该推导的信息。
+
+\subsubsection{Rejection Certificates}
+% 拒绝证书
 
 Each removed \((o_{\rm rem},b)\) records its rank \(i\), a prefix \(z\preceq b\), and uncovered \(o_{\rm miss}\in\mathsf{Compat}(z)\).
 % 每个被移除的 \((o_{\rm rem},b)\) 记录其秩 \(i\)、前缀 \(z\preceq b\) 与未覆盖的 \(o_{\rm miss}\in\mathsf{Compat}(z)\)。
@@ -291,8 +283,8 @@ Induction shows that every post-fixed \(P\) is contained in every \(\widehat B_i
 An empty final family therefore excludes every realization, and installation recomputes the ranked rejection certificate and the remaining witnesses.
 % 因此，最终执行族为空会排除每个实现，而安装会重新计算带秩拒绝证书和剩余见证。
 
-\subsubsection{Rejection certificates and repeated checking}
-% 拒绝证书与重复检查
+\subsubsection{Residual Coherence}
+% 残余一致性
 
 To show that the checker can be applied again after each permitted partial execution, fix \(H,u,\mathcal A_u\) after deriving \(\mathcal C\), and write \(W^\dagger(\mathcal C,\Delta)\) and \(\widehat B^\dagger(\mathcal C,\Delta)\) with those parameters suppressed.
 % 为证明检查器能在每段允许的部分执行之后再次应用，先在推导 \(\mathcal C\) 后固定 \(H,u,\mathcal A_u\)，再将省略这些参数的记法写作 \(W^\dagger(\mathcal C,\Delta)\) 和 \(\widehat B^\dagger(\mathcal C,\Delta)\)。
@@ -328,17 +320,3 @@ The full proof is in \cref{app:residual-coherence-proof}.
 \end{proof}
 Thus every accepted prefix retains a safe completion for every residual outcome index still contract-compatible with that prefix.
 % 因此，每个被接受的前缀都会为仍与该前缀契约兼容的每个残余结果索引保留一条安全完成路径。
-
-\subsubsection{Registered extension}
-% 已注册扩展
-
-\begin{lemma}[Registered extension preserves safety]
-% 已注册扩展保持安全
-\label{lem:live-extension}
-For an authenticated \(\mathsf{Extend}(\xi)\), the current residual indexed realization is a post-fixed family for the extension instance and is therefore contained in \(\widehat B^\dagger_{H,\mathsf{Extend}(\xi)}\ne\varnothing\).
-% 对于经认证的 \(\mathsf{Extend}(\xi)\)，当前残余的带索引实现是扩展实例的一个后不动点族，因此包含于 \(\widehat B^\dagger_{H,\mathsf{Extend}(\xi)}\ne\varnothing\)。
-Consequently, a valid registered extension cannot remove a currently required outcome or leave it without a safe completion.
-% 因此，有效的已注册扩展既不能移除当前要求实现的结果，也不能使其失去安全完成路径。
-\end{lemma}
-The proof is in \cref{app:live-extension-proof}.
-% 证明见 \cref{app:live-extension-proof}。

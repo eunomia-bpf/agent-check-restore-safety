@@ -2,7 +2,9 @@
 % 结论
 \label{sec:conclusion}
 
-Our exact checker turns an Agent Fork, Restore, or Merge into either the most permissive safe monitor or a proof that no implementation can meet the requirements.
-% 我们的精确检查器将 Agent 的 Fork、Restore 或 Merge 转化为限制最少的安全监控器，或者转化为没有实现能够满足要求的证明。
-The Exact Edit-Safety theorem carries this result through atomic installation and runtime execution, shows that none of four state relations can be erased without losing exactness, and remains applicable after every finite reachable execution.
-% 精确编辑安全定理将这一结果贯穿原子安装与运行时执行，表明四类状态关系中的任一类都无法在不丧失精确性的情况下被删除，并且在每个有限可达执行之后仍然适用。
+Safe execution editing has an exact criterion: past protected effects remain immutable, and every still-required outcome retains a policy-safe completion.
+% 安全执行编辑具有一个精确判据：过去的受控效果保持不可变，并且每个仍要求实现的结果都保留一条策略安全的完成路径。
+Our checker turns every registered Fork, Restore, Merge, or extension into the unique most-permissive monitor or a finite impossibility certificate.
+% 我们的检查器把每项已注册的 Fork、Restore、Merge 或扩展转化为唯一且限制最少的监控器，或一份有限不可能性证书。
+The Exact Edit-Safety theorem unifies exact synthesis, irredundant authenticated state, atomic race serialization, repeated finite execution, and ideal--runtime equivalence, providing a formal foundation for branchable Agent runtimes.
+% 精确编辑安全定理统一了精确综合、不可约认证状态、原子竞态串行化、重复有限执行以及理想机—运行时等价，为可分支 Agent 运行时提供形式化基础。

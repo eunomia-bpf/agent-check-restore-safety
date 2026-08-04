@@ -77,8 +77,8 @@ The same theorem proves atomic installation despite racing calls, proves that ea
 % 同一定理还证明了调用竞态下的原子安装，证明四类记录关系中的每一类都包含精确判定或安装所需的区分信息，并将已安装运行时与理想原子机器联系起来。
 Every supported event preserves the security invariant, so the theorem applies again after every finite reachable execution.
 % 每个受支持事件都保持安全不变量，因此该定理能在每个有限可达执行之后再次应用。
-Five Lean modules, 19 paper-specific executable tests, and measurements over 2--128 outcomes validate the executable fixed-point checker and its modeled edit-installation races.
-% 五个 Lean 模块、19 项论文专用可执行测试以及覆盖 2--128 个结果的测量，验证了可执行不动点检查器及其建模的编辑安装竞态。
+Six Lean modules mechanize the theorem spine from typed registration and exact admission through all six edit derivations, atomic installation, use--install serialization, and finite-trace security preservation; 19 paper-specific tests and measurements over 2--128 outcomes exercise the executable checker.
+% 六个 Lean 模块机械化从类型化注册与精确准入，到全部六种编辑推导、原子安装、调用—安装串行化以及有限轨迹安全保持的定理主干；19 项论文专用测试与覆盖 2--128 个结果的测量检验可执行检查器。
 \end{abstract}
 
 \input{sections/introduction}

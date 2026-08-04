@@ -8,8 +8,8 @@ Such a call must identify its registered position in the workflow, present an au
 % 这类调用必须标明它在工作流中的已注册位置、提供授权令牌，并提交具体工具请求。
 The monitor decides whether the call may use a new authorization, reuse an authorization already recorded in the log, or make no progress.
 % 监控器决定该调用能否使用新的授权、复用日志中已经记录的授权，或不得推进。
-Each modeled state covers one policy domain.
-% 每个建模状态涵盖一个策略域。
+Each modeled state covers one \emph{policy domain}: the protected actions governed by one policy, one authorization log, and one atomically replaced monitor.
+% 每个建模状态涵盖一个\emph{策略域}：由一项策略、一份授权日志和一个原子替换的监控器共同管理的受控动作。
 Domains with disjoint protected actions, authorization logs, and policies compose by product.
 % 受控动作、授权日志和策略彼此不相交的域通过乘积组合。
 Every state snapshot is finite, although an execution may contain an unbounded number of snapshots.
@@ -20,8 +20,8 @@ The definitions below first describe the required outcomes and then the authenti
 \subsection{Workflow outcomes and call order}
 % 工作流结果与调用次序
 
-\paragraph{Typed runtime vocabulary}
-% 类型化运行时词汇
+\paragraph{Semantic vocabulary}
+% 语义词汇
 We capitalize \emph{Agent} for the untrusted principal requesting execution edits.
 % 我们将请求执行编辑的不受信任主体称为 \emph{Agent}。
 An \emph{occurrence} \(x\) identifies one position for a protected tool call in the workflow.
@@ -32,20 +32,10 @@ The first authorized use of an effect identity creates an authorization record.
 % 一个效果标识首次获得授权使用时会创建授权记录。
 After Fork or Restore, several occurrences may refer to the same effect identity.
 % Fork 或 Restore 之后，多个发生项可能指向同一个效果标识。
-A monitor entry \(j\) belongs to one monitor version \(\eta\).
-% 监控器入口 \(j\) 属于一个监控器版本 \(\eta\)。
-An authorization token \(h\) binds an occurrence to its monitor entry, effect identity, scope, and normalized tool request \(m^\circ\).
-% 授权令牌 \(h\) 将发生项绑定到监控器入口、效果标识、作用域和规范化工具请求 \(m^\circ\)。
 \emph{Lineage} is the certified ancestry preserved when an edit carries or copies a workflow region.
 % \emph{谱系}是编辑携带或复制工作流区域时保留的认证祖先关系。
 \(T,\Delta,\chi\) denote the active workflow, authorization log, and ordered record of resolved occurrences.
 % \(T,\Delta,\chi\) 分别表示当前工作流、授权日志和已解析发生项的有序记录。
-An edit takes effect at an atomic installation point, which also replaces the policy domain's monitor version.
-% 一次编辑在原子安装点生效，该安装点同时替换策略域的监控器版本。
-Registry \(\rho\) authenticates each occurrence's monitor entry and token.
-% 注册表 \(\rho\) 认证每个发生项的监控器入口和令牌。
-It maps the occurrence to \(q_{\rm eff}(x)=d\), immutable normalized request \(\mathsf{inv}(d)=m^\circ\), and permission label \(\ell(d)\).
-% 它将发生项映射到 \(q_{\rm eff}(x)=d\)、不可变的规范化请求 \(\mathsf{inv}(d)=m^\circ\) 和权限标签 \(\ell(d)\)。
 
 A pomset \(p=(X_p,\prec_p)\) is a finite set of occurrences with a strict partial order.
 % 偏序事件集 \(p=(X_p,\prec_p)\) 是带有严格偏序的有限发生项集合。
@@ -69,10 +59,8 @@ This condition permits incomparable traces and different outcomes with the same 
 % 该条件允许不可比较的轨迹以及共享同一轨迹的不同结果，因此并不要求结果具有确定性。
 It requires a registered occurrence whenever continuing after a shared partial execution performs more work.
 % 如果在一段共享的部分执行之后继续会执行更多工作，该条件要求存在一个已注册发生项来表示继续。
-An otherwise silent choice between stopping and continuing lies outside the interface.
-% 一个不产生可观察事件的停止或继续选择不属于该接口。
-A deployment may represent such a choice with an authenticated terminal occurrence handled by the controller, without claiming that a remote action occurred.
-% 部署可以用由控制器处理的认证终止发生项表示这种选择，而不声称远端动作已经发生。
+The interface represents a choice between stopping and continuing by an authenticated terminal occurrence handled by the controller.
+% 该接口通过由控制器处理的认证终止发生项表示停止与继续之间的选择。
 
 Contracts use the three partial constructors below.
 % 契约使用下列三个偏构造器。
@@ -314,8 +302,8 @@ Within one policy domain, this TCB completely mediates every protected call and 
 % 在一个策略域内，该 TCB 完全中介每次受控调用，并为每项已建模状态变更和可见编辑答案提供可线性化且崩溃稳定的事务。
 A recovered labeled transition system (LTS) state shows each transaction entirely uncommitted or committed according to whether its linearization point occurred.
 % 恢复后的标号转移系统（LTS）状态根据事务的线性化点是否已经发生，将每项事务完整地呈现为未提交或已提交。
-No transaction is torn, and volatile compiler caches lie outside the model.
-% 任何事务都不会撕裂，而易失的编译器缓存不在模型中。
+Recovered states expose every transaction as entirely uncommitted or committed, while compiler caches are volatile.
+% 恢复状态把每项事务呈现为完整未提交或完整已提交，而编译器缓存为易失状态。
 Before the checker takes a source snapshot, the call authorization service may instantiate finitely many pre-authorized schema templates.
 % 在检查器获取源状态快照之前，调用授权服务可以实例化有限个预授权模式模板。
 For tool request \(m\), it computes normalized request \(m^\circ=\mathsf{canon}_\kappa(m)\), reuses only an effect identity certified for \(m^\circ\) or allocates a fresh one, and signs \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{lineage})\) into the authenticated registry.
@@ -339,8 +327,8 @@ The model stores these traces as outcome-indexed runs \(\mathsf{BRuns}(R)\) and 
 % 该模型把这些轨迹存为带结果索引的执行 \(\mathsf{BRuns}(R)\)，并存储从源轨迹出发的映射 \(\lambda\)；当 \(\lambda\) 是保持结果、调用位置到效果标识的映射、次序、结果权限和授权日志更新的双射时，记作 \(\mathcal W\sqsubseteq_\lambda R\)。
 \Cref{def:registration-refinement,lem:registration-reflection} give the exact finite check and proof.
 % \Cref{def:registration-refinement,lem:registration-reflection} 给出精确的有限检查与证明。
-The theory neither infers natural-language contracts nor equates local commit with remote physical exactly-once execution, which additionally requires an idempotent or queryable sink.
-% 该理论既不推断自然语言契约，也不把本地提交等同于远端物理恰好一次执行；后者还要求接收端具有幂等性或可查询性。
+Registered contracts enter through \(\mathsf{CheckReg}\), and remote exactly-once effects enter through authenticated receipts from an idempotent or queryable sink.
+% 已注册契约通过 \(\mathsf{CheckReg}\) 进入理论，而远端恰好一次效果通过幂等或可查询接收端的认证回执进入理论。
 
 \subsection{Security Objective}
 % 安全目标
@@ -636,13 +624,3 @@ The six row cases use certified clone/carry bijections and context identity to p
 The common poststate establishes well-formedness and binds every current target occurrence to \(\eta^+\); \cref{app:schema-fidelity-proof} gives the full argument.
 % 公共后状态建立良构性，并将每个当前目标发生项绑定到 \(\eta^+\)；完整论证见 \cref{app:schema-fidelity-proof}。
 \end{proof}
-
-\subsection{Supporting Authenticated Registry Growth}
-% 辅助性的认证注册表增长
-
-A registered extension is not a seventh execution edit: it adds finite authenticated schema, registry, outcome-authority, and policy entries without changing the current workflow or its required outcomes.
-% 已注册扩展不是第七种执行编辑：它增加有限且经认证的模式、注册表、结果权限与策略条目，但不改变当前工作流及其要求实现的结果。
-It preserves every existing identifier, effect identity, outcome-authority row, authorization record, and normalization rule, authorizes no removal, and conservatively extends the policy, \(\mathcal A\subseteq\mathcal A^+\).
-% 它保持每个现有标识、效果标识、结果权限记录、授权记录与规范化规则，不授权任何移除，并保守扩展策略，即 \(\mathcal A\subseteq\mathcal A^+\)。
-Under a fresh \(\eta^+\), it refreshes every current monitor entry and authorization token and uses the same safety checker and atomic installation as an execution edit; \cref{app:registered-extension} gives the exact judgment.
-% 在新的 \(\eta^+\) 下，它刷新每个当前监控器入口与授权令牌，并使用与执行编辑相同的安全检查器和原子安装；精确判定见 \cref{app:registered-extension}。

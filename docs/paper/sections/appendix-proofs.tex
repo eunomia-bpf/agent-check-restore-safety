@@ -380,6 +380,15 @@ It preserves \(T,K,\chi,\Delta,\mathsf{out}\) and every existing row of \(G,\Sig
 It uses the same checker and atomic installation as an execution edit.
 % 它使用与执行编辑相同的检查器和原子安装。
 
+\begin{lemma}[Registered extension preserves safety]
+% 已注册扩展保持安全
+\label{lem:live-extension}
+For an authenticated \(\mathsf{Extend}(\xi)\), the current residual indexed realization is a post-fixed family for the extension instance and is therefore contained in \(\widehat B^\dagger_{H,\mathsf{Extend}(\xi)}\ne\varnothing\).
+% 对于经认证的 \(\mathsf{Extend}(\xi)\)，当前残余的带索引实现是扩展实例的一个后不动点族，因此包含于 \(\widehat B^\dagger_{H,\mathsf{Extend}(\xi)}\ne\varnothing\)。
+Consequently, a valid registered extension cannot remove a currently required outcome or leave it without a safe completion.
+% 因此，有效的已注册扩展既不能移除当前要求实现的结果，也不能使其失去安全完成路径。
+\end{lemma}
+
 \subsubsection{Residual coherence}
 % 残余一致性
 \label{app:residual-coherence-proof}

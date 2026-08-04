@@ -12,8 +12,8 @@ The protocol serializes every overlapping protected call either before or after 
 % 该协议将每个重叠的受控调用完整地排列在安装之前或之后。
 The proof compares this implementation with an ideal machine that installs an accepted specification in one atomic step and admits exactly its resolved prefixes.
 % 证明将该实现与一台理想机比较；理想机以一个原子步骤安装被接受的规范，并且只接纳该规范的已解析前缀。
-The ideal transition system and the field-level implementation rules appear in \cref{sec:ideal,tab:app-event-matrix}; the main text retains only the monitor construction and the installation boundary.
-% 理想转移系统与字段级实现规则见 \cref{sec:ideal,tab:app-event-matrix}；正文只保留监控器构造与安装边界。
+The ideal transition system and the field-level implementation rules appear in \cref{sec:ideal,tab:app-event-matrix}; this section gives the monitor construction, the installed-state invariant, and the installation boundary needed by the main theorem.
+% 理想转移系统与字段级实现规则见 \cref{sec:ideal,tab:app-event-matrix}；本节给出主定理所需的监控器构造、安装后状态不变量与安装边界。
 
 \subsection{Canonical Occurrence-Sensitive Monitor}
 % 规范的发生项敏感监控器
@@ -57,46 +57,66 @@ The automaton is the paired-language derivative construction~\cite{brzozowski196
 
 The checker returns \(\mathsf{Invalid}\) when derivation fails, \(\mathsf{Reject}\) with a ranked impossibility certificate when the fixed point is empty, and \(\mathsf{Installable}\) with the canonical monitor otherwise.
 % 当推导失败时，检查器返回 \(\mathsf{Invalid}\)；当不动点为空时，返回带秩不可能性证书的 \(\mathsf{Reject}\)；否则返回携带规范监控器的 \(\mathsf{Installable}\)。
-Each answer is bound to the complete authenticated source snapshot.
-% 每个答案都绑定完整的认证源状态快照。
+Each answer carries a fingerprint of the complete state that was checked.
+% 每个答案都携带完整经检查状态的指纹。
 \Cref{app:certificate-payloads,app:compiled-transitions} gives the exact payloads and verification rules.
 % \Cref{app:certificate-payloads,app:compiled-transitions} 给出精确载荷与验证规则。
-The bounded implementation may instead return \(\mathsf{ResourceLimit}(b,n)\), which installs nothing and proves neither safety nor impossibility.
-% 有界实现可能改为返回 \(\mathsf{ResourceLimit}(b,n)\)，它不安装任何内容，也不证明安全性或不可能性。
+The resource-managed wrapper returns \(\mathsf{ResourceLimit}(b,n)\) before search and leaves the authenticated state unchanged; semantic verdicts are emitted by complete checker runs.
+% 资源管理包装器在搜索前返回 \(\mathsf{ResourceLimit}(b,n)\) 并保持认证状态不变；语义判定由完整的检查器运行发出。
 
 \subsection{Atomic Installation}
 % 原子安装
 
-At installation, the service re-derives the edit and recomputes the fixed point from the current authenticated snapshot.
-% 安装时，该服务根据当前认证快照重新推导编辑并重新计算不动点。
+At installation, the service re-derives the edit and recomputes the fixed point from the current authenticated state.
+% 安装时，该服务根据当前认证状态重新推导编辑并重新计算不动点。
 If any protected call has committed since compilation, the candidate is stale and installs nothing.
 % 如果编译之后已有任何受控调用提交，则候选已过期且不会安装任何内容。
 Otherwise, one policy-domain transaction closes the old monitor version, activates the canonical monitor, replaces every current occurrence binding and authorization token, and only then exposes the successful edit answer.
 % 否则，一个策略域事务会关闭旧监控器版本、激活规范监控器、替换每个当前发生项的绑定与授权令牌，然后才暴露成功编辑答案。
 Protected calls verify their occurrence, effect identity, normalized request, authorization token, and current monitor transition in the same transaction that records progress.
 % 受控调用在记录进度的同一事务中验证其发生项、效果标识、规范化请求、授权令牌与当前监控器转移。
-A \Fresh call creates one authorization record and ordered dispatch item; an \Alias call advances the workflow by linking to the existing record without extending the permission trace.
-% \Fresh 调用创建一条授权记录和一个有序派发条目；\Alias 调用通过链接到已有记录推进工作流，而不扩展权限轨迹。
-The complete invariant, guarded call rule, installation preconditions, field updates, retries, dispatch, settlement, and crash behavior appear in \cref{app:compiled-transitions,tab:app-event-matrix}.
-% 完整不变量、带守卫调用规则、安装前提、字段更新、重试、派发、结算与崩溃行为见 \cref{app:compiled-transitions,tab:app-event-matrix}。
+A \Fresh call creates one authorization record and queues the normalized request; an \Alias call advances the workflow by linking to the existing record without extending the permission trace.
+% \Fresh 调用创建一条授权记录并将规范化请求入队；\Alias 调用通过链接到已有记录推进工作流，而不扩展权限轨迹。
+
+\paragraph{Installed-state invariant}
+% 安装后状态不变量
+We write \(\mathsf{AgentSec}(S;c,r)\) when five conditions hold: the installed workflow and its required outcomes come from the checked edit; the stored nonempty execution family is the checker's largest safe family; the workflow, authorization log, queue, and checkpoints match the executed prefix \(r\); the current monitor is exactly the derivative after \(r\); and exactly one monitor version is active, with one current entry and authorization token for every remaining call position.
+% 当以下五项条件成立时，记作 \(\mathsf{AgentSec}(S;c,r)\)：已安装工作流及其要求实现的结果来自经检查编辑；已存非空执行族是检查器得到的最大安全执行族；工作流、授权日志、队列和检查点与已执行前缀 \(r\) 一致；当前监控器恰为执行 \(r\) 后的导数；且恰有一个监控器版本处于活动状态，并为每个剩余调用位置提供一个当前入口和授权令牌。
+For a submitted tool request, one transaction verifies the call position, effect identity, normalized request, authorization token, current monitor version, and enabled monitor transition before recording any progress.
+% 对于提交的工具请求，一个事务会先验证调用位置、效果标识、规范化请求、授权令牌、当前监控器版本以及已启用的监控器转移，然后才记录任何进展。
+The same transaction either creates the authorization record and queues the request, or records reuse of an existing authorization and return value.
+% 同一事务随后要么创建授权记录并将请求入队，要么记录对已有授权及返回值的复用。
+
+\paragraph{Installation check}
+% 安装检查
+Write \(\mathsf{Ready}(S,u,Y)\) when the service re-derives \(u\) from the current state, recomputes the same nonempty fixed point and canonical monitor carried by \(Y\), matches \(Y\)'s checked-state fingerprint, confirms the old monitor version is current, and confirms the new version is not active.
+% 当服务根据当前状态重新推导 \(u\)、重新计算出 \(Y\) 所携带的同一非空不动点与规范监控器、匹配 \(Y\) 的经检查状态指纹、确认旧监控器版本仍为当前版本并确认新版本尚未激活时，记作 \(\mathsf{Ready}(S,u,Y)\)。
+If these checks pass, one transaction closes the old version, installs and activates the new monitor, replaces every current entry and authorization token, and then exposes the successful edit answer.
+% 若这些检查通过，一个事务会关闭旧版本、安装并激活新监控器、替换每个当前入口与授权令牌，然后才暴露成功编辑答案。
+A changed state makes the candidate stale and forces a new check.
+% 状态一旦改变，候选结果即过期，必须重新检查。
+The complete field updates, retries, dispatch, settlement, and recovery rules appear in \cref{app:compiled-transitions,tab:app-event-matrix}.
+% 完整字段更新、重试、派发、结算与恢复规则见 \cref{app:compiled-transitions,tab:app-event-matrix}。
 
 \begin{lemma}[Edit--call serialization]
 % 编辑--调用串行化
 \label{lem:cut-linearization}
 In every reachable well-formed compiled state, a visible edit answer and a protected call in the same policy domain have a unique order at the installation point.
 % 在每个可达的良构编译状态中，同一策略域内的一项可见编辑答案与一次受控调用在安装点具有唯一顺序。
-If the call commits first, that seal cannot install.
-% 若该调用先提交，则该封印无法安装。
+If the call commits first, it changes the checked state, so the earlier fingerprint cannot install.
+% 若调用先提交，它会改变经检查状态，因此先前的指纹无法安装。
 If \Install commits first, the old call cannot resolve \Fresh or \Alias.
 % 若 \Install 先提交，则旧调用无法解析 \Fresh 或 \Alias。
 Steps in independent domains commute by product semantics.
 % 独立域中的步骤依据乘积语义可交换。
 \end{lemma}
 \begin{proof}
-Prior \Fresh/\Alias invalidates every old source-snapshot seal, while prior installation closes the old monitor version.
-% 先发生的 \Fresh/\Alias 会使每个旧源状态快照封印失效，而先发生的安装会关闭旧监控器版本。
-Disjoint-domain steps commute, and the persisted target and certificate restore the invariant.
-% 互不相交域中的步骤可交换，持久目标与证书则恢复不变量。
+If the call commits first, its recorded progress changes the checked-state fingerprint.
+% 若调用先提交，其记录的进展会改变经检查状态指纹。
+If installation commits first, it closes the old monitor version, so the old authorization token fails.
+% 若安装先提交，它会关闭旧监控器版本，因此旧授权令牌无法通过验证。
+Atomicity excludes a partial third outcome; independent domains commute.
+% 原子性排除了部分完成的第三种结果；独立域中的步骤彼此可交换。
 \end{proof}
 
 \subsection{Decidability and trust}
