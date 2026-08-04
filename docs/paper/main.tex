@@ -53,16 +53,24 @@ A safe edit must therefore account for both what the original execution has alre
 % 因此，一次安全编辑必须同时考虑原执行已经完成的事情和仍然负有的责任。
 Each old promise must remain required after the edit, have durable evidence of completion, or be explicitly canceled by the authority that created it.
 % 每项旧承诺都必须在编辑后继续有效、已有持久证据证明其完成，或由创建它的权限方明确取消。
-Existing Agent recovery systems implement particular edits, and existing synthesis methods choose behavior after a model and its goals have been supplied; neither derives the exact requirements of an edit from authenticated history.
+Existing Agent recovery systems implement particular edits, while existing synthesis methods choose behavior after a model and its goals have been supplied.
 % 现有 Agent 恢复系统实现特定编辑，而现有综合方法在模型及其目标已经给定后选择行为；二者都不会从经认证历史中推导一次编辑的精确要求。
+Neither derives the exact requirements of an edit from authenticated history.
+% 二者都不会从经认证历史中推导一次编辑的精确要求。
 We give a decision procedure that starts from a checked workflow and authenticated runtime state, derives the legal futures, and repeatedly removes any future whose prefix would strand a result that the edit still promises.
 % 我们给出一种判定过程：它从经检查的工作流和经认证的运行时状态出发，推导合法未来，并反复删除那些会在某个前缀后使编辑仍然承诺的结果无路可走的未来。
-If nothing remains, the procedure returns a finite proof that no implementation can meet the requirements; otherwise, the survivors compile into the largest enforceable set of safe behaviors.
+If nothing remains, the procedure returns a finite proof that no implementation can meet the requirements.
 % 如果没有未来留下，该过程返回一份有限证明，说明任何实现都无法满足要求；否则，留下的未来会被编译成可强制执行的最大安全行为集合。
-For all six registered history operations and authenticated additive extensions, our main theorem proves that this procedure succeeds exactly when some implementation can enforce policy, preserve the edit's meaning, and keep every still-possible result able to finish; it also proves that the resulting monitor can be installed atomically despite racing calls.
+Otherwise, the survivors compile into the largest enforceable set of safe behaviors.
+% 否则，留下的未来会被编译成可强制执行的最大安全行为集合。
+For all six registered history operations and authenticated additive extensions, our main theorem proves that this procedure succeeds exactly when some implementation can enforce policy, preserve the edit's meaning, and keep every still-possible result able to finish.
 % 对全部六种已注册历史操作和经认证的仅追加扩展，我们的主定理证明：当且仅当某个实现能够执行策略、保持编辑含义并让每个仍可能的结果都可完成时，该过程才会成功；定理还证明，所得监控器能够在调用竞态下原子安装。
-The theorem also identifies the history information that no exact decision can discard, remains valid through every finite sequence of operations, and connects the installed runtime to an ideal atomic machine; five kernel-checked Lean modules, 81 executable tests, and a bounded scaling study validate the finite checked core and explicit procedure.
+The theorem also proves that the resulting monitor can be installed atomically despite racing calls.
+% 定理还证明，所得监控器能够在调用竞态下原子安装。
+It identifies the history information that no exact decision can discard, remains valid through every finite sequence of operations, and connects the installed runtime to an ideal atomic machine.
 % 该定理还识别出任何精确判定都不能丢弃的历史信息，在操作组成的每个有限序列中保持成立，并将已安装运行时连接到理想原子机器；五个经内核检查的 Lean 模块、81 项可执行测试与一项有界扩展性研究验证了有限检查核心和显式过程。
+Five kernel-checked Lean modules, 81 executable tests, and a bounded scaling study validate the finite checked core and explicit procedure.
+% 五个经内核检查的 Lean 模块、81 项可执行测试与一项有界扩展性研究验证了有限检查核心和显式过程。
 \end{abstract}
 
 \input{sections/introduction}

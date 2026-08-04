@@ -94,6 +94,8 @@ A copied occurrence that resolves as \Alias stutters only in the authority histo
 \subsection{Prefix-robust history admission}
 % 前缀鲁棒的历史准入
 
+\subsubsection{Greatest Prefix-Robust Fixed Point}
+
 For each structurally derived outcome \(o\in O_{H,u}\), define its set of resolved completions and the corresponding safe subset.
 % 对每个结构化派生的结果 \(o\in O_{H,u}\)，定义其已解析完成路径的集合及相应的安全子集。
 \begin{equation}
@@ -215,6 +217,8 @@ Let singleton contracts \(X,Y,Z\) contain \(x_o,y_o,z_o\), and let the target re
 % 令单元素契约 \(X,Y,Z\) 分别包含 \(x_o,y_o,z_o\)，并令目标注册表将它们映射到此前无回执且标签分别为 \(x,y,z\) 的不同单元 \(d_x,d_y,d_z\)。
 Write \(\bar x=\Fresh(x_o,d_x)\), \(\bar y=\Fresh(y_o,d_y)\), and \(\bar z=\Fresh(z_o,d_z)\).
 % 记 \(\bar x=\Fresh(x_o,d_x)\)、\(\bar y=\Fresh(y_o,d_y)\)、\(\bar z=\Fresh(z_o,d_z)\)。
+\subsubsection{Why Individual Outcome Safety Is Insufficient}
+
 For \(\mathcal C=X\otimes(Y\oplus Z)\) and \(\mathcal A=\Pref\{yx,xz\}\), the \(X\otimes Y\) and \(X\otimes Z\) outcomes initially have safe resolved completions \(\bar y\bar x\) and \(\bar x\bar z\), with authority projections \(yx\) and \(xz\).
 % 对于 \(\mathcal C=X\otimes(Y\oplus Z)\) 和 \(\mathcal A=\Pref\{yx,xz\}\)，\(X\otimes Y\) 与 \(X\otimes Z\) 结果最初分别具有安全的已解析完成路径 \(\bar y\bar x\) 和 \(\bar x\bar z\)，其权限投影为 \(yx\) 和 \(xz\)。
 Yet prefix \(\bar x\) from \(\bar x\bar z\) remains contract-compatible with \(X\otimes Y\) but leaves no safe continuation.
@@ -273,6 +277,8 @@ Each removed \((o_{\rm rem},b)\) records its rank \(i\), a prefix \(z\preceq b\)
 Induction gives every post-fixed \(P\subseteq\widehat B_i\), so an empty final family excludes every realization, and installation recomputes the chain, causes, and survivor witnesses.
 % 归纳给出每个后不动点 \(P\subseteq\widehat B_i\)，因此最终族为空会排除每个实现，而安装会重新计算淘汰链、原因与幸存者见证。
 
+\subsubsection{Rejection Certificates and Residual Closure}
+
 To preserve admission after each permitted prefix, fix \(H,u,\mathcal A_u\) after deriving \(\mathcal C\), and write \(W^\dagger(\mathcal C,\Delta)\) and \(\widehat B^\dagger(\mathcal C,\Delta)\) with those parameters suppressed.
 % 为在每个允许的前缀之后保持准入，先在派生 \(\mathcal C\) 后固定 \(H,u,\mathcal A_u\)，再将省略这些参数的记法写作 \(W^\dagger(\mathcal C,\Delta)\) 和 \(\widehat B^\dagger(\mathcal C,\Delta)\)。
 \begin{lemma}[Residual coherence]
@@ -326,6 +332,8 @@ Finally, \(\Pref(B)/z=\Pref(B/z)\) yields the generated-language equality.
 \end{proof}
 Thus every admitted prefix retains a safe completion for every residual outcome index still contract-compatible with that prefix.
 % 因此，每个已准入前缀都会为仍与该前缀契约兼容的每个残余结果索引保留一条安全完成路径。
+
+\subsubsection{Live Extension}
 
 \begin{lemma}[Monotone live extension]
 % 单调在线扩展

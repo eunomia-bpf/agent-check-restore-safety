@@ -216,7 +216,7 @@ For unresolved \(x\), \cref{eq:use-rule} applies exactly when all premises hold,
 Here \(\Dispatch\) is the durable local outbox release, not evidence of exactly-once execution by a remote service.
 % 此处的 \(\Dispatch\) 是持久的本地发件箱释放，而不是远程服务恰好执行一次的证据。
 
-\paragraph{Atomic verdict and installation}
+\subsubsection{Verdict Verification and Atomic Installation}
 % 原子判定与安装
 At its linearization point, the kernel ignores caller-supplied target and epoch data, sets \(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), and re-runs \(\mathsf{Derive}(\Theta_S(u))\) from the current state.
 % 在其线性化点，内核忽略调用方提供的目标与纪元数据，令 \(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并根据当前状态重新执行 \(\mathsf{Derive}(\Theta_S(u))\)。
@@ -270,7 +270,7 @@ Success is observed as \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\), retaining 
 A stale or malformed precomputed candidate emits no verdict, is discarded as an internal stutter, and must be recomputed against the current request cut before any visible response.
 % 过期或畸形的预计算候选不会发出判定，而是作为内部停顿被丢弃，并且必须针对当前请求切点重新计算后才能产生任何可见响应。
 
-\paragraph{Remaining rules}
+\subsubsection{Auxiliary Kernel Transitions}
 % 其余规则
 \(\mathsf{Preload}(\eta,Z)\) is a \(\tau\)-step that may allocate an unallocated epoch or change an inactive, unbound epoch, and it leaves the epoch inactive, while a stale or malformed candidate attempt is a state-preserving \(\tau\)-step.
 % \(\mathsf{Preload}(\eta,Z)\) 是一个 \(\tau\) 步，它可以分配尚未分配的纪元或改变处于非活跃且未绑定状态的纪元，并使该纪元保持非活跃，而过期或畸形的候选尝试是保持状态的 \(\tau\) 步。
