@@ -76,13 +76,13 @@ The verdict is therefore \emph{Accept}: both supplier outcomes remain possible, 
 % 因而判定为\emph{接受}：两个供应商结果仍然可能，每个获准前缀都满足策略，且每个这样的前缀仍能到达完整结果。
 If policy excludes \(rap_Rs\), then \(M_{o_R}=\varnothing\), and the Fork is rejected because pruning supplier \(R\) would change its meaning.
 % 如果策略排除 \(rap_Rs\)，则 \(M_{o_R}=\varnothing\)，并且该 Fork 会被拒绝，因为剪除供应商 \(R\) 将改变其含义。
-Rejection returns a ranked certificate explaining which completions were removed and why, rather than letting the Agent weaken the requested edit.
-% 拒绝会返回一份带秩证书，解释哪些完成路径被删除以及删除原因，而不会让 Agent 弱化请求的编辑。
+Rejection returns a certificate listing the order in which completions were removed and the reason for each removal, rather than letting the Agent weaken the requested edit.
+% 拒绝会返回一份证书，列出完成路径的移除顺序及每次移除的原因，而不会让 Agent 弱化请求的编辑。
 The verdict in this variant is \emph{Reject}: checking only the surviving \(L\) branch would silently weaken the requested Fork.
 % 该变体的判定为\emph{拒绝}：只检查保留下来的 \(L\) 分支会悄然削弱所请求的 Fork。
 
-\subsection{Prefix-Unsafe Outcomes}
-% 前缀不安全的结果
+\subsection{Why Safe Endpoints Are Not Enough}
+% 为什么安全终点仍然不够
 
 The previous rejection is visible at the start because one outcome has no safe completion.
 % 前述拒绝在起点即可看出，因为其中一个结果没有安全完成路径。
@@ -103,14 +103,14 @@ A monitor that exposes \(x\) is therefore unsafe, while a monitor that removes \
 % 因而，暴露 \(x\) 的监控器不安全，而移除 \(x\) 的监控器又会破坏 \(X\otimes Z\) 结果。
 The exact verdict is \emph{Reject}, even though an outcome-by-outcome check would accept.
 % 精确判定为\emph{拒绝}，尽管逐结果检查会接受。
-\Cref{sec:admission} formalizes this failure as a greatest-fixed-point elimination rather than assuming that one safe trace per outcome is enough.
-% \Cref{sec:admission} 将这一失败形式化为最大不动点淘汰过程，而不是假设每个结果有一条安全轨迹就已足够。
+\Cref{sec:admission} detects this failure by repeatedly removing executions that create such a bad prefix.
+% \Cref{sec:admission} 通过反复移除会产生此类危险前缀的执行来检测这一失败。
 
 \subsection{Installation Races}
 % 安装竞态
 
-\Cref{fig:two-histories} separates the active workflow, the append-only authorization history, and the monitor version that must change atomically.
-% \Cref{fig:two-histories} 区分当前工作流、仅追加授权历史，以及必须原子变更的监控器版本。
+\Cref{fig:two-histories} separates the active workflow, the authorization log, and the monitor version that must change atomically.
+% \Cref{fig:two-histories} 区分当前工作流、授权日志以及必须原子变更的监控器版本。
 
 \begin{figure*}[t]
   \centering
@@ -173,13 +173,13 @@ The exact verdict is \emph{Reject}, even though an outcome-by-outcome check woul
   % Fork、Restore 和 Merge 会改变当前工作流，但不会抹去已经记录的调用。
   Restore creates a new call position while preserving its authenticated effect identity.
   % Restore 会创建新的调用位置，同时保留其认证效果标识。
-  The atomic installation point must order both a new authorization (\Fresh) and reuse of an earlier authorization record (\Alias) against the monitor-version change.}
-  % 原子安装点必须确定新授权（\Fresh）和先前授权记录复用（\Alias）相对于监控器版本变更的顺序。
+  The atomic installation point orders both creation and reuse of an authorization record against the monitor-version change.}
+  % 原子安装点确定授权记录的创建或复用与监控器版本变更之间的先后顺序。
   \label{fig:two-histories}
 \end{figure*}
 
-\paragraph{\Fresh-authorization race}
-% \Fresh 授权竞态
+\paragraph{New authorization during installation}
+% 安装期间的新授权
 After the shared approval and before either payment, the Agent requests \(\mathsf{MergeSelect}(g,L,\sigma)\).
 % 在共享审批之后、任一付款之前，Agent 请求 \(\mathsf{MergeSelect}(g,L,\sigma)\)。
 If the payment call \(x_R^p\) from the old supplier-\(R\) branch is authorized first, it selects \(R\) and changes \(\mathsf{lab}(\Delta)\) from \(ra\) to \(rap_R\).
@@ -191,27 +191,27 @@ If the Merge installation occurs first, it closes the old monitor version and gi
 Leaving the old monitor version active would allow both payments.
 % 让旧监控器版本继续有效会允许两笔付款。
 
-\paragraph{Receipt-reuse race}
-% 收据复用竞态
-Now consider the Restore that keeps both continuations in \cref{fig:two-histories}.
-% 现在考虑 \cref{fig:two-histories} 中保留两条延续的 Restore。
+\paragraph{Authorization reuse during installation}
+% 安装期间的授权复用
+Now consider the Restore that keeps both branches in \cref{fig:two-histories}.
+% 现在考虑 \cref{fig:two-histories} 中保留两个分支的 Restore。
 A later Restore of \(k\) creates a new approval occurrence \(x_a'\), but both approval occurrences refer to the same effect identity \(d_a\).
 % 随后 Restore 到 \(k\) 会创建新的审批发生项 \(x_a'\)，但两个审批发生项都指向同一个效果标识 \(d_a\)。
 The restored occurrence is a new workflow position but retains effect identity \(d_a\).
 % 恢复出的发生项是一个新的工作流位置，但保留效果标识 \(d_a\)。
 Because \(d_a\) already has an authorization record, executing \(x_a'\) is an \Alias: the restored branch advances past approval without creating another authorization record.
 % 由于 \(d_a\) 已有授权记录，执行 \(x_a'\) 是一次 \Alias：恢复后的分支越过审批，但不会创建另一条授权记录。
-A concurrent join or replacement computed before that progress is stale even though the authorization log has not changed.
-% 在该推进之前计算的并发 join 或替换已经过期，即使授权日志没有变化。
-The installation check must therefore compare the ordered occurrence record \(\chi\) as well as the authorization log.
-% 因此，安装检查除了比较授权日志外，还必须比较有序发生项记录 \(\chi\)。
-For this \(\mathsf{RestoreLive}\) request, the checker either installs the derived monitor under a new version or returns a ranked rejection certificate.
-% 对于该 \(\mathsf{RestoreLive}\) 请求，检查器要么在新版本下安装推导出的监控器，要么返回带秩拒绝证书。
+A concurrent Merge or Restore result computed before that progress is now out of date even though the authorization log has not changed.
+% 即使授权日志没有变化，在该进展之前计算的并发 Merge 或 Restore 结果也已经过期。
+The installation check must therefore compare both the authorization log and the ordered record \(\chi\) of executed call positions.
+% 因此，安装检查必须同时比较授权日志和记录已执行调用位置顺序的 \(\chi\)。
+For this \(\mathsf{RestoreLive}\) request, the checker either installs the derived monitor under a new version or returns a rejection certificate.
+% 对于该 \(\mathsf{RestoreLive}\) 请求，检查器要么在新版本下安装推导出的监控器，要么返回拒绝证书。
 
 These executions determine the three requirements used throughout the paper.
 % 这些执行确定全文采用的三项要求。
-First, an edit must preserve every outcome that the authenticated source still requires.
-% 第一，编辑必须保留经认证源状态仍要求实现的每个结果。
+First, an edit must preserve every outcome that the checked state still requires.
+% 第一，编辑必须保留经检查状态仍要求实现的每个结果。
 Second, after every permitted prefix, every outcome still compatible with that prefix must retain a safe completion.
 % 第二，在每个获准前缀之后，每个仍与该前缀兼容的结果都必须保留一条安全完成路径。
 Third, the derived monitor and its authorization tokens must be installed atomically against concurrent protected calls.

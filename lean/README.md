@@ -40,6 +40,12 @@ a completed check.
 
 | Lean theorem | Mechanized obligation |
 |---|---|
+| `PaperTheorems.exact_checker_iff_realization` | Executable greatest-fixed-point admission is equivalent to the independently stated declarative realization predicate. |
+| `PaperTheorems.registered_workflow_exact_admission` | Typed workflow compilation composes accepted registration, exhaustive mediation, compiled/semantic contract equality, and exact admission. |
+| `PaperTheorems.six_edit_derivation_exact` | The executable derivation function is sound and complete for Choice/Parallel Fork, Replace/Live Restore, and Select/Join Merge. |
+| `PaperTheorems.compilation_preload_preserves_agentSec` | Compilation preloading is an explicit kernel transition that records inactive candidate metadata and preserves `AgentSec`. |
+| `PaperTheorems.exact_edit_installs_trace_safe_monitor` | An admitted derived edit constructs a valid atomic installation whose every finite continuation preserves `AgentSec`. |
+| `PaperTheorems.fresh_alias_installation_serialized` | Fresh use, alias use, and installation admit exactly the two durable orders: prior use stales the candidate; prior installation denies the old use. |
 | `checkAC_sound` | The executable finite AC checker implies semantic authority continuity. |
 | `guardClosure_iff` | Membership in the exact promotion guard is equivalent to old membership plus the promoted load bound. |
 | `simulation_preserves_ac` | A certified target whose configurations project to no-heavier solvent source configurations satisfies AC. |

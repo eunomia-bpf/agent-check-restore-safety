@@ -21,8 +21,8 @@ Restoring \(k\) creates another approval call in the workflow, but it must not a
 % Restore 到 \(k\) 会在工作流中创建另一个审批调用，但不得再次授权同一审批。
 A concurrent Merge can cause a similar error by selecting supplier \(L\) after a supplier-\(R\) payment has already been authorized.
 % 并发的 Merge 也会造成类似错误，例如在供应商 \(R\) 的付款已经获得授权后再选择供应商 \(L\)。
-An edit can therefore restore the saved program state yet violate authorization or release order; remote physical completion is represented by authenticated sink receipts.
-% 因此，一次编辑即使恢复了保存的程序状态，仍可能违反授权或发出顺序；远端物理完成由接收端认证回执表示。
+An edit can therefore restore the saved program state yet violate authorization or release order; the remote service reports physical completion separately through an authenticated completion record.
+% 因此，一次编辑即使恢复了保存的程序状态，仍可能违反授权或发出顺序；远端服务通过单独的认证完成记录报告物理完成。
 
 The problem is that a checkpoint contains only part of the information needed to decide whether an edit is safe.
 % 问题在于，检查点只包含决定一次编辑是否安全所需的部分信息。
@@ -44,12 +44,12 @@ Neither line of work derives from a recorded execution everything that a particu
 
 Our key idea is that an execution edit must preserve both past actions and still-required outcomes.
 % 我们的关键思想是：执行编辑必须同时保留过去的动作和仍然要求实现的结果。
-Every outcome required before the edit must remain required, already be satisfied by the recorded execution, or be explicitly removed by the same policy authority that required it.
-% 编辑前要求实现的每个结果都必须继续作为要求、已经由所记录的执行满足，或由提出该要求的同一策略权限方明确移除。
+Every outcome required before the edit must remain required, already be satisfied by the recorded execution, or be explicitly removed by the same authority that required it.
+% 编辑前要求实现的每个结果都必须继续作为要求、已经由所记录的执行满足，或由提出该要求的同一权限方明确移除。
 The Agent selects only a registered edit.
 % Agent 只能选择一项已注册编辑。
-The trusted controller derives the edited workflow and the requirements it inherits from the recorded execution; faithful registration is a theorem premise, not something inferred from natural language.
-% 可信控制器从已有执行记录中推导编辑后的工作流以及它继承的要求；忠实注册是定理前提，而不是从自然语言中推断出来的事实。
+The platform authenticates the registered workflow, and the trusted controller derives the edited workflow and inherited requirements from that record rather than from Agent text.
+% 平台认证已注册工作流，可信控制器根据该记录而非 Agent 文本推导编辑后的工作流及其继承的要求。
 The Agent therefore cannot obtain a favorable answer by submitting a replacement workflow that hides inconvenient facts.
 % 因此，Agent 无法通过提交一个隐藏不利事实的替代工作流来获得有利答案。
 
@@ -61,21 +61,21 @@ Second, after every allowed partial execution, every outcome that is still requi
 % 第二，在每段允许的部分执行之后，每个仍被要求且仍有可能实现的结果都必须保留安全完成方式。
 The checker must enforce this condition without forbidding additional safe behavior.
 % 检查器必须执行这一条件，同时不能额外禁止安全行为。
-Third, the answer must take effect atomically with respect to calls that overlap the edit or a runtime or machine failure followed by recovery (a crash).
-% 第三，该答案必须相对于与编辑重叠的调用，或运行时、机器意外停止后再恢复的情形（简称崩溃），原子生效。
+Third, the answer must take effect atomically with calls that overlap the edit and remain valid if the runtime or machine stops unexpectedly and later recovers.
+% 第三，该答案必须与重叠编辑的调用原子排序，并在运行时或机器意外停止后恢复时继续有效。
 
-We give an exact checker for registered finite execution edits: it accepts exactly when a safe implementation exists.
-% 我们给出一个针对已注册有限执行编辑的精确检查器：它当且仅当安全实现存在时才接受。
-For a requested edit, the controller uses the registered workflow, authenticated execution record, authorization log, dispatch queue, policy, and current monitor version to construct every allowed completed execution.
-% 对于一次编辑请求，控制器使用已注册工作流、经认证执行记录、授权日志、派发队列、策略和当前监控器版本，构造所有允许的完整执行。
+We give an exact checker for execution edits: it accepts exactly when a safe implementation exists under the model defined in \cref{sec:model}.
+% 我们给出一个针对执行编辑的精确检查器：在 \cref{sec:model} 定义的模型下，它当且仅当安全实现存在时才接受。
+For a requested edit, the controller uses the registered workflow and current authenticated state to construct every allowed completed execution.
+% 对于一次编辑请求，控制器使用已注册工作流和当前认证状态构造所有允许的完整执行。
 It removes an execution whenever one of its partial executions would leave a still-required outcome with no safe completion.
 % 如果某个完整执行的部分过程会让仍然要求实现的结果失去安全完成方式，检查器就删除该完整执行。
-If no execution remains, the controller returns a finite proof that no safe implementation exists.
-% 如果没有完整执行留下，控制器返回一份有限证明，说明不存在安全实现。
+If no execution remains, the controller returns an independently checkable rejection explanation.
+% 如果没有完整执行留下，控制器返回一份可独立检查的拒绝说明。
 Otherwise, the remaining executions define the most permissive safe monitor.
 % 否则，剩余执行定义限制最少的安全监控器。
-Before the edit takes effect, the runtime checks the current recorded state again and atomically replaces the old monitor.
-% 编辑生效之前，运行时再次检查当前记录状态并原子替换旧监控器。
+Before the edit takes effect, the runtime checks the current authenticated state again and atomically replaces the old monitor.
+% 编辑生效之前，运行时再次检查当前认证状态并原子替换旧监控器。
 Every overlapping call is therefore governed entirely by either the old monitor or the new one.
 % 因此，每个重叠调用都完全由旧监控器或新监控器管理。
 \Cref{sec:lifecycle} derives this process for a protected approval workflow containing Fork, Merge, both installation races, and Restore.
@@ -89,9 +89,9 @@ We contribute one end-to-end theorem connecting the original Agent workflow, the
 % 我们贡献一个端到端定理，将原始 Agent 工作流、请求的执行编辑、精确检查器与已安装运行时连接起来。
 For all six registered execution edits and registered extensions, a safe implementation exists exactly when the checker leaves a nonempty set of executions, its monitor can be installed, and an ideal atomic machine permits the same edit.
 % 对全部六种已注册执行编辑和已注册扩展，当且仅当检查器留下非空执行集合、其监控器能够安装且理想原子机器允许同一次编辑时，安全实现才存在。
-The theorem also proves that deleting any of four recorded relations changes some exact decision or installation answer, and that the concrete runtime has the same visible behavior as the ideal machine (\cref{sec:model,sec:admission,sec:enforcement,sec:results}).
-% 该定理还证明，删除四类记录关系中的任一类都会改变某个精确判定或安装答案，并且具体运行时与理想机器具有相同的可见行为（\cref{sec:model,sec:admission,sec:enforcement,sec:results}）。
+The theorem also proves that an exact checker cannot discard workflow structure, the mapping from call positions to protected actions, prior authorization state, or the current monitor version, and that the concrete runtime has the same visible behavior as the ideal machine (\cref{sec:model,sec:admission,sec:enforcement,sec:results}).
+% 该定理还证明，精确检查器不能丢弃工作流结构、调用位置到受控动作的映射、既有授权状态或当前监控器版本，并证明具体运行时与理想机器具有相同的可见行为（\cref{sec:model,sec:admission,sec:enforcement,sec:results}）。
 Every supported event preserves the security invariant, so the theorem applies again after every finite reachable execution.
 % 每个受支持事件都保持安全不变量，因此该定理能在每个有限可达执行之后再次应用。
-Six Lean modules mechanize the end-to-end theorem spine; 19 paper-specific executable tests and measurements over 2--128 outcomes exercise the checker and edit-installation races.
-% 六个 Lean 模块机械化端到端定理主干；19 项论文专用可执行测试与覆盖 2--128 个结果的测量检验检查器及编辑安装竞态。
+Six Lean modules mechanize the central theorem chain; 19 paper-specific executable tests and measurements over 2--128 outcomes exercise the checker and edit-installation races.
+% 六个 Lean 模块机械化核心定理链；19 项论文专用可执行测试与覆盖 2--128 个结果的测量检验检查器及编辑安装竞态。

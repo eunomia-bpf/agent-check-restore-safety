@@ -665,6 +665,9 @@ installed live-extension closure. -/
 #check AgentHistoryAdmission.PaperTheorems.six_edit_derivation_exact
 #print axioms AgentHistoryAdmission.PaperTheorems.six_edit_derivation_exact
 
+#check AgentHistoryAdmission.PaperTheorems.compilation_preload_preserves_agentSec
+#print axioms AgentHistoryAdmission.PaperTheorems.compilation_preload_preserves_agentSec
+
 #check AgentHistoryAdmission.PaperTheorems.exact_edit_installs_trace_safe_monitor
 #print axioms AgentHistoryAdmission.PaperTheorems.exact_edit_installs_trace_safe_monitor
 

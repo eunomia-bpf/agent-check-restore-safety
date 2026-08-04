@@ -67,6 +67,21 @@ theorem six_edit_derivation_exact
       HistoryDerivation history request post :=
   deriveEdit_iff
 
+/-- Compilation is an explicit kernel event: preloading records the candidate
+in inactive metadata and preserves the complete installed-state invariant. -/
+theorem compilation_preload_preserves_agentSec
+    {Outcome : Type uOutcome} {Label : Type uLabel}
+    [DecidableEq Outcome] [DecidableEq Label]
+    {state : InstalledState (Outcome := Outcome) (Label := Label)}
+    (secure : AgentSec state)
+    (candidate : InstallCandidate (Outcome := Outcome) (Label := Label)) :
+    KernelStep state (.preload candidate) (preloadPost state candidate) ∧
+      AgentSec (preloadPost state candidate) := by
+  have step :
+      KernelStep state (.preload candidate) (preloadPost state candidate) :=
+    KernelStep.preload
+  exact ⟨step, kernelStep_preserves_agentSec secure step⟩
+
 /-- For a well-formed installed state, an executable six-edit derivation and
 compiler admission construct an atomic installation whose successor and every
 finite continuation satisfy `AgentSec`. -/

@@ -6,8 +6,10 @@ Six Lean modules pass \texttt{--trust=0} and form a paper-facing theorem chain.
 % 六个 Lean 模块通过 \texttt{--trust=0} 检查，并形成面向论文的定理链。
 \path{exact_checker_iff_realization} proves executable admission equivalent to the independently stated declarative realization; \path{registered_workflow_exact_admission} composes typed registration, exhaustive mediation, and exact admission; and \path{six_edit_derivation_exact} proves the executable derivation sound and complete for all six edit rules.
 % \path{exact_checker_iff_realization} 证明可执行准入等价于独立陈述的声明式实现；\path{registered_workflow_exact_admission} 组合类型化注册、穷尽中介与精确准入；\path{six_edit_derivation_exact} 证明可执行推导对全部六种编辑规则既可靠又完备。
-\path{exact_edit_installs_trace_safe_monitor} then constructs an atomic installation whose every finite continuation preserves \(\mathsf{AgentSec}\), while \path{fresh_alias_installation_serialized} proves both durable orders between protected use and installation.
-% 随后，\path{exact_edit_installs_trace_safe_monitor} 构造一次原子安装并证明其每段有限延续均保持 \(\mathsf{AgentSec}\)，而 \path{fresh_alias_installation_serialized} 证明受控调用与安装之间的两种持久次序。
+\path{exact_edit_installs_trace_safe_monitor} then constructs an atomic installation whose every finite continuation preserves \(\mathsf{AgentSec}\), while \path{fresh_alias_installation_serialized} proves both possible orders between a protected call and installation.
+% 随后，\path{exact_edit_installs_trace_safe_monitor} 构造一次原子安装并证明其每段有限延续均保持 \(\mathsf{AgentSec}\)，而 \path{fresh_alias_installation_serialized} 证明受控调用与安装之间两种可能的先后顺序。
+\path{compilation_preload_preserves_agentSec} makes compilation an explicit kernel transition and proves that inactive candidate preloading preserves the same invariant.
+% \path{compilation_preload_preserves_agentSec} 把编译作为显式内核迁移，并证明非活动候选预加载保持同一不变量。
 
 All 19 paper-specific tests pass, together with 62 authority and compiler regression tests for supporting components.
 % 全部 19 项论文专用测试以及面向支撑组件的 62 项权限与编译器回归测试均通过。
@@ -15,3 +17,5 @@ Across accepted instances with 2--128 outcomes, checker time is \(0.11\)--\(53.4
 % 在具有 2--128 个结果的接受实例中，检查器耗时为 \(0.11\)--\(53.47\) ms；拒绝实例耗时为 \(0.11\)--\(5.51\) ms，枚举 6--720 条无序完成路径耗时为 \(0.33\)--\(50.35\) ms。
 \Cref{app:artifact-bounds} reports the complete measurement protocol, executable coverage, and state-preserving resource policy.
 % \Cref{app:artifact-bounds} 给出完整测量协议、可执行覆盖与保持状态的资源策略。
+The resource-managed wrapper classifies preflight-cap results separately and leaves the authenticated state unchanged.
+% 资源管理包装器单独分类预检上限结果，并保持认证状态不变。

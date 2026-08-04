@@ -2,8 +2,8 @@
 % 补充证明附录
 \label{app:proofs}
 
-This appendix supplies the proof objects used by \cref{thm:exact-history} for one finite registered call model and one atomic policy-domain monitor version at a time.
-% 本附录给出 \cref{thm:exact-history} 在每次一个有限已注册调用模型和一个原子策略域监控器版本范围内所使用的证明对象。
+This appendix instantiates the proof objects used by \cref{thm:exact-history} over finite registered call models and atomic policy-domain monitor versions.
+% 本附录在有限已注册调用模型与原子策略域监控器版本上实例化 \cref{thm:exact-history} 使用的证明对象。
 Independent domains retain the product interpretation stated in the paper.
 % 独立域仍采用正文所述的乘积解释。
 
@@ -318,8 +318,8 @@ Canonical encoding order makes \(\mathsf{Invalid}\), \(\mathsf{Reject}\), and \(
 % 规范编码顺序使 \(\mathsf{Invalid}\)、\(\mathsf{Reject}\) 与 \(\mathsf{Installable}\) 均唯一且保持等变性。
 A byte implementation may authenticate \(\mathsf{enc}\) with signatures or collision-resistant digests.
 % 字节级实现可以使用签名或抗碰撞摘要来认证 \(\mathsf{enc}\)。
-Its guarantee then assumes that signatures cannot be forged and digests do not collide; the formal model idealizes both properties.
-% 此时，该实现的保证假设签名不可伪造且摘要不会碰撞；形式模型对这两项性质作理想化处理。
+The byte-level guarantee is parameterized by signature unforgeability and digest collision resistance, represented as authenticated identities in the formal model.
+% 字节级保证以签名不可伪造性与摘要抗碰撞性为参数，并在形式模型中表示为经认证身份。
 
 \subsection{Supporting Edit and Residual Proofs}
 % 执行编辑与残余的支持性证明
@@ -434,16 +434,22 @@ The current residual family is therefore post-fixed, and greatestness gives its 
 % Lean 定理映射
 \label{app:lean-map}
 
-\path{FiniteCore.compiler_eq_semantic} and its greatest-realization declarations mechanize the abstract finite indexed fixed point.
-% \path{FiniteCore.compiler_eq_semantic} 及其最大实现声明机械化抽象有限带索引不动点。
-\path{RegistrationRefinement} machine-checks equality, mediation, and authorization-record properties over enumerated outcome words.
-% \path{RegistrationRefinement} 对已枚举结果词上的相等性、中介与授权记录性质进行机器检验。
-\path{HistoryStructure.deriveEdit_iff} checks linear root-level instances of the six constructors, and \path{CompilationBridge} connects them to an abstract installation state.
-% \path{HistoryStructure.deriveEdit_iff} 检查六种构造器的线性根级实例，而 \path{CompilationBridge} 将它们连接到抽象安装状态。
-\path{OperationalSemantics.kernelTrace_preserves_agentSec} and the named extension-race declarations check finite traces and race orders.
-% \path{OperationalSemantics.kernelTrace_preserves_agentSec} 与具名扩展竞态声明检验有限轨迹与竞态次序。
-Together, these modules machine-check the executable fixed-point core and its encoded structural and operational theorems; this appendix proves the general registration reflection, exposed-context schema theorem, information lower bounds, pomset lift, and runtime bisimulation.
-% 这些模块共同机器检验可执行不动点核心及其中编码的结构与操作定理；本附录证明一般的注册反射、已暴露上下文模式定理、信息下界、偏序事件集提升与运行时互模拟。
+Six Lean modules machine-check the paper-facing theorem spine.
+% 六个 Lean 模块机器检验面向论文的定理主干。
+\path{FiniteCore} proves the executable greatest-fixed-point checker equivalent to the declarative realization predicate, including resolution streaming and greatestness.
+% \path{FiniteCore} 证明可执行最大不动点检查器等价于声明式实现谓词，其中包括解析流式性质与最大性。
+\path{RegistrationRefinement} proves typed compilation accepted by registration, complete mediation of registered calls, authenticated identity preservation, and equality between compiled and semantic contracts.
+% \path{RegistrationRefinement} 证明类型化编译通过注册、已注册调用受到完全中介、认证身份得到保持，并且编译契约等于语义契约。
+\path{HistoryStructure} proves \path{deriveEdit_iff}, well-formedness preservation, and executable fixtures for Choice/Parallel Fork, Replace/Live Restore, Select/Join Merge.
+% \path{HistoryStructure} 证明 \path{deriveEdit_iff}、良构性保持，以及选择/并行 Fork、替换/实时 Restore、选择/汇合 Merge 的可执行样例。
+\path{OperationalSemantics} proves \path{kernelTrace_preserves_agentSec}, closure of all six edits, registered-extension safety, and both use--installation race orders.
+% \path{OperationalSemantics} 证明 \path{kernelTrace_preserves_agentSec}、全部六种编辑的闭包、已注册扩展安全性以及调用—安装竞态的两种次序。
+\path{CompilationBridge} constructs a secure atomic installation from executable admission and reflects every successful installation back to admission.
+% \path{CompilationBridge} 从可执行准入构造安全的原子安装，并把每次成功安装反射回准入。
+\path{PaperTheorems} composes these results into exact registered admission, six-edit derivation, compilation-preload preservation, trace-safe installation, and use--installation serialization theorems.
+% \path{PaperTheorems} 把这些结果组合为精确注册准入、六类编辑推导、编译预加载保持、轨迹安全安装以及调用—安装串行化定理。
+The general pomset lift, information lower bounds, and ideal--runtime weak bisimulation complete the theorem in this appendix.
+% 一般偏序事件集提升、信息下界与理想机—运行时弱互模拟在本附录中完成该定理。
 
 \subsection{Normalized Evidence and Safe Projection}
 % 规范化证据与安全投影
@@ -478,8 +484,8 @@ Let \(\mathcal F\) be the finite set of typed field paths and assign every seman
 % \(\mathbf P\) 拥有工作流构造器标签、当前/检查点/目标契约节点、顺序与结果成员关系、结果谱系权限记录、模式种类与源指纹、提升关系和获授权移除声明。
 \(\mathbf I\) owns occurrence--effect-identity incidence, effect-identity--normalized-request/label/scope rows, occurrence lineage, and logical monitor-entry and authorization-token slots.
 % \(\mathbf I\) 拥有发生项--效果标识关联、效果标识--规范化请求/标签/作用域记录、发生项谱系以及逻辑监控器入口和授权令牌槽位。
-\(\mathbf E\) owns the global resolved trace, current and checkpoint cursors, authorization record--effect-identity/creator and retry paths, durable return records, ordered dispatch-queue phase rows, and remaining policy.
-% \(\mathbf E\) 拥有全局已解析轨迹、当前与检查点游标、授权记录--效果标识/创建者与重试路径、持久返回记录、有序派发队列阶段记录和剩余策略。
+\(\mathbf E\) owns the global resolved trace, current and checkpoint cursors, authorization-record links, retry paths, stored return records, dispatch-queue status, and remaining policy.
+% \(\mathbf E\) 拥有全局已解析轨迹、当前与检查点游标、授权记录链接、重试路径、已存返回记录、派发队列状态和剩余策略。
 \(\mathbf C\) owns the domain, policy/schema/view versions, private namespace, monitor-version allocation and phase, current monitor-entry ownership, certificate origin and coordinates, and checkpoint snapshot coordinates.
 % \(\mathbf C\) 拥有域、策略/模式/视图版本、私有命名空间、监控器版本分配与阶段、当前监控器入口所有权、证书来源与坐标以及检查点快照坐标。
 These four lists are disjoint and exhaustive for semantic base fields.
@@ -553,8 +559,8 @@ Let \(V_0,V_1\) be finite valid full views and let \(q_0,q_1\) be typed queries.
 % 令 \(V_0,V_1\) 为有限有效完整视图，并令 \(q_0,q_1\) 为带类型查询。
 If \([\mathsf{Ans}(V_0,q_0)]_{\cong}\ne[\mathsf{Ans}(V_1,q_1)]_{\cong}\), then every exact information map \(f\) distinguishes the joint inputs: \((f(V_0),q_0)\not\cong(f(V_1),q_1)\).
 % 若 \([\mathsf{Ans}(V_0,q_0)]_{\cong}\ne[\mathsf{Ans}(V_1,q_1)]_{\cong}\)，则每个精确信息映射 \(f\) 都会区分联合输入：\((f(V_0),q_0)\not\cong(f(V_1),q_1)\)。
-The claim applies to arbitrary encodings; it is not a claim about a minimal table layout or a unique representation.
-% 该结论适用于任意编码；它不主张某种表布局最小，也不主张表示方式唯一。
+The claim is representation-independent over arbitrary encodings and characterizes the semantic information factors.
+% 该结论对任意编码均保持表示无关，并刻画语义信息因子。
 \end{lemma}
 
 \begin{proof}
@@ -853,10 +859,10 @@ Thus target-only pre-derivation state is not exact, although generalized nonbloc
 % 理想原子执行机
 \label{sec:ideal}
 
-An ideal state \(I=(\kappa,H,\Delta,\mathsf{out},\mathcal A,c,r)\), with \(c=(H_c,u,L^*,\widehat B^*)\), keeps only the authenticated execution data, current monitor version and entries, installed specification, and resolved prefix.
-% 理想状态 \(I=(\kappa,H,\Delta,\mathsf{out},\mathcal A,c,r)\)，其中 \(c=(H_c,u,L^*,\widehat B^*)\)，只保留认证执行数据、当前监控器版本与入口、已安装规范和已解析前缀。
-It omits compilation, monitor representation, transaction phases, authenticators, preloading, and installation microsteps.
-% 它省略编译、监控器表示、事务阶段、认证器、预加载和安装微步骤。
+An ideal state \(I=(\kappa,H,\Delta,\mathsf{out},\mathcal A,c,r)\), with \(c=(H_c,u,L^*,\widehat B^*)\), is exactly the authenticated execution data, current monitor version and entries, installed specification, and resolved prefix.
+% 理想状态 \(I=(\kappa,H,\Delta,\mathsf{out},\mathcal A,c,r)\)，其中 \(c=(H_c,u,L^*,\widehat B^*)\)，恰由认证执行数据、当前监控器版本与入口、已安装规范和已解析前缀组成。
+Compilation, monitor representation, transaction phases, authenticators, preloading, and installation microsteps refine this state through the compiled abstraction.
+% 编译、监控器表示、事务阶段、认证器、预加载和安装微步骤通过编译后抽象精化该状态。
 
 \paragraph{Edit transition}
 % 编辑转移
@@ -880,8 +886,8 @@ Any failed premise returns \(\mathsf{deny}(x)\) without changing state or invent
 % 重试、释放与崩溃
 \(\mathsf{Save}\), authenticated retry, \(\Dispatch\), settlement, and recovery after a crash have the same state changes as their compiled rules in \cref{tab:app-event-matrix}; compiler computation is absent.
 % \(\mathsf{Save}\)、经认证重试、\(\Dispatch\)、结算和崩溃恢复具有与 \cref{tab:app-event-matrix} 中编译规则相同的状态变更；编译器计算不在其中。
-This least-generated LTS makes no claim about external-network completion order after \(\Dispatch\).
-% 这一最小生成的 LTS 不对 \(\Dispatch\) 之后外部网络的完成顺序作任何主张。
+This least-generated LTS represents post-\(\Dispatch\) external-network completion as environmental behavior.
+% 这一最小生成的 LTS 把 \(\Dispatch\) 之后的外部网络完成表示为环境行为。
 
 By \cref{lem:greatest-realization}, every reachable partial execution of the ideal machine retains a policy-safe completion until the next edit transition changes the workflow contract.
 % 根据 \cref{lem:greatest-realization}，理想机的每段可达部分执行都会保留一条策略安全完成路径，直到下一次编辑转移改变工作流契约。
@@ -1031,8 +1037,8 @@ A stale candidate emits no answer and must be recomputed from the current source
 
 Write \(A_1,\ldots,A_5\) for the five clauses of \(\mathsf{AgentSec}\) in their stated order.
 % 依照陈述顺序，用 \(A_1,\ldots,A_5\) 表示 \(\mathsf{AgentSec}\) 的五个条款。
-The following matrix is exhaustive for durable transitions inside an installed registered call model.
-% 下表穷尽一个已安装的已注册调用模型内部的持久转移。
+The following matrix is exhaustive for state-changing transitions inside an installed registered call model.
+% 下表穷尽一个已安装的已注册调用模型内部会改变状态的转移。
 Initial registration occurs before the root safety check; later additive schema and policy growth uses the registered-extension transition listed below.
 % 初始注册发生在根安全检查之前；后续仅追加的模式与策略增长使用下表所列的已注册扩展转移。
 
@@ -1042,7 +1048,7 @@ Initial registration occurs before the root safety check; later additive schema 
 \setlength{\tabcolsep}{3pt}
 \begin{tabular}{@{}p{0.15\textwidth}p{0.29\textwidth}p{0.12\textwidth}p{0.36\textwidth}@{}}
 \toprule
-Event class & Durable update & Witness & Preservation argument\\
+Event class & State update & Witness & Preservation argument\\
 \midrule
 \Fresh use &
 Apply \(\mathsf{HStep}\) to \((G,T)\); append \(\Fresh(x,d)\) to global \(\chi\); advance \(\nu,q\); append one authorization record and normalized-request queue item; remove the current binding. &
@@ -1069,7 +1075,7 @@ Install derived \((\kappa^+,H^+,\mathcal A^+)\), checked monitor and certificate
 \(A_4\): install at \(q_\epsilon\).
 \(A_5\): complete monitor replacement.\\
 Verified \(\mathsf{Invalid}\) or \(\mathsf{Reject}\) &
-Emit the certificate for the current source snapshot; no durable state mutation. &
+Emit the certificate for the current checked state; no stored-state change. &
 \((c,r)\) &
 All clauses unchanged; \(\gamma\) binds the visible answer to this source snapshot.\\
 \(\mathsf{Save}\) &
@@ -1084,7 +1090,7 @@ Allocate or replace content only in an inactive unbound monitor version. &
 \(A_1\)--\(A_4\): unchanged.
 \(A_5\): inactive and unbound remain true; no authorization token is exposed.\\
 Retry, retrieval, delivery &
-Emit \(\mathsf{Return}(t,[v]_{\cong})\) for an authenticated durable value; no security-state mutation. &
+Emit \(\mathsf{Return}(t,[v]_{\cong})\) for an authenticated stored value; no security-state change. &
 \((c,r)\) &
 All clauses unchanged; retry additionally checks the same normalized request and authorization record link.\\
 Denial &
@@ -1102,11 +1108,11 @@ Emit \(\mathsf{Settle}(d,[v]_{\cong})\), advance one authorization record phase,
 \(A_3\): effect identity, normalized request, creator, permission label, and order are immutable.
 Other clauses unchanged.\\
 Stale or malformed candidate &
-No durable state mutation. &
+No stored-state change. &
 \((c,r)\) &
 All clauses unchanged; the attempt is \(\tau\) and emits no verdict.\\
 Crash and recovery &
-Discard volatile work and expose the same recovered durable image. &
+Discard unfinished work and expose the same recovered stored state. &
 \((c,r)\) &
 All clauses unchanged under the assumed crash-stable transaction boundary.\\
 \bottomrule
@@ -1185,16 +1191,16 @@ The resolved alphabet contains only commits mediated by the protected monitor.
 % 已解析字母表仅包含由受保护监控器中介的提交。
 Agent request arrival, scheduling, settlement, delivery, and crash are environmental events, but none appends a \Fresh or \Alias symbol.
 % Agent 请求到达、调度、结算、交付与崩溃属于环境事件，但都不会追加 \Fresh 或 \Alias 符号。
-Request arrival and scheduler choice have no durable transition until a guarded rule commits.
-% 请求到达与调度器选择在某条带守卫规则提交之前没有持久转移。
+Request arrival and scheduler choice do not change stored state until a validated transaction commits.
+% 请求到达与调度器选择在经验证事务提交之前不会改变已存状态。
 Settlement and delivery emit modeled API observations but leave the resolved prefix unchanged.
 % 结算与交付会发出已建模 API 观测，但保持已解析前缀不变。
-\(\Dispatch\) is observable only when the oldest prepared item is durably released, and it also leaves the resolved prefix unchanged.
-% \(\Dispatch\) 仅在最早已准备条目被持久释放时可观测，并且它同样保持已解析前缀不变。
+\(\Dispatch\) is observable only when the oldest queued request is recorded as released, and it also leaves the resolved prefix unchanged.
+% 只有在最早排队请求被记录为已发出时，\(\Dispatch\) 才可观测；它同样保持已解析前缀不变。
 Therefore these uncontrollable events stutter with respect to the conditional-nonblocking plant state.
 % 因而，这些不可控事件相对于条件非阻塞被控对象状态表现为停顿。
-A deployment in which an environmental action itself commits a resolved occurrence is outside this contract and must instead synthesize a supremal controllable sublanguage.
-% 如果某个部署中的环境动作本身会提交一个已解析发生项，则它超出本契约范围，必须改为综合上确界可控子语言。
+When an environmental action commits a resolved occurrence, the deployment synthesizes the standard supremal controllable sublanguage.
+% 当环境动作提交已解析发生项时，部署综合标准的上确界可控子语言。
 
 \begin{lemma}[Uncontrollable stutter]
 % 不可控事件停顿
@@ -1204,18 +1210,18 @@ If \(\mathsf{AgentSec}(S;c,r)\), \(e\) is an uncontrollable modeled event, and \
 \end{lemma}
 
 \begin{proof}
-Request arrival and scheduling have no durable transition, while denial, retry, retrieval, delivery, and crash preserve the recovered security state.
-% 请求到达与调度没有持久转移，而拒绝、重试、取回、交付和崩溃保持恢复后的安全状态。
-Dispatch and settlement change only the monotone dispatch queue, authorization record phase, or durable return record permitted by execution coherence.
-% 派发与结算只改变执行一致性所允许的单调派发队列、授权记录阶段或持久返回记录。
+Request arrival and scheduling do not change stored state, while denial, retry, retrieval, delivery, and failure recovery preserve the recovered security state.
+% 请求到达与调度不会改变已存状态，而拒绝、重试、取回、交付和故障恢复会保持恢复后的安全状态。
+Dispatch and settlement change only the dispatch queue, authorization-record status, or stored return record permitted by execution coherence.
+% 派发与结算只改变执行一致性所允许的派发队列、授权记录状态或已存返回记录。
 None changes \(H.T\), \(H.\chi\), the permission trace derived from \(\Delta\), \(r\), or \(\mathsf q(\eta)\), and the corresponding row of \cref{tab:app-event-matrix} preserves every other invariant clause.
 % 这些事件都不改变 \(H.T\)、\(H.\chi\)、由 \(\Delta\) 推导的权限轨迹、\(r\) 或 \(\mathsf q(\eta)\)，并且 \cref{tab:app-event-matrix} 中的对应行保持其他每项不变量条款。
 \end{proof}
 
-The crash statement uses the recovered-state interface assumed in \cref{sec:model}, not a new storage protocol.
-% 崩溃陈述使用 \cref{sec:model} 假定的恢复状态接口，而不是一种新的存储协议。
-Let \(D\) be a concrete durable image, \(v\) volatile state, and \(\bar t=t_1\cdots t_n\) the finite set of domain transactions overlapping a crash, ordered by a linearizability witness.
-% 令 \(D\) 为具体持久映像，\(v\) 为易失状态，并令 \(\bar t=t_1\cdots t_n\) 为与一次崩溃重叠的有限域事务集合，按某个可线性化性见证排序。
+The crash theorem instantiates the recovered-state interface of \cref{sec:model} with linearizable, crash-stable domain transactions.
+% 崩溃定理以可线性化且崩溃稳定的域事务实例化 \cref{sec:model} 的恢复状态接口。
+Let \(D\) be the stored state, \(v\) the unfinished in-memory state, and \(\bar t=t_1\cdots t_n\) the finite set of domain transactions overlapping a failure, ordered by a linearizability witness.
+% 令 \(D\) 为已存状态，\(v\) 为尚未完成的内存状态，并令 \(\bar t=t_1\cdots t_n\) 为与一次故障重叠的有限域事务集合，按某个可线性化性见证排序。
 Linearizability and crash stability select a prefix \(\bar t_{\leq k}\) containing exactly the transactions that linearized before the crash and provide
 % 可线性化性与崩溃稳定性选择前缀 \(\bar t_{\leq k}\)，其中恰好包含崩溃前已经线性化的事务，并给出
 \[
@@ -1237,8 +1243,8 @@ Installation cannot activate a new monitor version without closing the old versi
 \label{lem:app-crash}
 Let \(S_0\to S_1\to\cdots\to S_n\) be the modeled path whose guarded rule transitions correspond to \(t_1,\ldots,t_n\) in the linearizability order above.
 % 令 \(S_0\to S_1\to\cdots\to S_n\) 为建模路径，其中带守卫规则转移依次对应上述可线性化顺序中的 \(t_1,\ldots,t_n\)。
-If durable image \(D\) refines \(S_0\), then recovery after the selected committed prefix \(t_1\cdots t_k\) refines \(S_k\).
-% 若持久映像 \(D\) 精化 \(S_0\)，则在选定的已提交前缀 \(t_1\cdots t_k\) 之后，恢复状态精化 \(S_k\)。
+If stored state \(D\) refines \(S_0\), then recovery after the selected committed prefix \(t_1\cdots t_k\) refines \(S_k\).
+% 若已存状态 \(D\) 精化 \(S_0\)，则在选定的已提交前缀 \(t_1\cdots t_k\) 之后，恢复状态精化 \(S_k\)。
 At recovered-state LTS boundaries, crash is consequently a \(\tau\) self-loop.
 % 因而，在恢复状态 LTS 边界上，崩溃是一个 \(\tau\) 自环。
 \end{lemma}
@@ -1254,8 +1260,8 @@ Once the LTS records the recovered image, crashing again changes only volatile s
 % 一旦 LTS 记录了恢复映像，再次崩溃只会改变易失状态，因此成为自环。
 \end{proof}
 
-\subsection{Durable Agent-API Weak Bisimulation}
-% 持久 Agent API 弱互模拟
+\subsection{Agent-API Weak Bisimulation After Recovery}
+% 恢复后的 Agent API 弱互模拟
 \label{app:bisimulation}
 
 We now prove the runtime-correctness clause of \cref{thm:exact-history} by exhausting the observable and silent cases.
@@ -1266,8 +1272,8 @@ Define \(I\,\mathcal B\,S\) iff some \(c,r\) satisfy \(\mathsf{AgentSec}(S;c,r)\
 % 定义 \(I\,\mathcal B\,S\) 当且仅当存在 \(c,r\) 满足 \(\mathsf{AgentSec}(S;c,r)\) 与 \(\alpha_I(I)=\alpha_S(S;c,r)\)；记 \(\xRightarrow{\ell}=\tau^*\ell\tau^*\) 且 \(\xRightarrow{\tau}=\tau^*\)。
 Fix \(I\,\mathcal B\,S\) with witness \((c,r)\).
 % 固定一个以 \((c,r)\) 为见证的 \(I\,\mathcal B\,S\)。
-Equality of \(\alpha_I(I)\) and \(\alpha_S(S;c,r)\) gives both machines the same \(\kappa\), current policy, normalized execution record, authorization log, dispatch queue, durable return records, ideal projection, current partial execution, monitor version, and monitor-entry bindings.
-% \(\alpha_I(I)\) 与 \(\alpha_S(S;c,r)\) 相等，使两台机器具有相同的 \(\kappa\)、当前策略、规范化执行记录、授权日志、派发队列、持久返回记录、理想投影、当前部分执行、监控器版本和监控器入口绑定。
+Equality of \(\alpha_I(I)\) and \(\alpha_S(S;c,r)\) gives both machines the same \(\kappa\), current policy, normalized execution record, authorization log, dispatch queue, stored return records, ideal projection, current partial execution, monitor version, and monitor-entry bindings.
+% \(\alpha_I(I)\) 与 \(\alpha_S(S;c,r)\) 相等，使两台机器具有相同的 \(\kappa\)、当前策略、规范化执行记录、授权日志、派发队列、已存返回记录、理想投影、当前部分执行、监控器版本和监控器入口绑定。
 
 \paragraph{Edit transitions}
 % 编辑转移
@@ -1279,10 +1285,8 @@ If derivation exists but no declarative realization exists, \cref{lem:app-spec-b
 % 若推导存在但不存在声明式实现，则 \cref{lem:app-spec-bridge} 与确定性不动点检查使两侧发出相同的规范 \(\mathsf{Reject}\) 轨道并执行状态自环。
 Otherwise the ideal machine enables its edit transition and, by \cref{lem:app-spec-bridge}, the compiled checker accepts exactly the same edit and installs the same largest language.
 % 否则，理想机启用其编辑转移，并且根据 \cref{lem:app-spec-bridge}，编译后检查器恰好接受同一次编辑并安装相同的最大语言。
-The compiled side may take finitely many inactive-preloading \(\tau\)-steps before atomic installation.
-% 编译后一侧可以在原子安装之前执行有限次非活跃预加载 \(\tau\) 步。
-Pure compilation is outside the recovered-state LTS.
-% 纯编译位于恢复状态 LTS 之外。
+Compilation takes an explicit \(\mathsf{Preload}\) transition in the compiled LTS: it records the candidate key in inactive metadata, exposes no authorization token or verdict, and preserves \(\mathsf{AgentSec}\).
+% 编译在编译后 LTS 中执行一条显式的 \(\mathsf{Preload}\) 迁移：它把候选键记录到非活动元数据中，不暴露授权令牌或判定，并保持 \(\mathsf{AgentSec}\)。
 The ideal side takes its single atomic edge, and both successors normalize to the same \((\kappa_u,H_u,\mathcal A_u)\), ideal projection, empty prefix, active monitor version, and target bindings.
 % 理想机一侧执行单个原子边，而两个后继都规范化为相同的 \((\kappa_u,H_u,\mathcal A_u)\)、理想投影、空前缀、活动监控器版本和目标绑定。
 Deterministic allocation gives the same authorization-token bundle up to private renaming, so both expose \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\).
@@ -1309,8 +1313,8 @@ In the \Fresh case, both successors apply the same paired residual, append the s
 % 在 \Fresh 情形中，两个后继都应用相同的成对残余、把同一符号追加到全局轨迹与分支局部游标、推进 \(\nu\)、创建绑定同一效果标识的授权记录，并准备同一规范化请求。
 The compiled dispatch queue stores \((d,\mathsf{inv}_\rho(d))\), never the caller buffer, while the ideal queue stores \((d,m^\circ)\); the verified equality makes these records identical.
 % 编译后派发队列存储 \((d,\mathsf{inv}_\rho(d))\) 而绝不存储调用方缓冲区，理想队列存储 \((d,m^\circ)\)；经验证的等式使这两条记录相同。
-In the \Alias case, both successors apply the same paired update, append the same authorization record-free symbol to the global record and branch cursor, and bind the occurrence to the same durable return record without changing \(\Delta\) or the dispatch queue.
-% 在 \Alias 情形中，两个后继都应用相同的成对更新、把同一个不产生授权记录的符号追加到全局记录与分支游标，并把该发生项绑定到同一持久返回记录，而不改变 \(\Delta\) 或派发队列。
+In the \Alias case, both successors apply the same paired update, append the same symbol that creates no authorization record to the global record and branch cursor, and bind the occurrence to the same stored return record without changing \(\Delta\) or the dispatch queue.
+% 在 \Alias 情形中，两个后继都应用相同的成对更新、把同一个不产生授权记录的符号追加到全局记录与分支游标，并把该发生项绑定到同一已存返回记录，而不改变 \(\Delta\) 或派发队列。
 Both successors remove \(x\)'s current binding; because the remaining workflow no longer contains \(x\), their normalized current-binding components remain equal.
 % 两个后继都移除 \(x\) 的当前绑定；由于剩余工作流不再包含 \(x\)，它们规范化后的当前绑定分量仍然相等。
 In either case, \cref{lem:app-event-derivative} re-establishes \(\mathcal B\) with witness \((c,ra)\).
@@ -1351,8 +1355,8 @@ Compiled preload and stale or malformed candidate attempts are implementation-on
 Crash is matched by a \(\tau\) self-loop on each recovered-state machine by \cref{lem:app-crash}.
 % 根据 \cref{lem:app-crash}，崩溃在每台恢复状态机器上都由一个 \(\tau\) 自环匹配。
 
-\begin{theorem}[Durable Agent-API weak bisimulation, detailed]
-% 持久 Agent API 弱互模拟，详细形式
+\begin{theorem}[Agent-API weak bisimulation after recovery, detailed]
+% 恢复后的 Agent API 弱互模拟，详细形式
 \label{thm:app-bisimulation}
 \(\mathcal B\) is a divergence-insensitive weak bisimulation under \(\mathsf{obs}_{\rm api}\).
 % \(\mathcal B\) 在 \(\mathsf{obs}_{\rm api}\) 下是发散不敏感弱互模拟。
@@ -1369,19 +1373,17 @@ Arbitrary repetition of silent preload, stale-candidate, Save, or crash steps is
 % 任意重复的静默预加载、过期候选、Save 或崩溃步骤均被忽略，这恰是发散不敏感弱匹配。
 \end{proof}
 
-\subsection{Executable-Artifact Bounds}
-% 可执行制品界限
+\subsection{Executable-Artifact Evaluation}
+% 可执行制品评估
 \label{app:artifact-bounds}
 
 The performance script runs every sample in a fresh CPython 3.12 process and reports the median of five repetitions on a 16-vCPU AMD EPYC 7R12.
 % 性能脚本在新的 CPython 3.12 进程中运行每个样本，并报告 16-vCPU AMD EPYC 7R12 上五次重复的中位数。
 The 19 paper-specific tests exercise indexed pomset resolution, the greatest fixed point, and finite fixtures for all six constructors.
 % 19 项论文专用测试检验带索引偏序事件集解析、最大不动点以及全部六种构造器的有限样例。
-The executable model covers the checker core and all six finite constructor fixtures; the mathematical development above establishes immutable schema refinement, authority-bound removal certificates, and the complete domain-wide monitor-version protocol.
-% 可执行模型覆盖检查器核心与全部六种有限构造器样例；上述数学推导建立不可变模式精化、与权限方绑定的移除证书以及完整的域级监控器版本协议。
+The executable model covers the checker core and all six constructor fixtures, and the theorem development establishes immutable schema refinement, authority-bound removal certificates, and the complete domain-wide monitor-version protocol.
+% 可执行模型覆盖检查器核心与全部六种构造器样例，定理推导建立不可变模式精化、与权限方绑定的移除证书以及完整的域级监控器版本协议。
 Above 128 outcomes, eight occurrences per outcome, 50,000 linearizations per outcome, or 100,000 indexed completions, the executable wrapper returns \(\mathsf{ResourceLimit}(b,n)\) before search and performs no installation.
 % 当结果超过 128 个、每个结果的发生项超过 8 个、每个结果的线性化超过 50,000 条或带索引完成路径超过 100,000 条时，可执行包装器会在搜索前返回 \(\mathsf{ResourceLimit}(b,n)\) 且不执行安装。
-This fail-closed engineering outcome is neither a semantic rejection nor an impossibility certificate.
-% 这一故障关闭的工程结果既不是语义拒绝，也不是不可能性证书。
-The theorem uses the uncapped finite semantic compiler.
-% 定理使用无上限的有限语义编译器。
+The wrapper classifies this state-preserving preflight result separately from the semantic verdicts of the uncapped finite compiler used by the theorem.
+% 包装器把这一保持状态的预检结果与定理所用无上限有限编译器的语义判定分开分类。

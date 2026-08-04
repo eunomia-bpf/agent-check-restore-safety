@@ -193,6 +193,7 @@ frozen_constants=(
   exact_checker_iff_realization
   registered_workflow_exact_admission
   six_edit_derivation_exact
+  compilation_preload_preserves_agentSec
   exact_edit_installs_trace_safe_monitor
   fresh_alias_installation_serialized
 )

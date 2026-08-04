@@ -20,8 +20,8 @@
 \newtheorem{example}{Example}
 \newtheorem{remark}{Remark}
 
-\newcommand{\Fresh}{\ensuremath{\mathsf{fresh}}\xspace}
-\newcommand{\Alias}{\ensuremath{\mathsf{alias}}\xspace}
+\newcommand{\Fresh}{\ensuremath{\mathsf{new}}\xspace}
+\newcommand{\Alias}{\ensuremath{\mathsf{reuse}}\xspace}
 \newcommand{\Use}{\ensuremath{\mathsf{Use}}\xspace}
 \newcommand{\Install}{\ensuremath{\mathsf{Install}}\xspace}
 \newcommand{\Dispatch}{\ensuremath{\mathsf{Dispatch}}\xspace}
@@ -55,8 +55,8 @@ We ask when an execution edit can be implemented safely.
 % 我们研究执行编辑在什么条件下能够被安全实现。
 Our answer preserves every outcome that was required before the edit.
 % 我们的答案保留编辑前要求实现的每个结果。
-Each such outcome must remain required, already be satisfied by the recorded execution, or be explicitly removed by the same policy authority that required it.
-% 每个这类结果都必须继续作为要求、已经由所记录的执行满足，或由提出该要求的同一策略权限方明确移除。
+Each such outcome must remain required, already be satisfied by the recorded execution, or be explicitly removed by the same authority that required it.
+% 每个这类结果都必须继续作为要求、已经由所记录的执行满足，或由提出该要求的同一权限方明确移除。
 Existing Agent recovery systems implement particular edits, while existing synthesis methods assume that the possible executions and completion conditions are already known.
 % 现有 Agent 恢复系统实现特定编辑，而现有综合方法假定可能执行及完成条件已经给定。
 Neither derives the full safety requirement of a requested edit from the execution record.
@@ -67,18 +67,18 @@ Given a registered workflow, its authenticated record, and a requested edit, the
 % 给定一个已注册工作流、其经认证记录以及请求的编辑，检查器构造工作流和策略允许的每种完整执行。
 It removes an execution whenever one of its partial executions would leave a still-required outcome with no safe way to finish.
 % 如果某个完整执行的部分过程会让仍然需要实现的结果失去安全完成方式，检查器就删除该完整执行。
-If nothing remains, the checker returns a finite proof that no safe implementation exists.
-% 如果没有完整执行留下，检查器返回一份有限证明，说明不存在安全实现。
+If nothing remains, the checker returns a finite, independently checkable explanation that no safe implementation exists.
+% 如果没有完整执行留下，检查器返回一份有限且可独立检查的说明，证明不存在安全实现。
 Otherwise, the remaining executions define the most permissive runtime monitor that enforces the edit.
 % 否则，剩余执行定义了强制执行该编辑且限制最少的运行时监控器。
 For all six registered execution edits and registered extensions, our main theorem proves that the checker accepts exactly when such a safe implementation exists.
 % 对全部六种已注册执行编辑和已注册扩展，我们的主定理证明，当且仅当这种安全实现存在时，检查器才会接受。
-The same theorem proves atomic installation despite racing calls, proves that each of four recorded relations carries distinctions needed for exact decision or installation, and relates the installed runtime to an ideal atomic machine.
-% 同一定理还证明了调用竞态下的原子安装，证明四类记录关系中的每一类都包含精确判定或安装所需的区分信息，并将已安装运行时与理想原子机器联系起来。
+The same theorem proves atomic installation despite racing calls, identifies the workflow, call identity, prior authorization, and monitor-version information that no exact checker can discard, and relates the installed runtime to an ideal atomic machine.
+% 同一定理还证明了调用竞态下的原子安装，确定任何精确检查器都不能丢弃的工作流、调用标识、既有授权和监控器版本信息，并将已安装运行时与理想原子机器联系起来。
 Every supported event preserves the security invariant, so the theorem applies again after every finite reachable execution.
 % 每个受支持事件都保持安全不变量，因此该定理能在每个有限可达执行之后再次应用。
-Six Lean modules mechanize the theorem spine from typed registration and exact admission through all six edit derivations, atomic installation, use--install serialization, and finite-trace security preservation; 19 paper-specific tests and measurements over 2--128 outcomes exercise the executable checker.
-% 六个 Lean 模块机械化从类型化注册与精确准入，到全部六种编辑推导、原子安装、调用—安装串行化以及有限轨迹安全保持的定理主干；19 项论文专用测试与覆盖 2--128 个结果的测量检验可执行检查器。
+Six Lean modules mechanize registration, all six edit rules, atomic monitor installation, call--installation races, and preservation across finite executions; 19 paper-specific tests and measurements over 2--128 outcomes exercise the executable checker.
+% 六个 Lean 模块机械化注册、全部六种编辑规则、监控器原子安装、调用—安装竞态以及有限执行上的安全保持；19 项论文专用测试与覆盖 2--128 个结果的测量检验可执行检查器。
 \end{abstract}
 
 \input{sections/introduction}
