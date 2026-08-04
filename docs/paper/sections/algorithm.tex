@@ -25,7 +25,7 @@ Removing outcome labels from the largest safe execution set gives the finite pai
 For \(L/z=\{v\mid zv\in L\}\), let \(q_z=(W/z,B/z)\) be the automaton state after prefix \(z\).
 % 对于 \(L/z=\{v\mid zv\in L\}\)，令 \(q_z=(W/z,B/z)\) 表示执行前缀 \(z\) 后的自动机状态。
 \begin{equation}
-\label{eq:canonical-program}
+\label{eq:canonical-automaton}
 \begin{aligned}
  Q_{W,B} &= \{q_z\mid z\in W\},\\
  q^0&=q_\epsilon=(W,B),\\
@@ -42,9 +42,9 @@ Each transition symbol \(a\) contains workflow call \(x\), action \(d\), and its
 
 \begin{lemma}[Exact finite enforcement]
 % 精确的有限执行规则
-\label{lem:compiled-language}
-The generated and marked languages of the automaton in \cref{eq:canonical-program} are exactly \((W^\dagger_{H,u},B^\dagger_{H,u})\).
-% \cref{eq:canonical-program} 中自动机的生成语言和标记语言恰为 \((W^\dagger_{H,u},B^\dagger_{H,u})\)。
+\label{lem:runtime-language}
+The generated and marked languages of the automaton in \cref{eq:canonical-automaton} are exactly \((W^\dagger_{H,u},B^\dagger_{H,u})\).
+% \cref{eq:canonical-automaton} 中自动机的生成语言和标记语言恰为 \((W^\dagger_{H,u},B^\dagger_{H,u})\)。
 The automaton is the smallest deterministic marked partial automaton for this pair up to state renaming.
 % 在忽略状态重命名的意义下，该自动机是实现这对语言的最小确定性标记偏自动机。
 \end{lemma}
@@ -95,8 +95,8 @@ If these checks pass, one transaction closes the old version, activates the new 
 % 若这些检查通过，一个事务会关闭旧版本、激活新自动机、替换每个当前规则入口与授权令牌，然后才暴露成功编辑答案。
 A changed state makes the candidate stale and forces a new check.
 % 状态一旦改变，候选结果即过期，必须重新检查。
-The complete state updates, retries, request release, completion updates, and restart rules appear in \cref{app:compiled-transitions,tab:app-event-matrix}.
-% 完整状态更新、重试、请求发出、完成更新与重启规则见 \cref{app:compiled-transitions,tab:app-event-matrix}。
+The complete state updates, retries, request release, completion updates, and restart rules appear in \cref{app:runtime-transitions,tab:app-event-matrix}.
+% 完整状态更新、重试、请求发出、完成更新与重启规则见 \cref{app:runtime-transitions,tab:app-event-matrix}。
 
 \begin{lemma}[Edit--call serialization]
 % 编辑--调用串行化

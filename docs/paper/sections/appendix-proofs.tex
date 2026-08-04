@@ -204,8 +204,8 @@ On that edge, the ideal language \(L^*\) equals the generated language of \(\mat
 \begin{proof}
 The first statement is \cref{lem:app-spec-bridge}.
 % 第一项陈述即为 \cref{lem:app-spec-bridge}。
-The second combines that lemma with \cref{lem:compiled-language}.
-% 第二项陈述由该引理与 \cref{lem:compiled-language} 共同得到。
+The second combines that lemma with \cref{lem:runtime-language}.
+% 第二项陈述由该引理与 \cref{lem:runtime-language} 共同得到。
 \end{proof}
 
 \begin{proposition}[Output-sensitive checking]
@@ -255,7 +255,7 @@ Store one rank and cause per removed candidate rather than copied sets, and cons
 
 \subsection{Ordered Rejection Proofs}
 % 有序拒绝证明
-\label{app:rejection-certificate}
+\label{app:rejection-proof}
 
 For an empty fixed point, the returned proof is
 % 对于空不动点，返回的证明为
@@ -291,7 +291,7 @@ For soundness, induction places every post-fixed family inside every \(\widehat 
 
 \subsection{Exact Returned Proof Data}
 % 精确返回的证明数据
-\label{app:certificate-payloads}
+\label{app:returned-data}
 
 Let \(\mathsf{enc}\) be canonical and length-delimited, with \(\kappa\) authenticating \(\mathcal A\).
 % 令 \(\mathsf{enc}\) 为规范且带长度分隔的编码，并由 \(\kappa\) 认证 \(\mathcal A\)。
@@ -319,7 +319,7 @@ H_{\mathsf{aut}}
 The digest checked before the rules change is
 % 规则改变前检查的摘要为
 \begin{equation}
-\label{eq:cut-seal}
+\label{eq:checked-record-digest}
 \begin{split}
  \mathsf{cut}_Z=
  \mathsf{Digest}_{\rm record}(\mathsf{enc}(&\omega,\zeta,\kappa,H,\Delta,
@@ -503,7 +503,7 @@ The general pomset lift, information lower bounds, and ideal--runtime weak bisim
 
 \subsection{Why All Four Parts of the Record Are Necessary}
 % 为什么执行记录的四个部分都不可缺少
-\label{app:evidence}
+\label{app:record-information}
 
 We prove that every exact checker needs all four parts of the execution record.
 % 我们证明，每个精确检查器都需要执行记录的全部四个部分。
@@ -549,22 +549,22 @@ The four parts of the record are as follows.
 Encodings, digests, authorization sequences, and returned proof data are computed from these four parts rather than treated as additional facts.
 % 编码、摘要、授权序列和返回的证明数据都由这四个部分计算得出，而不是额外的事实。
 
-For \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), \(\pi_J(V)\) retains the facts in \(J\).
-% 对 \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\)，\(\pi_J(V)\) 保留 \(J\) 中的事实。
+For \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), \(\mathsf{Keep}_J(V)\) retains the facts in \(J\).
+% 对 \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\)，\(\mathsf{Keep}_J(V)\) 保留 \(J\) 中的事实。
 It also removes every stored reference to an omitted fact and every computed value that depends on an omitted fact.
 % 它还会删除每个指向被省略事实的存储引用，以及每个依赖被省略事实的计算值。
 This recursive deletion has a unique result because computed values depend acyclically on the four recorded parts.
 % 这种递归删除具有唯一结果，因为计算值对执行记录四个部分的依赖是无环的。
-\(\pi_{\neg oc}(V)\) removes only the correspondence between workflow calls and protected actions, together with all data that could reconstruct it.
-% \(\pi_{\neg oc}(V)\) 只删除工作流调用与受控动作之间的对应关系，以及所有能够重建该关系的数据。
-\(\pi_{\neg ar}(V)\) similarly removes only the correspondence between prior authorization records and protected actions.
-% \(\pi_{\neg ar}(V)\) 类似地只删除先前授权记录与受控动作之间的对应关系。
+\(\mathsf{Drop}_{ca}(V)\) removes only the correspondence between workflow calls and protected actions, together with all data that could reconstruct it.
+% \(\mathsf{Drop}_{ca}(V)\) 只删除工作流调用与受控动作之间的对应关系，以及所有能够重建该关系的数据。
+\(\mathsf{Drop}_{ra}(V)\) similarly removes only the correspondence between prior authorization records and protected actions.
+% \(\mathsf{Drop}_{ra}(V)\) 类似地只删除先前授权记录与受控动作之间的对应关系。
 
 \begin{lemma}[Omitting information is well defined]
 % 省略信息是良定义的
-\label{lem:app-projection}
-Consistent renaming commutes with \(\pi_J\), \(\pi_{\neg oc}\), and \(\pi_{\neg ar}\).
-% 一致重命名与 \(\pi_J\)、\(\pi_{\neg oc}\) 和 \(\pi_{\neg ar}\) 可交换。
+\label{lem:app-omission}
+Consistent renaming commutes with \(\mathsf{Keep}_J\), \(\mathsf{Drop}_{ca}\), and \(\mathsf{Drop}_{ra}\).
+% 一致重命名与 \(\mathsf{Keep}_J\)、\(\mathsf{Drop}_{ca}\) 和 \(\mathsf{Drop}_{ra}\) 可交换。
 Their results therefore do not depend on the spelling of internal identifiers or the byte encoding of computed data.
 % 因此，它们的结果不依赖内部标识符的拼写或计算数据的字节编码。
 \end{lemma}
@@ -620,7 +620,7 @@ two \Fresh reject \(aa\).\\
 \(V^0\xrightarrow{\Dispatch(d)}V^1\), changing only whether a queued request was released. &
 \(V^0\): rules take effect;
 \(V^1\): \(\mathsf{NoCommit}\) because the checked record changed.\\
-\(\pi_{\neg ar}\) &
+\(\mathsf{Drop}_{ra}\) &
 \(q_{\neg ar}=\mathsf{Decide}(\mathsf{RestoreReplace}(b_L,k,\sigma_{\neg ar}))\) after safe empty-root/ForkChoice/Save/\Fresh;
 \(q_{\rm act}(x)=d\), \(\mathcal A=\Pref\{a\}\);
 same calls \(\{c,x\}\), records \(\{p\}\), and actions \(\{d,e\}\);
@@ -636,7 +636,7 @@ the current rule versions and dependent digests differ. &
 \end{tabular}
 \caption{Record pairs that become indistinguishable after one fact is omitted but require opposite answers.}
 % 省略一项事实后无法区分、但要求相反答案的记录对。
-\label{tab:projection-pairs}
+\label{tab:record-pairs}
 \end{table}
 
 \subsection{A Common Initial State and Five Record Pairs}
@@ -794,8 +794,8 @@ In \(V_{\mathbf I}^1\), every left-outcome linearization uses \Fresh on both \(d
 % 在 \(V_{\mathbf I}^1\) 中，左侧结果的每条线性化都在 \(d_0,d_1\) 上使用 \Fresh，所以其权限词为 \(aa\notin\mathcal A\)。
 The left outcome is compatible with \(\epsilon\), so the first \(\widehat\Phi\) round also removes the otherwise safe bypass completion and leaves the greatest fixed point empty.
 % 左侧结果与 \(\epsilon\) 兼容，因此第一轮 \(\widehat\Phi\) 也会移除本来安全的绕过完成路径，并使最大不动点为空。
-Applying \(\pi_{\neg oc}\) makes the remaining records indistinguishable because their individual calls and actions were already identical.
-% 应用 \(\pi_{\neg oc}\) 后，剩余记录无法区分，因为它们各自的调用和动作原本就完全相同。
+Applying \(\mathsf{Drop}_{ca}\) makes the remaining records indistinguishable because their individual calls and actions were already identical.
+% 应用 \(\mathsf{Drop}_{ca}\) 后，剩余记录无法区分，因为它们各自的调用和动作原本就完全相同。
 
 \paragraph{\(\mathbf E\): authorization and execution progress}
 % \(\mathbf E\)：授权与执行进展
@@ -814,8 +814,8 @@ Let \(V_{\mathbf E}^0\xrightarrow{\Dispatch(d)}V_{\mathbf E}^1\), which changes 
 For the same request \(q_{\mathbf E}=\mathsf{TryUpdate}(u_{\mathbf E},Y_0)\), the rules take effect at \(V_{\mathbf E}^0\), while \(V_{\mathbf E}^1\) returns \(\mathsf{NoCommit}\) because the digest of the checked record has changed.
 % 对于同一个请求 \(q_{\mathbf E}=\mathsf{TryUpdate}(u_{\mathbf E},Y_0)\)，规则在 \(V_{\mathbf E}^0\) 处生效，而 \(V_{\mathbf E}^1\) 因经检查记录的摘要已经改变而返回 \(\mathsf{NoCommit}\)。
 
-\paragraph{\(\pi_{\neg ar}\): which action a prior authorization names}
-% \(\pi_{\neg ar}\)：先前授权指向哪个动作
+\paragraph{\(\mathsf{Drop}_{ra}\): which action a prior authorization names}
+% \(\mathsf{Drop}_{ra}\)：先前授权指向哪个动作
 For a separate pair, keep the common active row \(q_{\rm act}(x)=d\), creator \(c\), authorization record \(p\), and protected actions \(d,e\) labeled \(a\), but set \(q_{\rm act}(c)=d\) and \(p\mapsto d\) in \(V_{\neg ar}^0\), versus \(q_{\rm act}(c)=e\) and \(p\mapsto e\) in \(V_{\neg ar}^1\).
 % 对于另一对状态，保持共同的当前记录 \(q_{\rm act}(x)=d\)、创建者 \(c\)、授权记录 \(p\) 以及以 \(a\) 标记的受控动作 \(d,e\)，但在 \(V_{\neg ar}^0\) 中令 \(q_{\rm act}(c)=d\) 且 \(p\mapsto d\)，在 \(V_{\neg ar}^1\) 中令 \(q_{\rm act}(c)=e\) 且 \(p\mapsto e\)。
 Both states follow the same safe empty-root/ForkChoice/Save/\Fresh shape above, have authorization sequence \(a\), and use the common query \(q_{\neg ar}=\mathsf{Decide}(\mathsf{RestoreReplace}(b_L,k,\sigma_{\neg ar}))\).
@@ -824,8 +824,8 @@ The cloned \(x_k\) is \(\Alias(x_k,d)\) in \(V_{\neg ar}^0\), but \(\Fresh(x_k,d
 % 克隆的 \(x_k\) 在 \(V_{\neg ar}^0\) 中为 \(\Alias(x_k,d)\)，而在 \(V_{\neg ar}^1\) 中，\(\Fresh(x_k,d)\) 会产生被禁止的权限词 \(aa\)。
 The two records contain the same creator, authorization record, workflow call, and protected actions, and both retain \(x\mapsto d\).
 % 两条记录包含相同的创建者、授权记录、工作流调用和受控动作，并且都保留 \(x\mapsto d\)。
-\(\pi_{\neg ar}\) removes the only differing correspondence and every value that could reconstruct it, so the remaining records are indistinguishable.
-% \(\pi_{\neg ar}\) 删除唯一不同的对应关系以及每个能够重建该关系的值，所以剩余记录无法区分。
+\(\mathsf{Drop}_{ra}\) removes the only differing correspondence and every value that could reconstruct it, so the remaining records are indistinguishable.
+% \(\mathsf{Drop}_{ra}\) 删除唯一不同的对应关系以及每个能够重建该关系的值，所以剩余记录无法区分。
 This pair proves that an exact checker must know which protected action each prior authorization names.
 % 该记录对证明，精确检查器必须知道每项先前授权指向哪个受控动作。
 
@@ -855,8 +855,8 @@ Every pair above consists of finite runtime states reached from the common empty
 % 上述每组记录对均由从共同空初始状态到达且满足 \(\mathsf{AgentSec}\) 的有限运行时状态组成。
 After the corresponding information is omitted, each pair becomes indistinguishable even though the correct answers are opposite.
 % 省略对应信息后，每组记录对都无法区分，但正确答案相反。
-Therefore every \(\pi_J\) with \(J\subsetneq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), as well as \(\pi_{\neg oc}\) and \(\pi_{\neg ar}\), is inexact.
-% 因此，每个满足 \(J\subsetneq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\) 的 \(\pi_J\)，以及 \(\pi_{\neg oc}\) 和 \(\pi_{\neg ar}\)，都是不精确的。
+Therefore every \(\mathsf{Keep}_J\) with \(J\subsetneq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), as well as \(\mathsf{Drop}_{ca}\) and \(\mathsf{Drop}_{ra}\), is inexact.
+% 因此，每个满足 \(J\subsetneq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\) 的 \(\mathsf{Keep}_J\)，以及 \(\mathsf{Drop}_{ca}\) 和 \(\mathsf{Drop}_{ra}\)，都是不精确的。
 Every exact checker input must distinguish all five pairs.
 % 每种精确检查器输入都必须区分这五组记录对。
 \end{proposition}
@@ -874,8 +874,8 @@ For the \(\mathbf E\) pair, \(\Dispatch\) preserves \(\mathbf P,\mathbf I,\mathb
 % 对于 \(\mathbf E\) 记录对，\(\Dispatch\) 保持 \(\mathbf P,\mathbf I,\mathbf C\)，但改变经检查的记录，从而分别得到成功更新与 \(\mathsf{NoCommit}\)。
 The displayed edit-rule and resolution calculations give the other opposite answers.
 % 所显示的编辑规则与解析计算给出其余相反答案。
-\Cref{lem:app-projection} and the stated private renamings make the reduced inputs indistinguishable.
-% \Cref{lem:app-projection} 与所述私有重命名使缩减后的输入无法区分。
+\Cref{lem:app-omission} and the stated private renamings make the reduced inputs indistinguishable.
+% \Cref{lem:app-omission} 与所述私有重命名使缩减后的输入无法区分。
 Each omission collapses its corresponding pair, so \cref{lem:app-observational-separation} proves inexactness.
 % 每种省略都会合并对应的记录对，因此 \cref{lem:app-observational-separation} 证明其不精确。
 \end{proof}
@@ -927,26 +927,27 @@ Any failed premise returns \(\mathsf{deny}(x)\) without changing state or invent
 This least-generated LTS represents post-\(\Dispatch\) external-network completion as environmental behavior.
 % 这一最小生成的 LTS 把 \(\Dispatch\) 之后的外部网络完成表示为环境行为。
 
-By \cref{lem:most-permissive}, every reachable partial execution of the ideal machine retains a policy-safe completion until the next edit transition changes the workflow contract.
-% 根据 \cref{lem:most-permissive}，理想机的每段可达部分执行都会保留一条策略安全完成路径，直到下一次编辑转移改变工作流契约。
+By \cref{lem:largest-safe-family}, every reachable partial execution of the ideal machine retains a policy-safe completion until the next edit transition changes the workflow contract.
+% 根据 \cref{lem:largest-safe-family}，理想机的每段可达部分执行都会保留一条策略安全完成路径，直到下一次编辑转移改变工作流契约。
 The runtime implements this machine without enumerating the full completion set at every call.
 % 运行时实现该机器，而无需在每次调用时枚举完整完成路径集合。
 
 \subsection{Runtime State and Atomic Transitions}
 % 运行时状态与原子转移
-\label{app:compiled-transitions}
+\label{app:runtime-transitions}
 
 For \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), let \(C_{\rm der}(\Theta)\) be the canonical failed-derivation transcript.
 % 对于 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，检查器恰好返回下列一种结果：
 \[
-\mathsf{Check}(\Theta)=
-\begin{cases}
-\mathsf{Invalid}([\gamma(\Theta),C_{\rm der}(\Theta)]_{\cong}),
- &\mathsf{Derive}(\Theta)\text{ undefined};\\
-\mathsf{Reject}([\gamma(\Theta),C_{\rm fp}]_{\cong}),
- &\mathsf{Derive}(\Theta)\text{ defined},\
-  \widehat B^\dagger_{H,u}=\varnothing.
-\end{cases}
+\begin{aligned}
+\mathsf{Check}(\Theta)
+ &=\mathsf{Invalid}([\gamma(\Theta),C_{\rm der}(\Theta)]_{\cong}),\\[-2pt]
+ &\qquad\text{if }\mathsf{Derive}(\Theta)\text{ is undefined};\\
+\mathsf{Check}(\Theta)
+ &=\mathsf{Reject}([\gamma(\Theta),C_{\rm fp}]_{\cong}),\\[-2pt]
+ &\qquad\text{if }\mathsf{Derive}(\Theta)\text{ is defined and }\
+   \widehat B^\dagger_{H,u}=\varnothing.
+\end{aligned}
 \]
 When \(\mathsf{Derive}(\Theta)\) is defined and
 \(\widehat B^\dagger_{H,u}\ne\varnothing\),
@@ -1055,12 +1056,12 @@ An authenticated \Retry follows the archived link from \(\chi\) to the authoriza
 % 最终检查与原子规则更新
 At the atomic update point, the trusted controller ignores any caller-supplied replacement workflow or rule version, sets \(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), and re-runs \(\mathsf{Derive}(\Theta_S(u))\) from the current execution record.
 % 在原子更新点，可信控制器忽略调用方提供的任何替代工作流或规则版本，令 \(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并根据当前执行记录重新执行 \(\mathsf{Derive}(\Theta_S(u))\)。
-For a positive derivation, \(\mathsf{ReCut}(S,u,Z)\) recomputes the right-hand side of \cref{eq:cut-seal}, while \(\mathsf{Verify}_Z\) recomputes the fixed point, coverage proof, canonical automaton, and both digests.
-% 对于正面推导，\(\mathsf{ReCut}(S,u,Z)\) 重新计算 \cref{eq:cut-seal} 的右侧，而 \(\mathsf{Verify}_Z\) 重新计算不动点、覆盖证明、规范自动机和两个摘要。
+For a positive derivation, \(\mathsf{ReCut}(S,u,Z)\) recomputes the right-hand side of \cref{eq:checked-record-digest}, while \(\mathsf{Verify}_Z\) recomputes the fixed point, coverage proof, canonical automaton, and both digests.
+% 对于正面推导，\(\mathsf{ReCut}(S,u,Z)\) 重新计算 \cref{eq:checked-record-digest} 的右侧，而 \(\mathsf{Verify}_Z\) 重新计算不动点、覆盖证明、规范自动机和两个摘要。
 The rules may take effect only if
 % 只有满足下列条件，规则才能生效：
 \begin{equation}
-\label{eq:install-premise}
+\label{eq:update-premise}
 \begin{gathered}
  \kappa=\kappa_Z,\qquad
  \mathsf{ReCut}(S,u,Z)=\mathsf{cut}_Z,\\
@@ -1070,8 +1071,8 @@ The rules may take effect only if
  \mathsf{phase}(\eta^+)\in\{\bot,\mathsf{inactive}\}.
 \end{gathered}
 \end{equation}
-\(\mathsf{Ready}(S,u,Y)\) holds when \(Y=\mathsf{Accepted}(\delta,W^\dagger,\widehat B^\dagger,Z)\), the current derivation is \(\delta\), and all state-dependent premises of \cref{eq:install-premise} hold.
-% 当 \(Y=\mathsf{Accepted}(\delta,W^\dagger,\widehat B^\dagger,Z)\)、当前推导为 \(\delta\) 且 \cref{eq:install-premise} 的全部状态相关前提成立时，\(\mathsf{Ready}(S,u,Y)\) 成立。
+\(\mathsf{Ready}(S,u,Y)\) holds when \(Y=\mathsf{Accepted}(\delta,W^\dagger,\widehat B^\dagger,Z)\), the current derivation is \(\delta\), and all state-dependent premises of \cref{eq:update-premise} hold.
+% 当 \(Y=\mathsf{Accepted}(\delta,W^\dagger,\widehat B^\dagger,Z)\)、当前推导为 \(\delta\) 且 \cref{eq:update-premise} 的全部状态相关前提成立时，\(\mathsf{Ready}(S,u,Y)\) 成立。
 The committing domain transaction makes \((\kappa_u,H_u,\mathcal A_u)\) current, closes \(\eta^-\), activates \(\eta^+\), assigns a rule entry to every target workflow call, starts the canonical automaton at \(q^0\), and stores the checked result.
 % 提交的域事务使 \((\kappa_u,H_u,\mathcal A_u)\) 成为当前值、关闭 \(\eta^-\)、激活 \(\eta^+\)、为每个目标工作流调用分配规则入口、在 \(q^0\) 处启动规范自动机，并保存经检查的结果。
 For this successor, write
@@ -1206,8 +1207,8 @@ Thus consistently renamed inputs have the same definedness and consistently rena
 This proves that \(\partial\) is well defined.
 % 这证明 \(\partial\) 是良定义的。
 
-For \Fresh and \Alias, \cref{lem:resolution,lem:residual-coherence,lem:compiled-language} establish the first two rows of the matrix.
-% 对于 \Fresh 与 \Alias，\cref{lem:resolution,lem:residual-coherence,lem:compiled-language} 建立表中的前两行。
+For \Fresh and \Alias, \cref{lem:resolution,lem:residual-coherence,lem:runtime-language} establish the first two rows of the matrix.
+% 对于 \Fresh 与 \Alias，\cref{lem:resolution,lem:residual-coherence,lem:runtime-language} 建立表中的前两行。
 If \(x\) lies at \(b\), \(\mathsf{HStep}\) appends \(a\) to \(b\)'s progress, while the same atomic protected-call update appends \(a\) to the global resolved-call trace \(\chi\).
 % 若 \(x\) 位于 \(b\)，\(\mathsf{HStep}\) 会把 \(a\) 追加到 \(b\) 的进展，而同一个原子受控调用更新会把 \(a\) 追加到全局已解析调用轨迹 \(\chi\)。
 Associativity of language quotients gives
@@ -1218,8 +1219,8 @@ Associativity of language quotients gives
 \]
 Thus the updated leaf and any later Save remain synchronized with \(G\).
 % 因此，更新后的叶节点以及此后的任何 Save 都与 \(G\) 保持同步。
-For a successful edit transition, \cref{lem:history-derivation,lem:live-extension,lem:app-spec-bridge,lem:compiled-language,lem:cut-linearization} establish the third row for all six edit rules and registered extension.
-% 对于成功编辑转移，\cref{lem:history-derivation,lem:live-extension,lem:app-spec-bridge,lem:compiled-language,lem:cut-linearization} 为六条编辑规则与已注册扩展建立表中的第三行。
+For a successful edit transition, \cref{lem:history-derivation,lem:live-extension,lem:app-spec-bridge,lem:runtime-language,lem:cut-linearization} establish the third row for all six edit rules and registered extension.
+% 对于成功编辑转移，\cref{lem:history-derivation,lem:live-extension,lem:app-spec-bridge,lem:runtime-language,lem:cut-linearization} 为六条编辑规则与已注册扩展建立表中的第三行。
 Each remaining rule changes only the fields shown in the matrix, and its row checks every invariant clause whose fields change.
 % 其余每条规则只改变表中显示的字段，而对应行会检查字段发生变化的每个不变量条款。
 Thus every successor has the displayed new state and preserves \(\mathsf{AgentSec}\).
@@ -1244,7 +1245,7 @@ The base case is \cref{lem:app-boot}, and \cref{lem:app-event-derivative} suppli
 
 \subsection{Events Outside the Agent's Control and Restarts}
 % Agent 无法控制的事件与重新启动
-\label{app:crash}
+\label{app:restart}
 
 The resolved alphabet contains only protected calls checked by the runtime automaton.
 % 已解析字母表只包含由运行时自动机检查的受控调用。
@@ -1297,7 +1298,7 @@ A rule update cannot activate a new version without closing the old version and 
 
 \begin{lemma}[Restart preserves an atomic prefix]
 % 重新启动保持原子前缀
-\label{lem:app-crash}
+\label{lem:app-restart}
 Let \(S_0\to S_1\to\cdots\to S_n\) be the modeled path whose atomic transitions correspond to \(t_1,\ldots,t_n\) in the order above.
 % 令 \(S_0\to S_1\to\cdots\to S_n\) 为建模路径，其中原子转移依次对应上述顺序中的 \(t_1,\ldots,t_n\)。
 If committed state \(D\) refines \(S_0\), then restart after the committed prefix \(t_1\cdots t_k\) yields a state refining \(S_k\).
@@ -1373,8 +1374,8 @@ The ideal automaton requires the same rule entry, protected action, and request 
 % 理想自动机要求相同的规则入口、受控动作和请求相等性。
 Both sides then inspect the same set \(D_\Delta\) of protected actions with authorization records, so they choose the same \(a\in\{\Fresh(x,d),\Alias(x,d)\}\).
 % 随后，两侧检查相同的已有授权记录受控动作集合 \(D_\Delta\)，因此选择相同的 \(a\in\{\Fresh(x,d),\Alias(x,d)\}\)。
-By \cref{cor:app-exact-boundary,lem:compiled-language}, the runtime automaton enables \(a\) after \(r\) exactly when \(ra\in L^*\) in the ideal machine.
-% 根据 \cref{cor:app-exact-boundary,lem:compiled-language}，当且仅当理想机中 \(ra\in L^*\) 时，运行时自动机才在 \(r\) 之后启用 \(a\)。
+By \cref{cor:app-exact-boundary,lem:runtime-language}, the runtime automaton enables \(a\) after \(r\) exactly when \(ra\in L^*\) in the ideal machine.
+% 根据 \cref{cor:app-exact-boundary,lem:runtime-language}，当且仅当理想机中 \(ra\in L^*\) 时，运行时自动机才在 \(r\) 之后启用 \(a\)。
 
 In the \Fresh case, both successors apply the same workflow update, append the same symbol to the global trace and branch progress, advance \(\mathsf{ver}\), create the same authorization record, and queue the same canonical request.
 % 在 \Fresh 情形中，两个后继都应用相同的工作流更新、把同一符号追加到全局轨迹与分支进展、推进 \(\mathsf{ver}\)、创建相同的授权记录，并将相同的规范请求加入队列。
@@ -1423,8 +1424,8 @@ An authenticated retry, authorization-data retrieval, or result delivery leaves 
 % \(\mathsf{Save}\) 执行匹配的 \(\tau\) 步。
 Runtime preload and internal \(\mathsf{NoCommit}\) results are \(\tau\)-steps matched by zero ideal steps because \(\alpha_S\) omits inactive prepared data and \(\mathsf{obs}_{\rm api}\) hides internal controller results.
 % 运行时预加载与内部 \(\mathsf{NoCommit}\) 结果是由零个理想步骤匹配的 \(\tau\) 步，因为 \(\alpha_S\) 忽略非活动的准备数据，而 \(\mathsf{obs}_{\rm api}\) 隐藏内部控制器结果。
-Stopping and restarting is matched by a \(\tau\) self-loop on each committed-state machine by \cref{lem:app-crash}.
-% 根据 \cref{lem:app-crash}，停止并重新启动在每台已提交状态机上都由一个 \(\tau\) 自环匹配。
+Stopping and restarting is matched by a \(\tau\) self-loop on each committed-state machine by \cref{lem:app-restart}.
+% 根据 \cref{lem:app-restart}，停止并重新启动在每台已提交状态机上都由一个 \(\tau\) 自环匹配。
 
 \begin{theorem}[Agent-API weak bisimulation after restart, detailed]
 % 重新启动后的 Agent API 弱互模拟，详细形式

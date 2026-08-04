@@ -187,7 +187,7 @@ The existential quantifier chooses a call order, and the universal condition kee
 
 \begin{lemma}[Largest safe execution set]
 % 最大安全执行集合
-\label{lem:most-permissive}
+\label{lem:largest-safe-family}
 A safe execution set exists iff \(\mathsf{SafeEdit}(\Theta)\).
 % 当且仅当 \(\mathsf{SafeEdit}(\Theta)\) 成立时，安全执行集合存在。
 When the edit is safe, \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) is a safe execution set, and every safe execution set \((L,\widehat B)\) satisfies \(\widehat B\subseteq\widehat B^\dagger_{H,u}\) and \(L\subseteq W^\dagger_{H,u}\).
@@ -214,8 +214,8 @@ Hence the fixed point is a safe execution set exactly when nonempty.
 % \(\mathsf{MaxSafe}(\Theta;L,\widehat B)\) 表示 \((L,\widehat B)\) 安全且包含每个其他安全执行集合。
 When such a pair exists, write its unique value as \(\mathsf{SafeBehavior}(\Theta)\).
 % 当这样的二元组存在时，将其唯一值记为 \(\mathsf{SafeBehavior}(\Theta)\)。
-\Cref{lem:most-permissive} proves that this witness exists exactly when \(\widehat B^\dagger_{H,u}\ne\varnothing\) and then equals \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\).
-% \Cref{lem:most-permissive} 证明该见证恰在 \(\widehat B^\dagger_{H,u}\ne\varnothing\) 时存在，并且此时等于 \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\)。
+\Cref{lem:largest-safe-family} proves that this witness exists exactly when \(\widehat B^\dagger_{H,u}\ne\varnothing\) and then equals \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\).
+% \Cref{lem:largest-safe-family} 证明该见证恰在 \(\widehat B^\dagger_{H,u}\ne\varnothing\) 时存在，并且此时等于 \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\)。
 
 \subsubsection{Why Outcome-by-Outcome Checking Fails}
 % 逐结果检查的反例
@@ -337,8 +337,8 @@ Write \(\mathsf{Check}(\Theta)\) for this deterministic output.
 % 将这一确定性输出记为 \(\mathsf{Check}(\Theta)\)。
 Each answer includes a digest of the execution record that was checked.
 % 每个判定结果都包含所检查执行记录的摘要。
-\Cref{app:certificate-payloads} gives the exact returned data and verification rules.
-% \Cref{app:certificate-payloads} 给出精确返回数据与验证规则。
+\Cref{app:returned-data} gives the exact returned data and verification rules.
+% \Cref{app:returned-data} 给出精确返回数据与验证规则。
 \Cref{prop:app-output-complexity} proves an output-sensitive \(O(D+n\Lambda+|\mathcal G_{\rm cov}|+V_B\log(2+V_B))\)-time, \(O(D+\Lambda+|\mathcal G_{\rm cov}|)\)-space bound.
 % \Cref{prop:app-output-complexity} 证明一种输出敏感的 \(O(D+n\Lambda+|\mathcal G_{\rm cov}|+V_B\log(2+V_B))\) 时间、\(O(D+\Lambda+|\mathcal G_{\rm cov}|)\) 空间界。
 Exponential growth occurs only in explicitly emitted linearizations and prefix--required-outcome support pairs.

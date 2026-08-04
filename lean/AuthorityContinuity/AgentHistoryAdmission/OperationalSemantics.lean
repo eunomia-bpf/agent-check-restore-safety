@@ -182,29 +182,49 @@ def AuthenticatedEditRule.Covers
 the indexed target contract to the edited frontier, partition every source
 promise into satisfied, authorized-removed, or still-required, and require a
 registered target witness for every still-required promise. -/
-def AuthenticatedEditRule.Obligations
+structure AuthenticatedEditRule.Obligations
     (slice : RegisteredSlice Outcome Label)
     (rule : AuthenticatedEditRule Outcome)
-    (target : History) : Prop :=
-  rule.targetOutcomes.Nonempty ∧
-  rule.targetLanguage = target.frontier.rawLanguage ∧
-  rule.satisfied ⊆ slice.promised ∧
-  rule.removalSignatures ⊆
-    slice.promised.image fun outcome =>
-      (outcome, slice.outcomeAuthority outcome) ∧
-  slice.promised =
-    rule.stillRequired slice ∪
-      (rule.satisfied ∪ rule.authorizedRemovals slice) ∧
-  rule.covers ⊆
-    rule.targetOutcomes ×ˢ rule.stillRequired slice ∧
-  rule.stillRequired slice ⊆ rule.covers.image Prod.snd
+    (target : History) : Prop where
+  targetNonempty : rule.targetOutcomes.Nonempty
+  targetLanguage_eq :
+    rule.targetLanguage = target.frontier.rawLanguage
+  satisfied_subset : rule.satisfied ⊆ slice.promised
+  signatures_registered :
+    rule.removalSignatures ⊆
+    (slice.promised.image fun outcome =>
+      (outcome, slice.outcomeAuthority outcome))
+  promised_partition :
+    slice.promised =
+      rule.stillRequired slice ∪
+        (rule.satisfied ∪ rule.authorizedRemovals slice)
+  covers_bounded :
+    rule.covers ⊆
+      rule.targetOutcomes ×ˢ rule.stillRequired slice
+  stillRequired_covered :
+    rule.stillRequired slice ⊆ rule.covers.image Prod.snd
 
 /-- Executable checker for the edit-rule obligations. -/
 def checkEditObligations
     (slice : RegisteredSlice Outcome Label)
     (rule : AuthenticatedEditRule Outcome)
     (target : History) : Bool :=
-  decide (rule.Obligations slice target)
+  decide rule.targetOutcomes.Nonempty &&
+  decide (rule.targetLanguage = target.frontier.rawLanguage) &&
+  decide (rule.satisfied ⊆ slice.promised) &&
+  decide
+    (rule.removalSignatures ⊆
+      slice.promised.image fun outcome =>
+        (outcome, slice.outcomeAuthority outcome)) &&
+  decide
+    (slice.promised =
+      rule.stillRequired slice ∪
+        (rule.satisfied ∪ rule.authorizedRemovals slice)) &&
+  decide
+    (rule.covers ⊆
+      rule.targetOutcomes ×ˢ rule.stillRequired slice) &&
+  decide
+    (rule.stillRequired slice ⊆ rule.covers.image Prod.snd)
 
 theorem checkEditObligations_iff
     (slice : RegisteredSlice Outcome Label)
@@ -212,7 +232,28 @@ theorem checkEditObligations_iff
     (target : History) :
     checkEditObligations slice rule target = true ↔
       rule.Obligations slice target := by
-  simp [checkEditObligations]
+  constructor
+  · intro checked
+    simp only [checkEditObligations, Bool.and_eq_true,
+      decide_eq_true_eq] at checked
+    rcases checked with
+      ⟨targetNonempty, targetLanguage_eq, satisfied_subset,
+        signatures_registered, promised_partition, covers_bounded,
+        stillRequired_covered⟩
+    exact {
+      targetNonempty := targetNonempty
+      targetLanguage_eq := targetLanguage_eq
+      satisfied_subset := satisfied_subset
+      signatures_registered := signatures_registered
+      promised_partition := promised_partition
+      covers_bounded := covers_bounded
+      stillRequired_covered := stillRequired_covered
+    }
+  · intro obligations
+    simp [checkEditObligations, obligations.targetNonempty,
+      obligations.targetLanguage_eq, obligations.satisfied_subset,
+      obligations.signatures_registered, obligations.promised_partition,
+      obligations.covers_bounded, obligations.stillRequired_covered]
 
 /-- The indexed edited contract \(\mathcal C_u\) carried by an authenticated
 rule, with the current durable receipt cut transported unchanged. -/
@@ -305,38 +346,36 @@ theorem editedContractAt_spec
   | none =>
       simp [lookup] at edited
   | some rule =>
-      simp only [lookup, Option.bind_some] at edited
       cases derive : deriveEdit source rule.resolved with
       | none =>
-          simp [derive] at edited
+          simp [lookup, derive] at edited
       | some derived =>
-          simp only [derive, Option.bind_some] at edited
-          split at edited
-          next accepted =>
-            have targetEq : derived = target := accepted.1
-            have obligations :
-                rule.Obligations slice target :=
-              (checkEditObligations_iff slice rule target).1 accepted.2
-            have contractEq :
-                contract = rule.targetContract slice durableReceiptCells :=
-              Option.some.inj edited.symm
-            refine ⟨rule, lookup, ?_, contractEq,
-              obligations.2.2.2.2.1, ?_, ?_⟩
-            · simpa [targetEq] using derive
-            · intro sourceOutcome sourceMember
-              have projected :
-                  sourceOutcome ∈ rule.covers.image Prod.snd :=
-                obligations.2.2.2.2.2.2 sourceMember
-              obtain ⟨pair, pairMember, pairSnd⟩ :=
-                Finset.mem_image.1 projected
-              refine ⟨pair.1, ?_, pairMember⟩
-              have bounded :=
-                obligations.2.2.2.2.2.1 pairMember
-              exact (Finset.mem_product.1 bounded).1
-            · intro sourceOutcome member
-              exact (Finset.mem_filter.1 member).2
-          next rejected =>
-            simp at edited
+          have accepted :
+              derived = target ∧
+                checkEditObligations slice rule target = true := by
+            by_contra rejected
+            simp [lookup, derive, rejected] at edited
+          have obligations :
+              rule.Obligations slice target :=
+            (checkEditObligations_iff slice rule target).1 accepted.2
+          have contractEq :
+              contract = rule.targetContract slice durableReceiptCells := by
+            simpa [lookup, derive, accepted] using edited.symm
+          refine ⟨rule, rfl, ?_, contractEq,
+            obligations.promised_partition, ?_, ?_⟩
+          · simpa [accepted.1] using derive
+          · intro sourceOutcome sourceMember
+            have projected :
+                sourceOutcome ∈ rule.covers.image Prod.snd :=
+              obligations.stillRequired_covered sourceMember
+            obtain ⟨pair, pairMember, pairSnd⟩ :=
+              Finset.mem_image.1 projected
+            refine ⟨pair.1, ?_, ?_⟩
+            have bounded := obligations.covers_bounded pairMember
+            exact (Finset.mem_product.1 bounded).1
+            simpa [AuthenticatedEditRule.Covers, pairSnd] using pairMember
+          · intro sourceOutcome member
+            exact (Finset.mem_filter.1 member).2
 
 end AuthenticatedEditContract
 

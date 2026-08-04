@@ -38,8 +38,8 @@ Internal identifiers may be renamed consistently because their spelling cannot a
 % 内部标识可以一致重命名，因为它们的具体拼写不能影响答案。
 For \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), \(\mathsf{Keep}_J\) gives the checker exactly the parts named by \(J\).
 % 对于 \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\)，\(\mathsf{Keep}_J\) 恰好向检查器提供 \(J\) 指明的部分。
-\Cref{app:evidence} gives one record pair for each part and a fifth pair for the correspondence between earlier authorizations and actions.
-% \Cref{app:evidence} 为每个部分给出一组记录对，并为先前授权与动作之间的对应关系给出第五组记录对。
+\Cref{app:record-information} gives one record pair for each part and a fifth pair for the correspondence between earlier authorizations and actions.
+% \Cref{app:record-information} 为每个部分给出一组记录对，并为先前授权与动作之间的对应关系给出第五组记录对。
 
 \paragraph{Required-outcome preservation}
 % 要求实现结果的保留
@@ -120,8 +120,8 @@ If any one of the four parts is omitted, two records become indistinguishable ev
 \mathsf{Exact}(\mathsf{Keep}_J)\Longleftrightarrow
 J=\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}.
 \]
-The four component-labeled rows in \cref{tab:projection-pairs} witness omission of \(\mathbf P,\mathbf I,\mathbf E,\mathbf C\).
-% \Cref{tab:projection-pairs} 中标有四个分量的记录对分别见证省略 \(\mathbf P,\mathbf I,\mathbf E,\mathbf C\) 的后果。
+The four component-labeled rows in \cref{tab:record-pairs} witness omission of \(\mathbf P,\mathbf I,\mathbf E,\mathbf C\).
+% \Cref{tab:record-pairs} 中标有四个分量的记录对分别见证省略 \(\mathbf P,\mathbf I,\mathbf E,\mathbf C\) 的后果。
 The \(\mathsf{Drop}_{ra}\) row shows that retaining authorization records and actions without recording which ones correspond is also insufficient.
 % \(\mathsf{Drop}_{ra}\) 行表明，仅保留授权记录与动作而不记录它们之间的对应关系同样不够。
 In particular, a checker is not exact if it forgets which calls or authorization records refer to the same action, or if it sees only the target workflow proposed by the caller.

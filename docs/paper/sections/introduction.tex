@@ -101,8 +101,8 @@ We construct an executable checker that returns either every safe way for the ed
 % 我们构造一个可执行检查器，它返回该编辑安全推进的全部方式，或者返回不存在安全方式的证明。
 For all six registered edits and later registered extensions, the checker accepts exactly when a safe runtime implementation exists.
 % 对全部六种已注册编辑及后续注册扩展，检查器当且仅当安全运行时实现存在时才接受。
-The runtime puts the result into effect atomically, preserves safety across repeated edits and recovery, and has the same Agent-visible behavior as an ideal atomic machine.
-% 运行时使判定结果原子生效，在重复编辑与恢复过程中保持安全，并与理想原子机器具有相同的 Agent 可见行为。
+The runtime puts the result into effect atomically, preserves safety across repeated edits and restarts, and has the same Agent-visible behavior as an ideal atomic machine.
+% 运行时使判定结果原子生效，在重复编辑与重新启动过程中保持安全，并与理想原子机器具有相同的 Agent 可见行为。
 
 \item \textbf{Mechanization and executable validation.}
 % \textbf{机械化与可执行验证。}

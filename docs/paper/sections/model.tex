@@ -26,7 +26,7 @@ The trusted runtime protects this record from Agent modification.
 % 基本对象
 We capitalize \emph{Agent} for the untrusted principal requesting execution edits.
 % 我们将请求执行编辑的不受信任主体称为 \emph{Agent}。
-An \emph{workflow call} \(x\) is one place where the workflow can invoke a protected tool.
+A \emph{workflow call} \(x\) is one place where the workflow can invoke a protected tool.
 % \emph{工作流调用} \(x\) 是工作流可以调用受控工具的一个位置。
 The function \(q_{\rm act}(x)=d\) records the external action referred to by that call.
 % 函数 \(q_{\rm act}(x)=d\) 记录该调用所指向的外部动作。
@@ -318,8 +318,8 @@ For tool request \(m\), it computes canonical request \(m^\circ=\mathsf{canon}_\
 % 对于工具请求 \(m\)，它计算规范请求 \(m^\circ=\mathsf{canon}_\kappa(m)\)，复用已认证用于 \(m^\circ\) 的受控动作或分配新标识，并把 \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{origin})\) 签入认证注册表。
 The resulting finite model \(\mathcal R\) contains the workflow's protected calls and remains unchanged while the checker evaluates that execution record.
 % 由此得到的有限模型 \(\mathcal R\) 包含工作流的受控调用，并在检查器评估该执行记录期间保持不变。
-Unmatched calls fail closed.
-% 不匹配的调用以关闭方式失败。
+The runtime rejects any call that does not match the registered model.
+% 运行时拒绝任何不匹配已注册模型的调用。
 The platform supplies workflow \(\mathcal W\), finite model \(\mathcal R\), edit rules, request-normalization rules, policy, checkpoints, authorization log, and queued requests in one protected execution record.
 % 平台在一份受保护的执行记录中提供工作流 \(\mathcal W\)、有限模型 \(\mathcal R\)、编辑规则、请求规范化规则、策略、检查点、授权日志和排队请求。
 From these inputs and an Agent request naming an edit and its objects, the controller derives the edited workflow, required outcomes, the authorization decision for each call, the safe execution set or rejection proof, and the rule entry and authorization token for each remaining call.
@@ -359,8 +359,8 @@ The last requirement rejects the example in \cref{sec:lifecycle}, where separate
 % 最后一项要求拒绝 \cref{sec:lifecycle} 中的示例：分别安全的结果无法在同一组运行时规则下持续保持安全。
 \Cref{def:safe-implementation} states these requirements over executions labeled by outcome.
 % \Cref{def:safe-implementation} 在按结果标记的执行上表述这些要求。
-\Cref{lem:most-permissive} then proves that the checker computes the largest safe execution set.
-% \Cref{lem:most-permissive} 随后证明检查器计算最大的安全执行集合。
+\Cref{lem:largest-safe-family} then proves that the checker computes the largest safe execution set.
+% \Cref{lem:largest-safe-family} 随后证明检查器计算最大的安全执行集合。
 
 \section{Exact Checking of Execution Edits}
 % 执行编辑的精确检查
@@ -416,8 +416,8 @@ Writing \(X_{\rm ctx}\) for its workflow calls and \(X_{\rm added(u)}\) for work
 \]
 The edit rule and surrounding workflow induce \(\mathsf{pr}^u_r:O_{\sem{T'}}\rightharpoonup O_{\mathcal D_r}\).
 % 编辑规则和周围工作流诱导 \(\mathsf{pr}^u_r:O_{\sem{T'}}\rightharpoonup O_{\mathcal D_r}\)。
-For choice, this projection is defined only in the arm containing \(r\), while product and sequence select the corresponding indexed component.
-% 对于选择，该投影仅在包含 \(r\) 的分支上有定义，而乘积和顺序选择相应的带索引分量。
+For choice, this map is defined only in the arm containing \(r\), while product and sequence select the corresponding indexed component.
+% 对于选择，该映射仅在包含 \(r\) 的分支上有定义，而乘积和顺序选择相应的带索引分量。
 Define
 % 定义
 \[
