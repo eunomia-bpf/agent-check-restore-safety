@@ -97,8 +97,8 @@ If these checks pass, one transaction closes the old version, activates the new 
 % 若这些检查通过，一个事务会关闭旧版本、激活新自动机、替换每个当前规则入口与授权令牌，然后才向 Agent 返回成功结果。
 A changed state makes the candidate stale and forces a new check.
 % 状态一旦改变，候选结果即过期，必须重新检查。
-The complete state updates, retries, request release, completion updates, and restart rules appear in \cref{app:runtime-transitions,tab:app-event-matrix}.
-% 完整状态更新、重试、请求发出、完成更新与重启规则见 \cref{app:runtime-transitions,tab:app-event-matrix}。
+The complete state updates, retries, request sending, completion updates, and restart rules appear in \cref{app:runtime-transitions,tab:app-event-matrix}.
+% 完整状态更新、重试、请求发送、完成更新与重启规则见 \cref{app:runtime-transitions,tab:app-event-matrix}。
 
 \begin{lemma}[Edit--call serialization]
 % 编辑--调用串行化

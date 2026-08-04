@@ -46,7 +46,7 @@ Agent runtimes can Checkpoint an execution, Fork it, Restore a checkpoint, or Me
 % Agent 运行时可以 Checkpoint 一次执行、Fork 它、Restore 一个检查点或 Merge 多个分支，而无需重新开始任务。
 We call these operations \emph{execution edits} because they change what the Agent will do next.
 % 我们把这些操作称为\emph{执行编辑}，因为它们会改变 Agent 接下来做什么。
-An edit changes future work without undoing a tool action that has already been authorized or released.
+An edit changes future work without undoing a tool action that has already been authorized or sent.
 % 编辑会改变未来的工作，但不会撤销已经获得授权或已经发出的工具动作。
 An unsafe edit can therefore authorize the same action twice, discard a result the task still requires, or conflict with a call that began before the edit.
 % 因此，不安全的编辑可能两次授权同一个动作、丢弃任务仍然要求的结果，或与编辑前已经开始的调用冲突。

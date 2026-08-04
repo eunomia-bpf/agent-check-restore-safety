@@ -2,8 +2,8 @@
 % 模型与安全目标
 \label{sec:model}
 
-The model leaves the Agent's internal reasoning unrestricted and places every tool call under trusted runtime control.
-% 该模型不限制 Agent 的内部推理，并把每次工具调用置于可信运行时的控制之下。
+The model leaves the Agent's internal reasoning unrestricted and requires every tool call to pass through the trusted runtime.
+% 该模型不限制 Agent 的内部推理，并要求每次工具调用都经过可信运行时。
 Each call identifies its registered place in the workflow, presents an authorization token, and submits a concrete tool request.
 % 每次调用都要标明其在工作流中的已注册位置、提供授权令牌，并提交具体工具请求。
 The runtime either creates a new authorization, reuses an authorization already recorded in the log, or rejects the call.
@@ -49,8 +49,8 @@ A \emph{workflow contract} \(\mathcal C=(O,\{p_o\}_{o\in O})\) assigns one pomse
 % \emph{工作流契约} \(\mathcal C=(O,\{p_o\}_{o\in O})\) 为有限非空结果集 \(O\) 中的每个成员分配一个偏序事件集。
 For the laptop, the contract has results \(o_L,o_R\), and \(p_{o_L}\) orders the \(L\)-payment call before the \(L\)-shipment call.
 % 对于笔记本电脑示例，契约包含结果 \(o_L,o_R\)，且 \(p_{o_L}\) 把向 \(L\) 付款的调用排在向 \(L\) 发货的调用之前。
-Each index \(o\) names one allowed completion result.
-% 每个索引 \(o\) 命名一种允许的完成结果。
+Each index \(o\) names one allowed result.
+% 每个索引 \(o\) 命名一种允许的结果。
 Two results remain distinct even if the calls still required for them later become identical.
 % 即使两个结果后来仍需执行的调用变得相同，它们仍保持不同。
 Write \(X_{\mathcal C}=\bigcup_{o\in O}X_{p_o}\) and \(\mathsf{CL}(\mathcal C)=\bigcup_{o\in O}\Lin(p_o)\).
@@ -227,8 +227,8 @@ For each current workflow call \(x\), \(\beta(x)=(j,\eta)\) records the rule ent
 
 \(\mathsf{Checkpoint}(k,b)\) creates a checkpoint for a current branch \(b\) under a fresh checkpoint ID \(k\).
 % \(\mathsf{Checkpoint}(k,b)\) 使用新的检查点标识 \(k\) 为当前分支 \(b\) 创建检查点。
-A trusted transaction stores a protected copy of branch \(b\)'s remaining contract \(\mathcal C_b\), ordered progress record \(\chi_b\), relevant calls, and signed result requirements.
-% 可信事务存储分支 \(b\) 的剩余契约 \(\mathcal C_b\)、有序进展记录 \(\chi_b\)、相关调用以及经签名的结果要求，并保护这些内容不被修改。
+A trusted transaction stores a signed copy of branch \(b\)'s remaining contract \(\mathcal C_b\), ordered progress record \(\chi_b\), relevant calls, and result requirements.
+% 可信事务存储分支 \(b\) 的剩余契约 \(\mathcal C_b\)、有序进展记录 \(\chi_b\)、相关调用和结果要求的签名副本。
 The checkpoint check requires \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\), and the transaction advances \(\mathsf{ver}\) without changing the current workflow, authorization records, \(\beta\), the active rule version, or the authorization sequence.
 % 检查点检查要求 \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\)，且该事务推进 \(\mathsf{ver}\) 而不改变当前工作流、授权记录、\(\beta\)、当前规则版本或授权序列。
 This internal transition changes \(H\), so a rule update computed from the earlier record will fail its final check.
@@ -324,8 +324,8 @@ The trusted runtime registers tool calls, actions, and authorization tokens, and
 % 可信运行时注册工具调用、动作与授权令牌，并推导和检查每次编辑。
 The trusted runtime checks the answer again before atomically changing the rules in force.
 % 可信运行时在原子改变当前规则之前再次检查判定结果。
-The policy authority, trusted runtime, protected registries and authorization log, proof verifier, and transaction mechanism form the trusted computing base (TCB).
-% 策略权限方、可信运行时、受保护的注册表与授权日志、证明验证器和事务机制共同构成可信计算基（TCB）。
+The policy authority, trusted runtime, registries, authorization log, proof verifier, and transaction mechanism form the trusted computing base (TCB).
+% 策略权限方、可信运行时、注册表、授权日志、证明验证器和事务机制共同构成可信计算基（TCB）。
 Within one policy domain, the TCB checks every tool call and commits every state change and edit result returned to the Agent through a linearizable transaction.
 % 在一个策略域内，TCB 检查每次工具调用，并通过线性化事务提交每项状态变更以及返回给 Agent 的编辑结果。
 After an unexpected stop and restart, each transaction appears entirely before or entirely after its linearization point.

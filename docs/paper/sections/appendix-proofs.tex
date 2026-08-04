@@ -655,10 +655,10 @@ the current rule versions and dependent digests differ. &
 \label{def:registration-refinement}
 A typed Agent workflow \(\mathcal W\) is eligible for registration when it is a finite-state result-labeled LTS whose complete paths end at result terminals and yield finitely many tool-call traces after internal \(\tau\)-steps are erased.
 % 当类型化 Agent 工作流 \(\mathcal W\) 是带结果标签的有限状态 LTS、其完整路径终止于结果终点，且擦除内部 \(\tau\) 步后只产生有限条工具调用轨迹时，该工作流可以注册。
-\(\mathsf{CheckReg}\) rejects any reachable strongly connected component that can still reach an result and contains a tool-call edge within the component, permits erased \(\tau\)-cycles, and then enumerates the resulting finite traces.
+\(\mathsf{CheckReg}\) rejects any reachable strongly connected component that can still reach a result and contains a tool-call edge within the component, permits erased \(\tau\)-cycles, and then enumerates the resulting finite traces.
 % \(\mathsf{CheckReg}\) 拒绝任何可达、仍可到达结果且内部包含工具调用边的强连通分量，允许被擦除的 \(\tau\) 环，随后枚举由此得到的有限轨迹。
-\(\mathcal R\) stores a candidate map \(\lambda\), and \(\mathsf{BRuns}(\mathcal R)\) is the finite result-indexed language obtained by linearizing its registered root pomsets and labeling every workflow call by its protected \Use.
-% \(\mathcal R\) 存储候选映射 \(\lambda\)，而 \(\mathsf{BRuns}(\mathcal R)\) 是通过线性化其已注册根偏序事件集，并以受控 \Use 标记每个工作流调用而得到的有限结果索引语言。
+\(\mathcal R\) stores a candidate map \(\lambda\), and \(\mathsf{BRuns}(\mathcal R)\) is the finite language obtained by linearizing its registered root pomsets, retaining each result label, and labeling every workflow call by its checked \Use.
+% \(\mathcal R\) 存储候选映射 \(\lambda\)，而 \(\mathsf{BRuns}(\mathcal R)\) 是通过线性化其已注册根偏序事件集、保留每个结果标签，并以经过检查的 \Use 标记每个工作流调用而得到的有限语言。
 \(\mathcal W\sqsubseteq_\lambda\mathcal R\) means that \(\lambda\) gives a bijection from these traces to \(\mathsf{BRuns}(\mathcal R)\) that preserves results, call order, which calls refer to which tool actions, and the signed policy authority for each source region.
 % \(\mathcal W\sqsubseteq_\lambda\mathcal R\) 表示 \(\lambda\) 给出从这些轨迹到 \(\mathsf{BRuns}(\mathcal R)\) 的双射，并保持结果、调用次序、哪些调用指向哪些工具动作，以及每个来源区域的签名策略权限方。
 For source executions \(e,e'\), write \(e\equiv_\partial e'\) when erasing internal \(\tau\)-steps yields the same result-labeled tool-call trace.
@@ -698,7 +698,7 @@ The correspondence preserves result identity, causal order, canonical requests, 
 \begin{proof}
 The SCC check terminates because the state graph is finite.
 % 强连通分量检查因状态图有限而终止。
-A reachable SCC that can still reach an result and contains a tool-call edge can be repeated before that result, producing projected words of unbounded length.
+A reachable SCC that can still reach a result and contains a tool-call edge can be repeated before that result, producing projected words of unbounded length.
 % 一个可达、仍可到达结果且包含工具调用边的强连通分量可以在该结果之前被反复遍历，从而产生长度无界的投影词。
 Conversely, if no such SCC contains a tool-call edge, contracting the SCCs yields a DAG with a finite, enumerable projected language.
 % 反之，若此类强连通分量都不含工具调用边，则收缩这些分量会得到具有有限且可枚举投影语言的 DAG。
@@ -812,8 +812,8 @@ Let \(C,X\) be singleton contracts with workflow calls \(c,x\), let \(q_{\rm act
 % 令 \(C,X\) 为分别具有工作流调用 \(c,x\) 的单元素契约，令 \(q_{\rm act}(c)=q_{\rm act}(x)=d\)，并以 \(a\) 标记 \(d\)。
 From the safe \(\mathbf 1\) root, a checked Fork update puts \(b_L{:}C\oplus_g^{\mathsf{open}}b_R{:}X\) into effect.
 % 从安全的 \(\mathbf 1\) 根出发，一次经检查的 Fork 更新使 \(b_L{:}C\oplus_g^{\mathsf{open}}b_R{:}X\) 生效。
-Create a checkpoint for \(b_R\), then use \(c\) to complete the left arm, create authorization record \(p\), and queue its protected request.
-% 为 \(b_R\) 创建检查点，再使用 \(c\) 完成左侧分支、创建授权记录 \(p\)，并将其受控请求加入队列。
+Create a checkpoint for \(b_R\), then use \(c\) to complete the left arm, create authorization record \(p\), and queue its canonical request.
+% 为 \(b_R\) 创建检查点，再使用 \(c\) 完成左侧分支、创建授权记录 \(p\)，并将其规范请求加入队列。
 At the resulting \(V_{\mathbf E}^0\), check \(u_{\mathbf E}=\mathsf{RestoreReplace}(b_L,k,\sigma_{\mathbf E})\) to obtain \(Y_0\).
 % 在所得 \(V_{\mathbf E}^0\) 处，检查 \(u_{\mathbf E}=\mathsf{RestoreReplace}(b_L,k,\sigma_{\mathbf E})\) 并得到 \(Y_0\)。
 Its clone of \(x\) reuses \(d\), so the update is safe under \(\mathcal A=\Pref\{a\}\).
@@ -1146,7 +1146,7 @@ Return the failed derivation or rejection proof; no runtime-state change. &
 \((c,r)\) &
 All clauses unchanged; \(\gamma\) ties the answer to the checked execution record.\\
 \(\mathsf{Checkpoint}(k,b)\) &
-Record the current continuation and progress in a protected checkpoint; advance \(\mathsf{ver}\). &
+Record the current continuation and progress in a signed checkpoint; advance \(\mathsf{ver}\). &
 \((c,r)\) &
 \(A_1\): immutable well-typed extension.
 \(A_2,A_4,A_5\): unchanged.

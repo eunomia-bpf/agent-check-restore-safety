@@ -118,7 +118,7 @@ However, executing the shared \(x\) call first keeps the \(X\otimes Y\) result p
 % 然而，若先执行共享的 \(x\) 调用，\(X\otimes Y\) 结果仍然可能，但只剩下被禁止的后续轨迹 \(xy\)。
 Allowing \(x\) is therefore unsafe, while forbidding \(x\) destroys the \(X\otimes Z\) result.
 % 因而，允许 \(x\) 并不安全，而禁止 \(x\) 又会破坏 \(X\otimes Z\) 结果。
-The exact verdict is \(\mathsf{Reject}\), even though an result-by-result check would accept.
+The exact verdict is \(\mathsf{Reject}\), even though a result-by-result check would accept.
 % 精确判定为\emph{拒绝}，尽管逐结果检查会接受。
 \Cref{sec:exact-check} detects this failure by repeatedly removing executions that leave some required result with no safe completion.
 % \Cref{sec:exact-check} 通过反复移除会使某个要求实现的结果失去安全完成方式的执行来检测这一失败。
