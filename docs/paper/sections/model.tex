@@ -200,6 +200,12 @@ Write \(\mathcal C_k=\mathsf{contract}(K(k))\) for the remaining contract stored
 % \(\Sigma_\zeta\) 是不可变且带版本的类型化编辑规则注册表。
 \(\rho\) records, for each workflow call, its action, authorization token, source region, scope, canonical tool request, and request digest.
 % \(\rho\) 为每个工作流调用记录其动作、授权令牌、来源区域、作用域、规范工具请求和请求摘要。
+Write \(q^{\rho}_{\rm act}(x)\) for the action field of \(\rho(x)\).
+% 将 \(\rho(x)\) 的动作字段记为 \(q^{\rho}_{\rm act}(x)\)。
+For \(d\in\operatorname{im}(q^{\rho}_{\rm act})\), let \(\mathsf{inv}_\rho(d)\) be the common canonical-request field of calls \(x\) with \(q^{\rho}_{\rm act}(x)=d\).
+% 对于 \(d\in\operatorname{im}(q^{\rho}_{\rm act})\)，令 \(\mathsf{inv}_\rho(d)\) 为满足 \(q^{\rho}_{\rm act}(x)=d\) 的调用 \(x\) 所共有的规范请求字段。
+Independently, \(\ell(d)\in\mathcal U\) is the policy label certified for protected action \(d\) by the registered call model.
+% 与 \(\rho\) 无关，\(\ell(d)\in\mathcal U\) 是已注册调用模型为受控动作 \(d\) 认证的策略标签。
 For each current workflow call \(x\), \(\beta(x)=(j,\eta)\) records the rule entry \(j\) and version \(\eta\) used to check it.
 % 对于每个当前工作流调用 \(x\)，\(\beta(x)=(j,\eta)\) 记录用于检查它的规则入口 \(j\) 和版本 \(\eta\)。
 \(\chi\) records processed workflow calls in order, including whether each created or reused an authorization record, and \(\mathsf{ver}\) is the state version.

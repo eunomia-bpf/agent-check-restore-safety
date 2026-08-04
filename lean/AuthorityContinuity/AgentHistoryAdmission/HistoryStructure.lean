@@ -33,6 +33,11 @@ structure RequestId where
   value : Nat
 deriving DecidableEq, Repr
 
+/-- Stable identifier of an authenticated execution-edit rule. -/
+structure EditRuleId where
+  value : Nat
+deriving DecidableEq, Repr
+
 inductive NameSpace where
   | branch
   | group
@@ -156,6 +161,45 @@ def Frontier.complete : Frontier → Bool
   | .joinBarrier left right
   | .sequence left right => left.complete && right.complete
 
+/-- Boolean subsequence test used only to enumerate finite parallel
+linearizations. -/
+def isSubsequence : List Occurrence → List Occurrence → Bool
+  | [], _ => true
+  | _ :: _, [] => false
+  | source@(head :: tail), candidateHead :: candidateTail =>
+      if head = candidateHead then
+        isSubsequence tail candidateTail
+      else
+        isSubsequence source candidateTail
+termination_by _ candidate => candidate.length
+
+/-- All order-preserving interleavings of two finite words.  Registered
+well-formedness gives disjoint occurrence identities across parallel operands;
+the definition nevertheless remains total for arbitrary inputs. -/
+def shuffles (left right : List Occurrence) : Finset (List Occurrence) :=
+  (left ++ right).permutations.toFinset.filter fun word =>
+    isSubsequence left word && isSubsequence right word
+
+/-- Finite complete raw-call language denoted by a structured frontier.
+Choice takes a union, parallel and join take all interleavings, and sequence
+concatenates the two complete languages. -/
+def Frontier.rawLanguage : Frontier → Finset (List Occurrence)
+  | .leaf branch => {branch.residual}
+  | .choiceOpen _ left right =>
+      left.rawLanguage ∪ right.rawLanguage
+  | .choiceSelected _ .left left _ =>
+      left.rawLanguage
+  | .choiceSelected _ .right _ right =>
+      right.rawLanguage
+  | .parallel _ left right
+  | .joinBarrier left right =>
+      left.rawLanguage.biUnion fun leftWord =>
+        right.rawLanguage.biUnion fun rightWord =>
+          shuffles leftWord rightWord
+  | .sequence left right =>
+      left.rawLanguage.biUnion fun leftWord =>
+        right.rawLanguage.image fun rightWord => leftWord ++ rightWord
+
 /-! ## Checkpoints and append-only resolved progress -/
 
 structure CheckpointId where
@@ -229,6 +273,103 @@ inductive EditRequest where
   | mergeJoin (request : RequestId) (target : GroupName)
       (joinSuffix : List Occurrence)
 deriving DecidableEq, Repr
+
+/-- The six public edit kinds.  Unlike `EditRequest`, this type contains no
+registered workflow suffix or retirement-authorization bit. -/
+inductive EditKind where
+  | forkChoice
+  | forkParallel
+  | restoreReplace
+  | restoreLive
+  | mergeSelect
+  | mergeJoin
+deriving DecidableEq, Repr
+
+/-- Agent-facing edit request.  It names only the operation, live objects, and
+an authenticated rule.  All workflow additions and retirement authority are
+resolved from that rule before the structural editor runs. -/
+inductive RegisteredEditRequest where
+  | forkChoice (request : RequestId) (target : BranchName)
+      (rule : EditRuleId)
+  | forkParallel (request : RequestId) (target : BranchName)
+      (rule : EditRuleId)
+  | restoreReplace (request : RequestId) (target : BranchName)
+      (checkpoint : CheckpointId) (rule : EditRuleId)
+  | restoreLive (request : RequestId) (target : BranchName)
+      (checkpoint : CheckpointId) (rule : EditRuleId)
+  | mergeSelect (request : RequestId) (target : GroupName)
+      (winner : Side) (rule : EditRuleId)
+  | mergeJoin (request : RequestId) (target : GroupName)
+      (rule : EditRuleId)
+deriving DecidableEq, Repr
+
+def EditRequest.requestId : EditRequest → RequestId
+  | .forkChoice request _ _ _ => request
+  | .forkParallel request _ _ _ => request
+  | .restoreReplace request _ _ _ => request
+  | .restoreLive request _ _ => request
+  | .mergeSelect request _ _ _ _ => request
+  | .mergeJoin request _ _ => request
+
+def EditRequest.kind : EditRequest → EditKind
+  | .forkChoice .. => .forkChoice
+  | .forkParallel .. => .forkParallel
+  | .restoreReplace .. => .restoreReplace
+  | .restoreLive .. => .restoreLive
+  | .mergeSelect .. => .mergeSelect
+  | .mergeJoin .. => .mergeJoin
+
+def RegisteredEditRequest.requestId : RegisteredEditRequest → RequestId
+  | .forkChoice request _ _ => request
+  | .forkParallel request _ _ => request
+  | .restoreReplace request _ _ _ => request
+  | .restoreLive request _ _ _ => request
+  | .mergeSelect request _ _ _ => request
+  | .mergeJoin request _ _ => request
+
+def RegisteredEditRequest.ruleId : RegisteredEditRequest → EditRuleId
+  | .forkChoice _ _ rule
+  | .forkParallel _ _ rule
+  | .restoreReplace _ _ _ rule
+  | .restoreLive _ _ _ rule
+  | .mergeSelect _ _ _ rule
+  | .mergeJoin _ _ rule => rule
+
+def RegisteredEditRequest.kind : RegisteredEditRequest → EditKind
+  | .forkChoice .. => .forkChoice
+  | .forkParallel .. => .forkParallel
+  | .restoreReplace .. => .restoreReplace
+  | .restoreLive .. => .restoreLive
+  | .mergeSelect .. => .mergeSelect
+  | .mergeJoin .. => .mergeJoin
+
+/-- A public request matches an authenticated internal rule result exactly
+when all caller-visible identifiers agree.  The suffixes are intentionally
+ignored because they come from the rule.  Destructive rows require the
+registry's authorization bit to be true. -/
+def RegisteredEditRequest.matchesResolved :
+    RegisteredEditRequest → EditRequest → Bool
+  | .forkChoice request target _, .forkChoice request' target' _ _ =>
+      decide (request = request' ∧ target = target')
+  | .forkParallel request target _, .forkParallel request' target' _ _ =>
+      decide (request = request' ∧ target = target')
+  | .restoreReplace request target checkpoint _,
+      .restoreReplace request' target' checkpoint' retirementAuthorized =>
+      decide
+        (request = request' ∧ target = target' ∧ checkpoint = checkpoint') &&
+        retirementAuthorized
+  | .restoreLive request target checkpoint _,
+      .restoreLive request' target' checkpoint' =>
+      decide
+        (request = request' ∧ target = target' ∧ checkpoint = checkpoint')
+  | .mergeSelect request target winner _,
+      .mergeSelect request' target' winner' _ retirementAuthorized =>
+      decide
+        (request = request' ∧ target = target' ∧ winner = winner') &&
+        retirementAuthorized
+  | .mergeJoin request target _, .mergeJoin request' target' _ =>
+      decide (request = request' ∧ target = target')
+  | _, _ => false
 
 def rootBranch : Frontier → BranchName → Option Branch
   | .leaf branch, target =>

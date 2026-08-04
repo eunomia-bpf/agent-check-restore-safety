@@ -45,7 +45,7 @@ For \(d_i=q^{\rho_u}_{\rm act}(x_i)\),
 \(\mathsf{auth}\) keeps the authorization label of each new authorization and contributes nothing for reuse.
 % \(\mathsf{auth}\) 保留每次新授权的授权标签，而授权复用不贡献标签。
 \[
- \mathsf{auth}(\Fresh(x,d))=\ell_{\rho_u}(d),\qquad
+ \mathsf{auth}(\Fresh(x,d))=\ell(d),\qquad
  \mathsf{auth}(\Alias(x,d))=\epsilon .
 \]
 For annotated \(z\), \(\mathsf{raw}(z)\) drops the new/reuse annotation and action while preserving the ordered workflow-call IDs.
@@ -333,8 +333,8 @@ Thus every accepted prefix retains a safe completion for every outcome that rema
 
 The checker returns \(\mathsf{Invalid}\) when derivation fails, \(\mathsf{Reject}\) with the ordered reasons for removing every execution when the fixed point is empty, and \(\mathsf{Accepted}\) with the largest safe execution set otherwise.
 % 当推导失败时，检查器返回 \(\mathsf{Invalid}\)；当不动点为空时，返回 \(\mathsf{Reject}\) 以及删除每段执行的有序理由；否则返回携带最大安全执行集合的 \(\mathsf{Accepted}\)。
-Write \(\mathsf{Compile}(\Theta)\) for this deterministic output.
-% 将这一确定性输出记为 \(\mathsf{Compile}(\Theta)\)。
+Write \(\mathsf{Check}(\Theta)\) for this deterministic output.
+% 将这一确定性输出记为 \(\mathsf{Check}(\Theta)\)。
 Each answer includes a digest of the execution record that was checked.
 % 每个判定结果都包含所检查执行记录的摘要。
 \Cref{app:certificate-payloads} gives the exact returned data and verification rules.

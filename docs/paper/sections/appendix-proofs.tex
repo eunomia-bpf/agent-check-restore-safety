@@ -300,11 +300,17 @@ The symbolic LTS uses domain-separated injective authenticated digests \(\mathsf
 For \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), define
 % 对于 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，定义
 \[
-\begin{aligned}
 \gamma(\Theta)
- &=\mathsf{Digest}_{\rm record}(
+ =\mathsf{Digest}_{\rm record}(
    \mathsf{enc}(\mathsf{request},\omega,\zeta,\kappa,
-   H,\Delta,\mathsf{out},\mathcal A,u)),\\
+   H,\Delta,\mathsf{out},\mathcal A,u)).
+\]
+When \(\mathsf{Derive}(\Theta)\) is defined, also define
+% 当 \(\mathsf{Derive}(\Theta)\) 有定义时，另定义
+\[
+\begin{aligned}
+\mathsf{aut}_Z
+ &=\mathsf{Can}(W^\dagger_{H,u},B^\dagger_{H,u}),\\
 H_{\mathsf{aut}}
  &=\mathsf{Digest}_{\rm rules}(
    \mathsf{enc}(\mathsf{aut}_Z,\widehat B^\dagger_{H,u})).
@@ -508,8 +514,8 @@ Let \(\mathcal Q_{\rm sec}\) pair every valid checked record \(V=\mathsf{Sec}(S;
 % 令 \(\mathcal Q_{\rm sec}\) 将每条有效的经检查记录 \(V=\mathsf{Sec}(S;c,r)\) 与一个良好定型的请求 \(q::=\mathsf{Decide}(u)\mid\mathsf{TryUpdate}(u,Y)\) 配对。
 For such a record, let \(\Theta_V(u)=\Theta_S(u)\) and \(\mathsf{Ready}_V(u,Y)=\mathsf{Ready}(S,u,Y)\).
 % 对于这样的记录，令 \(\Theta_V(u)=\Theta_S(u)\) 且 \(\mathsf{Ready}_V(u,Y)=\mathsf{Ready}(S,u,Y)\)。
-For \(\mathsf{Decide}\), \(\mathsf{Ans}\) returns \(\mathsf{Compile}(\Theta_V(u))\).
-% 对于 \(\mathsf{Decide}\)，\(\mathsf{Ans}\) 返回 \(\mathsf{Compile}(\Theta_V(u))\)。
+For \(\mathsf{Decide}\), \(\mathsf{Ans}\) returns \(\mathsf{Check}(\Theta_V(u))\).
+% 对于 \(\mathsf{Decide}\)，\(\mathsf{Ans}\) 返回 \(\mathsf{Check}(\Theta_V(u))\)。
 For \(\mathsf{TryUpdate}\), it returns the updated runtime state exactly when \(\mathsf{Ready}_V(u,Y)\) holds, and returns \(\mathsf{NoCommit}\) otherwise.
 % 对于 \(\mathsf{TryUpdate}\)，它恰在 \(\mathsf{Ready}_V(u,Y)\) 成立时返回更新后的运行时状态，否则返回 \(\mathsf{NoCommit}\)。
 
@@ -608,8 +614,9 @@ Omitted & Record pair & Correct answers\\
 \((X\otimes Y_k)\oplus Y\): one \Fresh, accept;
 two \Fresh reject \(aa\).\\
 \(\mathbf E\) &
-\(q_{\mathbf E}=\mathsf{TryUpdate}(\mathsf{RestoreReplace}(b_L,k,\sigma_{\mathbf E}),Y_0)\);
-\(Y_0\) is compiled at \(V^0\) after safe empty-root/ForkChoice/Save/\Fresh;
+\(u_{\mathbf E}=\mathsf{RestoreReplace}(b_L,k,\sigma_{\mathbf E})\),
+\(q_{\mathbf E}=\mathsf{TryUpdate}(u_{\mathbf E},Y_0)\);
+\(Y_0\) is checked at \(V^0\) after safe empty-root/ForkChoice/Save/\Fresh;
 \(V^0\xrightarrow{\Dispatch(d)}V^1\), changing only whether a queued request was released. &
 \(V^0\): rules take effect;
 \(V^1\): \(\mathsf{NoCommit}\) because the checked record changed.\\
@@ -647,6 +654,8 @@ A boundary-finite typed Agent workflow \(\mathcal W\) is a finite-state outcome-
 % \(\mathcal R\) 存储候选映射 \(\lambda\)，而 \(\mathsf{BRuns}(\mathcal R)\) 是通过线性化其已注册根偏序事件集，并以受控 \Use 标记每个工作流调用而得到的有限结果索引语言。
 \(\mathcal W\sqsubseteq_\lambda\mathcal R\) means that \(\lambda\) gives a bijection from these traces to \(\mathsf{BRuns}(\mathcal R)\) that preserves outcomes, call order, which calls refer to which protected actions, and the signed policy authority for each source region.
 % \(\mathcal W\sqsubseteq_\lambda\mathcal R\) 表示 \(\lambda\) 给出从这些轨迹到 \(\mathsf{BRuns}(\mathcal R)\) 的双射，并保持结果、调用次序、哪些调用指向哪些受控动作，以及每个来源区域的签名策略权限方。
+For source executions \(e,e'\), write \(e\equiv_\partial e'\) when erasing internal \(\tau\)-steps yields the same outcome-labeled protected-call trace.
+% 对于源执行 \(e,e'\)，若擦除内部 \(\tau\) 步后得到相同的带结果标签受控调用轨迹，则记 \(e\equiv_\partial e'\)。
 The check requires every protected action to have one certified canonical request and requires every reuse of that action to retain the same request.
 % 该检查要求每个受控动作具有唯一经认证的规范请求，并要求每次复用该动作时保持同一个请求。
 It also requires \(\lambda\) to be total, unique, and free of unregistered instructions, while preserving prior authorizations and every required outcome.
@@ -930,18 +939,21 @@ The runtime implements this machine without enumerating the full completion set 
 For \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), let \(C_{\rm der}(\Theta)\) be the canonical failed-derivation transcript.
 % 对于 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，检查器恰好返回下列一种结果：
 \[
-\mathsf{Compile}(\Theta)=
+\mathsf{Check}(\Theta)=
 \begin{cases}
 \mathsf{Invalid}([\gamma(\Theta),C_{\rm der}(\Theta)]_{\cong}),
  &\mathsf{Derive}(\Theta)\text{ undefined};\\
 \mathsf{Reject}([\gamma(\Theta),C_{\rm fp}]_{\cong}),
  &\mathsf{Derive}(\Theta)\text{ defined},\
-  \widehat B^\dagger_{H,u}=\varnothing;\\
-\mathsf{Accepted}(\delta,W^\dagger_{H,u},
-  \widehat B^\dagger_{H,u},Z),
- &\mathsf{Derive}(\Theta)\text{ defined},\
-  \widehat B^\dagger_{H,u}\ne\varnothing.
+  \widehat B^\dagger_{H,u}=\varnothing.
 \end{cases}
+\]
+When \(\mathsf{Derive}(\Theta)\) is defined and
+\(\widehat B^\dagger_{H,u}\ne\varnothing\),
+\[
+\mathsf{Check}(\Theta)=
+\mathsf{Accepted}(\delta,W^\dagger_{H,u},
+ \widehat B^\dagger_{H,u},Z).
 \]
 where
 % 其中
@@ -1062,6 +1074,13 @@ The rules may take effect only if
 % 当 \(Y=\mathsf{Accepted}(\delta,W^\dagger,\widehat B^\dagger,Z)\)、当前推导为 \(\delta\) 且 \cref{eq:install-premise} 的全部状态相关前提成立时，\(\mathsf{Ready}(S,u,Y)\) 成立。
 The committing domain transaction makes \((\kappa_u,H_u,\mathcal A_u)\) current, closes \(\eta^-\), activates \(\eta^+\), assigns a rule entry to every target workflow call, starts the canonical automaton at \(q^0\), and stores the checked result.
 % 提交的域事务使 \((\kappa_u,H_u,\mathcal A_u)\) 成为当前值、关闭 \(\eta^-\)、激活 \(\eta^+\)、为每个目标工作流调用分配规则入口、在 \(q^0\) 处启动规范自动机，并保存经检查的结果。
+For this successor, write
+\[
+c_\delta^+=
+(\mathsf{state}(\Theta_S(u)),H_u,u,
+ W^\dagger_{H,u},\widehat B^\dagger_{H,u},Z).
+\]
+% 对这一后继，使用上述 \(c_\delta^+\) 记号。
 Only after activation does it expose \(\mathcal H_u^+\) and emit \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\).
 % 只有激活之后，它才暴露 \(\mathcal H_u^+\) 并发出 \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\)。
 Old authorization data then fails, while \Retry still follows its archived authorization-record link.

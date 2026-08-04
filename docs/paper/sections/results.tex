@@ -25,9 +25,9 @@ The atomic rule update activates this automaton at \(\eta^+\), closes \(\eta^-\)
 \paragraph{What the checker must know}
 % 检查器必须知道什么
 Write \(V=\mathsf{Sec}(S;c,r)
-=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) for four parts of the checked record: (1) the workflow and its required outcomes, (2) which calls refer to the same action, (3) earlier authorizations and call progress, and (4) which rules govern a call that overlaps the atomic rule update.
+=({\mathbf P},{\mathbf I},{\mathbf E},{\mathbf C})\) for four parts of the checked record: (1) the workflow and its required outcomes, (2) which calls refer to the same action, (3) earlier authorizations and call progress, and (4) which rules govern a call that overlaps the atomic rule update.
 % 令 \(V=\mathsf{Sec}(S;c,r)
-% =\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) 表示所检查记录的四个部分：(1) 工作流及其要求实现的结果，(2) 哪些调用指向同一个动作，(3) 先前的授权与调用进展，以及 (4) 哪组规则管理与原子规则更新重叠的调用。
+% =({\mathbf P},{\mathbf I},{\mathbf E},{\mathbf C})\) 表示所检查记录的四个部分：(1) 工作流及其要求实现的结果，(2) 哪些调用指向同一个动作，(3) 先前的授权与调用进展，以及 (4) 哪组规则管理与原子规则更新重叠的调用。
 Suppose a checker receives only some function \(f(V)\) of this record.
 % 假设检查器只能得到该记录的某个函数 \(f(V)\)。
 The function is exact if any two records that it makes indistinguishable always give the same answer to every common decision or rule-update request.
@@ -36,10 +36,10 @@ Write \(\mathsf{Exact}(f)\) for this property.
 % 将这一性质记为 \(\mathsf{Exact}(f)\)。
 Internal identifiers may be renamed consistently because their spelling cannot affect the answer.
 % 内部标识可以一致重命名，因为它们的具体拼写不能影响答案。
-For \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), \(\pi_J\) gives the checker exactly the parts named by \(J\).
-% 对于 \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\)，\(\pi_J\) 恰好向检查器提供 \(J\) 指明的部分。
-\Cref{app:evidence} gives four pairs of records showing that each part of \(V\) is necessary.
-% \Cref{app:evidence} 给出四对记录，证明 \(V\) 的每个部分都是必需的。
+For \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), \(\mathsf{Keep}_J\) gives the checker exactly the parts named by \(J\).
+% 对于 \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\)，\(\mathsf{Keep}_J\) 恰好向检查器提供 \(J\) 指明的部分。
+\Cref{app:evidence} gives one record pair for each part and a fifth pair for the correspondence between earlier authorizations and actions.
+% \Cref{app:evidence} 为每个部分给出一组记录对，并为先前授权与动作之间的对应关系给出第五组记录对。
 
 \paragraph{Required-outcome preservation}
 % 要求实现结果的保留
@@ -103,8 +103,8 @@ Undefined derivation gives state-preserving \(\mathsf{Invalid}\).
 % 未定义推导给出保持状态的 \(\mathsf{Invalid}\)。
 For defined \(\delta=\mathsf{Derive}(\Theta)\), \(\widehat B^\dagger_{H,u}=\varnothing\) gives state-preserving \(\mathsf{Reject}\) with no safe runtime implementation.
 % 对有定义的 \(\delta=\mathsf{Derive}(\Theta)\)，\(\widehat B^\dagger_{H,u}=\varnothing\) 给出保持状态的 \(\mathsf{Reject}\)，且不存在安全运行时实现。
-Otherwise, for \(Y=\mathsf{Compile}(\Theta)\), nonempty \(\widehat B^\dagger_{H,u}\), existence of a safe runtime implementation, \(\mathsf{Ready}(S,u,Y)\), and a successor that puts the edit into effect while preserving \(\mathsf{AgentSec}\) are equivalent.
-% 否则，对于 \(Y=\mathsf{Compile}(\Theta)\)，\(\widehat B^\dagger_{H,u}\) 非空、安全运行时实现存在、\(\mathsf{Ready}(S,u,Y)\) 成立，以及存在使编辑生效并保持 \(\mathsf{AgentSec}\) 的后继，这四项彼此等价。
+Otherwise, for \(Y=\mathsf{Check}(\Theta)\), nonempty \(\widehat B^\dagger_{H,u}\), existence of a safe runtime implementation, \(\mathsf{Ready}(S,u,Y)\), and a successor that puts the edit into effect while preserving \(\mathsf{AgentSec}\) are equivalent.
+% 否则，对于 \(Y=\mathsf{Check}(\Theta)\)，\(\widehat B^\dagger_{H,u}\) 非空、安全运行时实现存在、\(\mathsf{Ready}(S,u,Y)\) 成立，以及存在使编辑生效并保持 \(\mathsf{AgentSec}\) 的后继，这四项彼此等价。
 The largest execution family satisfies \(\mathsf{PreservesRequired}\), and the derived record identifies every already-satisfied source outcome and every authorized removal.
 % 最大执行族满足 \(\mathsf{PreservesRequired}\)，且派生记录标识每个已满足源结果和每项获准移除。
 \end{theorem}
@@ -120,10 +120,10 @@ If any one of the four parts is omitted, two records become indistinguishable ev
 \mathsf{Exact}(\mathsf{Keep}_J)\Longleftrightarrow
 J=\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}.
 \]
-The first four pairs in \cref{tab:projection-pairs} witness omission of \(\mathbf P,\mathbf I,\mathbf E,\mathbf C\).
-% \Cref{tab:projection-pairs} 中的前四组记录对分别见证省略 \(\mathbf P,\mathbf I,\mathbf E,\mathbf C\) 的后果。
-The fifth shows that retaining authorization records and actions without recording which ones correspond is also insufficient.
-% 第五组表明，仅保留授权记录与动作而不记录它们之间的对应关系同样不够。
+The four component-labeled rows in \cref{tab:projection-pairs} witness omission of \(\mathbf P,\mathbf I,\mathbf E,\mathbf C\).
+% \Cref{tab:projection-pairs} 中标有四个分量的记录对分别见证省略 \(\mathbf P,\mathbf I,\mathbf E,\mathbf C\) 的后果。
+The \(\mathsf{Drop}_{ra}\) row shows that retaining authorization records and actions without recording which ones correspond is also insufficient.
+% \(\mathsf{Drop}_{ra}\) 行表明，仅保留授权记录与动作而不记录它们之间的对应关系同样不够。
 In particular, a checker is not exact if it forgets which calls or authorization records refer to the same action, or if it sees only the target workflow proposed by the caller.
 % 特别地，如果检查器忘记哪些调用或授权记录指向同一个动作，或者只看到调用方提出的目标工作流，它就不是精确的。
 Generalized nonblocking can serve as an exact solver only after the trusted controller derives the workflow and outcome-specific completion conditions.
@@ -142,8 +142,8 @@ Every enabled event preserves \(\mathsf{AgentSec}\), so the theorem applies afte
 \label{thm:runtime-correctness}
 \(\mathcal B\) is a divergence-insensitive weak bisimulation under \(\mathsf{obs}_{\rm api}\), so every pair related by \(\mathcal B\) satisfies \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\).
 % \(\mathcal B\) 在 \(\mathsf{obs}_{\rm api}\) 下是发散不敏感弱互模拟，因此由 \(\mathcal B\) 关联的每对状态均满足 \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\)。
-The observation records edit answers tied to the checked record, replacement authorization tokens, and returned values.
-% 该观测记录与所检查记录对应的编辑答案、替代授权令牌与返回值。
+The observation records edit answers tied to the checked record, new authorization data, and returned values.
+% 该观测记录与所检查记录对应的编辑答案、新授权数据与返回值。
 \end{theorem}
 
 \paragraph{Proof roadmap}
@@ -154,11 +154,11 @@ The edit-rule checks and greatest-fixed-point argument prove exact checking.
 % 编辑规则检查与最大不动点论证证明精确检查。
 Every safe execution set is contained in the computed family, and a nonempty computed family yields a safe runtime implementation.
 % 每个安全执行集合都包含于计算出的执行族中，而非空的计算执行族会产生安全运行时实现。
-Four explicit pairs of execution records prove the information result.
-% 四对显式执行记录证明信息结果。
+Five explicit pairs of execution records prove the information result.
+% 五组显式执行记录对证明信息结果。
 Induction over the runtime rules proves repeated use.
 % 对运行时规则作归纳证明重复使用。
-A case analysis over edits, protected calls, races with the rule update, returns, and recovery establishes the weak bisimulation.
-% 对编辑、受控调用、与规则更新的竞态、返回与恢复作分类讨论建立弱互模拟。
-The appendix gives the complete witnesses and case proofs.
-% 附录给出完整见证与分类证明。
+A case analysis over edits, protected calls, races with the rule update, returns, and restarts establishes the weak bisimulation.
+% 对编辑、受控调用、与规则更新的竞态、返回与重新启动作分类讨论建立弱互模拟。
+The appendix gives the complete case proofs.
+% 附录给出完整的分类证明。

@@ -68,6 +68,44 @@ def allocateBundle (seed : NamespaceSeed)
   resultFuture :=
     allocateRuntime seed schemaVersion viewVersion request .resultFuture
 
+/-- Identifier of the authority that owns one registered outcome. -/
+structure AuthorityId where
+  value : Nat
+deriving DecidableEq, Repr
+
+/-- Authenticated edit-rule row.  The internal `resolved` edit is the only
+place where registered suffixes and destructive-row authority bits occur.
+The Agent-facing `RegisteredEditRequest` contains none of these fields.
+
+`targetOutcomes` and `targetLinearizations` are the registered indexed
+contract \(\mathcal C_u\).  `satisfied` and signed removal rows determine
+which source outcomes remain required; `covers` maps a target outcome to the
+source outcomes it preserves. -/
+structure AuthenticatedEditRule (Outcome : Type uOutcome) where
+  id : EditRuleId
+  resolved : EditRequest
+  targetOutcomes : Finset Outcome
+  targetLinearizations : Outcome → Finset (List Occurrence)
+  satisfied : Finset Outcome
+  covers : Finset (Outcome × Outcome)
+  removalSignatures : Finset (Outcome × AuthorityId)
+
+/-- A rule row can answer a public request only when its stable identifier and
+all caller-visible object identifiers agree. -/
+def AuthenticatedEditRule.matches
+    (rule : AuthenticatedEditRule Outcome)
+    (request : RegisteredEditRequest) : Bool :=
+  decide (rule.id = request.ruleId) &&
+    request.matchesResolved rule.resolved
+
+/-- Deterministically resolve an Agent-facing request against the authenticated
+registry.  Registry validity below prevents duplicate rule identifiers. -/
+def lookupAuthenticatedEditRule
+    (rules : List (AuthenticatedEditRule Outcome))
+    (request : RegisteredEditRequest) :
+    Option (AuthenticatedEditRule Outcome) :=
+  rules.find? fun rule => rule.matches request
+
 /-- Registration contains contracts, policy, schemas, and authenticated
 identity rows only.  In particular it has no receipt ledger, cursor, outbox,
 epoch, certificate, result future, monitor state, or installed cut. -/
@@ -83,6 +121,23 @@ structure RegisteredSlice (Outcome : Type uOutcome) (Label : Type uLabel) where
   policyVersion : Version
   registeredSchemas : Finset Nat
   authenticatedIdentityRows : Finset (Occurrence × Cell)
+  editRules : List (AuthenticatedEditRule Outcome) := []
+  outcomeAuthority : Outcome → AuthorityId := fun _ => ⟨0⟩
+
+def RegisteredSlice.editRuleIds
+    (slice : RegisteredSlice Outcome Label) : List EditRuleId :=
+  slice.editRules.map (·.id)
+
+def RegisteredSlice.lookupEditRule
+    (slice : RegisteredSlice Outcome Label)
+    (request : RegisteredEditRequest) :
+    Option (AuthenticatedEditRule Outcome) :=
+  lookupAuthenticatedEditRule slice.editRules request
+
+def RegisteredSlice.resolveEdit
+    (slice : RegisteredSlice Outcome Label)
+    (request : RegisteredEditRequest) : Option EditRequest :=
+  (slice.lookupEditRule request).map (·.resolved)
 
 def contractAt (slice : RegisteredSlice Outcome Label)
     (durableReceiptCells : List Cell) : Contract Outcome Label where
@@ -92,6 +147,198 @@ def contractAt (slice : RegisteredSlice Outcome Label)
   durableReceiptCells := durableReceiptCells
   authority := slice.authority
   labelOf := slice.labelOf
+
+section AuthenticatedEditContract
+
+variable [DecidableEq Outcome]
+
+/-- The raw target language registered for an edit rule. -/
+def AuthenticatedEditRule.targetLanguage
+    (rule : AuthenticatedEditRule Outcome) : Finset (List Occurrence) :=
+  rule.targetOutcomes.biUnion rule.targetLinearizations
+
+/-- A source outcome is removable exactly when the registry contains a
+signature by the authority registered for that outcome.  A caller cannot
+supply or override this fact. -/
+def AuthenticatedEditRule.authorizedRemovals
+    (slice : RegisteredSlice Outcome Label)
+    (rule : AuthenticatedEditRule Outcome) : Finset Outcome :=
+  slice.promised.filter fun outcome =>
+    (outcome, slice.outcomeAuthority outcome) ∈ rule.removalSignatures
+
+/-- Source outcomes that the edited contract must still implement. -/
+def AuthenticatedEditRule.stillRequired
+    (slice : RegisteredSlice Outcome Label)
+    (rule : AuthenticatedEditRule Outcome) : Finset Outcome :=
+  slice.promised \ (rule.satisfied ∪ rule.authorizedRemovals slice)
+
+/-- A registered target outcome covers a still-required source outcome. -/
+def AuthenticatedEditRule.Covers
+    (rule : AuthenticatedEditRule Outcome)
+    (target source : Outcome) : Prop :=
+  (target, source) ∈ rule.covers
+
+/-- Declarative obligations checked for an authenticated edit rule.  They tie
+the indexed target contract to the edited frontier, partition every source
+promise into satisfied, authorized-removed, or still-required, and require a
+registered target witness for every still-required promise. -/
+def AuthenticatedEditRule.Obligations
+    (slice : RegisteredSlice Outcome Label)
+    (rule : AuthenticatedEditRule Outcome)
+    (target : History) : Prop :=
+  rule.targetOutcomes.Nonempty ∧
+  rule.targetLanguage = target.frontier.rawLanguage ∧
+  rule.satisfied ⊆ slice.promised ∧
+  rule.removalSignatures ⊆
+    slice.promised.image fun outcome =>
+      (outcome, slice.outcomeAuthority outcome) ∧
+  slice.promised =
+    rule.stillRequired slice ∪
+      (rule.satisfied ∪ rule.authorizedRemovals slice) ∧
+  rule.covers ⊆
+    rule.targetOutcomes ×ˢ rule.stillRequired slice ∧
+  rule.stillRequired slice ⊆ rule.covers.image Prod.snd
+
+/-- Executable checker for the edit-rule obligations. -/
+def checkEditObligations
+    (slice : RegisteredSlice Outcome Label)
+    (rule : AuthenticatedEditRule Outcome)
+    (target : History) : Bool :=
+  decide (rule.Obligations slice target)
+
+theorem checkEditObligations_iff
+    (slice : RegisteredSlice Outcome Label)
+    (rule : AuthenticatedEditRule Outcome)
+    (target : History) :
+    checkEditObligations slice rule target = true ↔
+      rule.Obligations slice target := by
+  simp [checkEditObligations]
+
+/-- The indexed edited contract \(\mathcal C_u\) carried by an authenticated
+rule, with the current durable receipt cut transported unchanged. -/
+def AuthenticatedEditRule.targetContract
+    (slice : RegisteredSlice Outcome Label)
+    (rule : AuthenticatedEditRule Outcome)
+    (durableReceiptCells : List Cell) : Contract Outcome Label where
+  promised := rule.targetOutcomes
+  linearizations := rule.targetLinearizations
+  cellOf := slice.cellOf
+  durableReceiptCells := durableReceiptCells
+  authority := slice.authority
+  labelOf := slice.labelOf
+
+/-- Resolve and execute a public request.  Suffixes and destructive authority
+are read only from the matching authenticated rule. -/
+def deriveAuthenticatedEdit
+    (slice : RegisteredSlice Outcome Label)
+    (history : History)
+    (request : RegisteredEditRequest) : Option History := do
+  let rule ← slice.lookupEditRule request
+  deriveEdit history rule.resolved
+
+/-- Independent relational account of authenticated edit derivation. -/
+def AuthenticatedHistoryDerivation
+    (slice : RegisteredSlice Outcome Label)
+    (source : History)
+    (request : RegisteredEditRequest)
+    (target : History) : Prop :=
+  ∃ rule,
+    slice.lookupEditRule request = some rule ∧
+      HistoryDerivation source rule.resolved target
+
+theorem deriveAuthenticatedEdit_iff
+    (slice : RegisteredSlice Outcome Label)
+    (source : History)
+    (request : RegisteredEditRequest)
+    (target : History) :
+    deriveAuthenticatedEdit slice source request = some target ↔
+      AuthenticatedHistoryDerivation slice source request target := by
+  simp only [deriveAuthenticatedEdit]
+  cases lookup : slice.lookupEditRule request with
+  | none =>
+      simp [lookup, AuthenticatedHistoryDerivation]
+  | some rule =>
+      simp [lookup, AuthenticatedHistoryDerivation, deriveEdit_iff]
+
+/-- Compute the contract checked for one concrete authenticated edit. -/
+def editedContractAt
+    (slice : RegisteredSlice Outcome Label)
+    (durableReceiptCells : List Cell)
+    (source : History)
+    (request : RegisteredEditRequest)
+    (target : History) : Option (Contract Outcome Label) := do
+  let rule ← slice.lookupEditRule request
+  let derived ← deriveEdit source rule.resolved
+  if derived = target ∧ checkEditObligations slice rule target then
+    some (rule.targetContract slice durableReceiptCells)
+  else
+    none
+
+/-- Successful contract editing exposes the registered \(\mathcal C_u\), the
+complete `StillRequired` partition, `Covers` witnesses, and signatures for
+every authorized removal. -/
+theorem editedContractAt_spec
+    (slice : RegisteredSlice Outcome Label)
+    (durableReceiptCells : List Cell)
+    (source : History)
+    (request : RegisteredEditRequest)
+    (target : History)
+    (contract : Contract Outcome Label)
+    (edited :
+      editedContractAt slice durableReceiptCells source request target =
+        some contract) :
+    ∃ rule,
+      slice.lookupEditRule request = some rule ∧
+      deriveEdit source rule.resolved = some target ∧
+      contract = rule.targetContract slice durableReceiptCells ∧
+      slice.promised =
+        rule.stillRequired slice ∪
+          (rule.satisfied ∪ rule.authorizedRemovals slice) ∧
+      (∀ sourceOutcome ∈ rule.stillRequired slice,
+        ∃ targetOutcome ∈ rule.targetOutcomes,
+          rule.Covers targetOutcome sourceOutcome) ∧
+      ∀ sourceOutcome ∈ rule.authorizedRemovals slice,
+        (sourceOutcome, slice.outcomeAuthority sourceOutcome) ∈
+          rule.removalSignatures := by
+  unfold editedContractAt at edited
+  cases lookup : slice.lookupEditRule request with
+  | none =>
+      simp [lookup] at edited
+  | some rule =>
+      simp only [lookup, Option.bind_some] at edited
+      cases derive : deriveEdit source rule.resolved with
+      | none =>
+          simp [derive] at edited
+      | some derived =>
+          simp only [derive, Option.bind_some] at edited
+          split at edited
+          next accepted =>
+            have targetEq : derived = target := accepted.1
+            have obligations :
+                rule.Obligations slice target :=
+              (checkEditObligations_iff slice rule target).1 accepted.2
+            have contractEq :
+                contract = rule.targetContract slice durableReceiptCells :=
+              Option.some.inj edited.symm
+            refine ⟨rule, lookup, ?_, contractEq,
+              obligations.2.2.2.2.1, ?_, ?_⟩
+            · simpa [targetEq] using derive
+            · intro sourceOutcome sourceMember
+              have projected :
+                  sourceOutcome ∈ rule.covers.image Prod.snd :=
+                obligations.2.2.2.2.2.2 sourceMember
+              obtain ⟨pair, pairMember, pairSnd⟩ :=
+                Finset.mem_image.1 projected
+              refine ⟨pair.1, ?_, pairMember⟩
+              have bounded :=
+                obligations.2.2.2.2.2.1 pairMember
+              exact (Finset.mem_product.1 bounded).1
+            · intro sourceOutcome member
+              exact (Finset.mem_filter.1 member).2
+          next rejected =>
+            simp at edited
+
+end AuthenticatedEditContract
 
 def rootRequest (seed : NamespaceSeed) : RequestId :=
   ⟨seed.value⟩
@@ -136,6 +383,7 @@ structure RegisteredSlice.Valid
   contractValid : ValidInstance (contractAt slice [])
   greatestNonempty :
     (greatestPostfixed (contractAt slice [])).Nonempty
+  editRuleIdsNodup : slice.editRuleIds.Nodup
 
 /-- Authenticated append-only control-plane growth.  The active contract's
 topology, resolution map, and labels retain exactly their old meanings.
@@ -148,6 +396,10 @@ structure RegisteredSlice.StaticExtends
   linearizations_eq : target.linearizations = source.linearizations
   cellOf_eq : target.cellOf = source.cellOf
   labelOf_eq : target.labelOf = source.labelOf
+  outcomeAuthority_eq :
+    target.outcomeAuthority = source.outcomeAuthority
+  editRules_mono :
+    ∀ rule ∈ source.editRules, rule ∈ target.editRules
   schemas_mono :
     source.registeredSchemas ⊆ target.registeredSchemas
   identityRows_mono :
@@ -201,14 +453,6 @@ inductive CutOrigin
         LiveExtensionDerivation sourceSlice slice source request target) :
       CutOrigin slice seed (some source) target
 
-def EditRequest.requestId : EditRequest → RequestId
-  | .forkChoice request _ _ _ => request
-  | .forkParallel request _ _ _ => request
-  | .restoreReplace request _ _ _ => request
-  | .restoreLive request _ _ => request
-  | .mergeSelect request _ _ _ _ => request
-  | .mergeJoin request _ _ => request
-
 structure CutSpecification
     [DecidableEq Outcome] [DecidableEq Label] where
   slice : RegisteredSlice Outcome Label
@@ -219,7 +463,12 @@ structure CutSpecification
   origin : CutOrigin slice seed source target
   durableReceiptCells : List Cell
   contract : Contract Outcome Label
-  contract_eq : contract = contractAt slice durableReceiptCells
+  contract_source :
+    contract = contractAt slice durableReceiptCells ∨
+      ∃ sourceHistory request,
+        source = some sourceHistory ∧
+          editedContractAt slice durableReceiptCells sourceHistory request
+            target = some contract
   allocation : Allocation
   allocation_eq :
     allocation =
@@ -250,7 +499,7 @@ def rootSpecification
   origin := .root ⟨rfl, valid⟩
   durableReceiptCells := []
   contract := contractAt slice []
-  contract_eq := rfl
+  contract_source := Or.inl rfl
   allocation :=
     allocateBundle seed slice.schemaVersion slice.viewVersion
       (rootRequest seed)
