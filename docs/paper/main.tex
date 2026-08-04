@@ -51,8 +51,8 @@ An edit changes future work without undoing a tool action that has already been 
 % 编辑会改变未来的工作，但不会撤销已经获得授权或已经发出的工具动作。
 An unsafe edit can therefore authorize the same action twice, discard a result the workflow still requires, or conflict with a call that began before the edit.
 % 因此，不安全的编辑可能两次授权同一个动作、丢弃工作流仍然要求的结果，或与编辑前已经开始的调用冲突。
-Existing Agent recovery systems implement particular edits, and synthesis methods assume known executions and completion conditions, but neither derives an edit's safety requirements from the current execution record.
-% 现有 Agent 恢复系统实现特定编辑，综合方法则假定执行及完成条件已经给定，但二者都不会从当前执行记录中推导一次编辑的安全要求。
+Existing Agent systems support Fork, Restore, or Merge, but neither these systems nor existing synthesis methods derive a requested edit's safety conditions from the current execution record.
+% 现有 Agent 系统支持 Fork、Restore 或 Merge，但这些系统和现有综合方法都不会从当前执行记录中推导一次编辑的安全条件。
 We give an exact procedure for deciding whether an execution edit is safe.
 % 我们给出一个精确过程，用于判定一次执行编辑是否安全。
 It either computes every safe way for the edited workflow to continue or proves that every possible implementation is unsafe.

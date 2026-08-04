@@ -43,9 +43,9 @@ Projection \(\pi_J\) keeps \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C
 \[
 \begin{aligned}
 \mathsf{PreservesRequired}(H,u,\widehat B)
-&\Longleftrightarrow
-\forall a\in\mathsf{StillRequired}_u.\ \exists t\in O_{H,u},b,\\[-2pt]
-&\qquad \mathsf{Covers}_u(t,a)\land(t,b)\in\widehat B .
+&\Longleftrightarrow\\[-2pt]
+&\quad\forall a\in\mathsf{StillRequired}_u.\ 
+\exists(t,y)\in\widehat B.\ \mathsf{Covers}_u(t,a).
 \end{aligned}
 \]
 Thus every required source outcome appears in an accepted target outcome.
@@ -63,8 +63,8 @@ Thus every required source outcome appears in an accepted target outcome.
 \begin{theorem}[Exact Edit-Safety]
 % 精确编辑安全
 \label{thm:exact-history}
-Clause~1 holds for finite-state \(\mathcal W\) and finite \(R\).
-% 第 1 条对有限状态 \(\mathcal W\) 与有限 \(R\) 成立。
+Clause~1 holds for finite-state \(\mathcal W\) and finite \(\mathcal R\).
+% 第 1 条对有限状态 \(\mathcal W\) 与有限 \(\mathcal R\) 成立。
 For Clauses~2--5, assume accepted registration, complete control and mediation of every protected call, and crash-stable linearizable transactions within each policy domain.
 % 对于第 2--5 条，假设注册已通过、每次受控调用都受到完全控制与中介，并且每个策略域内采用崩溃稳定且可线性化的事务。
 Then they hold for every \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) at every finite reachable \(\mathsf{AgentSec}\) state.
@@ -72,10 +72,10 @@ Then they hold for every \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) a
 \begin{enumerate}[leftmargin=*,itemsep=0pt]
 \item \textbf{Faithful registration.}
 % 忠实注册。
-\(\mathsf{CheckReg}(\mathcal W,R)\) accepts iff stored \(\lambda\) witnesses \(\mathcal W\sqsubseteq_\lambda R\).
-% 当且仅当所存 \(\lambda\) 见证 \(\mathcal W\sqsubseteq_\lambda R\) 时，\(\mathsf{CheckReg}(\mathcal W,R)\) 才接受。
-On acceptance, the source workflow's protected-call traces and \(\mathsf{BRuns}(R)\) are order-isomorphic and preserve outcomes, actions, \Fresh/\Alias, the safety answer, and the most permissive program.
-% 接受时，源工作流的受控调用轨迹与 \(\mathsf{BRuns}(R)\) 序同构，并保持结果、动作、\Fresh/\Alias、安全答案与限制最少的执行程序。
+\(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) accepts iff stored \(\lambda\) witnesses \(\mathcal W\sqsubseteq_\lambda\mathcal R\).
+% 当且仅当所存 \(\lambda\) 见证 \(\mathcal W\sqsubseteq_\lambda\mathcal R\) 时，\(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) 才接受。
+On acceptance, the source workflow's protected-call traces and \(\mathsf{BRuns}(\mathcal R)\) are order-isomorphic and preserve outcomes, actions, \Fresh/\Alias, the safety answer, and the most permissive program.
+% 接受时，源工作流的受控调用轨迹与 \(\mathsf{BRuns}(\mathcal R)\) 序同构，并保持结果、动作、\Fresh/\Alias、安全答案与限制最少的执行程序。
 Malformed registrations fail before startup.
 % 不合格的注册在启动前失败。
 

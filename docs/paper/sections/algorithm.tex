@@ -4,26 +4,26 @@
 
 The safety checker produces either a rejection certificate or the largest safe family of complete executions.
 % 安全检查器生成拒绝证书或最大的安全完整执行族。
-The trusted installation service turns a nonempty family into runtime enforcement in three steps.
-% 可信安装服务分三步将非空执行族转化为运行时强制执行。
-It builds a program for the family's partial executions, binds that program to the authenticated source snapshot, and atomically installs it under a new program version.
-% 它为该执行族的部分执行构造执行程序，将执行程序绑定到认证源状态快照，并在新的执行程序版本下原子安装。
+The trusted installation service turns a nonempty family into rules checked before each tool call.
+% 可信安装服务把非空执行族转化为每次工具调用之前检查的规则。
+It builds a finite automaton for the allowed partial executions, records which version of the execution record was checked, and atomically puts the new rules into effect.
+% 它为允许的部分执行构造有限自动机，记录检查时使用的执行记录版本，并使新规则原子生效。
 The protocol serializes every overlapping protected call either before or after installation.
 % 该协议将每个重叠的受控调用完整地排列在安装之前或之后。
 The proof compares this implementation with an ideal machine that installs an accepted specification in one atomic step and admits exactly its resolved prefixes.
 % 证明将该实现与一台理想机比较；理想机以一个原子步骤安装被接受的规范，并且只接纳该规范的已解析前缀。
 The ideal transition system and the field-level implementation rules appear in \cref{sec:ideal,tab:app-event-matrix}.
 % 理想转移系统与字段级实现规则见 \cref{sec:ideal,tab:app-event-matrix}。
-This section gives the program construction, installed-state invariant, and installation boundary needed by the main theorem.
-% 本节给出主定理所需的执行程序构造、安装后状态不变量与安装边界。
+This section gives the automaton construction, the invariant after installation, and the atomic update used by the main theorem.
+% 本节给出主定理所需的自动机构造、安装后的不变量以及原子更新。
 
-\subsection{Canonical Call-Position Program}
-% 规范工作流调用执行程序
+\subsection{Turning Safe Executions into Runtime Rules}
+% 把安全执行转化为运行时规则
 
-The greatest safe implementation has the finite, canonically installable projected pair \((W,B)=(W^\dagger_{H,u},B^\dagger_{H,u})\).
-% 最大实现具有有限且可规范安装的投影对 \((W,B)=(W^\dagger_{H,u},B^\dagger_{H,u})\)。
-For \(L/z=\{v\mid zv\in L\}\), use residual states \(q_z=(W^\dagger/z,B^\dagger/z)\).
-% 对于 \(L/z=\{v\mid zv\in L\}\)，使用残余状态 \(q_z=(W^\dagger/z,B^\dagger/z)\)。
+Removing outcome labels from the largest safe execution set gives the finite pair \((W,B)=(W^\dagger_{H,u},B^\dagger_{H,u})\).
+% 从最大安全执行集合中去掉结果标签，得到有限对 \((W,B)=(W^\dagger_{H,u},B^\dagger_{H,u})\)。
+For \(L/z=\{v\mid zv\in L\}\), let \(q_z=(W^\dagger/z,B^\dagger/z)\) be the automaton state after prefix \(z\).
+% 对于 \(L/z=\{v\mid zv\in L\}\)，令 \(q_z=(W^\dagger/z,B^\dagger/z)\) 表示执行前缀 \(z\) 后的自动机状态。
 \begin{equation}
 \label{eq:canonical-program}
 \begin{aligned}
@@ -33,20 +33,20 @@ For \(L/z=\{v\mid zv\in L\}\), use residual states \(q_z=(W^\dagger/z,B^\dagger/
  &\quad\Longleftrightarrow\quad za\in W .
 \end{aligned}
 \end{equation}
-Call this program automaton \(\mathsf{Can}(W,B)\).
-% 将该执行程序自动机记作 \(\mathsf{Can}(W,B)\)。
+Call this deterministic automaton \(\mathsf{Can}(W,B)\).
+% 将该确定性自动机记作 \(\mathsf{Can}(W,B)\)。
 Every state is reachable and is marked exactly when \(\epsilon\in B^\dagger/z\).
 % 每个状态均可达，并且恰在 \(\epsilon\in B^\dagger/z\) 时被标记。
-Each transition symbol \(a\) contains workflow call \(x\), action \(d\), and its \Fresh or \Alias mode, so one workflow call cannot use another position's program entry.
-% 每个转移符号 \(a\) 都包含工作流调用 \(x\)、动作 \(d\) 以及 \Fresh/\Alias 模式，因此一个工作流调用无法使用另一个位置的执行程序入口。
+Each transition symbol \(a\) contains workflow call \(x\), action \(d\), and its \Fresh or \Alias mode, so one workflow call cannot use another call's rule entry.
+% 每个转移符号 \(a\) 都包含工作流调用 \(x\)、动作 \(d\) 以及 \Fresh/\Alias 模式，因此一个工作流调用无法使用另一个调用的规则入口。
 
-\begin{lemma}[Exact compiled safe implementation]
-% 精确的编译实现
+\begin{lemma}[Exact finite enforcement]
+% 精确的有限执行规则
 \label{lem:compiled-language}
-The generated and marked languages of the program in \cref{eq:canonical-program} are exactly \((W^\dagger_{H,u},B^\dagger_{H,u})\).
-% \cref{eq:canonical-program} 中程序的生成语言和标记语言恰为 \((W^\dagger_{H,u},B^\dagger_{H,u})\)。
-The program is the smallest deterministic marked partial automaton for this pair up to state renaming.
-% 在忽略状态重命名的意义下，该程序是实现这对语言的最小确定性标记偏自动机。
+The generated and marked languages of the automaton in \cref{eq:canonical-program} are exactly \((W^\dagger_{H,u},B^\dagger_{H,u})\).
+% \cref{eq:canonical-program} 中自动机的生成语言和标记语言恰为 \((W^\dagger_{H,u},B^\dagger_{H,u})\)。
+The automaton is the smallest deterministic marked partial automaton for this pair up to state renaming.
+% 在忽略状态重命名的意义下，该自动机是实现这对语言的最小确定性标记偏自动机。
 \end{lemma}
 \begin{proof}
 Induction on \(z\) shows that the automaton reaches \((W^\dagger/z,B^\dagger/z)\), enables \(a\) iff \(za\in W^\dagger\), and marks the reached state iff \(z\in B^\dagger\).
@@ -64,10 +64,10 @@ At installation, the service re-derives the edit and recomputes the fixed point 
 % 安装时，该服务根据执行记录重新推导编辑并重新计算不动点。
 If any protected call has committed since compilation, the candidate is stale and installs nothing.
 % 如果编译之后已有任何受控调用提交，则候选已过期且不会安装任何内容。
-Otherwise, one policy-domain transaction closes the old program version, activates the canonical program, replaces every current workflow-call binding and authorization token, and only then exposes the successful edit answer.
-% 否则，一个策略域事务会关闭旧执行程序版本、激活规范执行程序、替换每个当前工作流调用的绑定与授权令牌，然后才暴露成功编辑答案。
-Protected calls verify their workflow call, action, canonical request, authorization token, and current program transition in the same transaction that records progress.
-% 受控调用在记录进度的同一事务中验证其工作流调用、动作、规范请求、授权令牌与当前执行程序转移。
+Otherwise, one policy-domain transaction closes the old rule version, activates the new automaton, replaces the rule entry and authorization token for every current workflow call, and only then exposes the successful edit answer.
+% 否则，一个策略域事务会关闭旧规则版本、激活新自动机、替换每个当前工作流调用的规则入口与授权令牌，然后才暴露成功编辑答案。
+Protected calls verify their workflow call, action, canonical request, authorization token, and enabled automaton transition in the same transaction that records progress.
+% 受控调用在记录进度的同一事务中验证其工作流调用、动作、规范请求、授权令牌与已启用的自动机转移。
 A \Fresh call creates one authorization record and queues the canonical request.
 % \Fresh 调用创建一条授权记录并将规范请求入队。
 An \Alias call advances the workflow by linking to the existing record without extending the authorization sequence.
@@ -75,41 +75,41 @@ An \Alias call advances the workflow by linking to the existing record without e
 
 \paragraph{Installed-state invariant}
 % 安装后状态不变量
-We write \(\mathsf{AgentSec}(S;c,r)\) when five conditions hold: (1) the installed workflow and its required outcomes come from the checked edit; (2) the stored nonempty execution family is the checker's largest safe family; (3) the workflow, authorization log, queue, and checkpoints match the executed prefix \(r\); (4) the current program is exactly the derivative after \(r\); and (5) exactly one program version is active, with one current entry and authorization token for every remaining workflow call.
-% 当以下五项条件成立时，记作 \(\mathsf{AgentSec}(S;c,r)\)：(1) 已安装工作流及其要求实现的结果来自经检查编辑；(2) 已存非空执行族是检查器得到的最大安全执行族；(3) 工作流、授权日志、队列和检查点与已执行前缀 \(r\) 一致；(4) 当前执行程序恰为执行 \(r\) 后的导数；(5) 恰有一个执行程序版本处于活动状态，并为每个剩余工作流调用提供一个当前入口和授权令牌。
-For a submitted tool request, one transaction verifies the workflow call, action, canonical request, authorization token, current program version, and enabled program transition before recording any progress.
-% 对于提交的工具请求，一个事务会先验证工作流调用、动作、规范请求、授权令牌、当前执行程序版本以及已启用的执行程序转移，然后才记录任何进展。
+We write \(\mathsf{AgentSec}(S;c,r)\) when five conditions hold: (1) the installed workflow and its required outcomes come from the checked edit; (2) the stored nonempty execution family is the checker's largest safe family; (3) the workflow, authorization log, queue, and checkpoints match the executed prefix \(r\); (4) the automaton is in exactly the state reached after \(r\); and (5) exactly one rule version is active, with one rule entry and authorization token for every remaining workflow call.
+% 当以下五项条件成立时，记作 \(\mathsf{AgentSec}(S;c,r)\)：(1) 已安装工作流及其要求实现的结果来自经检查编辑；(2) 已存非空执行族是检查器得到的最大安全执行族；(3) 工作流、授权日志、队列和检查点与已执行前缀 \(r\) 一致；(4) 自动机恰处于执行 \(r\) 后到达的状态；(5) 恰有一个规则版本处于活动状态，并为每个剩余工作流调用提供一个规则入口和授权令牌。
+For a submitted tool request, one transaction verifies the workflow call, action, canonical request, authorization token, active rule version, and enabled automaton transition before recording any progress.
+% 对于提交的工具请求，一个事务会先验证工作流调用、动作、规范请求、授权令牌、当前规则版本以及已启用的自动机转移，然后才记录任何进展。
 The same transaction either creates the authorization record and queues the request, or records reuse of an existing authorization record and its return value.
 % 同一事务随后要么创建授权记录并将请求入队，要么记录对已有授权记录及其返回值的复用。
 
 \paragraph{Installation check}
 % 安装检查
-Write \(\mathsf{Ready}(S,u,Y)\) when the service re-derives \(u\) from the current state, recomputes the same nonempty fixed point and canonical program carried by \(Y\), matches \(Y\)'s checked-state fingerprint, confirms the old program version is current, and confirms the new version is not active.
-% 当服务根据当前状态重新推导 \(u\)、重新计算出 \(Y\) 所携带的同一非空不动点与规范执行程序、匹配 \(Y\) 的经检查状态指纹、确认旧执行程序版本仍为当前版本并确认新版本尚未激活时，记作 \(\mathsf{Ready}(S,u,Y)\)。
-If these checks pass, one transaction closes the old version, installs and activates the new program, replaces every current entry and authorization token, and then exposes the successful edit answer.
-% 若这些检查通过，一个事务会关闭旧版本、安装并激活新执行程序、替换每个当前入口与授权令牌，然后才暴露成功编辑答案。
+Write \(\mathsf{Ready}(S,u,Y)\) when the service re-derives \(u\) from the current execution record, recomputes the same nonempty fixed point and automaton carried by \(Y\), confirms that the record has not changed since \(Y\) was computed, confirms that the old rule version is current, and confirms that the new version is inactive.
+% 当服务根据当前执行记录重新推导 \(u\)、重新计算出 \(Y\) 所携带的同一非空不动点与自动机、确认计算 \(Y\) 之后执行记录未发生变化、确认旧规则版本仍为当前版本并确认新版本尚未激活时，记作 \(\mathsf{Ready}(S,u,Y)\)。
+If these checks pass, one transaction closes the old version, installs and activates the new automaton, replaces every current rule entry and authorization token, and then exposes the successful edit answer.
+% 若这些检查通过，一个事务会关闭旧版本、安装并激活新自动机、替换每个当前规则入口与授权令牌，然后才暴露成功编辑答案。
 A changed state makes the candidate stale and forces a new check.
 % 状态一旦改变，候选结果即过期，必须重新检查。
-The complete field updates, retries, dispatch, settlement, and recovery rules appear in \cref{app:compiled-transitions,tab:app-event-matrix}.
-% 完整字段更新、重试、派发、结算与恢复规则见 \cref{app:compiled-transitions,tab:app-event-matrix}。
+The complete state updates, retries, request release, completion updates, and recovery rules appear in \cref{app:compiled-transitions,tab:app-event-matrix}.
+% 完整状态更新、重试、请求发出、完成更新与恢复规则见 \cref{app:compiled-transitions,tab:app-event-matrix}。
 
 \begin{lemma}[Edit--call serialization]
 % 编辑--调用串行化
 \label{lem:cut-linearization}
 In every reachable well-formed compiled state, a visible edit answer and a protected call in the same policy domain have a unique order at the installation point.
 % 在每个可达的良构编译状态中，同一策略域内的一项可见编辑答案与一次受控调用在安装点具有唯一顺序。
-If the call commits first, it changes the checked state, so the earlier fingerprint cannot install.
-% 若调用先提交，它会改变经检查状态，因此先前的指纹无法安装。
+If the call commits first, it changes the execution record, so the earlier result cannot install.
+% 若调用先提交，它会改变执行记录，因此先前的结果无法安装。
 If \Install commits first, the old call cannot resolve \Fresh or \Alias.
 % 若 \Install 先提交，则旧调用无法解析 \Fresh 或 \Alias。
 Steps in independent domains commute by product semantics.
 % 独立域中的步骤依据乘积语义可交换。
 \end{lemma}
 \begin{proof}
-If the call commits first, its recorded progress changes the checked-state fingerprint.
-% 若调用先提交，其记录的进展会改变经检查状态指纹。
-If installation commits first, it closes the old program version, so the old authorization token fails.
-% 若安装先提交，它会关闭旧执行程序版本，因此旧授权令牌无法通过验证。
+If the call commits first, its recorded progress changes the execution record.
+% 若调用先提交，其记录的进展会改变执行记录。
+If installation commits first, it closes the old rule version, so the old authorization token fails.
+% 若安装先提交，它会关闭旧规则版本，因此旧授权令牌无法通过验证。
 Atomicity excludes a partial third outcome.
 % 原子性排除了部分完成的第三种结果。
 Independent domains commute.

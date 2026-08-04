@@ -308,8 +308,8 @@ The source-snapshot seal is
      &H_{\mathsf{prog}},\eta^-,\eta^+)).
 \end{split}
 \end{equation}
-Because \(H\) contains \(\chi,\nu,\rho,\beta\), this seal binds workflow progress, record version, registry state, program-entry/version bindings, the authorization log, and the dispatch queue.
-% 由于 \(H\) 包含 \(\chi,\nu,\rho,\beta\)，该封印会绑定工作流推进、记录版本、注册表状态、执行程序入口/版本绑定、授权日志和派发队列。
+Because \(H\) contains \(\chi,\mathsf{ver},\rho,\beta\), this seal binds workflow progress, record version, registry state, program-entry/version bindings, the authorization log, and the dispatch queue.
+% 由于 \(H\) 包含 \(\chi,\mathsf{ver},\rho,\beta\)，该封印会绑定工作流推进、记录版本、注册表状态、执行程序入口/版本绑定、授权日志和派发队列。
 The verifier re-derives the schema judgment and complete indexed fixed point, reconstructs \((W^\dagger,B^\dagger)\), verifies both seals, and checks the full automaton isomorphism
 % 验证器重新推导模式判定与完整的带索引不动点，重建 \((W^\dagger,B^\dagger)\)，验证两个封印，并检查下列完整自动机同构：
 \[
@@ -351,7 +351,7 @@ Finally, \(\beta'\) and \(\mathcal H_u^+\) bind every current target call positi
 % 已注册扩展
 \label{app:registered-extension}
 
-The Agent may name only an immutable record \(\xi\) binding the exact predecessor schema, registry, execution-record, and policy roots to finite disjoint additions \(D_\Sigma,D_\rho,D_\alpha\) and a successor policy \(\mathcal A^+\), where \(D_\alpha\) contains the signed authority row for every newly introduced outcome's registered source.
+The Agent may name only an immutable record \(\xi\) binding the exact predecessor schema, registry, execution record, and policy roots to finite disjoint additions \(D_\Sigma,D_\rho,D_\alpha\) and a successor policy \(\mathcal A^+\), where \(D_\alpha\) contains the signed authority row for every newly introduced outcome's registered source.
 % Agent 只能指名不可变记录 \(\xi\)，该记录将精确的前驱模式、注册表、执行记录和策略根绑定到有限且不交的新增集合 \(D_\Sigma,D_\rho,D_\alpha\) 以及后继策略 \(\mathcal A^+\)，其中 \(D_\alpha\) 包含每个新引入结果的已注册来源所对应的签名权限记录。
 The policy authority and call authorization service authenticate \(\xi\); existing meanings remain unchanged, new identifiers are fresh and domain-scoped, and \(\mathcal A\subseteq\mathcal A^+\).
 % 策略权限方与调用授权服务认证 \(\xi\)；现有含义保持不变，新标识是新鲜且限定于该域的，并且 \(\mathcal A\subseteq\mathcal A^+\)。
@@ -364,7 +364,7 @@ For fresh \(\eta^+\), define
  \rho^+&=\rho\uplus D_\rho,\\
  H_\xi^+
    &= (\omega,G^+,T,K,\Sigma_{\zeta^+},\rho^+,\beta^+,\\[-2pt]
-   &\hspace{13mm}\chi,\nu+1,\eta^+),\\
+   &\hspace{13mm}\chi,\mathsf{ver}+1,\eta^+),\\
  \mathcal C_\xi&=\sem T,\\
  \mathsf{RequiredBefore}(H,\xi)&=\mathsf{StillRequired}_\xi,\\
  \mathsf{StillRequired}_\xi&=O_{\sem T},\\
@@ -634,10 +634,10 @@ A boundary-finite typed Agent workflow \(\mathcal W\) is a finite-state outcome-
 % 边界有限的类型化 Agent 工作流 \(\mathcal W\) 是一个带结果标签的有限状态 LTS；其完整路径终止于结果终点，并且经 \(\tau\) 擦除的受控调用投影 \(\partial e=(o,s_1\cdots s_n)\) 在相等关系 \(\equiv_\partial\) 下形成有限多个等价类。
 \(\mathsf{CheckReg}\) rejects any reachable strongly connected component that can still reach an outcome and contains a protected-call edge, permits erased \(\tau\)-cycles, and then enumerates the finite classes.
 % \(\mathsf{CheckReg}\) 拒绝任何可达、仍可到达结果且包含受控调用边的强连通分量，允许被擦除的 \(\tau\) 环，随后枚举有限等价类。
-\(R\) stores a candidate map \(\lambda\), and \(\mathsf{BRuns}(R)\) is the finite outcome-indexed language obtained by linearizing its registered root pomsets and labeling every workflow call by its protected \Use.
-% \(R\) 存储候选映射 \(\lambda\)，而 \(\mathsf{BRuns}(R)\) 是通过线性化其已注册根偏序事件集，并以受控 \Use 标记每个工作流调用而得到的有限结果索引语言。
-\(\mathcal W\sqsubseteq_\lambda R\) means that \(\lambda\) induces a bijection from boundary classes to \(\mathsf{BRuns}(R)\) that preserves outcomes, incidence, order, and the signed policy authority for each outcome's registered source.
-% \(\mathcal W\sqsubseteq_\lambda R\) 表示 \(\lambda\) 从边界等价类到 \(\mathsf{BRuns}(R)\) 诱导一个保持结果、关联、次序以及每个结果已注册来源的签名策略权限方的双射。
+\(\mathcal R\) stores a candidate map \(\lambda\), and \(\mathsf{BRuns}(\mathcal R)\) is the finite outcome-indexed language obtained by linearizing its registered root pomsets and labeling every workflow call by its protected \Use.
+% \(\mathcal R\) 存储候选映射 \(\lambda\)，而 \(\mathsf{BRuns}(\mathcal R)\) 是通过线性化其已注册根偏序事件集，并以受控 \Use 标记每个工作流调用而得到的有限结果索引语言。
+\(\mathcal W\sqsubseteq_\lambda\mathcal R\) means that \(\lambda\) induces a bijection from boundary classes to \(\mathsf{BRuns}(\mathcal R)\) that preserves outcomes, incidence, order, and the signed policy authority for each outcome's registered source.
+% \(\mathcal W\sqsubseteq_\lambda\mathcal R\) 表示 \(\lambda\) 从边界等价类到 \(\mathsf{BRuns}(\mathcal R)\) 诱导一个保持结果、关联、次序以及每个结果已注册来源的签名策略权限方的双射。
 The check also requires protected actions to be exactly the equivalence classes of canonical requests, requires \(\lambda\) to be total, unique, and free of raw instructions, and requires authorization record evolution to commute with \(\Resolve\) without dropping a required outcome, workflow call, or authorization record.
 % 该检查还要求受控动作恰好对应规范请求的等价类，要求 \(\lambda\) 全定义、唯一且不包含原始指令，并要求授权记录演化与 \(\Resolve\) 交换且不丢弃要求实现的结果、工作流调用或授权记录。
 \end{definition}
@@ -651,22 +651,22 @@ The resulting pair proves that an exact abstraction cannot erase that factor.
 
 We construct the finite lower-bound witnesses from one literal empty initial state \(\mathsf S_\emptyset\).
 % 我们从唯一的字面空初始状态 \(\mathsf S_\emptyset\) 构造有限下界见证。
-A registered call model \(R\) compiled from a boundary-finite typed Agent workflow \(\mathcal W\) contains only finite contracts, schemas, policy, the checked registration map, and authenticated outcome-authority, workflow-call, protected-action, canonical-request, certified-origin, scope, and label rows.
-% 从边界有限的类型化 Agent 工作流 \(\mathcal W\) 编译得到的已注册调用模型 \(R\) 只包含有限契约、模式、策略、经检查注册映射，以及经认证的结果权限、工作流调用、受控动作、规范请求、谱系、作用域和标签记录。
+A registered call model \(\mathcal R\) compiled from a boundary-finite typed Agent workflow \(\mathcal W\) contains only finite contracts, schemas, policy, the checked registration map, and authenticated outcome-authority, workflow-call, protected-action, canonical-request, certified-origin, scope, and label rows.
+% 从边界有限的类型化 Agent 工作流 \(\mathcal W\) 编译得到的已注册调用模型 \(\mathcal R\) 只包含有限契约、模式、策略、经检查注册映射，以及经认证的结果权限、工作流调用、受控动作、规范请求、谱系、作用域和标签记录。
 It contains no authorization record, cursor, dispatch-queue entry, program version, certificate, return record, program state, or installation record.
 % 它不包含授权记录、游标、派发队列条目、执行程序版本、证书、返回记录、执行程序状态或安装记录。
-The registration relation has a step \(\mathsf S_\emptyset\xrightarrow{\mathsf{register}(\mathcal W,R,n)}\mathsf{Reg}(R,n)\) exactly when \(\mathsf{CheckReg}(\mathcal W,R)\) accepts and \(n\) is a fresh private namespace, followed by checked root installation.
-% 当且仅当 \(\mathsf{CheckReg}(\mathcal W,R)\) 接受且 \(n\) 是新鲜私有命名空间时，注册关系才包含步骤 \(\mathsf S_\emptyset\xrightarrow{\mathsf{register}(\mathcal W,R,n)}\mathsf{Reg}(R,n)\)，随后执行经检查的根安装。
-Root installation constructs empty authorization record, cursor, and dispatch-queue state, sets \(\nu=0\), activates one program version, installs the canonical program, and authenticates every current binding and root outcome-authority row.
-% 根安装构造空授权记录、空游标与空派发队列状态，将 \(\nu\) 设为 \(0\)，激活一个执行程序版本，安装规范执行程序，并认证每个当前绑定和根结果权限记录。
+The registration relation has a step \(\mathsf S_\emptyset\xrightarrow{\mathsf{register}(\mathcal W,\mathcal R,n)}\mathsf{Reg}(\mathcal R,n)\) exactly when \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) accepts and \(n\) is a fresh private namespace, followed by checked root installation.
+% 当且仅当 \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) 接受且 \(n\) 是新鲜私有命名空间时，注册关系才包含步骤 \(\mathsf S_\emptyset\xrightarrow{\mathsf{register}(\mathcal W,\mathcal R,n)}\mathsf{Reg}(\mathcal R,n)\)，随后执行经检查的根安装。
+Root installation constructs empty authorization record, cursor, and dispatch-queue state, sets \(\mathsf{ver}=0\), activates one program version, installs the canonical program, and authenticates every current binding and root outcome-authority row.
+% 根安装构造空授权记录、空游标与空派发队列状态，将 \(\mathsf{ver}\) 设为 \(0\)，激活一个执行程序版本，安装规范执行程序，并认证每个当前绑定和根结果权限记录。
 
 \begin{lemma}[Registration reflection]
 % 注册反射
 \label{lem:registration-reflection}
-For finite-state \(\mathcal W\) and finite \(R\), \(\mathsf{CheckReg}(\mathcal W,R)\) accepts iff the registered \(\lambda\) witnesses \(\mathcal W\sqsubseteq_\lambda R\) in \cref{def:registration-refinement}.
-% 对于有限状态的 \(\mathcal W\) 与有限的 \(R\)，当且仅当已注册的 \(\lambda\) 见证 \cref{def:registration-refinement} 中的 \(\mathcal W\sqsubseteq_\lambda R\) 时，\(\mathsf{CheckReg}(\mathcal W,R)\) 才接受。
-On acceptance, the \(\lambda\)-lowerings of source executions modulo \(\equiv_\partial\) correspond bijectively to \(\mathsf{BRuns}(R)\).
-% 接受时，模 \(\equiv_\partial\) 的源执行经 \(\lambda\) 降低后与 \(\mathsf{BRuns}(R)\) 双射对应。
+For finite-state \(\mathcal W\) and finite \(\mathcal R\), \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) accepts iff the registered \(\lambda\) witnesses \(\mathcal W\sqsubseteq_\lambda\mathcal R\) in \cref{def:registration-refinement}.
+% 对于有限状态的 \(\mathcal W\) 与有限的 \(\mathcal R\)，当且仅当已注册的 \(\lambda\) 见证 \cref{def:registration-refinement} 中的 \(\mathcal W\sqsubseteq_\lambda\mathcal R\) 时，\(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) 才接受。
+On acceptance, the \(\lambda\)-lowerings of source executions modulo \(\equiv_\partial\) correspond bijectively to \(\mathsf{BRuns}(\mathcal R)\).
+% 接受时，模 \(\equiv_\partial\) 的源执行经 \(\lambda\) 降低后与 \(\mathsf{BRuns}(\mathcal R)\) 双射对应。
 The correspondence preserves indexed outcomes, causal order, canonical-request equivalence, authorization record evolution, and the safety-check answer.
 % 该对应保持带索引结果、因果次序、规范请求等价关系、授权记录演化与安全检查答案。
 \end{lemma}
@@ -677,10 +677,10 @@ A reachable SCC that can still reach an outcome and contains a protected-call ed
 % 一个可达、仍可到达结果且包含受控调用边的强连通分量可以在该结果之前被反复遍历，从而产生长度无界的投影词。
 Conversely, if no such SCC contains a protected-call edge, contracting the SCCs yields a DAG with a finite, enumerable projected language.
 % 反之，若此类强连通分量都不含受控调用边，则收缩这些分量会得到具有有限且可枚举投影语言的 DAG。
-The checker compares that language with \(\mathsf{BRuns}(R)\) and directly checks outcome/workflow-call incidence, order, protected-action attestation, total unique registration, exclusion of unregistered calls, and authorization record evolution at every prefix.
-% 检查器将该语言与 \(\mathsf{BRuns}(R)\) 比较，并直接检查结果/工作流调用关联关系、次序、受控动作证明、全定义唯一注册、未注册调用排除以及每个前缀处的授权记录演化。
-Therefore it accepts exactly the semantic conjunction defining \(\mathcal W\sqsubseteq_\lambda R\), rather than an oracle restatement.
-% 因而，它恰好接受定义 \(\mathcal W\sqsubseteq_\lambda R\) 的语义合取，而不是对预言机的重述。
+The checker compares that language with \(\mathsf{BRuns}(\mathcal R)\) and directly checks outcome/workflow-call incidence, order, protected-action attestation, total unique registration, exclusion of unregistered calls, and authorization record evolution at every prefix.
+% 检查器将该语言与 \(\mathsf{BRuns}(\mathcal R)\) 比较，并直接检查结果/工作流调用关联关系、次序、受控动作证明、全定义唯一注册、未注册调用排除以及每个前缀处的授权记录演化。
+Therefore it accepts exactly the semantic conjunction defining \(\mathcal W\sqsubseteq_\lambda\mathcal R\), rather than an oracle restatement.
+% 因而，它恰好接受定义 \(\mathcal W\sqsubseteq_\lambda\mathcal R\) 的语义合取，而不是对预言机的重述。
 Boundary projection erases only internal steps, so matching projected paths induce a bijection between the corresponding executions.
 % 边界投影只擦除内部步骤，因此匹配的投影路径在对应执行之间诱导一个双射。
 Canonical-request equality and deterministic \(\Resolve\) make authorization record evolution commute with this bijection at every prefix.
@@ -692,15 +692,15 @@ The safe implementation families are therefore order-isomorphic, so the fixed-po
 \begin{lemma}[Natural bootstrap]
 % 自然引导
 \label{lem:app-boot}
-If \(\mathsf{CheckReg}(\mathcal W,R)\) accepts and \(R\)'s registered root contract and policy have a nonempty greatest safe implementation, registration and checked root installation reach a finite state \(S_R\) with \(\mathsf{AgentSec}(S_R;c_R,\epsilon)\).
-% 若 \(\mathsf{CheckReg}(\mathcal W,R)\) 接受且 \(R\) 的已注册根契约与策略具有非空的最大实现，则注册与经检查的根安装会到达一个满足 \(\mathsf{AgentSec}(S_R;c_R,\epsilon)\) 的有限状态 \(S_R\)。
+If \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) accepts and \(\mathcal R\)'s registered root contract and policy have a nonempty greatest safe implementation, registration and checked root installation reach a finite state \(S_{\mathcal R}\) with \(\mathsf{AgentSec}(S_{\mathcal R};c_{\mathcal R},\epsilon)\).
+% 若 \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) 接受且 \(\mathcal R\) 的已注册根契约与策略具有非空的最大实现，则注册与经检查的根安装会到达一个满足 \(\mathsf{AgentSec}(S_{\mathcal R};c_{\mathcal R},\epsilon)\) 的有限状态 \(S_{\mathcal R}\)。
 The installation record originates at the checked root derivation, while every later replacement records an execution-edit derivation or a registered extension.
 % 安装记录起源于经检查根推导，而此后每次替换都记录执行编辑推导或已注册扩展。
 \end{lemma}
 
 \begin{proof}
-Registration contributes only the checked \(R\) and \(n\), and deterministic allocation constructs every runtime identifier from them.
-% 注册只提供经检查的 \(R\) 和 \(n\)，而确定性分配据此构造每个运行时标识。
+Registration contributes only the checked \(\mathcal R\) and \(n\), and deterministic allocation constructs every runtime identifier from them.
+% 注册只提供经检查的 \(\mathcal R\) 和 \(n\)，而确定性分配据此构造每个运行时标识。
 The root judgment and checked lifts establish core/schema coherence, and the recomputed nonempty fixed point establishes required-outcome coherence.
 % 根判定与经检查的提升建立核心/模式一致性，而重新计算的非空不动点建立要求实现结果的一致性。
 Empty runtime progress establishes execution coherence, the canonical program at \(q_\epsilon\) establishes program coherence, and the atomic phase/binding assignments establish program-version coherence.
@@ -807,8 +807,8 @@ This proves the necessity of semantic authorization record--protected-action inc
 % \(\mathbf C\)：安装坐标
 Let a bootstrap namespace be a family \(n=(n_s)_{s\in\mathsf{Sort}}\) of injective, per-sort fresh supplies.
 % 令引导命名空间为一族 \(n=(n_s)_{s\in\mathsf{Sort}}\)；其中每个类型的供给均为单射且新鲜。
-From the same literal empty initial state, register the same public call model \(R\) with supplies \(n^0,n^1\) that agree on every non-program-version sort but mint distinct initial versions \(\eta_0\ne\eta_1\), and perform checked root installation.
-% 从同一个字面空初始状态出发，使用供给 \(n^0,n^1\) 注册同一个公开调用模型 \(R\)；二者在每个非执行程序版本类型上相同，但生成不同的初始版本 \(\eta_0\ne\eta_1\)，随后执行经检查根安装。
+From the same literal empty initial state, register the same public call model \(\mathcal R\) with supplies \(n^0,n^1\) that agree on every non-program-version sort but mint distinct initial versions \(\eta_0\ne\eta_1\), and perform checked root installation.
+% 从同一个字面空初始状态出发，使用供给 \(n^0,n^1\) 注册同一个公开调用模型 \(\mathcal R\)；二者在每个非执行程序版本类型上相同，但生成不同的初始版本 \(\eta_0\ne\eta_1\)，随后执行经检查根安装。
 The resulting \(V_{\mathbf C}^0,V_{\mathbf C}^1\) have literally identical \(\mathbf P,\mathbf I,\mathbf E\) base fields, while \(\mathbf C\)'s active program version, program-entry ownership, certificate coordinates, and dependent authenticators differ.
 % 得到的 \(V_{\mathbf C}^0,V_{\mathbf C}^1\) 具有字面完全相同的 \(\mathbf P,\mathbf I,\mathbf E\) 基础字段，而 \(\mathbf C\) 的活动执行程序版本、执行程序入口所有权、证书坐标及其依赖认证器不同。
 Compile the same registered edit \(u_0\) at \(V_{\mathbf C}^0\) to obtain \(Y_0=\mathsf{Installable}(\delta_0,W_0,\widehat B_0,Z_0)\), and submit the same literal query \(q_{\mathbf C}=\mathsf{TryInstall}(u_0,Y_0)\) to both views.
@@ -881,8 +881,8 @@ All three answers bind the same current source-snapshot token and are mutually e
 % 受控调用
 For submitted tool request \(m\), an enabled \(x\) passes the ideal program exactly when its current entry and authorization token bind protected action \(d\), \(\mathsf{canon}_\kappa(m)=\mathsf{inv}_\rho(d)\), and \(ra\in L^*\), where \(a=\Fresh(x,d)\) if \(d\) has no authorization record and \(a=\Alias(x,d)\) otherwise.
 % 对于提交的工具请求 \(m\)，当且仅当已启用的 \(x\) 的当前入口与授权令牌绑定受控动作 \(d\)、\(\mathsf{canon}_\kappa(m)=\mathsf{inv}_\rho(d)\) 且 \(ra\in L^*\) 时，它才通过理想执行程序；若 \(d\) 尚无授权记录，则 \(a=\Fresh(x,d)\)，否则 \(a=\Alias(x,d)\)。
-One atomic transition applies \(\mathsf{HStep}\), appends \(a\) to \(\chi\), advances \(\nu\), removes \(x\)'s binding, and sets \(r:=ra\); \Fresh also creates the labeled authorization record and queues the canonical request, whereas \Alias links to the existing return record.
-% 一个原子转移应用 \(\mathsf{HStep}\)、将 \(a\) 追加到 \(\chi\)、推进 \(\nu\)、移除 \(x\) 的绑定并令 \(r:=ra\)；\Fresh 还会创建带标签授权记录并将规范请求入队，而 \Alias 则链接到已有返回记录。
+One atomic transition applies \(\mathsf{HStep}\), appends \(a\) to \(\chi\), advances \(\mathsf{ver}\), removes \(x\)'s binding, and sets \(r:=ra\); \Fresh also creates the labeled authorization record and queues the canonical request, whereas \Alias links to the existing return record.
+% 一个原子转移应用 \(\mathsf{HStep}\)、将 \(a\) 追加到 \(\chi\)、推进 \(\mathsf{ver}\)、移除 \(x\) 的绑定并令 \(r:=ra\)；\Fresh 还会创建带标签授权记录并将规范请求入队，而 \Alias 则链接到已有返回记录。
 Any failed premise returns \(\mathsf{deny}(x)\) without changing state or inventing a return value.
 % 任一前提失败都会返回 \(\mathsf{deny}(x)\)，且既不改变状态也不虚构返回值。
 
@@ -930,8 +930,8 @@ S=(\kappa,H,\Delta,\mathsf{out},\mathcal A,
 \]
 where \(\mathsf{phase}\) records whether each program version \(\eta\) is unallocated (\(\bot\)), inactive, active, or closed.
 % 其中 \(\mathsf{phase}\) 记录每个执行程序版本 \(\eta\) 是未分配（\(\bot\)）、非活动、活动还是已关闭。
-The bootstrap rule runs only after \(\mathsf{CheckReg}(\mathcal W,R)\) accepts, and its exact construction appears in \cref{app:boot-pairs}.
-% 引导规则只在 \(\mathsf{CheckReg}(\mathcal W,R)\) 接受后运行，其精确构造见 \cref{app:boot-pairs}。
+The bootstrap rule runs only after \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) accepts, and its exact construction appears in \cref{app:boot-pairs}.
+% 引导规则只在 \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) 接受后运行，其精确构造见 \cref{app:boot-pairs}。
 Each installed version stores \(c=(\mathsf{state}_c,H_c^+,u,W,\widehat B,Z)\): the authenticated source snapshot, derived target, edit, safe language, indexed family, and checked certificate.
 % 每个已安装版本都存储 \(c=(\mathsf{state}_c,H_c^+,u,W,\widehat B,Z)\)：认证源状态快照、派生目标、编辑、安全语言、带索引执行族和经检查证书。
 
@@ -995,7 +995,7 @@ The paired update \(\mathsf{HStep}((G,T),a)\) removes \(x\), records any choice,
 \begin{aligned}
  (H.G,H.T)&:=\mathsf{HStep}((G,T),a),&
  H.\chi&:=\chi a,\\
- H.\nu&:=\nu+1,& H.\beta&:=\beta\setminus\{x\},\\
+ H.\mathsf{ver}&:=\mathsf{ver}+1,& H.\beta&:=\beta\setminus\{x\},\\
  \mathsf{bind}&:=\mathsf{bind}\setminus\{x\},&
  \mathsf q(\eta)&:=q'.
 \end{aligned}
@@ -1055,7 +1055,7 @@ Initial registration occurs before the root safety check; later additive schema 
 Event class & State update & Witness & Preservation argument\\
 \midrule
 \Fresh use &
-Apply \(\mathsf{HStep}\) to \((G,T)\); append \(\Fresh(x,d)\) to global \(\chi\); advance \(\nu,q\); append one authorization record and canonical-request queue item; remove the current binding. &
+Apply \(\mathsf{HStep}\) to \((G,T)\); append \(\Fresh(x,d)\) to global \(\chi\); advance \(\mathsf{ver},q\); append one authorization record and canonical-request queue item; remove the current binding. &
 \((c,r\Fresh(x,d))\) &
 \(A_1\): registry and schema unchanged.
 \(A_2\): residual coherence.
@@ -1063,7 +1063,7 @@ Apply \(\mathsf{HStep}\) to \((G,T)\); append \(\Fresh(x,d)\) to global \(\chi\)
 \(A_4\): canonical derivative.
 \(A_5\): remove exactly \(x\)'s binding.\\
 \Alias use &
-Apply \(\mathsf{HStep}\) to \((G,T)\); append \(\Alias(x,d)\) to global \(\chi\); advance \(\nu,q\); add only the return-record link; remove current binding. &
+Apply \(\mathsf{HStep}\) to \((G,T)\); append \(\Alias(x,d)\) to global \(\chi\); advance \(\mathsf{ver},q\); add only the return-record link; remove current binding. &
 \((c,r\Alias(x,d))\) &
 \(A_1\): authenticated protected action retained.
 \(A_2\): residual coherence.
@@ -1083,7 +1083,7 @@ Emit the certificate for the current checked state; no stored-state change. &
 \((c,r)\) &
 All clauses unchanged; \(\gamma\) binds the visible answer to this source snapshot.\\
 \(\mathsf{Save}\) &
-Snapshot the current residual/cursor pair in an authenticated checkpoint; advance \(\nu\). &
+Snapshot the current residual/cursor pair in an authenticated checkpoint; advance \(\mathsf{ver}\). &
 \((c,r)\) &
 \(A_1\): immutable well-typed extension.
 \(A_2,A_4,A_5\): unchanged.
@@ -1313,8 +1313,8 @@ Both sides then inspect the same set \(D_\Delta\) of protected actions with auth
 By \cref{cor:app-exact-boundary,lem:compiled-language}, \(ra\) is enabled by the compiled derivative exactly when \(ra\in L^*\) in the ideal machine.
 % 根据 \cref{cor:app-exact-boundary,lem:compiled-language}，当且仅当理想机中 \(ra\in L^*\) 时，编译后导数才启用 \(ra\)。
 
-In the \Fresh case, both successors apply the same paired residual, append the same symbol to the global trace and branch-local cursor, advance \(\nu\), create the same protected-action-bound authorization record, and prepare the same canonical request.
-% 在 \Fresh 情形中，两个后继都应用相同的成对残余、把同一符号追加到全局轨迹与分支局部游标、推进 \(\nu\)、创建绑定同一受控动作的授权记录，并准备同一规范请求。
+In the \Fresh case, both successors apply the same paired residual, append the same symbol to the global trace and branch-local cursor, advance \(\mathsf{ver}\), create the same protected-action-bound authorization record, and prepare the same canonical request.
+% 在 \Fresh 情形中，两个后继都应用相同的成对残余、把同一符号追加到全局轨迹与分支局部游标、推进 \(\mathsf{ver}\)、创建绑定同一受控动作的授权记录，并准备同一规范请求。
 The compiled dispatch queue stores \((d,\mathsf{inv}_\rho(d))\), never the caller buffer, while the ideal queue stores \((d,m^\circ)\); the verified equality makes these records identical.
 % 编译后派发队列存储 \((d,\mathsf{inv}_\rho(d))\) 而绝不存储调用方缓冲区，理想队列存储 \((d,m^\circ)\)；经验证的等式使这两条记录相同。
 In the \Alias case, both successors apply the same paired update, append the same symbol that creates no authorization record to the global record and branch cursor, and bind the workflow call to the same stored return record without changing \(\Delta\) or the dispatch queue.
@@ -1333,10 +1333,10 @@ Both machines emit \(\mathsf{deny}(x)\), preserve state, and remain related.
 % 使用--安装竞态
 Use and installation serialize on the same execution and program-version records.
 % 使用与安装会在相同的执行记录和执行程序版本记录上串行化。
-If a \Fresh use commits first, it changes \((G,T,\Delta,\chi,\nu,\mathsf{out})\), all of which are bound directly or through \(H\) by the source-snapshot seal, so the prepared installation becomes stale.
-% 如果 \Fresh 使用先提交，它会改变 \((G,T,\Delta,\chi,\nu,\mathsf{out})\)，这些字段都由源状态快照封印直接绑定或通过 \(H\) 绑定，因此已准备安装会过期。
-If an \Alias use commits first, it changes \((G,T,\chi,\nu)\) even though \(\Delta\) and the dispatch queue are unchanged, so the prepared installation again becomes stale.
-% 如果 \Alias 使用先提交，即使 \(\Delta\) 和派发队列不变，它仍会改变 \((G,T,\chi,\nu)\)，因此已准备安装同样会过期。
+If a \Fresh use commits first, it changes \((G,T,\Delta,\chi,\mathsf{ver},\mathsf{out})\), all of which are bound directly or through \(H\) by the source-snapshot seal, so the prepared installation becomes stale.
+% 如果 \Fresh 使用先提交，它会改变 \((G,T,\Delta,\chi,\mathsf{ver},\mathsf{out})\)，这些字段都由源状态快照封印直接绑定或通过 \(H\) 绑定，因此已准备安装会过期。
+If an \Alias use commits first, it changes \((G,T,\chi,\mathsf{ver})\) even though \(\Delta\) and the dispatch queue are unchanged, so the prepared installation again becomes stale.
+% 如果 \Alias 使用先提交，即使 \(\Delta\) 和派发队列不变，它仍会改变 \((G,T,\chi,\mathsf{ver})\)，因此已准备安装同样会过期。
 If installation commits first, it atomically closes \(\eta^-\), activates \(\eta^+\), refreshes every current program entry and authorization token, and exposes the replacement authorization tokens only after activation.
 % 如果安装先提交，它会原子关闭 \(\eta^-\)、激活 \(\eta^+\)、刷新每个当前执行程序入口与授权令牌，并且只在激活之后暴露替代授权令牌。
 The old \Fresh or \Alias use then fails the current-program-version program and is denied without progress.
