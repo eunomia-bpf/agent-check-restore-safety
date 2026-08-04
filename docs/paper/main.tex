@@ -55,8 +55,10 @@ Existing Agent recovery systems implement particular edits, while existing synth
 % 现有 Agent 恢复系统实现特定编辑，而现有综合方法假定可能执行及完成条件已经给定。
 Neither derives the full safety requirement of a requested edit from the current execution record.
 % 二者都不会从当前执行记录中推导出一次请求的编辑所需的完整安全条件。
-We give an exact theory that turns a requested edit into either a runtime monitor or a proof that no safe monitor exists.
-% 我们给出一套精确理论，把请求的编辑转化为运行时监控器，或者转化为不存在安全监控器的证明。
+We give an exact procedure for deciding whether an execution edit is safe.
+% 我们给出一个精确过程，用于判定一次执行编辑是否安全。
+It either computes every safe way for the edited workflow to continue or proves that every possible implementation is unsafe.
+% 它要么计算编辑后工作流安全继续执行的全部方式，要么证明该编辑的每种可能实现都不安全。
 Given a registered workflow and its current execution record, the trusted controller first derives the edited workflow and the outcomes that it must preserve.
 % 给定一个已注册工作流及其当前执行记录，可信控制器首先推导编辑后的工作流及其必须保留的结果。
 Every outcome required before the edit must remain required, already be satisfied by the recorded execution, or be explicitly removed by the same authority that required it.
@@ -67,16 +69,16 @@ It removes an execution whenever one of its partial executions would leave a sti
 % 如果某个完整执行的部分过程会让仍然需要实现的结果失去安全完成方式，检查器就删除该完整执行。
 If nothing remains, the checker returns a finite, independently checkable explanation that no safe implementation exists.
 % 如果没有完整执行留下，检查器返回一份有限且可独立检查的说明，证明不存在安全实现。
-Otherwise, the remaining executions define the most permissive runtime monitor that enforces the edit.
-% 否则，剩余执行定义了强制执行该编辑且限制最少的运行时监控器。
-For all six registered Fork, Restore, and Merge edits and later registered extensions, our main theorem proves that the checker accepts exactly when a safe monitor exists and that the accepted monitor permits every safe behavior.
-% 对全部六种已注册的 Fork、Restore 和 Merge 编辑以及后续注册扩展，我们的主定理证明，检查器当且仅当安全监控器存在时才接受，并且被接受的监控器允许全部安全行为。
-The theorem also proves that the monitor can be installed atomically despite concurrent calls, remains safe through repeated edits and recovery, and has the same Agent-visible behavior as an ideal atomic machine.
-% 该定理还证明，即使存在并发调用，监控器也能被原子安装，并在重复编辑与恢复过程中保持安全，同时与理想原子机器具有相同的 Agent 可见行为。
-Finally, the theorem proves that every exact checker needs four facts: (1) the workflow and its required outcomes, (2) which calls refer to the same action, (3) earlier authorizations and call progress, and (4) the monitor version in force when the edit takes effect.
-% 最后，该定理证明每个精确检查器都需要四类事实：(1) 工作流及其要求实现的结果，(2) 哪些调用指向同一个动作，(3) 先前的授权与调用进展，以及 (4) 编辑生效时使用的监控器版本。
-Six Lean modules mechanize registration, all six edit rules, atomic monitor installation, call--installation races, and preservation across finite executions.
-% 六个 Lean 模块机械化注册、全部六种编辑规则、监控器原子安装、调用—安装竞态以及有限执行上的安全保持。
+Otherwise, the remaining executions contain every safe way for the edit to proceed, and the runtime permits only calls that stay within them.
+% 否则，剩余执行包含该编辑安全推进的全部方式，运行时只允许保持在这些执行之内的调用。
+For all six registered Fork, Restore, and Merge edits and later registered extensions, our main theorem proves that the checker accepts exactly when a safe implementation exists and that acceptance retains every safe execution.
+% 对全部六种已注册的 Fork、Restore 和 Merge 编辑以及后续注册扩展，我们的主定理证明，检查器当且仅当安全实现存在时才接受，并且接受结果保留每段安全执行。
+The theorem also proves that the result can take effect atomically despite concurrent calls, remains safe through repeated edits and recovery, and gives the runtime the same Agent-visible behavior as an ideal atomic machine.
+% 该定理还证明，即使存在并发调用，判定结果也能原子生效，并在重复编辑与恢复过程中保持安全，同时使运行时与理想原子机器具有相同的 Agent 可见行为。
+Finally, the theorem proves that every exact checker needs four facts: (1) the workflow and its required outcomes, (2) which calls refer to the same action, (3) earlier authorizations and call progress, and (4) which rules govern a call that overlaps the edit.
+% 最后，该定理证明每个精确检查器都需要四类事实：(1) 工作流及其要求实现的结果，(2) 哪些调用指向同一个动作，(3) 先前的授权与调用进展，以及 (4) 哪组规则管理与编辑重叠的调用。
+Six Lean modules mechanize registration, all six edit rules, atomic installation, calls concurrent with installation, and preservation across finite executions.
+% 六个 Lean 模块机械化注册、全部六种编辑规则、原子安装、与安装并发的调用以及有限执行上的安全保持。
 Nineteen paper-specific tests and measurements over 2--128 outcomes exercise the executable checker.
 % 十九项论文专用测试与覆盖 2--128 个结果的测量检验可执行检查器。
 \end{abstract}

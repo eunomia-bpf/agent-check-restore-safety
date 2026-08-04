@@ -26,8 +26,8 @@ Either result violates the intended workflow because the first repeats a one-tim
 
 Detecting this failure requires more than the restored checkpoint.
 % 检测这种失败所需的信息不止恢复后的检查点。
-The execution record contains four facts that the checker needs: (1) the workflow and its required outcomes, (2) which calls refer to the same action, (3) earlier authorizations and call progress, and (4) the monitor version in force when the edit takes effect.
-% 执行记录包含检查器所需的四类事实：(1) 工作流及其要求实现的结果，(2) 哪些调用指向同一个动作，(3) 先前的授权与调用进展，以及 (4) 编辑生效时使用的监控器版本。
+The execution record contains four facts that the checker needs: (1) the workflow and its required outcomes, (2) which calls refer to the same action, (3) earlier authorizations and call progress, and (4) which rules govern a call that overlaps the edit.
+% 执行记录包含检查器所需的四类事实：(1) 工作流及其要求实现的结果，(2) 哪些调用指向同一个动作，(3) 先前的授权与调用进展，以及 (4) 哪组规则管理与编辑重叠的调用。
 Each field can change the correct answer.
 % 每个字段都可能改变正确答案。
 Equal workspaces, an execution trace alone, an authorization log alone, or a replacement workflow proposed by the Agent cannot reconstruct this record.
@@ -72,32 +72,40 @@ It removes an execution whenever one of its partial executions would leave a sti
 % 如果某个完整执行的部分过程会让仍然要求实现的结果失去安全完成方式，检查器就删除该完整执行。
 If no execution remains, the controller returns an independently checkable rejection certificate.
 % 如果没有完整执行留下，控制器返回一份可独立检查的拒绝证书。
-Otherwise, the remaining executions define the most permissive safe monitor.
-% 否则，剩余执行定义限制最少的安全监控器。
-Before the edit takes effect, the runtime checks the current execution record again and atomically replaces the old monitor.
-% 编辑生效之前，运行时再次检查当前执行记录并原子替换旧监控器。
-Every overlapping call is therefore governed entirely by either the old monitor or the new one.
-% 因此，每个重叠调用都完全由旧监控器或新监控器管理。
-\Cref{sec:lifecycle} derives this process for an approval workflow containing Fork, Merge, Restore, and calls that overlap monitor installation.
-% \Cref{sec:lifecycle} 针对一个包含 Fork、Merge、Restore 以及与监控器安装重叠调用的审批工作流推导这一过程。
+Otherwise, the remaining executions contain every safe way for the edit to proceed.
+% 否则，剩余执行包含该编辑安全推进的全部方式。
+Before the edit takes effect, the runtime checks the current execution record again and atomically switches to the newly computed rules.
+% 编辑生效之前，运行时再次检查当前执行记录，并原子切换到新计算出的规则。
+Every overlapping call is therefore checked entirely under either the old rules or the new rules.
+% 因此，每个重叠调用都完全依据旧规则或新规则进行检查。
+\Cref{sec:lifecycle} derives this process for an approval workflow containing Fork, Merge, Restore, and calls that overlap installation.
+% \Cref{sec:lifecycle} 针对一个包含 Fork、Merge、Restore 以及与安装重叠调用的审批工作流推导这一过程。
 After Restore, the repeated approval call reuses the earlier authorization record instead of authorizing the approval again.
 % Restore 之后，重复的审批调用复用先前的授权记录，而不会再次授权该审批。
 
 \paragraph{Contributions}
 % 贡献
-We contribute one end-to-end theorem connecting the original Agent workflow, the requested execution edit, the exact checker, and the installed monitor.
-% 我们贡献一个端到端定理，将原始 Agent 工作流、请求的执行编辑、精确检查器与已安装监控器连接起来。
-For all six registered Fork, Restore, and Merge edits and later registered extensions, the checker accepts exactly when a safe monitor exists.
-% 对全部六种已注册的 Fork、Restore 和 Merge 编辑以及后续注册扩展，检查器当且仅当安全监控器存在时才接受。
-When the checker accepts, it constructs the most permissive monitor, the runtime can install that monitor atomically, and an ideal atomic machine permits the same edit.
-% 当检查器接受时，它构造限制最少的监控器，运行时可以原子安装该监控器，并且理想原子机器允许同一次编辑。
-The theorem also proves that every exact checker must know the same four facts recorded by the runtime (\cref{sec:model,sec:admission,sec:results}).
-% 该定理还证明，每个精确检查器都必须知道运行时记录的这四类事实（\cref{sec:model,sec:admission,sec:results}）。
-The concrete runtime and ideal machine have the same Agent-visible behavior (\cref{sec:enforcement,sec:results}).
-% 具体运行时与理想机器具有相同的 Agent 可见行为（\cref{sec:enforcement,sec:results}）。
-The security invariant is inductive across edits, protected calls, installation races, returns, and recovery, so it holds after every finite execution.
-% 安全不变量在编辑、受控调用、安装竞态、返回与恢复上均为归纳不变量，因此在每段有限执行之后都成立。
-Six Lean modules mechanize registration, all six edit rules, atomic monitor installation, call--installation races, and preservation across finite executions.
-% 六个 Lean 模块机械化注册、全部六种编辑规则、监控器原子安装、调用—安装竞态以及有限执行上的安全保持。
+\begin{enumerate}[leftmargin=*,itemsep=2pt,topsep=2pt]
+\item \textbf{Safety model.}
+% \textbf{安全模型。}
+We define safety for Agent Fork, Restore, and Merge from the execution record rather than from a replacement workflow proposed by the Agent.
+% 我们根据执行记录而不是 Agent 提出的替代工作流，定义 Agent Fork、Restore 和 Merge 的安全性。
+The model preserves past actions and every still-required outcome, and it proves that every exact checker needs the four facts identified above.
+% 该模型保留过去的动作和每个仍要求实现的结果，并证明每个精确检查器都需要上述四类事实。
+
+\item \textbf{Exact checking and runtime implementation.}
+% \textbf{精确检查与运行时实现。}
+We construct an executable checker that returns either a rejection certificate or every safe way for the edit to proceed.
+% 我们构造一个可执行检查器，它返回拒绝证书或该编辑安全推进的全部方式。
+For all six registered edits and later registered extensions, the checker accepts exactly when a safe implementation exists.
+% 对全部六种已注册编辑及后续注册扩展，检查器当且仅当安全实现存在时才接受。
+The runtime puts the result into effect atomically, preserves safety across repeated edits and recovery, and has the same Agent-visible behavior as an ideal atomic machine.
+% 运行时使判定结果原子生效，在重复编辑与恢复过程中保持安全，并与理想原子机器具有相同的 Agent 可见行为。
+
+\item \textbf{Mechanization and executable validation.}
+% \textbf{机械化与可执行验证。}
+Six Lean modules mechanize registration, all six edit rules, atomic installation, calls concurrent with installation, and preservation across finite executions.
+% 六个 Lean 模块机械化注册、全部六种编辑规则、原子安装、与安装并发的调用以及有限执行上的安全保持。
 Nineteen paper-specific tests and measurements over 2--128 outcomes exercise the executable checker.
 % 十九项论文专用测试与覆盖 2--128 个结果的测量检验可执行检查器。
+\end{enumerate}

@@ -2,8 +2,8 @@
 % 形式保证
 \label{sec:results}
 
-The theorem connects authenticated edit derivation, exact checking, monitor construction, atomic installation, and every later runtime step.
-% 该定理连接经认证编辑推导、精确检查、监控器构造、原子安装以及此后的每个运行时步骤。
+The theorem connects authenticated edit derivation, exact checking, program construction, atomic installation, and every later runtime step.
+% 该定理连接经认证编辑推导、精确检查、执行程序构造、原子安装以及此后的每个运行时步骤。
 Its central clause says that the checker accepts if and only if a safe implementation exists.
 % 其核心条款表明，当且仅当安全实现存在时，检查器才会接受。
 The other clauses establish faithful registration, necessary state information, repeated use, and runtime correctness.
@@ -13,13 +13,13 @@ Fix \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
 % 固定 \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
 An \emph{installed safe implementation} is a pair \((M,\widehat B_M)\) whose generated and marked languages realize \((H,u)\) as in \cref{def:safe-implementation}.
 % \emph{已安装实现}是二元组 \((M,\widehat B_M)\)，其生成语言与标记语言按 \cref{def:safe-implementation} 实现 \((H,u)\)。
-Installation atomically places the pair at \(\eta^+\), closes \(\eta^-\), and replaces all target monitor entries and tokens.
-% 安装将该二元组原子置于 \(\eta^+\)、关闭 \(\eta^-\)，并替换全部目标监控器入口与令牌。
+Installation atomically places the pair at \(\eta^+\), closes \(\eta^-\), and replaces all target program entries and tokens.
+% 安装将该二元组原子置于 \(\eta^+\)、关闭 \(\eta^-\)，并替换全部目标执行程序入口与令牌。
 
 \paragraph{Information required end to end}
 % 端到端所需的信息
-At a checked source snapshot, \(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) joins four relations: (1) workflow structure and schemas (\(\mathbf P\)), (2) the call--action map (\(\mathbf I\)), (3) authorization and execution progress (\(\mathbf E\)), and (4) monitor-version and installation coordinates (\(\mathbf C\)).
-% 在经检查源状态快照处，\(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) 连接四类关系：(1) 工作流结构与模式（\(\mathbf P\)）；(2) 调用—动作映射（\(\mathbf I\)）；(3) 授权与执行进展（\(\mathbf E\)）；(4) 监控器版本与安装坐标（\(\mathbf C\)）。
+At a checked source snapshot, \(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) joins four relations: (1) workflow structure and schemas (\(\mathbf P\)), (2) the call--action map (\(\mathbf I\)), (3) authorization and execution progress (\(\mathbf E\)), and (4) program-version and installation coordinates (\(\mathbf C\)).
+% 在经检查源状态快照处，\(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) 连接四类关系：(1) 工作流结构与模式（\(\mathbf P\)）；(2) 调用—动作映射（\(\mathbf I\)）；(3) 授权与执行进展（\(\mathbf E\)）；(4) 执行程序版本与安装坐标（\(\mathbf C\)）。
 For every well-typed decide or install query \((V,q)\in\mathcal Q_{\rm sec}\), compare private names up to consistent renaming and define an equivariant information map \(f\) to be exact when
 % 对每个良好定型的判定或安装查询 \((V,q)\in\mathcal Q_{\rm sec}\)，私有名称按一致重命名比较，并在下列条件成立时称等变信息映射 \(f\) 是精确的：
 \[
@@ -74,8 +74,8 @@ Then they hold for every \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) a
 % 忠实注册。
 \(\mathsf{CheckReg}(\mathcal W,R)\) accepts iff stored \(\lambda\) witnesses \(\mathcal W\sqsubseteq_\lambda R\).
 % 当且仅当所存 \(\lambda\) 见证 \(\mathcal W\sqsubseteq_\lambda R\) 时，\(\mathsf{CheckReg}(\mathcal W,R)\) 才接受。
-On acceptance, the source workflow's protected-call traces and \(\mathsf{BRuns}(R)\) are order-isomorphic and preserve outcomes, action IDs, \Fresh/\Alias, the safety answer, and the most permissive monitor.
-% 接受时，源工作流的受控调用轨迹与 \(\mathsf{BRuns}(R)\) 序同构，并保持结果、动作标识、\Fresh/\Alias、安全答案与限制最少的监控器。
+On acceptance, the source workflow's protected-call traces and \(\mathsf{BRuns}(R)\) are order-isomorphic and preserve outcomes, actions, \Fresh/\Alias, the safety answer, and the most permissive program.
+% 接受时，源工作流的受控调用轨迹与 \(\mathsf{BRuns}(R)\) 序同构，并保持结果、动作、\Fresh/\Alias、安全答案与限制最少的执行程序。
 Malformed registrations fail before startup.
 % 不合格的注册在启动前失败。
 
