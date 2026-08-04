@@ -52,20 +52,22 @@ An unsafe edit can therefore authorize the same action twice, discard a result t
 % 因此，不安全的编辑可能两次授权同一个动作、丢弃工作流仍然要求的结果，或与编辑前已经开始的调用冲突。
 Existing Agent systems support Fork, Restore, or Merge, but neither these systems nor existing synthesis methods derive a requested edit's safety conditions from the current execution record.
 % 现有 Agent 系统支持 Fork、Restore 或 Merge，但这些系统和现有综合方法都不会从当前执行记录中推导一次编辑的安全条件。
-We give an exact procedure for deciding whether an execution edit is safe.
-% 我们给出一个精确过程，用于判定一次执行编辑是否安全。
-It either computes every safe way for the edited workflow to continue or proves that every possible implementation is unsafe.
-% 它要么计算编辑后工作流安全继续执行的全部方式，要么证明该编辑的每种可能实现都不安全。
-Given a registered workflow and execution record, a trusted controller derives the edited workflow and the outcomes that it must preserve.
-% 给定一个已注册工作流及执行记录，可信控制器推导编辑后的工作流及其必须保留的结果。
-The procedure constructs the complete executions allowed by the workflow and policy, then removes any execution whose prefix would leave a still-required outcome with no safe completion.
-% 该过程构造工作流与策略允许的完整执行，然后删除任何会在某个前缀后使仍然要求实现的结果无法安全完成的执行。
-If no execution remains, it returns a finite, independently checkable proof that the edit has no safe implementation.
-% 如果没有执行留下，它就返回一个有限且可独立检查的证明，说明该编辑不存在安全实现。
-Otherwise, the remaining executions contain every safe continuation, and the runtime permits exactly their prefixes.
-% 否则，剩余执行包含全部安全继续方式，运行时只允许它们的前缀。
-The main theorem covers Checkpoint, six execution edit forms, extensions, atomic enforcement, and the information every exact checker needs.
-% 主定理覆盖 Checkpoint、六种编辑形式、扩展、原子执行以及每个精确检查器所需的信息。
+We give an algorithm that decides exactly whether the requested operation is safe.
+% 我们给出一种算法，精确判定所请求的操作是否安全。
+It returns all safe ways to continue, or proves that none exists.
+% 它给出全部安全继续方式，或者证明不存在安全方式。
+The Agent is untrusted and cannot choose which past actions or required results to ignore; the runtime determines both from its own records.
+% Agent 不能自行选择忽略哪些过去的动作或要求实现的结果；运行时根据自己的记录确定二者。
+To make this decision, the algorithm lists every way the task can finish without violating policy.
+% 为作出这一判定，算法列出任务在不违反策略的情况下完成的每种方式。
+It removes any way that could make a still-required result impossible to finish later.
+% 如果某种方式可能导致仍然要求实现的结果以后无法完成，算法就将其删除。
+If none remain, it returns a checkable proof that no safe implementation exists.
+% 如果没有方式留下，算法就返回一份可检查的证明，说明不存在安全实现。
+Otherwise, the remaining ways describe exactly what the runtime may allow.
+% 否则，剩余方式精确描述运行时可以允许的行为。
+The main theorem covers Checkpoint and the six forms of Fork, Restore, and Merge, together with extensions, atomic enforcement, and the information every exact checker needs.
+% 主定理覆盖 Checkpoint 以及 Fork、Restore 和 Merge 的六种形式，并涵盖扩展、原子强制执行以及每个精确检查器所需的信息。
 Lean proofs and executable tests validate the theory and checker.
 % Lean 证明和可执行测试验证了该理论与检查器。
 \end{abstract}

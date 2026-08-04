@@ -24,14 +24,20 @@ If the runtime sees only the restored workspace, it may request the same approva
 Either result violates the intended workflow because the first repeats a one-time approval and the second combines incompatible supplier actions.
 % 两种结果都会违反预期工作流，因为前者重复一次性审批，后者组合彼此不相容的供应商动作。
 
-Detecting this failure requires more than the restored checkpoint.
-% 检测这种失败所需的信息不止恢复后的检查点。
-The execution record contains four facts that the checker needs: (1) the workflow and its required outcomes, (2) which calls refer to the same action, (3) earlier authorizations and call progress, and (4) which rules govern a call that overlaps the edit.
-% 执行记录包含检查器所需的四类事实：(1) 工作流及其要求实现的结果，(2) 哪些调用指向同一个动作，(3) 先前的授权与调用进展，以及 (4) 哪组规则管理与编辑重叠的调用。
+The Agent is untrusted: it may request an edit that omits an earlier action or a result that the workflow still requires.
+% Agent 不受信任：它可能请求一次编辑，而该编辑省略先前的动作或工作流仍要求实现的结果。
+The trusted controller does not accept a workflow supplied by the Agent.
+% 可信控制器不接受由 Agent 提供的工作流。
+It derives the edited workflow from an execution record that the Agent cannot modify and checks every tool action governed by policy.
+% 它根据 Agent 无法修改的执行记录推导编辑后的工作流，并检查策略约束的每个工具动作。
+The security goal is to prevent an edit from authorizing a tool action forbidden by policy or discarding a result that the workflow still requires.
+% 安全目标是防止编辑授权策略禁止的工具动作，或丢弃工作流仍要求实现的结果。
+Enforcing this goal requires four facts: (1) the workflow and its required outcomes, (2) which calls refer to the same action, (3) earlier authorizations and call progress, and (4) which rules govern a call that overlaps the edit.
+% 执行这一目标需要四类事实：(1) 工作流及其要求实现的结果，(2) 哪些调用指向同一个动作，(3) 先前的授权与调用进展，以及 (4) 哪组规则管理与编辑重叠的调用。
 Each field can change the correct answer.
 % 每个字段都可能改变正确答案。
-Equal workspaces, an execution trace alone, an authorization log alone, or a replacement workflow proposed by the Agent cannot reconstruct this record.
-% 相同工作区、单独的执行轨迹、单独的授权日志，或 Agent 提出的替代工作流都无法重建该记录。
+Equal workspaces, an execution trace alone, an authorization log alone, or a workflow supplied by the Agent cannot reconstruct this record.
+% 相同工作区、单独的执行轨迹、单独的授权日志，或 Agent 提供的工作流都无法重建该记录。
 
 Existing approaches cover parts of this problem but do not derive its complete safety condition.
 % 现有方法覆盖了该问题的部分环节，却没有推导其完整安全条件。
@@ -50,8 +56,8 @@ The Agent identifies a registered edit.
 % Agent 指明一项已注册编辑。
 The platform authenticates the registered workflow, and the trusted controller derives the edited workflow and inherited requirements from that record rather than from Agent text.
 % 平台认证已注册工作流，可信控制器根据该记录而非 Agent 文本推导编辑后的工作流及其继承的要求。
-The Agent therefore cannot obtain a favorable answer by submitting a replacement workflow that hides inconvenient facts.
-% 因此，Agent 无法通过提交一个隐藏不利事实的替代工作流来获得有利答案。
+The Agent therefore cannot obtain a favorable answer by supplying a workflow that omits earlier actions or required outcomes.
+% 因此，Agent 无法通过提供一个省略先前动作或要求结果的工作流来获得有利答案。
 
 This idea creates three technical problems.
 % 这一思想带来三个技术问题。
@@ -90,8 +96,8 @@ After Restore, the repeated approval call reuses the earlier authorization recor
 \begin{enumerate}[leftmargin=*,itemsep=2pt,topsep=2pt]
 \item \textbf{Safety model.}
 % \textbf{安全模型。}
-We define safety for Agent Checkpoint, Fork, Restore, and Merge from the execution record rather than from a replacement workflow proposed by the Agent.
-% 我们根据执行记录而不是 Agent 提出的替代工作流，定义 Agent Checkpoint、Fork、Restore 和 Merge 的安全性。
+We define safety for Agent Checkpoint, Fork, Restore, and Merge from the execution record rather than from a workflow supplied by the Agent.
+% 我们根据执行记录而不是 Agent 提供的工作流，定义 Agent Checkpoint、Fork、Restore 和 Merge 的安全性。
 The model preserves past actions and every still-required outcome, and it proves that every exact checker needs the four facts identified above.
 % 该模型保留过去的动作和每个仍要求实现的结果，并证明每个精确检查器都需要上述四类事实。
 
@@ -99,8 +105,8 @@ The model preserves past actions and every still-required outcome, and it proves
 % \textbf{精确检查与运行时实现。}
 We construct an executable checker that returns either every safe way for the edit to proceed or a proof that none exists.
 % 我们构造一个可执行检查器，它返回该编辑安全推进的全部方式，或者返回不存在安全方式的证明。
-Checkpoint has an exact local check, and each of the six registered execution forms is accepted exactly when a safe runtime implementation exists.
-% Checkpoint 具有精确的局部检查，而六种已注册形式都当且仅当安全运行时实现存在时才被接受。
+The checker accepts Checkpoint and each registered form of Fork, Restore, and Merge exactly when a safe runtime implementation exists.
+% 当且仅当存在安全的运行时实现时，检查器才接受 Checkpoint 以及 Fork、Restore 和 Merge 的每种已注册形式。
 The runtime puts the result into effect atomically, preserves safety across repeated edits and restarts, and has the same Agent-visible behavior as an ideal atomic machine.
 % 运行时使判定结果原子生效，在重复编辑与重新启动过程中保持安全，并与理想原子机器具有相同的 Agent 可见行为。
 

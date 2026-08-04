@@ -1055,8 +1055,8 @@ An authenticated \Retry follows the archived link from \(\chi\) to the authoriza
 
 \paragraph{Final check and atomic rule update}
 % 最终检查与原子规则更新
-At the atomic update point, the trusted controller ignores any caller-supplied replacement workflow or rule version, sets \(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), and re-runs \(\mathsf{Derive}(\Theta_S(u))\) from the current execution record.
-% 在原子更新点，可信控制器忽略调用方提供的任何替代工作流或规则版本，令 \(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并根据当前执行记录重新执行 \(\mathsf{Derive}(\Theta_S(u))\)。
+At the atomic update point, the trusted controller ignores any workflow or rule version supplied by the caller, sets \(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), and re-runs \(\mathsf{Derive}(\Theta_S(u))\) from the current execution record.
+% 在原子更新点，可信控制器忽略调用方提供的任何工作流或规则版本，令 \(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并根据当前执行记录重新执行 \(\mathsf{Derive}(\Theta_S(u))\)。
 For a positive derivation, \(\mathsf{ReCut}(S,u,Z)\) recomputes the right-hand side of \cref{eq:checked-record-digest}, while \(\mathsf{Verify}_Z\) recomputes the fixed point, coverage proof, canonical automaton, and both digests.
 % 对于正面推导，\(\mathsf{ReCut}(S,u,Z)\) 重新计算 \cref{eq:checked-record-digest} 的右侧，而 \(\mathsf{Verify}_Z\) 重新计算不动点、覆盖证明、规范自动机和两个摘要。
 The rules may take effect only if
