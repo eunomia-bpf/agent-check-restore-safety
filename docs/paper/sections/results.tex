@@ -32,6 +32,8 @@ Suppose a checker receives only some function \(f(V)\) of this record.
 % 假设检查器只能得到该记录的某个函数 \(f(V)\)。
 The function is exact if any two records that it makes indistinguishable always give the same answer to every common decision or rule-update request.
 % 如果该函数无法区分的任意两份记录，对每个共同的判定或规则更新请求都给出相同答案，那么该函数是精确的。
+Write \(\mathsf{Exact}(f)\) for this property.
+% 将这一性质记为 \(\mathsf{Exact}(f)\)。
 Internal identifiers may be renamed consistently because their spelling cannot affect the answer.
 % 内部标识可以一致重命名，因为它们的具体拼写不能影响答案。
 For \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), \(\pi_J\) gives the checker exactly the parts named by \(J\).
