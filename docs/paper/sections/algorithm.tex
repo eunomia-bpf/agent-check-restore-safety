@@ -60,8 +60,8 @@ The automaton is the paired-language derivative construction~\cite{brzozowski196
 \subsection{Atomic Installation}
 % 原子安装
 
-At installation, the service re-derives the edit and recomputes the fixed point from the current authenticated state.
-% 安装时，该服务根据当前认证状态重新推导编辑并重新计算不动点。
+At installation, the service re-derives the edit and recomputes the fixed point from the current execution record.
+% 安装时，该服务根据当前执行记录重新推导编辑并重新计算不动点。
 If any protected call has committed since compilation, the candidate is stale and installs nothing.
 % 如果编译之后已有任何受控调用提交，则候选已过期且不会安装任何内容。
 Otherwise, one policy-domain transaction closes the old monitor version, activates the canonical monitor, replaces every current call position binding and authorization token, and only then exposes the successful edit answer.

@@ -81,9 +81,9 @@ u&\mathsf{CanRemove}(H,u)\\ \hline
 \end{array}
 \]
 \(\mathsf{reqauth}_H(a)\) follows \(a\)'s certified origin to the unique signed authority row in \(G\), or to the value-snapshotted copy in \(K\) for a checkpoint role.
-% \(\mathsf{reqauth}_H(a)\) 沿 \(a\) 的认证结果谱系找到 \(G\) 中唯一的签名权限记录；若 \(a\) 属于检查点角色，则找到 \(K\) 中按值快照的副本。
+% \(\mathsf{reqauth}_H(a)\) 沿 \(a\) 的认证来源找到 \(G\) 中唯一的签名权限记录；若 \(a\) 属于检查点角色，则找到 \(K\) 中按值快照的副本。
 Context identity, carry, and clone preserve that row, while every schema-introduced certified origin receives the authority signed with its schema and policy version.
-% 上下文恒等映射、携带和克隆都会保持该记录，而每条由模式引入的谱系都会获得与其模式及策略版本一同签名的权限方。
+% 上下文恒等映射、携带和克隆都会保持该记录，而每个由模式引入的认证来源都会获得与其模式及策略版本一同签名的权限方。
 Thus \(\mathsf{reqauth}_H\) is total and immutable on \(\mathsf{RequiredBefore}(H,u)\), including Fork-created \(L/R\) copies.
 % 因此，\(\mathsf{reqauth}_H\) 在 \(\mathsf{RequiredBefore}(H,u)\) 上全定义且不可变，其中包括 Fork 创建的 \(L/R\) 副本。
 For every \(a\in\mathsf{CanRemove}(H,u)\), the removal bundle must contain a signature by \(\mathsf{reqauth}_H(a)\) over
@@ -340,9 +340,9 @@ The Fork rows certify both clones; RestoreReplace certifies the checkpoint clone
 MergeSelect certifies the selected and unselected regions, while MergeJoin certifies both carried regions before its barrier.
 % MergeSelect 认证被选择和未被选择的区域，而 MergeJoin 认证其屏障之前的两个携带区域。
 Clone and carry supply the global bijections and preserve call position--outcome membership and certified-origin authority rows; constructor induction defines \(\mathsf{pr}^u_r\), proves the cover, and supplies every \(\mathsf{Covers}_u\) witness.
-% 克隆和携带给出全局双射，并保持调用位置—结果成员关系和谱系权限记录；构造器归纳定义 \(\mathsf{pr}^u_r\)、证明覆盖，并给出每个 \(\mathsf{Covers}_u\) 见证。
+% 克隆和携带给出全局双射，并保持调用位置—结果成员关系和认证来源权限记录；构造器归纳定义 \(\mathsf{pr}^u_r\)、证明覆盖，并给出每个 \(\mathsf{Covers}_u\) 见证。
 The common poststate fixes all remaining fields, preserves or initializes branch cursors, and assigns each schema-introduced certified origin its signed authority row, while new identifiers, partial-constructor checks, and \cref{lem:observable-completion} preserve uniqueness, acyclicity, and contract well-formedness.
-% 公共后状态固定所有其余字段、保持或初始化分支游标，并为每条模式引入的谱系分配其签名权限记录；新标识、偏构造器检查和 \cref{lem:observable-completion} 则保持唯一性、无环性与契约良构性。
+% 公共后状态固定所有其余字段、保持或初始化分支游标，并为每个由模式引入的认证来源分配其签名权限记录；新标识、偏构造器检查和 \cref{lem:observable-completion} 则保持唯一性、无环性与契约良构性。
 Finally, \(\beta'\) and \(\mathcal H_u^+\) bind every current target call position to \(\eta^+\).
 % 最后，\(\beta'\) 和 \(\mathcal H_u^+\) 将每个当前目标调用位置绑定到 \(\eta^+\)。
 \end{proof}
@@ -352,7 +352,7 @@ Finally, \(\beta'\) and \(\mathcal H_u^+\) bind every current target call positi
 \label{app:registered-extension}
 
 The Agent may name only an immutable record \(\xi\) binding the exact predecessor schema, registry, execution-record, and policy roots to finite disjoint additions \(D_\Sigma,D_\rho,D_\alpha\) and a successor policy \(\mathcal A^+\), where \(D_\alpha\) contains the signed authority row for every newly introduced outcome's certified origin.
-% Agent 只能指名不可变记录 \(\xi\)，该记录将精确的前驱模式、注册表、执行记录和策略根绑定到有限且不交的新增集合 \(D_\Sigma,D_\rho,D_\alpha\) 以及后继策略 \(\mathcal A^+\)，其中 \(D_\alpha\) 包含每条新引入结果谱系的签名权限记录。
+% Agent 只能指名不可变记录 \(\xi\)，该记录将精确的前驱模式、注册表、执行记录和策略根绑定到有限且不交的新增集合 \(D_\Sigma,D_\rho,D_\alpha\) 以及后继策略 \(\mathcal A^+\)，其中 \(D_\alpha\) 包含每个新引入结果的认证来源所对应的签名权限记录。
 The policy authority and call authorization service authenticate \(\xi\); existing meanings remain unchanged, new identifiers are fresh and domain-scoped, and \(\mathcal A\subseteq\mathcal A^+\).
 % 策略权限方与调用授权服务认证 \(\xi\)；现有含义保持不变，新标识是新鲜且限定于该域的，并且 \(\mathcal A\subseteq\mathcal A^+\)。
 For fresh \(\eta^+\), define
@@ -379,7 +379,7 @@ The checked judgment is
 (\kappa,H,\mathcal A)\vdash\mathsf{Extend}(\xi)\Downarrow
   (\kappa^+,H_\xi^+,\mathcal A^+,\mathcal C_\xi,\eta,\eta^+).
 \]
-It preserves \(T,K,\chi,\Delta,\mathsf{out}\) and every existing row of \(G,\Sigma_\zeta,\rho\), appends \(D_\alpha\) to the authenticated execution record, and authorizes no removal; every current outcome, call position, action ID, certified origin, authority row, and causal edge therefore remains unchanged.
+It preserves \(T,K,\chi,\Delta,\mathsf{out}\) and every existing row of \(G,\Sigma_\zeta,\rho\), appends \(D_\alpha\) to the execution record, and authorizes no removal; every current outcome, call position, action ID, certified origin, authority row, and causal edge therefore remains unchanged.
 % 它保持 \(T,K,\chi,\Delta,\mathsf{out}\) 以及 \(G,\Sigma_\zeta,\rho\) 的每条现有记录，将 \(D_\alpha\) 追加到经认证执行记录，并且不授权任何移除；因此每个当前结果、调用位置、动作标识、谱系、权限记录和因果边都保持不变。
 It uses the same checker and atomic installation as an execution edit.
 % 它使用与执行编辑相同的检查器和原子安装。
@@ -485,9 +485,9 @@ Let \(\mathcal F\) be the finite set of typed field paths and assign every seman
  \longrightarrow\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}.
 \]
 \(\mathbf P\) owns workflow constructor tags, current/checkpoint/target contract nodes, order and outcome membership, certified-origin authority rows, schema kind and source fingerprints, lift relations, and authorized-removal declarations.
-% \(\mathbf P\) 拥有工作流构造器标签、当前/检查点/目标契约节点、顺序与结果成员关系、结果谱系权限记录、模式种类与源指纹、提升关系和获授权移除声明。
+% \(\mathbf P\) 拥有工作流构造器标签、当前/检查点/目标契约节点、顺序与结果成员关系、认证来源权限记录、模式种类与源指纹、提升关系和获授权移除声明。
 \(\mathbf I\) owns call position--action-ID incidence, action-ID--canonical-request/label/scope rows, call-position certified origin, and logical monitor-entry and authorization-token slots.
-% \(\mathbf I\) 拥有调用位置--动作标识关联、动作标识--规范请求/标签/作用域记录、调用位置谱系以及逻辑监控器入口和授权令牌槽位。
+% \(\mathbf I\) 拥有调用位置--动作标识关联、动作标识--规范请求/标签/作用域记录、调用位置的认证来源以及逻辑监控器入口和授权令牌槽位。
 \(\mathbf E\) owns the global resolved trace, current and checkpoint cursors, authorization-record links, retry paths, stored return records, dispatch-queue status, and remaining policy.
 % \(\mathbf E\) 拥有全局已解析轨迹、当前与检查点游标、授权记录链接、重试路径、已存返回记录、派发队列状态和剩余策略。
 \(\mathbf C\) owns the domain, policy/schema/view versions, private namespace, monitor-version allocation and phase, current monitor-entry ownership, certificate origin and coordinates, and checkpoint snapshot coordinates.
@@ -638,7 +638,7 @@ A boundary-finite typed Agent workflow \(\mathcal W\) is a finite-state outcome-
 \(R\) stores a candidate map \(\lambda\), and \(\mathsf{BRuns}(R)\) is the finite outcome-indexed language obtained by linearizing its registered root pomsets and labeling every call position by its protected \Use.
 % \(R\) 存储候选映射 \(\lambda\)，而 \(\mathsf{BRuns}(R)\) 是通过线性化其已注册根偏序事件集，并以受控 \Use 标记每个调用位置而得到的有限结果索引语言。
 \(\mathcal W\sqsubseteq_\lambda R\) means that \(\lambda\) induces a bijection from boundary classes to \(\mathsf{BRuns}(R)\) that preserves outcomes, incidence, order, and the signed policy authority for each outcome's certified origin.
-% \(\mathcal W\sqsubseteq_\lambda R\) 表示 \(\lambda\) 从边界等价类到 \(\mathsf{BRuns}(R)\) 诱导一个保持结果、关联、次序以及每条结果谱系签名策略权限方的双射。
+% \(\mathcal W\sqsubseteq_\lambda R\) 表示 \(\lambda\) 从边界等价类到 \(\mathsf{BRuns}(R)\) 诱导一个保持结果、关联、次序以及每个结果认证来源的签名策略权限方的双射。
 The check also requires action IDs to be exactly the equivalence classes of canonical requests, requires \(\lambda\) to be total, unique, and free of raw instructions, and requires authorization record evolution to commute with \(\Resolve\) without dropping a required outcome, call position, or authorization record.
 % 该检查还要求动作标识恰好对应规范请求的等价类，要求 \(\lambda\) 全定义、唯一且不包含原始指令，并要求授权记录演化与 \(\Resolve\) 交换且不丢弃要求实现的结果、调用位置或授权记录。
 \end{definition}

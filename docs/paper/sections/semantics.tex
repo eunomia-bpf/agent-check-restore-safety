@@ -75,16 +75,16 @@ Both cases retain \(x_i\).
 Splitting after \(r\) gives the stated composition equation.
 % 在 \(r\) 之后拆分即可得到所述组合等式。
 \end{proof}
-Thus a retry changes neither the processed-call record nor the authorization-label sequence, although its successful API reply is observable as \(\mathsf{Return}(t,[v]_{\cong})\).
-% 因而，重试既不改变已处理调用记录，也不改变授权标签序列，但其成功 API 回复仍可观测为 \(\mathsf{Return}(t,[v]_{\cong})\)。
-A copied call position that reuses an authorization advances the processed-call record without changing the label sequence.
-% 复用授权的复制调用位置会推进已处理调用记录，但不会改变标签序列。
+Thus a retry changes neither the processed-call record nor the permission trace, although its successful API reply is observable as \(\mathsf{Return}(t,[v]_{\cong})\).
+% 因而，重试既不改变已处理调用记录，也不改变权限轨迹，但其成功 API 回复仍可观测为 \(\mathsf{Return}(t,[v]_{\cong})\)。
+A copied call position that reuses an authorization record advances the processed-call record without changing the permission trace.
+% 复用授权记录的复制调用位置会推进已处理调用记录，但不会改变权限轨迹。
 
 \subsection{Safe Completion After Every Prefix}
 % 每个前缀之后的安全完成
 
-\subsubsection{Largest family safe after every prefix}
-% 每个前缀之后都安全的最大执行族
+\subsubsection{Computing all safe behavior}
+% 计算全部安全行为
 
 For each derived outcome \(o\in O_{H,u}\), define all of its complete executions and the subset allowed by policy.
 % 对每个推导出的结果 \(o\in O_{H,u}\)，定义其全部完整执行以及策略允许的子集。
@@ -96,34 +96,36 @@ For each derived outcome \(o\in O_{H,u}\), define all of its complete executions
    \mathsf{lab}(\Delta)\mathsf{auth}(z)\in\mathcal A_u\}.
 \end{aligned}
 \end{equation}
-For a resolved prefix \(z\), let
-% 对于已解析前缀 \(z\)，定义 \(\mathsf{Compat}(z)\) 如下：
+For an annotated prefix \(z\), let
+% 对于带标注前缀 \(z\)，定义 \(\mathsf{Compat}(z)\) 如下：
 \[
  \mathsf{Compat}(z)=
  \{o\mid \mathsf{raw}(z)\preceq_{\rm pref}w
 		          \text{ for some }w\in\Lin(p_o)\}.
 \]
-Relation \(\mathsf{PreservesRequired}\) requires every source outcome that is neither completed nor authorized for removal to have a checked lift into \(\widehat B\).
-% 关系 \(\mathsf{PreservesRequired}\) 要求每个既未完成、也未获授权移除的源结果在 \(\widehat B\) 中都有经检查的提升。
-\Cref{app:spc} gives its full definition.
-% \Cref{app:spc} 给出完整定义。
+\(\mathsf{PreservesRequired}(H,u,\widehat B)\) means that every outcome in \(\mathsf{StillRequired}_u\) is covered by some target outcome represented in \(\widehat B\):
+% \(\mathsf{PreservesRequired}(H,u,\widehat B)\) 表示 \(\mathsf{StillRequired}_u\) 中的每个结果都被 \(\widehat B\) 所表示的某个目标结果覆盖：
+\[
+ \forall a\in\mathsf{StillRequired}_u.\quad
+ \exists (t,b)\in\widehat B.\ \mathsf{Covers}_u(t,a).
+\]
 
 \begin{definition}[Safe implementation]
-% 带索引实现
+% 安全实现
 \label{def:safe-implementation}
-A generated language and indexed marked family \((L,\widehat B)\) realize \((H,u)\) when all conditions below hold.
-% 当下列全部条件成立时，生成语言和带索引的标记族 \((L,\widehat B)\) 实现 \((H,u)\)。
+A safe implementation is a pair \((L,\widehat B)\), where \(L\) contains allowed partial executions and \(\widehat B\) contains allowed complete executions tagged by outcome, satisfying:
+% 安全实现是二元组 \((L,\widehat B)\)，其中 \(L\) 包含获准的部分执行，\(\widehat B\) 包含按结果标记的获准完整执行，并满足：
 \begin{enumerate}[leftmargin=*,itemsep=1pt]
  \item \(\widehat B\ne\varnothing\);
 % \(\widehat B\) 非空；
- \item \emph{source and target fidelity:} \(\mathsf{PreservesRequired}(H,u,\widehat B)\), \(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\), and \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\);
-% 源与目标忠实性：\(\mathsf{PreservesRequired}(H,u,\widehat B)\)、\(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\)，且 \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\)。
- \item \emph{policy safety:} \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A_u\) for every \(z\in L\);
-% 策略安全性：对每个 \(z\in L\)，均有 \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A_u\)。
- \item \emph{completion nonblocking:} \(L=\Pref(\pi_2\widehat B)\); and
-% 完成非阻塞性：\(L=\Pref(\pi_2\widehat B)\)；并且
- \item \emph{persistent outcome coverage:} for every \(z\in L\) and \(o\in\mathsf{Compat}(z)\), some \((o,b)\in\widehat B\) extends \(z\).
-% 持续的结果覆盖：对于每个 \(z\in L\) 和 \(o\in\mathsf{Compat}(z)\)，都存在某个 \((o,b)\in\widehat B\) 扩展 \(z\)。
+ \item \emph{workflow and outcomes:} \(\mathsf{PreservesRequired}(H,u,\widehat B)\), \(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\), and \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\);
+% 工作流与结果：\(\mathsf{PreservesRequired}(H,u,\widehat B)\)、\(\widehat B\subseteq \biguplus_{o\in O_{H,u}}\{o\}\times R_o(H,u)\)，且 \(L\subseteq\Pref(\bigcup_{o\in O_{H,u}}R_o(H,u))\)。
+ \item \emph{policy:} \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A_u\) for every \(z\in L\);
+% 策略：对每个 \(z\in L\)，均有 \(\mathsf{lab}(\Delta)\,\mathsf{auth}(z)\in\mathcal A_u\)。
+ \item \emph{some completion after every prefix:} \(L=\Pref(\pi_2\widehat B)\); and
+% 每个前缀之后都有某种完成方式：\(L=\Pref(\pi_2\widehat B)\)；并且
+ \item \emph{every compatible outcome remains completable:} for every \(z\in L\) and \(o\in\mathsf{Compat}(z)\), some \((o,b)\in\widehat B\) extends \(z\).
+% 每个兼容结果仍可完成：对于每个 \(z\in L\) 和 \(o\in\mathsf{Compat}(z)\)，都存在某个 \((o,b)\in\widehat B\) 扩展 \(z\)。
 \end{enumerate}
 \end{definition}
 
@@ -151,8 +153,8 @@ For \(\widehat B\subseteq\widehat B_0\), define the monotone operator
 \end{equation}
 Set \(\widehat B_{i+1}=\widehat\Phi(\widehat B_i)\).
 % 令 \(\widehat B_{i+1}=\widehat\Phi(\widehat B_i)\)。
-Since \(\widehat B_1\subseteq\widehat B_0\), monotonicity yields a finite descending chain, whose limit is
-% 由于 \(\widehat B_1\subseteq\widehat B_0\)，单调性产生一条有限下降链，其极限如下：
+Since \(\widehat B_1\subseteq\widehat B_0\), repeated application removes executions until the finite set stops changing:
+% 由于 \(\widehat B_1\subseteq\widehat B_0\)，反复应用该算子会移除执行，直至有限集合不再变化：
 \[
 \begin{aligned}
  \widehat B^\dagger_{H,u}
@@ -165,14 +167,12 @@ Since \(\widehat B_1\subseteq\widehat B_0\), monotonicity yields a finite descen
 \begin{definition}[Safe execution edit]
 % 安全执行编辑
 \label{def:admission}
-If \(\mathsf{Derive}(\Theta)\) is undefined, then \(\mathsf{SafeEdit}(\Theta)\) is false.
-% 若 \(\mathsf{Derive}(\Theta)\) 无定义，则 \(\mathsf{SafeEdit}(\Theta)\) 为假。
-Otherwise,
-% 否则，
 \begin{equation}
 \label{eq:admission}
 \mathsf{SafeEdit}(\Theta)
  \quad\Longleftrightarrow\quad
+ \mathsf{Derive}(\Theta)\text{ is defined}
+ \ \land\
  \widehat B^\dagger_{H,u}\ne\varnothing .
 \end{equation}
 \end{definition}
@@ -180,8 +180,8 @@ Otherwise,
 % \(\mathsf{SafeEdit}(H,u)\) 固定 \(\Theta\) 与两个注册表。
 At \(z=\epsilon\), nonemptiness covers every required outcome.
 % 在 \(z=\epsilon\) 处，非空性覆盖每个要求实现的结果。
-The existential quantifier chooses a call order without assuming fairness, and the universal condition keeps every compatible outcome completable after every prefix.
-% 存在量词在不假设公平性的情况下选择调用顺序，而全称条件保证每个兼容结果在每个前缀之后仍可完成。
+The existential quantifier chooses a call order, and the universal condition keeps every compatible outcome completable after every prefix.
+% 存在量词选择调用次序，而全称条件保证每个兼容结果在每个前缀之后仍可完成。
 
 \begin{lemma}[Most-permissive safe implementation]
 % 最大安全实现
@@ -192,24 +192,24 @@ When the edit is safe, \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) is a safe 
 % 当编辑安全时，\((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) 是一个实现，并且每个实现 \((L,\widehat B)\) 都满足 \(\widehat B\subseteq\widehat B^\dagger_{H,u}\) 和 \(L\subseteq W^\dagger_{H,u}\)。
 \end{lemma}
 \begin{proof}
-Fidelity, completion nonblocking, and safety place any safe implementation's indexed marked family inside \(\widehat B_0\).
-% 忠实性、完成非阻塞性和安全性使任意实现的带索引标记族包含于 \(\widehat B_0\)。
-Persistent coverage makes it post-fixed, so monotonicity and finite Knaster--Tarski place it inside \(\widehat B^\dagger\), and projected prefixes give \(L\subseteq W^\dagger\).
-% 持续覆盖使其成为后不动点，因此由单调性和有限 Knaster--Tarski 可知其包含于 \(\widehat B^\dagger\)，而投影前缀给出 \(L\subseteq W^\dagger\)。
-Conversely, \(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) supplies persistent coverage.
-% 反之，\(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) 提供持续覆盖。
-Together with checked lifts, this coverage establishes \(\mathsf{PreservesRequired}\) at \(\epsilon\).
-% 该覆盖与经检查的提升共同在 \(\epsilon\) 处建立 \(\mathsf{PreservesRequired}\)。
-The inclusion \(\widehat B^\dagger\subseteq\widehat B_0\) supplies target fidelity and safe marked words, while prefix closure of \(\mathcal A_u\) supplies prefix safety.
-% 包含关系 \(\widehat B^\dagger\subseteq\widehat B_0\) 提供目标忠实性和安全标记词，而 \(\mathcal A_u\) 的前缀闭包提供前缀安全性。
-Finally, \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) supplies nonblocking.
-% 最后，\(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) 提供非阻塞性。
+The workflow, outcome, and policy conditions place every safe implementation's complete executions inside \(\widehat B_0\).
+% 工作流、结果和策略条件使每个安全实现的完整执行都包含于 \(\widehat B_0\)。
+The final condition makes this set post-fixed, so monotonicity and finite Knaster--Tarski place it inside \(\widehat B^\dagger\), and projected prefixes give \(L\subseteq W^\dagger\).
+% 最后一项条件使该集合成为后不动点，因此由单调性和有限 Knaster--Tarski 可知其包含于 \(\widehat B^\dagger\)，而投影前缀给出 \(L\subseteq W^\dagger\)。
+Conversely, \(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) keeps every compatible outcome completable.
+% 反之，\(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) 保证每个兼容结果仍可完成。
+At the empty prefix this condition establishes \(\mathsf{PreservesRequired}\).
+% 在空前缀处，这一条件建立 \(\mathsf{PreservesRequired}\)。
+The inclusion \(\widehat B^\dagger\subseteq\widehat B_0\) ensures that complete executions follow the edited workflow and policy, while prefix closure of \(\mathcal A_u\) makes every allowed prefix safe.
+% 包含关系 \(\widehat B^\dagger\subseteq\widehat B_0\) 保证完整执行遵守编辑后的工作流与策略，而 \(\mathcal A_u\) 的前缀闭包保证每个获准前缀安全。
+Finally, \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) gives a completion after every allowed prefix.
+% 最后，\(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) 为每个获准前缀给出完成方式。
 Hence the fixed point is a safe implementation exactly when nonempty.
 % 因此，该不动点恰在非空时构成实现。
 \end{proof}
 
-\(\mathsf{MaxSafe}(\Theta;L,\widehat B)\) denotes a safe implementation that contains every other safe implementation componentwise, and its unique witness is \(\mathsf{SafeBehavior}(\Theta)\).
-% \(\mathsf{MaxSafe}(\Theta;L,\widehat B)\) 表示一个按分量包含其他所有实现的实现，其唯一见证记为 \(\mathsf{SafeBehavior}(\Theta)\)。
+\(\mathsf{MaxSafe}(\Theta;L,\widehat B)\) means that \((L,\widehat B)\) is safe and contains every other safe implementation; its unique value is \(\mathsf{SafeBehavior}(\Theta)\).
+% \(\mathsf{MaxSafe}(\Theta;L,\widehat B)\) 表示 \((L,\widehat B)\) 安全且包含每个其他安全实现；其唯一值记为 \(\mathsf{SafeBehavior}(\Theta)\)。
 \Cref{lem:most-permissive} proves that this witness exists exactly when \(\widehat B^\dagger_{H,u}\ne\varnothing\) and then equals \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\).
 % \Cref{lem:most-permissive} 证明该见证恰在 \(\widehat B^\dagger_{H,u}\ne\varnothing\) 时存在，并且此时等于 \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\)。
 
@@ -218,8 +218,8 @@ Hence the fixed point is a safe implementation exactly when nonempty.
 
 \Cref{sec:lifecycle} introduced the contract \(X\otimes(Y\oplus Z)\) under policy \(\Pref\{yx,xz\}\).
 % \Cref{sec:lifecycle} 已介绍策略 \(\Pref\{yx,xz\}\) 下的契约 \(X\otimes(Y\oplus Z)\)。
-For its resolved calls, write \(\bar x=\Fresh(x_o,d_x)\), \(\bar y=\Fresh(y_o,d_y)\), and \(\bar z=\Fresh(z_o,d_z)\).
-% 对其已解析调用，记 \(\bar x=\Fresh(x_o,d_x)\)、\(\bar y=\Fresh(y_o,d_y)\) 和 \(\bar z=\Fresh(z_o,d_z)\)。
+For its annotated calls, write \(\bar x=\Fresh(x_o,d_x)\), \(\bar y=\Fresh(y_o,d_y)\), and \(\bar z=\Fresh(z_o,d_z)\).
+% 对其带标注调用，记 \(\bar x=\Fresh(x_o,d_x)\)、\(\bar y=\Fresh(y_o,d_y)\) 和 \(\bar z=\Fresh(z_o,d_z)\)。
 The candidate family initially contains \(\bar y\bar x\) and \(\bar x\bar z\).
 % 初始候选族包含 \(\bar y\bar x\) 与 \(\bar x\bar z\)。
 The first fixed-point iteration removes \(\bar x\bar z\).
@@ -229,8 +229,8 @@ The second iteration removes \(\bar y\bar x\), because after the first removal t
 The empty fixed point is the formal reason the exact checker rejects.
 % 空不动点就是精确检查器拒绝该编辑的形式原因。
 
-\begin{proposition}[Outcome-indexed nonblocking correspondence]
-% 结果索引的非阻塞对应关系
+\begin{proposition}[Exact correspondence with generalized nonblocking]
+% 与广义非阻塞的精确对应
 \label{prop:outcome-necessary}
 For nonempty \(\widehat B\subseteq\widehat B_0\), let \(G_{\widehat B}\) be the prefix trie of \(L_{\widehat B}=\Pref(\pi_2\widehat B)\).
 % 对于非空的 \(\widehat B\subseteq\widehat B_0\)，令 \(G_{\widehat B}\) 为 \(L_{\widehat B}=\Pref(\pi_2\widehat B)\) 的前缀字典树。
@@ -264,16 +264,14 @@ For strictness, the preceding instance has the marker-nonblocking projected pair
 % 关于严格性，前述实例具有标记非阻塞的投影二元组 \((\Pref\{\bar y\bar x,\bar x\bar z\}, \{\bar y\bar x,\bar x\bar z\})\)，但其带索引不动点为空。
 \end{proof}
 
-\Cref{prop:outcome-necessary} gives the exact interface to generalized nonblocking~\cite{dequeiroz2005multitasking,malik2008generalised}.
-% \Cref{prop:outcome-necessary} 给出与广义非阻塞之间的精确接口~\cite{dequeiroz2005multitasking,malik2008generalised}。
-After the trusted controller derives \(\alpha_o,\omega_o\) from the requested edit, authorized removals, action IDs, authorization records, and source snapshot, a generalized-nonblocking solver computes the same largest family.
-% 在可信控制器根据请求的编辑、获授权移除、动作标识、授权记录和源状态快照推导出 \(\alpha_o,\omega_o\) 之后，广义非阻塞求解器会计算同一个最大执行族。
-Complete mediation makes \Fresh/\Alias controllable.
-% 完全中介使 \Fresh/\Alias 可控。
-Uncontrollable resolved events compose this construction with the standard supremal-controllable refinement.
-% 不可控的已解析事件将该构造与标准的上确界可控精化相组合。
-Our theory additionally constructs the most permissive Agent monitor or a rejection certificate, carries the result through atomic installation, and proves that neither a caller-proposed workflow nor its traces contain enough information to reproduce the derivation.
-% 我们的理论还构造限制最少的 Agent 监控器或拒绝证书，将结果贯穿原子安装，并证明调用方提出的工作流及其轨迹都不包含足以复现该推导的信息。
+\Cref{prop:outcome-necessary} identifies the precise generalized-nonblocking problem produced by an Agent execution edit~\cite{dequeiroz2005multitasking,malik2008generalised}.
+% \Cref{prop:outcome-necessary} 确定 Agent 执行编辑所产生的精确广义非阻塞问题~\cite{dequeiroz2005multitasking,malik2008generalised}。
+The controller derives \(\alpha_o,\omega_o\) from the requested edit, signed removals, action IDs, authorization records, and the execution record; generalized nonblocking then computes the same largest execution set.
+% 控制器根据请求的编辑、签名移除、动作标识、授权记录和执行记录推导 \(\alpha_o,\omega_o\)；随后，广义非阻塞计算相同的最大执行集合。
+Because every protected call is mediated, the controller decides every new/reuse transition.
+% 由于每次受控调用都受到中介，控制器决定每次新建/复用转移。
+The Agent-specific theory characterizes the entire transformation: it derives the problem from the execution record, decides the edit exactly, produces the most permissive monitor or an impossibility certificate, installs the result atomically, and proves the information necessary for any exact checker.
+% 这套面向 Agent 的理论刻画整个转换过程：它从执行记录推导问题，精确判定编辑，产生限制最少的监控器或不可能性证书，原子安装结果，并证明任何精确检查器都必须具备的状态信息。
 
 \subsubsection{Rejection Certificates}
 % 拒绝证书
@@ -330,8 +328,8 @@ Thus every accepted prefix retains a safe completion for every residual outcome 
 
 The checker returns \(\mathsf{Invalid}\) when derivation fails, \(\mathsf{Reject}\) with a ranked rejection certificate when the fixed point is empty, and \(\mathsf{Installable}\) with the greatest safe implementation otherwise.
 % 当推导失败时，检查器返回 \(\mathsf{Invalid}\)；当不动点为空时，返回带秩拒绝证书的 \(\mathsf{Reject}\)；否则返回携带最大实现的 \(\mathsf{Installable}\)。
-Each answer carries a fingerprint of the complete authenticated state that was checked.
-% 每个答案都携带所检查完整认证状态的指纹。
+Each answer carries a fingerprint of the complete execution record that was checked.
+% 每个答案都携带所检查完整执行记录的指纹。
 \Cref{app:certificate-payloads} gives the exact payloads and verification rules.
 % \Cref{app:certificate-payloads} 给出精确载荷与验证规则。
 \Cref{prop:app-output-complexity} proves an output-sensitive \(O(D+n\Lambda+|\mathcal G_{\rm cov}|+V_B\log(2+V_B))\)-time, \(O(D+\Lambda+|\mathcal G_{\rm cov}|)\)-space bound.

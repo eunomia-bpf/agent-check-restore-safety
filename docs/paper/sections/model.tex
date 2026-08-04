@@ -14,8 +14,10 @@ Domains with disjoint protected actions, authorization logs, and policies compos
 % 受控动作、授权日志和策略彼此不相交的域通过乘积组合。
 Every individual state is finite, while the theory covers executions of arbitrary finite length.
 % 每个单独状态都是有限的，而该理论覆盖任意有限长度的执行。
-The definitions below describe the required outcomes and the authenticated state that preserves them across edits.
-% 下文定义要求实现的结果，以及在编辑过程中保留这些结果的认证状态。
+The runtime records the current workflow, checkpoints, call-to-action links, prior authorizations, queued requests, and current monitor version.
+% 运行时记录当前工作流、检查点、调用到动作的关联、先前授权、排队请求及当前监控器版本。
+We call this the \emph{execution record}; the trusted runtime protects it from Agent modification.
+% 我们把这些信息称为\emph{执行记录}；可信运行时保护它不被 Agent 修改。
 
 \subsection{Workflow outcomes and call order}
 % 工作流结果与调用次序
@@ -30,8 +32,8 @@ An \emph{action ID} \(d\) groups the call positions that share one protected act
 % \emph{动作标识} \(d\) 将共享同一受控动作和同一授权记录的调用位置归为一组。
 The first authorized use creates that record; positions copied by Fork or Restore later reuse it.
 % 第一次获授权使用会创建该记录；Fork 或 Restore 随后复制出的调用位置会复用它。
-The authenticated state also records the certified origin of each workflow region copied by an edit.
-% 认证状态还记录编辑所复制的每个工作流区域的认证来源。
+The workflow record also stores the certified origin of each region copied by an edit.
+% 工作流记录还保存编辑所复制的每个区域的认证来源。
 \(T,\Delta,\chi\) denote the current workflow, authorization log, and ordered record of processed call positions.
 % \(T,\Delta,\chi\) 分别表示当前工作流、授权日志和已处理调用位置的有序记录。
 
@@ -111,14 +113,14 @@ Both contradict the condition that no complete sequence strictly prefixes anothe
 % 两种情况都与“任何完整序列都不是真前缀”这一条件矛盾。
 \end{proof}
 
-\subsection{Authenticated State}
-% 认证状态
+\subsection{Execution Record}
+% 执行记录
 
 \subsubsection{Recorded structure and current workflow}
 % 已记录结构与当前工作流
 
-The authenticated state is
-% 认证状态为
+The workflow record is
+% 工作流记录为
 \begin{equation}
 \label{eq:history-state}
  H=(\omega,G,T,K,\Sigma_\zeta,\rho,\beta,\chi,\nu,\eta).
@@ -217,8 +219,8 @@ Restore accepts only records created by this rule.
 \subsubsection{Well-formedness}
 % 良构性
 
-\begin{definition}[Well-formed authenticated state]
-% 良构认证状态
+\begin{definition}[Well-formed workflow record]
+% 良构工作流记录
 \label{def:well-formed-history}
 \(H\) is well formed when the following groups hold.
 % 当下列各组条件成立时，\(H\) 是良构的。
@@ -236,7 +238,7 @@ Every original or edit-introduced outcome has exactly one signed policy authorit
 \item \emph{Identity and progress.}
 % \emph{标识与进展。}
 Call-position and monitor-entry IDs are unique, while call positions with the same action ID agree on the call authorization service, scope, canonical request, digest, and certified origin.
-% 调用位置标识和监控器入口标识是唯一的，而共享同一动作标识的调用位置在授权服务、作用域、规范请求、摘要和认证来源上保持一致。
+% 调用位置标识和监控器入口标识是唯一的，而共享同一动作标识的调用位置在调用授权服务、作用域、规范请求、摘要和认证来源上保持一致。
 Processed call positions are downward closed in their pomset, consistent with every choice status, and absent from the remaining workflow.
 % 已处理调用位置在其偏序事件集中向下闭合，与每个选择状态一致，并且不出现在剩余工作流中。
 \item \emph{Current workflow.}
@@ -302,8 +304,8 @@ Within one policy domain, this TCB completely mediates every protected call and 
 % 在一个策略域内，该 TCB 完全中介每次受控调用，并通过可恢复的线性化事务提交每项状态变更和可见编辑答案。
 After an unexpected stop and restart, each transaction appears entirely before or entirely after its linearization point.
 % 在意外停止并重新启动后，每项事务都完整呈现在线性化点之前或之后。
-Before the checker reads the authenticated state, the call authorization service may instantiate finitely many registered call templates.
-% 在检查器读取认证状态之前，调用授权服务可以实例化有限个已注册调用模板。
+Before the checker reads the execution record, the call authorization service may instantiate finitely many registered call templates.
+% 在检查器读取执行记录之前，调用授权服务可以实例化有限个已注册调用模板。
 For tool request \(m\), it computes canonical request \(m^\circ=\mathsf{canon}_\kappa(m)\), reuses an action ID certified for \(m^\circ\) or allocates a fresh one, and signs \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{origin})\) into the authenticated registry.
 % 对于工具请求 \(m\)，它计算规范请求 \(m^\circ=\mathsf{canon}_\kappa(m)\)，复用已认证用于 \(m^\circ\) 的动作标识或分配新标识，并把 \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{origin})\) 签入认证注册表。
 The resulting finite call model \(R\) remains unchanged while the checker evaluates that state.
@@ -314,8 +316,8 @@ The platform supplies authenticated workflow \(\mathcal W\), call model \(R\), e
 % 平台提供经认证的工作流 \(\mathcal W\)、调用模型 \(R\)、编辑规则、规范化规则、策略、检查点，以及包含授权日志和排队请求的一致状态。
 From these inputs and an Agent request naming an edit and its objects, the controller derives the edited workflow, required outcomes, call decisions, fixed point, monitor, rejection explanation, monitor version, and authorization tokens.
 % 控制器根据这些输入以及指明编辑及其对象的 Agent 请求，推导编辑后的工作流、要求实现的结果、调用判定、不动点、监控器、拒绝说明、监控器版本和授权令牌。
-Every derived object therefore comes from authenticated state rather than Agent-supplied semantics.
-% 因此，每个派生对象都来自认证状态，而不是 Agent 提供的语义。
+Every derived object therefore comes from the execution record rather than Agent-supplied semantics.
+% 因此，每个派生对象都来自执行记录，而不是 Agent 提供的语义。
 
 Registration turns the protected-call behavior of a typed Agent workflow into a finite call model \(R\).
 % 注册把类型化 Agent 工作流的受控调用行为转换为有限调用模型 \(R\)。
@@ -335,8 +337,8 @@ Registered contracts enter through \(\mathsf{CheckReg}\), and an idempotent or q
 
 The security objective is fixed independently of the checker that will implement it.
 % 安全目标独立于随后实现它的检查器而确定。
-For an edit derived from authenticated state, a safe implementation satisfies four requirements.
-% 对于从认证状态派生的编辑，安全实现满足四项要求。
+For an edit derived from the execution record, a safe implementation satisfies four requirements.
+% 对于从执行记录派生的编辑，安全实现满足四项要求。
 First, it preserves every source outcome that is neither already satisfied nor explicitly authorized for removal, and every admitted execution belongs to the derived target workflow.
 % 第一，它保留每个既未满足、也未被明确授权移除的源结果，并且每段获准执行都属于派生目标工作流。
 Second, every admitted prefix is allowed by the policy after accounting for authorization records already present in the append-only log.
@@ -356,8 +358,8 @@ The last requirement rejects the example in \cref{sec:lifecycle}, where separate
 % 执行编辑的精确检查
 \label{sec:admission}
 
-The checker first derives the exact edited workflow from the authenticated state and the requested edit.
-% 检查器首先从认证状态与所请求编辑中推导精确的编辑后工作流。
+The checker first derives the exact edited workflow from the execution record and the requested edit.
+% 检查器首先从执行记录与所请求编辑中推导精确的编辑后工作流。
 It then decides whether each call position creates or reuses an authorization record and removes precisely those complete executions that violate the security objective after some prefix.
 % 随后，它判断每个调用位置创建还是复用授权记录，并精确移除那些在某个前缀之后违反安全目标的完整执行。
 

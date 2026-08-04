@@ -68,16 +68,16 @@ Third, the answer must take effect atomically with calls that overlap the edit a
 
 We give an exact checker for execution edits that accepts exactly when a safe implementation exists.
 % 我们给出一个针对执行编辑的精确检查器，它当且仅当安全实现存在时才接受。
-For a requested edit, the controller uses the registered workflow and current authenticated state to construct every allowed complete execution.
-% 对于一次编辑请求，控制器使用已注册工作流和当前认证状态构造所有允许的完整执行。
+For a requested edit, the controller uses the registered workflow and current execution record to construct every allowed complete execution.
+% 对于一次编辑请求，控制器使用已注册工作流和当前执行记录构造所有允许的完整执行。
 It removes an execution whenever one of its partial executions would leave a still-required outcome with no safe completion.
 % 如果某个完整执行的部分过程会让仍然要求实现的结果失去安全完成方式，检查器就删除该完整执行。
 If no execution remains, the controller returns an independently checkable rejection explanation.
 % 如果没有完整执行留下，控制器返回一份可独立检查的拒绝说明。
 Otherwise, the remaining executions define the most permissive safe monitor.
 % 否则，剩余执行定义限制最少的安全监控器。
-Before the edit takes effect, the runtime checks the current authenticated state again and atomically replaces the old monitor.
-% 编辑生效之前，运行时再次检查当前认证状态并原子替换旧监控器。
+Before the edit takes effect, the runtime checks the current execution record again and atomically replaces the old monitor.
+% 编辑生效之前，运行时再次检查当前执行记录并原子替换旧监控器。
 Every overlapping call is therefore governed entirely by either the old monitor or the new one.
 % 因此，每个重叠调用都完全由旧监控器或新监控器管理。
 \Cref{sec:lifecycle} derives this process for a protected approval workflow containing Fork, Merge, both installation races, and Restore.

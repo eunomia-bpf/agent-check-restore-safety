@@ -59,12 +59,12 @@ Each such outcome must remain required, already be satisfied by the recorded exe
 % 每个这类结果都必须继续作为要求、已经由所记录的执行满足，或由提出该要求的同一权限方明确移除。
 Existing Agent recovery systems implement particular edits, while existing synthesis methods assume that the possible executions and completion conditions are already known.
 % 现有 Agent 恢复系统实现特定编辑，而现有综合方法假定可能执行及完成条件已经给定。
-Neither derives the full safety requirement of a requested edit from the current authenticated state.
-% 二者都不会从当前认证状态中推导出一次请求的编辑所需的完整安全条件。
+Neither derives the full safety requirement of a requested edit from the current execution record.
+% 二者都不会从当前执行记录中推导出一次请求的编辑所需的完整安全条件。
 We present an exact theory and an executable checker.
 % 我们提出一套精确理论以及一个可执行检查器。
-Given a registered workflow, its current authenticated state, and a requested edit, the checker constructs every complete execution allowed by the workflow and policy.
-% 给定一个已注册工作流、其当前认证状态以及请求的编辑，检查器构造工作流和策略允许的每种完整执行。
+Given a registered workflow, its current execution record, and a requested edit, the checker constructs every complete execution allowed by the workflow and policy.
+% 给定一个已注册工作流、其当前执行记录以及请求的编辑，检查器构造工作流和策略允许的每种完整执行。
 It removes an execution whenever one of its partial executions would leave a still-required outcome with no safe way to finish.
 % 如果某个完整执行的部分过程会让仍然需要实现的结果失去安全完成方式，检查器就删除该完整执行。
 If nothing remains, the checker returns a finite, independently checkable explanation that no safe implementation exists.

@@ -53,8 +53,8 @@ Although the supplier outcomes are exclusive, both must still have a safe way to
 % 被接受与被拒绝的 Fork
 The Agent sends \(u=\mathsf{ForkChoice}(b,\sigma)\), which names a current branch and a registered edit rule.
 % Agent 发送 \(u=\mathsf{ForkChoice}(b,\sigma)\)，其中指明一个当前分支和一条已注册编辑规则。
-The trusted controller constructs the edited workflow from the authenticated state.
-% 可信控制器根据认证状态构造编辑后的工作流。
+The trusted controller constructs the edited workflow from the execution record.
+% 可信控制器根据执行记录构造编辑后的工作流。
 It also derives the outcomes that remain required and the action ID behind every call position.
 % 控制器还推导仍然要求实现的结果，以及每个调用位置背后的动作标识。
 
@@ -212,7 +212,7 @@ For this \(\mathsf{RestoreLive}\) request, the checker either installs the deriv
 
 Together, these executions give the paper's end-to-end safety rule.
 % 这些执行共同给出本文的端到端安全规则。
-An edit satisfies this rule when (1) it preserves every outcome still required by the authenticated state, (2) every allowed step obeys policy and can still reach a complete execution, (3) every required outcome compatible with those steps still has a safe way to finish, and (4) the resulting monitor and authorization tokens take effect atomically with concurrent calls.
-% 当一次编辑满足以下条件时，它符合该规则：(1) 保留认证状态仍要求实现的每个结果；(2) 每个获准步骤都遵守策略且仍能到达完整执行；(3) 每个与这些步骤兼容的要求实现结果仍有安全完成方式；(4) 所得监控器与授权令牌相对于并发调用原子生效。
+An edit satisfies this rule when (1) it preserves every outcome still required by the execution record, (2) every allowed step obeys policy and can still reach a complete execution, (3) every required outcome compatible with those steps still has a safe way to finish, and (4) the resulting monitor and authorization tokens take effect atomically with concurrent calls.
+% 当一次编辑满足以下条件时，它符合该规则：(1) 保留执行记录仍要求实现的每个结果；(2) 每个获准步骤都遵守策略且仍能到达完整执行；(3) 每个与这些步骤兼容的要求实现结果仍有安全完成方式；(4) 所得监控器与授权令牌相对于并发调用原子生效。
 \Cref{sec:model} states this rule precisely, and \cref{sec:admission} constructs the exact checker.
 % \Cref{sec:model} 精确定义这一规则，\cref{sec:admission} 则构造精确检查器。
