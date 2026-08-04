@@ -32,10 +32,10 @@
 \newcommand{\Pref}{\ensuremath{\mathsf{Pref}}\xspace}
 \newcommand{\sem}[1]{\mathopen{[\![}#1\mathclose{]\!]}}
 
-\title{When Are Agent Execution Edits Safe?\\
-% Agent 执行编辑何时安全？
-An Exact Theory of Fork, Restore, and Merge}
-% Fork、Restore 与 Merge 的精确理论
+\title{When Can Agents Safely Checkpoint, Fork, Restore, and Merge?\\
+% Agent 何时能够安全地 Checkpoint、Fork、Restore 和 Merge？
+Exact Checking for Execution Edits}
+% 执行编辑的精确检查
 
 \author{}
 
@@ -43,8 +43,8 @@ An Exact Theory of Fork, Restore, and Merge}
 \maketitle
 
 \begin{abstract}
-Agent runtimes can Fork an execution, Restore a checkpoint, or Merge branches without restarting a task.
-% Agent 运行时可以 Fork 一次执行、Restore 一个检查点或 Merge 多个分支，而无需重新开始任务。
+Agent runtimes can Checkpoint an execution, Fork it, Restore a checkpoint, or Merge branches without restarting a task.
+% Agent 运行时可以 Checkpoint 一次执行、Fork 它、Restore 一个检查点或 Merge 多个分支，而无需重新开始任务。
 We call these operations \emph{execution edits} because they change which parts of the workflow will run next.
 % 我们把这些操作称为\emph{执行编辑}，因为它们会改变工作流接下来执行哪些部分。
 An edit changes future work without undoing a tool action that has already been authorized or released.

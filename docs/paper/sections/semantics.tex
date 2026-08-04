@@ -4,10 +4,10 @@ For authorization log \(\Delta\), \(\mathsf{lab}(\Delta)\in\mathcal A\) is its a
 % 对于授权日志 \(\Delta\)，\(\mathsf{lab}(\Delta)\in\mathcal A\) 是其授权序列，\(D_\Delta\) 是已经具有授权记录的动作集合。
 Fix \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\) and write \(\mathsf{state}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\).
 % 固定 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并记 \(\mathsf{state}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\)。
-The initial rule update, each execution edit, and each later registered extension produce a unique derived record.
-% 初始规则更新、每种执行编辑和每次后续注册扩展都会产生唯一的派生记录。
-Write \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
-% 记为 \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
+\(\mathsf{Derive}\) is partial; whenever the initial rule update, an execution edit, or a later registered extension is valid, it produces a unique derived record.
+% \(\mathsf{Derive}\) 是偏函数；当初始规则更新、执行编辑或后续注册扩展有效时，它产生唯一的派生记录。
+When defined, write \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
+% 当有定义时，记 \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
 Root derivation additionally requires that \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) accept.
 % 根推导还要求 \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) 接受。
 An execution edit has \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) and uses the unique execution-edit judgment.

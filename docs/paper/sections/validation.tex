@@ -2,20 +2,22 @@
 % 机械化与可执行验证
 \label{sec:validation}
 
-Six Lean modules pass \texttt{--trust=0} and prove the claims used by the paper.
-% 六个 Lean 模块通过 \texttt{--trust=0} 检查，并证明论文使用的主张。
-\path{exact_checker_iff_realization} proves that the executable checker accepts exactly when a safe execution set exists.
-% \path{exact_checker_iff_realization} 证明可执行检查器当且仅当安全执行集合存在时才接受。
-\path{registered_workflow_exact_admission} combines typed registration, trusted checking of every protected call, and exact edit checking.
-% \path{registered_workflow_exact_admission} 组合类型化注册、对每次受控调用的可信检查以及精确编辑检查。
-\path{six_edit_derivation_exact} proves the executable derivation sound and complete for all six edit rules.
-% \path{six_edit_derivation_exact} 证明可执行推导对全部六种编辑规则既可靠又完备。
-\path{exact_edit_installs_trace_safe_monitor} constructs an atomic rule update whose every finite continuation preserves \(\mathsf{AgentSec}\).
-% \path{exact_edit_installs_trace_safe_monitor} 构造一次原子规则更新，并证明其每段有限延续均保持 \(\mathsf{AgentSec}\)。
+Six Lean modules pass \texttt{--trust=0} and mechanize the finite linear-contract core used by the paper.
+% 六个 Lean 模块通过 \texttt{--trust=0} 检查，并机械化论文使用的有限线性契约核心。
+\path{exact_checker_iff_realization} proves that the core executable checker accepts exactly when a \path{ValidRealization} exists.
+% \path{exact_checker_iff_realization} 证明核心可执行检查器当且仅当存在 \path{ValidRealization} 时才接受。
+\path{registered_workflow_exact_admission} proves registration acceptance, exact mediation of compiled call occurrences, and equivalence between checker admission and a valid realization at the current receipt cut.
+% \path{registered_workflow_exact_admission} 证明注册通过、编译后调用出现的精确中介，以及当前授权记录切面上检查器准入与有效实现之间的等价性。
+\path{six_edit_derivation_exact} proves the executable structural history editor sound and complete for the six edit constructors.
+% \path{six_edit_derivation_exact} 证明可执行结构化历史编辑器对六种编辑构造器既可靠又完备。
+\path{exact_edit_installs_trace_safe_monitor} constructs an atomic installation from a derived history and an admitted current finite contract, and proves that every finite continuation preserves Lean's \path{AgentSec}.
+% \path{exact_edit_installs_trace_safe_monitor} 从派生历史和已准入的当前有限契约构造原子安装，并证明每段有限延续均保持 Lean 中的 \path{AgentSec}。
 \path{fresh_alias_installation_serialized} proves both possible orders between a protected call and that update.
 % \path{fresh_alias_installation_serialized} 证明受控调用与该更新之间两种可能的先后顺序。
 \path{compilation_preload_preserves_agentSec} models preparation as an explicit transition and proves that preparing an inactive candidate preserves the same invariant.
 % \path{compilation_preload_preserves_agentSec} 把准备过程建模为显式转移，并证明准备尚未激活的候选结果会保持同一不变量。
+The general pomset lift, source-outcome preservation maps, information lower bound, and ideal--runtime weak bisimulation remain the mathematical arguments in \cref{app:spec-bridge,app:bisimulation}.
+% 一般偏序事件集提升、源结果保持映射、信息下界以及理想机—运行时弱互模拟仍由 \cref{app:spec-bridge,app:bisimulation} 中的数学论证给出。
 
 All 19 paper-specific tests pass, together with 62 authority and compiler regression tests for supporting components.
 % 全部 19 项论文专用测试以及面向支撑组件的 62 项权限与编译器回归测试均通过。

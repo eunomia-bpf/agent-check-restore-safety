@@ -61,6 +61,15 @@ Thus every required source outcome appears in an accepted target outcome.
 % \(\mathcal O_{\rm api}\) 包括与所检查记录对应的编辑答案、已经生效的编辑、受控调用答案、已发出请求、完成更新和返回值。
 It hides internal computation, Save, stale candidates, and restart bookkeeping.
 % 它隐藏内部计算、Save、过期候选结果和重启记录工作。
+\[
+\mathsf{obs}_{\rm api}(\ell)=
+\begin{cases}
+\ell,&\ell\in\mathcal O_{\rm api};\\
+\tau,&\text{otherwise}.
+\end{cases}
+\]
+Write \(S\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I\) when \(S\) and \(I\) are related by a divergence-insensitive weak bisimulation under \(\mathsf{obs}_{\rm api}\).
+% 当 \(S\) 与 \(I\) 在 \(\mathsf{obs}_{\rm api}\) 下由某个发散不敏感弱互模拟关联时，记作 \(S\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I\)。
 \(\mathcal B\) matches ideal and runtime states on \(\mathsf{AgentSec}\) and these visible fields.
 % \(\mathcal B\) 在 \(\mathsf{AgentSec}\) 与这些可见字段上匹配理想状态和运行时状态。
 \Cref{app:bisimulation} gives the full relation.
@@ -80,8 +89,10 @@ Malformed registrations fail before startup.
 
 For the remaining results, assume accepted registration, trusted checking of every protected call, and linearizable transactions that remain atomic after a restart within each policy domain.
 % 对于其余结果，假设注册已通过、每次受控调用都由可信组件检查，并且每个策略域内的可线性化事务在重启后仍保持原子性。
-They hold for every \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) at every finite reachable \(\mathsf{AgentSec}\) state.
-% 它们对每个有限可达 \(\mathsf{AgentSec}\) 状态上的每个 \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) 成立。
+Let \(\mathsf{Ext}=\{\mathsf{Extend}(\xi)\mid \xi\text{ is verified}\}\).
+% 令 \(\mathsf{Ext}=\{\mathsf{Extend}(\xi)\mid \xi\text{ 已通过验证}\}\)。
+They hold for every \(u\in\mathsf{Edit}_6\uplus\mathsf{Ext}\) at every finite reachable \(\mathsf{AgentSec}\) state.
+% 它们对每个有限可达 \(\mathsf{AgentSec}\) 状态上的每个 \(u\in\mathsf{Edit}_6\uplus\mathsf{Ext}\) 成立。
 
 \begin{theorem}[Exact Edit-Safety]
 % 精确编辑安全
@@ -94,8 +105,8 @@ For defined \(\delta=\mathsf{Derive}(\Theta)\), \(\widehat B^\dagger_{H,u}=\varn
 % 对有定义的 \(\delta=\mathsf{Derive}(\Theta)\)，\(\widehat B^\dagger_{H,u}=\varnothing\) 给出保持状态的 \(\mathsf{Reject}\)，且不存在安全运行时实现。
 Otherwise, for \(Y=\mathsf{Compile}(\Theta)\), nonempty \(\widehat B^\dagger_{H,u}\), existence of a safe runtime implementation, \(\mathsf{Ready}(S,u,Y)\), and a successor that puts the edit into effect while preserving \(\mathsf{AgentSec}\) are equivalent.
 % 否则，对于 \(Y=\mathsf{Compile}(\Theta)\)，\(\widehat B^\dagger_{H,u}\) 非空、安全运行时实现存在、\(\mathsf{Ready}(S,u,Y)\) 成立，以及存在使编辑生效并保持 \(\mathsf{AgentSec}\) 的后继，这四项彼此等价。
-The largest execution family satisfies \(\mathsf{PreservesRequired}\), records every already-satisfied source outcome, and records every authorized removal.
-% 最大执行族满足 \(\mathsf{PreservesRequired}\)，记录每个已满足的源结果以及每项获准移除。
+The largest execution family satisfies \(\mathsf{PreservesRequired}\); the derived record retains the evidence for every already-satisfied source outcome and every authorized removal.
+% 最大执行族满足 \(\mathsf{PreservesRequired}\)；派生记录保留每个已满足源结果以及每项获准移除的证据。
 \end{theorem}
 
 \begin{theorem}[Necessary State Information]
