@@ -123,27 +123,32 @@ Both contradict completion observability.
 % 两种情况都与完成可观测性矛盾。
 \end{proof}
 
-\subsection{Trusted history state}
-% 可信历史状态
+\subsection{Authenticated execution record}
+% 经认证执行记录
 
-\subsubsection{History State and Live Frontier}
+\subsubsection{Recorded structure and active workflow}
+% 已记录结构与当前工作流
 
-An Agent history state is
-% Agent 的历史状态为
+The authenticated execution record is
+% 经认证执行记录为
 \begin{equation}
 \label{eq:history-state}
  H=(\omega,G,T,K,\Sigma_\zeta,\rho,\beta,\chi,\nu,\eta).
 \end{equation}
-\(\omega\) is the policy-domain identity and \(\eta\) its single current policy-domain epoch.
-% \(\omega\) 是策略域标识，\(\eta\) 是该域唯一的当前策略域纪元。
-\(G\) is a finite append-only provenance store whose node identities, base contracts, and typed topology records never change.
-% \(G\) 是有限的仅追加溯源存储，其中的节点标识、基础契约和类型化拓扑记录永不改变。
-Each continuation node \(b\) carries an immutable registered base contract \(\Gamma_b\), while its branch-local resolved cursor \(\chi_b\) is the event projection of append-only progress records tagged by \(b\).
-% 每个延续节点 \(b\) 携带一个不可变的已注册基础契约 \(\Gamma_b\)，而其分支局部已解析游标 \(\chi_b\) 是带 \(b\) 标签的仅追加进度记录的事件投影。
-The immutable topology records form a DAG whose edges record typed Fork, Restore, and Merge operations.
-% 不可变拓扑记录形成一个 DAG，其边记录类型化的 Fork、Restore 和 Merge 操作。
-\(T\) is the live structural frontier.
-% \(T\) 是活跃结构前沿。
+\(\omega\) identifies the policy domain, and \(\eta\) identifies its current monitor version.
+% \(\omega\) 标识策略域，\(\eta\) 标识其当前监控器版本。
+\(G\) is a finite append-only record of workflow versions.
+% \(G\) 是工作流版本的有限仅追加记录。
+Its node identities, base contracts, and typed edit records never change.
+% 其中的节点标识、基础契约和类型化编辑记录永不改变。
+Each continuation node \(b\) carries an immutable registered base contract \(\Gamma_b\).
+% 每个延续节点 \(b\) 携带一个不可变的已注册基础契约 \(\Gamma_b\)。
+Its branch cursor \(\chi_b\) records which occurrences on that continuation have completed.
+% 其分支游标 \(\chi_b\) 记录该延续上的哪些发生项已经完成。
+The immutable records form a directed acyclic graph (DAG) whose edges record typed Fork, Restore, and Merge operations.
+% 这些不可变记录形成一个有向无环图（DAG），其边记录类型化的 Fork、Restore 和 Merge 操作。
+\(T\) is the active workflow.
+% \(T\) 是当前工作流。
 \[
  T ::= b{:}\mathcal C
      \mid T\oplus_g^s T
@@ -168,8 +173,8 @@ Set \(\mathsf{heads}(b{:}\mathcal C)=\{b\}\).
 % 令 \(\mathsf{heads}(b{:}\mathcal C)=\{b\}\)。
 Open choice exposes both arms, selected choice its winner, parallel and \(\mathsf{jbar}\) both arms, and sequence its left operand until completion and then its right.
 % 开放选择暴露两个分支，已选选择暴露胜出分支，并行和 \(\mathsf{jbar}\) 暴露两个分支，而顺序先暴露左操作数直至其完成，再暴露右操作数。
-Occurrence progress residualizes leaves without deleting structure.
-% 发生项进展会使叶节点残余化，但不删除结构。
+Completing an occurrence updates the work remaining at its leaf without deleting the recorded structure.
+% 完成一个发生项会更新其叶节点仍需执行的工作，但不会删除已记录结构。
 Because sequence exposure tests \(\mathsf{complete}\), it retains completed left-outcome indices, so an isolated completed leaf remains addressable for later Fork or Restore.
 % 由于顺序暴露检查 \(\mathsf{complete}\)，它会保留已完成的左侧结果索引，因此孤立的已完成叶节点仍可供后续 Fork 或 Restore 寻址。
 Joining removes \(g\) immediately but keeps its continuation behind a barrier until both arms complete.
@@ -178,8 +183,8 @@ An occurrence is enabled when minimal in some pomset of \(\sem{T}\), consistent 
 % 当一个发生项在 \(\sem{T}\) 的某个偏序事件集中为极小元时，它即被启用；这与完成可观测性所确定的顺序暴露一致。
 Occurrence disjointness and unique context decomposition give every enabled \(x\) a unique exposed leaf \(\mathsf{leaf}_T(x)=b\).
 % 发生项互不重叠以及上下文分解的唯一性，使每个已启用的 \(x\) 都具有唯一的已暴露叶节点 \(\mathsf{leaf}_T(x)=b\)。
-For \(a\in\{\Fresh(x,d),\Alias(x,d)\}\), define the paired history residual
-% 对于 \(a\in\{\Fresh(x,d),\Alias(x,d)\}\)，定义成对历史残余
+For \(a\in\{\Fresh(x,d),\Alias(x,d)\}\), define the paired execution update
+% 对于 \(a\in\{\Fresh(x,d),\Alias(x,d)\}\)，定义成对执行更新
 \[
  \mathsf{HStep}((G,T),a)=
  \bigl(G\mathbin{\|}(b,a),\,T/(x,a)\bigr),
@@ -187,8 +192,8 @@ For \(a\in\{\Fresh(x,d),\Alias(x,d)\}\), define the paired history residual
 \]
 where \(G\mathbin{\|}(b,a)\) appends the progress record \((b,a)\), and \(T/(x,a)\) residualizes the leaf and records any choice selection without storing a second cursor.
 % 其中 \(G\mathbin{\|}(b,a)\) 追加进度记录 \((b,a)\)，而 \(T/(x,a)\) 对叶节点取残余并记录任何选择结果，但不存储第二份游标。
-Write \(\mathsf{HRes}((G,T),r)\) for iterating this paired residual over a resolved word \(r\).
-% 用 \(\mathsf{HRes}((G,T),r)\) 表示沿已解析词 \(r\) 迭代这一成对残余。
+Write \(\mathsf{HRes}((G,T),r)\) for iterating this update over a resolved word \(r\).
+% 用 \(\mathsf{HRes}((G,T),r)\) 表示沿已解析词 \(r\) 迭代这一更新。
 
 \(\mathsf{addr}(T)\) follows the same recursion over branch and group identifiers.
 % \(\mathsf{addr}(T)\) 对分支标识和组标识采用相同的递归。
@@ -201,17 +206,21 @@ Write \(\mathcal C_k=\mathsf{contract}(K(k))\) for the residual contract stored 
 % 将检查点 \(k\) 存储的残余契约记为 \(\mathcal C_k=\mathsf{contract}(K(k))\)。
 \(\Sigma_\zeta\) is a versioned immutable registry of typed edit schemas.
 % \(\Sigma_\zeta\) 是带版本且不可变的类型化编辑模式注册表。
-\(\rho\) contains the authenticated occurrence-to-gate/cell, handle, lineage, scope, canonical-invocation, and effect-digest data.
-% \(\rho\) 包含经认证的发生项到门/单元的映射、句柄、谱系、作用域、规范调用和效果摘要数据。
-For each live occurrence \(x\), binding \(\beta(x)=(j,\eta)\) names its gate and the domain's current epoch, while \(\chi\) is the ordered append-only trace of durably \emph{resolved} logical occurrences, including \Fresh and \Alias bindings, and \(\nu\) is the history-view version.
-% 对于每个活跃发生项 \(x\)，绑定 \(\beta(x)=(j,\eta)\) 指明其门和该域的当前纪元，而 \(\chi\) 是持久\emph{已解析}逻辑发生项的有序仅追加轨迹，包括 \Fresh 和 \Alias 绑定，\(\nu\) 则是历史视图版本。
-Because \(\chi\) records authorization and causal progress rather than physical completion, the corresponding external result may still await remote settlement or return.
-% 由于 \(\chi\) 记录授权和因果进展而非物理完成，相应的外部结果仍可能等待远程结算或返回。
+\(\rho\) contains the authenticated occurrence-to-monitor-entry/effect-identity map, authorization tokens, lineage, scope, normalized tool requests, and request digests.
+% \(\rho\) 包含经认证的发生项到监控器入口/效果标识映射、授权令牌、谱系、作用域、规范化工具请求和请求摘要。
+For each current occurrence \(x\), binding \(\beta(x)=(j,\eta)\) names its monitor entry and version.
+% 对于每个当前发生项 \(x\)，绑定 \(\beta(x)=(j,\eta)\) 指明其监控器入口和版本。
+\(\chi\) is the ordered append-only record of resolved occurrences, including \Fresh and \Alias bindings, and \(\nu\) is the record version.
+% \(\chi\) 是已解析发生项的有序仅追加记录，其中包括 \Fresh 和 \Alias 绑定；\(\nu\) 是记录版本。
+Because \(\chi\) records authorization and workflow progress rather than remote completion, a return value may still await settlement.
+% 由于 \(\chi\) 记录授权和工作流推进而非远端完成，返回值仍可能等待结算。
 
 \(\mathsf{Save}(k,b)\) is an explicit checkpoint transition, not a seventh execution edit, and requires fresh \(k\) and addressable \(b\).
 % \(\mathsf{Save}(k,b)\) 是显式检查点转移，而非第七种执行编辑，并要求 \(k\) 为新标识且 \(b\) 可寻址。
-A trusted transaction snapshots the current pair \((\mathcal C_b,\chi_b)\) by value and appends \((\omega,b,\mathcal C_b,\chi_b,\rho|_{X_{\mathcal C_b}},\zeta)\) and its authenticated fingerprint to \(K\).
-% 一个可信事务按值快照当前的 \((\mathcal C_b,\chi_b)\) 对，并向 \(K\) 追加 \((\omega,b,\mathcal C_b,\chi_b,\rho|_{X_{\mathcal C_b}},\zeta)\) 及其认证指纹。
+A trusted transaction stores an authenticated copy of continuation \(b\)'s remaining contract \(\mathcal C_b\), completed-occurrence cursor \(\chi_b\), and relevant registry rows.
+% 一个可信事务存储延续 \(b\) 的剩余契约 \(\mathcal C_b\)、已完成发生项游标 \(\chi_b\) 及相关注册表行的认证副本。
+Formally, it appends \((\omega,b,\mathcal C_b,\chi_b,\rho|_{X_{\mathcal C_b}},\zeta)\) and its fingerprint to \(K\).
+% 形式上，它向 \(K\) 追加 \((\omega,b,\mathcal C_b,\chi_b,\rho|_{X_{\mathcal C_b}},\zeta)\) 及其指纹。
 The checkpoint check requires \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\), and the transaction advances \(\nu\) without changing the frontier, receipts, bindings, epochs, or authority.
 % 检查点检查要求 \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\)，且该事务推进 \(\nu\) 而不改变前沿、回执、绑定、纪元或权限。
 Both machines take this \(\tau\)-transition, which makes a concurrent installation stale because installation authenticates \(H\).
@@ -219,7 +228,8 @@ Both machines take this \(\tau\)-transition, which makes a concurrent installati
 Restore accepts only records created by this rule.
 % Restore 仅接受由此规则创建的记录。
 
-\subsubsection{Well-Formedness}
+\subsubsection{Well-formedness}
+% 良构性
 
 \begin{definition}[Well-formed history]
 % 良构历史
@@ -262,17 +272,18 @@ The durable kernel additionally requires that the one current policy-domain epoc
 % 持久内核还要求唯一的当前策略域纪元处于活跃状态。
 \end{definition}
 
-\subsubsection{Ledger and Security Core}
+\subsubsection{Receipt log and security state}
+% 回执日志与安全状态
 
-Outside \(H\), ledger state stores policy version \(\kappa\), a regular prefix-closed authority policy \(\mathcal A\subseteq\mathcal U^*\) over label alphabet \(\mathcal U\), monotone receipt ledger \(\Delta\), and ordered outbox \(\mathsf{out}\).
-% 在 \(H\) 之外，账本状态存储策略版本 \(\kappa\)、定义在标签字母表 \(\mathcal U\) 上的正则前缀闭合权限策略 \(\mathcal A\subseteq\mathcal U^*\)、单调回执账本 \(\Delta\) 和有序发件箱 \(\mathsf{out}\)。
+Outside \(H\), the security state stores policy version \(\kappa\), a regular prefix-closed permission policy \(\mathcal A\subseteq\mathcal U^*\) over label alphabet \(\mathcal U\), append-only receipt log \(\Delta\), and ordered dispatch queue \(\mathsf{out}\).
+% 在 \(H\) 之外，安全状态存储策略版本 \(\kappa\)、定义在标签字母表 \(\mathcal U\) 上的正则前缀闭合权限策略 \(\mathcal A\subseteq\mathcal U^*\)、仅追加回执日志 \(\Delta\) 和有序派发队列 \(\mathsf{out}\)。
 Receipt creation is append-only.
 % 回执创建仅可追加。
-Settlement advances receipt phases and fills durable result futures with stable results.
-% 结算会推进回执阶段，并用稳定结果填充持久结果期值。
-Each receipt binds its cell, immutable canonical invocation, creator occurrence, and authority label.
-% 每条回执都绑定其单元、不可变规范调用、创建者发生项和权限标签。
-Each record in \(\chi\) points to its own \Fresh receipt or, for \Alias, an earlier receipt, making retry and \Alias-result lookup functions of \((\chi,\Delta)\).
+Settlement advances receipt phases and fills durable return records with stable return values.
+% 结算会推进回执阶段，并用稳定返回值填充持久返回记录。
+Each receipt binds its effect identity, immutable normalized tool request, creator occurrence, and permission label.
+% 每条回执都绑定其效果标识、不可变规范化工具请求、创建者发生项和权限标签。
+Each record in \(\chi\) points to its own \Fresh receipt or, for \Alias, an earlier receipt, making retry and \Alias return lookup functions of \((\chi,\Delta)\).
 % \(\chi\) 中的每条记录都指向其自身的 \Fresh 回执；若为 \Alias，则指向更早的回执，从而使重试和 \Alias 结果查找成为 \((\chi,\Delta)\) 的函数。
 \(\mathsf{lab}(\Delta)\) is the authority word.
 % \(\mathsf{lab}(\Delta)\) 是权限词。

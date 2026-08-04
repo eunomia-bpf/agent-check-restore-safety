@@ -228,22 +228,24 @@ Hence the fixed point is a realization exactly when nonempty.
 \Cref{lem:greatest-realization} proves that this witness exists exactly when \(\widehat B^\dagger_{H,u}\ne\varnothing\) and then equals \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\).
 % \Cref{lem:greatest-realization} 证明该见证恰在 \(\widehat B^\dagger_{H,u}\ne\varnothing\) 时存在，并且此时等于 \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\)。
 
-The following shared-prefix instance shows why derived conditional markings matter even when every \(M_o\) is nonempty.
-% 下列共享前缀实例说明了为何即使每个 \(M_o\) 都非空，所派生的条件标记仍然重要。
-Let singleton contracts \(X,Y,Z\) contain \(x_o,y_o,z_o\), and let the target registry map them to distinct previously unreceipted cells \(d_x,d_y,d_z\) labeled \(x,y,z\), respectively.
-% 令单元素契约 \(X,Y,Z\) 分别包含 \(x_o,y_o,z_o\)，并令目标注册表将它们映射到此前无回执且标签分别为 \(x,y,z\) 的不同单元 \(d_x,d_y,d_z\)。
+The following shared-prefix example shows why each outcome needs its own completion condition even when every \(M_o\) is nonempty.
+% 下列共享前缀例子说明，即使每个 \(M_o\) 都非空，每个结果仍需要自己的完成条件。
+Let singleton contracts \(X,Y,Z\) contain \(x_o,y_o,z_o\), and let the target registry map them to distinct effect identities \(d_x,d_y,d_z\) that do not yet have receipts and have labels \(x,y,z\), respectively.
+% 令单元素契约 \(X,Y,Z\) 分别包含 \(x_o,y_o,z_o\)，并令目标注册表将它们映射到尚无回执且标签分别为 \(x,y,z\) 的不同效果标识 \(d_x,d_y,d_z\)。
 Write \(\bar x=\Fresh(x_o,d_x)\), \(\bar y=\Fresh(y_o,d_y)\), and \(\bar z=\Fresh(z_o,d_z)\).
 % 记 \(\bar x=\Fresh(x_o,d_x)\)、\(\bar y=\Fresh(y_o,d_y)\)、\(\bar z=\Fresh(z_o,d_z)\)。
 \subsubsection{Why Individual Outcome Safety Is Insufficient}
 
-For \(\mathcal C=X\otimes(Y\oplus Z)\) and \(\mathcal A=\Pref\{yx,xz\}\), the \(X\otimes Y\) and \(X\otimes Z\) outcomes initially have safe resolved completions \(\bar y\bar x\) and \(\bar x\bar z\), with authority projections \(yx\) and \(xz\).
-% 对于 \(\mathcal C=X\otimes(Y\oplus Z)\) 和 \(\mathcal A=\Pref\{yx,xz\}\)，\(X\otimes Y\) 与 \(X\otimes Z\) 结果最初分别具有安全的已解析完成路径 \(\bar y\bar x\) 和 \(\bar x\bar z\)，其权限投影为 \(yx\) 和 \(xz\)。
+For \(\mathcal C=X\otimes(Y\oplus Z)\) and \(\mathcal A=\Pref\{yx,xz\}\), the \(X\otimes Y\) and \(X\otimes Z\) outcomes initially have safe completed executions \(\bar y\bar x\) and \(\bar x\bar z\), with permission traces \(yx\) and \(xz\).
+% 对于 \(\mathcal C=X\otimes(Y\oplus Z)\) 和 \(\mathcal A=\Pref\{yx,xz\}\)，\(X\otimes Y\) 与 \(X\otimes Z\) 结果最初分别具有安全完整执行 \(\bar y\bar x\) 和 \(\bar x\bar z\)，其权限轨迹为 \(yx\) 和 \(xz\)。
 Yet prefix \(\bar x\) from \(\bar x\bar z\) remains contract-compatible with \(X\otimes Y\) but leaves no safe continuation.
 % 然而，\(\bar x\bar z\) 的前缀 \(\bar x\) 仍与 \(X\otimes Y\) 契约兼容，却不留下安全后续。
-The first fixed-point iteration removes \(\bar x\bar z\), and the next removes \(\bar y\bar x\) after root coverage is lost.
-% 第一次不动点迭代移除 \(\bar x\bar z\)，根覆盖丢失后下一次迭代再移除 \(\bar y\bar x\)。
-Thus the edit is rejected, whereas the independent \(\forall o.\,M_o\ne\varnothing\) test admits it.
-% 因此，该编辑会被拒绝，而独立的 \(\forall o.\,M_o\ne\varnothing\) 检验会准入它。
+The first fixed-point iteration removes \(\bar x\bar z\).
+% 第一次不动点迭代移除 \(\bar x\bar z\)。
+The next removes \(\bar y\bar x\) because the empty prefix no longer has a completion for every outcome.
+% 下一次迭代移除 \(\bar y\bar x\)，因为空前缀不再为每个结果保留完成路径。
+Thus the edit is rejected, whereas the independent \(\forall o.\,M_o\ne\varnothing\) test accepts it.
+% 因此，该编辑会被拒绝，而独立的 \(\forall o.\,M_o\ne\varnothing\) 检验会接受它。
 
 \begin{proposition}[Outcome-indexed nonblocking correspondence]
 % 结果索引的非阻塞对应关系
@@ -262,10 +264,10 @@ Then
  G_{\widehat B}\text{ is }(\alpha_o,\omega_o)\text{-nonblocking}.
 \end{gathered}
 \]
-Consequently, if \(\widehat B^\dagger\) is nonempty, it is the greatest nonempty completion subfamily of \(\widehat B_0\) satisfying these conditional nonblocking obligations.
-% 因此，若 \(\widehat B^\dagger\) 非空，则它是 \(\widehat B_0\) 中满足这些条件非阻塞义务的最大非空完成路径子族。
-If it is empty, no nonempty subfamily satisfies them.
-% 若它为空，则没有任何非空子族满足这些义务。
+Consequently, if \(\widehat B^\dagger\) is nonempty, it is the largest nonempty completion subfamily of \(\widehat B_0\) satisfying these outcome-specific nonblocking conditions.
+% 因此，若 \(\widehat B^\dagger\) 非空，则它是 \(\widehat B_0\) 中满足这些特定于结果的非阻塞条件的最大非空完成路径子族。
+If it is empty, no nonempty subfamily satisfies the conditions.
+% 若它为空，则没有任何非空子族满足这些条件。
 Ordinary marker nonblocking of the unaugmented projected language is strictly weaker.
 % 未增广投影语言的普通标记非阻塞性严格更弱。
 \end{proposition}
@@ -280,24 +282,29 @@ For strictness, the preceding instance has the marker-nonblocking projected pair
 % 关于严格性，前述实例具有标记非阻塞的投影二元组 \((\Pref\{\bar y\bar x,\bar x\bar z\}, \{\bar y\bar x,\bar x\bar z\})\)，但其带索引不动点为空。
 \end{proof}
 
-\Cref{prop:outcome-necessary} gives the exact generalized-nonblocking interface~\cite{dequeiroz2005multitasking,malik2008generalised}: after Agent history derives \(\alpha_o,\omega_o\) from the edit, retirement, cells, receipts, and cut, that backend computes the same greatest family.
-% \Cref{prop:outcome-necessary} 给出精确的广义非阻塞接口~\cite{dequeiroz2005multitasking,malik2008generalised}：Agent 历史从编辑、退役、单元、回执与切点派生 \(\alpha_o,\omega_o\) 后，该后端计算同一个最大族。
+\Cref{prop:outcome-necessary} gives the exact interface to generalized nonblocking~\cite{dequeiroz2005multitasking,malik2008generalised}.
+% \Cref{prop:outcome-necessary} 给出与广义非阻塞之间的精确接口~\cite{dequeiroz2005multitasking,malik2008generalised}。
+After the trusted controller derives \(\alpha_o,\omega_o\) from the requested edit, authorized removals, effect identities, receipts, and source snapshot, a generalized-nonblocking solver computes the same largest family.
+% 在可信控制器根据请求的编辑、获授权移除、效果标识、回执和源状态快照推导出 \(\alpha_o,\omega_o\) 之后，广义非阻塞求解器会计算同一个最大执行族。
 Complete mediation makes \Fresh/\Alias controllable.
 % 完全中介使 \Fresh/\Alias 可控。
 Deployments with uncontrollable resolved events need the usual supremal-controllable refinement.
 % 具有不可控已解析事件的部署需要通常的上确界可控精化。
-Our characterization additionally constructs the greatest Agent monitor or impossibility certificate, carries it through atomic installation, and proves that neither a caller target nor a target-only trace can recover the derivation.
-% 我们的刻画还构造最大 Agent 监控器或不可能性证书，将其贯穿原子安装，并证明调用方目标或仅目标轨迹都无法恢复该派生。
+Our theory additionally constructs the most permissive Agent monitor or an impossibility certificate, carries the result through atomic installation, and proves that neither a caller-proposed workflow nor its traces contain enough information to reproduce the derivation.
+% 我们的理论还构造限制最少的 Agent 监控器或不可能性证书，将结果贯穿原子安装，并证明调用方提出的工作流及其轨迹都不包含足以复现该推导的信息。
 
 Each removed \((o_{\rm rem},b)\) records its rank \(i\), a prefix \(z\preceq b\), and uncovered \(o_{\rm miss}\in\mathsf{Compat}(z)\).
 % 每个被移除的 \((o_{\rm rem},b)\) 记录其秩 \(i\)、前缀 \(z\preceq b\) 与未覆盖的 \(o_{\rm miss}\in\mathsf{Compat}(z)\)。
-Induction gives every post-fixed \(P\subseteq\widehat B_i\), so an empty final family excludes every realization, and installation recomputes the chain, causes, and survivor witnesses.
-% 归纳给出每个后不动点 \(P\subseteq\widehat B_i\)，因此最终族为空会排除每个实现，而安装会重新计算淘汰链、原因与幸存者见证。
+Induction shows that every post-fixed \(P\) is contained in every \(\widehat B_i\).
+% 归纳表明每个后不动点 \(P\) 都包含于每个 \(\widehat B_i\)。
+An empty final family therefore excludes every realization, and installation recomputes the ranked rejection certificate and the remaining witnesses.
+% 因此，最终执行族为空会排除每个实现，而安装会重新计算带秩拒绝证书和剩余见证。
 
-\subsubsection{Rejection Certificates and Residual Closure}
+\subsubsection{Rejection certificates and repeated checking}
+% 拒绝证书与重复检查
 
-To preserve the safety result after each permitted prefix, fix \(H,u,\mathcal A_u\) after deriving \(\mathcal C\), and write \(W^\dagger(\mathcal C,\Delta)\) and \(\widehat B^\dagger(\mathcal C,\Delta)\) with those parameters suppressed.
-% 为在每个允许的前缀之后保持安全判定，先在派生 \(\mathcal C\) 后固定 \(H,u,\mathcal A_u\)，再将省略这些参数的记法写作 \(W^\dagger(\mathcal C,\Delta)\) 和 \(\widehat B^\dagger(\mathcal C,\Delta)\)。
+To show that the checker can be applied again after each permitted partial execution, fix \(H,u,\mathcal A_u\) after deriving \(\mathcal C\), and write \(W^\dagger(\mathcal C,\Delta)\) and \(\widehat B^\dagger(\mathcal C,\Delta)\) with those parameters suppressed.
+% 为证明检查器能在每段允许的部分执行之后再次应用，先在推导 \(\mathcal C\) 后固定 \(H,u,\mathcal A_u\)，再将省略这些参数的记法写作 \(W^\dagger(\mathcal C,\Delta)\) 和 \(\widehat B^\dagger(\mathcal C,\Delta)\)。
 \begin{lemma}[Residual coherence]
 % 残余一致性
 \label{lem:residual-coherence}
@@ -350,45 +357,52 @@ Finally, \(\Pref(B)/z=\Pref(B/z)\) yields the generated-language equality.
 Thus every accepted prefix retains a safe completion for every residual outcome index still contract-compatible with that prefix.
 % 因此，每个被接受的前缀都会为仍与该前缀契约兼容的每个残余结果索引保留一条安全完成路径。
 
-\subsubsection{Live Extension}
+\subsubsection{Registered extension}
+% 已注册扩展
 
-\begin{lemma}[Monotone live extension]
-% 单调在线扩展
+\begin{lemma}[Registered extension preserves safety]
+% 已注册扩展保持安全
 \label{lem:live-extension}
 For an authenticated \(\mathsf{Extend}(\xi)\), the current residual indexed realization is a post-fixed family for the extension instance and is therefore contained in \(\widehat B^\dagger_{H,\mathsf{Extend}(\xi)}\ne\varnothing\).
 % 对于经认证的 \(\mathsf{Extend}(\xi)\)，当前残余的带索引实现是扩展实例的一个后不动点族，因此包含于 \(\widehat B^\dagger_{H,\mathsf{Extend}(\xi)}\ne\varnothing\)。
-Consequently, a valid live extension cannot retire or strand a currently promised outcome.
-% 因此，有效的在线扩展不能退役或搁浅任何当前已承诺结果。
+Consequently, a valid registered extension cannot remove a currently required outcome or leave it without a safe completion.
+% 因此，有效的已注册扩展既不能移除当前要求实现的结果，也不能使其失去安全完成路径。
 \end{lemma}
 The proof is in \cref{app:live-extension-proof}.
 % 证明见 \cref{app:live-extension-proof}。
 
-\subsection{The ideal atomic history machine}
-% 理想原子历史机
+\subsection{The ideal atomic execution machine}
+% 理想原子执行机
 \label{sec:ideal}
 
-The ideal labeled transition system (LTS) retains abstract gate and epoch identities for protected calls and history edges but omits the compiler, monitor representation, phase protocols, seals, preloading, and handoff microsteps.
-% 理想标号转移系统（LTS）保留受保护调用和历史边所需的抽象门与纪元标识，但省略编译器、监控器表示、阶段协议、封印、预加载和交接微步骤。
+The ideal labeled transition system (LTS) retains abstract monitor-entry and version identities for protected calls and installed edits.
+% 理想标号转移系统（LTS）保留受控调用和已安装编辑所需的抽象监控器入口与版本标识。
+It omits compilation, the monitor representation, transaction phases, authenticators, preloading, and installation microsteps.
+% 它省略编译、监控器表示、事务阶段、认证器、预加载和安装微步骤。
 An ideal state is \(I=(\kappa,H,\Delta,\mathsf{out},\mathcal A,c,r)\), where \(c=(H_c,u,L^*,\widehat B^*)\).
 % 理想状态为 \(I=(\kappa,H,\Delta,\mathsf{out},\mathcal A,c,r)\)，其中 \(c=(H_c,u,L^*,\widehat B^*)\)。
 \(H.\eta\) and \(H.\beta\) are its current abstract epoch and live bindings.
 % \(H.\eta\) 与 \(H.\beta\) 是其当前抽象纪元与活跃绑定。
 
-\paragraph{History edge}
-% 历史边
+\paragraph{Edit transition}
+% 编辑转移
 For \(\Theta_I(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), the rule \(I\xrightarrow{\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})}(\kappa_u,H_u,\Delta,\mathsf{out},\mathcal A_u,(H,u,L^*,\widehat B^*),\epsilon)\) exists exactly when \(\mathsf{Derive}(\Theta_I(u))=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\) and \(\mathsf{Spec}(\Theta_I(u))=(L^*,\widehat B^*)\).
 % 对 \(\Theta_I(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，当且仅当 \(\mathsf{Derive}(\Theta_I(u))=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\) 且 \(\mathsf{Spec}(\Theta_I(u))=(L^*,\widehat B^*)\) 时，规则 \(I\xrightarrow{\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})}(\kappa_u,H_u,\Delta,\mathsf{out},\mathcal A_u,(H,u,L^*,\widehat B^*),\epsilon)\) 存在。
-\(H_u\) records the epoch handoff and target gates, while \(\mathsf{Spec}\) is independent of \(\mathsf{Admit}\), \(\mathsf{Compile}\), and installation.
-% \(H_u\) 记录纪元交接与目标门，而 \(\mathsf{Spec}\) 独立于 \(\mathsf{Admit}\)、\(\mathsf{Compile}\) 和安装。
-Undefined derivation yields the state-preserving \(\mathsf{Invalid}(u,[\gamma,C_{\rm str}]_{\cong})\) with canonical failed-check transcript, whereas a derivation with no \(\mathsf{GReal}\) witness yields the state-preserving \(\mathsf{Reject}(u,[\gamma,C_{\rm fp}]_{\cong})\) with canonical ranked empty-chain.
-% 未定义推导产生带规范检查失败记录且保持状态的 \(\mathsf{Invalid}(u,[\gamma,C_{\rm str}]_{\cong})\)，而存在推导但没有 \(\mathsf{GReal}\) 见证时，产生带规范带秩空链且保持状态的 \(\mathsf{Reject}(u,[\gamma,C_{\rm fp}]_{\cong})\)。
+\(H_u\) records the monitor-version change and target entries.
+% \(H_u\) 记录监控器版本变更和目标入口。
+\(\mathsf{Spec}\) is a declarative definition that does not invoke the executable checker or installer.
+% \(\mathsf{Spec}\) 是一个不调用可执行检查器或安装器的声明式定义。
+Undefined derivation yields the state-preserving \(\mathsf{Invalid}(u,[\gamma,C_{\rm str}]_{\cong})\) with a verified invalid-edit transcript.
+% 未定义推导产生带有经验证无效编辑记录且保持状态的 \(\mathsf{Invalid}(u,[\gamma,C_{\rm str}]_{\cong})\)。
+A derivation with no \(\mathsf{GReal}\) witness yields the state-preserving \(\mathsf{Reject}(u,[\gamma,C_{\rm fp}]_{\cong})\) with a ranked rejection certificate ending in the empty family.
+% 存在推导但没有 \(\mathsf{GReal}\) 见证时，产生带有以空执行族结束的带秩拒绝证书且保持状态的 \(\mathsf{Reject}(u,[\gamma,C_{\rm fp}]_{\cong})\)。
 Together with \(\mathsf{Edge}\), these current-\(\gamma(\Theta_I(u))\) verdicts are mutually exclusive and exhaustive.
 % 这些绑定当前 \(\gamma(\Theta_I(u))\) 的判定与 \(\mathsf{Edge}\) 一起构成互斥且穷尽的三类结果。
 
-\paragraph{Protected occurrence}
-% 受保护发生项
-For submitted invocation \(m\), an enabled current-frontier occurrence \(x\) passes the ideal guard exactly when \(H.\beta(x)=(j,H.\eta)\), its authenticated handle binds \(j\) and cell \(d\), and \(\mathsf{canon}_\kappa(m)=\mathsf{inv}_\rho(d)\).
-% 对于提交的调用 \(m\)，当且仅当已启用的当前前沿发生项 \(x\) 满足 \(H.\beta(x)=(j,H.\eta)\)、其认证句柄绑定 \(j\) 与单元 \(d\)，且 \(\mathsf{canon}_\kappa(m)=\mathsf{inv}_\rho(d)\) 时，它才通过理想守卫。
+\paragraph{Protected call}
+% 受控调用
+For submitted tool request \(m\), an enabled occurrence \(x\) in the active workflow passes the ideal guard exactly when \(H.\beta(x)=(j,H.\eta)\), its authorization token binds monitor entry \(j\) and effect identity \(d\), and \(\mathsf{canon}_\kappa(m)=\mathsf{inv}_\rho(d)\).
+% 对于提交的工具请求 \(m\)，当且仅当当前工作流中已启用的发生项 \(x\) 满足 \(H.\beta(x)=(j,H.\eta)\)、其授权令牌绑定监控器入口 \(j\) 与效果标识 \(d\)，且 \(\mathsf{canon}_\kappa(m)=\mathsf{inv}_\rho(d)\) 时，它才通过理想守卫。
 Current receipts then determine \(a\in\{\Fresh(x,d),\Alias(x,d)\}\).
 % 随后，当前回执确定 \(a\in\{\Fresh(x,d),\Alias(x,d)\}\)。
 Exactly when \(ra\in L^*\), one atomic transition applies \(\mathsf{HStep}((G,T),a)\), appends \(a\) to the global resolved-occurrence trace \(\chi\), advances \(\nu\), removes \(x\) from \(H.\beta\), and sets \(r:=ra\).
@@ -400,29 +414,35 @@ Exactly when \(ra\in L^*\), one atomic transition applies \(\mathsf{HStep}((G,T)
 
 An invalid occurrence, gate, handle, or invocation, a disabled branch, or \(ra\notin L^*\) fails the guard and returns \(\mathsf{deny}(x)\) without changing state.
 % 无效的发生项、门、句柄或调用、禁用分支或 \(ra\notin L^*\) 会使守卫失败，并返回 \(\mathsf{deny}(x)\) 且不改变状态。
-\Alias binds the restored occurrence to its cell's durable result future, advancing causal history without inventing a result not yet produced by the original invocation.
-% \Alias 将恢复的发生项绑定到其单元的持久结果期值，从而推进因果历史，却不虚构原始调用尚未产生的结果。
+\Alias binds the restored occurrence to the effect identity's durable return record.
+% \Alias 将恢复的发生项绑定到该效果标识的持久返回记录。
+It advances the workflow without inventing a return value that the original call has not yet produced.
+% 它推进工作流，但不会虚构原始调用尚未产生的返回值。
 
 \paragraph{Retry, release, and crash}
 % 重试、释放与崩溃
 \(\mathsf{Save}\) takes the trusted checkpoint transition in \cref{sec:model} as a \(\tau\)-step.
 % \(\mathsf{Save}\) 将 \cref{sec:model} 中的可信检查点转移作为一个 \(\tau\) 步。
-An authenticated same-invocation retry follows its \(\chi\)-to-receipt link and emits \(\mathsf{Return}(t,[v]_{\cong})\) for the same stable result future without changing history, whereas an unauthenticated or argument-changing lookup is denied.
-% 经认证的同调用重试沿其从 \(\chi\) 到回执的链接，为同一稳定结果期值发出 \(\mathsf{Return}(t,[v]_{\cong})\) 且不改变历史，而未认证或改变参数的查找会被拒绝。
+An authenticated retry of the same tool request follows its \(\chi\)-to-receipt link and emits \(\mathsf{Return}(t,[v]_{\cong})\) for the same durable return record without changing the execution record.
+% 对同一工具请求的认证重试沿其从 \(\chi\) 到回执的链接，为同一持久返回记录发出 \(\mathsf{Return}(t,[v]_{\cong})\)，且不改变执行记录。
+An unauthenticated lookup or a lookup with different arguments is denied.
+% 未经认证的查找或参数不同的查找会被拒绝。
 \Dispatch releases exactly the stored invocation in the oldest prepared outbox item and marks that item released, making the release trace a prefix of \Fresh preparation order.
 % \Dispatch 恰好释放最早已准备发件箱条目中存储的调用并将该条目标记为已释放，使释放轨迹成为 \Fresh 准备次序的前缀。
-Settlement emits \(\mathsf{Settle}(d,[v]_{\cong})\), monotonically advances a receipt's phase, and fills its durable result future with the stable result, changing no history or authority field.
-% 结算发出 \(\mathsf{Settle}(d,[v]_{\cong})\)，单调推进回执阶段，并以稳定结果填充其持久结果期值，且不改变历史或权限字段。
+Settlement emits \(\mathsf{Settle}(d,[v]_{\cong})\), advances a receipt's phase, and fills its durable return record with the stable return value.
+% 结算发出 \(\mathsf{Settle}(d,[v]_{\cong})\)，推进回执阶段，并以稳定返回值填充其持久返回记录。
+It changes neither the execution record nor the permission trace.
+% 它既不改变执行记录，也不改变权限轨迹。
 Crash discards nondurable computation without changing LTS state.
 % 崩溃丢弃非持久计算而不改变 LTS 状态。
 We make no claim about completion order inside an external network after release.
 % 我们不对释放后外部网络内部的完成顺序作任何主张。
-The ideal LTS is the least relation generated by these history-edge verdicts, protected-use/denial, Save, retry/retrieval/delivery, \(\Dispatch\), settlement, and recovered-crash rules.
-% 理想 LTS 是由这些历史边判定、受保护使用/拒绝、Save、重试/取回/交付、\(\Dispatch\)、结算与恢复崩溃规则生成的最小关系。
+The ideal LTS is the least relation generated by these edit answers, protected-call success or denial, Save, retry, retrieval, delivery, \(\Dispatch\), settlement, and recovered-crash rules.
+% 理想 LTS 是由这些编辑答案、受控调用成功或拒绝、Save、重试、取回、交付、\(\Dispatch\)、结算与恢复崩溃规则生成的最小关系。
 No other transition, including compiler computation, exists.
 % 不存在包括编译器计算在内的其他转移。
 
-By \cref{lem:greatest-realization}, every reachable ideal-machine prefix retains a policy-safe completion until the next explicit history edge changes the contract.
-% 根据 \cref{lem:greatest-realization}，理想机的每个可达前缀都会保留一条策略安全完成路径，直到下一条显式历史边改变契约。
+By \cref{lem:greatest-realization}, every reachable partial execution of the ideal machine retains a policy-safe completion until the next edit transition changes the workflow contract.
+% 根据 \cref{lem:greatest-realization}，理想机的每段可达部分执行都会保留一条策略安全完成路径，直到下一次编辑转移改变工作流契约。
 The next sections implement this machine without consulting the full completion set at every call.
 % 后续章节实现该机器，而无需在每次调用时查询完整完成路径集合。

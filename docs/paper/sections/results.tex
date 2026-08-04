@@ -1,48 +1,79 @@
-\section{Exact Edit-Safety Characterization}
-% 精确编辑安全刻画
+\section{The Exact Safety Theorem}
+% 精确安全定理
 \label{sec:results}
 
-The main theorem connects the preceding layers: authenticated derivation, the exact safety check, monitor compilation, and durable installation.
-% 主定理连接前述各层：经认证推导、精确安全检查、监控器编译与持久安装。
-It also characterizes which history information an exact implementation must retain and proves closure across finite executions.
-% 它还刻画精确实现必须保留哪些历史信息，并证明有限执行上的闭合性。
-The theorem has one central equivalence and three supporting guarantees.
-% 该定理包含一个核心等价关系和三类支撑保证。
-Clause~2 equates realizability, successful compilation, and atomic installation.
-% 第 2 条将可实现性、成功编译与原子安装等同起来。
-Clauses~1 and~3 justify the checked boundary and the necessity of its state, while clauses~4 and~5 lift the result to finite histories and the durable API.
-% 第 1 条和第 3 条分别论证经检查边界及其状态的必要性，第 4 条和第 5 条则将结果提升到有限历史与持久 API。
+The main theorem states the paper's complete theory in one place.
+% 主定理在一处陈述本文的完整理论。
+It connects authenticated edit derivation, the safety checker, monitor construction, and atomic installation.
+% 它连接经认证编辑推导、安全检查器、监控器构造与原子安装。
+Here \emph{exact} means that the checker accepts if and only if a safe implementation exists.
+% 这里的\emph{精确}是指，当且仅当安全实现存在时，检查器才会接受。
+Clause~2 is the central equivalence.
+% 第 2 条是核心等价关系。
+Clauses~1, 3, 4, and~5 prove faithful registration, the necessity of all four state components, repeated applicability, and correctness of the installed runtime.
+% 第 1、3、4、5 条分别证明忠实注册、四类状态信息的必要性、重复适用性以及已安装运行时的正确性。
 
 Fix a derivation witness \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
 % 固定一个推导见证 \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
-An independently defined \emph{installed atomic realization} is a pair \((M,\widehat B_M)\) whose generated language realizes \((H,u)\) according to \cref{def:realization} and whose marked language is \(\pi_2\widehat B_M\).
-% 独立定义的\emph{已安装原子实现}是一个二元组 \((M,\widehat B_M)\)，其生成语言按照 \cref{def:realization} 实现 \((H,u)\)，且其标记语言为 \(\pi_2\widehat B_M\)。
-The witness's exact-cut transaction must atomically install \((\kappa_u,H_u,\mathcal A_u,M)\) at \(\eta^+\), close \(\eta^-\), bind the target gates, and publish replacement handles.
-% 对于见证 \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)，独立定义的\emph{精确原子实现}是满足以下条件的 \((M,\widehat B_M)\)：\((\mathsf{Gen}(M,q^0),\widehat B_M)\) 按照 \cref{def:realization} 实现 \((H,u)\)，\(\mathsf{Mark}(M,q^0)=\pi_2\widehat B_M\)，且 \(\delta\) 的精确切点事务原子地在 \(\eta^+\) 安装 \((\kappa_u,H_u,\mathcal A_u,M)\)、关闭 \(\eta^-\)、绑定目标门并发布替换句柄。
+An independently defined \emph{installed realization} is a pair \((M,\widehat B_M)\) such that \((\mathsf{Gen}(M,q^0),\widehat B_M)\) realizes \((H,u)\) according to \cref{def:realization} and \(\mathsf{Mark}(M,q^0)=\pi_2\widehat B_M\).
+% 独立定义的\emph{已安装实现}是一个二元组 \((M,\widehat B_M)\)，其中 \((\mathsf{Gen}(M,q^0),\widehat B_M)\) 按照 \cref{def:realization} 实现 \((H,u)\)，且 \(\mathsf{Mark}(M,q^0)=\pi_2\widehat B_M\)。
+The domain transaction must atomically install \((\kappa_u,H_u,\mathcal A_u,M)\) at \(\eta^+\), close \(\eta^-\), bind the target monitor entries, and publish replacement authorization tokens.
+% 域事务必须在 \(\eta^+\) 原子安装 \((\kappa_u,H_u,\mathcal A_u,M)\)、关闭 \(\eta^-\)、绑定目标监控器入口，并发布替代授权令牌。
 
-\paragraph{Relational evidence}
-% 关系证据
-We call \(S\) the compiled runtime state, \(\mathsf{AgentSec}\) its invariant, and \(\mathsf{Sec}(S;c,r)\) the four-factor information view used by the lower bound.
-% 我们将 \(S\) 称为编译后运行时状态，将 \(\mathsf{AgentSec}\) 称为其不变量，并将 \(\mathsf{Sec}(S;c,r)\) 称为下界所用的四因子信息视图。
-At a checked cut, \(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) joins promised topology/schema, occurrence--cell identity, effect progress/receipts, and epoch/cut coordinates.
-% 在经检查的切点处，\(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) 连接已承诺拓扑/模式、发生项--单元标识、效果进展/回执以及纪元/切点坐标。
-\(\mathcal Q_{\rm sec}\) contains typed decide/install queries, and \(\mathsf{Exact}(\tau)\) means that a decoder reproduces \(\mathsf{Ans}\) from \(\tau(\mathsf{Sec})\) for every such query.
-% \(\mathcal Q_{\rm sec}\) 包含带类型的判定/安装查询，而 \(\mathsf{Exact}(\tau)\) 意味着一个解码器能从 \(\tau(\mathsf{Sec})\) 为每个此类查询复现 \(\mathsf{Ans}\)。
-\Cref{app:evidence} gives the full field dependencies, projections, query semantics, and private-name orbits.
-% \Cref{app:evidence} 给出完整字段依赖、投影、查询语义与私有名称轨道；该下界约束信息而非布局。
-The lower bound concerns information rather than a particular layout.
-% 该下界约束信息，而非特定布局。
+\paragraph{Information required by any exact checker}
+% 任何精确检查器所需的信息
+Let \(S\) be the compiled runtime state and \(\mathsf{AgentSec}\) its security invariant.
+% 令 \(S\) 为编译后运行时状态，\(\mathsf{AgentSec}\) 为其安全不变量。
+At a checked source snapshot, \(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) joins four kinds of information: workflow structure and edit schemas (\(\mathbf P\)), call-to-effect identity (\(\mathbf I\)), completed and pending effects (\(\mathbf E\)), and monitor-version and installation coordinates (\(\mathbf C\)).
+% 在经检查源状态快照处，\(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) 连接四类信息：工作流结构与编辑模式（\(\mathbf P\)）、调用到效果标识的关系（\(\mathbf I\)）、已完成与待处理效果（\(\mathbf E\)），以及监控器版本与安装坐标（\(\mathbf C\)）。
+States are compared up to consistent renaming of private identifiers.
+% 状态在私有标识符一致重命名的意义下比较。
+\(\mathcal Q_{\rm sec}\) contains every well-typed decide or install query.
+% \(\mathcal Q_{\rm sec}\) 包含每个良好定型的判定或安装查询。
+For an information map \(f\), define
+% 对于信息映射 \(f\)，定义
+\[
+\mathsf{Exact}(f)\Longleftrightarrow
+\exists D_f.\ \forall(V,q)\in\mathcal Q_{\rm sec}.\quad
+D_f(\langle f(V),q\rangle_{\cong})
+=[\mathsf{Ans}(V,q)]_{\cong}.
+\]
+Thus \(f\) is exact when some decoder can reproduce every correct answer from the retained information.
+% 因此，如果某个解码器能从保留的信息中复现每个正确答案，则 \(f\) 是精确的。
+For \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), projection \(\pi_J\) keeps the factors in \(J\) and removes every field that depends on a discarded factor.
+% 对于 \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\)，投影 \(\pi_J\) 保留 \(J\) 中的因子，并删除依赖被丢弃因子的每个字段。
+\(\mathsf{TargetOnly}\) keeps only the replacement workflow and completion data proposed by the caller.
+% \(\mathsf{TargetOnly}\) 只保留调用方提出的替代工作流与完成数据。
+\Cref{app:evidence} gives the complete field dependencies and query semantics.
+% \Cref{app:evidence} 给出完整字段依赖与查询语义。
+The lower bound concerns information, not its storage layout.
+% 该下界约束信息，而非其存储布局。
 
-\paragraph{Durable Agent-API observation}
-% 持久 Agent API 观测
-\(\mathcal O_{\rm api}\) exposes verdicts and history edges bound to a specific cut, protected-use outcomes, dispatch, settlement, and authenticated returns.
-% \(\mathcal O_{\rm api}\) 暴露绑定切点的判定/历史边、受保护使用结果、派发、结算与经认证返回，对私有名称而非公开字节取商；\(\mathsf{obs}_{\rm api}\) 只隐藏内部计算、预加载、Save、过期尝试与恢复崩溃。
+\paragraph{Required-outcome preservation}
+% 要求实现结果的保留
+The main theorem uses the following compact condition from \cref{app:spc}:
+% 主定理使用 \cref{app:spc} 中的下列紧凑条件：
+\[
+\begin{aligned}
+\mathsf{Preserve}(H,u,\widehat B)
+\Longleftrightarrow
+\forall a\in\mathsf{Req}_u.\ \exists t\in O_{H,u},b.\quad
+\mathsf{Lift}_u(t,a)\land(t,b)\in\widehat B .
+\end{aligned}
+\]
+It says that every required source outcome appears in some accepted target outcome.
+% 它表示每个要求实现的源结果都出现在某个被接受的目标结果中。
+
+\paragraph{Visible runtime behavior}
+% 可见运行时行为
+\(\mathcal O_{\rm api}\) exposes edit answers bound to a specific source snapshot, installed edits, protected-call answers, dispatch, settlement, and authenticated returns.
+% \(\mathcal O_{\rm api}\) 暴露绑定特定源状态快照的编辑答案、已安装编辑、受控调用答案、派发、结算与经认证返回。
 It quotients private names but preserves public bytes.
 % 它对私有名称取商，但保留公开字节。
 \(\mathsf{obs}_{\rm api}\) hides only internal computation, preload, Save, stale attempts, and recovered crash.
 % \(\mathsf{obs}_{\rm api}\) 只隐藏内部计算、预加载、Save、过期尝试与恢复崩溃。
-\(\mathcal R\) equates ideal and compiled states when \(\mathsf{AgentSec}\), cut and prefix, epoch, live bindings, and visible fields agree.
-% 当 \(\mathsf{AgentSec}\)、切点/前缀、纪元、在线绑定与可见字段一致时，\(\mathcal R\) 等同理想状态与编译状态；\cref{app:bisimulation} 给出其类型化映射、回复链接与良好初始对。
+\(\mathcal R\) relates ideal and compiled states when \(\mathsf{AgentSec}\), source snapshot and current partial execution, monitor version, current bindings, and visible fields agree.
+% 当 \(\mathsf{AgentSec}\)、源状态快照与当前部分执行、监控器版本、当前绑定和可见字段一致时，\(\mathcal R\) 关联理想状态与编译状态。
 \Cref{app:bisimulation} gives its typed maps, reply linkage, and good initial pairs.
 % \Cref{app:bisimulation} 给出其类型化映射、回复链接与良好初始对。
 
