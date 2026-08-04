@@ -49,38 +49,24 @@ We call these operations \emph{execution edits} because they change which parts 
 % 我们把这些操作称为\emph{执行编辑}，因为它们会改变工作流接下来执行哪些部分。
 An edit changes future work without undoing a tool action that has already been authorized or released.
 % 编辑会改变未来的工作，但不会撤销已经获得授权或已经发出的工具动作。
-An unsafe edit can therefore authorize the same action twice, drop a result that the workflow still requires, or conflict with a call that began before the edit.
+An unsafe edit can therefore authorize the same action twice, discard a result the workflow still requires, or conflict with a call that began before the edit.
 % 因此，不安全的编辑可能两次授权同一个动作、丢弃工作流仍然要求的结果，或与编辑前已经开始的调用冲突。
-Existing Agent recovery systems implement particular edits, while existing synthesis methods assume that the possible executions and completion conditions are already known.
-% 现有 Agent 恢复系统实现特定编辑，而现有综合方法假定可能执行及完成条件已经给定。
-Neither derives the full safety requirement of a requested edit from the current execution record.
-% 二者都不会从当前执行记录中推导出一次请求的编辑所需的完整安全条件。
+Existing Agent recovery systems implement particular edits, and synthesis methods assume known executions and completion conditions, but neither derives an edit's safety requirements from the current execution record.
+% 现有 Agent 恢复系统实现特定编辑，综合方法则假定执行及完成条件已经给定，但二者都不会从当前执行记录中推导一次编辑的安全要求。
 We give an exact procedure for deciding whether an execution edit is safe.
 % 我们给出一个精确过程，用于判定一次执行编辑是否安全。
 It either computes every safe way for the edited workflow to continue or proves that every possible implementation is unsafe.
 % 它要么计算编辑后工作流安全继续执行的全部方式，要么证明该编辑的每种可能实现都不安全。
-Given a registered workflow and its current execution record, the trusted controller first derives the edited workflow and the outcomes that it must preserve.
-% 给定一个已注册工作流及其当前执行记录，可信控制器首先推导编辑后的工作流及其必须保留的结果。
-Every outcome required before the edit must remain required, already be satisfied by the recorded execution, or be explicitly removed by the same authority that required it.
-% 编辑前要求实现的每个结果都必须继续作为要求、已经由所记录的执行满足，或由提出该要求的同一权限方明确移除。
-The checker then constructs every complete execution allowed by the derived workflow and policy.
-% 检查器随后构造派生工作流和策略允许的每种完整执行。
-It removes an execution whenever one of its partial executions would leave a still-required outcome with no safe way to finish.
-% 如果某个完整执行的部分过程会让仍然需要实现的结果失去安全完成方式，检查器就删除该完整执行。
-If nothing remains, the checker returns a finite, independently checkable explanation that no safe implementation exists.
-% 如果没有完整执行留下，检查器返回一份有限且可独立检查的说明，证明不存在安全实现。
-Otherwise, the remaining executions contain every safe way for the edit to proceed, and the runtime permits only calls that stay within them.
-% 否则，剩余执行包含该编辑安全推进的全部方式，运行时只允许保持在这些执行之内的调用。
-For all six registered Fork, Restore, and Merge edits and later registered extensions, our main theorem proves that the checker accepts exactly when a safe implementation exists and that acceptance retains every safe execution.
-% 对全部六种已注册的 Fork、Restore 和 Merge 编辑以及后续注册扩展，我们的主定理证明，检查器当且仅当安全实现存在时才接受，并且接受结果保留每段安全执行。
-The theorem also proves that the result can take effect atomically despite concurrent calls, remains safe through repeated edits and recovery, and gives the runtime the same Agent-visible behavior as an ideal atomic machine.
-% 该定理还证明，即使存在并发调用，判定结果也能原子生效，并在重复编辑与恢复过程中保持安全，同时使运行时与理想原子机器具有相同的 Agent 可见行为。
-Finally, the theorem proves that every exact checker needs four facts: (1) the workflow and its required outcomes, (2) which calls refer to the same action, (3) earlier authorizations and call progress, and (4) which rules govern a call that overlaps the edit.
-% 最后，该定理证明每个精确检查器都需要四类事实：(1) 工作流及其要求实现的结果，(2) 哪些调用指向同一个动作，(3) 先前的授权与调用进展，以及 (4) 哪组规则管理与编辑重叠的调用。
-Six Lean modules mechanize registration, all six edit rules, atomic installation, calls concurrent with installation, and preservation across finite executions.
-% 六个 Lean 模块机械化注册、全部六种编辑规则、原子安装、与安装并发的调用以及有限执行上的安全保持。
-Nineteen paper-specific tests and measurements over 2--128 outcomes exercise the executable checker.
-% 十九项论文专用测试与覆盖 2--128 个结果的测量检验可执行检查器。
+Given a registered workflow and execution record, a trusted controller derives the edited workflow and the outcomes that it must preserve.
+% 给定一个已注册工作流及执行记录，可信控制器推导编辑后的工作流及其必须保留的结果。
+The procedure constructs the complete executions allowed by the workflow and policy, then removes any execution whose prefix would leave a still-required outcome with no safe completion.
+% 该过程构造工作流与策略允许的完整执行，然后删除任何会在某个前缀后使仍然要求实现的结果无法安全完成的执行。
+If no execution remains, it returns a finite, independently checkable proof that the edit has no safe implementation.
+% 如果没有执行留下，它就返回一个有限且可独立检查的证明，说明该编辑不存在安全实现。
+Otherwise, the remaining executions contain every safe continuation, and the runtime permits exactly their prefixes.
+% 否则，剩余执行包含全部安全继续方式，运行时只允许它们的前缀。
+Our main theorem proves this result for six Fork, Restore, and Merge edits and later registered extensions, establishes atomic runtime enforcement, and identifies the information that any exact checker must retain.
+% 我们的主定理为六种 Fork、Restore 和 Merge 编辑以及后续注册扩展证明了这一结果，证明运行时可以原子执行判定结果，并确定任何精确检查器都必须保留的信息。
 \end{abstract}
 
 \input{sections/introduction}
