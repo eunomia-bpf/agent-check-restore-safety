@@ -2,18 +2,20 @@
 % 机械化与可执行验证
 \label{sec:validation}
 
-Six Lean modules pass \texttt{--trust=0} and form a paper-facing theorem chain.
-% 六个 Lean 模块通过 \texttt{--trust=0} 检查，并形成面向论文的定理链。
-\path{exact_checker_iff_safe implementation} proves executable admission equivalent to the independently stated declarative safe implementation.
-% \path{exact_checker_iff_safe implementation} 证明可执行准入等价于独立陈述的声明式实现。
-\path{registered_workflow_exact_admission} composes typed registration, exhaustive mediation, and exact admission.
-% \path{registered_workflow_exact_admission} 组合类型化注册、穷尽中介与精确准入。
+Six Lean modules pass \texttt{--trust=0} and prove the claims used by the paper.
+% 六个 Lean 模块通过 \texttt{--trust=0} 检查，并证明论文使用的主张。
+\path{exact_checker_iff_realization} proves that the executable checker accepts exactly when a safe execution set exists.
+% \path{exact_checker_iff_realization} 证明可执行检查器当且仅当安全执行集合存在时才接受。
+\path{registered_workflow_exact_admission} combines typed registration, trusted checking of every protected call, and exact edit checking.
+% \path{registered_workflow_exact_admission} 组合类型化注册、对每次受控调用的可信检查以及精确编辑检查。
 \path{six_edit_derivation_exact} proves the executable derivation sound and complete for all six edit rules.
 % \path{six_edit_derivation_exact} 证明可执行推导对全部六种编辑规则既可靠又完备。
-\path{exact_edit_installs_trace_safe_monitor} then constructs an atomic installation whose every finite continuation preserves \(\mathsf{AgentSec}\), while \path{fresh_alias_installation_serialized} proves both possible orders between a protected call and installation.
-% 随后，\path{exact_edit_installs_trace_safe_monitor} 构造一次原子安装并证明其每段有限延续均保持 \(\mathsf{AgentSec}\)，而 \path{fresh_alias_installation_serialized} 证明受控调用与安装之间两种可能的先后顺序。
-\path{compilation_preload_preserves_agentSec} models compilation as an explicit transition and proves that inactive candidate preloading preserves the same invariant.
-% \path{compilation_preload_preserves_agentSec} 把编译建模为显式转移，并证明非活动候选预加载保持同一不变量。
+\path{exact_edit_installs_trace_safe_monitor} constructs an atomic installation whose every finite continuation preserves \(\mathsf{AgentSec}\).
+% \path{exact_edit_installs_trace_safe_monitor} 构造一次原子安装，并证明其每段有限延续均保持 \(\mathsf{AgentSec}\)。
+\path{fresh_alias_installation_serialized} proves both possible orders between a protected call and installation.
+% \path{fresh_alias_installation_serialized} 证明受控调用与安装之间两种可能的先后顺序。
+\path{compilation_preload_preserves_agentSec} models preparation as an explicit transition and proves that preparing an inactive candidate preserves the same invariant.
+% \path{compilation_preload_preserves_agentSec} 把准备过程建模为显式转移，并证明准备尚未激活的候选结果会保持同一不变量。
 
 All 19 paper-specific tests pass, together with 62 authority and compiler regression tests for supporting components.
 % 全部 19 项论文专用测试以及面向支撑组件的 62 项权限与编译器回归测试均通过。

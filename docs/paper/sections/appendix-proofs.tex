@@ -124,9 +124,9 @@ The checker requires
 \[
 \begin{aligned}
 \mathsf{PreservesRequired}(H,u,\widehat B)
-&\Longleftrightarrow
-\forall a\in\mathsf{StillRequired}_u.\ \exists t\in O_{H,u},b.\\[-2pt]
-&\qquad\mathsf{Covers}_u(t,a)\land(t,b)\in\widehat B .
+&\Longleftrightarrow\\[-2pt]
+&\quad\forall a\in\mathsf{StillRequired}_u.\ 
+\exists(t,y)\in\widehat B.\ \mathsf{Covers}_u(t,a).
 \end{aligned}
 \]
 Here \(\mathsf{AuthorizedRemoval}_{H,u}\) contains the typed unselected-arm outcomes for \(\mathsf{MergeSelect}\) or the current-role outcomes of a pending certified \(\mathsf{RestoreReplace}\).
@@ -162,10 +162,10 @@ Let \((L,\widehat B)\in\mathfrak R_\Theta\).
 % 令 \((L,\widehat B)\in\mathfrak R_\Theta\)。
 Source and target fidelity and policy safety give \(\widehat B\subseteq\widehat B_0\).
 % 源与目标忠实性以及策略安全性给出 \(\widehat B\subseteq\widehat B_0\)。
-For every \((o,b)\in\widehat B\), every prefix \(z\preceq_{\rm pref}b\) belongs to \(L=\Pref(\pi_2\widehat B)\).
-% 对每个 \((o,b)\in\widehat B\)，每个前缀 \(z\preceq_{\rm pref}b\) 都属于 \(L=\Pref(\pi_2\widehat B)\)。
-Persistent outcome coverage therefore supplies, for every \(v\in\mathsf{Compat}(z)\), a pair \((v,b')\in\widehat B\) extending \(z\).
-% 因而，持续结果覆盖为每个 \(v\in\mathsf{Compat}(z)\) 提供一个扩展 \(z\) 的二元组 \((v,b')\in\widehat B\)。
+For every \((o,y)\in\widehat B\), every prefix \(z\preceq_{\rm pref}y\) belongs to \(L=\Pref(\pi_2\widehat B)\).
+% 对每个 \((o,y)\in\widehat B\)，每个前缀 \(z\preceq_{\rm pref}y\) 都属于 \(L=\Pref(\pi_2\widehat B)\)。
+Persistent outcome coverage therefore supplies, for every \(o'\in\mathsf{Compat}(z)\), a pair \((o',y')\in\widehat B\) extending \(z\).
+% 因而，持续结果覆盖为每个 \(o'\in\mathsf{Compat}(z)\) 提供一个扩展 \(z\) 的二元组 \((o',y')\in\widehat B\)。
 Thus \(\widehat B\subseteq\widehat\Phi(\widehat B)\).
 % 因此 \(\widehat B\subseteq\widehat\Phi(\widehat B)\)。
 By monotonicity on the finite lattice \(2^{\widehat B_0}\), every post-fixed set is contained in the greatest fixed point, so \(\widehat B\subseteq\widehat B^\dagger\).
@@ -214,12 +214,12 @@ D&=\lvert\Theta\rvert_{\rm chk},&
 n&=\max_o\lvert X_{p_o}\rvert,\\
 \Lambda&=\sum_o\sum_{w\in\Lin(p_o)}(\lvert w\rvert+1),&
 N_B&=\lvert\widehat B_0\rvert,\\
-V_B&=\sum_{(o,b)\in\widehat B_0}(\lvert b\rvert+1).
+V_B&=\sum_{(o,y)\in\widehat B_0}(\lvert y\rvert+1).
 \end{aligned}
 \]
 \[
-\mathcal G_{\rm cov}=\{((o,b),z,v)\mid
-(o,b)\in\widehat B_0,\ z\preceq b,\ v\in\mathsf{Compat}(z)\}.
+\mathcal G_{\rm cov}=\{((o,y),z,o')\mid
+(o,y)\in\widehat B_0,\ z\preceq y,\ o'\in\mathsf{Compat}(z)\}.
 \]
 Here \(D\) is the authenticated input size, \(\Lambda\) is indexed linearization volume, and \(\mathcal G_{\rm cov}\) is the materialized prefix--required-outcome relation.
 % 其中 \(D\) 是经认证输入大小，\(\Lambda\) 是带索引线性化体积，而 \(\mathcal G_{\rm cov}\) 是物化的前缀--要求实现结果关系。
@@ -232,8 +232,8 @@ Moreover, \(N_B\leq\sum_o|\Lin(p_o)|\), \(|\mathcal G_{\rm cov}|\leq N_B(n+1)|O_
 \begin{proof}
 A backtracking topological-order enumerator emits all indexed linearizations in \(O(n\Lambda)\) time, while resolution, policy simulation, and construction of raw and resolved prefix tries are linear in emitted volume.
 % 回溯式拓扑序枚举器在 \(O(n\Lambda)\) 时间内发出全部带索引线性化，而解析、策略模拟以及原始与已解析前缀字典树的构造关于输出体积均为线性。
-For every support key \((z,v)\), maintain the number of remaining pairs \((v,b')\) extending \(z\), initially enqueue candidates having a required outcome with zero support, and remove candidates in synchronous batches.
-% 对每个支撑键 \((z,v)\)，维护扩展 \(z\) 的剩余二元组 \((v,b')\) 数量，初始时将某项要求实现结果支持数为零的候选入队，并按同步批次删除候选。
+For every support key \((z,o')\), maintain the number of remaining pairs \((o',y')\) extending \(z\), initially enqueue candidates having a required outcome with zero support, and remove candidates in synchronous batches.
+% 对每个支撑键 \((z,o')\)，维护扩展 \(z\) 的剩余二元组 \((o',y')\) 数量，初始时将某项要求实现结果支持数为零的候选入队，并按同步批次删除候选。
 When removal makes a support count zero, enqueue exactly the candidates incident to that requirement for the next batch.
 % 当删除使一个支撑计数变为零时，恰将关联该要求的候选放入下一批次。
 Each candidate and each incidence in \(\mathcal G_{\rm cov}\) is processed at most once, and the batches are exactly \(\widehat B_i\setminus\widehat B_{i+1}\).
@@ -257,8 +257,8 @@ E_i\subseteq
 \]
 The verifier first recomputes the canonical \(\widehat B_0(\Theta)\) and requires equality with the serialized first component.
 % 验证器首先重新计算规范的 \(\widehat B_0(\Theta)\)，并要求它与序列化的第一分量相等。
-An entry \(((o,b),z,v)\in E_i\) verifies exactly when \(z\preceq b\), \(v\in\mathsf{Compat}(z)\), and no \((v,b')\in\widehat B_i\) extends \(z\).
-% 当且仅当 \(z\preceq b\)、\(v\in\mathsf{Compat}(z)\)，且 \(\widehat B_i\) 中不存在扩展 \(z\) 的 \((v,b')\) 时，条目 \(((o,b),z,v)\in E_i\) 才通过验证。
+An entry \(((o,y),z,o')\in E_i\) verifies exactly when \(z\preceq y\), \(o'\in\mathsf{Compat}(z)\), and no \((o',y')\in\widehat B_i\) extends \(z\).
+% 当且仅当 \(z\preceq y\)、\(o'\in\mathsf{Compat}(z)\)，且 \(\widehat B_i\) 中不存在扩展 \(z\) 的 \((o',y')\) 时，条目 \(((o,y),z,o')\in E_i\) 才通过验证。
 The verifier requires the first projection of \(E_i\) to equal \(\widehat B_i\setminus\widehat\Phi(\widehat B_i)\), sets \(\widehat B_{i+1}=\widehat B_i\setminus\pi_1(E_i)\), and accepts only when \(\widehat B_{k+1}=\varnothing\).
 % 验证器要求 \(E_i\) 的第一投影恰好等于 \(\widehat B_i\setminus\widehat\Phi(\widehat B_i)\)，令 \(\widehat B_{i+1}=\widehat B_i\setminus\pi_1(E_i)\)，并且只在 \(\widehat B_{k+1}=\varnothing\) 时接受。
 All sets, prefixes, and compatibility checks are finite and use the canonical order fixed by the checker.

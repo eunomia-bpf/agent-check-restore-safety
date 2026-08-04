@@ -213,8 +213,8 @@ A trusted transaction stores a protected copy of branch \(b\)'s remaining contra
 % 可信事务存储分支 \(b\) 的剩余契约 \(\mathcal C_b\)、有序进展记录 \(\chi_b\)、相关调用以及经签名的结果要求，并保护这些内容不被修改。
 The checkpoint check requires \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\), and the transaction advances \(\mathsf{ver}\) without changing the current workflow, authorization records, \(\beta\), the active rule version, or the authorization sequence.
 % 检查点检查要求 \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\)，且该事务推进 \(\mathsf{ver}\) 而不改变当前工作流、授权记录、\(\beta\)、当前规则版本或授权序列。
-This internal transition changes \(H\), so an installation computed from the earlier state will fail its final state check.
-% 这一内部转移会改变 \(H\)，因此根据较早状态计算的安装将在最终状态检查时失败。
+This internal transition changes \(H\), so a rule update computed from the earlier record will fail its final check.
+% 这一内部转移会改变 \(H\)，因此根据较早记录计算的规则更新无法通过最终检查。
 Restore accepts only records created by this rule.
 % Restore 仅接受由此规则创建的记录。
 
@@ -298,10 +298,10 @@ The policy authority signs policies, outcome requirements, and authorized remova
 % 策略权限方签署策略、结果要求和获授权移除。
 The trusted controller registers protected calls, actions, and authorization tokens, and it derives and checks each edit.
 % 可信控制器注册受控调用、动作与授权令牌，并推导和检查每次编辑。
-Its installer checks the answer again before atomically changing the rules in force.
-% 其安装组件在原子改变当前规则之前再次检查判定结果。
-The policy authority, trusted controller, protected registries and authorization log, certificate verifier, and transaction mechanism form the trusted computing base (TCB).
-% 策略权限方、可信控制器、受保护的注册表与授权日志、证书验证器和事务机制共同构成可信计算基（TCB）。
+The trusted controller checks the answer again before atomically changing the rules in force.
+% 可信控制器在原子改变当前规则之前再次检查判定结果。
+The policy authority, trusted controller, protected registries and authorization log, proof verifier, and transaction mechanism form the trusted computing base (TCB).
+% 策略权限方、可信控制器、受保护的注册表与授权日志、证明验证器和事务机制共同构成可信计算基（TCB）。
 Within one policy domain, the TCB mediates every protected call and commits every state change and visible edit answer through a linearizable transaction.
 % 在一个策略域内，TCB 中介每次受控调用，并通过线性化事务提交每项状态变更和可见编辑答案。
 After an unexpected stop and restart, each transaction appears entirely before or entirely after its linearization point.
@@ -316,8 +316,8 @@ Unmatched calls fail closed.
 % 不匹配的调用以关闭方式失败。
 The platform supplies workflow \(\mathcal W\), finite model \(\mathcal R\), edit rules, request-normalization rules, policy, checkpoints, authorization log, and queued requests in one protected execution record.
 % 平台在一份受保护的执行记录中提供工作流 \(\mathcal W\)、有限模型 \(\mathcal R\)、编辑规则、请求规范化规则、策略、检查点、授权日志和排队请求。
-From these inputs and an Agent request naming an edit and its objects, the controller derives the edited workflow, required outcomes, the authorization decision for each call, the safe execution set or rejection certificate, and the rule entry and authorization token for each remaining call.
-% 控制器根据这些输入以及指明编辑及其对象的 Agent 请求，推导编辑后的工作流、要求实现的结果、每个调用的授权判定、安全执行集合或拒绝证书，以及每个剩余调用所用的规则入口和授权令牌。
+From these inputs and an Agent request naming an edit and its objects, the controller derives the edited workflow, required outcomes, the authorization decision for each call, the safe execution set or rejection proof, and the rule entry and authorization token for each remaining call.
+% 控制器根据这些输入以及指明编辑及其对象的 Agent 请求，推导编辑后的工作流、要求实现的结果、每个调用的授权判定、安全执行集合或拒绝证明，以及每个剩余调用所用的规则入口和授权令牌。
 Every derived object therefore comes from the execution record rather than Agent-supplied semantics.
 % 因此，每个派生对象都来自执行记录，而不是 Agent 提供的语义。
 
@@ -373,8 +373,8 @@ It then decides whether each workflow call creates or reuses an authorization re
 
 The six disjoint constructors of \(\mathsf{Edit}_6\) are exactly the typed operation signatures in \cref{tab:history-rules}.
 % \(\mathsf{Edit}_6\) 的六个互不相交构造器恰为 \cref{tab:history-rules} 中带类型的操作签名。
-\(\mathsf{Save}\), initial installation, later rule registration, and protected calls use their own transitions.
-% \(\mathsf{Save}\)、初始安装、后续规则注册及受控调用分别使用各自的转移。
+\(\mathsf{Save}\), the initial rule update, later rule registration, and protected calls use their own transitions.
+% \(\mathsf{Save}\)、初始规则更新、后续规则注册及受控调用分别使用各自的转移。
 
 An Agent request \(u\) names an edit kind, current object IDs, and edit-rule ID \(\sigma\).
 % Agent 请求 \(u\) 指明编辑种类、当前对象标识和编辑规则标识 \(\sigma\)。
@@ -484,8 +484,8 @@ and hence the exact disjoint partition
 \]
 This partition accounts for every source outcome and prevents an Agent request from silently dropping one.
 % 这一分解处理每个源结果，并防止 Agent 请求悄然删除其中任何一个。
-The preservation maps retain actions, source regions, and order, while installation retains the records for satisfied outcomes and authorized removals.
-% 保持映射保留动作、来源区域和次序，而安装保留已满足结果与获准移除的记录。
+The preservation maps retain actions, source regions, and order, while the rule update retains the records for satisfied outcomes and authorized removals.
+% 保持映射保留动作、来源区域和次序，而规则更新保留已满足结果与获准移除的记录。
 
 Let \(\mathcal E[-]\) be the current workflow with one editable region replaced by a hole.
 % 令 \(\mathcal E[-]\) 表示当前工作流中一个可编辑区域被孔替换后的结构。
@@ -596,8 +596,8 @@ Define
  \beta'(x)&=(j_x^+,\eta^+).
 \end{aligned}
 \]
-The new authorization tokens are inactive and inaccessible to the caller before installation.
-% 安装前，新授权令牌尚未激活，调用方也无法访问。
+The new authorization tokens are inactive and inaccessible to the caller before the rule update takes effect.
+% 规则更新生效前，新授权令牌尚未激活，调用方也无法访问。
 The complete judgment is shown below.
 % 完整判定如下。
 \begin{equation}

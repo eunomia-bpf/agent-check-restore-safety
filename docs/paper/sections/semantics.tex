@@ -4,8 +4,8 @@ For authorization log \(\Delta\), \(\mathsf{lab}(\Delta)\in\mathcal A\) is its a
 % 对于授权日志 \(\Delta\)，\(\mathsf{lab}(\Delta)\in\mathcal A\) 是其授权序列，\(D_\Delta\) 是已经具有授权记录的动作集合。
 Fix \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\) and write \(\mathsf{state}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\).
 % 固定 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并记 \(\mathsf{state}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\)。
-Initial installation, each execution edit, and each later registered extension have a unique derived state.
-% 初始安装、每种执行编辑和每次后续注册扩展都具有唯一的派生状态。
+The initial rule update, each execution edit, and each later registered extension produce a unique derived record.
+% 初始规则更新、每种执行编辑和每次后续注册扩展都会产生唯一的派生记录。
 Write \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
 % 记为 \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
 Root derivation additionally requires that \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) accept.
@@ -18,8 +18,8 @@ Let \(\rho_u\) be the target registry in \(H_u\), let \(O_{H,u}=O_{\mathcal C_u}
 % 令 \(\rho_u\) 为 \(H_u\) 中的目标注册表，令 \(O_{H,u}=O_{\mathcal C_u}\)，并在沿用先前记法更方便时使用 \(H'=H_u\) 和 \(\rho'=\rho_u\)。
 The execution sets below use \(\Theta\), the edit-rule registry, \(\rho_u\), and target policy \(\mathcal A_u\).
 % 下文执行集合使用 \(\Theta\)、编辑规则注册表、\(\rho_u\) 和目标策略 \(\mathcal A_u\)。
-Installation checks the complete record again, including queued requests \(\mathsf{out}\), so a concurrent release makes an earlier answer stale.
-% 安装会再次检查完整记录，其中包括排队请求 \(\mathsf{out}\)，因此并发发出请求会使较早的判定结果过期。
+Before the rules change, the trusted controller checks the complete record again, including queued requests \(\mathsf{out}\), so a concurrent release makes an earlier answer stale.
+% 规则改变之前，可信控制器会再次检查完整记录，其中包括排队请求 \(\mathsf{out}\)，因此并发发出请求会使较早的判定结果过期。
 We abbreviate the fixed parameters by writing \(H,u\).
 % 我们用 \(H,u\) 简写固定参数。
 
@@ -62,8 +62,8 @@ The first call creates the authorization record, and later calls reuse it.
 \label{lem:resolution}
 \(\Resolve^{\rho_u}_\Delta\) is deterministic, preserves length, and gives the same annotations on every shared prefix.
 % \(\Resolve^{\rho_u}_\Delta\) 是确定性的、保持长度，并在每个共享前缀上给出相同标注。
-Among positions annotated as new, each action occurs at most once outside \(D_\Delta\), while the workflow-call projection is exactly the input sequence.
-% 在标注为新授权的位置中，\(D_\Delta\) 之外的每个动作至多出现一次，而工作流调用投影恰为输入序列。
+Among calls annotated as new, each action occurs at most once outside \(D_\Delta\), and dropping the annotations gives exactly the input sequence.
+% 在标注为新授权的调用中，\(D_\Delta\) 之外的每个动作至多出现一次，并且去掉标注后恰好得到输入序列。
 Moreover, if \(\Resolve^{\rho_u}_\Delta(rv)=zv'\), then \(z=\Resolve^{\rho_u}_\Delta(r)\) and \(v'=\Resolve^{\rho_u}_{\Delta_z}(v)\), where \(\Delta_z\) extends \(\Delta\) by the new authorizations in \(z\).
 % 此外，若 \(\Resolve^{\rho_u}_\Delta(rv)=zv'\)，则 \(z=\Resolve^{\rho_u}_\Delta(r)\) 且 \(v'=\Resolve^{\rho_u}_{\Delta_z}(v)\)，其中 \(\Delta_z\) 通过加入 \(z\) 中的新授权来扩展 \(\Delta\)。
 \end{lemma}
@@ -149,8 +149,8 @@ For \(\widehat B\subseteq\widehat B_0\), define the monotone operator
 \widehat\Phi(\widehat B)=
 \left\{(o,y)\in\widehat B_0\ \middle|\
 \begin{array}{l}
-\forall z\preceq_{\rm pref} y.\ \forall v\in\mathsf{Compat}(z).\\[-2pt]
-\exists (v,y')\in\widehat B.\ z\preceq_{\rm pref}y'
+\forall z\preceq_{\rm pref} y.\ \forall o'\in\mathsf{Compat}(z).\\[-2pt]
+\exists (o',y')\in\widehat B.\ z\preceq_{\rm pref}y'
 \end{array}\right\}.
 \end{equation}
 Set \(\widehat B_{i+1}=\widehat\Phi(\widehat B_i)\).
@@ -178,8 +178,6 @@ Since \(\widehat B_1\subseteq\widehat B_0\), repeated application removes execut
  \widehat B^\dagger_{H,u}\ne\varnothing .
 \end{equation}
 \end{definition}
-\(\mathsf{SafeEdit}(H,u)\) fixes \(\Theta\) and both registries.
-% \(\mathsf{SafeEdit}(H,u)\) 固定 \(\Theta\) 与两个注册表。
 At \(z=\epsilon\), nonemptiness covers every required outcome.
 % 在 \(z=\epsilon\) 处，非空性覆盖每个要求实现的结果。
 The existential quantifier chooses a call order, and the universal condition keeps every compatible outcome completable after every prefix.
@@ -188,8 +186,8 @@ The existential quantifier chooses a call order, and the universal condition kee
 \begin{lemma}[Largest safe execution set]
 % 最大安全执行集合
 \label{lem:most-permissive}
-A safe execution set exists iff \(\mathsf{SafeEdit}(H,u)\).
-% 当且仅当 \(\mathsf{SafeEdit}(H,u)\) 成立时，安全执行集合存在。
+A safe execution set exists iff \(\mathsf{SafeEdit}(\Theta)\).
+% 当且仅当 \(\mathsf{SafeEdit}(\Theta)\) 成立时，安全执行集合存在。
 When the edit is safe, \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) is a safe execution set, and every safe execution set \((L,\widehat B)\) satisfies \(\widehat B\subseteq\widehat B^\dagger_{H,u}\) and \(L\subseteq W^\dagger_{H,u}\).
 % 当编辑安全时，\((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\) 是安全执行集合，并且每个安全执行集合 \((L,\widehat B)\) 都满足 \(\widehat B\subseteq\widehat B^\dagger_{H,u}\) 和 \(L\subseteq W^\dagger_{H,u}\)。
 \end{lemma}
@@ -236,8 +234,8 @@ The empty fixed point is the formal reason the exact checker rejects.
 \begin{proposition}[Exact correspondence with generalized nonblocking]
 % 与广义非阻塞的精确对应
 \label{prop:outcome-necessary}
-For nonempty \(\widehat B\subseteq\widehat B_0\), let \(G_{\widehat B}\) be the prefix trie of \(L_{\widehat B}=\Pref(\pi_2\widehat B)\).
-% 对于非空的 \(\widehat B\subseteq\widehat B_0\)，令 \(G_{\widehat B}\) 为 \(L_{\widehat B}=\Pref(\pi_2\widehat B)\) 的前缀字典树。
+For nonempty \(\widehat B\subseteq\widehat B_0\), let \(\mathcal T_{\widehat B}\) be the prefix trie of \(L_{\widehat B}=\Pref(\pi_2\widehat B)\).
+% 对于非空的 \(\widehat B\subseteq\widehat B_0\)，令 \(\mathcal T_{\widehat B}\) 为 \(L_{\widehat B}=\Pref(\pi_2\widehat B)\) 的前缀字典树。
 Mark state \(z\) by \(\mathsf{possible}_o\) exactly when \(o\in\mathsf{Compat}(z)\), and mark state \(y\) by \(\mathsf{done}_o\) exactly when \((o,y)\in\widehat B\).
 % 当且仅当 \(o\in\mathsf{Compat}(z)\) 时用 \(\mathsf{possible}_o\) 标记状态 \(z\)，并且当且仅当 \((o,y)\in\widehat B\) 时用 \(\mathsf{done}_o\) 标记状态 \(y\)。
 Then
@@ -247,7 +245,7 @@ Then
  \widehat B\subseteq\widehat\Phi(\widehat B)\\[-2pt]
  \Longleftrightarrow\
  \forall o\in O_{H,u}.\;
- G_{\widehat B}\text{ is }
+ \mathcal T_{\widehat B}\text{ is }
  (\mathsf{possible}_o,\mathsf{done}_o)\text{-nonblocking}.
 \end{gathered}
 \]
@@ -273,11 +271,11 @@ For strictness, the preceding instance has the marker-nonblocking projected pair
 % \Cref{prop:outcome-necessary} 表明，在控制器推导出各结果的完成条件之后，该不动点与广义非阻塞相对应~\cite{dequeiroz2005multitasking,malik2008generalised}。
 The controller derives those conditions from the requested edit, authorized removals, actions, authorization records, and the execution record.
 % 控制器根据请求的编辑、获准移除、动作、授权记录和执行记录推导这些条件。
-It also decides whether each protected call creates or reuses an authorization, computes every safe continuation or a rejection certificate, and puts an accepted result into effect atomically.
-% 它还判断每个受控调用是创建还是复用授权，计算全部安全继续方式或拒绝证书，并使接受的结果原子生效。
+It also decides whether each protected call creates or reuses an authorization, computes every safe continuation or a rejection proof, and puts an accepted result into effect atomically.
+% 它还判断每个受控调用是创建还是复用授权，计算全部安全继续方式或拒绝证明，并使接受的结果原子生效。
 
-\subsubsection{Rejection Certificates}
-% 拒绝证书
+\subsubsection{Rejection Proofs}
+% 拒绝证明
 
 Each removed \((o_{\rm rem},y)\) records its rank \(i\), a prefix \(z\preceq y\), and uncovered \(o_{\rm miss}\in\mathsf{Compat}(z)\).
 % 每个被移除的 \((o_{\rm rem},y)\) 记录其秩 \(i\)、前缀 \(z\preceq y\) 与未覆盖的 \(o_{\rm miss}\in\mathsf{Compat}(z)\)。
@@ -285,8 +283,8 @@ Induction shows that every post-fixed \(P\) is contained in every \(\widehat B_i
 % 归纳表明每个后不动点 \(P\) 都包含于每个 \(\widehat B_i\)。
 An empty final family therefore proves that no safe execution set exists.
 % 因此，最终执行族为空证明不存在安全执行集合。
-Before installation, the service recomputes both the removal order and the remaining completions.
-% 安装之前，服务会重新计算删除顺序与剩余完成路径。
+Before the rule update, the trusted controller recomputes both the removal order and the remaining completions.
+% 规则更新之前，可信控制器会重新计算删除顺序与剩余完成路径。
 
 \subsubsection{Checking Again After a Permitted Prefix}
 % 在获准前缀之后再次检查
@@ -335,8 +333,8 @@ The checker returns \(\mathsf{Invalid}\) when derivation fails, \(\mathsf{Reject
 % 当推导失败时，检查器返回 \(\mathsf{Invalid}\)；当不动点为空时，返回 \(\mathsf{Reject}\) 以及删除每段执行的有序理由；否则返回携带最大安全执行集合的 \(\mathsf{Installable}\)。
 Each answer includes a digest of the execution record that was checked.
 % 每个判定结果都包含所检查执行记录的摘要。
-\Cref{app:certificate-payloads} gives the exact payloads and verification rules.
-% \Cref{app:certificate-payloads} 给出精确载荷与验证规则。
+\Cref{app:certificate-payloads} gives the exact returned data and verification rules.
+% \Cref{app:certificate-payloads} 给出精确返回数据与验证规则。
 \Cref{prop:app-output-complexity} proves an output-sensitive \(O(D+n\Lambda+|\mathcal G_{\rm cov}|+V_B\log(2+V_B))\)-time, \(O(D+\Lambda+|\mathcal G_{\rm cov}|)\)-space bound.
 % \Cref{prop:app-output-complexity} 证明一种输出敏感的 \(O(D+n\Lambda+|\mathcal G_{\rm cov}|+V_B\log(2+V_B))\) 时间、\(O(D+\Lambda+|\mathcal G_{\rm cov}|)\) 空间界。
 Exponential growth occurs only in explicitly emitted linearizations and prefix--required-outcome support pairs.

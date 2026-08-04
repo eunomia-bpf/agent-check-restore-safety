@@ -2,32 +2,38 @@
 % 形式保证
 \label{sec:results}
 
-The theorem connects derivation from the execution record, exact checking, finite enforcement, atomic installation, and every later runtime step.
-% 该定理连接从执行记录进行的推导、精确检查、有限执行规则、原子安装以及此后的每个运行时步骤。
+The theorem connects derivation from the execution record, exact checking, finite enforcement, the atomic rule update, and every later runtime step.
+% 该定理连接从执行记录进行的推导、精确检查、有限执行规则、原子规则更新以及此后的每个运行时步骤。
 Its central clause says that the checker accepts if and only if a safe runtime implementation exists.
 % 其核心条款表明，当且仅当安全运行时实现存在时，检查器才会接受。
 The other clauses establish faithful registration, the information required for an exact answer, repeated use, and runtime correctness.
 % 其余条款建立忠实注册、精确答案所需的信息、重复使用与运行时正确性。
 
-Fix \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
-% 固定 \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
+When defined, write
+\(\delta=\mathsf{Derive}(\Theta)
+ =(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
+% 当推导有定义时，记
+% \(\delta=\mathsf{Derive}(\Theta)
+%  =(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
 A \emph{safe runtime implementation} is an automaton \(M\) together with complete executions \(\widehat B_M\) labeled by outcome.
 % \emph{安全运行时实现}由自动机 \(M\) 和按结果标记的完整执行 \(\widehat B_M\) 组成。
 The partial and complete executions of \(M\) must form a safe execution set as defined in \cref{def:safe-implementation}.
 % \(M\) 的部分执行与完整执行必须构成 \cref{def:safe-implementation} 定义的安全执行集合。
-Installation atomically activates this automaton at \(\eta^+\), closes \(\eta^-\), and replaces the rule entries and authorization tokens for all target calls.
-% 安装在 \(\eta^+\) 原子激活该自动机、关闭 \(\eta^-\)，并替换全部目标调用的规则入口与授权令牌。
+The atomic rule update activates this automaton at \(\eta^+\), closes \(\eta^-\), and replaces the rule entries and authorization tokens for all target calls.
+% 原子规则更新在 \(\eta^+\) 激活该自动机、关闭 \(\eta^-\)，并替换全部目标调用的规则入口与授权令牌。
 
 \paragraph{What the checker must know}
 % 检查器必须知道什么
-Write \(V=(\mathbf P,\mathbf I,\mathbf E,\mathbf C)\) for four parts of the checked record: (1) the workflow and its required outcomes, (2) which calls refer to the same action, (3) earlier authorizations and call progress, and (4) which rules govern a call that overlaps installation.
-% 令 \(V=(\mathbf P,\mathbf I,\mathbf E,\mathbf C)\) 表示所检查记录的四个部分：(1) 工作流及其要求实现的结果，(2) 哪些调用指向同一个动作，(3) 先前的授权与调用进展，以及 (4) 哪组规则管理与安装重叠的调用。
+Write \(V=\mathsf{Sec}(S;c,r)=(\mathbf P,\mathbf I,\mathbf E,\mathbf C)\) for four parts of the checked record: (1) the workflow and its required outcomes, (2) which calls refer to the same action, (3) earlier authorizations and call progress, and (4) which rules govern a call that overlaps the atomic rule update.
+% 令 \(V=\mathsf{Sec}(S;c,r)=(\mathbf P,\mathbf I,\mathbf E,\mathbf C)\) 表示所检查记录的四个部分：(1) 工作流及其要求实现的结果，(2) 哪些调用指向同一个动作，(3) 先前的授权与调用进展，以及 (4) 哪组规则管理与原子规则更新重叠的调用。
 Suppose a checker receives only some function \(f(V)\) of this record.
 % 假设检查器只能得到该记录的某个函数 \(f(V)\)。
-The function is exact if any two records that it makes indistinguishable always give the same answer to every common decision or installation request.
-% 如果该函数无法区分的任意两份记录，对每个共同的判定或安装请求都给出相同答案，那么该函数是精确的。
+The function is exact if any two records that it makes indistinguishable always give the same answer to every common decision or rule-update request.
+% 如果该函数无法区分的任意两份记录，对每个共同的判定或规则更新请求都给出相同答案，那么该函数是精确的。
 Internal identifiers may be renamed consistently because their spelling cannot affect the answer.
 % 内部标识可以一致重命名，因为它们的具体拼写不能影响答案。
+For \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), \(\mathsf{Keep}_J\) gives the checker exactly the parts named by \(J\).
+% 对于 \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\)，\(\mathsf{Keep}_J\) 恰好向检查器提供 \(J\) 指明的部分。
 \Cref{app:evidence} gives four pairs of records showing that each part of \(V\) is necessary.
 % \Cref{app:evidence} 给出四对记录，证明 \(V\) 的每个部分都是必需的。
 
@@ -55,44 +61,47 @@ It hides internal computation, Save, stale candidates, and restart bookkeeping.
 \Cref{app:bisimulation} gives the full relation.
 % \Cref{app:bisimulation} 给出完整关系。
 
-\begin{theorem}[Exact Edit-Safety]
-% 精确编辑安全
-\label{thm:exact-history}
-Clause~1 holds for finite-state \(\mathcal W\) and finite \(\mathcal R\).
-% 第 1 条对有限状态 \(\mathcal W\) 与有限 \(\mathcal R\) 成立。
-For Clauses~2--5, assume accepted registration, trusted checking of every protected call, and linearizable transactions that remain atomic after a restart within each policy domain.
-% 对于第 2--5 条，假设注册已通过、每次受控调用都由可信组件检查，并且每个策略域内的可线性化事务在重启后仍保持原子性。
-Then they hold for every \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) at every finite reachable \(\mathsf{AgentSec}\) state.
-% 此时，它们对每个有限可达 \(\mathsf{AgentSec}\) 状态上的每个 \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) 成立。
-\begin{enumerate}[leftmargin=*,itemsep=0pt]
-\item \textbf{Faithful registration.}
-% 忠实注册。
+\begin{theorem}[Faithful Registration]
+% 忠实注册
+\label{thm:faithful-registration}
+For finite-state \(\mathcal W\) and finite \(\mathcal R\),
 \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) accepts iff stored \(\lambda\) witnesses \(\mathcal W\sqsubseteq_\lambda\mathcal R\).
 % 当且仅当所存 \(\lambda\) 见证 \(\mathcal W\sqsubseteq_\lambda\mathcal R\) 时，\(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) 才接受。
 On acceptance, the source workflow's protected-call traces and \(\mathsf{BRuns}(\mathcal R)\) are order-isomorphic and preserve outcomes, actions, \Fresh/\Alias, the safety answer, and the largest safe execution set.
 % 接受时，源工作流的受控调用轨迹与 \(\mathsf{BRuns}(\mathcal R)\) 序同构，并保持结果、动作、\Fresh/\Alias、安全答案与最大安全执行集合。
 Malformed registrations fail before startup.
 % 不合格的注册在启动前失败。
+\end{theorem}
 
-\item \textbf{Exact checking and construction.}
-% 精确检查与构造。
+For the remaining results, assume accepted registration, trusted checking of every protected call, and linearizable transactions that remain atomic after a restart within each policy domain.
+% 对于其余结果，假设注册已通过、每次受控调用都由可信组件检查，并且每个策略域内的可线性化事务在重启后仍保持原子性。
+They hold for every \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) at every finite reachable \(\mathsf{AgentSec}\) state.
+% 它们对每个有限可达 \(\mathsf{AgentSec}\) 状态上的每个 \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) 成立。
+
+\begin{theorem}[Exact Edit-Safety]
+% 精确编辑安全
+\label{thm:exact-history}
 The ideal and runtime machines return the same mutually exclusive and exhaustive answer for \(\Theta=\Theta_S(u)\).
 % 对于 \(\Theta=\Theta_S(u)\)，理想机与运行时机器返回相同且互斥穷尽的答案。
-Undefined derivation gives state-preserving \(\mathsf{Invalid}\), and \(\widehat B^\dagger_\delta=\varnothing\) gives state-preserving \(\mathsf{Reject}\) with no safe runtime implementation.
-% 未定义推导给出保持状态的 \(\mathsf{Invalid}\)，而 \(\widehat B^\dagger_\delta=\varnothing\) 给出保持状态的 \(\mathsf{Reject}\)，且不存在安全运行时实现。
-Otherwise, for \(Y=\mathsf{Compile}(\Theta)\), nonempty \(\widehat B^\dagger_\delta\), existence of a safe runtime implementation, \(\mathsf{Ready}(S,u,Y)\), and an \(\mathsf{AgentSec}\)-preserving installed successor are equivalent.
-% 否则，对于 \(Y=\mathsf{Compile}(\Theta)\)，\(\widehat B^\dagger_\delta\) 非空、安全运行时实现存在、\(\mathsf{Ready}(S,u,Y)\) 成立，以及存在保持 \(\mathsf{AgentSec}\) 的已安装后继，这四项彼此等价。
+Undefined derivation gives state-preserving \(\mathsf{Invalid}\).
+% 未定义推导给出保持状态的 \(\mathsf{Invalid}\)。
+For defined \(\delta=\mathsf{Derive}(\Theta)\), \(\widehat B^\dagger_{H,u}=\varnothing\) gives state-preserving \(\mathsf{Reject}\) with no safe runtime implementation.
+% 对有定义的 \(\delta=\mathsf{Derive}(\Theta)\)，\(\widehat B^\dagger_{H,u}=\varnothing\) 给出保持状态的 \(\mathsf{Reject}\)，且不存在安全运行时实现。
+Otherwise, for \(Y=\mathsf{Compile}(\Theta)\), nonempty \(\widehat B^\dagger_{H,u}\), existence of a safe runtime implementation, \(\mathsf{Ready}(S,u,Y)\), and an \(\mathsf{AgentSec}\)-preserving installed successor are equivalent.
+% 否则，对于 \(Y=\mathsf{Compile}(\Theta)\)，\(\widehat B^\dagger_{H,u}\) 非空、安全运行时实现存在、\(\mathsf{Ready}(S,u,Y)\) 成立，以及存在保持 \(\mathsf{AgentSec}\) 的已安装后继，这四项彼此等价。
 The largest execution family satisfies \(\mathsf{PreservesRequired}\), records every already-satisfied source outcome, and records every authorized removal.
 % 最大执行族满足 \(\mathsf{PreservesRequired}\)，记录每个已满足的源结果以及每项获准移除。
+\end{theorem}
 
-\item \textbf{All four parts of the record are necessary for exact answers.}
-% 执行记录的四个部分对精确答案都必不可少。
+\begin{theorem}[Necessary State Information]
+% 必要状态信息
+\label{thm:necessary-state}
 The full record is sufficient.
 % 完整记录是充分的。
 If any one of the four parts is omitted, two records become indistinguishable even though the correct answer differs.
 % 如果省略这四个部分中的任何一个，两份记录就会变得无法区分，但它们的正确答案不同。
 \[
-\mathsf{Exact}(\mathsf{View}_J)\Longleftrightarrow
+\mathsf{Exact}(\pi_J)\Longleftrightarrow
 J=\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}.
 \]
 The four pairs in \cref{tab:projection-pairs} witness these opposite answers.
@@ -101,19 +110,22 @@ In particular, a checker is not exact if it forgets which calls or authorization
 % 特别地，如果检查器忘记哪些调用或授权记录指向同一个动作，或者只看到调用方提出的目标工作流，它就不是精确的。
 Generalized nonblocking can serve as an exact solver only after the trusted controller derives the workflow and outcome-specific completion conditions.
 % 只有在可信控制器推导出工作流以及特定于结果的完成条件之后，广义非阻塞才能作为精确求解器。
+\end{theorem}
 
-\item \textbf{Repeated use.}
-% 重复使用。
+\begin{theorem}[Repeated-Use Safety]
+% 重复使用安全
+\label{thm:repeated-use}
 Every enabled event preserves \(\mathsf{AgentSec}\), so the theorem applies after every finite reachable sequence of edits, registered extensions, protected calls, authorization updates, installations, stops, and restarts.
 % 每个启用事件都保持 \(\mathsf{AgentSec}\)，因此该定理适用于由编辑、已注册扩展、受控调用、授权更新、安装、停止和重启组成的每个有限可达序列。
+\end{theorem}
 
-\item \textbf{Runtime correctness.}
-% 运行时正确性。
+\begin{theorem}[Runtime Correctness]
+% 运行时正确性
+\label{thm:runtime-correctness}
 \(\mathcal B\) is a divergence-insensitive weak bisimulation under \(\mathsf{obs}_{\rm api}\), so every pair related by \(\mathcal B\) satisfies \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\).
 % \(\mathcal B\) 在 \(\mathsf{obs}_{\rm api}\) 下是发散不敏感弱互模拟，因此由 \(\mathcal B\) 关联的每对状态均满足 \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\)。
 The observation records edit answers tied to the checked record, replacement authorization tokens, and returned values.
 % 该观测记录与所检查记录对应的编辑答案、替代授权令牌与返回值。
-\end{enumerate}
 \end{theorem}
 
 \paragraph{Proof roadmap}

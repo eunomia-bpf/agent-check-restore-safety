@@ -2,20 +2,20 @@
 % 运行时强制执行
 \label{sec:enforcement}
 
-The safety checker produces either a rejection certificate or the largest safe family of complete executions.
-% 安全检查器生成拒绝证书或最大的安全完整执行族。
-The trusted installation service turns a nonempty family into rules checked before each tool call.
-% 可信安装服务把非空执行族转化为每次工具调用之前检查的规则。
+The safety checker produces either a rejection proof or the largest safe family of complete executions.
+% 安全检查器生成拒绝证明或最大的安全完整执行族。
+The trusted controller turns a nonempty family into rules checked before each tool call.
+% 可信控制器把非空执行族转化为每次工具调用之前检查的规则。
 It builds a finite automaton for the allowed partial executions, records which version of the execution record was checked, and atomically puts the new rules into effect.
 % 它为允许的部分执行构造有限自动机，记录检查时使用的执行记录版本，并使新规则原子生效。
-The protocol serializes every overlapping protected call either before or after installation.
-% 该协议将每个重叠的受控调用完整地排列在安装之前或之后。
-The proof compares this implementation with an ideal machine that installs an accepted specification in one atomic step and admits exactly its resolved prefixes.
-% 证明将该实现与一台理想机比较；理想机以一个原子步骤安装被接受的规范，并且只接纳该规范的已解析前缀。
+The protocol orders every overlapping protected call either before or after the atomic rule update.
+% 该协议将每个重叠的受控调用完整地排列在原子规则更新之前或之后。
+The proof compares this implementation with an ideal machine that puts an accepted result into effect in one atomic step and admits exactly its resolved prefixes.
+% 证明将该实现与一台理想机比较；理想机以一个原子步骤使接受的结果生效，并且只接纳该结果的已解析前缀。
 The ideal transition system and the field-level implementation rules appear in \cref{sec:ideal,tab:app-event-matrix}.
 % 理想转移系统与字段级实现规则见 \cref{sec:ideal,tab:app-event-matrix}。
-This section gives the automaton construction, the invariant after installation, and the atomic update used by the main theorem.
-% 本节给出主定理所需的自动机构造、安装后的不变量以及原子更新。
+This section gives the automaton construction, the invariant after the rules change, and the atomic update used by the main theorem.
+% 本节给出主定理所需的自动机构造、规则改变后的不变量以及原子更新。
 
 \subsection{Turning Safe Executions into Runtime Rules}
 % 把安全执行转化为运行时规则
@@ -57,13 +57,13 @@ The automaton is the paired-language derivative construction~\cite{brzozowski196
 % 该自动机是成对语言的导数构造~\cite{brzozowski1964derivatives}。
 \end{proof}
 
-\subsection{Atomic Installation}
-% 原子安装
+\subsection{Atomic Rule Update}
+% 原子规则更新
 
-At installation, the service re-derives the edit and recomputes the fixed point from the execution record.
-% 安装时，该服务根据执行记录重新推导编辑并重新计算不动点。
-If any protected call has committed since compilation, the candidate is stale and installs nothing.
-% 如果编译之后已有任何受控调用提交，则候选已过期且不会安装任何内容。
+Before the rules change, the trusted controller re-derives the edit and recomputes the fixed point from the execution record.
+% 规则改变之前，可信控制器根据执行记录重新推导编辑并重新计算不动点。
+If any protected call has committed since the candidate was computed, the candidate is stale and changes nothing.
+% 如果计算候选结果之后已有任何受控调用提交，则该候选结果已过期且不会改变任何内容。
 Otherwise, one policy-domain transaction closes the old rule version, activates the new automaton, replaces the rule entry and authorization token for every current workflow call, and only then exposes the successful edit answer.
 % 否则，一个策略域事务会关闭旧规则版本、激活新自动机、替换每个当前工作流调用的规则入口与授权令牌，然后才暴露成功编辑答案。
 Protected calls verify their workflow call, action, canonical request, authorization token, and enabled automaton transition in the same transaction that records progress.
@@ -73,8 +73,8 @@ A \Fresh call creates one authorization record and queues the canonical request.
 An \Alias call advances the workflow by linking to the existing record without extending the authorization sequence.
 % \Alias 调用通过链接到已有记录推进工作流，而不扩展授权序列。
 
-\paragraph{Installed-state invariant}
-% 安装后状态不变量
+\paragraph{Invariant after the rule update}
+% 规则更新后的不变量
 We write \(\mathsf{AgentSec}(S;c,r)\) when five conditions hold: (1) the installed workflow and its required outcomes come from the checked edit; (2) the stored nonempty execution family is the checker's largest safe family; (3) the workflow, authorization log, queue, and checkpoints match the executed prefix \(r\); (4) the automaton is in exactly the state reached after \(r\); and (5) exactly one rule version is active, with one rule entry and authorization token for every remaining workflow call.
 % 当以下五项条件成立时，记作 \(\mathsf{AgentSec}(S;c,r)\)：(1) 已安装工作流及其要求实现的结果来自经检查编辑；(2) 已存非空执行族是检查器得到的最大安全执行族；(3) 工作流、授权日志、队列和检查点与已执行前缀 \(r\) 一致；(4) 自动机恰处于执行 \(r\) 后到达的状态；(5) 恰有一个规则版本处于活动状态，并为每个剩余工作流调用提供一个规则入口和授权令牌。
 For a submitted tool request, one transaction verifies the workflow call, action, canonical request, authorization token, active rule version, and enabled automaton transition before recording any progress.
@@ -82,12 +82,12 @@ For a submitted tool request, one transaction verifies the workflow call, action
 The same transaction either creates the authorization record and queues the request, or records reuse of an existing authorization record and its return value.
 % 同一事务随后要么创建授权记录并将请求入队，要么记录对已有授权记录及其返回值的复用。
 
-\paragraph{Installation check}
-% 安装检查
+\paragraph{Final check}
+% 最终检查
 Write \(\mathsf{Ready}(S,u,Y)\) when the service re-derives \(u\) from the current execution record, recomputes the same nonempty fixed point and automaton carried by \(Y\), confirms that the record has not changed since \(Y\) was computed, confirms that the old rule version is current, and confirms that the new version is inactive.
 % 当服务根据当前执行记录重新推导 \(u\)、重新计算出 \(Y\) 所携带的同一非空不动点与自动机、确认计算 \(Y\) 之后执行记录未发生变化、确认旧规则版本仍为当前版本并确认新版本尚未激活时，记作 \(\mathsf{Ready}(S,u,Y)\)。
-If these checks pass, one transaction closes the old version, installs and activates the new automaton, replaces every current rule entry and authorization token, and then exposes the successful edit answer.
-% 若这些检查通过，一个事务会关闭旧版本、安装并激活新自动机、替换每个当前规则入口与授权令牌，然后才暴露成功编辑答案。
+If these checks pass, one transaction closes the old version, activates the new automaton, replaces every current rule entry and authorization token, and then exposes the successful edit answer.
+% 若这些检查通过，一个事务会关闭旧版本、激活新自动机、替换每个当前规则入口与授权令牌，然后才暴露成功编辑答案。
 A changed state makes the candidate stale and forces a new check.
 % 状态一旦改变，候选结果即过期，必须重新检查。
 The complete state updates, retries, request release, completion updates, and recovery rules appear in \cref{app:compiled-transitions,tab:app-event-matrix}.
@@ -96,8 +96,8 @@ The complete state updates, retries, request release, completion updates, and re
 \begin{lemma}[Edit--call serialization]
 % 编辑--调用串行化
 \label{lem:cut-linearization}
-In every reachable well-formed compiled state, a visible edit answer and a protected call in the same policy domain have a unique order at the installation point.
-% 在每个可达的良构编译状态中，同一策略域内的一项可见编辑答案与一次受控调用在安装点具有唯一顺序。
+In every reachable well-formed runtime state, a visible edit answer and a protected call in the same policy domain have a unique order at the atomic rule update.
+% 在每个可达的良构运行时状态中，同一策略域内的一项可见编辑答案与一次受控调用在原子规则更新处具有唯一顺序。
 If the call commits first, it changes the execution record, so the earlier result cannot install.
 % 若调用先提交，它会改变执行记录，因此先前的结果无法安装。
 If \Install commits first, the old call cannot resolve \Fresh or \Alias.
@@ -108,8 +108,8 @@ Steps in independent domains commute by product semantics.
 \begin{proof}
 If the call commits first, its recorded progress changes the execution record.
 % 若调用先提交，其记录的进展会改变执行记录。
-If installation commits first, it closes the old rule version, so the old authorization token fails.
-% 若安装先提交，它会关闭旧规则版本，因此旧授权令牌无法通过验证。
+If the rule update commits first, it closes the old rule version, so the old authorization token fails.
+% 若规则更新先提交，它会关闭旧规则版本，因此旧授权令牌无法通过验证。
 Atomicity excludes a partial third outcome.
 % 原子性排除了部分完成的第三种结果。
 Independent domains commute.
@@ -121,7 +121,7 @@ Independent domains commute.
 
 The TCB is the trusted boundary defined in \cref{sec:model}.
 % TCB 即 \cref{sec:model} 定义的可信边界。
-Search, minimization, and preloading remain untrusted because installation checks them again.
-% 搜索、最小化与预加载仍不受信任，因为安装时会再次检查它们。
+Search, minimization, and candidate preparation remain untrusted because the final check recomputes them.
+% 搜索、最小化与候选结果准备仍不受信任，因为最终检查会重新计算它们。
 The next section states the exactness and runtime guarantees obtained at this boundary.
 % 下一节陈述在这一边界上获得的精确性与运行时保证。

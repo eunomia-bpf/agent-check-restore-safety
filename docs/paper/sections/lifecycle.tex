@@ -89,8 +89,8 @@ The verdict is therefore \emph{Accept} because both supplier outcomes remain pos
 % 因而判定为\emph{接受}，因为两个供应商结果仍然可能，每个获准前缀都满足策略，且每个这样的前缀仍能到达完整结果。
 If policy excludes \(rap_Rs\), then \(M_{o_R}=\varnothing\), and the Fork is rejected because pruning supplier \(R\) would change its meaning.
 % 如果策略排除 \(rap_Rs\)，则 \(M_{o_R}=\varnothing\)，并且该 Fork 会被拒绝，因为剪除供应商 \(R\) 将改变其含义。
-Rejection returns a certificate listing the order in which completions were removed and the reason for each removal, rather than letting the Agent weaken the requested edit.
-% 拒绝会返回一份证书，列出完成路径的移除顺序及每次移除的原因，而不会让 Agent 弱化请求的编辑。
+Rejection returns a proof listing the order in which completions were removed and the reason for each removal, rather than letting the Agent weaken the requested edit.
+% 拒绝会返回一份证明，列出完成路径的移除顺序及每次移除的原因，而不会让 Agent 弱化请求的编辑。
 The verdict in this variant is \emph{Reject} because checking only the surviving \(L\) branch would silently weaken the requested Fork.
 % 该变体的判定为\emph{拒绝}，因为只检查保留下来的 \(L\) 分支会悄然削弱所请求的 Fork。
 
@@ -119,8 +119,8 @@ The exact verdict is \emph{Reject}, even though an outcome-by-outcome check woul
 \Cref{sec:admission} detects this failure by repeatedly removing executions that create such a bad prefix.
 % \Cref{sec:admission} 通过反复移除会产生此类危险前缀的执行来检测这一失败。
 
-\subsection{Calls During Atomic Installation}
-% 原子安装期间的调用
+\subsection{Calls During the Atomic Rule Update}
+% 原子规则更新期间的调用
 
 \Cref{fig:two-histories} separates the current workflow, the authorization log, and the rules that must change atomically.
 % \Cref{fig:two-histories} 区分当前工作流、授权日志以及必须原子变更的规则。
@@ -186,26 +186,26 @@ The exact verdict is \emph{Reject}, even though an outcome-by-outcome check woul
   % Fork、Restore 和 Merge 会改变当前工作流，但不会抹去已经记录的调用。
   Restore creates a new workflow call that refers to the same action as the original call.
 % Restore 会创建一个新的工作流调用，该调用与原调用指向同一个动作。
-  The atomic installation point orders both creation and reuse of an authorization record against the rule change.}
-% 原子安装点确定授权记录的创建或复用与规则变更之间的先后顺序。
+  The atomic rule update orders both creation and reuse of an authorization record against the rule change.}
+% 原子规则更新确定授权记录的创建或复用与规则变更之间的先后顺序。
   \label{fig:two-histories}
 \end{figure*}
 
-\paragraph{New authorization during installation}
-% 安装期间的新授权
+\paragraph{New authorization during the rule update}
+% 规则更新期间的新授权
 After the shared approval and before either payment, the Agent requests \(\mathsf{MergeSelect}(g,L,\sigma)\).
 % 在共享审批之后、任一付款之前，Agent 请求 \(\mathsf{MergeSelect}(g,L,\sigma)\)。
 If the payment call \(x_R^p\) from the old supplier-\(R\) branch is authorized first, it selects \(R\) and changes \(\mathsf{lab}(\Delta)\) from \(ra\) to \(rap_R\).
 % 如果旧供应商 \(R\) 分支的付款调用 \(x_R^p\) 先获得授权，它就会选择 \(R\)，并将 \(\mathsf{lab}(\Delta)\) 从 \(ra\) 改为 \(rap_R\)。
 The controller must therefore check the Merge again and reject it.
 % 因此，控制器必须重新检查该 Merge 并拒绝它。
-If the Merge installation occurs first, the old rules stop applying and every current call receives a new authorization token before any later \(x_R^p\) can be authorized.
-% 如果 Merge 先安装，旧规则将停止生效，并在后续任何 \(x_R^p\) 获得授权之前为每个当前调用提供新的授权令牌。
+If the Merge rule update occurs first, the old rules stop applying and every current call receives a new authorization token before any later \(x_R^p\) can be authorized.
+% 如果 Merge 的规则更新先发生，旧规则将停止生效，并在后续任何 \(x_R^p\) 获得授权之前为每个当前调用提供新的授权令牌。
 Leaving the old rules active would allow both payments.
 % 让旧规则继续有效会允许两笔付款。
 
-\paragraph{Authorization reuse during installation}
-% 安装期间的授权复用
+\paragraph{Authorization reuse during the rule update}
+% 规则更新期间的授权复用
 Now consider the Restore that keeps both branches in \cref{fig:two-histories}.
 % 现在考虑 \cref{fig:two-histories} 中保留两个分支的 Restore。
 A later Restore of \(k\) creates a new approval call \(x_a'\), but both approval calls refer to the same action \(d_a\).
@@ -218,10 +218,10 @@ The restored branch therefore advances past approval without creating another au
 % 因此，恢复后的分支越过审批，而不会创建另一条授权记录。
 A concurrent Merge or Restore result computed before that progress is now out of date even though the authorization log has not changed.
 % 即使授权日志没有变化，在该进展之前计算的并发 Merge 或 Restore 结果也已经过期。
-The installation check must therefore compare both the authorization log and the ordered record \(\chi\) of executed workflow calls.
-% 因此，安装检查必须同时比较授权日志和记录已执行工作流调用顺序的 \(\chi\)。
-For this \(\mathsf{RestoreLive}\) request, the checker either puts the newly computed rules into effect or returns a rejection certificate.
-% 对于该 \(\mathsf{RestoreLive}\) 请求，检查器要么使新计算出的规则生效，要么返回拒绝证书。
+The final check must therefore compare both the authorization log and the ordered record \(\chi\) of executed workflow calls.
+% 因此，最终检查必须同时比较授权日志和记录已执行工作流调用顺序的 \(\chi\)。
+For this \(\mathsf{RestoreLive}\) request, the checker either puts the newly computed rules into effect or returns a rejection proof.
+% 对于该 \(\mathsf{RestoreLive}\) 请求，检查器要么使新计算出的规则生效，要么返回拒绝证明。
 
 Together, these executions give the paper's end-to-end safety rule.
 % 这些执行共同给出本文的端到端安全规则。
