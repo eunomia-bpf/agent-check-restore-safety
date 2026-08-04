@@ -2,17 +2,7 @@
 % 结论
 \label{sec:conclusion}
 
-Agent runtimes that Fork, Restore, or Merge an execution must account for both the workflow they change and calls that have already been authorized.
-% 对执行进行 Fork、Restore 或 Merge 的 Agent 运行时必须同时考虑被改变的工作流和已经获得授权的调用。
-Our checker derives the safety answer from a validated workflow, its authenticated execution record, the receipt log, and the requested edit.
-% 我们的检查器从经验证工作流、其认证执行记录、回执日志和请求的编辑中推导安全答案。
-When the edit is safe, the greatest fixed point yields the most permissive monitor.
-% 当编辑安全时，最大不动点给出限制最少的监控器。
-When it is unsafe, the empty fixed point yields a finite proof that no implementation can satisfy the requirements.
-% 当编辑不安全时，空不动点给出有限证明，说明没有实现能够满足要求。
-The Exact Edit-Safety theorem connects this decision to atomic installation and identifies the four kinds of recorded information required by any exact checker.
-% 精确编辑安全定理将该判定连接到原子安装，并识别出任何精确检查器所需的四类记录信息。
-Every supported event preserves \(\mathsf{AgentSec}\), so the theorem applies again after every finite reachable sequence of edits, calls, crashes, and registered extensions.
-% 每个受支持事件都保持 \(\mathsf{AgentSec}\)，因此该定理能在由编辑、调用、崩溃和已注册扩展组成的每个有限可达序列之后再次应用。
-The Lean modules and executable tests validate the finite decision procedure and its implementation.
-% Lean 模块与可执行测试验证了有限判定过程及其实现。
+Our exact checker turns an Agent Fork, Restore, or Merge into either the most permissive safe monitor or a proof that no implementation can meet the requirements.
+% 我们的精确检查器将 Agent 的 Fork、Restore 或 Merge 转化为限制最少的安全监控器，或者转化为没有实现能够满足要求的证明。
+The Exact Edit-Safety theorem carries this result through atomic installation and runtime execution, shows that none of four state relations can be erased without losing exactness, and remains applicable after every finite reachable execution.
+% 精确编辑安全定理将这一结果贯穿原子安装与运行时执行，表明四类状态关系中的任一类都无法在不丧失精确性的情况下被删除，并且在每个有限可达执行之后仍然适用。

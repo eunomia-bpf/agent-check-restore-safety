@@ -49,8 +49,8 @@ We call these operations \emph{execution edits} because they change which parts 
 % 我们把这些操作称为\emph{执行编辑}，因为它们会改变工作流接下来执行哪些部分。
 An edit cannot undo a tool call that has already been authorized or released.
 % 一次编辑无法撤销已经获得授权或已经发出的工具调用。
-A careless edit can therefore perform the same action twice, drop work that the workflow still requires, or overlap with a call that began before the edit.
-% 因此，一次欠考虑的编辑可能重复执行同一动作、丢弃工作流仍然要求的工作，或与编辑前已经开始的调用重叠。
+A careless edit can therefore authorize or release the same protected action twice, drop work that the workflow still requires, or overlap with a call that began before the edit.
+% 因此，一次欠考虑的编辑可能两次授权或发出同一个受控动作、丢弃工作流仍然要求的工作，或与编辑前已经开始的调用重叠。
 We ask when an execution edit can be implemented safely.
 % 我们研究执行编辑在什么条件下能够被安全实现。
 Our answer preserves every outcome that was required before the edit.
@@ -73,12 +73,12 @@ Otherwise, the remaining executions define the most permissive runtime monitor t
 % 否则，剩余执行定义了强制执行该编辑且限制最少的运行时监控器。
 For all six registered execution edits and registered extensions, our main theorem proves that the checker accepts exactly when such a safe implementation exists.
 % 对全部六种已注册执行编辑和已注册扩展，我们的主定理证明，当且仅当这种安全实现存在时，检查器才会接受。
-The same theorem proves atomic installation despite racing calls, identifies the four kinds of recorded information required by any exact checker, and relates the installed runtime to an ideal atomic machine.
-% 同一定理还证明了调用竞态下的原子安装，识别出任何精确检查器都必须记录的四类信息，并将已安装运行时与理想原子机器联系起来。
+The same theorem proves atomic installation despite racing calls, proves that each of four recorded relations carries distinctions needed for exact decision or installation, and relates the installed runtime to an ideal atomic machine.
+% 同一定理还证明了调用竞态下的原子安装，证明四类记录关系中的每一类都包含精确判定或安装所需的区分信息，并将已安装运行时与理想原子机器联系起来。
 Every supported event preserves the security invariant, so the theorem applies again after every finite reachable execution.
 % 每个受支持事件都保持安全不变量，因此该定理能在每个有限可达执行之后再次应用。
-Five kernel-checked Lean modules, 81 executable tests, and bounded performance measurements validate the finite checker, critical examples, and executable artifact.
-% 五个经内核检查的 Lean 模块、81 项可执行测试和有界性能测量验证了有限检查器、关键例子与可执行制品。
+Five kernel-checked Lean modules, 19 paper-specific executable tests, and bounded performance measurements validate the fixed-point checker core and selected transition lemmas.
+% 五个经内核检查的 Lean 模块、19 项论文专用可执行测试和有界性能测量验证了不动点检查器核心与选定转移引理。
 \end{abstract}
 
 \input{sections/introduction}
@@ -98,25 +98,12 @@ Five kernel-checked Lean modules, 81 executable tests, and bounded performance m
 \clearpage
 \section*{AI Use Acknowledgment}
 % AI 使用声明
-OpenAI Codex was used throughout the manuscript for initial
-prose drafting and revision, and in the executable artifact for
-code scaffolding and test generation.
-% OpenAI Codex 用于全文各部分的初始文本起草与修改，并用于可执行
-% 制品的代码脚手架和测试生成。
-It also served as an interactive aid for literature discovery,
-counterexample search, and the discussion and refinement of the
-formal theory, including definitions, assumptions, theorem
-statements, and proof structure.
-% 它还作为交互式辅助工具，用于文献发现、反例搜索，以及形式理论的
-% 讨论与完善，包括定义、假设、定理陈述和证明结构。
-The authors chose and directed the research, made all final
-theoretical and methodological decisions, independently verified
-the cited sources, theorem statements, proofs, code, and
-experimental results, and remain responsible for every claim,
-proof, result, and citation.
-% 作者选择并主导了研究方向，作出所有最终理论与方法决策，独立核查
-% 了所引文献、定理陈述、证明、代码与实验结果，并对每一项主张、证
-% 明、结果和引用承担责任。
+OpenAI Codex was used throughout the manuscript for initial prose drafting and revision, and in the executable artifact for code scaffolding and test generation.
+% OpenAI Codex 用于全文各部分的初始文本起草与修改，并用于可执行制品的代码脚手架和测试生成。
+It also served as an interactive aid for literature discovery, counterexample search, and the discussion and refinement of the formal theory, including definitions, assumptions, theorem statements, and proof structure.
+% 它还作为交互式辅助工具，用于文献发现、反例搜索，以及形式理论的讨论与完善，包括定义、假设、定理陈述和证明结构。
+The authors chose and directed the research, made all final theoretical and methodological decisions, independently verified the cited sources, theorem statements, proofs, code, and experimental results, and remain responsible for every claim, proof, result, and citation.
+% 作者选择并主导了研究方向，作出所有最终理论与方法决策，独立核查了所引文献、定理陈述、证明、代码与实验结果，并对每一项主张、证明、结果和引用承担责任。
 
 \bibliographystyle{IEEEtran}
 \IEEEtriggeratref{14}

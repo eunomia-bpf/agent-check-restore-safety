@@ -2,27 +2,20 @@
 % 相关工作
 \label{sec:related}
 
-\paragraph{Recovery and rollback}
-% 恢复与回滚
-Output-commit recovery delays effects until state commits and reconstructs a fixed computation after failure.
-% 输出提交恢复将效果延迟到状态提交后，并在故障后重建固定计算。
-It does not decide whether an Agent may safely change its branch and checkpoint structure while several outcomes share one-use permissions~\cite{strom1985optimistic,elnozahy2002rollback}.
-% 它不判定 Agent 能否在多个结果共享一次性权限时安全改变其分支和检查点结构~\cite{strom1985optimistic,elnozahy2002rollback}。
-
-\paragraph{Supervisory control and synthesis}
-% 监督控制与综合
-Generalized nonblocking starts from a supplied transition system, called the plant, and supplied completion conditions, called markings.
-% 广义非阻塞从给定的转移系统（称为被控对象）和给定的完成条件（称为标记）出发。
-Live Synthesis similarly starts from an old specification and an execution~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live}.
-% Live Synthesis 类似地从旧规范和一次执行出发~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live}。
-Our checker instead derives the edited workflow, every required outcome, and the necessary-and-sufficient safety condition for all six edits from the authenticated execution record before installation.
-% 相比之下，我们的检查器在安装之前从认证执行记录中推导编辑后的工作流、每个要求实现的结果，以及全部六种编辑的必要且充分安全条件。
+\paragraph{Recovery, workflow update, and synthesis}
+% 恢复、工作流更新与综合
+Output-commit recovery reconstructs a fixed computation, while generalized nonblocking and Live Synthesis start from supplied transition systems, completion conditions, or prior specifications~\cite{strom1985optimistic,elnozahy2002rollback,dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live}.
+% 输出提交恢复重建一个固定计算，而广义非阻塞与 Live Synthesis 从给定的转移系统、完成条件或先前规范出发~\cite{strom1985optimistic,elnozahy2002rollback,dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live}。
+Workflow inheritance checks whether a running case can move between supplied workflow models, while dynamic controller update synthesizes a bridge between supplied old and new specifications~\cite{vanderaalst2002inheritance,nahabedian2020dynamic,amram2022dynamic}.
+% 工作流继承检查运行中实例能否在给定的工作流模型之间迁移，而动态控制器更新则在给定的新旧规范之间综合桥接控制器~\cite{vanderaalst2002inheritance,nahabedian2020dynamic,amram2022dynamic}。
+A structurally valid migration does not by itself answer our Restore question: whether the old and copied approval occurrences share one already-receipted protected effect, or how that alias is ordered against monitor replacement.
+% 仅有结构上有效的迁移并不能回答我们的 Restore 问题：原审批与复制出的审批发生项是否共享同一个已有回执的受控效果，以及这一别名如何与监控器替换排序。
+Our controller derives that alias, the edited workflow, still-required outcomes, and controllers that must be replaced from the authenticated Agent record, then installs the resulting exact monitor against fresh and alias races.
+% 我们的控制器从经认证的 Agent 记录中推导这一别名关系、编辑后的工作流、仍要求实现的结果以及必须替换的控制器，继而针对新授权与别名竞态安装所得精确监控器。
 
 \paragraph{Agent recovery mechanisms}
 % Agent 恢复机制
-ACRFence blocks replayed effects after Restore, and DART selects checkpoints that preserve earlier work.
-% ACRFence 阻止 Restore 后重放效果，DART 选择能够保留先前工作的检查点。
-Atomix delays settlement until its required branch boundary, while Rebound makes rollback atomic and auditable~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}.
-% Atomix 将结算推迟到其要求的分支边界，而 Rebound 使回滚具有原子性与可审计性~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}。
-These mechanisms take logs, scopes, call classes, branch boundaries, or policies as inputs rather than deriving the full safety condition of an execution edit from its authenticated record.
-% 这些机制将日志、作用域、调用类别、分支边界或策略作为输入，而不是从执行的认证记录中推导一次执行编辑的完整安全条件。
+ACRFence blocks replay after Restore, DART selects checkpoints, Atomix delays settlement, and Rebound makes rollback atomic and auditable~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}.
+% ACRFence 阻止 Restore 后重放，DART 选择检查点，Atomix 延迟结算，而 Rebound 使回滚具有原子性与可审计性~\cite{zheng2026acrfence,yang2026dart,mohammadi2026atomix,burke2026rebound}。
+They address replay, checkpoint choice, staged effects, or atomic rollback rather than the exact safe realization of all six derived Agent edits.
+% 它们处理重放、检查点选择、分阶段效果或原子回滚，而不是全部六种由系统推导的 Agent 编辑的精确安全实现。

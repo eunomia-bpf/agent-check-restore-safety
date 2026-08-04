@@ -1780,3 +1780,171 @@ AuthorityContinuity.RedemptionDomainFrontier.RollbackClonedCells.rollback_clone_
 'AuthorityContinuity.RedemptionDomainFrontier.RollbackClonedCells.rollback_clone_double_accept_counterexample' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.RegistrationRefinement.checkRegistration_iff.{uOutcome, uInvocation, uLabel}
+  {Outcome : Type uOutcome} {Invocation : Type uInvocation} {Label : Type uLabel} [DecidableEq Outcome]
+  [DecidableEq Invocation] [DecidableEq Label]
+  (workflow : AgentHistoryAdmission.RegistrationRefinement.WorkflowIR Outcome Invocation Label)
+  (registered : AgentHistoryAdmission.OperationalSemantics.RegisteredSlice Outcome Label) :
+  AgentHistoryAdmission.RegistrationRefinement.checkRegistration workflow registered = true ↔
+    AgentHistoryAdmission.RegistrationRefinement.RegistrationRefines workflow registered
+'AuthorityContinuity.AgentHistoryAdmission.RegistrationRefinement.checkRegistration_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.RegistrationRefinement.compiled_cell_eq_iff_canonical_eq.{uOutcome,
+    uInvocation, uLabel}
+  {Outcome : Type uOutcome} {Invocation : Type uInvocation} {Label : Type uLabel} [DecidableEq Outcome]
+  [DecidableEq Invocation] [DecidableEq Label]
+  (workflow : AgentHistoryAdmission.RegistrationRefinement.WorkflowIR Outcome Invocation Label)
+  (left right : AgentHistoryAdmission.HistoryStructure.Occurrence) :
+  workflow.compile.cellOf left = workflow.compile.cellOf right ↔ workflow.canonical left = workflow.canonical right
+'AuthorityContinuity.AgentHistoryAdmission.RegistrationRefinement.compiled_cell_eq_iff_canonical_eq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.RegistrationRefinement.compiled_mediation_exhaustive.{uOutcome, uInvocation,
+    uLabel}
+  {Outcome : Type uOutcome} {Invocation : Type uInvocation} {Label : Type uLabel} [DecidableEq Outcome]
+  [DecidableEq Invocation] [DecidableEq Label]
+  (workflow : AgentHistoryAdmission.RegistrationRefinement.WorkflowIR Outcome Invocation Label)
+  (occurrence : AgentHistoryAdmission.HistoryStructure.Occurrence) :
+  workflow.callFor occurrence ∈ workflow.mediatedCalls ↔
+    (occurrence, workflow.compile.cellOf occurrence) ∈ workflow.compile.authenticatedIdentityRows
+'AuthorityContinuity.AgentHistoryAdmission.RegistrationRefinement.compiled_mediation_exhaustive' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.RegistrationRefinement.compiled_fresh_receipts_unique.{uOutcome, uInvocation,
+    uLabel}
+  {Outcome : Type uOutcome} {Invocation : Type uInvocation} {Label : Type uLabel} [DecidableEq Outcome]
+  [DecidableEq Invocation] [DecidableEq Label]
+  (workflow : AgentHistoryAdmission.RegistrationRefinement.WorkflowIR Outcome Invocation Label)
+  (durableReceiptCells : List AgentHistoryAdmission.HistoryStructure.Cell)
+  (word : List AgentHistoryAdmission.HistoryStructure.Occurrence) :
+  (AgentHistoryAdmission.FiniteCore.freshCells
+        (AgentHistoryAdmission.FiniteCore.resolve
+          (AgentHistoryAdmission.OperationalSemantics.contractAt workflow.compile durableReceiptCells) word)).Nodup ∧
+    ∀
+      cell ∈
+        AgentHistoryAdmission.FiniteCore.freshCells
+          (AgentHistoryAdmission.FiniteCore.resolve
+            (AgentHistoryAdmission.OperationalSemantics.contractAt workflow.compile durableReceiptCells) word),
+      cell ∉
+        AgentHistoryAdmission.FiniteCore.Instance.initialReceipted
+          (AgentHistoryAdmission.OperationalSemantics.contractAt workflow.compile durableReceiptCells)
+'AuthorityContinuity.AgentHistoryAdmission.RegistrationRefinement.compiled_fresh_receipts_unique' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.RegistrationRefinement.compiled_admission_preserved.{uOutcome, uInvocation,
+    uLabel}
+  {Outcome : Type uOutcome} {Invocation : Type uInvocation} {Label : Type uLabel} [DecidableEq Outcome]
+  [DecidableEq Invocation] [DecidableEq Label]
+  (workflow : AgentHistoryAdmission.RegistrationRefinement.WorkflowIR Outcome Invocation Label)
+  (durableReceiptCells : List AgentHistoryAdmission.HistoryStructure.Cell) :
+  AgentHistoryAdmission.FiniteCore.CompilerAns
+      (AgentHistoryAdmission.OperationalSemantics.contractAt workflow.compile durableReceiptCells) =
+    AgentHistoryAdmission.FiniteCore.CompilerAns (workflow.contract durableReceiptCells)
+'AuthorityContinuity.AgentHistoryAdmission.RegistrationRefinement.compiled_admission_preserved' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.CompilationBridge.compiler_admit_exists_secure_install.{u_1, u_2}
+  {Outcome : Type u_1} {Label : Type u_2} [DecidableEq Outcome] [DecidableEq Label]
+  (state : AgentHistoryAdmission.OperationalSemantics.InstalledState)
+  (secure : AgentHistoryAdmission.OperationalSemantics.AgentSec state)
+  {request : AgentHistoryAdmission.HistoryStructure.EditRequest}
+  {target : AgentHistoryAdmission.HistoryStructure.History}
+  (derivation : AgentHistoryAdmission.HistoryStructure.HistoryDerivation state.history request target)
+  (admitted :
+    AgentHistoryAdmission.FiniteCore.CompilerAns (AgentHistoryAdmission.CompilationBridge.currentContract state) =
+      AgentHistoryAdmission.FiniteCore.Ans.admit)
+  (targetWellFormed : target.WellFormed)
+  (fresh : AgentHistoryAdmission.CompilationBridge.FreshEditAllocation state request)
+  (running : state.availability = AgentHistoryAdmission.OperationalSemantics.RuntimeAvailability.running) :
+  ∃ candidate event,
+    candidate =
+        AgentHistoryAdmission.CompilationBridge.compileInstallCandidate state secure derivation admitted
+          targetWellFormed ∧
+      candidate.ValidFor state ∧
+        AgentHistoryAdmission.OperationalSemantics.KernelStep state event
+            (AgentHistoryAdmission.OperationalSemantics.installPost state candidate) ∧
+          AgentHistoryAdmission.OperationalSemantics.AgentSec
+            (AgentHistoryAdmission.OperationalSemantics.installPost state candidate)
+'AuthorityContinuity.AgentHistoryAdmission.CompilationBridge.compiler_admit_exists_secure_install' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.CompilationBridge.validInstallCandidate_entails_admission.{u_1, u_2}
+  {Outcome : Type u_1} {Label : Type u_2} [DecidableEq Outcome] [DecidableEq Label]
+  {state : AgentHistoryAdmission.OperationalSemantics.InstalledState}
+  {candidate : AgentHistoryAdmission.OperationalSemantics.InstallCandidate} (_valid : candidate.ValidFor state) :
+  (AgentHistoryAdmission.FiniteCore.greatestPostfixed candidate.specification.contract).Nonempty ∧
+    AgentHistoryAdmission.FiniteCore.CompilerAns candidate.specification.contract =
+      AgentHistoryAdmission.FiniteCore.Ans.admit
+'AuthorityContinuity.AgentHistoryAdmission.CompilationBridge.validInstallCandidate_entails_admission' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.kernelTrace_preserves_agentSec.{u_1, u_2}
+  {Outcome : Type u_1} {Label : Type u_2} [DecidableEq Outcome] [DecidableEq Label]
+  {initial post : AgentHistoryAdmission.OperationalSemantics.InstalledState}
+  (secure : AgentHistoryAdmission.OperationalSemantics.AgentSec initial)
+  (trace : AgentHistoryAdmission.OperationalSemantics.KernelTrace initial post) :
+  AgentHistoryAdmission.OperationalSemantics.AgentSec post
+'AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.kernelTrace_preserves_agentSec' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.live_extension_closed.{u_1, u_2} {Outcome : Type u_1}
+  {Label : Type u_2} [DecidableEq Outcome] [DecidableEq Label]
+  {state : AgentHistoryAdmission.OperationalSemantics.InstalledState}
+  (candidate : AgentHistoryAdmission.OperationalSemantics.LiveExtensionCandidate) (valid : candidate.ValidFor state) :
+  AgentHistoryAdmission.OperationalSemantics.KernelStep state
+    (AgentHistoryAdmission.OperationalSemantics.KernelEvent.installLiveExtension candidate)
+    (AgentHistoryAdmission.OperationalSemantics.liveExtensionPost state candidate)
+'AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.live_extension_closed' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.live_extension_preserves_agentSec.{u_1, u_2}
+  {Outcome : Type u_1} {Label : Type u_2} [DecidableEq Outcome] [DecidableEq Label]
+  {state : AgentHistoryAdmission.OperationalSemantics.InstalledState}
+  (candidate : AgentHistoryAdmission.OperationalSemantics.LiveExtensionCandidate)
+  (secure : AgentHistoryAdmission.OperationalSemantics.AgentSec state) (valid : candidate.ValidFor state) :
+  AgentHistoryAdmission.OperationalSemantics.AgentSec
+    (AgentHistoryAdmission.OperationalSemantics.liveExtensionPost state candidate)
+'AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.live_extension_preserves_agentSec' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.fresh_before_live_extension_stale.{u_1, u_2}
+  {Outcome : Type u_1} {Label : Type u_2} [DecidableEq Outcome] [DecidableEq Label]
+  {state post : AgentHistoryAdmission.OperationalSemantics.InstalledState}
+  {token : AgentHistoryAdmission.OperationalSemantics.UseToken}
+  {candidate : AgentHistoryAdmission.OperationalSemantics.LiveExtensionCandidate}
+  (use :
+    AgentHistoryAdmission.OperationalSemantics.KernelStep state
+      (AgentHistoryAdmission.OperationalSemantics.KernelEvent.freshUse token) post)
+  (captured : candidate.capturedHistory = state.history) : ¬candidate.ValidFor post
+'AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.fresh_before_live_extension_stale' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.alias_before_live_extension_stale.{u_1, u_2}
+  {Outcome : Type u_1} {Label : Type u_2} [DecidableEq Outcome] [DecidableEq Label]
+  {state post : AgentHistoryAdmission.OperationalSemantics.InstalledState}
+  {token : AgentHistoryAdmission.OperationalSemantics.UseToken}
+  {candidate : AgentHistoryAdmission.OperationalSemantics.LiveExtensionCandidate}
+  (use :
+    AgentHistoryAdmission.OperationalSemantics.KernelStep state
+      (AgentHistoryAdmission.OperationalSemantics.KernelEvent.aliasUse token) post)
+  (captured : candidate.capturedHistory = state.history) : ¬candidate.ValidFor post
+'AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.alias_before_live_extension_stale' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.live_extension_before_old_use_denied.{u_1, u_2}
+  {Outcome : Type u_1} {Label : Type u_2} [DecidableEq Outcome] [DecidableEq Label]
+  {state : AgentHistoryAdmission.OperationalSemantics.InstalledState}
+  {candidate : AgentHistoryAdmission.OperationalSemantics.LiveExtensionCandidate}
+  {token : AgentHistoryAdmission.OperationalSemantics.UseToken} (valid : candidate.ValidFor state)
+  (oldEpoch : token.epoch = state.activeEpoch) :
+  ¬AgentHistoryAdmission.OperationalSemantics.UseGuard
+        (AgentHistoryAdmission.OperationalSemantics.liveExtensionPost state candidate) token ∧
+    AgentHistoryAdmission.OperationalSemantics.KernelStep
+      (AgentHistoryAdmission.OperationalSemantics.liveExtensionPost state candidate)
+      (AgentHistoryAdmission.OperationalSemantics.KernelEvent.denial token)
+      (AgentHistoryAdmission.OperationalSemantics.denialPost
+        (AgentHistoryAdmission.OperationalSemantics.liveExtensionPost state candidate) token)
+'AuthorityContinuity.AgentHistoryAdmission.OperationalSemantics.live_extension_before_old_use_denied' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]

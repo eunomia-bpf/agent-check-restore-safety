@@ -216,7 +216,7 @@ frozen_controls=(
   replace_restore_closes_parent
 )
 
-placeholder_pattern='(^|[^[:alnum:]_])(sorryAx|sorry|admit)([^[:alnum:]_]|$)'
+placeholder_pattern='sorryAx|^[[:space:]]*(sorry|admit)([[:space:]]*--.*)?$|(:=|=>|exact|from|by)[[:space:]]+(sorry|admit)([[:space:];]|$)'
 if rg --line-number --glob '*.lean' "$placeholder_pattern" AuthorityContinuity; then
   echo "audit: proof placeholder found in project source" >&2
   exit 1

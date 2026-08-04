@@ -2,28 +2,14 @@
 % 可执行验证
 \label{sec:validation}
 
-\paragraph{Proof coverage}
-% 证明覆盖
-The executable validation checks the finite decision procedure and its correspondence to the formal development.
-% 可执行验证检查有限判定过程及其与形式化开发的对应关系。
-Five Lean modules pass \texttt{--trust=0}, with their theorem mapping listed in \cref{app:lean-map}.
-% 五个 Lean 模块通过 \texttt{--trust=0} 检查，映射见 \cref{app:lean-map}；因子下界、偏序事件集提升与互模拟仍由数学证明给出。
-The factor bounds, pomset lifting, and bisimulation remain mathematical proofs rather than mechanized Lean results.
-% 因子下界、偏序事件集提升与互模拟仍为数学证明，而非 Lean 机械化结果。
+Five Lean modules pass \texttt{--trust=0}.
+% 五个 Lean 模块通过 \texttt{--trust=0} 检查。
+They cover the abstract finite fixed point and selected linear root-level edit, installation, and race cases; registration, full schema refinement, lower bounds, pomset lifting, and bisimulation remain mathematical proofs, itemized in \cref{app:lean-map}.
+% 它们覆盖抽象有限不动点以及选定的线性根级编辑、安装和竞态情形；注册、完整模式精化、下界、偏序事件集提升与互模拟仍由数学证明给出，并在 \cref{app:lean-map} 中逐项列明。
 
-\paragraph{Executable checks}
-% 可执行检查
-All 81 decision-procedure tests pass.
-% 全部 81 项判定过程测试均通过。
-The performance script runs each sample in a fresh Python process and reports the median of five repetitions on a 16-vCPU AMD EPYC 7R12 with CPython 3.12.
-% 性能脚本在新的 Python 进程中运行每个样本，并报告使用 16 vCPU AMD EPYC 7R12 与 CPython 3.12 时五次重复的中位数。
-For accepted instances with \(2,8,32,64,\) and \(128\) outcomes, checker time grows from \(0.11\) to \(53.47\) ms.
-% 对于具有 \(2,8,32,64,\) 和 \(128\) 个结果的接受实例，检查器时间从 \(0.11\) ms 增长到 \(53.47\) ms。
-The corresponding rejected instances take \(0.11\) to \(5.51\) ms.
-% 对应拒绝实例耗时从 \(0.11\) ms 到 \(5.51\) ms。
-Enumerating \(6,24,120,\) and \(720\) unordered completions takes \(0.33\) to \(50.35\) ms.
-% 枚举 \(6,24,120,\) 和 \(720\) 条无序完成路径耗时从 \(0.33\) ms 到 \(50.35\) ms。
-These timings cover only the checker core and exclude workload construction, edit derivation, installation, dispatch, and protected-call mediation.
-% 这些时间只覆盖检查器核心，不包括工作负载构造、编辑推导、安装、派发和受控调用中介。
-The executable caps are 128 outcomes, eight occurrences per outcome, 50,000 linearizations per outcome, and 100,000 indexed completed executions; larger instances return \(\mathsf{ResourceLimit}\) and install nothing.
-% 可执行实现的上限为 128 个结果、每个结果 8 个发生项、每个结果 50,000 条线性化，以及 100,000 条带索引完整执行；更大的实例返回 \(\mathsf{ResourceLimit}\) 且不安装任何内容。
+All 19 paper-specific tests pass; 62 earlier authority and compiler regressions also pass but do not test the full theorem.
+% 全部 19 项论文专用测试均通过；另有 62 项早期权限与编译器回归测试也通过，但它们不检验完整定理。
+Across accepted instances with 2--128 outcomes, checker time is \(0.11\)--\(53.47\) ms; rejected instances take \(0.11\)--\(5.51\) ms, and enumerating 6--720 unordered completions takes \(0.33\)--\(50.35\) ms.
+% 在具有 2--128 个结果的接受实例中，检查器耗时为 \(0.11\)--\(53.47\) ms；拒绝实例耗时为 \(0.11\)--\(5.51\) ms，枚举 6--720 条无序完成路径耗时为 \(0.33\)--\(50.35\) ms。
+They cover only the checker core; \cref{app:artifact-bounds} gives the protocol, omissions, and fail-closed caps.
+% 它们只覆盖检查器核心；实验协议、省略项与故障关闭上限见 \cref{app:artifact-bounds}。

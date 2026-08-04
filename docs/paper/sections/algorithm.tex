@@ -97,8 +97,8 @@ For \(c=(\mathsf{src}_c,H_c^+,u,W,\widehat B,Z)\) and resolved \(r\), \(\mathsf{
 \begin{enumerate}[leftmargin=*,itemsep=0pt,topsep=1pt]
 \item \emph{Core and schema coherence.}
 % 核心与模式一致性。
-The state is well formed, \(c=\mathsf{cert}(\eta)\), its origin derives the installed target, and every \(a\in\mathsf{Req}_u\) has a checked \(\mathsf{Lift}_u\) witness.
-% 状态良构，\(c=\mathsf{cert}(\eta)\)，其来源推导出已安装目标，且每个 \(a\in\mathsf{Req}_u\) 都有经检查的 \(\mathsf{Lift}_u\) 见证。
+The state is well formed, \(c=\mathsf{cert}(\eta)\), its origin derives the installed target, and every required outcome has one authenticated authority and a checked \(\mathsf{Lift}_u\) witness.
+% 状态良构，\(c=\mathsf{cert}(\eta)\)，其来源推导出已安装目标，且每个要求实现的结果都有唯一经认证的权限方和经检查的 \(\mathsf{Lift}_u\) 见证。
 \item \emph{Required-outcome coherence.}
 % 要求实现结果的一致性。
 \(\widehat B=\widehat B^\dagger_{H_c,u}\ne\varnothing\), \(W=\Pref(\pi_2\widehat B)\), and \(Z\) verifies both at \(\mathsf{src}_c\).
@@ -113,8 +113,8 @@ The state is well formed, \(c=\mathsf{cert}(\eta)\), its origin derives the inst
 % \(\mathsf{prog}(\eta)\cong\mathsf{Can}(W,\pi_2\widehat B)\)，且 \(\mathsf q(\eta)\) 是其在 \(r\) 之后的导数。
 \item \emph{Monitor-version coherence.}
 % 监控器版本一致性。
-Only \(\eta\) is active; it owns exactly one authenticated entry and token for each current occurrence, while inactive or closed versions expose none.
-% 只有 \(\eta\) 处于活动状态；它为每个当前发生项拥有唯一认证入口和令牌，而非活动或已关闭版本不暴露任何令牌。
+Only \(\eta\) is active, \(\mathsf{bind}|_{X_{\sem H.T}}=H.\beta\), and it owns exactly one authenticated entry and token for each current occurrence, while inactive or closed versions expose none.
+% 只有 \(\eta\) 处于活动状态，\(\mathsf{bind}|_{X_{\sem H.T}}=H.\beta\)，且它为每个当前发生项拥有唯一认证入口和令牌，而非活动或已关闭版本不暴露任何令牌。
 \end{enumerate}
 \end{definition}
 The full invariant and every preserving transition are enumerated in \cref{tab:app-event-matrix}.
@@ -136,7 +136,7 @@ Its sole durable transition is the rule below.
 \begin{gathered}
  x\text{ enabled in }T\quad
  \mathsf{bind}(x)=(j,\eta)\\[-2pt]
- \eta=H.\mathsf{epoch}\quad
+ \eta=H.\eta\quad
  \mathsf{phase}(\eta)=\mathsf{active}\\[-2pt]
  \mathsf{VerifyHandle}(h,\rho(x),j,d,m^\circ)\quad
  \mathsf q(\eta)\xrightarrow{a}_{\mathsf{prog}(\eta)}q'
@@ -189,7 +189,7 @@ Installation requires
  \mathsf{ReCut}(S,u,Z)=\mathsf{cut}_Z,\\
  \mathsf{Verify}_Z(W^\dagger_{H,u},B^\dagger_{H,u},
     \widehat B^\dagger_{H,u}),\\
- H.\mathsf{epoch}=\eta^-,\qquad
+ H.\eta=\eta^-,\qquad
  \mathsf{phase}(\eta^+)\in\{\bot,\mathsf{inactive}\}.
 \end{gathered}
 \end{equation}
@@ -228,10 +228,10 @@ Preload, Save, retry, token retrieval, return delivery, \(\Dispatch\), settlemen
 \label{lem:cut-linearization}
 In every reachable well-formed compiled state, a visible edit answer and a protected call in the same policy domain have a unique order at the installation point.
 % 在每个可达的良构编译状态中，同一策略域内的一项可见编辑答案与一次受控调用在安装点具有唯一顺序。
-If the use commits first, that seal cannot install.
-% 若该使用先提交，则该封印无法安装。
-If \Install commits first, the old use cannot resolve \Fresh or \Alias.
-% 若 \Install 先提交，则旧使用无法解析 \Fresh 或 \Alias。
+If the call commits first, that seal cannot install.
+% 若该调用先提交，则该封印无法安装。
+If \Install commits first, the old call cannot resolve \Fresh or \Alias.
+% 若 \Install 先提交，则旧调用无法解析 \Fresh 或 \Alias。
 Steps in independent domains commute by product semantics.
 % 独立域中的步骤依据乘积语义可交换。
 \end{lemma}

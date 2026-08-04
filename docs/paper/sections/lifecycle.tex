@@ -12,8 +12,8 @@ The Agent next requests a Fork between suppliers \(L\) and \(R\).
 % Agent 随后请求在供应商 \(L\) 和 \(R\) 之间执行 Fork。
 The workflow allows two outcomes: order from \(L\) or order from \(R\).
 % 工作流允许两种结果：向 \(L\) 下单或向 \(R\) 下单。
-In either outcome, payment must precede shipment:
-% 在任一结果中，付款都必须先于发货：
+In either outcome, payment authorization must precede shipment authorization:
+% 在任一结果中，付款授权都必须先于发货授权：
 \begin{equation}
 \label{eq:running-outcomes}
 \begin{split}
@@ -47,7 +47,7 @@ Budget reservation contributes \(r\), approval contributes \(a\), the two paymen
 At the Fork request, \(\mathsf{lab}(\Delta)=ra\).
 % 在 Fork 请求处，\(\mathsf{lab}(\Delta)=ra\)。
 The policy allows prefixes of \(rap_Ls\) and \(rap_Rs\), but never both payments or a payment before approval.
-% 策略允许 \(rap_Ls\) 和 \(rap_Rs\) 的前缀，但绝不允许两笔付款同时发生，也不允许付款先于审批。
+% 策略允许 \(rap_Ls\) 和 \(rap_Rs\) 的前缀，但绝不允许两笔付款都发生，也不允许付款先于审批。
 Although the supplier outcomes are exclusive, both must still have a safe way to finish when the Fork is checked.
 % 尽管两个供应商结果互斥，但在检查 Fork 时，二者都必须仍有安全完成方式。
 

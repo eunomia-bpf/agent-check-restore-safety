@@ -21,8 +21,8 @@ Restoring \(k\) creates another approval call in the workflow, but it must not a
 % Restore 到 \(k\) 会在工作流中创建另一个审批调用，但不得再次授权同一审批。
 A concurrent Merge can cause a similar error by selecting supplier \(L\) after a supplier-\(R\) payment has already been authorized.
 % 并发的 Merge 也会造成类似错误，例如在供应商 \(R\) 的付款已经获得授权后再选择供应商 \(L\)。
-An edit can therefore restore the saved program state and still be unsafe.
-% 因此，一次编辑即使正确恢复了保存的程序状态，仍然可能不安全。
+An edit can therefore restore the saved program state yet violate authorization or release order; the theory does not equate that order with remote physical completion.
+% 因此，一次编辑即使恢复了保存的程序状态，仍可能违反授权或发出顺序；本理论不把这一顺序等同于远端物理完成顺序。
 
 The problem is that a checkpoint contains only part of the information needed to decide whether an edit is safe.
 % 问题在于，检查点只包含决定一次编辑是否安全所需的部分信息。
@@ -48,8 +48,8 @@ Every outcome required before the edit must remain required, already have a reco
 % 编辑前要求实现的每个结果都必须继续作为要求、已经有完成记录，或由提出该要求的同一策略权限方明确移除。
 The Agent selects only a registered edit.
 % Agent 只能选择一项已注册编辑。
-The trusted controller derives the edited workflow and the requirements it inherits from the recorded execution.
-% 可信控制器从已有执行记录中推导编辑后的工作流以及它继承的要求。
+The trusted controller derives the edited workflow and the requirements it inherits from the recorded execution; faithful registration is a theorem premise, not something inferred from natural language.
+% 可信控制器从已有执行记录中推导编辑后的工作流以及它继承的要求；忠实注册是定理前提，而不是从自然语言中推断出来的事实。
 The Agent therefore cannot obtain a favorable answer by submitting a replacement workflow that hides inconvenient facts.
 % 因此，Agent 无法通过提交一个隐藏不利事实的替代工作流来获得有利答案。
 
@@ -89,9 +89,9 @@ We contribute one end-to-end theorem connecting the original Agent workflow, the
 % 我们贡献一个端到端定理，将原始 Agent 工作流、请求的执行编辑、精确检查器与已安装运行时连接起来。
 For all six registered execution edits and registered extensions, a safe implementation exists exactly when the checker leaves a nonempty set of executions, its monitor can be installed, and an ideal atomic machine permits the same edit.
 % 对全部六种已注册执行编辑和已注册扩展，当且仅当检查器留下非空执行集合、其监控器能够安装且理想原子机器允许同一次编辑时，安全实现才存在。
-The theorem also proves that all four kinds of recorded information used by the checker are necessary and that the concrete runtime has the same visible behavior as the ideal machine (\cref{sec:model,sec:admission,sec:kernel,sec:results}).
-% 该定理还证明，检查器使用的四类记录信息都不可缺少，并且具体运行时与理想机器具有相同的可见行为（\cref{sec:model,sec:admission,sec:kernel,sec:results}）。
+The theorem also proves that deleting any of four recorded relations changes some exact decision or installation answer, and that the concrete runtime has the same visible behavior as the ideal machine (\cref{sec:model,sec:admission,sec:kernel,sec:results}).
+% 该定理还证明，删除四类记录关系中的任一类都会改变某个精确判定或安装答案，并且具体运行时与理想机器具有相同的可见行为（\cref{sec:model,sec:admission,sec:kernel,sec:results}）。
 Every supported event preserves the security invariant, so the theorem applies again after every finite reachable execution.
 % 每个受支持事件都保持安全不变量，因此该定理能在每个有限可达执行之后再次应用。
-Five kernel-checked Lean modules, 81 executable tests, and bounded performance measurements validate the finite checker, critical examples, and executable artifact.
-% 五个经内核检查的 Lean 模块、81 项可执行测试和有界性能测量验证了有限检查器、关键例子与可执行制品。
+Five kernel-checked Lean modules, 19 paper-specific executable tests, and bounded performance measurements validate the fixed-point checker core and selected transition lemmas.
+% 五个经内核检查的 Lean 模块、19 项论文专用可执行测试和有界性能测量验证了不动点检查器核心与选定转移引理。
