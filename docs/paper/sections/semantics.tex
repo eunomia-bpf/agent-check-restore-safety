@@ -173,9 +173,11 @@ Since \(\widehat B_1\subseteq\widehat B_0\), repeated application removes execut
 \label{eq:admission}
 \mathsf{SafeEdit}(\Theta)
  \quad\Longleftrightarrow\quad
- \mathsf{Derive}(\Theta)\text{ is defined}
- \ \land\
- \widehat B^\dagger_{H,u}\ne\varnothing .
+ \begin{cases}
+ \widehat B^\dagger_{H,u}\ne\varnothing,
+   & \mathsf{Derive}(\Theta)\text{ is defined};\\
+ \mathsf{false},&\text{otherwise}.
+ \end{cases}
 \end{equation}
 \end{definition}
 At \(z=\epsilon\), nonemptiness covers every required outcome.
@@ -198,8 +200,8 @@ The final condition makes this set post-fixed, so monotonicity and finite Knaste
 % 最后一项条件使该集合成为后不动点，因此由单调性和有限 Knaster--Tarski 可知其包含于 \(\widehat B^\dagger\)，而投影前缀给出 \(L\subseteq W^\dagger\)。
 Conversely, \(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) keeps every compatible outcome completable.
 % 反之，\(\widehat B^\dagger=\widehat\Phi(\widehat B^\dagger)\) 保证每个兼容结果仍可完成。
-At the empty prefix this condition establishes \(\mathsf{PreservesRequired}\).
-% 在空前缀处，这一条件建立 \(\mathsf{PreservesRequired}\)。
+At the empty prefix, this condition and the checked coverage witnesses from \cref{lem:history-derivation} establish \(\mathsf{PreservesRequired}\).
+% 在空前缀处，该条件与 \cref{lem:history-derivation} 中经检查的覆盖见证共同建立 \(\mathsf{PreservesRequired}\)。
 The inclusion \(\widehat B^\dagger\subseteq\widehat B_0\) ensures that complete executions follow the edited workflow and policy, while prefix closure of \(\mathcal A_u\) makes every allowed prefix safe.
 % 包含关系 \(\widehat B^\dagger\subseteq\widehat B_0\) 保证完整执行遵守编辑后的工作流与策略，而 \(\mathcal A_u\) 的前缀闭包保证每个获准前缀安全。
 Finally, \(W^\dagger=\Pref(\pi_2\widehat B^\dagger)\) gives a completion after every allowed prefix.
@@ -210,8 +212,8 @@ Hence the fixed point is a safe execution set exactly when nonempty.
 
 \(\mathsf{MaxSafe}(\Theta;L,\widehat B)\) means that \((L,\widehat B)\) is safe and contains every other safe execution set.
 % \(\mathsf{MaxSafe}(\Theta;L,\widehat B)\) 表示 \((L,\widehat B)\) 安全且包含每个其他安全执行集合。
-Its unique value is \(\mathsf{SafeBehavior}(\Theta)\).
-% 其唯一值记为 \(\mathsf{SafeBehavior}(\Theta)\)。
+When such a pair exists, write its unique value as \(\mathsf{SafeBehavior}(\Theta)\).
+% 当这样的二元组存在时，将其唯一值记为 \(\mathsf{SafeBehavior}(\Theta)\)。
 \Cref{lem:most-permissive} proves that this witness exists exactly when \(\widehat B^\dagger_{H,u}\ne\varnothing\) and then equals \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\).
 % \Cref{lem:most-permissive} 证明该见证恰在 \(\widehat B^\dagger_{H,u}\ne\varnothing\) 时存在，并且此时等于 \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\)。
 

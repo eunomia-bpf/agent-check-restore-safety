@@ -78,8 +78,10 @@ Before the edit takes effect, the runtime checks the current execution record ag
 % 编辑生效之前，运行时再次检查当前执行记录，并原子切换到新计算出的规则。
 Every overlapping call is therefore checked entirely under either the old rules or the new rules.
 % 因此，每个重叠调用都完全依据旧规则或新规则进行检查。
-\Cref{sec:lifecycle} derives this process for an approval workflow containing Fork, Merge, Restore, and calls that overlap the atomic rule update.
-% \Cref{sec:lifecycle} 针对一个包含 Fork、Merge、Restore 以及与原子规则更新重叠调用的审批工作流推导这一过程。
+\Cref{fig:two-histories} illustrates this process for an approval workflow containing Fork, Merge, Restore, and calls that overlap the atomic rule update.
+% \Cref{fig:two-histories} 用一个包含 Fork、Merge、Restore 以及与原子规则更新重叠调用的审批工作流展示这一过程。
+\Cref{sec:lifecycle} derives the example step by step.
+% \Cref{sec:lifecycle} 对该例逐步进行推导。
 After Restore, the repeated approval call reuses the earlier authorization record instead of authorizing the approval again.
 % Restore 之后，重复的审批调用复用先前的授权记录，而不会再次授权该审批。
 

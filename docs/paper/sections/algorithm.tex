@@ -22,13 +22,13 @@ This section gives the automaton construction, the invariant after the rules cha
 
 Removing outcome labels from the largest safe execution set gives the finite pair \((W,B)=(W^\dagger_{H,u},B^\dagger_{H,u})\).
 % 从最大安全执行集合中去掉结果标签，得到有限对 \((W,B)=(W^\dagger_{H,u},B^\dagger_{H,u})\)。
-For \(L/z=\{v\mid zv\in L\}\), let \(q_z=(W^\dagger/z,B^\dagger/z)\) be the automaton state after prefix \(z\).
-% 对于 \(L/z=\{v\mid zv\in L\}\)，令 \(q_z=(W^\dagger/z,B^\dagger/z)\) 表示执行前缀 \(z\) 后的自动机状态。
+For \(L/z=\{v\mid zv\in L\}\), let \(q_z=(W/z,B/z)\) be the automaton state after prefix \(z\).
+% 对于 \(L/z=\{v\mid zv\in L\}\)，令 \(q_z=(W/z,B/z)\) 表示执行前缀 \(z\) 后的自动机状态。
 \begin{equation}
 \label{eq:canonical-program}
 \begin{aligned}
  Q_{W,B} &= \{q_z\mid z\in W\},\\
- q^0&=q_\epsilon=(W^\dagger,B^\dagger),\\
+ q^0&=q_\epsilon=(W,B),\\
  q_z\xrightarrow{a}q_{za}
  &\quad\Longleftrightarrow\quad za\in W .
 \end{aligned}
