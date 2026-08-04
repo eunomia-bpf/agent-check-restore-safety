@@ -71,12 +71,12 @@ If nothing remains, the checker returns a finite, independently checkable explan
 % 如果没有完整执行留下，检查器返回一份有限且可独立检查的说明，证明不存在安全实现。
 Otherwise, the remaining executions define the most permissive runtime monitor that enforces the edit.
 % 否则，剩余执行定义了强制执行该编辑且限制最少的运行时监控器。
-For all six registered execution edits and registered extensions, our main theorem proves that the checker accepts exactly when such a safe implementation exists.
-% 对全部六种已注册执行编辑和已注册扩展，我们的主定理证明，当且仅当这种安全实现存在时，检查器才会接受。
-The same theorem proves atomic installation despite racing calls, identifies the workflow, call identity, prior authorization, and monitor-version information that no exact checker can discard, and relates the installed runtime to an ideal atomic machine.
-% 同一定理还证明了调用竞态下的原子安装，确定任何精确检查器都不能丢弃的工作流、调用标识、既有授权和监控器版本信息，并将已安装运行时与理想原子机器联系起来。
-Every supported event preserves the security invariant, so the theorem applies again after every finite reachable execution.
-% 每个受支持事件都保持安全不变量，因此该定理能在每个有限可达执行之后再次应用。
+For Fork, Restore, Merge, and later workflow extensions, our main theorem proves that the checker accepts exactly when such a safe implementation exists.
+% 对 Fork、Restore、Merge 以及后续工作流扩展，我们的主定理证明，当且仅当这种安全实现存在时，检查器才会接受。
+The same theorem proves atomic installation despite racing calls, identifies the workflow structure, call-to-action links, prior authorizations, and monitor version that every exact checker needs, and proves that the installed runtime has the same Agent-visible behavior as an ideal atomic machine.
+% 同一定理还证明调用竞态下的原子安装，确定每个精确检查器都需要的工作流结构、调用到动作的关联、既有授权和监控器版本，并证明已安装运行时与理想原子机器具有相同的 Agent 可见行为。
+The security invariant is preserved by every runtime transition and therefore holds after every finite execution.
+% 安全不变量由每个运行时转移保持，因此在每段有限执行之后都成立。
 Six Lean modules mechanize registration, all six edit rules, atomic monitor installation, call--installation races, and preservation across finite executions; 19 paper-specific tests and measurements over 2--128 outcomes exercise the executable checker.
 % 六个 Lean 模块机械化注册、全部六种编辑规则、监控器原子安装、调用—安装竞态以及有限执行上的安全保持；19 项论文专用测试与覆盖 2--128 个结果的测量检验可执行检查器。
 \end{abstract}

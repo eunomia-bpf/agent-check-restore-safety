@@ -12,37 +12,35 @@ Each modeled state covers one \emph{policy domain}: the protected actions govern
 % 每个建模状态涵盖一个\emph{策略域}：由一项策略、一份授权日志和一个原子替换的监控器共同管理的受控动作。
 Domains with disjoint protected actions, authorization logs, and policies compose by product.
 % 受控动作、授权日志和策略彼此不相交的域通过乘积组合。
-Every state snapshot is finite, although an execution may contain an unbounded number of snapshots.
-% 每个状态快照都是有限的，但一次执行可以包含数量不受固定上界约束的快照。
-The definitions below first describe the required outcomes and then the authenticated record needed to preserve them across edits.
-% 下文首先描述要求实现的结果，随后定义在编辑过程中保留这些结果所需的认证记录。
+Every individual state is finite, while the theory covers executions of arbitrary finite length.
+% 每个单独状态都是有限的，而该理论覆盖任意有限长度的执行。
+The definitions below describe the required outcomes and the authenticated state that preserves them across edits.
+% 下文定义要求实现的结果，以及在编辑过程中保留这些结果的认证状态。
 
 \subsection{Workflow outcomes and call order}
 % 工作流结果与调用次序
 
-\paragraph{Semantic vocabulary}
-% 语义词汇
+\paragraph{Basic objects}
+% 基本对象
 We capitalize \emph{Agent} for the untrusted principal requesting execution edits.
 % 我们将请求执行编辑的不受信任主体称为 \emph{Agent}。
-An \emph{occurrence} \(x\) identifies one position for a protected tool call in the workflow.
-% \emph{发生项} \(x\) 标识工作流中一次受控工具调用的位置。
-An \emph{effect identity} \(d\) identifies the one protected action and one-use permission behind that position.
-% \emph{效果标识} \(d\) 标识该调用位置背后的受控动作与一次性权限。
-The first authorized use of an effect identity creates an authorization record.
-% 一个效果标识首次获得授权使用时会创建授权记录。
-After Fork or Restore, several occurrences may refer to the same effect identity.
-% Fork 或 Restore 之后，多个发生项可能指向同一个效果标识。
-\emph{Lineage} is the certified ancestry preserved when an edit carries or copies a workflow region.
-% \emph{谱系}是编辑携带或复制工作流区域时保留的认证祖先关系。
-\(T,\Delta,\chi\) denote the active workflow, authorization log, and ordered record of resolved occurrences.
-% \(T,\Delta,\chi\) 分别表示当前工作流、授权日志和已解析发生项的有序记录。
+An \emph{call position} \(x\) identifies one position for a protected tool call in the workflow.
+% \emph{调用位置} \(x\) 标识工作流中一次受控工具调用的位置。
+An \emph{action ID} \(d\) groups the call positions that share one protected action and one authorization record.
+% \emph{动作标识} \(d\) 将共享同一受控动作和同一授权记录的调用位置归为一组。
+The first authorized use creates that record; positions copied by Fork or Restore later reuse it.
+% 第一次获授权使用会创建该记录；Fork 或 Restore 随后复制出的调用位置会复用它。
+The authenticated state also records the certified origin of each workflow region copied by an edit.
+% 认证状态还记录编辑所复制的每个工作流区域的认证来源。
+\(T,\Delta,\chi\) denote the current workflow, authorization log, and ordered record of processed call positions.
+% \(T,\Delta,\chi\) 分别表示当前工作流、授权日志和已处理调用位置的有序记录。
 
-A pomset \(p=(X_p,\prec_p)\) is a finite set of occurrences with a strict partial order.
-% 偏序事件集 \(p=(X_p,\prec_p)\) 是带有严格偏序的有限发生项集合。
+A pomset \(p=(X_p,\prec_p)\) is a finite set of call positions with a strict partial order.
+% 偏序事件集 \(p=(X_p,\prec_p)\) 是带有严格偏序的有限调用位置集合。
 Its linearizations \(\Lin(p)\) are the words containing each member of \(X_p\) once and respecting \(\prec_p\).
 % 它的线性化 \(\Lin(p)\) 是各包含 \(X_p\) 中每个成员一次且遵循 \(\prec_p\) 的序列。
-An \emph{indexed workflow contract} \(\mathcal C=(O,\{p_o\}_{o\in O})\) is a finite nonempty family of pomsets.
-% \emph{带索引的工作流契约} \(\mathcal C=(O,\{p_o\}_{o\in O})\) 是一个有限非空的偏序事件集族。
+A \emph{workflow contract} \(\mathcal C=(O,\{p_o\}_{o\in O})\) assigns one pomset to each member of a finite nonempty outcome set \(O\).
+% \emph{工作流契约} \(\mathcal C=(O,\{p_o\}_{o\in O})\) 为有限非空结果集 \(O\) 中的每个成员分配一个偏序事件集。
 Each index \(o\) names one allowed completion outcome.
 % 每个索引 \(o\) 命名一种允许的完成结果。
 Two outcomes remain distinct even if the calls still required for them later become identical.
@@ -57,15 +55,15 @@ We require the runtime to distinguish completion from continuation.
 \]
 This condition permits incomparable traces and different outcomes with the same trace, so it does not require deterministic outcomes.
 % 该条件允许不可比较的轨迹以及共享同一轨迹的不同结果，因此并不要求结果具有确定性。
-It requires a registered occurrence whenever continuing after a shared partial execution performs more work.
-% 如果在一段共享的部分执行之后继续会执行更多工作，该条件要求存在一个已注册发生项来表示继续。
-The interface represents a choice between stopping and continuing by an authenticated terminal occurrence handled by the controller.
-% 该接口通过由控制器处理的认证终止发生项表示停止与继续之间的选择。
+It requires a registered call position whenever continuing after a shared partial execution performs more work.
+% 如果在一段共享的部分执行之后继续会执行更多工作，该条件要求存在一个已注册调用位置来表示继续。
+The interface represents a choice between stopping and continuing by an authenticated terminal call position handled by the controller.
+% 该接口通过由控制器处理的认证终止调用位置表示停止与继续之间的选择。
 
 Contracts use the three partial constructors below.
 % 契约使用下列三个偏构造器。
-Each constructor requires occurrence-disjoint operands and is defined only when its result remains completion-observable.
-% 每个构造器都要求操作数的发生项互不相交，并且仅在结果仍满足完成可观测性时有定义。
+Each constructor requires operands with disjoint call positions and preserves the condition that no complete call sequence is a strict prefix of another.
+% 每个构造器都要求操作数的调用位置互不相交，并保持“任何完整调用序列都不是另一完整调用序列真前缀”这一条件。
 \begin{equation}
 \label{eq:contract-algebra}
 \begin{aligned}
@@ -81,30 +79,30 @@ Each constructor requires occurrence-disjoint operands and is defined only when 
  p_{(o,v)}&=p_o\triangleright p_v.
 \end{aligned}
 \end{equation}
-Before adding a registered or copied operand, the edit derivation deterministically renames its occurrences and extends \(\rho\) while retaining their authenticated effect identities.
-% 在加入已注册或复制的操作数之前，编辑推导会确定性地重命名其发生项并扩展 \(\rho\)，同时保留其认证效果标识。
+Before adding a registered or copied operand, the controller deterministically assigns fresh call-position IDs and extends \(\rho\) while retaining the authenticated action IDs.
+% 在加入已注册或复制的操作数之前，控制器确定性地分配新的调用位置标识并扩展 \(\rho\)，同时保留认证动作标识。
 Well-formedness already makes carried operands disjoint.
 % 良构性已经保证被携带的操作数互不相交。
 In \cref{eq:contract-algebra}, \(\uplus\) adds no cross-order and \(\triangleright\) orders every event of \(p\) before every event of \(q\), while choice uses a tagged union of outcome indices and parallel and sequence use Cartesian products.
 % 在 \cref{eq:contract-algebra} 中，\(\uplus\) 不添加跨操作数次序，\(\triangleright\) 将 \(p\) 的每个事件置于 \(q\) 的每个事件之前，而选择使用带标签的结果索引不交并，并行和顺序则使用笛卡尔积。
 Consequently, choice retains each arm's full indexed family, parallel pairs outcomes while permitting every causal linearization, and sequence adds a barrier.
 % 因此，选择保留每个分支的完整带索引结果族，并行对结果配对并允许每种因果线性化，而顺序添加一道屏障。
-For raw prefix \(w\), \(\mathcal C/w\) retains each index whose pomset has a linearization prefixed by \(w\), then removes \(w\)'s occurrences and incident order.
-% 对于原始前缀 \(w\)，\(\mathcal C/w\) 保留其偏序事件集存在以 \(w\) 为前缀的线性化的每个索引，再移除 \(w\) 中的发生项及其关联次序。
+After call prefix \(w\), \(\mathcal C/w\) retains each outcome whose pomset has a linearization prefixed by \(w\), then removes the call positions in \(w\) and their order edges.
+% 在调用前缀 \(w\) 之后，\(\mathcal C/w\) 保留其偏序事件集存在以 \(w\) 为前缀的线性化的每个结果，再移除 \(w\) 中的调用位置及其次序边。
 It is undefined if no index remains.
 % 若没有索引保留，则其无定义。
-This operational ``remaining contract'' preserves outcome and occurrence identity.
-% 这一“剩余契约”的操作定义会保留结果标识和发生项标识。
+This operational ``remaining contract'' preserves outcome and call position identity.
+% 这一“剩余契约”的操作定义会保留结果标识和调用位置标识。
 
-\begin{lemma}[Observable completion]
-% 可观测完成
+\begin{lemma}[Completion remains unambiguous]
+% 完成状态保持无歧义
 \label{lem:observable-completion}
-Every defined residual \(\mathcal C/w\) is completion-observable, and either every retained pomset is empty or no retained pomset is empty.
-% 每个有定义的残余 \(\mathcal C/w\) 都满足完成可观测性，并且保留的偏序事件集要么全为空，要么全都非空。
+For every defined \(\mathcal C/w\), no complete sequence is a strict prefix of another, and either every retained pomset is empty or none is empty.
+% 对于每个有定义的 \(\mathcal C/w\)，任何完整序列都不是另一完整序列的真前缀，并且保留的偏序事件集要么全为空，要么全都非空。
 \end{lemma}
 \begin{proof}
-If a residual suffix \(v\) strictly prefixes \(v'\), then \(wv\) strictly prefixes \(wv'\) in \(\mathsf{CL}(\mathcal C)\).
-% 如果残余后缀 \(v\) 是 \(v'\) 的真前缀，那么在 \(\mathsf{CL}(\mathcal C)\) 中，\(wv\) 是 \(wv'\) 的真前缀。
+If a remaining suffix \(v\) strictly prefixes \(v'\), then \(wv\) strictly prefixes \(wv'\) in \(\mathsf{CL}(\mathcal C)\).
+% 如果剩余后缀 \(v\) 是 \(v'\) 的真前缀，那么在 \(\mathsf{CL}(\mathcal C)\) 中，\(wv\) 是 \(wv'\) 的真前缀。
 If one retained pomset is empty and another is nonempty, choose a nonempty linearization \(v\) of the latter.
 % 如果一个保留的偏序事件集为空而另一个非空，则选择后者的一条非空线性化 \(v\)。
 Then \(w\) strictly prefixes \(wv\).
@@ -133,8 +131,8 @@ Its node identities, base contracts, outcome-lineage authority rows, and typed e
 % 其中的节点标识、基础契约、结果谱系权限记录和类型化编辑记录永不改变。
 Each continuation node \(b\) carries an immutable registered base contract \(\Gamma_b\).
 % 每个延续节点 \(b\) 携带一个不可变的已注册基础契约 \(\Gamma_b\)。
-Its branch cursor \(\chi_b\) records which occurrences on that continuation have completed.
-% 其分支游标 \(\chi_b\) 记录该延续上的哪些发生项已经完成。
+Its branch cursor \(\chi_b\) records which call positions on that continuation have completed.
+% 其分支游标 \(\chi_b\) 记录该延续上的哪些调用位置已经完成。
 The immutable records form a directed acyclic graph (DAG) whose edges record typed Fork, Restore, and Merge operations.
 % 这些不可变记录形成一个有向无环图（DAG），其边记录类型化的 Fork、Restore 和 Merge 操作。
 \(T\) is the active workflow.
@@ -163,16 +161,16 @@ Set \(\mathsf{heads}(b{:}\mathcal C)=\{b\}\).
 % 令 \(\mathsf{heads}(b{:}\mathcal C)=\{b\}\)。
 Open choice exposes both arms, selected choice its winner, parallel and \(\mathsf{jbar}\) both arms, and sequence its left operand until completion and then its right.
 % 开放选择暴露两个分支，已选选择暴露胜出分支，并行和 \(\mathsf{jbar}\) 暴露两个分支，而顺序先暴露左操作数直至其完成，再暴露右操作数。
-Completing an occurrence updates the work remaining at its leaf without deleting the recorded structure.
-% 完成一个发生项会更新其叶节点仍需执行的工作，但不会删除已记录结构。
+Completing an call position updates the work remaining at its leaf without deleting the recorded structure.
+% 完成一个调用位置会更新其叶节点仍需执行的工作，但不会删除已记录结构。
 Because sequence exposure tests \(\mathsf{complete}\), it retains completed left-outcome indices, so an isolated completed leaf remains addressable for later Fork or Restore.
 % 由于顺序暴露检查 \(\mathsf{complete}\)，它会保留已完成的左侧结果索引，因此孤立的已完成叶节点仍可供后续 Fork 或 Restore 寻址。
 Joining removes \(g\) immediately but keeps its continuation behind a barrier until both arms complete.
 % Join 会立即移除 \(g\)，但在两个分支都完成之前，将其延续保持在屏障之后。
-An occurrence is enabled when minimal in some pomset of \(\sem{T}\), consistent with sequence exposure by observable completion.
-% 当一个发生项在 \(\sem{T}\) 的某个偏序事件集中为极小元时，它即被启用；这与完成可观测性所确定的顺序暴露一致。
-Occurrence disjointness and unique context decomposition give every enabled \(x\) a unique exposed leaf \(\mathsf{leaf}_T(x)=b\).
-% 发生项互不重叠以及上下文分解的唯一性，使每个已启用的 \(x\) 都具有唯一的已暴露叶节点 \(\mathsf{leaf}_T(x)=b\)。
+An call position is enabled when minimal in some pomset of \(\sem{T}\), consistent with sequence exposure by observable completion.
+% 当一个调用位置在 \(\sem{T}\) 的某个偏序事件集中为极小元时，它即被启用；这与完成可观测性所确定的顺序暴露一致。
+Call position disjointness and unique context decomposition give every enabled \(x\) a unique exposed leaf \(\mathsf{leaf}_T(x)=b\).
+% 调用位置互不重叠以及上下文分解的唯一性，使每个已启用的 \(x\) 都具有唯一的已暴露叶节点 \(\mathsf{leaf}_T(x)=b\)。
 For \(a\in\{\Fresh(x,d),\Alias(x,d)\}\), define the paired execution update
 % 对于 \(a\in\{\Fresh(x,d),\Alias(x,d)\}\)，定义成对执行更新
 \[
@@ -196,19 +194,19 @@ Write \(\mathcal C_k=\mathsf{contract}(K(k))\) for the residual contract stored 
 % 将检查点 \(k\) 存储的残余契约记为 \(\mathcal C_k=\mathsf{contract}(K(k))\)。
 \(\Sigma_\zeta\) is a versioned immutable registry of typed edit schemas.
 % \(\Sigma_\zeta\) 是带版本且不可变的类型化编辑模式注册表。
-\(\rho\) contains the authenticated occurrence-to-monitor-entry/effect-identity map, authorization tokens, lineage, scope, normalized tool requests, and request digests.
-% \(\rho\) 包含经认证的发生项到监控器入口/效果标识映射、授权令牌、谱系、作用域、规范化工具请求和请求摘要。
-For each current occurrence \(x\), binding \(\beta(x)=(j,\eta)\) names its monitor entry and version.
-% 对于每个当前发生项 \(x\)，绑定 \(\beta(x)=(j,\eta)\) 指明其监控器入口和版本。
-\(\chi\) is the ordered append-only record of resolved occurrences, including \Fresh and \Alias bindings, and \(\nu\) is the record version.
-% \(\chi\) 是已解析发生项的有序仅追加记录，其中包括 \Fresh 和 \Alias 绑定；\(\nu\) 是记录版本。
+\(\rho\) contains the authenticated call position-to-monitor-entry/action-ID map, authorization tokens, lineage, scope, normalized tool requests, and request digests.
+% \(\rho\) 包含经认证的调用位置到监控器入口/动作标识映射、授权令牌、谱系、作用域、规范化工具请求和请求摘要。
+For each current call position \(x\), binding \(\beta(x)=(j,\eta)\) names its monitor entry and version.
+% 对于每个当前调用位置 \(x\)，绑定 \(\beta(x)=(j,\eta)\) 指明其监控器入口和版本。
+\(\chi\) is the ordered append-only record of resolved call positions, including \Fresh and \Alias bindings, and \(\nu\) is the record version.
+% \(\chi\) 是已解析调用位置的有序仅追加记录，其中包括 \Fresh 和 \Alias 绑定；\(\nu\) 是记录版本。
 Because \(\chi\) records authorization and workflow progress rather than remote completion, a return value may still await settlement.
 % 由于 \(\chi\) 记录授权和工作流推进而非远端完成，返回值仍可能等待结算。
 
 \(\mathsf{Save}(k,b)\) is an explicit checkpoint transition, not a seventh execution edit, and requires fresh \(k\) and addressable \(b\).
 % \(\mathsf{Save}(k,b)\) 是显式检查点转移，而非第七种执行编辑，并要求 \(k\) 为新标识且 \(b\) 可寻址。
-A trusted transaction stores an authenticated copy of continuation \(b\)'s remaining contract \(\mathcal C_b\), completed-occurrence cursor \(\chi_b\), and relevant call and outcome-authority rows.
-% 一个可信事务存储延续 \(b\) 的剩余契约 \(\mathcal C_b\)、已完成发生项游标 \(\chi_b\) 以及相关调用记录与结果权限记录的认证副本。
+A trusted transaction stores an authenticated copy of continuation \(b\)'s remaining contract \(\mathcal C_b\), completed-call position cursor \(\chi_b\), and relevant call and outcome-authority rows.
+% 一个可信事务存储延续 \(b\) 的剩余契约 \(\mathcal C_b\)、已完成调用位置游标 \(\chi_b\) 以及相关调用记录与结果权限记录的认证副本。
 The checkpoint check requires \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\), and the transaction advances \(\nu\) without changing the active workflow, authorization records, bindings, monitor versions, or permission trace.
 % 检查点检查要求 \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\)，且该事务推进 \(\nu\) 而不改变当前工作流、授权记录、绑定、监控器版本或权限轨迹。
 Both machines take this \(\tau\)-transition, which makes a concurrent installation stale because installation authenticates \(H\).
@@ -237,14 +235,14 @@ Every root or schema-introduced outcome lineage has exactly one signed policy-au
 % 每条根结果谱系或模式引入的结果谱系都恰有一个经签名的策略权限记录，并由上下文恒等映射、携带、克隆和检查点快照保持。
 \item \emph{Identity and progress.}
 % \emph{标识与进展。}
-Occurrence and monitor-entry identifiers are unique, while occurrences mapped to the same effect identity agree on the call authorization service, scope, normalized request, digest, and lineage.
-% 发生项标识和监控器入口标识是唯一的，而映射到同一效果标识的发生项在调用授权服务、作用域、规范化请求、摘要和谱系上保持一致。
-Resolved occurrences are downward closed in their pomset, consistent with every choice status, and absent from the remaining workflow.
-% 已解析发生项在其偏序事件集中向下闭合，与每个选择状态一致，并且不出现在剩余工作流中。
+Call position and monitor-entry identifiers are unique, while call positions mapped to the same action ID agree on the call authorization service, scope, normalized request, digest, and lineage.
+% 调用位置标识和监控器入口标识是唯一的，而映射到同一动作标识的调用位置在调用授权服务、作用域、规范化请求、摘要和谱系上保持一致。
+Resolved call positions are downward closed in their pomset, consistent with every choice status, and absent from the remaining workflow.
+% 已解析调用位置在其偏序事件集中向下闭合，与每个选择状态一致，并且不出现在剩余工作流中。
 \item \emph{Current workflow.}
 % \emph{当前工作流。}
-\(\operatorname{dom}(\beta)=X_{\sem T}\), and every current occurrence \(x\) has exactly one authenticated binding \(\beta(x)=(j_x,\eta)\) to the domain's single current monitor version.
-% \(\operatorname{dom}(\beta)=X_{\sem T}\)，且每个当前发生项 \(x\) 都恰有一个经认证的绑定 \(\beta(x)=(j_x,\eta)\)，指向该域唯一的当前监控器版本。
+\(\operatorname{dom}(\beta)=X_{\sem T}\), and every current call position \(x\) has exactly one authenticated binding \(\beta(x)=(j_x,\eta)\) to the domain's single current monitor version.
+% \(\operatorname{dom}(\beta)=X_{\sem T}\)，且每个当前调用位置 \(x\) 都恰有一个经认证的绑定 \(\beta(x)=(j_x,\eta)\)，指向该域唯一的当前监控器版本。
 Every current leaf \(b{:}\mathcal C\) is exactly the indexed residual of its immutable registered base \(\Gamma_b\) by the raw projection of its resolved cursor \(\chi_b\), rather than a caller-pruned subfamily.
 % 每个当前叶节点 \(b{:}\mathcal C\) 恰好是其不可变已注册基础 \(\Gamma_b\) 按已解析游标 \(\chi_b\) 的原始投影所得的带索引残余，而不是由调用方裁剪的子族。
 Every constructor in \(T\) is defined, so every subtree interpretation is completion-observable.
@@ -253,10 +251,10 @@ Every constructor in \(T\) is defined, so every subtree interpretation is comple
 % \emph{模式与域。}
 Every edge and introduced contract is justified by one immutable schema at version \(\zeta\).
 % 每条边和每个引入的契约都由版本 \(\zeta\) 的一个不可变模式提供依据。
-Every current, checkpoint, or schema occurrence, effect identity, monitor entry, lineage, and scope belongs to \(\omega\).
-% 当前状态、检查点或模式中的每个发生项、效果标识、监控器入口、谱系和作用域都属于 \(\omega\)。
-Effect identities, authorization logs, and policies of distinct domains are disjoint, and an edit never crosses a domain.
-% 不同域的效果标识、授权日志和策略互不相交，并且编辑绝不跨域。
+Every current, checkpoint, or schema call position, action ID, monitor entry, lineage, and scope belongs to \(\omega\).
+% 当前状态、检查点或模式中的每个调用位置、动作标识、监控器入口、谱系和作用域都属于 \(\omega\)。
+Action IDs, authorization logs, and policies of distinct domains are disjoint, and an edit never crosses a domain.
+% 不同域的动作标识、授权日志和策略互不相交，并且编辑绝不跨域。
 \end{enumerate}
 The trusted installation service additionally requires that the policy domain's one current monitor version is active.
 % 可信安装服务还要求策略域唯一的当前监控器版本处于活动状态。
@@ -271,8 +269,8 @@ Authorization records can only be appended.
 % 授权记录只能追加。
 Settlement advances an authorization record's status and fills its return record with a stable return value.
 % 结算会推进授权记录的状态，并用稳定返回值填充其返回记录。
-Each authorization record binds its effect identity, immutable normalized tool request, creator occurrence, and permission label.
-% 每条授权记录都绑定其效果标识、不可变规范化工具请求、创建者发生项和权限标签。
+Each authorization record binds its action ID, immutable normalized tool request, creator call position, and permission label.
+% 每条授权记录都绑定其动作标识、不可变规范化工具请求、创建者调用位置和权限标签。
 Each entry in \(\chi\) points to the authorization record created by its \Fresh event or, for \Alias, to an earlier authorization record, making retry and \Alias return lookup functions of \((\chi,\Delta)\).
 % \(\chi\) 中的每个条目都指向其 \Fresh 事件创建的授权记录；若为 \Alias，则指向更早的授权记录，从而使重试和 \Alias 结果查找成为 \((\chi,\Delta)\) 的函数。
 \(\mathsf{lab}(\Delta)\) is the permission trace: the ordered labels of calls that create authorization records.
@@ -280,8 +278,8 @@ Each entry in \(\chi\) points to the authorization record created by its \Fresh 
 Restore may reconstruct workspace payload but never restores \(\Delta\).
 % Restore 可以重建工作区载荷，但绝不会恢复 \(\Delta\)。
 
-A security core \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) is \emph{well formed} when \(H\) is well formed, \(\mathsf{lab}(\Delta)\in\mathcal A\), each effect identity has at most one authorization record created by \Fresh, each \Fresh entry names that record, each \Alias entry names an earlier authorization record, the authorization log, dispatch queue, and policy are scoped to \(\omega\), and the queue preserves \Fresh order.
-% 当 \(H\) 良构、\(\mathsf{lab}(\Delta)\in\mathcal A\)、每个效果标识至多有一条由 \Fresh 创建的授权记录、每个 \Fresh 条目指明该记录、每个 \Alias 条目指明一条更早的授权记录、授权日志、派发队列和策略均限定于 \(\omega\)，且该队列保持 \Fresh 次序时，安全核心 \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) 是\emph{良构的}。
+A security core \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) is \emph{well formed} when \(H\) is well formed, \(\mathsf{lab}(\Delta)\in\mathcal A\), each action ID has at most one authorization record created by \Fresh, each \Fresh entry names that record, each \Alias entry names an earlier authorization record, the authorization log, dispatch queue, and policy are scoped to \(\omega\), and the queue preserves \Fresh order.
+% 当 \(H\) 良构、\(\mathsf{lab}(\Delta)\in\mathcal A\)、每个动作标识至多有一条由 \Fresh 创建的授权记录、每个 \Fresh 条目指明该记录、每个 \Alias 条目指明一条更早的授权记录、授权日志、派发队列和策略均限定于 \(\omega\)，且该队列保持 \Fresh 次序时，安全核心 \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) 是\emph{良构的}。
 This joint invariant is assumed below.
 % 下文假定这一联合不变量成立。
 
@@ -290,10 +288,10 @@ This joint invariant is assumed below.
 
 The adversary controls Agent output, edit requests, tool arguments, copied workspace, retries, stale authorization tokens, and scheduling, including races between calls and edits.
 % 对手控制 Agent 输出、编辑请求、工具参数、复制的工作区、重试、过期授权令牌和调度，包括调用与编辑之间的竞态。
-It cannot forge registries, the checkpoint directed acyclic graph (DAG), effect-identity certificates, policy, or authorization log.
-% 它无法伪造注册表、检查点有向无环图（DAG）、效果标识证书、策略或授权日志。
-The policy authority signs policies, outcome requirements, and authorized removals; the call authorization service registers protected calls, effect identities, and authorization tokens.
-% 策略权限方签署策略、结果要求和获授权移除；调用授权服务注册受控调用、效果标识和授权令牌。
+It cannot forge registries, the checkpoint directed acyclic graph (DAG), action-ID certificates, policy, or authorization log.
+% 它无法伪造注册表、检查点有向无环图（DAG）、动作标识证书、策略或授权日志。
+The policy authority signs policies, outcome requirements, and authorized removals; the call authorization service registers protected calls, action IDs, and authorization tokens.
+% 策略权限方签署策略、结果要求和获授权移除；调用授权服务注册受控调用、动作标识和授权令牌。
 The trusted controller derives and checks each edit, while the trusted installation service re-verifies the answer and atomically replaces the monitor.
 % 可信控制器推导并检查每次编辑，而可信安装服务重新验证答案并原子替换监控器。
 These roles, the authenticated registries and authorization log, certificate verifier, atomic rules, and complete mediation form the trusted computing base (TCB).
@@ -306,8 +304,8 @@ Recovered states expose every transaction as entirely uncommitted or committed, 
 % 恢复状态把每项事务呈现为完整未提交或完整已提交，而编译器缓存为易失状态。
 Before the checker takes a source snapshot, the call authorization service may instantiate finitely many pre-authorized schema templates.
 % 在检查器获取源状态快照之前，调用授权服务可以实例化有限个预授权模式模板。
-For tool request \(m\), it computes normalized request \(m^\circ=\mathsf{canon}_\kappa(m)\), reuses only an effect identity certified for \(m^\circ\) or allocates a fresh one, and signs \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{lineage})\) into the authenticated registry.
-% 对于工具请求 \(m\)，它计算规范化请求 \(m^\circ=\mathsf{canon}_\kappa(m)\)，只复用已认证用于 \(m^\circ\) 的效果标识或分配新标识，并把 \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{lineage})\) 签入认证注册表。
+For tool request \(m\), it computes normalized request \(m^\circ=\mathsf{canon}_\kappa(m)\), reuses only an action ID certified for \(m^\circ\) or allocates a fresh one, and signs \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{lineage})\) into the authenticated registry.
+% 对于工具请求 \(m\)，它计算规范化请求 \(m^\circ=\mathsf{canon}_\kappa(m)\)，只复用已认证用于 \(m^\circ\) 的动作标识或分配新标识，并把 \((x,j,d,\mathsf{scope},\mathsf{digest}(m^\circ),\mathsf{lineage})\) 签入认证注册表。
 The resulting finite registered call model \(R\) remains unchanged while that snapshot is checked.
 % 由此得到的有限已注册调用模型 \(R\) 在检查该状态快照期间保持不变。
 Unmatched calls fail closed.
@@ -321,10 +319,10 @@ The Agent may supply or weaken none of these derived objects.
 
 A boundary-finite typed Agent workflow has only finitely many distinct protected-call traces that reach an outcome.
 % 边界有限的类型化 Agent 工作流只有有限多条能够到达结果的不同受控调用轨迹。
-\(\mathsf{CheckReg}\) accepts a finite registered call model only when it faithfully represents the outcomes, call order, effect identities, and first-time authorization records of that workflow.
-% 仅当有限的已注册调用模型忠实表示该工作流的结果、调用次序、效果标识与首次授权记录时，\(\mathsf{CheckReg}\) 才会接受它。
-The model stores these traces as outcome-indexed runs \(\mathsf{BRuns}(R)\) and a map \(\lambda\) from source traces; write \(\mathcal W\sqsubseteq_\lambda R\) when \(\lambda\) is a bijection preserving outcomes, the mapping from call positions to effect identities, order, outcome authority, and authorization-log updates.
-% 该模型把这些轨迹存为带结果索引的执行 \(\mathsf{BRuns}(R)\)，并存储从源轨迹出发的映射 \(\lambda\)；当 \(\lambda\) 是保持结果、调用位置到效果标识的映射、次序、结果权限和授权日志更新的双射时，记作 \(\mathcal W\sqsubseteq_\lambda R\)。
+\(\mathsf{CheckReg}\) accepts a finite registered call model only when it faithfully represents the outcomes, call order, action IDs, and first-time authorization records of that workflow.
+% 仅当有限的已注册调用模型忠实表示该工作流的结果、调用次序、动作标识与首次授权记录时，\(\mathsf{CheckReg}\) 才会接受它。
+The model stores these traces as outcome-indexed runs \(\mathsf{BRuns}(R)\) and a map \(\lambda\) from source traces; write \(\mathcal W\sqsubseteq_\lambda R\) when \(\lambda\) is a bijection preserving outcomes, the mapping from call positions to action IDs, order, outcome authority, and authorization-log updates.
+% 该模型把这些轨迹存为带结果索引的执行 \(\mathsf{BRuns}(R)\)，并存储从源轨迹出发的映射 \(\lambda\)；当 \(\lambda\) 是保持结果、调用位置到动作标识的映射、次序、结果权限和授权日志更新的双射时，记作 \(\mathcal W\sqsubseteq_\lambda R\)。
 \Cref{def:registration-refinement,lem:registration-reflection} give the exact finite check and proof.
 % \Cref{def:registration-refinement,lem:registration-reflection} 给出精确的有限检查与证明。
 Registered contracts enter through \(\mathsf{CheckReg}\), and remote exactly-once effects enter through authenticated receipts from an idempotent or queryable sink.
@@ -356,8 +354,8 @@ The last requirement rules out the prefix-unsafe example in \cref{sec:lifecycle}
 
 The checker first derives the only admissible target workflow from the authenticated source and the requested edit.
 % 检查器首先从认证源状态与所请求编辑中推导唯一可接受的目标工作流。
-It then resolves call occurrences against existing authorization records and removes precisely those complete executions that violate the security objective after some prefix.
-% 随后，它根据已有授权记录解析调用发生项，并精确移除那些在某个前缀之后违反安全目标的完整执行。
+It then resolves call call positions against existing authorization records and removes precisely those complete executions that violate the security objective after some prefix.
+% 随后，它根据已有授权记录解析调用调用位置，并精确移除那些在某个前缀之后违反安全目标的完整执行。
 
 \subsection{Edit Derivation and Outcome Preservation}
 % 编辑推导与结果保留
@@ -375,8 +373,8 @@ An untrusted request \(u\) supplies an edit kind, current object identifiers, an
 
 The edit certificate defined below makes the derivation checkable.
 % 下文定义的编辑证书使该推导成为可检查的性质。
-For indexed source \(\mathcal C\), schema-designated carried or cloned target region \(\mathcal D\), and parent map \(\mu:X_{\mathcal D}\to X_{\mathcal C}\), write \(\mathcal C\preccurlyeq_\mu\mathcal D\) exactly when \(\mu\) is a global bijection, some surjection \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\) satisfies the conditions below for every target outcome \(v\), and \(\mu\) preserves effect identity and lineage.
-% 对于带索引的源 \(\mathcal C\)、由模式指定的携带或克隆目标区域 \(\mathcal D\) 以及父映射 \(\mu:X_{\mathcal D}\to X_{\mathcal C}\)，当且仅当 \(\mu\) 是全局双射、存在满射 \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\) 使下列条件对每个目标结果 \(v\) 成立，且 \(\mu\) 保持效果标识和谱系时，记作 \(\mathcal C\preccurlyeq_\mu\mathcal D\)。
+For indexed source \(\mathcal C\), schema-designated carried or cloned target region \(\mathcal D\), and parent map \(\mu:X_{\mathcal D}\to X_{\mathcal C}\), write \(\mathcal C\preccurlyeq_\mu\mathcal D\) exactly when \(\mu\) is a global bijection, some surjection \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\) satisfies the conditions below for every target outcome \(v\), and \(\mu\) preserves action ID and lineage.
+% 对于带索引的源 \(\mathcal C\)、由模式指定的携带或克隆目标区域 \(\mathcal D\) 以及父映射 \(\mu:X_{\mathcal D}\to X_{\mathcal C}\)，当且仅当 \(\mu\) 是全局双射、存在满射 \(\pi:O_{\mathcal D}\twoheadrightarrow O_{\mathcal C}\) 使下列条件对每个目标结果 \(v\) 成立，且 \(\mu\) 保持动作标识和谱系时，记作 \(\mathcal C\preccurlyeq_\mu\mathcal D\)。
 \[
 \begin{aligned}
  x\in X_{p_v}
@@ -385,17 +383,17 @@ For indexed source \(\mathcal C\), schema-designated carried or cloned target re
    &\Longleftrightarrow \mu(x)\prec_{\pi(v)}\mu(y).
 \end{aligned}
 \]
-Global bijection and occurrence--outcome membership equivalence prevent splitting a source occurrence shared across outcomes into outcome-specific target occurrences.
-% 全局双射和发生项--结果成员关系等价防止将跨结果共享的源发生项拆分为特定于结果的目标发生项。
+Global bijection and call position--outcome membership equivalence prevent splitting a source call position shared across outcomes into outcome-specific target call positions.
+% 全局双射和调用位置--结果成员关系等价防止将跨结果共享的源调用位置拆分为特定于结果的目标调用位置。
 
 For candidate \(T'\), let \(R_u\) index the disjoint carried or cloned target regions inside the replaced subtree.
 % 对候选 \(T'\)，令 \(R_u\) 索引被替换子树中互不相交的携带或克隆目标区域。
 An edit certificate \(\mathcal P_u=\{(\mathcal C_r,\mathcal D_r,\mu_r,\pi_r)\}_{r\in R_u}\) contains the relation for each indexed region.
 % 编辑证书 \(\mathcal P_u=\{(\mathcal C_r,\mathcal D_r,\mu_r,\pi_r)\}_{r\in R_u}\) 包含每个带索引区域的关系。
-A separate identity map checks that the exposed one-hole context preserves syntax, outcome indices, occurrences, effect identities, lineage, and order.
-% 另一个恒等映射检查已暴露单孔上下文是否保持语法、结果索引、发生项、效果标识、谱系和次序。
-Writing \(X_{\rm ctx}\) for its occurrences and \(X_{\rm suf(u)}\) for schema-declared suffix occurrences, the checker verifies the following disjoint cover.
-% 将其发生项记为 \(X_{\rm ctx}\)，将模式声明后缀中的发生项记为 \(X_{\rm suf(u)}\)，检查器验证下列不交覆盖。
+A separate identity map checks that the exposed one-hole context preserves syntax, outcome indices, call positions, action IDs, lineage, and order.
+% 另一个恒等映射检查已暴露单孔上下文是否保持语法、结果索引、调用位置、动作标识、谱系和次序。
+Writing \(X_{\rm ctx}\) for its call positions and \(X_{\rm suf(u)}\) for schema-declared suffix call positions, the checker verifies the following disjoint cover.
+% 将其调用位置记为 \(X_{\rm ctx}\)，将模式声明后缀中的调用位置记为 \(X_{\rm suf(u)}\)，检查器验证下列不交覆盖。
 \[
  X_{\sem{T'}}=X_{\rm ctx}\uplus
    \biguplus_{r\in R_u}X_{\mathcal D_r}\uplus X_{\rm suf(u)} .
@@ -429,8 +427,8 @@ Define the single required-outcome set and its bypass lift by
 \end{equation}
 For regional \(a=(r,o)\in\mathsf{RegionReq}_u\), \(\mathsf{Lift}_u(t,a)\) denotes the relation above.
 % 对区域元素 \(a=(r,o)\in\mathsf{RegionReq}_u\)，\(\mathsf{Lift}_u(t,a)\) 表示上述关系。
-The checker also requires \(\forall a\in\mathsf{Req}_u.\ \exists t\in O_{\sem{T'}}.\ \mathsf{Lift}_u(t,a)\), ensuring a full-target lift for every required source outcome, no outcome-specific splitting of shared occurrences, and no inherited occurrence mislabeled as a suffix.
-% 检查器还要求 \(\forall a\in\mathsf{Req}_u.\ \exists t\in O_{\sem{T'}}.\ \mathsf{Lift}_u(t,a)\)，从而保证每个要求实现的源结果都有完整目标提升、共享发生项不会按结果拆分，且继承发生项不会被误标为后缀。
+The checker also requires \(\forall a\in\mathsf{Req}_u.\ \exists t\in O_{\sem{T'}}.\ \mathsf{Lift}_u(t,a)\), ensuring a full-target lift for every required source outcome, no outcome-specific splitting of shared call positions, and no inherited call position mislabeled as a suffix.
+% 检查器还要求 \(\forall a\in\mathsf{Req}_u.\ \exists t\in O_{\sem{T'}}.\ \mathsf{Lift}_u(t,a)\)，从而保证每个要求实现的源结果都有完整目标提升、共享调用位置不会按结果拆分，且继承调用位置不会被误标为后缀。
 
 The schema-verification phase checks the following judgment.
 % 模式验证阶段检查以下判定。
@@ -468,15 +466,15 @@ and hence the exact disjoint partition
 \]
 Thus the Agent cannot make an edit pass by quietly dropping an inconvenient outcome.
 % 因此，Agent 无法通过悄悄删除一个不方便的结果来使编辑通过检查。
-Checked lifts preserve effect identity, lineage, and order, while installation retains recorded evidence for every already-satisfied source outcome and the exact signed removal set.
-% 经检查的提升保持效果标识、谱系与次序，而安装会保留每个已满足源结果的记录证据以及精确的已签名移除集合。
+Checked lifts preserve action ID, lineage, and order, while installation retains recorded evidence for every already-satisfied source outcome and the exact signed removal set.
+% 经检查的提升保持动作标识、谱系与次序，而安装会保留每个已满足源结果的记录证据以及精确的已签名移除集合。
 
 Let \(\mathcal E[-]\) be a one-hole \emph{exposed} active-workflow context, so its hole has the addressability property above.
 % 令 \(\mathcal E[-]\) 为单孔的\emph{已暴露}当前工作流上下文，因此其孔具有上述可寻址性质。
-\(\mathsf{carry}\) preserves continuation, outcome, and occurrence identifiers, pomset order, effect identities, lineage authority, base contracts, current branch cursors, and nested choice status.
-% \(\mathsf{carry}\) 保留延续标识、结果标识、发生项标识、偏序事件集次序、效果标识、谱系权限、基础契约、当前分支游标和嵌套选择状态。
-\(\mathsf{clone}_r\) gives continuation, outcome, and occurrence identifiers deterministic fresh names while preserving pomset order and authenticated effect identity, scope, digest, lineage, and lineage authority.
-% \(\mathsf{clone}_r\) 为延续标识、结果标识和发生项标识给出确定性的新名称，同时保持偏序事件集次序以及认证效果标识、作用域、摘要、谱系和谱系权限。
+\(\mathsf{carry}\) preserves continuation, outcome, and call position identifiers, pomset order, action IDs, lineage authority, base contracts, current branch cursors, and nested choice status.
+% \(\mathsf{carry}\) 保留延续标识、结果标识、调用位置标识、偏序事件集次序、动作标识、谱系权限、基础契约、当前分支游标和嵌套选择状态。
+\(\mathsf{clone}_r\) gives continuation, outcome, and call position identifiers deterministic fresh names while preserving pomset order and authenticated action ID, scope, digest, lineage, and lineage authority.
+% \(\mathsf{clone}_r\) 为延续标识、结果标识和调用位置标识给出确定性的新名称，同时保持偏序事件集次序以及认证动作标识、作用域、摘要、谱系和谱系权限。
 It registers each copied remainder as a new base contract with an empty cursor.
 % 它将每个复制的剩余部分注册为具有空游标的新基础契约。
 Schema suffix leaves likewise start with their registered base contract and an empty cursor.
@@ -551,8 +549,8 @@ other arm removed\\
 \end{tabular}
 \end{table*}
 
-In an open choice, the first \Fresh or \Alias atomically selects its arm and disables later occurrences from the other, so \(\mathsf{MergeSelect}(g,w,\sigma)\) has no derivation after any recorded progress on the unselected arm, including progress that creates no authorization record.
-% 在开放选择中，第一个 \Fresh 或 \Alias 会原子选择其分支并禁用另一分支的后续发生项，因此未被选择的分支取得任何已记录进展后，\(\mathsf{MergeSelect}(g,w,\sigma)\) 都没有可用推导，包括未创建授权记录的进展。
+In an open choice, the first \Fresh or \Alias atomically selects its arm and disables later call positions from the other, so \(\mathsf{MergeSelect}(g,w,\sigma)\) has no derivation after any recorded progress on the unselected arm, including progress that creates no authorization record.
+% 在开放选择中，第一个 \Fresh 或 \Alias 会原子选择其分支并禁用另一分支的后续调用位置，因此未被选择的分支取得任何已记录进展后，\(\mathsf{MergeSelect}(g,w,\sigma)\) 都没有可用推导，包括未创建授权记录的进展。
 \(\mathsf{MergeJoin}\) replaces the addressable \(\parallel_g\) node with \(\mathsf{jbar}\), removes \(g\) from the addressable workflow, and prevents the same pair from being joined again.
 % \(\mathsf{MergeJoin}\) 以 \(\mathsf{jbar}\) 替换可寻址的 \(\parallel_g\) 节点，将 \(g\) 从可寻址工作流中移除，并防止同一对分支再次合并。
 
@@ -565,8 +563,8 @@ The execution-edit judgment is the least relation generated by one row of \cref{
 % 执行编辑判定是如下最小关系：在良类型单孔上下文 \(\mathcal E\) 中应用 \cref{tab:history-rules} 的一行，再执行下述公共更新；不存在其他执行编辑推导。
 Let \(e_u\) contain its typed edge and exactly the newly allocated clone, suffix, and group nodes prescribed by \(T'\); carried node identities remain unchanged.
 % 令 \(e_u\) 包含其类型化边，以及恰由 \(T'\) 指定的新分配克隆节点、后缀节点和组节点；被携带节点的标识保持不变。
-For every current target occurrence \(x\), the trusted call authorization service deterministically mints \(j_x^+,h_x^+\), and \(\rho'\) preserves the certified effect identity, lineage, scope, digest, and records needed for \Retry while refreshing monitor entries and authorization tokens.
-% 对每个当前目标发生项 \(x\)，可信调用授权服务确定性地签发 \(j_x^+,h_x^+\)，而 \(\rho'\) 保留经认证的效果标识、谱系、作用域、摘要以及 \Retry 所需的记录，同时刷新监控器入口和授权令牌。
+For every current target call position \(x\), the trusted call authorization service deterministically mints \(j_x^+,h_x^+\), and \(\rho'\) preserves the certified action ID, lineage, scope, digest, and records needed for \Retry while refreshing monitor entries and authorization tokens.
+% 对每个当前目标调用位置 \(x\)，可信调用授权服务确定性地签发 \(j_x^+,h_x^+\)，而 \(\rho'\) 保留经认证的动作标识、谱系、作用域、摘要以及 \Retry 所需的记录，同时刷新监控器入口和授权令牌。
 Define
 % 定义
 \[
@@ -610,17 +608,17 @@ If it derives \(H'\), then \(H'\) is well formed.
 % 如果它推导出 \(H'\)，则 \(H'\) 是良构的。
 It preserves required outcomes and their authority rows: evidence for already-satisfied outcomes remains recorded, and no pending source lineage disappears outside \(\mathsf{Removed}_{H,u}\).
 % 它保留要求实现的结果及其权限记录：已满足结果的证据保持记录，且任何待处理源谱系都不会在 \(\mathsf{Removed}_{H,u}\) 之外消失。
-The identity-preserved context and family \(\mathcal P_u\) preserve global occurrence sharing, effect identity, lineage, lineage authority, and causal order.
-% 由恒等映射保持的上下文和族 \(\mathcal P_u\) 会保持全局发生项共享、效果标识、谱系、谱系权限和因果次序。
+The identity-preserved context and family \(\mathcal P_u\) preserve global call position sharing, action ID, lineage, lineage authority, and causal order.
+% 由恒等映射保持的上下文和族 \(\mathcal P_u\) 会保持全局调用位置共享、动作标识、谱系、谱系权限和因果次序。
 For every \(a\in\mathsf{Req}_u\), some full target outcome \(t\) satisfies \(\mathsf{Lift}_u(t,a)\), including the identity lift of every bypassing context outcome.
 % 对每个 \(a\in\mathsf{Req}_u\)，都存在某个完整目标结果 \(t\) 满足 \(\mathsf{Lift}_u(t,a)\)，其中包括每个绕过上下文结果的恒等提升。
-Every current target occurrence has a monitor entry bound to \(\eta^+\) and one authorization token in \(\mathcal H_u^+\), and none remains bound to \(\eta^-\).
-% 每个当前目标发生项都有一个绑定到 \(\eta^+\) 的监控器入口和 \(\mathcal H_u^+\) 中的一个授权令牌，并且没有任何发生项仍绑定到 \(\eta^-\)。
+Every current target call position has a monitor entry bound to \(\eta^+\) and one authorization token in \(\mathcal H_u^+\), and none remains bound to \(\eta^-\).
+% 每个当前目标调用位置都有一个绑定到 \(\eta^+\) 的监控器入口和 \(\mathcal H_u^+\) 中的一个授权令牌，并且没有任何调用位置仍绑定到 \(\eta^-\)。
 \end{lemma}
 \begin{proof}[Proof sketch]
 % 证明概要。
-The six row cases use certified clone/carry bijections and context identity to preserve sharing, effect identity, lineage, and order and to construct every \(\mathsf{Lift}_u\) witness.
-% 六条规则使用经认证的克隆/携带双射与上下文恒等关系，保持共享、效果标识、谱系与次序，并构造每个 \(\mathsf{Lift}_u\) 见证。
-The common poststate establishes well-formedness and binds every current target occurrence to \(\eta^+\); \cref{app:schema-fidelity-proof} gives the full argument.
-% 公共后状态建立良构性，并将每个当前目标发生项绑定到 \(\eta^+\)；完整论证见 \cref{app:schema-fidelity-proof}。
+The six row cases use certified clone/carry bijections and context identity to preserve sharing, action ID, lineage, and order and to construct every \(\mathsf{Lift}_u\) witness.
+% 六条规则使用经认证的克隆/携带双射与上下文恒等关系，保持共享、动作标识、谱系与次序，并构造每个 \(\mathsf{Lift}_u\) 见证。
+The common poststate establishes well-formedness and binds every current target call position to \(\eta^+\); \cref{app:schema-fidelity-proof} gives the full argument.
+% 公共后状态建立良构性，并将每个当前目标调用位置绑定到 \(\eta^+\)；完整论证见 \cref{app:schema-fidelity-proof}。
 \end{proof}

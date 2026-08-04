@@ -1,7 +1,7 @@
 Recall the permission-label alphabet \(\mathcal U\) and regular prefix-closed policy \(\mathcal A\subseteq\mathcal U^*\).
 % 回顾权限标签字母表 \(\mathcal U\) 和正则前缀闭合策略 \(\mathcal A\subseteq\mathcal U^*\)。
-For the authenticated authorization log \(\Delta\), \(\mathsf{lab}(\Delta)\in\mathcal A\) is its permission trace and \(D_\Delta\) is the set of effect identities that already have authorization records.
-% 对于经认证授权日志 \(\Delta\)，\(\mathsf{lab}(\Delta)\in\mathcal A\) 是其权限轨迹，\(D_\Delta\) 是已经具有授权记录的效果标识集合。
+For the authenticated authorization log \(\Delta\), \(\mathsf{lab}(\Delta)\in\mathcal A\) is its permission trace and \(D_\Delta\) is the set of action IDs that already have authorization records.
+% 对于经认证授权日志 \(\Delta\)，\(\mathsf{lab}(\Delta)\in\mathcal A\) 是其权限轨迹，\(D_\Delta\) 是已经具有授权记录的动作标识集合。
 Fix \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\) and write \(\mathsf{src}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\).
 % 固定 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并记 \(\mathsf{src}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\)。
 When defined, the tagged root, execution-edit, or registered-extension derivation is unique.
@@ -26,8 +26,8 @@ We write only \(H,u\) where the remaining parameters are fixed.
 \subsection{\Fresh and \Alias resolution}
 % \Fresh 与 \Alias 解析
 
-Resolution never erases an occurrence retained by the derived contract.
-% 解析绝不会擦除派生契约所保留的发生项。
+Resolution never erases an call position retained by the derived contract.
+% 解析绝不会擦除派生契约所保留的调用位置。
 Starting with \(D_0=D_\Delta\), the deterministic transducer \(\Resolve^{\rho_u}_\Delta\) maps a raw word \(w=x_1\cdots x_n\) to a resolved word \(z_1\cdots z_n\).
 % 从 \(D_0=D_\Delta\) 开始，确定性转换器 \(\Resolve^{\rho_u}_\Delta\) 将原始词 \(w=x_1\cdots x_n\) 映射为已解析词 \(z_1\cdots z_n\)。
 For \(d_i=q^{\rho_u}_{\rm eff}(x_i)\),
@@ -42,34 +42,34 @@ For \(d_i=q^{\rho_u}_{\rm eff}(x_i)\),
        \quad D_i=D_{i-1}.
  \end{cases}
 \end{equation}
-The permission projection erases \Alias symbols and maps each \Fresh symbol to its effect identity's permission label.
-% 权限投影会擦除 \Alias 符号，并将每个 \Fresh 符号映射到其效果标识的权限标签。
+The permission projection erases \Alias symbols and maps each \Fresh symbol to its action ID's permission label.
+% 权限投影会擦除 \Alias 符号，并将每个 \Fresh 符号映射到其动作标识的权限标签。
 \[
  \mathsf{auth}(\Fresh(x,d))=\ell_{\rho_u}(d),\qquad
  \mathsf{auth}(\Alias(x,d))=\epsilon .
 \]
-For resolved \(z\), \(\mathsf{raw}(z)\) drops the \Fresh/\Alias mode and effect identity but preserves the ordered occurrence identifiers.
-% 对于已解析的 \(z\)，\(\mathsf{raw}(z)\) 会去除 \Fresh/\Alias 模式和效果标识，但保留有序发生项标识符。
-A \Retry repeats the same normalized request and adds no occurrence.
-% \Retry 重复同一个规范化请求，不增加任何发生项。
-Restored occurrences sharing an effect identity remain distinct and may resolve differently.
-% 共享同一效果标识的恢复发生项仍彼此有别，并且可能得到不同的解析结果。
+For resolved \(z\), \(\mathsf{raw}(z)\) drops the \Fresh/\Alias mode and action ID but preserves the ordered call position identifiers.
+% 对于已解析的 \(z\)，\(\mathsf{raw}(z)\) 会去除 \Fresh/\Alias 模式和动作标识，但保留有序调用位置标识符。
+A \Retry repeats the same normalized request and adds no call position.
+% \Retry 重复同一个规范化请求，不增加任何调用位置。
+Restored call positions sharing an action ID remain distinct and may resolve differently.
+% 共享同一动作标识的恢复调用位置仍彼此有别，并且可能得到不同的解析结果。
 
 \begin{lemma}[Resolution]
 % 解析
 \label{lem:resolution}
 \(\Resolve^{\rho_u}_\Delta\) is deterministic, length preserving, and prefix compatible.
 % \(\Resolve^{\rho_u}_\Delta\) 是确定性的、保持长度的，并且与前缀兼容。
-Its \Fresh projection contains each effect identity at most once outside \(D_\Delta\), while its occurrence projection is exactly the input word.
-% 在 \(D_\Delta\) 之外，其 \Fresh 投影至多包含每个效果标识一次，而其发生项投影恰好就是输入词。
+Its \Fresh projection contains each action ID at most once outside \(D_\Delta\), while its call position projection is exactly the input word.
+% 在 \(D_\Delta\) 之外，其 \Fresh 投影至多包含每个动作标识一次，而其调用位置投影恰好就是输入词。
 Moreover, if \(\Resolve^{\rho_u}_\Delta(rv)=zv'\), then \(z=\Resolve^{\rho_u}_\Delta(r)\) and \(v'=\Resolve^{\rho_u}_{\Delta_z}(v)\), where \(\Delta_z\) extends \(\Delta\) by the \Fresh events of \(z\).
 % 此外，若 \(\Resolve^{\rho_u}_\Delta(rv)=zv'\)，则 \(z=\Resolve^{\rho_u}_\Delta(r)\) 且 \(v'=\Resolve^{\rho_u}_{\Delta_z}(v)\)，其中 \(\Delta_z\) 通过加入 \(z\) 的 \Fresh 事件来扩展 \(\Delta\)。
 \end{lemma}
 \begin{proof}
 Induction on input length shows that the transducer emits one prefix-determined output symbol per input symbol and updates \(D_i\) only for \Fresh.
 % 对输入长度作归纳表明，该转换器为每个输入符号发出一个由前缀决定的输出符号，并且仅在 \Fresh 时更新 \(D_i\)。
-Set membership ensures one \Fresh emission per effect identity.
-% 集合成员关系确保每个效果标识仅产生一次 \Fresh。
+Set membership ensures one \Fresh emission per action ID.
+% 集合成员关系确保每个动作标识仅产生一次 \Fresh。
 Both cases retain \(x_i\).
 % 两种情形都会保留 \(x_i\)。
 Splitting after \(r\) gives the streaming equation.
@@ -77,8 +77,8 @@ Splitting after \(r\) gives the streaming equation.
 \end{proof}
 Thus a retry changes neither the resolved call record nor the permission trace, although its successful API reply is observable as \(\mathsf{Return}(t,[v]_{\cong})\).
 % 因而，重试既不改变已解析调用记录，也不改变权限轨迹，但其成功 API 回复仍可观测为 \(\mathsf{Return}(t,[v]_{\cong})\)。
-A copied occurrence that resolves as \Alias advances the call record without changing the permission trace.
-% 解析为 \Alias 的复制发生项会推进调用记录，但不会改变权限轨迹。
+A copied call position that resolves as \Alias advances the call record without changing the permission trace.
+% 解析为 \Alias 的复制调用位置会推进调用记录，但不会改变权限轨迹。
 
 \subsection{Safe Completion After Every Prefix}
 % 每个前缀之后的安全完成
@@ -264,8 +264,8 @@ For strictness, the preceding instance has the marker-nonblocking projected pair
 
 \Cref{prop:outcome-necessary} gives the exact interface to generalized nonblocking~\cite{dequeiroz2005multitasking,malik2008generalised}.
 % \Cref{prop:outcome-necessary} 给出与广义非阻塞之间的精确接口~\cite{dequeiroz2005multitasking,malik2008generalised}。
-After the trusted controller derives \(\alpha_o,\omega_o\) from the requested edit, authorized removals, effect identities, authorization records, and source snapshot, a generalized-nonblocking solver computes the same largest family.
-% 在可信控制器根据请求的编辑、获授权移除、效果标识、授权记录和源状态快照推导出 \(\alpha_o,\omega_o\) 之后，广义非阻塞求解器会计算同一个最大执行族。
+After the trusted controller derives \(\alpha_o,\omega_o\) from the requested edit, authorized removals, action IDs, authorization records, and source snapshot, a generalized-nonblocking solver computes the same largest family.
+% 在可信控制器根据请求的编辑、获授权移除、动作标识、授权记录和源状态快照推导出 \(\alpha_o,\omega_o\) 之后，广义非阻塞求解器会计算同一个最大执行族。
 Complete mediation makes \Fresh/\Alias controllable.
 % 完全中介使 \Fresh/\Alias 可控。
 Uncontrollable resolved events compose this construction with the standard supremal-controllable refinement.

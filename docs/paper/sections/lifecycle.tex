@@ -2,8 +2,8 @@
 % 执行编辑安全
 \label{sec:lifecycle}
 
-Consider an Agent operating an approval workflow with one authorized order.
-% 考虑一个运行审批工作流且只获授权下单一次的 Agent。
+Consider an Agent operating an approval workflow that authorizes at most one order.
+% 考虑一个运行审批工作流且至多获授权下单一次的 Agent。
 The Agent reserves the budget and saves checkpoint \(k\) before approval.
 % Agent 预留预算，并在审批前保存检查点 \(k\)。
 The approval is then authorized once, creating an authorization record that Restore does not delete.
@@ -21,23 +21,23 @@ In either outcome, payment authorization must precede shipment authorization:
  o_R&:\ x_R^p\prec x_R^s ,
 \end{split}
 \end{equation}
-where \(x_i^p\) and \(x_i^s\) are payment and shipment occurrences.
-% 其中，\(x_i^p\) 和 \(x_i^s\) 分别是付款发生项和发货发生项。
-An occurrence identifies one call position in the workflow.
-% 发生项标识工作流中的一个调用位置。
-An effect identity \(d\) identifies the protected action and one-use permission behind that position.
-% 效果标识 \(d\) 指明该位置背后的受控动作和一次性权限。
+where \(x_i^p\) and \(x_i^s\) are payment and shipment call positions.
+% 其中，\(x_i^p\) 和 \(x_i^s\) 分别是付款调用位置和发货调用位置。
+Each \(x\) identifies one call position in the workflow.
+% 每个 \(x\) 标识工作流中的一个调用位置。
+An action ID \(d\) identifies the protected action and one-use permission behind that position.
+% 动作标识 \(d\) 指明该位置背后的受控动作和一次性权限。
 
-The two shipment calls share one effect identity:
-% 两个发货调用共享一个效果标识：
+The two shipment calls share one action ID:
+% 两个发货调用共享一个动作标识：
 \[
- q_{\rm eff}(x_L^s)=q_{\rm eff}(x_R^s)=d_s.
+ q_{\rm act}(x_L^s)=q_{\rm act}(x_R^s)=d_s.
 \]
-The two payment calls instead have different effect identities \(d_L^p\) and \(d_R^p\).
-% 两个付款调用则具有不同的效果标识 \(d_L^p\) 和 \(d_R^p\)。
+The two payment calls instead have different action IDs \(d_L^p\) and \(d_R^p\).
+% 两个付款调用则具有不同的动作标识 \(d_L^p\) 和 \(d_R^p\)。
 
-The authorization log \(\Delta\) records newly authorized effects in order.
-% 授权日志 \(\Delta\) 按顺序记录新获得授权的效果。
+The authorization log \(\Delta\) records newly authorized actions in order.
+% 授权日志 \(\Delta\) 按顺序记录新获得授权的动作。
 The notation \(\mathsf{lab}(\Delta)\) keeps only their permission labels.
 % 记号 \(\mathsf{lab}(\Delta)\) 只保留这些效果的权限标签。
 Budget reservation contributes \(r\), approval contributes \(a\), the two payments contribute \(p_L\) and \(p_R\), and shipment contributes \(s\).
@@ -51,15 +51,15 @@ Although the supplier outcomes are exclusive, both must still have a safe way to
 
 \subsection{Accepted and Rejected Forks}
 % 被接受与被拒绝的 Fork
-The Agent submits only \(u=\mathsf{ForkChoice}(b,\sigma)\).
-% Agent 只提交 \(u=\mathsf{ForkChoice}(b,\sigma)\)。
-The trusted controller, not the Agent, constructs the edited workflow from the registered edit schema.
-% 可信控制器而非 Agent 根据已注册编辑模式构造编辑后的工作流。
-From the authenticated workflow, execution record, authorization log, and policy, it derives the edited workflow, its required outcomes, and the effect identity behind every call position.
-% 控制器根据经认证的工作流、执行记录、授权日志与策略，推导编辑后的工作流、要求实现的结果以及每个调用位置背后的效果标识。
+The Agent sends \(u=\mathsf{ForkChoice}(b,\sigma)\), which names a current branch and a registered edit rule.
+% Agent 发送 \(u=\mathsf{ForkChoice}(b,\sigma)\)，其中指明一个当前分支和一条已注册编辑规则。
+The trusted controller constructs the edited workflow from the authenticated state.
+% 可信控制器根据认证状态构造编辑后的工作流。
+It also derives the outcomes that remain required and the action ID behind every call position.
+% 控制器还推导仍然要求实现的结果，以及每个调用位置背后的动作标识。
 
-Write \(M_o\) for the policy-safe completions of outcome \(o\).
-% 以 \(M_o\) 表示结果 \(o\) 的策略安全完成路径。
+Write \(M_o\) for the ways to complete outcome \(o\) while obeying the policy.
+% 以 \(M_o\) 表示遵守策略并完成结果 \(o\) 的方式。
 Each outcome has one allowed call order:
 % 每个结果都有一种允许的调用顺序：
 \[
@@ -141,7 +141,7 @@ The exact verdict is \emph{Reject}, even though an outcome-by-outcome check woul
     \draw[arr] (ba) -- (ms);
     \draw[arr] (ms) -- (bl);
     \draw[stale] (b0.north) -- (0.65,3.18) --
-      node[above] {checkpoint copy: new call, same effect identity}
+      node[above] {checkpoint copy: new call, same action ID}
       (8.35,3.18) -- (rl.north);
     \draw[arr] (rl) -- (cl);
     \draw[arr] (bl) -- (jn);
@@ -149,7 +149,7 @@ The exact verdict is \emph{Reject}, even though an outcome-by-outcome check woul
     \draw[stale] (bb) to[bend left=17]
       node[below] {other branch disabled} (ms);
 
-    \node[lab] at (0,0.65) {recorded calls and permission trace};
+    \node[lab] at (0,0.65) {recorded calls and authorization labels};
     \node[node] (r) at (0.65,0.65) {$r$};
     \node[node] (a) at (3.05,0.65) {$a$};
     \node[node] (pa) at (6.05,0.65) {$p_L$};
@@ -171,8 +171,8 @@ The exact verdict is \emph{Reject}, even though an outcome-by-outcome check woul
   \end{tikzpicture}
   \caption{Fork, Restore, and Merge change the active workflow but do not erase recorded calls.
   % Fork、Restore 和 Merge 会改变当前工作流，但不会抹去已经记录的调用。
-  Restore creates a new call position while preserving its authenticated effect identity.
-  % Restore 会创建新的调用位置，同时保留其认证效果标识。
+  Restore creates a new call position while preserving its authenticated action ID.
+  % Restore 会创建新的调用位置，同时保留其认证动作标识。
   The atomic installation point orders both creation and reuse of an authorization record against the monitor-version change.}
   % 原子安装点确定授权记录的创建或复用与监控器版本变更之间的先后顺序。
   \label{fig:two-histories}
@@ -195,12 +195,12 @@ Leaving the old monitor version active would allow both payments.
 % 安装期间的授权复用
 Now consider the Restore that keeps both branches in \cref{fig:two-histories}.
 % 现在考虑 \cref{fig:two-histories} 中保留两个分支的 Restore。
-A later Restore of \(k\) creates a new approval occurrence \(x_a'\), but both approval occurrences refer to the same effect identity \(d_a\).
-% 随后 Restore 到 \(k\) 会创建新的审批发生项 \(x_a'\)，但两个审批发生项都指向同一个效果标识 \(d_a\)。
-The restored occurrence is a new workflow position but retains effect identity \(d_a\).
-% 恢复出的发生项是一个新的工作流位置，但保留效果标识 \(d_a\)。
-Because \(d_a\) already has an authorization record, executing \(x_a'\) is an \Alias: the restored branch advances past approval without creating another authorization record.
-% 由于 \(d_a\) 已有授权记录，执行 \(x_a'\) 是一次 \Alias：恢复后的分支越过审批，但不会创建另一条授权记录。
+A later Restore of \(k\) creates a new approval call position \(x_a'\), but both approval call positions refer to the same action ID \(d_a\).
+% 随后 Restore 到 \(k\) 会创建新的审批调用位置 \(x_a'\)，但两个审批调用位置都指向同一个动作标识 \(d_a\)。
+The restored call position is a new workflow position but retains action ID \(d_a\).
+% 恢复出的调用位置是一个新的工作流位置，但保留动作标识 \(d_a\)。
+Because \(d_a\) already has an authorization record, executing \(x_a'\) reuses it: the restored branch advances past approval without creating another authorization record.
+% 由于 \(d_a\) 已有授权记录，执行 \(x_a'\) 会复用该记录：恢复后的分支越过审批，但不会创建另一条授权记录。
 A concurrent Merge or Restore result computed before that progress is now out of date even though the authorization log has not changed.
 % 即使授权日志没有变化，在该进展之前计算的并发 Merge 或 Restore 结果也已经过期。
 The installation check must therefore compare both the authorization log and the ordered record \(\chi\) of executed call positions.
@@ -208,13 +208,9 @@ The installation check must therefore compare both the authorization log and the
 For this \(\mathsf{RestoreLive}\) request, the checker either installs the derived monitor under a new version or returns a rejection certificate.
 % 对于该 \(\mathsf{RestoreLive}\) 请求，检查器要么在新版本下安装推导出的监控器，要么返回拒绝证书。
 
-These executions determine the three requirements used throughout the paper.
-% 这些执行确定全文采用的三项要求。
-First, an edit must preserve every outcome that the checked state still requires.
-% 第一，编辑必须保留经检查状态仍要求实现的每个结果。
-Second, after every permitted prefix, every outcome still compatible with that prefix must retain a safe completion.
-% 第二，在每个获准前缀之后，每个仍与该前缀兼容的结果都必须保留一条安全完成路径。
-Third, the derived monitor and its authorization tokens must be installed atomically against concurrent protected calls.
-% 第三，派生监控器及其授权令牌必须相对于并发受控调用原子安装。
-\Cref{sec:model} now defines the authenticated state and fixes this security objective before \cref{sec:admission} constructs the checker.
-% \Cref{sec:model} 接下来定义认证状态并确定这一安全目标，随后 \cref{sec:admission} 再构造检查器。
+Together, these executions give the paper's end-to-end safety rule.
+% 这些执行共同给出本文的端到端安全规则。
+An edit preserves every outcome still required by the authenticated state; every allowed step obeys policy and can still reach a complete execution; every required outcome compatible with those steps still has a safe way to finish; and the resulting monitor and authorization tokens take effect atomically with concurrent calls.
+% 一次编辑必须保留认证状态仍要求实现的每个结果；每个获准步骤都遵守策略且仍能到达完整执行；每个与这些步骤兼容的要求实现结果仍有安全完成方式；所得监控器与授权令牌相对于并发调用原子生效。
+\Cref{sec:model} states this rule precisely, and \cref{sec:admission} constructs the exact checker.
+% \Cref{sec:model} 精确定义这一规则，\cref{sec:admission} 则构造精确检查器。

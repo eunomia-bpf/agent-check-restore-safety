@@ -14,8 +14,8 @@ An \emph{installed realization} is a pair \((M,\widehat B_M)\) whose generated a
 
 \paragraph{Information required end to end}
 % 端到端所需的信息
-At a checked source snapshot, \(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) joins workflow structure and schemas (\(\mathbf P\)), call--effect identity (\(\mathbf I\)), effect progress (\(\mathbf E\)), and monitor-version and installation coordinates (\(\mathbf C\)).
-% 在经检查源状态快照处，\(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) 连接工作流结构与模式（\(\mathbf P\)）、调用—效果标识（\(\mathbf I\)）、效果进度（\(\mathbf E\)），以及监控器版本与安装坐标（\(\mathbf C\)）。
+At a checked source snapshot, \(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) joins workflow structure and schemas (\(\mathbf P\)), call--action ID (\(\mathbf I\)), effect progress (\(\mathbf E\)), and monitor-version and installation coordinates (\(\mathbf C\)).
+% 在经检查源状态快照处，\(\mathsf{Sec}(S;c,r)=\mathbf P\bowtie\mathbf I\bowtie\mathbf E\bowtie\mathbf C\) 连接工作流结构与模式（\(\mathbf P\)）、调用—动作标识（\(\mathbf I\)）、效果进度（\(\mathbf E\)），以及监控器版本与安装坐标（\(\mathbf C\)）。
 For every well-typed decide or install query \((V,q)\in\mathcal Q_{\rm sec}\), compare private names up to consistent renaming and define an equivariant information map \(f\) to be exact when
 % 对每个良好定型的判定或安装查询 \((V,q)\in\mathcal Q_{\rm sec}\)，私有名称按一致重命名比较，并在下列条件成立时称等变信息映射 \(f\) 是精确的：
 \[
@@ -29,8 +29,8 @@ For every well-typed decide or install query \((V,q)\in\mathcal Q_{\rm sec}\), c
 \]
 Projection \(\pi_J\) keeps \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\) and deletes dependent fields; \(\mathsf{TargetOnly}\) keeps only caller-proposed target data.
 % 投影 \(\pi_J\) 保留 \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\) 并删除依赖字段；\(\mathsf{TargetOnly}\) 只保留调用方提出的目标数据。
-\Cref{app:evidence} gives the exact dependencies and shows that the lower bound concerns information, not storage layout.
-% \Cref{app:evidence} 给出精确依赖关系，并说明该下界约束信息而非存储布局。
+\Cref{app:evidence} gives the exact dependencies and proves a representation-independent semantic-information lower bound.
+% \Cref{app:evidence} 给出精确依赖关系，并证明一个与表示无关的语义信息下界。
 
 \paragraph{Required-outcome preservation}
 % 要求实现结果的保留
@@ -66,8 +66,8 @@ Then they hold for every \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) a
 % 忠实注册。
 \(\mathsf{CheckReg}(\mathcal W,R)\) accepts iff stored \(\lambda\) witnesses \(\mathcal W\sqsubseteq_\lambda R\).
 % 当且仅当所存 \(\lambda\) 见证 \(\mathcal W\sqsubseteq_\lambda R\) 时，\(\mathsf{CheckReg}(\mathcal W,R)\) 才接受。
-On acceptance, the source workflow's protected-call traces and \(\mathsf{BRuns}(R)\) are order-isomorphic and preserve outcomes, effect identities, \Fresh/\Alias, the safety answer, and the most permissive monitor; malformed registrations fail before startup.
-% 接受时，源工作流的受控调用轨迹与 \(\mathsf{BRuns}(R)\) 序同构，并保持结果、效果标识、\Fresh/\Alias、安全答案与限制最少的监控器；不合格的注册在启动前失败。
+On acceptance, the source workflow's protected-call traces and \(\mathsf{BRuns}(R)\) are order-isomorphic and preserve outcomes, action IDs, \Fresh/\Alias, the safety answer, and the most permissive monitor; malformed registrations fail before startup.
+% 接受时，源工作流的受控调用轨迹与 \(\mathsf{BRuns}(R)\) 序同构，并保持结果、动作标识、\Fresh/\Alias、安全答案与限制最少的监控器；不合格的注册在启动前失败。
 
 \item \textbf{Exact checking and construction.}
 % 精确检查与构造。
@@ -88,8 +88,8 @@ J=\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}.
 \]
 Every exact decision-and-installation information map distinguishes every separating state--query pair in \cref{tab:projection-pairs}.
 % 每个精确信息映射都区分 \cref{tab:projection-pairs} 中的每对分离状态—查询对。
-Maps that erase the call-to-effect link or the link between authorization records and effect identities, as well as \(\mathsf{TargetOnly}\), are inexact.
-% 擦除调用到效果标识关系、授权记录到效果标识关系的信息映射以及 \(\mathsf{TargetOnly}\) 都不精确。
+Maps that erase the call-to-effect link or the link between authorization records and action IDs, as well as \(\mathsf{TargetOnly}\), are inexact.
+% 擦除调用到动作标识关系、授权记录到动作标识关系的信息映射以及 \(\mathsf{TargetOnly}\) 都不精确。
 Generalized nonblocking can serve as an exact solver only after the trusted controller derives the workflow and outcome-specific completion conditions.
 % 只有在可信控制器推导出工作流以及特定于结果的完成条件之后，广义非阻塞才能作为精确求解器。
 
