@@ -49,8 +49,8 @@ Thus every required source outcome appears in an accepted target outcome.
 % 可见运行时行为
 \(\mathcal O_{\rm api}\) exposes snapshot-bound edit answers, installed edits, protected-call answers, dispatch, settlement, and authenticated returns, while hiding only internal work, Save, stale attempts, and recovered crashes.
 % \(\mathcal O_{\rm api}\) 暴露绑定状态快照的编辑答案、已安装编辑、受控调用答案、派发、结算与经认证返回，同时只隐藏内部工作、Save、过期尝试与恢复后的崩溃。
-\(\mathcal R\) matches ideal and compiled states on \(\mathsf{AgentSec}\) and these visible fields; \cref{app:bisimulation} gives the full relation.
-% \(\mathcal R\) 在 \(\mathsf{AgentSec}\) 与这些可见字段上匹配理想状态和编译后状态；\cref{app:bisimulation} 给出完整关系。
+\(\mathcal B\) matches ideal and compiled states on \(\mathsf{AgentSec}\) and these visible fields; \cref{app:bisimulation} gives the full relation.
+% \(\mathcal B\) 在 \(\mathsf{AgentSec}\) 与这些可见字段上匹配理想状态和编译后状态；\cref{app:bisimulation} 给出完整关系。
 
 \begin{theorem}[Exact Edit-Safety]
 % 精确编辑安全
@@ -66,8 +66,8 @@ Then they hold for every \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\) a
 % 忠实注册。
 \(\mathsf{CheckReg}(\mathcal W,R)\) accepts iff stored \(\lambda\) witnesses \(\mathcal W\sqsubseteq_\lambda R\).
 % 当且仅当所存 \(\lambda\) 见证 \(\mathcal W\sqsubseteq_\lambda R\) 时，\(\mathsf{CheckReg}(\mathcal W,R)\) 才接受。
-On acceptance, source executions modulo \(\equiv_\partial\) and \(\mathsf{BRuns}(R)\) are order-isomorphic and preserve outcomes, effect identities, \Fresh/\Alias, the safety answer, and the most permissive monitor; malformed registrations fail before startup.
-% 接受时，模 \(\equiv_\partial\) 的源执行与 \(\mathsf{BRuns}(R)\) 序同构，并保持结果、效果标识、\Fresh/\Alias、安全答案与限制最少的监控器；不合格的注册在启动前失败。
+On acceptance, the source workflow's protected-call traces and \(\mathsf{BRuns}(R)\) are order-isomorphic and preserve outcomes, effect identities, \Fresh/\Alias, the safety answer, and the most permissive monitor; malformed registrations fail before startup.
+% 接受时，源工作流的受控调用轨迹与 \(\mathsf{BRuns}(R)\) 序同构，并保持结果、效果标识、\Fresh/\Alias、安全答案与限制最少的监控器；不合格的注册在启动前失败。
 
 \item \textbf{Exact checking and construction.}
 % 精确检查与构造。
@@ -75,8 +75,8 @@ The ideal and compiled machines return the same mutually exclusive and exhaustiv
 % 对于 \(\Theta=\Theta_S(u)\)，理想机与编译后机器返回相同且互斥穷尽的答案：未定义推导给出保持状态的 \(\mathsf{Invalid}\)，而 \(\widehat B^\dagger_\delta=\varnothing\) 给出保持状态的 \(\mathsf{Reject}\)，且不存在已安装实现。
 Otherwise, for \(Y=\mathsf{Compile}(\Theta)\), nonempty \(\widehat B^\dagger_\delta\), existence of an installed realization, \(\mathsf{Ready}(S,u,Y)\), and an \(\mathsf{AgentSec}\)-preserving installed successor are equivalent.
 % 否则，对于 \(Y=\mathsf{Compile}(\Theta)\)，\(\widehat B^\dagger_\delta\) 非空、已安装实现存在、\(\mathsf{Ready}(S,u,Y)\) 成立，以及存在保持 \(\mathsf{AgentSec}\) 的已安装后继，这四项彼此等价。
-The largest execution family satisfies \(\mathsf{Preserve}\), retains completion evidence, and records every authorized removal.
-% 最大执行族满足 \(\mathsf{Preserve}\)，保留完成证据，并记录每项获授权移除。
+The largest execution family satisfies \(\mathsf{Preserve}\), retains recorded evidence for every already-satisfied source outcome, and records every authorized removal.
+% 最大执行族满足 \(\mathsf{Preserve}\)，保留每个已满足源结果的记录证据，并记录每项获授权移除。
 
 \item \textbf{Each of four state relations is necessary for exact answers.}
 % 四类状态关系中的每一类都是精确答案所必需的。
@@ -100,10 +100,10 @@ Every enabled event preserves \(\mathsf{AgentSec}\), so the theorem applies afte
 
 \item \textbf{Runtime correctness.}
 % 运行时正确性。
-\(\mathcal R\) is a divergence-insensitive weak bisimulation under \(\mathsf{obs}_{\rm api}\), so every good pair satisfies \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\).
-% \(\mathcal R\) 在 \(\mathsf{obs}_{\rm api}\) 下是发散不敏感弱互模拟，因此每个良好对均满足 \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\)。
-The observation includes snapshot-bound answers, replacement tokens, and returns, but excludes time, fairness, and networking after \(\Dispatch\); disjoint domains compose asynchronously.
-% 该观测包括绑定状态快照的答案、替代令牌与返回，但不包括时间、公平性和 \(\Dispatch\) 之后的网络行为；互不相交的域异步组合。
+\(\mathcal B\) is a divergence-insensitive weak bisimulation under \(\mathsf{obs}_{\rm api}\), so every good pair satisfies \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\).
+% \(\mathcal B\) 在 \(\mathsf{obs}_{\rm api}\) 下是发散不敏感弱互模拟，因此每个良好对均满足 \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\)。
+The observation includes snapshot-bound answers, replacement authorization tokens, and returns, but excludes time, fairness, and networking after \(\Dispatch\); disjoint domains compose asynchronously.
+% 该观测包括绑定状态快照的答案、替代授权令牌与返回，但不包括时间、公平性和 \(\Dispatch\) 之后的网络行为；互不相交的域异步组合。
 \end{enumerate}
 \end{theorem}
 

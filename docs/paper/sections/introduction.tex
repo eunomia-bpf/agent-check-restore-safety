@@ -15,8 +15,8 @@ An execution edit does not undo earlier tool calls.
 % 执行编辑不会撤销先前的工具调用。
 In our running procurement example, the Agent saves checkpoint \(k\) before approval.
 % 在贯穿全文的采购例子中，Agent 在审批前保存检查点 \(k\)。
-The approval later uses its one-use permission and leaves a completion record.
-% 审批随后使用其一次性权限并留下完成记录。
+The approval is later authorized once, creating a receipt that survives Restore.
+% 审批随后只获得一次授权，并创建一条不会被 Restore 删除的回执。
 Restoring \(k\) creates another approval call in the workflow, but it must not authorize the same approval again.
 % Restore 到 \(k\) 会在工作流中创建另一个审批调用，但不得再次授权同一审批。
 A concurrent Merge can cause a similar error by selecting supplier \(L\) after a supplier-\(R\) payment has already been authorized.
@@ -44,8 +44,8 @@ Neither line of work derives from a recorded execution everything that a particu
 
 Our key idea is that an execution edit must preserve both past actions and still-required outcomes.
 % 我们的关键思想是：执行编辑必须同时保留过去的动作和仍然要求实现的结果。
-Every outcome required before the edit must remain required, already have a recorded completion, or be explicitly removed by the same policy authority that required it.
-% 编辑前要求实现的每个结果都必须继续作为要求、已经有完成记录，或由提出该要求的同一策略权限方明确移除。
+Every outcome required before the edit must remain required, already be satisfied by the recorded execution, or be explicitly removed by the same policy authority that required it.
+% 编辑前要求实现的每个结果都必须继续作为要求、已经由所记录的执行满足，或由提出该要求的同一策略权限方明确移除。
 The Agent selects only a registered edit.
 % Agent 只能选择一项已注册编辑。
 The trusted controller derives the edited workflow and the requirements it inherits from the recorded execution; faithful registration is a theorem premise, not something inferred from natural language.
@@ -64,10 +64,10 @@ The checker must enforce this condition without forbidding additional safe behav
 Third, the answer must take effect atomically with respect to calls that overlap the edit or a crash.
 % 第三，该答案必须相对于与编辑或崩溃重叠的调用原子生效。
 
-We give an exact checker for execution edits.
-% 我们给出一个针对执行编辑的精确检查器。
-For a requested edit, the controller uses the registered workflow, recorded calls and edits, completion records, pending calls, policy, and current monitor version to construct every allowed completed execution.
-% 对于一次编辑请求，控制器使用已注册工作流、已记录的调用与编辑、完成记录、待处理调用、策略和当前监控器版本，构造所有允许的完整执行。
+We give an exact checker for execution edits: under the stated model, it accepts exactly when a safe implementation exists.
+% 我们给出一个针对执行编辑的精确检查器：在本文模型下，它当且仅当安全实现存在时才接受。
+For a requested edit, the controller uses the registered workflow, authenticated execution record, receipt log, dispatch queue, policy, and current monitor version to construct every allowed completed execution.
+% 对于一次编辑请求，控制器使用已注册工作流、经认证执行记录、回执日志、派发队列、策略和当前监控器版本，构造所有允许的完整执行。
 It removes an execution whenever one of its partial executions would leave a still-required outcome with no safe completion.
 % 如果某个完整执行的部分过程会让仍然要求实现的结果失去安全完成方式，检查器就删除该完整执行。
 If no execution remains, the controller returns a finite proof that no safe implementation exists.
@@ -80,8 +80,8 @@ Every overlapping call is therefore governed entirely by either the old monitor 
 % 因此，每个重叠调用都完全由旧监控器或新监控器管理。
 \Cref{sec:lifecycle} follows this process through one procurement execution containing Fork, Merge, two races, and Restore.
 % \Cref{sec:lifecycle} 通过一个包含 Fork、Merge、两类竞态与 Restore 的采购执行展示这一过程。
-After Restore, the repeated approval call reuses the earlier completion record instead of authorizing the approval again.
-% Restore 之后，重复的审批调用复用先前的完成记录，而不会再次授权该审批。
+After Restore, the repeated approval call follows the earlier receipt instead of authorizing the approval again.
+% Restore 之后，重复的审批调用沿用先前的回执，而不会再次授权该审批。
 
 \paragraph{Contributions}
 % 贡献

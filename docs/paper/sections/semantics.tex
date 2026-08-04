@@ -2,8 +2,8 @@
 % 执行编辑的精确安全检查
 \label{sec:admission}
 
-The preceding section derives an edited workflow from the authenticated source record and requested edit.
-% 前一节从经认证源记录和请求的编辑中推导编辑后的工作流。
+The preceding section derives an edited workflow from the authenticated execution record and requested edit.
+% 前一节从经认证执行记录和请求的编辑中推导编辑后的工作流。
 This section decides whether that workflow has a policy-safe implementation that preserves every still-possible required outcome.
 % 本节判定该工作流是否存在满足策略且保留每个仍可能且仍要求实现结果的安全实现。
 It first determines whether each copied call needs a new receipt or reuses an existing one.
@@ -45,8 +45,8 @@ Resolution never erases an occurrence retained by the derived contract.
 % 解析绝不会擦除派生契约所保留的发生项。
 Starting with \(D_0=D_\Delta\), the deterministic transducer \(\Resolve^{\rho_u}_\Delta\) maps a raw word \(w=x_1\cdots x_n\) to a resolved word \(z_1\cdots z_n\).
 % 从 \(D_0=D_\Delta\) 开始，确定性转换器 \(\Resolve^{\rho_u}_\Delta\) 将原始词 \(w=x_1\cdots x_n\) 映射为已解析词 \(z_1\cdots z_n\)。
-For \(d_i=q^{\rho_u}_{\rm cell}(x_i)\),
-% 对于 \(d_i=q^{\rho_u}_{\rm cell}(x_i)\)，定义 \(z_i\) 如下：
+For \(d_i=q^{\rho_u}_{\rm eff}(x_i)\),
+% 对于 \(d_i=q^{\rho_u}_{\rm eff}(x_i)\)，定义 \(z_i\) 如下：
 \begin{equation}
 \label{eq:resolve}
  z_i=
@@ -65,8 +65,8 @@ The permission projection erases \Alias symbols and maps each \Fresh symbol to i
 \]
 For resolved \(z\), \(\mathsf{raw}(z)\) drops the \Fresh/\Alias mode and effect identity but preserves the ordered occurrence identifiers.
 % 对于已解析的 \(z\)，\(\mathsf{raw}(z)\) 会去除 \Fresh/\Alias 模式和效果标识，但保留有序发生项标识符。
-A \Retry repeats the same invocation and adds no occurrence.
-% \Retry 重复同一次调用，不增加任何发生项。
+A \Retry repeats the same normalized request and adds no occurrence.
+% \Retry 重复同一个规范化请求，不增加任何发生项。
 Restored occurrences sharing an effect identity remain distinct and may resolve differently.
 % 共享同一效果标识的恢复发生项仍彼此有别，并且可能得到不同的解析结果。
 

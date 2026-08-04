@@ -6,8 +6,8 @@ Consider a procurement Agent authorized to place one order.
 % 考虑一个获授权只能下单一次的采购 Agent。
 The Agent reserves the budget and saves checkpoint \(k\) before approval.
 % Agent 预留预算，并在审批前保存检查点 \(k\)。
-The approval then uses its one-use permission and leaves a completion record.
-% 审批随后使用其一次性权限并留下完成记录。
+The approval is then authorized once, creating a receipt that survives Restore.
+% 审批随后只获得一次授权，并创建一条不会被 Restore 删除的回执。
 The Agent next requests a Fork between suppliers \(L\) and \(R\).
 % Agent 随后请求在供应商 \(L\) 和 \(R\) 之间执行 Fork。
 The workflow allows two outcomes: order from \(L\) or order from \(R\).
@@ -31,7 +31,7 @@ An effect identity \(d\) identifies the protected action and one-use permission 
 The two shipment calls share one effect identity:
 % 两个发货调用共享一个效果标识：
 \[
- q_{\rm cell}(x_L^s)=q_{\rm cell}(x_R^s)=d_s.
+ q_{\rm eff}(x_L^s)=q_{\rm eff}(x_R^s)=d_s.
 \]
 The two payment calls instead have different effect identities \(d_L^p\) and \(d_R^p\).
 % 两个付款调用则具有不同的效果标识 \(d_L^p\) 和 \(d_R^p\)。
@@ -91,8 +91,8 @@ Rejection returns a ranked certificate explaining which completions were removed
 % 在不改变当前要求的情况下增加新规则
 A registered extension \(\mathsf{Extend}(\xi)\) can add compensation schemas and policy entries while the procurement execution remains active.
 % 已注册扩展 \(\mathsf{Extend}(\xi)\) 可以在采购执行仍然活跃时增加补偿模式与策略条目。
-The protected-call and policy authorities must both sign \(\xi\).
-% 受控调用权限方与策略权限方都必须签署 \(\xi\)。
+The call authorization service and policy authority must both sign \(\xi\).
+% 调用授权服务与策略权限方都必须签署 \(\xi\)。
 The extension preserves every current outcome, call position, effect identity, receipt, checkpoint, cursor, dispatch-queue entry, and causal edge.
 % 该扩展保留每个当前结果、调用位置、效果标识、回执、检查点、游标、派发队列条目和因果边。
 It only appends new schema and registry rows and enlarges the policy.
@@ -166,8 +166,8 @@ A \emph{policy domain} is the set of protected actions governed by one policy, o
   % Fork、Restore 和 Merge 会改变当前工作流，但不会抹去已经记录的调用。
   Restore creates a new call position while preserving its authenticated effect identity.
   % Restore 会创建新的调用位置，同时保留其认证效果标识。
-  The atomic installation point must order both a new authorization (\Fresh) and reuse of an earlier completion record (\Alias) against the monitor-version change.}
-  % 原子安装点必须确定新授权（\Fresh）和先前完成记录复用（\Alias）相对于监控器版本变更的顺序。
+  The atomic installation point must order both a new authorization (\Fresh) and reuse of an earlier receipt (\Alias) against the monitor-version change.}
+  % 原子安装点必须确定新授权（\Fresh）和先前回执复用（\Alias）相对于监控器版本变更的顺序。
   \label{fig:two-histories}
 \end{figure*}
 
