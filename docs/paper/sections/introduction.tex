@@ -99,8 +99,8 @@ The model preserves past actions and every still-required outcome, and it proves
 % \textbf{精确检查与运行时实现。}
 We construct an executable checker that returns either every safe way for the edit to proceed or a proof that none exists.
 % 我们构造一个可执行检查器，它返回该编辑安全推进的全部方式，或者返回不存在安全方式的证明。
-Checkpoint has an exact local check, and each of the six registered workflow-changing forms is accepted exactly when a safe runtime implementation exists.
-% Checkpoint 具有精确的局部检查，而六种已注册的工作流变更形式都当且仅当安全运行时实现存在时才被接受。
+Checkpoint has an exact local check, and each of the six registered execution forms is accepted exactly when a safe runtime implementation exists.
+% Checkpoint 具有精确的局部检查，而六种已注册形式都当且仅当安全运行时实现存在时才被接受。
 The runtime puts the result into effect atomically, preserves safety across repeated edits and restarts, and has the same Agent-visible behavior as an ideal atomic machine.
 % 运行时使判定结果原子生效，在重复编辑与重新启动过程中保持安全，并与理想原子机器具有相同的 Agent 可见行为。
 
