@@ -4,18 +4,16 @@
 
 Six Lean modules pass \texttt{--trust=0} and mechanize the finite linear-contract core used by the paper.
 % 六个 Lean 模块通过 \texttt{--trust=0} 检查，并机械化论文使用的有限线性契约核心。
-\path{exact_checker_iff_realization} proves that the core executable checker accepts exactly when a \path{ValidRealization} exists.
-% \path{exact_checker_iff_realization} 证明核心可执行检查器当且仅当存在 \path{ValidRealization} 时才接受。
-\path{registered_workflow_exact_admission} proves registration acceptance, exact mediation of registered calls, and equivalence between checker acceptance and a valid realization for the current execution record.
-% \path{registered_workflow_exact_admission} 证明注册通过、已注册调用的精确中介，以及当前执行记录上检查器接受与有效实现之间的等价性。
-\path{six_edit_derivation_exact} proves that executable workflow editing is sound and complete for the six edit constructors.
-% \path{six_edit_derivation_exact} 证明可执行工作流编辑对六种编辑构造器既可靠又完备。
-\path{exact_edit_installs_trace_safe_monitor} constructs an atomic rule update from a derived workflow and accepted finite contract, and proves that every finite continuation preserves Lean's \path{AgentSec}.
-% \path{exact_edit_installs_trace_safe_monitor} 从派生工作流和已接受的有限契约构造原子规则更新，并证明每段有限延续均保持 Lean 中的 \path{AgentSec}。
-\path{fresh_alias_installation_serialized} proves both possible orders between a protected call and that update.
-% \path{fresh_alias_installation_serialized} 证明受控调用与该更新之间两种可能的先后顺序。
-\path{compilation_preload_preserves_agentSec} models preparation as an explicit transition and proves that preparing an inactive candidate preserves the same invariant.
-% \path{compilation_preload_preserves_agentSec} 把准备过程建模为显式转移，并证明准备尚未激活的候选结果会保持同一不变量。
+The mechanization proves that the executable checker accepts exactly when a valid safe execution set exists.
+% 机械化证明，可执行检查器当且仅当存在有效安全执行集合时才接受。
+It proves that registration checks every protected call and preserves the exact answer for the current execution record.
+% 它证明注册会检查每次受控调用，并保持当前执行记录上的精确答案。
+It also proves that executable workflow editing is sound and complete for all six edit rules.
+% 它还证明可执行工作流编辑对全部六条编辑规则既可靠又完备。
+An accepted edit produces an atomic rule update, and every finite continuation preserves Lean's \path{AgentSec}.
+% 被接受的编辑会产生原子规则更新，且每段有限延续均保持 Lean 中的 \path{AgentSec}。
+Separate proofs cover both possible orders between a protected call and that update, as well as preparation before the update takes effect.
+% 另外的证明覆盖受控调用与该更新之间的两种可能次序，以及更新生效前的准备过程。
 The appendix proves the general pomset lift, source-outcome preservation maps, information lower bound, and ideal--runtime weak bisimulation in \cref{app:spec-bridge,app:schema-fidelity-proof,app:record-information,app:bisimulation}.
 % 附录在 \cref{app:spec-bridge,app:schema-fidelity-proof,app:record-information,app:bisimulation} 中证明一般偏序事件集提升、源结果保持映射、信息下界以及理想机—运行时弱互模拟。
 

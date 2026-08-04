@@ -79,7 +79,7 @@ Write \(S\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I\) when \(S\) and \(I\) ar
 % 忠实注册
 \label{thm:faithful-registration}
 For finite-state \(\mathcal W\) and finite \(\mathcal R\),
-\(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) accepts iff stored \(\lambda\) witnesses \(\mathcal W\sqsubseteq_\lambda\mathcal R\).
+\(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) accepts iff the stored \(\lambda\) witnesses \(\mathcal W\sqsubseteq_\lambda\mathcal R\).
 % 当且仅当所存 \(\lambda\) 见证 \(\mathcal W\sqsubseteq_\lambda\mathcal R\) 时，\(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) 才接受。
 On acceptance, the source workflow's protected-call traces and \(\mathsf{BRuns}(\mathcal R)\) are order-isomorphic and preserve outcomes, actions, \Fresh/\Alias, the safety answer, and the largest safe execution set.
 % 接受时，源工作流的受控调用轨迹与 \(\mathsf{BRuns}(\mathcal R)\) 序同构，并保持结果、动作、\Fresh/\Alias、安全答案与最大安全执行集合。
@@ -137,8 +137,10 @@ Generalized nonblocking can serve as an exact solver only after the trusted runt
 \begin{theorem}[Repeated-Use Safety]
 % 重复使用安全
 \label{thm:repeated-use}
-Every enabled event preserves \(\mathsf{AgentSec}\), so the theorem applies after every finite reachable sequence of edits, registered extensions, protected calls, authorization updates, rule updates, stops, and restarts.
-% 每个启用事件都保持 \(\mathsf{AgentSec}\)，因此该定理适用于由编辑、已注册扩展、受控调用、授权更新、规则更新、停止和重启组成的每个有限可达序列。
+Every enabled event preserves \(\mathsf{AgentSec}\).
+% 每个启用事件都保持 \(\mathsf{AgentSec}\)。
+Therefore, the guarantees hold after every finite reachable sequence of edits, registered extensions, protected calls, authorization updates, rule updates, stops, and restarts.
+% 因此，这些保证在由编辑、已注册扩展、受控调用、授权更新、规则更新、停止和重启组成的每个有限可达序列之后仍然成立。
 \end{theorem}
 
 \begin{theorem}[Runtime Correctness]

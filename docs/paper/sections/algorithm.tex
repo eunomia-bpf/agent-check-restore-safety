@@ -10,8 +10,8 @@ It builds a finite automaton for the allowed partial executions, records which v
 % 它为允许的部分执行构造有限自动机，记录检查时使用的执行记录版本，并使新规则原子生效。
 The protocol orders every overlapping protected call either before or after the atomic rule update.
 % 该协议将每个重叠的受控调用完整地排列在原子规则更新之前或之后。
-The proof compares this implementation with an ideal machine that puts an accepted result into effect in one atomic step and admits exactly its resolved prefixes.
-% 证明将该实现与一台理想机比较；理想机以一个原子步骤使接受的结果生效，并且只接纳该结果的已解析前缀。
+The proof compares this implementation with an ideal machine that puts an accepted result into effect in one atomic step and allows exactly its resolved prefixes.
+% 证明将该实现与一台理想机比较，理想机以一个原子步骤使接受的结果生效，并且只允许该结果的已解析前缀。
 The ideal transition system and the detailed runtime rules appear in \cref{sec:ideal,tab:app-event-matrix}.
 % 理想转移系统与详细运行时规则见 \cref{sec:ideal,tab:app-event-matrix}。
 This section gives the automaton construction, the invariant after the rules change, and the atomic update used by the formal guarantees in the next section.
@@ -64,10 +64,10 @@ Before the rules change, the trusted runtime re-derives the edit and recomputes 
 % 规则改变之前，可信运行时根据执行记录重新推导编辑并重新计算不动点。
 If any protected call has committed since the candidate was computed, the candidate is stale and changes nothing.
 % 如果计算候选结果之后已有任何受控调用提交，则该候选结果已过期且不会改变任何内容。
-Otherwise, one policy-domain transaction closes the old rule version, activates the new automaton, replaces the rule entry and authorization token for every current workflow call, and only then exposes the successful edit answer.
-% 否则，一个策略域事务会关闭旧规则版本、激活新自动机、替换每个当前工作流调用的规则入口与授权令牌，然后才暴露成功编辑答案。
-Protected calls verify their workflow call, action, canonical request, authorization token, and enabled automaton transition in the same transaction that records progress.
-% 受控调用在记录进度的同一事务中验证其工作流调用、动作、规范请求、授权令牌与已启用的自动机转移。
+Otherwise, one policy-domain transaction closes the old rule version, activates the new automaton, replaces the rule entry and authorization token for every current workflow call, and only then returns success to the Agent.
+% 否则，一个策略域事务会关闭旧规则版本、激活新自动机、替换每个当前工作流调用的规则入口与授权令牌，然后才向 Agent 返回成功结果。
+For each protected call, the same transaction verifies its workflow-call ID, action, canonical request, authorization token, and enabled automaton transition before recording progress.
+% 对于每次受控调用，同一事务会在记录进展之前验证其工作流调用标识、动作、规范请求、授权令牌与已启用的自动机转移。
 A \Fresh call creates one authorization record and queues the canonical request.
 % \Fresh 调用创建一条授权记录并将规范请求入队。
 An \Alias call advances the workflow by linking to the existing record without extending the authorization sequence.
@@ -89,10 +89,10 @@ For current state \(S\), write
 for the safety-check instance obtained from its current components.
 % 对当前状态 \(S\)，将由其当前分量得到的安全检查实例记为
 % \(\Theta_S(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)。
-Write \(\mathsf{Ready}(S,u,Y)\) when the service re-derives \(u\) from the current execution record, recomputes the same nonempty fixed point and automaton carried by \(Y\), confirms that the record has not changed since \(Y\) was computed, confirms that the old rule version is current, and confirms that the new version is inactive.
-% 当服务根据当前执行记录重新推导 \(u\)、重新计算出 \(Y\) 所携带的同一非空不动点与自动机、确认计算 \(Y\) 之后执行记录未发生变化、确认旧规则版本仍为当前版本并确认新版本尚未激活时，记作 \(\mathsf{Ready}(S,u,Y)\)。
-If these checks pass, one transaction closes the old version, activates the new automaton, replaces every current rule entry and authorization token, and then exposes the successful edit answer.
-% 若这些检查通过，一个事务会关闭旧版本、激活新自动机、替换每个当前规则入口与授权令牌，然后才暴露成功编辑答案。
+Write \(\mathsf{Ready}(S,u,Y)\) when the trusted runtime re-derives \(u\) from the current execution record, recomputes the same nonempty fixed point and automaton carried by \(Y\), confirms that the record has not changed since \(Y\) was computed, confirms that the old rule version is current, and confirms that the new version is unallocated or inactive.
+% 当可信运行时根据当前执行记录重新推导 \(u\)、重新计算出 \(Y\) 所携带的同一非空不动点与自动机、确认计算 \(Y\) 之后执行记录未发生变化、确认旧规则版本仍为当前版本并确认新版本尚未分配或尚未激活时，记作 \(\mathsf{Ready}(S,u,Y)\)。
+If these checks pass, one transaction closes the old version, activates the new automaton, replaces every current rule entry and authorization token, and then returns success to the Agent.
+% 若这些检查通过，一个事务会关闭旧版本、激活新自动机、替换每个当前规则入口与授权令牌，然后才向 Agent 返回成功结果。
 A changed state makes the candidate stale and forces a new check.
 % 状态一旦改变，候选结果即过期，必须重新检查。
 The complete state updates, retries, request release, completion updates, and restart rules appear in \cref{app:runtime-transitions,tab:app-event-matrix}.

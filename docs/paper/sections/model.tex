@@ -61,8 +61,8 @@ This condition permits incomparable traces and different outcomes with the same 
 % 该条件允许不可比较的轨迹以及共享同一轨迹的不同结果，因此并不要求结果具有确定性。
 It requires a registered workflow call whenever continuing after a shared partial execution performs more work.
 % 如果在一段共享的部分执行之后继续会执行更多工作，该条件要求存在一个已注册工作流调用来表示继续。
-The interface represents a choice between stopping and continuing by an authenticated terminal workflow call handled by the trusted runtime.
-% 该接口通过由可信运行时处理的认证终止工作流调用表示停止与继续之间的选择。
+The interface represents a choice between stopping and continuing by a registered terminal workflow call checked by the trusted runtime.
+% 该接口通过由可信运行时检查的已注册终止工作流调用表示停止与继续之间的选择。
 
 Contracts use the three partial constructors below.
 % 契约使用下列三个偏构造器。
@@ -83,8 +83,8 @@ Each constructor requires operands with disjoint workflow calls and preserves th
  p_{(o,v)}&=p_o\triangleright p_v.
 \end{aligned}
 \end{equation}
-Before adding a registered or copied operand, the trusted runtime deterministically assigns fresh workflow-call IDs and extends \(\rho\) while retaining the authenticated actions.
-% 在加入已注册或复制的操作数之前，可信运行时确定性地分配新的工作流调用标识并扩展 \(\rho\)，同时保留认证受控动作。
+Before adding a registered or copied operand, the trusted runtime deterministically assigns fresh workflow-call IDs and extends \(\rho\) while retaining which protected action each call refers to.
+% 在加入已注册或复制的操作数之前，可信运行时确定性地分配新的工作流调用标识并扩展 \(\rho\)，同时保留每个调用所指向的受控动作。
 Well-formedness already makes carried operands disjoint.
 % 良构性已经保证被携带的操作数互不相交。
 In \cref{eq:contract-algebra}, \(\uplus\) adds no cross-order and \(\triangleright\) orders every event of \(p\) before every event of \(q\), while choice uses a tagged union of outcome indices and parallel and sequence use Cartesian products.
@@ -165,8 +165,8 @@ Set \(\mathsf{heads}(b{:}\mathcal C)=\{b\}\).
 % 令 \(\mathsf{heads}(b{:}\mathcal C)=\{b\}\)。
 An open choice makes both arms current, a selected choice makes its winner current, parallel and \(\mathsf{join}\) make both arms current, and sequence makes its left operand current until completion and then its right.
 % 开放选择使两个分支均为当前分支，已选选择使胜出分支成为当前分支，并行和 \(\mathsf{join}\) 使两个分支均为当前分支，而顺序先使左操作数成为当前部分直至其完成，再切换到右操作数。
-Completing a workflow call updates the work remaining at its leaf without deleting the recorded structure.
-% 完成一个工作流调用会更新其叶节点仍需执行的工作，但不会删除已记录结构。
+Processing a workflow call updates the work remaining at its leaf without deleting the recorded structure.
+% 处理一个工作流调用会更新其叶节点仍需执行的工作，但不会删除已记录结构。
 Because sequence checks \(\mathsf{complete}\), it retains completed outcomes from its left operand, so an isolated completed leaf remains available for a later Fork or Restore.
 % 由于顺序检查 \(\mathsf{complete}\)，它会保留左操作数中的已完成结果，因此孤立的已完成叶节点仍可供后续 Fork 或 Restore 使用。
 Joining removes \(g\) immediately but keeps its continuation behind a barrier until both arms complete.
@@ -247,8 +247,8 @@ The trusted runtime preserves that record when it carries or copies the outcome 
 % 可信运行时在携带、复制该结果或将其存入检查点时保留这条记录。
 \item \emph{Identity and progress.}
 % \emph{标识与进展。}
-Workflow-call IDs and the \(j\) identifiers in \(\beta\) are unique, while workflow calls that refer to the same action agree on the trusted-runtime identity, scope, canonical request, digest, and source region.
-% 工作流调用标识和 \(\beta\) 中的 \(j\) 标识均唯一，而指向同一个动作的工作流调用在可信运行时标识、作用域、规范请求、摘要和来源区域上保持一致。
+Workflow-call IDs and the \(j\) identifiers in \(\beta\) are unique, while workflow calls that refer to the same action agree on which trusted runtime authorized them, their scope, canonical request, digest, and source region.
+% 工作流调用标识和 \(\beta\) 中的 \(j\) 标识均唯一，而指向同一个动作的工作流调用在授权它们的可信运行时、作用域、规范请求、摘要和来源区域上保持一致。
 Processed workflow calls are downward closed in their pomset, consistent with every choice status, and absent from the remaining workflow.
 % 已处理工作流调用在其偏序事件集中向下闭合，与每个选择状态一致，并且不出现在剩余工作流中。
 \item \emph{Current workflow.}
@@ -275,7 +275,7 @@ The policy domain has exactly one active rule version, namely the version record
 \subsubsection{Authorization and completion}
 % 授权与完成
 
-The remaining parts of the execution record are policy version \(\kappa\), a regular prefix-closed authorization policy \(\mathcal A\subseteq\mathcal U^*\) over label alphabet \(\mathcal U\), authorization log \(\Delta\), and queue \(\mathsf{out}\) of requests awaiting release.
+The remaining parts of the execution record are policy version \(\kappa\), a regular prefix-closed authorization policy \(\mathcal A\subseteq\mathcal U^*\) over label alphabet \(\mathcal U\), authorization log \(\Delta\), and queue \(\mathsf{out}\) of requests waiting to be sent.
 % 执行记录的其余部分是策略版本 \(\kappa\)、定义在标签字母表 \(\mathcal U\) 上的正则前缀闭合授权策略 \(\mathcal A\subseteq\mathcal U^*\)、授权日志 \(\Delta\)，以及等待发出的请求队列 \(\mathsf{out}\)。
 Authorization records can only be appended.
 % 授权记录只能追加。
@@ -310,8 +310,8 @@ The trusted runtime checks the answer again before atomically changing the rules
 % 可信运行时在原子改变当前规则之前再次检查判定结果。
 The policy authority, trusted runtime, protected registries and authorization log, proof verifier, and transaction mechanism form the trusted computing base (TCB).
 % 策略权限方、可信运行时、受保护的注册表与授权日志、证明验证器和事务机制共同构成可信计算基（TCB）。
-Within one policy domain, the TCB mediates every protected call and commits every state change and visible edit answer through a linearizable transaction.
-% 在一个策略域内，TCB 中介每次受控调用，并通过线性化事务提交每项状态变更和可见编辑答案。
+Within one policy domain, the TCB checks every protected call and commits every state change and edit result returned to the Agent through a linearizable transaction.
+% 在一个策略域内，TCB 检查每次受控调用，并通过线性化事务提交每项状态变更以及返回给 Agent 的编辑结果。
 After an unexpected stop and restart, each transaction appears entirely before or entirely after its linearization point.
 % 在意外停止并重新启动后，每项事务都完整呈现在线性化点之前或之后。
 Before the checker reads the execution record, the trusted runtime may instantiate finitely many registered templates for tool calls.
@@ -339,8 +339,8 @@ Write \(\mathcal W\sqsubseteq_\lambda\mathcal R\) when \(\lambda\) is a bijectio
 % 当 \(\lambda\) 是保持结果、哪些调用指向同一个动作、调用次序、结果权限和授权日志更新的双射时，记作 \(\mathcal W\sqsubseteq_\lambda\mathcal R\)。
 \Cref{def:registration-refinement,lem:registration-reflection} give the exact finite check and proof.
 % \Cref{def:registration-refinement,lem:registration-reflection} 给出精确的有限检查与证明。
-Registered contracts enter through \(\mathsf{CheckReg}\), and an idempotent or queryable remote service supplies authenticated completion records for its actions.
-% 已注册契约通过 \(\mathsf{CheckReg}\) 进入理论，幂等或可查询的远端服务为其动作提供认证完成记录。
+Registered contracts enter through \(\mathsf{CheckReg}\), and an idempotent or queryable remote service supplies signed completion records for its actions.
+% 已注册契约通过 \(\mathsf{CheckReg}\) 进入理论，幂等或可查询的远端服务为其动作提供签名完成记录。
 
 \subsection{Security Objective}
 % 安全目标
@@ -349,13 +349,13 @@ The security objective is fixed independently of the checker that will implement
 % 安全目标独立于随后实现它的检查器而确定。
 For an edit derived from the execution record, a safe execution set satisfies four requirements.
 % 对于从执行记录派生的编辑，安全执行集合满足四项要求。
-First, it preserves every source outcome that is neither already satisfied nor explicitly authorized for removal, and every admitted execution belongs to the derived target workflow.
+First, it preserves every source outcome that is neither already satisfied nor explicitly authorized for removal, and every allowed execution belongs to the derived target workflow.
 % 第一，它保留每个既未满足、也未被明确授权移除的源结果，并且每段获准执行都属于派生目标工作流。
-Second, every admitted prefix is allowed by the policy after accounting for authorization records already present in the append-only log.
+Second, every allowed prefix obeys the policy after accounting for authorization records already present in the append-only log.
 % 第二，在计入仅追加日志中已经存在的授权记录后，每个获准前缀都满足策略。
-Third, each admitted prefix extends to a complete admitted execution.
+Third, each allowed prefix extends to a complete allowed execution.
 % 第三，每个获准前缀都能扩展为一段完整的获准执行。
-Fourth, every outcome still compatible with an admitted prefix retains such a completion.
+Fourth, every outcome still compatible with an allowed prefix retains such a completion.
 % 第四，每个仍与获准前缀兼容的结果都保留这样一条完成路径。
 The last requirement rejects the example in \cref{sec:lifecycle}, where separately safe outcomes cannot remain safe under one set of runtime rules.
 % 最后一项要求拒绝 \cref{sec:lifecycle} 中的示例：分别安全的结果无法在同一组运行时规则下持续保持安全。
@@ -366,7 +366,7 @@ The last requirement rejects the example in \cref{sec:lifecycle}, where separate
 
 \section{Exact Checking of Execution Edits}
 % 执行编辑的精确检查
-\label{sec:admission}
+\label{sec:exact-check}
 
 The checker first derives the edited workflow prescribed by the execution record and the requested edit.
 % 检查器首先根据执行记录与所请求编辑推导编辑后的工作流。
@@ -494,8 +494,8 @@ and hence the exact disjoint partition
  &\quad\uplus\mathsf{AuthorizedRemoval}_{H,u}.
 \end{aligned}
 \]
-This partition accounts for every source outcome and prevents an Agent request from silently dropping one.
-% 这一分解处理每个源结果，并防止 Agent 请求悄然删除其中任何一个。
+This partition accounts for every source outcome and prevents an Agent request from dropping one without authorization.
+% 这一分解处理每个源结果，并防止 Agent 请求在未经授权的情况下删除其中任何一个。
 The preservation maps retain actions, source regions, and order, while the rule update retains the records for satisfied outcomes and authorized removals.
 % 保持映射保留动作、来源区域和次序，而规则更新保留已满足结果与获准移除的记录。
 
@@ -628,7 +628,7 @@ Here \(H'\) is the derived target record.
 % 此处 \(H'\) 是推导得到的目标记录。
 It becomes current and activates \(\eta^+\) only through the atomic rule update.
 % 它仅通过原子规则更新成为当前记录并激活 \(\eta^+\)。
-Here \(G\mathbin{\cdot}e_u\) retains earlier progress, outcome-authority records, and existing nodes, and initializes each copied or added branch from its remaining registered contract with inherited or rule-signed outcome authority and no progress.
+In this record, \(G\mathbin{\cdot}e_u\) retains earlier progress, outcome-authority records, and existing nodes, and initializes each copied or added branch from its remaining registered contract with inherited or rule-signed outcome authority and no progress.
 % 其中 \(G\mathbin{\cdot}e_u\) 保留先前进展、结果权限记录和已有节点，并从剩余已注册契约初始化每个复制或新增分支，同时赋予继承或规则签名的结果权限且进展为空。
 Thus the derivation preserves \(K,\Sigma_\zeta,\chi\), appends one record of the edit and its target nodes, and prepares a new rule entry and authorization token for every target call under \(\eta^+\).
 % 因此，该推导保持 \(K,\Sigma_\zeta,\chi\)，追加一条编辑记录及其目标节点，并在 \(\eta^+\) 下为每个目标调用准备新的规则入口和授权令牌。

@@ -24,8 +24,10 @@ If the runtime sees only the restored workspace, it may request the same approva
 Either result breaks the school's purchasing rules because the first repeats a one-time approval and the second combines incompatible supplier actions.
 % 两种结果都会违反学校的采购规则，因为前者重复一次性审批，后者组合彼此不相容的供应商动作。
 
-This example shows why the runtime cannot rely on the Agent's account of the execution: the Agent may request an edit that omits an earlier action or a result the task still requires.
-% 这个例子说明运行时为何不能依赖 Agent 对执行情况的描述：Agent 可能请求一次编辑，而该编辑省略先前的动作或任务仍要求实现的结果。
+This example shows that the runtime cannot rely on the Agent's account of the execution.
+% 这个例子说明，运行时不能依赖 Agent 对执行情况的描述。
+The Agent may request an edit that omits an earlier action or a result the task still requires.
+% Agent 可能请求一次编辑，而该编辑省略先前的动作或任务仍要求实现的结果。
 The trusted runtime instead determines what may happen next from an execution record that the Agent cannot modify, and it checks every tool action against policy.
 % 可信运行时改为根据 Agent 无法修改的执行记录确定后续可以发生什么，并依据策略检查每个工具动作。
 Our security goal is therefore to prevent an edit from authorizing a tool action forbidden by policy or discarding a result that the task still requires.
@@ -70,10 +72,10 @@ Third, the answer must take effect atomically with calls that overlap the edit a
 
 We give an exact checker that either computes every safe way for a requested operation to proceed or proves that every possible implementation is unsafe.
 % 我们给出一个精确检查器，它要么计算所请求操作安全推进的全部方式，要么证明每种可能实现都不安全。
-For a requested edit, the runtime uses the recorded task structure and current execution record to construct every allowed complete execution.
-% 对于一次编辑请求，运行时使用已记录的任务结构和当前执行记录构造所有允许的完整执行。
+For a requested edit, the runtime uses the current execution record to construct every allowed complete execution.
+% 对于一次编辑请求，运行时使用当前执行记录构造所有允许的完整执行。
 It removes an execution whenever one of its partial executions would leave a still-required result with no safe completion.
-% 如果某个完整执行的部分过程会让仍然要求实现的结果失去安全完成方式，检查器就删除该完整执行。
+% 如果某个完整执行的部分执行会让仍然要求实现的结果失去安全完成方式，检查器就删除该完整执行。
 If no execution remains, the runtime returns an independently checkable proof that no safe implementation exists.
 % 如果没有完整执行留下，运行时返回一份可独立检查的证明，说明不存在安全实现。
 Otherwise, the remaining executions contain every safe way for the edit to proceed.
@@ -103,8 +105,8 @@ The model preserves past actions and every still-required result, and it proves 
 % \textbf{精确检查与运行时实现。}
 We construct an executable checker that returns either every safe way for the edit to proceed or a proof that none exists.
 % 我们构造一个可执行检查器，它返回该编辑安全推进的全部方式，或者返回不存在安全方式的证明。
-The checker accepts Checkpoint and each registered form of Fork, Restore, and Merge exactly when a safe runtime implementation exists.
-% 当且仅当存在安全的运行时实现时，检查器才接受 Checkpoint 以及 Fork、Restore 和 Merge 的每种已注册形式。
+Checkpoint has an exact check, and the checker accepts each registered form of Fork, Restore, and Merge exactly when a safe runtime implementation exists.
+% Checkpoint 具有精确检查，而对于 Fork、Restore 和 Merge 的每种已注册形式，当且仅当存在安全运行时实现时，检查器才接受。
 The runtime puts the result into effect atomically, preserves safety across repeated edits and restarts, and has the same Agent-visible behavior as an ideal atomic machine.
 % 运行时使判定结果原子生效，在重复编辑与重新启动过程中保持安全，并与理想原子机器具有相同的 Agent 可见行为。
 

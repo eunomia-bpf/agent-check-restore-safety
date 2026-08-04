@@ -2,8 +2,8 @@
 % 补充证明附录
 \label{app:proofs}
 
-This appendix instantiates the proof objects used by \cref{thm:exact-checking} over finite registered call models and atomic policy-domain rule versions.
-% 本附录在有限已注册调用模型与原子策略域规则版本上实例化 \cref{thm:exact-checking} 使用的证明对象。
+This appendix gives the proof details for \cref{thm:exact-checking} over finite registered call models and atomic policy-domain rule versions.
+% 本附录给出 \cref{thm:exact-checking} 在有限已注册调用模型与原子策略域规则版本上的证明细节。
 Independent domains retain the product interpretation stated in the paper.
 % 独立域仍采用正文所述的乘积解释。
 
@@ -62,8 +62,8 @@ u&\mathsf{Satisfied}_{H,u}\\ \hline
 \text{otherwise}&\varnothing
 \end{array}
 \]
-Completion observability makes this current-role set either all of \(\{\mathsf{cur}\}\times O_{\mathcal C}\) or empty.
-% 完成可观测性使这一当前角色集合要么等于整个 \(\{\mathsf{cur}\}\times O_{\mathcal C}\)，要么为空。
+Completion observability makes this set either all of \(\{\mathsf{cur}\}\times O_{\mathcal C}\) or empty.
+% 完成可观测性使这一集合要么等于整个 \(\{\mathsf{cur}\}\times O_{\mathcal C}\)，要么为空。
 The only sets eligible for signed removal are
 % 唯一可以经签名移除的集合为
 \[
@@ -80,8 +80,10 @@ u&\mathsf{CanRemove}(H,u)\\ \hline
 \text{otherwise}&\varnothing
 \end{array}
 \]
-\(\mathsf{reqauth}_H(a)\) is the authority identity named by the unique signed authority record found through \(a\)'s source region in \(G\), or through its stored copy in \(K\) when \(a\) comes from a checkpoint.
-% \(\mathsf{reqauth}_H(a)\) 是唯一签名权限记录所指明的权限方标识；该记录通过 \(a\) 在 \(G\) 中的来源区域找到，若 \(a\) 来自检查点，则通过 \(K\) 中存储的副本找到。
+\(\mathsf{reqauth}_H(a)\) is the authority identity named by the unique signed authority record found through \(a\)'s source region in \(G\).
+% \(\mathsf{reqauth}_H(a)\) 是通过 \(a\) 在 \(G\) 中的来源区域找到的唯一签名权限记录所指明的权限方标识。
+When \(a\) comes from a checkpoint, the identity is taken from the stored copy in \(K\).
+% 当 \(a\) 来自检查点时，该标识取自 \(K\) 中存储的副本。
 Context identity, carry, and clone preserve that authority identity, while every source region introduced by an edit rule receives the identity of the authority that signed the rule and policy version.
 % 上下文恒等映射、携带和克隆都会保持该权限方标识，而编辑规则引入的每个来源区域都会获得为该规则与策略版本签名的权限方标识。
 Thus \(\mathsf{reqauth}_H\) is total and immutable on \(\mathsf{RequiredBefore}(H,u)\), including Fork-created \(L/R\) copies.
@@ -132,10 +134,10 @@ The checker requires
 \mathsf{Covers}_u(t,a).
 \end{aligned}
 \]
-Here \(\mathsf{AuthorizedRemoval}_{H,u}\) contains the typed unselected-arm outcomes for \(\mathsf{MergeSelect}\) or the current-role outcomes of an authorized \(\mathsf{RestoreReplace}\).
-% 此处 \(\mathsf{AuthorizedRemoval}_{H,u}\) 包含 \(\mathsf{MergeSelect}\) 中未被选择分支的类型化结果，或已获授权的 \(\mathsf{RestoreReplace}\) 的当前角色结果。
-\(\mathsf{Satisfied}_{H,u}\) contains the completed current role of \(\mathsf{RestoreReplace}\).
-% \(\mathsf{Satisfied}_{H,u}\) 包含 \(\mathsf{RestoreReplace}\) 已完成的当前角色。
+Here \(\mathsf{AuthorizedRemoval}_{H,u}\) contains the typed outcomes of the unselected branch in \(\mathsf{MergeSelect}\) or the current-branch outcomes of an authorized \(\mathsf{RestoreReplace}\).
+% 此处 \(\mathsf{AuthorizedRemoval}_{H,u}\) 包含 \(\mathsf{MergeSelect}\) 中未被选择分支的类型化结果，或已获授权的 \(\mathsf{RestoreReplace}\) 的当前分支结果。
+\(\mathsf{Satisfied}_{H,u}\) contains the completed current-branch outcomes of \(\mathsf{RestoreReplace}\).
+% \(\mathsf{Satisfied}_{H,u}\) 包含 \(\mathsf{RestoreReplace}\) 已完成的当前分支结果。
 Both sets are empty for every other row and for a registered extension.
 % 对于其余各行和已注册扩展，这两个集合均为空。
 Thus \(\mathsf{StillRequired}_u=\mathsf{RequiredBefore}(H,u)\setminus(\mathsf{Satisfied}_{H,u}\uplus\mathsf{AuthorizedRemoval}_{H,u})\), so \(\mathsf{PreservesRequired}\) covers exactly the source outcomes that are neither completed nor authorized for removal.
@@ -156,8 +158,8 @@ The declarative predicate \(\mathsf{MaxSafe}(\Theta;L,\widehat B)\) holds for so
 % 当且仅当 \(\widehat B^\dagger_{H,u}\ne\varnothing\) 时，声明式谓词 \(\mathsf{MaxSafe}(\Theta;L,\widehat B)\) 才对某个二元组成立。
 When such a pair exists, it is unique and equals \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\).
 % 当这样的二元组存在时，它是唯一的，并且等于 \((W^\dagger_{H,u},\widehat B^\dagger_{H,u})\)。
-This equality is a theorem relating two independently stated objects, rather than the definition of the ideal machine.
-% 这一等式是联系两个独立陈述对象的定理，而不是理想机的定义。
+The declarative object and the computed fixed point are defined independently, and the lemma proves their equality.
+% 声明式对象与计算得到的不动点彼此独立定义，而该引理证明二者相等。
 \end{lemma}
 
 \begin{proof}
@@ -211,8 +213,8 @@ The second combines that lemma with \cref{lem:runtime-language}.
 \begin{proposition}[Output-sensitive checking]
 % 输出敏感检查
 \label{prop:app-output-complexity}
-Fix the unit-cost symbolic-checker model with constant-time finite-map lookup and policy-automaton transitions.
-% 固定单位代价的符号检查器模型，其中有限映射查询与策略自动机转移均为常数时间。
+Fix a unit-cost model for the checker with constant-time finite-map lookup and policy-automaton transitions.
+% 固定检查器的单位代价模型，其中有限映射查询与策略自动机转移均为常数时间。
 Let
 % 令
 \[
@@ -295,8 +297,8 @@ For soundness, induction places every post-fixed family inside every \(\widehat 
 
 Let \(\mathsf{enc}\) be canonical and length-delimited, with \(\kappa\) authenticating \(\mathcal A\).
 % 令 \(\mathsf{enc}\) 为规范且带长度分隔的编码，并由 \(\kappa\) 认证 \(\mathcal A\)。
-The symbolic LTS uses domain-separated injective authenticated digests \(\mathsf{Digest}_{\rm rules}\) and \(\mathsf{Digest}_{\rm record}\), so equal digests have equal encoded inputs.
-% 符号 LTS 使用域分离、单射且经认证的摘要 \(\mathsf{Digest}_{\rm rules}\) 和 \(\mathsf{Digest}_{\rm record}\)，因此相同摘要具有相同的编码输入。
+The formal transition system treats the domain-separated authenticated digests \(\mathsf{Digest}_{\rm rules}\) and \(\mathsf{Digest}_{\rm record}\) as injective, so equal digests have equal encoded inputs.
+% 形式转移系统把域分离且经认证的摘要 \(\mathsf{Digest}_{\rm rules}\) 和 \(\mathsf{Digest}_{\rm record}\) 视为单射，因此相同摘要具有相同的编码输入。
 For \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\), define
 % 对于 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，定义
 \[
@@ -339,10 +341,10 @@ including its initial state, marking, and every labeled transition.
 % 该同构包括初始状态、标记及每个带标签转移。
 Canonical encoding order makes \(\mathsf{Invalid}\), \(\mathsf{Reject}\), and \(\mathsf{Accepted}\) unique and unchanged by consistent renaming of internal identifiers.
 % 规范编码顺序使 \(\mathsf{Invalid}\)、\(\mathsf{Reject}\) 与 \(\mathsf{Accepted}\) 均唯一，并且不受内部标识一致重命名的影响。
-A byte implementation may authenticate \(\mathsf{enc}\) with signatures or collision-resistant digests.
-% 字节级实现可以使用签名或抗碰撞摘要来认证 \(\mathsf{enc}\)。
-The byte-level guarantee is parameterized by signature unforgeability and digest collision resistance, represented as authenticated identities in the formal model.
-% 字节级保证以签名不可伪造性与摘要抗碰撞性为参数，并在形式模型中表示为经认证身份。
+A concrete implementation may authenticate \(\mathsf{enc}\) with signatures or collision-resistant digests.
+% 具体实现可以使用签名或抗碰撞摘要来认证 \(\mathsf{enc}\)。
+The corresponding guarantee relies on signature unforgeability and digest collision resistance, which the formal model represents with unforgeable identifiers.
+% 相应保证依赖签名不可伪造性与摘要抗碰撞性，形式模型用不可伪造标识来表示这两项性质。
 
 \subsection{Proofs for Edit Rules and Rechecking}
 % 编辑规则与重新检查的证明
@@ -381,12 +383,12 @@ The Agent may name only an immutable record \(\xi\) that specifies the exact pri
 % Agent 只能指名不可变记录 \(\xi\)，其中指定先前的确切编辑规则、注册表、执行记录和策略，以及有限且不交的新增集合 \(D_\Sigma,D_\rho,D_\alpha\) 和后继策略 \(\mathcal A^+\)。
 The set \(D_\alpha\) contains the signed authority record for every newly introduced outcome and its source region.
 % 集合 \(D_\alpha\) 包含每个新引入结果及其来源区域的签名权限记录。
-The policy authority and call authorization service verify \(\xi\).
-% 策略权限方与调用授权服务验证 \(\xi\)。
+The policy authority and trusted runtime verify \(\xi\).
+% 策略权限方与可信运行时验证 \(\xi\)。
 Existing meanings remain unchanged, new identifiers are fresh and domain-scoped, and \(\mathcal A\subseteq\mathcal A^+\).
 % 现有含义保持不变，新标识限定于该域且从未使用，并且 \(\mathcal A\subseteq\mathcal A^+\)。
-Let \(\zeta^+\), \(\kappa^+\), and \(\mathcal A^+\) be the authenticated successor versions and policy named by \(\xi\).
-% 令 \(\zeta^+\)、\(\kappa^+\) 和 \(\mathcal A^+\) 为 \(\xi\) 指明并经认证的后继版本与策略。
+Let \(\zeta^+\), \(\kappa^+\), and \(\mathcal A^+\) be the verified successor versions and policy named by \(\xi\).
+% 令 \(\zeta^+\)、\(\kappa^+\) 和 \(\mathcal A^+\) 为 \(\xi\) 指明并通过验证的后继版本与策略。
 For every \(x\in X_{\sem T}\), the trusted runtime deterministically creates \(j_x^+\) and \(h_x^+\).
 % 对每个 \(x\in X_{\sem T}\)，可信运行时确定性地创建 \(j_x^+\) 和 \(h_x^+\)。
 For fresh \(\eta^+\), define
