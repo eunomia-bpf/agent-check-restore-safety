@@ -2,80 +2,80 @@
 % 引言
 \label{sec:introduction}
 
-A tool-using Agent can Fork live continuations, Restore a checkpoint, and Merge descendants~\cite{codexappserver,claudesessions,claudecheckpoint, wang2026fork,wu2026crab,zhang2026agentlibos}.
-% 使用工具的 Agent 可以 Fork 活跃延续、Restore 检查点，并 Merge 后代~\cite{codexappserver,claudesessions,claudecheckpoint, wang2026fork,wu2026crab,zhang2026agentlibos}。
-The world does not rewind.
-% 现实世界不会倒转。
-A pre-Restore payment remains charged, copied occurrences may share one-use authority, and an old call may race a Merge.
-% Restore 前的付款仍已扣款，复制的发生项可能共享一次性权限，而旧调用可能与 Merge 发生竞态。
-History editing changes \emph{which past continuations can still produce a future} while commitments remain irreversible.
-% 历史编辑会改变\emph{哪些过去的延续仍能产生未来}，而既有承诺仍不可逆。
+Tool-using Agents no longer execute only one linear plan.
+% 使用工具的 Agent 不再只执行一条线性计划。
+Modern runtimes let an Agent Fork live continuations, Restore a checkpoint, and Merge descendants~\cite{codexappserver,claudesessions,claudecheckpoint,wang2026fork,wu2026crab,zhang2026agentlibos}.
+% 现代运行时允许 Agent Fork 活跃延续、Restore 检查点并 Merge 后代~\cite{codexappserver,claudesessions,claudecheckpoint,wang2026fork,wu2026crab,zhang2026agentlibos}。
+These operations support exploration, recovery, and reuse without restarting the whole task.
+% 这些操作支持探索、恢复与复用，而无需重新开始整个任务。
+Consequently, an Agent's logical execution history becomes mutable runtime state.
+% 因此，Agent 的逻辑执行历史成为可变的运行时状态。
 
-This paper asks the following question.
-% 本文提出以下问题。
-\begin{quote}
-\emph{When does an Agent history rewrite have a policy-safe, history-faithful, completion-nonblocking realization conserving every source promise as target-lifted, durably discharged, or exactly issuer-retired on the history edge, and how can a reference monitor realize that boundary while effects race the rewrite?}
-% Agent 历史重写何时具有一种策略安全、历史忠实且完成非阻塞的实现，使每项源承诺都被提升到目标、已经持久履行，或由发行方在历史边上精确退役；当效应与重写发生竞态时，参考监控器又如何实现该边界？
-\end{quote}
+However, the world does not rewind with that history.
+% 然而，现实世界不会随这段历史一起倒转。
+In our running procurement example, the Agent saves checkpoint \(k\) before approval, the approval later commits, and a Restore of \(k\) creates a new logical approval occurrence while the old receipt remains.
+% 在贯穿全文的采购例子中，Agent 在审批前保存检查点 \(k\)，审批随后提交，而对 \(k\) 的 Restore 会创建一个新的逻辑审批发生项，同时旧回执仍然存在。
+Treating that occurrence as new can repeat the approval, while selecting supplier \(L\) in a Merge as an old supplier-\(R\) payment commits can authorize both branches.
+% 将该发生项视为全新调用可能重复审批，而在旧供应商 \(R\) 的付款提交时通过 Merge 选择供应商 \(L\)，则可能同时授权两个分支。
+A checkpoint-correct edit can therefore be security-wrong.
+% 因此，一次对检查点而言正确的编辑，在安全性上仍可能错误。
 
-\paragraph{One Restore, end to end}
-% 一次 Restore 的端到端过程
-In our running procurement history, the Agent saves checkpoint \(k\) before approval, the approval later commits, and the Agent eventually submits only \(u=\mathsf{RestoreLive}(b,k,\sigma)\).
-% 在贯穿全文的采购历史中，Agent 在审批前保存检查点 \(k\)，该审批随后提交，而 Agent 最终仅提交 \(u=\mathsf{RestoreLive}(b,k,\sigma)\)。
-Before execution, \(\mathsf{CheckReg}(\mathcal W,R)\) checks the typed procurement effect boundary against the finite registered slice \(R\) and establishes \(\mathcal W\sqsubseteq_\lambda R\) for the registered lowering \(\lambda\).
-% 执行之前，\(\mathsf{CheckReg}(\mathcal W,R)\) 根据有限注册切片 \(R\) 检查类型化采购效果边界，并为已注册降低映射 \(\lambda\) 建立 \(\mathcal W\sqsubseteq_\lambda R\)。
-Registration derives cells from canonical invocations, and the checker rejects a missing promised outcome, an unmediated durable edge, or an inconsistent receipt binding.
-% 注册过程从规范调用推导单元，而检查器会拒绝遗漏承诺结果、未受中介的持久边或不一致的回执绑定。
-At Restore, the trusted controller snapshots \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\), re-derives every schema-preserved outcome and occurrence--cell identity, and computes the greatest prefix-robust fixed point.
-% 在 Restore 时，可信控制器快照 \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\)，重新推导模式所保留的每个结果及发生项--单元标识关系，并计算前缀鲁棒最大不动点。
-Its uncapped semantic result is a cut-bound \(\mathsf{Invalid}(C_{\rm str})\), \(\mathsf{Reject}(C_{\rm fp})\), or \(\mathsf{Install}(\mathsf{Can}(W^\dagger,B^\dagger),\eta^+)\).
-% 它的无上限语义结果是绑定切点的 \(\mathsf{Invalid}(C_{\rm str})\)、\(\mathsf{Reject}(C_{\rm fp})\) 或 \(\mathsf{Install}(\mathsf{Can}(W^\dagger,B^\dagger),\eta^+)\)。
-After installation, every protected call is classified as \Fresh, \Alias, or denied, and the restored approval becomes a receipt-reusing \Alias rather than a second local outbox preparation.
-% 安装之后，每个受保护调用都被分类为 \Fresh、\Alias 或拒绝，而恢复后的审批成为复用回执的 \Alias，而非第二次本地发件箱准备。
-A verified empty fixed point rejects the Restore with a ranked elimination certificate, and the Agent can neither weaken the derived target nor bypass the installed monitor.
-% 经验证的空不动点会以带秩淘汰证书拒绝 Restore，且 Agent 既不能弱化派生目标，也不能绕过已安装监控器。
-\Cref{sec:lifecycle} carries this exact history through Fork, Merge, both cut races, and the later Restore.
-% \Cref{sec:lifecycle} 沿用这段完全相同的历史，依次展开 Fork、Merge、两类切点竞态和随后的 Restore。
+The root cause is that a checkpoint records only part of the facts that determine whether an edit is safe.
+% 根因在于，检查点只记录了决定一次编辑是否安全的部分事实。
+The controller must also know which results the old execution still promises, which logical calls refer to the same irreversible action, which effects have already advanced, and the exact moment at which the edit takes effect.
+% 控制器还必须知道旧执行仍然承诺哪些结果、哪些逻辑调用指向同一个不可逆动作、哪些效果已经推进，以及编辑生效的精确时刻。
+Each fact can change the correct decision.
+% 每项事实都可能改变正确判定。
+None can be reconstructed from workspace equality, a trace or receipt ledger alone, or a new target proposed by the caller.
+% 这些事实都无法仅从工作区相等性、单独的轨迹或回执账本，或者调用方提出的新目标中恢复。
 
-Closest Agent systems provide branching, staged effects, transactions, or recovery checks, while control and synthesis construct behavior from a supplied plant, marking, old specification, or formula~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart,dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,aceto2018suppressions}.
-% 最接近的 Agent 系统提供分支、分阶段效果、事务或恢复检查，而控制与综合方法从给定的被控对象、标记、旧规范或公式构造行为~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart,dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,aceto2018suppressions}。
-Our theorem begins at the checked typed Agent workflow and ends at the installed history edge: authenticated history determines outcomes, occurrence--cell/receipt state, and the exact cut consumed by synthesis, and an epoch transaction realizes the answer.
-% 我们的定理始于经检查的类型化 Agent 工作流，止于已安装的历史边：经认证历史决定综合所需的结果、发生项--单元/回执状态与精确切点，而纪元事务实现该判定。
-For every projection omitting one of the four semantic factors, and for either incidence erasure, two finite registered histories have the same retained view but require opposite admission or installation decisions.
-% 对于每个遗漏四个语义因子之一的投影以及任一种关联擦除，都存在两条有限注册历史具有相同的保留视图，却要求相反的准入或安装判定。
-The full state remains closed across successive edits, protected calls, and authenticated live schema/policy extensions rather than characterizing only one rewrite.
-% 完整状态在连续编辑、受保护调用以及经认证的在线模式/策略扩展之间保持闭合，而非只刻画一次重写。
+Existing approaches cover pieces of this problem but do not derive its end-to-end admission boundary.
+% 现有方法覆盖了该问题的部分环节，却没有推导其端到端准入边界。
+Agent systems provide branching, staged effects, transactions, or recovery checks~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart}.
+% Agent 系统提供分支、分阶段效果、事务或恢复检查~\cite{yu2026shepherd,li2025agentgit,langchain2026timetravel,patil2024goex,chang2025sagallm,mohammadi2026atomix,chen2026cordon,yang2026dart}。
+Control and synthesis choose behavior after a model of possible executions and desired final states has been supplied~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,aceto2018suppressions}.
+% 控制与综合方法则在可能执行及期望最终状态的模型已经给定后选择行为~\cite{dequeiroz2005multitasking,malik2008generalised,finkbeiner2022live,aceto2018suppressions}。
+Neither line of work by itself derives, from an authenticated editable history, everything that a particular edit must preserve before that edit can be installed.
+% 这两类工作本身都不会从经认证的可编辑历史中推导出某次具体编辑在安装前必须保留的全部内容。
 
-Once the trusted semantics has derived this Agent-specific state, conditional generalized nonblocking supplies the synthesis backend~\cite{malik2008generalised}.
-% 可信语义推导出这一 Agent 特有状态之后，条件广义非阻塞提供综合后端~\cite{malik2008generalised}。
-From the policy-safe resolved completions \(\widehat B_0\), the pruning operator \(\widehat\Phi\) removes any completion having a prefix without a surviving continuation for even one contract-compatible outcome.
-% 从策略安全的已解析完成路径 \(\widehat B_0\) 出发，裁剪算子 \(\widehat\Phi\) 会移除任何包含如下前缀的完成路径：哪怕仅对一个与契约兼容的结果，该前缀都没有仍然存活的后续路径。
-\[
- \widehat B^\dagger=\nu\widehat B.\widehat\Phi(\widehat B),
- \qquad B^\dagger=\pi_2\widehat B^\dagger,\qquad
- W^\dagger=\Pref(B^\dagger).
-\]
-The edit is admissible exactly when \(\widehat B^\dagger\neq\varnothing\).
-% 当且仅当 \(\widehat B^\dagger\neq\varnothing\) 时，该编辑才可接纳。
-When nonempty, it yields the greatest permitted behavior \(W^\dagger\), and when empty, its ranked elimination chain proves impossibility.
-% 当该不动点非空时，它给出最大的允许行为 \(W^\dagger\)，而当其为空时，带秩的淘汰链证明不可能性。
-Ordinary marker nonblocking over traces alone loses both outcome compatibility and occurrence--cell identity (\cref{prop:outcome-necessary,thm:exact-history}).
-% 普通的纯轨迹标记非阻塞会丢失结果兼容性和发生项--单元标识这两类信息（\cref{prop:outcome-necessary,thm:exact-history}）。
+Our key idea is that a history edit must not make old facts or unfinished promises disappear.
+% 我们的关键思想是：历史编辑不能让旧事实或尚未完成的承诺消失。
+After an edit, every old promise must still be required, have durable evidence that it was completed, or have been explicitly canceled by the authority that created it.
+% 编辑之后，每项旧承诺都必须继续有效、已有持久证据证明其完成，或已由创建它的权限方明确取消。
+The Agent chooses only a registered operation; the trusted controller determines which promises and past effects carry into the result.
+% Agent 只能选择一项已注册操作；可信控制器决定哪些承诺与既往效果必须带入结果。
+The Agent therefore cannot obtain a favorable answer by proposing a weaker version of its own past.
+% 因此，Agent 无法通过提出一个更弱的自身过去来获得有利判定。
 
-For a structural edit, the Agent names only live objects and an immutable schema.
-% 对于结构编辑，Agent 仅指名活对象和不可变模式。
-For online growth, it names only an authenticated extension-record identifier.
-% 对于在线增长，它仅指名一个经认证的扩展记录标识符。
-The trusted derivation enforces this three-way conservation law and preserves cells, lineage, and order; the Agent cannot enlarge the edge-recorded retirement set.
-% 可信推导执行这一三分守恒律并保持单元、谱系和次序；Agent 无法扩大边上记录的退役集合。
-Resolution distinguishes \Fresh commitments from receipt-silent \Alias progress, and each cut replaces the whole policy-domain epoch to order old uses against target activation.
-% 解析区分 \Fresh 承诺与不产生回执的 \Alias 进展，而每个切点都会替换整个策略域纪元，从而确定旧使用与目标激活的次序。
+Realizing this insight requires solving three coupled problems.
+% 实现这一洞见需要解决三个相互耦合的问题。
+First, calls copied by Fork or Restore may still refer to the same real-world action, so the controller must distinguish a genuinely new effect from reuse of an earlier result.
+% 第一，由 Fork 或 Restore 复制的调用仍可能指向同一个现实动作，因此控制器必须区分真正的新效果与对旧结果的复用。
+Second, at every allowed partial execution, each result that is still possible must retain a safe way to finish, without forbidding more behavior than safety requires.
+% 第二，在每段允许的部分执行处，每个仍然可能的结果都必须保留一条安全完成路径，同时不能禁止超出安全所需的行为。
+Third, the answer must take effect atomically with respect to old calls, including calls that race the edit or survive a crash.
+% 第三，该判定必须相对于旧调用原子生效，包括与编辑竞态或跨越崩溃存活的调用。
+
+We develop Agent History Admission, an exact decision procedure for this boundary.
+% 我们提出 Agent 历史准入，即针对这一边界的精确判定过程。
+For a requested edit, the controller takes the checked workflow, authenticated history, receipts, pending effects, policy, and current runtime version, and derives all legal completed executions.
+% 对于一次编辑请求，控制器接收经检查的工作流、经认证历史、回执、待处理效果、策略与当前运行时版本，并推导所有合法完整执行。
+It repeatedly removes any execution having a prefix after which one still-possible promised result can no longer finish safely.
+% 它反复删除这样的执行：在该执行的某个前缀之后，某个仍可能且已承诺的结果再也无法安全完成。
+If no execution remains, the controller returns a finite proof that every implementation must fail; otherwise, the survivors define the most permissive safe monitor.
+% 如果没有执行留下，控制器返回一份有限证明，说明所有实现都必然失败；否则，留下的执行定义最宽松的安全监控器。
+Before installation, the runtime recomputes the answer from the current history and atomically replaces the old monitor, forcing every racing call to occur either before or after the edit.
+% 安装之前，运行时根据当前历史重新计算判定并原子替换旧监控器，迫使每个竞态调用发生在编辑之前或之后。
+\Cref{sec:lifecycle} applies this process to one procurement history across Fork, Merge, two races, and Restore; the restored approval reuses its earlier receipt rather than producing a second effect.
+% \Cref{sec:lifecycle} 将这一过程应用于一段依次经历 Fork、Merge、两类竞态与 Restore 的采购历史；恢复后的审批复用先前回执，而不会产生第二个效果。
 
 \paragraph{Contribution}
 % 贡献
-We contribute one unified Agent History Admission Theory in which a checked typed effect boundary becomes the relational security state used by both exact admission and installation.
-% 我们提出一套统一的 Agent 历史准入理论，其中经检查的类型化效果边界转化为精确准入与安装共同使用的关系安全状态。
-For every \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\), the theorem establishes this conservation law and one equivalence among source-level safe realizability, a nonempty history-derived fixed point, successful installation, and an enabled ideal history edge.
-% 对每个 \(u\in\mathsf{Edit}_6\uplus\{\mathsf{Extend}(\xi)\}\)，该定理建立这一守恒律，并在源级安全可实现性、非空的历史派生不动点、成功安装和已启用的理想历史边之间建立一个统一等价关系。
-Registration reflection, information lower bounds, sequence closure, and weak bisimulation show that the same equivalence is application-grounded, information-tight, stable under Agent evolution, and durably realizable (\cref{sec:model,sec:admission,sec:kernel,sec:results}).
-% 注册反射、信息下界、序列闭包与弱互模拟表明，同一等价关系以应用为基础、在信息上紧致、在 Agent 演化下稳定，并可持久实现（\cref{sec:model,sec:admission,sec:kernel,sec:results}）。
+We contribute one end-to-end theorem connecting the original Agent workflow, the requested history edit, the exact decision procedure, and the installed runtime.
+% 我们贡献一个端到端定理，将原始 Agent 工作流、请求的历史编辑、精确判定过程与已安装运行时连接起来。
+For all six registered history operations and authenticated additive extensions, a safe implementation exists exactly when the procedure leaves a nonempty set of executions, exactly when its monitor can be installed, and exactly when an ideal atomic machine permits the same edit.
+% 对全部六种已注册历史操作和经认证的仅追加扩展，当且仅当该过程留下非空执行集合、其监控器能够安装且理想原子机器允许同一次编辑时，安全实现才存在。
+The theorem also proves that every category of history information used by the procedure is necessary, that the result remains valid after every finite sequence of operations, and that the concrete runtime has the same visible behavior as the ideal machine (\cref{sec:model,sec:admission,sec:kernel,sec:results}).
+% 该定理还证明，判定过程使用的每类历史信息都不可缺少，结果在操作组成的每个有限序列之后仍然成立，并且具体运行时与理想机器具有相同的可见行为（\cref{sec:model,sec:admission,sec:kernel,sec:results}）。
+Five kernel-checked Lean modules, 81 executable tests, and a bounded scaling study validate the finite checked core, critical examples, and explicit decision procedure.
+% 五个经内核检查的 Lean 模块、81 项可执行测试与一项有界扩展性研究验证了有限检查核心、关键例子和显式判定过程。

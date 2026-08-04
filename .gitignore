@@ -36,6 +36,7 @@ comment.cut
 
 # PDF output
 *.pdf
+!docs/paper/main.pdf
 
 # Lean build and dependency cache
 lean/.lake/

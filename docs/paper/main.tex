@@ -44,20 +44,24 @@ Exact Admission for Fork, Restore, and Merge}
 \maketitle
 
 \begin{abstract}
-Tool-using Agents can Fork, Restore, and Merge executions whose irreversible effects do not rewind.
-% 使用工具的 Agent 可以 Fork、Restore 和 Merge 执行，而其中的不可逆效果不会随历史倒转。
-For a checked typed Agent workflow and an authenticated edit or live extension, the Agent Security-State Characterization Theorem proves source-promise conservation and exact realizability: every source obligation is target-lifted, durably discharged, or named by an exact issuer-authenticated retirement set on the history edge; a policy-safe, history-faithful, completion-nonblocking realization exists exactly when the history-derived outcome family has a nonempty greatest prefix-robust fixed point.
-% 对于一个经检查的类型化 Agent 工作流以及一次经认证的编辑或在线扩展，Agent 安全状态刻画定理证明源承诺守恒与精确可实现性：每项源义务都被提升到目标、已经持久履行，或由历史边上的精确且经发行方认证的退役集合明确指名；当且仅当历史派生的结果族具有非空的前缀鲁棒最大不动点时，才存在策略安全、历史忠实且完成非阻塞的实现。
-The same theorem constructs the greatest monitor or a finite impossibility certificate and proves the information distinctions every exact compiler must preserve.
-% 同一定理构造最大监控器或有限不可能性证书，并证明每个精确编译器都必须保留的信息区分。
-It remains closed under arbitrary finite histories of the six edits, protected calls, and additive schema/policy extensions, and it refines the compiled monitor to an ideal atomic Agent-history machine at the modeled durable Agent API.
-% 它在六种编辑、受保护调用以及仅追加的模式/策略扩展组成的任意有限历史下保持闭合，并在已建模的持久 Agent API 上将编译后的监控器精化到理想原子 Agent 历史机。
-Unlike synthesis or rollback systems that consume supplied plants, obligations, or recovery decisions, our theory checks the typed Agent effect boundary, derives the exact admission instance, and carries its answer through atomic installation.
-% 不同于使用既定被控对象、义务或恢复决定的综合或回滚系统，我们的理论检查类型化的 Agent 效果边界，推导精确准入实例，并将其判定贯穿到原子安装。
-Five kernel-checked Lean modules establish typed registration reflection, finite compiler exactness and greatestness, deterministic six-edit derivation, compiler-to-installation construction, and installed-kernel invariant preservation across finite traces, live extensions, and cut races.
-% 五个经内核检查的 Lean 模块共同建立类型化注册反射、有限编译器的精确性与最大性、六种编辑的确定性派生、从编译器到安装的构造，以及已安装内核在有限轨迹、在线扩展和切点竞态中的不变量保持。
-Eighty-one executable tests and a bounded scaling study exercise the critical examples and explicit compiler.
-% 八十一项可执行测试和一项有界扩展性研究运行关键案例与显式编译器。
+Tool-using Agents support Fork, Restore, and Merge so that an execution can explore alternatives or recover without starting over.
+% 使用工具的 Agent 支持 Fork、Restore 和 Merge，使执行能够探索备选路径或从故障中恢复，而无需从头开始。
+These operations rewind logical control state, but not an approval, payment, message, or one-use authority already committed to the world; an edit can therefore duplicate an effect, erase a promised outcome, or race an old call.
+% 这些操作会倒转逻辑控制状态，却不会撤销已经提交到现实世界的审批、付款、消息或一次性权限；因此，一次编辑可能重复效果、抹去已承诺结果，或与旧调用发生竞态。
+A safe edit must therefore account for both what the original execution has already done and what it still owes.
+% 因此，一次安全编辑必须同时考虑原执行已经完成的事情和仍然负有的责任。
+Each old promise must remain required after the edit, have durable evidence of completion, or be explicitly canceled by the authority that created it.
+% 每项旧承诺都必须在编辑后继续有效、已有持久证据证明其完成，或由创建它的权限方明确取消。
+Existing Agent recovery systems implement particular edits, and existing synthesis methods choose behavior after a model and its goals have been supplied; neither derives the exact requirements of an edit from authenticated history.
+% 现有 Agent 恢复系统实现特定编辑，而现有综合方法在模型及其目标已经给定后选择行为；二者都不会从经认证历史中推导一次编辑的精确要求。
+We give a decision procedure that starts from a checked workflow and authenticated runtime state, derives the legal futures, and repeatedly removes any future whose prefix would strand a result that the edit still promises.
+% 我们给出一种判定过程：它从经检查的工作流和经认证的运行时状态出发，推导合法未来，并反复删除那些会在某个前缀后使编辑仍然承诺的结果无路可走的未来。
+If nothing remains, the procedure returns a finite proof that no implementation can meet the requirements; otherwise, the survivors compile into the largest enforceable set of safe behaviors.
+% 如果没有未来留下，该过程返回一份有限证明，说明任何实现都无法满足要求；否则，留下的未来会被编译成可强制执行的最大安全行为集合。
+For all six registered history operations and authenticated additive extensions, our main theorem proves that this procedure succeeds exactly when some implementation can enforce policy, preserve the edit's meaning, and keep every still-possible result able to finish; it also proves that the resulting monitor can be installed atomically despite racing calls.
+% 对全部六种已注册历史操作和经认证的仅追加扩展，我们的主定理证明：当且仅当某个实现能够执行策略、保持编辑含义并让每个仍可能的结果都可完成时，该过程才会成功；定理还证明，所得监控器能够在调用竞态下原子安装。
+The theorem also identifies the history information that no exact decision can discard, remains valid through every finite sequence of operations, and connects the installed runtime to an ideal atomic machine; five kernel-checked Lean modules, 81 executable tests, and a bounded scaling study validate the finite checked core and explicit procedure.
+% 该定理还识别出任何精确判定都不能丢弃的历史信息，在操作组成的每个有限序列中保持成立，并将已安装运行时连接到理想原子机器；五个经内核检查的 Lean 模块、81 项可执行测试与一项有界扩展性研究验证了有限检查核心和显式过程。
 \end{abstract}
 
 \input{sections/introduction}
@@ -85,6 +89,7 @@ The authors selected the research direction, checked the cited sources and mathe
 % 作者选择了研究方向，核查了所引文献和数学论证，并对每一项主张、证明、结果与引用承担责任。
 
 \bibliographystyle{IEEEtran}
+\IEEEtriggeratref{14}
 \bibliography{references}
 
 \end{document}
