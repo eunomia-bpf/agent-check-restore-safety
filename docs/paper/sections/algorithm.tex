@@ -10,8 +10,8 @@ It builds a finite automaton for the allowed partial executions, records which v
 % 它为允许的部分执行构造有限自动机，记录检查时使用的执行记录版本，并使新规则原子生效。
 The protocol orders every overlapping tool call either before or after the atomic rule update.
 % 该协议将每个重叠的工具调用完整地排列在原子规则更新之前或之后。
-The proof compares this implementation with an ideal machine that puts an accepted result into effect in one atomic step and allows exactly its resolved prefixes.
-% 证明将该实现与一台理想机比较，理想机以一个原子步骤使接受的结果生效，并且只允许该结果的已解析前缀。
+The proof compares this runtime protocol with an ideal machine that puts an accepted edit into effect in one atomic step and allows exactly its safe prefixes.
+% 证明将该运行时协议与一台理想机比较，理想机以一个原子步骤使接受的编辑生效，并且只允许其安全前缀。
 The ideal transition system and the detailed runtime rules appear in \cref{sec:ideal,tab:app-event-matrix}.
 % 理想转移系统与详细运行时规则见 \cref{sec:ideal,tab:app-event-matrix}。
 This section gives the automaton construction, the invariant after the rules change, and the atomic update used by the formal guarantees in the next section.
@@ -20,6 +20,8 @@ This section gives the automaton construction, the invariant after the rules cha
 \subsection{Turning Safe Executions into Runtime Rules}
 % 把安全执行转化为运行时规则
 
+The runtime enforces an accepted safe execution set by tracking exactly which safe prefixes remain possible after each processed call.
+% 运行时通过跟踪每个已处理调用之后仍然可能的安全前缀，强制执行被接受的安全执行集合。
 Removing result labels from the largest safe execution set gives the finite pair \((W,B)=(W^\dagger_{H,u},B^\dagger_{H,u})\).
 % 从最大安全执行集合中去掉结果标签，得到有限对 \((W,B)=(W^\dagger_{H,u},B^\dagger_{H,u})\)。
 For \(L/z=\{v\mid zv\in L\}\), let \(q_z=(W/z,B/z)\) be the automaton state after prefix \(z\).
@@ -39,6 +41,9 @@ For the laptop example, its initial state enables either supplier's payment; aft
 % 对于笔记本电脑示例，自动机的初始状态允许任一供应商的付款；经过向 \(L\) 付款的转移后，它允许向 \(L\) 发货的转移，但不允许向 \(R\) 付款的转移。
 Every state is reachable and is marked exactly when \(\epsilon\in B^\dagger/z\).
 % 每个状态均可达，并且恰在 \(\epsilon\in B^\dagger/z\) 时被标记。
+Thus a marked state represents a completed execution, while an unmarked state records safe work that may still continue.
+% 因此，标记状态表示一段已经完成的执行，而未标记状态记录仍可继续的安全工作。
+
 Each transition symbol \(a\) contains workflow call \(x\), action \(d\), and its \Fresh or \Alias mode, so one workflow call cannot use another call's rule entry.
 % 每个转移符号 \(a\) 都包含工作流调用 \(x\)、动作 \(d\) 以及 \Fresh/\Alias 模式，因此一个工作流调用无法使用另一个调用的规则入口。
 
@@ -68,8 +73,8 @@ If any tool call has committed since the candidate was computed, the candidate i
 % 如果计算候选结果之后已有任何工具调用提交，则该候选结果已过期且不会改变任何内容。
 Otherwise, one policy-domain transaction closes the old rule version, activates the new automaton, replaces the rule entry and authorization token for every current workflow call, and only then returns success to the Agent.
 % 否则，一个策略域事务会关闭旧规则版本、激活新自动机、替换每个当前工作流调用的规则入口与授权令牌，然后才向 Agent 返回成功结果。
-For each tool call, the same transaction verifies its workflow-call ID, action, canonical request, authorization token, and enabled automaton transition before recording progress.
-% 对于每次工具调用，同一事务会在记录进展之前验证其工作流调用标识、动作、规范请求、授权令牌与已启用的自动机转移。
+For each tool call, a transaction verifies its workflow-call ID, action, canonical request, authorization token, and enabled automaton transition before recording progress.
+% 对于每次工具调用，一个事务会在记录进展之前验证其工作流调用标识、动作、规范请求、授权令牌与已启用的自动机转移。
 A \Fresh call creates one authorization record and queues the canonical request.
 % \Fresh 调用创建一条授权记录并将规范请求入队。
 An \Alias call advances the workflow by linking to the existing record without extending the authorization sequence.
@@ -94,9 +99,9 @@ for the safety-check instance obtained from its current components.
 Write \(\mathsf{Ready}(S,u,Y)\) when the trusted runtime re-derives \(u\) from the current execution record, recomputes the same nonempty fixed point and automaton carried by \(Y\), confirms that the record has not changed since \(Y\) was computed, confirms that the old rule version is current, and confirms that the new version is unallocated or inactive.
 % 当可信运行时根据当前执行记录重新推导 \(u\)、重新计算出 \(Y\) 所携带的同一非空不动点与自动机、确认计算 \(Y\) 之后执行记录未发生变化、确认旧规则版本仍为当前版本并确认新版本尚未分配或尚未激活时，记作 \(\mathsf{Ready}(S,u,Y)\)。
 If these checks pass, one transaction closes the old version, activates the new automaton, replaces every current rule entry and authorization token, and then returns success to the Agent.
-% 若这些检查通过，一个事务会关闭旧版本、激活新自动机、替换每个当前规则入口与授权令牌，然后才向 Agent 返回成功结果。
+% 若这些检查通过，一个事务会关闭旧版本、激活新自动机、替换每个当前规则入口与授权令牌，然后才向 Agent 返回成功。
 A changed state makes the candidate stale and forces a new check.
-% 状态一旦改变，候选结果即过期，必须重新检查。
+% 状态一旦改变，候选答案即过期，必须重新检查。
 The complete state updates, retries, request sending, completion updates, and restart rules appear in \cref{app:runtime-transitions,tab:app-event-matrix}.
 % 完整状态更新、重试、请求发送、完成更新与重启规则见 \cref{app:runtime-transitions,tab:app-event-matrix}。
 
@@ -105,8 +110,8 @@ The complete state updates, retries, request sending, completion updates, and re
 \label{lem:cut-linearization}
 In every reachable well-formed runtime state, a visible edit answer and a tool call in the same policy domain have a unique order at the atomic rule update.
 % 在每个可达的良构运行时状态中，同一策略域内的一项可见编辑答案与一次工具调用在原子规则更新处具有唯一顺序。
-If the call commits first, it changes the execution record, so the earlier result cannot take effect.
-% 若调用先提交，它会改变执行记录，因此先前的结果无法生效。
+If the call commits first, it changes the execution record, so the earlier answer becomes stale and the edit cannot take effect.
+% 若调用先提交，它会改变执行记录，因此先前的答案会过期，编辑也无法生效。
 If the rule update commits first, the old call cannot resolve \Fresh or \Alias.
 % 若规则更新先提交，则旧调用无法解析 \Fresh 或 \Alias。
 Steps in independent domains commute by product semantics.
@@ -117,8 +122,8 @@ If the call commits first, its recorded progress changes the execution record.
 % 若调用先提交，其记录的进展会改变执行记录。
 If the rule update commits first, it closes the old rule version, so the old authorization token fails.
 % 若规则更新先提交，它会关闭旧规则版本，因此旧授权令牌无法通过验证。
-Atomicity excludes a partial third result.
-% 原子性排除了部分完成的第三种结果。
+Atomicity excludes a partially applied third case.
+% 原子性排除了只完成一部分的第三种情形。
 Independent domains commute.
 % 独立域中的步骤彼此可交换。
 \end{proof}
@@ -129,6 +134,4 @@ Independent domains commute.
 The TCB is the trusted boundary defined in \cref{sec:model}.
 % TCB 即 \cref{sec:model} 定义的可信边界。
 Search, minimization, and candidate preparation remain untrusted because the final check recomputes them.
-% 搜索、最小化与候选结果准备仍不受信任，因为最终检查会重新计算它们。
-The next section states the exactness and runtime guarantees obtained at this boundary.
-% 下一节陈述在这一边界上获得的精确性与运行时保证。
+% 搜索、最小化与候选方案准备仍不受信任，因为最终检查会重新计算它们。

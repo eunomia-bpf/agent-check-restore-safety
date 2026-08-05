@@ -8,8 +8,10 @@ They let an Agent Checkpoint an execution, Fork it into alternatives, Restore an
 % 它们允许 Agent Checkpoint 一次执行、将其 Fork 为多个备选方案、Restore 到较早的检查点，并 Merge 多个分支~\cite{codexappserver,claudesessions,claudecheckpoint,wang2026fork,wu2026crab,zhang2026agentlibos}。
 These operations support exploration, recovery, and reuse without restarting the task.
 % 这些操作支持探索、恢复与复用，而无需重新开始任务。
-We call Fork, Restore, and Merge \emph{execution edits} because they change what the Agent will do next; Checkpoint records the current execution for a later edit.
-% 我们把 Fork、Restore 和 Merge 称为\emph{执行编辑}，因为它们会改变 Agent 接下来做什么；Checkpoint 则记录当前执行，供后续编辑使用。
+We call all four operations \emph{execution edits}.
+% 我们把这四种操作统称为\emph{执行编辑}。
+Checkpoint records the current execution for later use, while Fork, Restore, and Merge change what the Agent will do next.
+% Checkpoint 记录当前执行供之后使用，而 Fork、Restore 和 Merge 改变 Agent 接下来做什么。
 
 Consider an Agent buying one laptop for a school.
 % 考虑一个为学校购买一台笔记本电脑的 Agent。
@@ -21,8 +23,8 @@ The Agent then restores \(k\) to compare supplier \(L\) and merges the \(L\) bra
 % 随后 Agent Restore 到 \(k\) 以比较供应商 \(L\)，并把 \(L\) 分支 Merge 到当前执行中。
 If the runtime sees only the restored workspace, it may request the same approval again or continue with \(L\) even though payment to \(R\) is already authorized~\cite{zheng2026acrfence}.
 % 如果运行时只看到恢复后的工作区，它可能再次请求同一审批，或在已经授权向 \(R\) 付款后继续选择 \(L\)~\cite{zheng2026acrfence}。
-Either result breaks the school's purchasing rules because the first repeats a one-time approval and the second combines incompatible supplier actions.
-% 两种结果都会违反学校的采购规则，因为前者重复一次性审批，后者组合彼此不相容的供应商动作。
+Either behavior breaks the school's purchasing rules because the first repeats a one-time approval and the second combines incompatible supplier actions.
+% 两种行为都会违反学校的采购规则，因为前者重复一次性审批，后者组合彼此不相容的供应商动作。
 
 This example shows that the runtime cannot rely on the Agent's account of the execution.
 % 这个例子说明，运行时不能依赖 Agent 对执行情况的描述。
@@ -34,6 +36,10 @@ A \emph{tool action} is an external operation governed by policy, such as approv
 % \emph{工具动作}是受策略约束的外部操作，例如审批、付款或发货。
 The runtime checks every tool action against policy.
 % 运行时依据策略检查每个工具动作。
+The runtime makes its security decision when authorizing a tool request.
+% 运行时在授权工具请求时作出安全决定。
+Sending the request later and recording its return cannot undo that decision.
+% 随后发送请求和记录返回值都不能撤销该决定。
 Our security goal is therefore to prevent an edit from authorizing a tool action forbidden by policy or discarding a result that the task still requires.
 % 因此，我们的安全目标是防止编辑授权策略禁止的工具动作，或丢弃任务仍要求实现的结果。
 Meeting this goal requires four facts: (1) the task structure and its required results, (2) which calls refer to the same action, (3) earlier authorizations and call progress, and (4) which rules govern a call that overlaps the edit.
@@ -42,6 +48,10 @@ Each fact can change the correct answer.
 % 每类事实都可能改变正确答案。
 The restored workspace, an execution trace alone, an authorization log alone, and the Agent's own description each omit information the checker may need.
 % 恢复后的工作区、单独的执行轨迹、单独的授权日志以及 Agent 自己的描述，都各自缺少检查器可能需要的信息。
+Before an edit takes effect, the runtime records the finite set of relevant tool calls, their possible orders, and results.
+% 编辑生效前，运行时记录有限的相关工具调用集合、它们的可能次序及结果。
+The Agent's internal reasoning remains unchanged.
+% Agent 的内部推理保持不变。
 
 Existing approaches cover parts of this problem but do not derive its complete safety condition.
 % 现有方法覆盖了该问题的部分环节，却没有推导其完整安全条件。
@@ -52,8 +62,8 @@ Control and synthesis choose behavior after a model of possible executions and d
 Neither line of work derives from a recorded execution everything that a particular edit must preserve before it takes effect.
 % 这两类工作都不会从已有执行记录中推导出某次具体编辑在生效前必须保留的全部内容。
 
-Our key idea is that an execution edit must preserve both past actions and results that are still required.
-% 我们的关键思想是：执行编辑必须同时保留过去的动作和仍然要求实现的结果。
+Our key idea is to derive from the execution record what each edit must preserve: earlier authorizations and every result that remains required.
+% 我们的关键思想是根据执行记录推导每次编辑必须保留的内容：先前的授权以及每个仍要求实现的结果。
 Every result required before the edit must remain required, already be satisfied by the recorded execution, or be explicitly removed by the same authority that required it.
 % 编辑前要求实现的每个结果都必须继续作为要求、已经由所记录的执行满足，或由提出该要求的同一权限方明确移除。
 The Agent requests an edit under a registered edit rule.
@@ -71,27 +81,25 @@ Second, after every allowed partial execution, every result that is still requir
 % 第二，在每段允许的部分执行之后，每个仍被要求且仍有可能实现的结果都必须保留安全完成方式。
 The checker must enforce this condition without forbidding additional safe behavior.
 % 检查器必须执行这一条件，同时不能额外禁止安全行为。
-Third, the answer must take effect atomically with calls that overlap the edit and remain valid if the runtime or machine stops unexpectedly and later recovers.
-% 第三，该答案必须与重叠编辑的调用原子排序，并在运行时或机器意外停止后恢复时继续有效。
+Third, the rules for an accepted edit must take effect atomically with calls that overlap the edit and remain valid if the runtime or machine stops unexpectedly and later recovers.
+% 第三，被接受编辑的规则必须与重叠编辑的调用原子排序，并在运行时或机器意外停止后恢复时继续有效。
 
-We give an exact checker that either computes every safe way for a requested operation to proceed or proves that every possible implementation is unsafe.
-% 我们给出一个精确检查器，它要么计算所请求操作安全推进的全部方式，要么证明每种可能实现都不安全。
-For a requested edit, the runtime uses the current execution record to construct every allowed complete execution.
-% 对于一次编辑请求，运行时使用当前执行记录构造所有允许的完整执行。
-It removes an execution whenever one of its partial executions would leave a still-required result with no safe completion.
-% 如果某个完整执行的部分执行会让仍然要求实现的结果失去安全完成方式，检查器就删除该完整执行。
-If no execution remains, the runtime returns an independently checkable proof that no safe implementation exists.
-% 如果没有完整执行留下，运行时返回一份可独立检查的证明，说明不存在安全实现。
+We give an exact checker that computes every safe way for a requested operation to proceed or proves that every possible way is unsafe.
+% 我们给出一个精确检查器，它计算所请求操作安全推进的全部方式，或者证明每种可能方式都不安全。
+For a requested edit, the runtime constructs every allowed complete execution from the current record.
+% 对于一次编辑请求，运行时根据当前记录构造所有允许的完整执行。
+It removes an execution if any partial execution would leave a still-required result without a safe completion.
+% 如果任何部分执行会使仍要求实现的结果失去安全完成方式，检查器就删除该完整执行。
+If none remains, the runtime returns an independently checkable proof that no runtime rule set can enforce the edit safely.
+% 如果没有执行留下，运行时返回一份可独立检查的证明，说明不存在能够安全实施该编辑的运行时规则集合。
 Otherwise, the remaining executions contain every safe way for the edit to proceed.
 % 否则，剩余执行包含该编辑安全推进的全部方式。
 Before the edit takes effect, the runtime checks the current execution record again and atomically switches to the newly computed rules.
 % 编辑生效之前，运行时再次检查当前执行记录，并原子切换到新计算出的规则。
-Every overlapping call is therefore checked entirely under either the old rules or the new rules.
-% 因此，每个重叠调用都完全依据旧规则或新规则进行检查。
+Each overlapping call is checked entirely under either the old or new rules.
+% 每个重叠调用都完全依据旧规则或新规则进行检查。
 \Cref{fig:two-histories} illustrates this process for an approval task containing Fork, Merge, Restore, and calls that overlap the atomic rule update.
 % \Cref{fig:two-histories} 用一个包含 Fork、Merge、Restore 以及与原子规则更新重叠调用的审批任务展示这一过程。
-\Cref{sec:lifecycle} derives the example step by step.
-% \Cref{sec:lifecycle} 对该例逐步进行推导。
 After Restore, the repeated approval call reuses the earlier authorization record instead of authorizing the approval again.
 % Restore 之后，重复的审批调用复用先前的授权记录，而不会再次授权该审批。
 
@@ -100,24 +108,24 @@ After Restore, the repeated approval call reuses the earlier authorization recor
 \begin{enumerate}[leftmargin=*,itemsep=2pt,topsep=2pt]
 \item \textbf{Safety model.}
 % \textbf{安全模型。}
-We define safety for Agent Checkpoint, Fork, Restore, and Merge from the execution record rather than letting the Agent choose what the edited execution contains.
-% 我们根据执行记录定义 Agent Checkpoint、Fork、Restore 和 Merge 的安全性，而不是让 Agent 决定编辑后的执行包含什么。
-The model preserves past actions and every still-required result, and it proves that any exact checker must distinguish answer-changing cases from each of the four record parts identified above.
-% 该模型保留过去的动作和每个仍要求实现的结果，并证明任何精确检查器都必须区分上述四个记录部分中会改变答案的情形。
+We define Checkpoint, Fork, Restore, and Merge safety from the execution record rather than letting the Agent choose the edited execution.
+% 我们根据执行记录定义 Checkpoint、Fork、Restore 和 Merge 的安全性，而不是让 Agent 选择编辑后的执行。
+The model preserves past actions and every still-required result and proves that exact checkers must distinguish answer-changing cases from all four record parts.
+% 该模型保留过去的动作和每个仍要求实现的结果，并证明精确检查器必须区分全部四个记录部分中会改变答案的情形。
 
-\item \textbf{Exact checking and runtime implementation.}
-% \textbf{精确检查与运行时实现。}
-We construct an executable checker that returns either every safe way for the edit to proceed or a proof that none exists.
-% 我们构造一个可执行检查器，它返回该编辑安全推进的全部方式，或者返回不存在安全方式的证明。
-Checkpoint has an exact check, and the checker accepts each of the six forms of Fork, Restore, and Merge exactly when a safe runtime implementation exists.
-% Checkpoint 具有精确检查，而对于 Fork、Restore 和 Merge 的六种形式，当且仅当存在安全运行时实现时，检查器才接受。
-The runtime puts the result into effect atomically, preserves safety across repeated edits and restarts, and has the same Agent-visible behavior as an ideal atomic machine.
-% 运行时使判定结果原子生效，在重复编辑与重新启动过程中保持安全，并与理想原子机器具有相同的 Agent 可见行为。
+\item \textbf{Exact checking and atomic enforcement.}
+% \textbf{精确检查与原子强制执行。}
+We construct an executable checker that returns every safe way to proceed or a proof that none exists.
+% 我们构造一个可执行检查器，它返回安全推进的全部方式，或者返回不存在安全方式的证明。
+Checkpoint has an exact check, and the checker accepts each of the six forms of Fork, Restore, and Merge exactly when the safety condition is enforceable.
+% Checkpoint 具有精确检查，而对于 Fork、Restore 和 Merge 的六种形式，当且仅当安全条件可实施时，检查器才接受。
+Our formal runtime protocol rechecks the record, atomically installs accepted rules, preserves safety across repeated edits and restarts, and has the same Agent-visible behavior as an ideal atomic machine.
+% 我们的形式化运行时协议重新检查记录、原子安装被接受的规则、在重复编辑和重启中保持安全，并与理想原子机器具有相同的 Agent 可见行为。
 
 \item \textbf{Mechanization and executable validation.}
 % \textbf{机械化与可执行验证。}
-Six Lean modules mechanize registration, all six edit forms, the atomic rule update, calls concurrent with that update, and preservation across finite executions.
-% 六个 Lean 模块机械化注册、全部六种编辑形式、原子规则更新、与该更新并发的调用以及有限执行上的安全保持。
+Six Lean modules mechanize registration, all six edit forms, the atomic rule update, concurrent calls, and preservation across finite executions.
+% 六个 Lean 模块机械化注册、全部六种编辑形式、原子规则更新、并发调用以及有限执行上的安全保持。
 Nineteen paper-specific tests and measurements over 2--128 results exercise the executable checker.
 % 十九项论文专用测试与覆盖 2--128 个结果的测量检验可执行检查器。
 \end{enumerate}

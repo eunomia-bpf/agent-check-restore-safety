@@ -1,21 +1,28 @@
+This section defines the checker semantics in two steps.
+% 本节分两步定义检查器语义。
+It first classifies each workflow call as a new authorization or reuse and then computes the largest set of executions that remains safe after every prefix.
+% 它首先把每个工作流调用分类为新授权或授权复用，然后计算在每个前缀之后都保持安全的最大执行集合。
+
 Recall the authorization-label alphabet \(\mathcal U\) and regular prefix-closed policy \(\mathcal A\subseteq\mathcal U^*\).
 % 回顾授权标签字母表 \(\mathcal U\) 和正则前缀闭合策略 \(\mathcal A\subseteq\mathcal U^*\)。
 For authorization log \(\Delta\), \(\mathsf{lab}(\Delta)\in\mathcal A\) is its authorization sequence and \(D_\Delta\) is the set of actions that already have authorization records.
 % 对于授权日志 \(\Delta\)，\(\mathsf{lab}(\Delta)\in\mathcal A\) 是其授权序列，\(D_\Delta\) 是已经具有授权记录的动作集合。
 Fix \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\) and write \(\mathsf{state}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\).
 % 固定 \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)，并记 \(\mathsf{state}(\Theta)=(\kappa,H,\Delta,\mathsf{out},\mathcal A)\)。
-\(\mathsf{Derive}\) is partial.
+\(\mathsf{Derive}\) is a partial function.
 % \(\mathsf{Derive}\) 是偏函数。
-Whenever the initial rule update, an execution edit, or a later registered extension is valid, it produces a unique derived record.
-% 当初始规则更新、执行编辑或后续注册扩展有效时，它产生唯一的派生记录。
+For a valid initial rule update, a Fork, Restore, or Merge edit, or a registered extension, it produces a unique derived record.
+% 对于有效的初始规则更新、Fork/Restore/Merge 编辑或已注册扩展，它产生唯一的派生记录。
+Otherwise, it is undefined.
+% 否则，它没有定义。
 When defined, write \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
 % 当有定义时，记 \(\mathsf{Derive}(\Theta)=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\)。
 Root derivation additionally requires that \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) accept.
 % 根推导还要求 \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) 接受。
-An execution edit has \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) and uses the unique execution-edit judgment.
-% 执行编辑满足 \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) 并使用唯一的执行编辑判定。
-\(\mathsf{Extend}(\xi)\) adds signed edit-rule, call, result-authority, and policy entries while preserving the current workflow, its progress, and all earlier authorizations.
-% \(\mathsf{Extend}(\xi)\) 添加签名的编辑规则、调用、结果权限和策略条目，同时保留当前工作流、其进展及所有先前授权。
+Each Fork, Restore, or Merge edit has \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\) and uses the unique edit judgment.
+% 每个 Fork、Restore 或 Merge 编辑都满足 \((\kappa_u,\mathcal A_u)=(\kappa,\mathcal A)\)，并使用唯一的编辑判定。
+\(\mathsf{Extend}(\xi)\) adds signed entries for edit rules, calls, the authority for each result, and policies while preserving the current workflow, its progress, and all earlier authorizations.
+% \(\mathsf{Extend}(\xi)\) 添加编辑规则、调用、每个结果的权限方和策略的签名条目，同时保留当前工作流、其进展及所有先前授权。
 \Cref{app:registered-extension} gives the judgment.
 % 该判定见 \cref{app:registered-extension}。
 Let \(\rho_u\) be the target registry in \(H_u\), let \(O_{H,u}=O_{\mathcal C_u}\), and use \(H'=H_u\) and \(\rho'=\rho_u\) where earlier notation is convenient.
@@ -23,13 +30,14 @@ Let \(\rho_u\) be the target registry in \(H_u\), let \(O_{H,u}=O_{\mathcal C_u}
 The execution sets below use \(\Theta\), the edit-rule registry, \(\rho_u\), and target policy \(\mathcal A_u\).
 % 下文执行集合使用 \(\Theta\)、编辑规则注册表、\(\rho_u\) 和目标策略 \(\mathcal A_u\)。
 Before the rules change, the trusted runtime checks the complete record again, including queued requests \(\mathsf{out}\), so sending a request concurrently makes an earlier answer stale.
-% 规则改变之前，可信运行时会再次检查完整记录，其中包括排队请求 \(\mathsf{out}\)，因此并发发出请求会使较早的判定结果过期。
+% 规则改变之前，可信运行时会再次检查完整记录，其中包括排队请求 \(\mathsf{out}\)，因此并发发出请求会使较早的答案过期。
 We abbreviate the fixed parameters by writing \(H,u\).
 % 我们用 \(H,u\) 简写固定参数。
 
 \subsection{New and Reused Authorizations}
 % 新授权与授权复用
-
+The same external action may appear at several workflow-call positions after Fork or Restore, but it must be authorized at most once.
+% Fork 或 Restore 之后，同一个外部动作可能出现在多个工作流调用位置，但最多只能获得一次授权。
 Function \(\Resolve^{\rho_u}_\Delta\) keeps every workflow call and annotates it as creating a new authorization or reusing an earlier one.
 % 函数 \(\Resolve^{\rho_u}_\Delta\) 保留每个工作流调用，并标注它是创建新授权还是复用先前授权。
 Starting with \(D_0=D_\Delta\), it maps a call sequence \(w=x_1\cdots x_n\) to annotated sequence \(z_1\cdots z_n\).
@@ -102,6 +110,8 @@ For each derived result \(o\in O_{H,u}\), define all of its complete executions 
    \mathsf{lab}(\Delta)\mathsf{auth}(z)\in\mathcal A_u\}.
 \end{aligned}
 \end{equation}
+Here an execution is complete when every workflow call for its result has been processed, and requests and returns add no \Fresh or \Alias events.
+% 这里，当一个结果的每个工作流调用都已处理时，相应执行即告完成；发送请求和记录返回值不会增加 \Fresh 或 \Alias 事件。
 For an annotated prefix \(z\), let
 % 对于带标注前缀 \(z\)，定义 \(\mathsf{Compat}(z)\) 如下：
 \[
@@ -119,6 +129,8 @@ For an annotated prefix \(z\), let
 \begin{definition}[Safe execution set]
 % 安全执行集合
 \label{def:safe-execution-set}
+The checker tracks both the partial executions that the runtime may currently allow and the complete executions that justify allowing them.
+% 检查器同时跟踪运行时当前可以允许的部分执行，以及为允许这些部分执行提供依据的完整执行。
 A safe execution set is a pair \((L,\widehat B)\), where \(L\) contains allowed partial executions and \(\widehat B\) contains allowed complete executions labeled by result, satisfying the conditions below.
 % 安全执行集合是二元组 \((L,\widehat B)\)，其中 \(L\) 包含获准的部分执行，\(\widehat B\) 包含按结果标记的获准完整执行，并满足下列条件。
 At the laptop Fork, for example, \(\widehat B\) contains the \(L\) and \(R\) payment--shipment executions labeled by \(o_L\) and \(o_R\), while \(L\) contains their prefixes.
@@ -143,6 +155,8 @@ After a partial execution shared by several results, every result still compatib
 % 在多个结果共享的一段部分执行之后，每个仍与该部分执行兼容的结果都必须保留一条策略安全的完成路径。
 The operator below removes exactly the complete executions that violate this condition.
 % 下列算子恰好删除违反这一条件的完整执行。
+Removing one completion may make another prefix unsafe, so the checker repeats this pruning until no further execution must be removed.
+% 移除一条完成路径可能使另一个前缀变得不安全，因此检查器重复剪除，直到不再需要移除任何执行。
 Put
 % 令 \(\widehat B_0\) 如下：
 \[
@@ -172,7 +186,7 @@ Since \(\widehat B_1\subseteq\widehat B_0\), repeated application removes execut
  &W^\dagger_{H,u}&=\Pref(B^\dagger_{H,u}).
 \end{aligned}
 \]
-\begin{definition}[Safe execution edit]
+\begin{definition}[Safe Fork, Restore, or Merge edit]
 % 安全执行编辑
 \label{def:safe-execution-edit}
 \begin{equation}
@@ -257,8 +271,8 @@ Then
  (\mathsf{possible}_o,\mathsf{done}_o)\text{-nonblocking}.
 \end{gathered}
 \]
-Consequently, if \(\widehat B^\dagger\) is nonempty, it is the largest nonempty completion subfamily of \(\widehat B_0\) satisfying these result-specific nonblocking conditions.
-% 因此，若 \(\widehat B^\dagger\) 非空，则它是 \(\widehat B_0\) 中满足这些特定于结果的非阻塞条件的最大非空完成路径子族。
+Consequently, if \(\widehat B^\dagger\) is nonempty, it is the largest nonempty completion subfamily of \(\widehat B_0\) satisfying the nonblocking condition for every result.
+% 因此，若 \(\widehat B^\dagger\) 非空，则它是 \(\widehat B_0\) 中对每个结果都满足非阻塞条件的最大非空完成路径子族。
 If it is empty, no nonempty subfamily satisfies the conditions.
 % 若它为空，则没有任何非空子族满足这些条件。
 Ordinary marker nonblocking of the unaugmented projected language is strictly weaker.
@@ -275,12 +289,12 @@ For strictness, the preceding instance has the marker-nonblocking projected pair
 % 关于严格性，前述实例具有标记非阻塞的投影二元组 \((\Pref\{\bar y\bar x,\bar x\bar z\}, \{\bar y\bar x,\bar x\bar z\})\)，但其带索引不动点为空。
 \end{proof}
 
-\Cref{prop:result-necessary} relates the fixed point to generalized nonblocking after the trusted runtime has derived the result-specific completion conditions~\cite{dequeiroz2005multitasking,malik2008generalised}.
+\Cref{prop:result-necessary} relates the fixed point to generalized nonblocking after the trusted runtime has derived the completion condition for each result~\cite{dequeiroz2005multitasking,malik2008generalised}.
 % \Cref{prop:result-necessary} 表明，在可信运行时推导出各结果的完成条件之后，该不动点与广义非阻塞相对应~\cite{dequeiroz2005multitasking,malik2008generalised}。
 The trusted runtime derives those conditions from the requested edit, authorized removals, actions, authorization records, and the execution record.
 % 可信运行时根据请求的编辑、获准移除、动作、授权记录和执行记录推导这些条件。
-It also decides whether each tool call creates or reuses an authorization, computes the largest safe execution set or a rejection proof, and puts an accepted result into effect atomically.
-% 它还判断每个工具调用是创建还是复用授权，计算最大安全执行集合或拒绝证明，并使接受的结果原子生效。
+It also decides whether each tool call creates or reuses an authorization, computes the largest safe execution set or a rejection proof, and puts an accepted edit into effect atomically.
+% 它还判断每个工具调用是创建还是复用授权，计算最大安全执行集合或拒绝证明，并使接受的编辑原子生效。
 
 \subsubsection{Rejection Proofs}
 % 拒绝证明
@@ -342,7 +356,7 @@ The checker returns \(\mathsf{Invalid}\) when derivation fails, \(\mathsf{Reject
 Write \(\mathsf{Check}(\Theta)\) for this deterministic output.
 % 将这一确定性输出记为 \(\mathsf{Check}(\Theta)\)。
 Each answer includes a digest of the execution record that was checked.
-% 每个判定结果都包含所检查执行记录的摘要。
+% 每个答案都包含所检查执行记录的摘要。
 \Cref{app:returned-data} gives the exact returned data and verification rules.
 % \Cref{app:returned-data} 给出精确返回数据与验证规则。
 \Cref{prop:app-output-complexity} proves an output-sensitive \(O(D+n\Lambda+|\mathcal G_{\rm cov}|+V_B\log(2+V_B))\)-time, \(O(D+\Lambda+|\mathcal G_{\rm cov}|)\)-space bound.

@@ -7,8 +7,8 @@ This appendix gives the proof details for \cref{thm:exact-checking} over finite 
 Independent domains retain the product interpretation stated in the paper.
 % 独立域仍采用正文所述的乘积解释。
 
-\subsection{The Declarative Definition and the Computed Result}
-% 声明式定义与计算结果
+\subsection{The Declarative Definition and the Computed Answer}
+% 声明式定义与计算答案
 \label{app:spec-bridge}
 
 Fix a well-formed safety-check instance \(\Theta=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\) for which the edit derivation yields \(\delta=(\kappa_u,H_u,\mathcal A_u,\mathcal C_u,\eta^-,\eta^+)\).
@@ -122,7 +122,7 @@ The checker requires
 }
 \end{definition}
 
-\begin{definition}[Required-result preservation]
+\begin{definition}[Preserving required results]
 % 要求实现结果的保留
 \label{app:spc}
 \[
@@ -151,8 +151,8 @@ Let \(\mathfrak R_\Theta\) be the finite set of safe execution sets from \cref{d
  L_1\subseteq L_2\ \land\ \widehat B_1\subseteq\widehat B_2 .
 \]
 
-\begin{lemma}[The computed result is exact]
-% 计算结果是精确的
+\begin{lemma}[The computed answer is exact]
+% 计算答案是精确的
 \label{lem:app-spec-bridge}
 The declarative predicate \(\mathsf{MaxSafe}(\Theta;L,\widehat B)\) holds for some pair if and only if \(\widehat B^\dagger_{H,u}\ne\varnothing\).
 % 当且仅当 \(\widehat B^\dagger_{H,u}\ne\varnothing\) 时，声明式谓词 \(\mathsf{MaxSafe}(\Theta;L,\widehat B)\) 才对某个二元组成立。
@@ -234,8 +234,8 @@ V_B&=\sum_{(o,y)\in\widehat B_0}(\lvert y\rvert+1).
 &o'\in\mathsf{Compat}(z)
 \end{aligned}\right\}.
 \]
-Here \(D\) is the checked input size, \(\Lambda\) is the total size of the emitted linearizations, and \(\mathcal G_{\rm cov}\) contains the candidate, prefix, and required-result triples examined by the checker.
-% 其中 \(D\) 是所检查输入的大小，\(\Lambda\) 是输出线性化的总大小，而 \(\mathcal G_{\rm cov}\) 包含检查器检查的候选执行、前缀和要求结果三元组。
+Here \(D\) is the checked input size, \(\Lambda\) is the total size of the emitted linearizations, and \(\mathcal G_{\rm cov}\) contains the triples of candidate execution, prefix, and required result examined by the checker.
+% 其中 \(D\) 是所检查输入的大小，\(\Lambda\) 是输出线性化的总大小，而 \(\mathcal G_{\rm cov}\) 包含检查器检查的候选执行、前缀和要求实现结果三元组。
 The checker runs in \(O(D+n\Lambda+|\mathcal G_{\rm cov}|+V_B\log(2+V_B))\) time and \(O(D+\Lambda+|\mathcal G_{\rm cov}|)\) space, including the data it returns.
 % 检查器在 \(O(D+n\Lambda+|\mathcal G_{\rm cov}|+V_B\log(2+V_B))\) 时间和 \(O(D+\Lambda+|\mathcal G_{\rm cov}|)\) 空间内运行，其中包括它返回的数据。
 Moreover, \(N_B\leq\sum_o|\Lin(p_o)|\), \(|\mathcal G_{\rm cov}|\leq N_B(n+1)|O_{\mathcal C_u}|\), and the number of nonempty strict-removal ranks is at most \(N_B\).
@@ -426,8 +426,8 @@ It preserves \(T,K,\chi,\Delta,\mathsf{out}\) and every existing row of \(G,\Sig
 % 它保持 \(T,K,\chi,\Delta,\mathsf{out}\) 以及 \(G,\Sigma_\zeta,\rho\) 的每条现有记录，将 \(D_\alpha\) 追加到执行记录，并且不授权任何移除。
 Every current result, workflow call, action, source region, authority record, and causal edge therefore remains unchanged.
 % 因此，每个当前结果、工作流调用、动作、来源区域、权限记录和因果边都保持不变。
-It uses the same checker and atomic rule update as an execution edit.
-% 它使用与执行编辑相同的检查器和原子规则更新。
+It uses the same checker and atomic rule update as a Fork, Restore, or Merge edit.
+% 它使用与 Fork、Restore 或 Merge 编辑相同的检查器和原子规则更新。
 
 \begin{lemma}[Registered extension preserves safety]
 % 已注册扩展保持安全
@@ -448,7 +448,7 @@ Consequently, a valid registered extension cannot remove a currently required re
 % \cref{lem:residual-coherence} 的完整证明
 Because \(z\) prefixes a projected member of \(\widehat B^\dagger\), the recoverability and prefix properties in \cref{lem:resolution} give the recoverability and authorization-log equalities.
 % 因为 \(z\) 是 \(\widehat B^\dagger\) 某个投影成员的前缀，\cref{lem:resolution} 中的可恢复性与前缀性质给出可恢复性等式与授权日志等式。
-Removing the executed prefix from the result-labeled executions retains every compatible result and gives
+Removing the executed prefix from the executions labeled by result retains every compatible result and gives
 % 从按结果标记的执行中移除已执行前缀会保留每个兼容结果，并给出
 \[
  \mathsf{Compat}_{\mathcal C/\mathsf{raw}(z)}(s)
@@ -499,8 +499,8 @@ Six Lean modules machine-check the claims used in the paper.
 % \path{HistoryStructure} 证明 \path{deriveEdit_iff}、良构性保持，以及选择/并行 Fork、替换/实时 Restore、选择/汇合 Merge 的可执行样例。
 \path{OperationalSemantics} proves invariant preservation across every runtime trace, closure of all six edit forms, registered extension safety, and both orders between a tool call and an atomic rule update.
 % \path{OperationalSemantics} 证明每条运行时轨迹上的不变量保持、全部六种编辑形式的闭包、已注册扩展安全性，以及工具调用与原子规则更新之间的两种次序。
-\path{CompilationBridge} constructs a secure atomic rule update from an accepted checker result and reflects every successful update back to that result.
-% \path{CompilationBridge} 从已接受的检查结果构造安全的原子规则更新，并把每次成功更新对应回该结果。
+\path{CompilationBridge} constructs a secure atomic rule update from an accepted checker answer and reflects every successful update back to that answer.
+% \path{CompilationBridge} 从已接受的检查答案构造安全的原子规则更新，并把每次成功更新对应回该答案。
 \path{PaperTheorems} combines these results into exact registered checking, six-edit derivation, preservation before rules take effect, trace safety, and serialization between calls and rule updates.
 % \path{PaperTheorems} 把这些结果组合为精确注册检查、六类编辑推导、规则生效前的保持、轨迹安全，以及调用与规则更新之间的串行化。
 The remaining appendix sections prove the general pomset lift, information lower bounds, and ideal--runtime weak bisimulation.
@@ -529,7 +529,7 @@ Internal identifiers may be renamed consistently, while public identifiers remai
 We write \((V,q)\cong(V',q')\) when one type-preserving renaming maps the entire record and request to the other.
 % 若一个保持类型的重命名能够把整条记录及请求映射到另一条记录及请求，我们记作 \((V,q)\cong(V',q')\)。
 We use the same symbol for checker answers and runtime states when the corresponding renaming maps every field of one to the other.
-% 当相应的重命名把一个检查结果或运行时状态的每个字段映射到另一个时，我们也使用同一符号。
+% 当相应的重命名把一个检查答案或运行时状态的每个字段映射到另一个时，我们也使用同一符号。
 An input function \(f\) is exact when indistinguishable reduced inputs always have the same correct answer up to such a renaming:
 % 如果无法区分的缩减输入在这种重命名意义下总具有相同的正确答案，则输入函数 \(f\) 是精确的：
 \[
@@ -560,8 +560,8 @@ For \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), \(\mathsf{Keep}_J
 % 对 \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\)，\(\mathsf{Keep}_J(V)\) 保留 \(J\) 中的事实。
 It also removes every reference to an omitted fact and every computed value that depends on an omitted fact.
 % 它还会删除每个指向被省略事实的引用，以及每个依赖被省略事实的计算值。
-This recursive deletion has a unique result because computed values depend acyclically on the four recorded parts.
-% 这种递归删除具有唯一结果，因为计算值对执行记录四个部分的依赖是无环的。
+This recursive deletion has a unique output because computed values depend acyclically on the four recorded parts.
+% 这种递归删除具有唯一输出，因为计算值对执行记录四个部分的依赖是无环的。
 \(\mathsf{Drop}_{ca}(V)\) removes only the correspondence between workflow calls and tool actions, together with all data that could reconstruct it.
 % \(\mathsf{Drop}_{ca}(V)\) 只删除工作流调用与工具动作之间的对应关系，以及所有能够重建该关系的数据。
 \(\mathsf{Drop}_{ra}(V)\) similarly removes only the correspondence between prior authorization records and tool actions.
@@ -572,8 +572,8 @@ This recursive deletion has a unique result because computed values depend acycl
 \label{lem:app-omission}
 Consistent renaming commutes with \(\mathsf{Keep}_J\), \(\mathsf{Drop}_{ca}\), and \(\mathsf{Drop}_{ra}\).
 % 一致重命名与 \(\mathsf{Keep}_J\)、\(\mathsf{Drop}_{ca}\) 和 \(\mathsf{Drop}_{ra}\) 可交换。
-Their results therefore do not depend on the spelling of internal identifiers or the byte encoding of computed data.
-% 因此，它们的结果不依赖内部标识符的拼写或计算数据的字节编码。
+Their outputs therefore do not depend on the spelling of internal identifiers or the byte encoding of computed data.
+% 因此，它们的输出不依赖内部标识符的拼写或计算数据的字节编码。
 \end{lemma}
 
 \begin{proof}
@@ -581,7 +581,7 @@ A type-preserving renaming preserves references and dependencies.
 % 保持类型的重命名会保持引用与依赖关系。
 It therefore maps every deletion step to the corresponding step in the renamed record.
 % 因此，它会把每个删除步骤映射到重命名记录中的对应步骤。
-Induction over the finite acyclic dependency order proves the result.
+Induction over the finite acyclic dependency order proves the claim.
 % 对有限无环依赖次序作归纳即可证明该结论。
 \end{proof}
 
@@ -593,7 +593,7 @@ If \(\mathsf{Ans}(V_0,q_0)\not\cong\mathsf{Ans}(V_1,q_1)\), then every exact \(f
 \end{lemma}
 
 \begin{proof}
-The result is the contrapositive of the definition of \(\mathsf{Exact}(f)\).
+The claim is the contrapositive of the definition of \(\mathsf{Exact}(f)\).
 % 该结论是 \(\mathsf{Exact}(f)\) 定义的逆否命题。
 \end{proof}
 
@@ -624,7 +624,7 @@ two \Fresh reject \(aa\).\\
 \(u_{\mathbf E}=\mathsf{RestoreReplace}(b_L,k,\sigma_{\mathbf E})\),
 \(q_{\mathbf E}=\mathsf{TryUpdate}(u_{\mathbf E},Y_0)\);
 \(Y_0\) is checked at \(V^0\) after safe empty-root/ForkChoice/Checkpoint/\Fresh;
-\(V^0\xrightarrow{\Dispatch(d)}V^1\), changing only whether a queued request was released. &
+\(V^0\xrightarrow{\Dispatch(d)}V^1\), changing only whether a queued request was sent. &
 \(V^0\): rules take effect;
 \(V^1\): \(\mathsf{NoCommit}\) because the checked record changed.\\
 \(\mathsf{Drop}_{ra}\) &
@@ -653,16 +653,16 @@ the current rule versions and dependent digests differ. &
 \begin{definition}[Checked registration]
 % 经检查的注册
 \label{def:registration-refinement}
-A typed Agent workflow \(\mathcal W\) is eligible for registration when it is a finite-state result-labeled LTS whose complete paths end at result terminals and yield finitely many tool-call traces after internal \(\tau\)-steps are erased.
-% 当类型化 Agent 工作流 \(\mathcal W\) 是带结果标签的有限状态 LTS、其完整路径终止于结果终点，且擦除内部 \(\tau\) 步后只产生有限条工具调用轨迹时，该工作流可以注册。
+A typed Agent workflow \(\mathcal W\) is eligible for registration when it is a finite-state LTS whose complete paths carry result labels, end at terminal states, and yield finitely many tool-call traces after internal \(\tau\)-steps are erased.
+% 当类型化 Agent 工作流 \(\mathcal W\) 是有限状态 LTS、其完整路径带有结果标签并终止于终止状态，且擦除内部 \(\tau\) 步后只产生有限条工具调用轨迹时，该工作流可以注册。
 \(\mathsf{CheckReg}\) rejects any reachable strongly connected component that can still reach a result and contains a tool-call edge within the component, permits erased \(\tau\)-cycles, and then enumerates the resulting finite traces.
 % \(\mathsf{CheckReg}\) 拒绝任何可达、仍可到达结果且内部包含工具调用边的强连通分量，允许被擦除的 \(\tau\) 环，随后枚举由此得到的有限轨迹。
 \(\mathcal R\) stores a candidate map \(\lambda\), and \(\mathsf{BRuns}(\mathcal R)\) is the finite language obtained by linearizing its registered root pomsets, retaining each result label, and labeling every workflow call by its checked \Use.
 % \(\mathcal R\) 存储候选映射 \(\lambda\)，而 \(\mathsf{BRuns}(\mathcal R)\) 是通过线性化其已注册根偏序事件集、保留每个结果标签，并以经过检查的 \Use 标记每个工作流调用而得到的有限语言。
 \(\mathcal W\sqsubseteq_\lambda\mathcal R\) means that \(\lambda\) gives a bijection from these traces to \(\mathsf{BRuns}(\mathcal R)\) that preserves results, call order, which calls refer to which tool actions, and the signed policy authority for each source region.
 % \(\mathcal W\sqsubseteq_\lambda\mathcal R\) 表示 \(\lambda\) 给出从这些轨迹到 \(\mathsf{BRuns}(\mathcal R)\) 的双射，并保持结果、调用次序、哪些调用指向哪些工具动作，以及每个来源区域的签名策略权限方。
-For source executions \(e,e'\), write \(e\equiv_\partial e'\) when erasing internal \(\tau\)-steps yields the same result-labeled tool-call trace.
-% 对于源执行 \(e,e'\)，若擦除内部 \(\tau\) 步后得到相同的带结果标签工具调用轨迹，则记 \(e\equiv_\partial e'\)。
+For source executions \(e,e'\), write \(e\equiv_\partial e'\) when erasing internal \(\tau\)-steps yields the same tool-call trace with the same result label.
+% 对于源执行 \(e,e'\)，若擦除内部 \(\tau\) 步后得到具有相同结果标签的同一条工具调用轨迹，则记 \(e\equiv_\partial e'\)。
 The check requires every tool action to have one certified canonical request and requires every reuse of that action to retain the same request.
 % 该检查要求每个工具动作具有唯一经认证的规范请求，并要求每次复用该动作时保持同一个请求。
 It also requires \(\lambda\) to be total and one-to-one, to contain no unregistered tool calls, and to preserve prior authorizations and every required result.
@@ -721,19 +721,19 @@ The safe execution sets are therefore order-isomorphic, so the fixed-point opera
 \label{lem:app-boot}
 If \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) accepts and the registered root contract and policy have a nonempty greatest safe execution set, the checked root update reaches a finite state \(S_{\mathcal R}\) with \(\mathsf{AgentSec}(S_{\mathcal R};c_{\mathcal R},\epsilon)\).
 % 若 \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) 接受，且已注册根契约与策略具有非空的最大安全执行集合，则经检查的根更新会到达满足 \(\mathsf{AgentSec}(S_{\mathcal R};c_{\mathcal R},\epsilon)\) 的有限状态 \(S_{\mathcal R}\)。
-The execution record stores the checked root derivation, and every later rule update stores its checked execution edit or registered extension.
-% 执行记录保存经检查的根推导，而此后的每次规则更新都保存其经检查的执行编辑或已注册扩展。
+The execution record stores the checked root derivation, and every later rule update stores the checked Fork, Restore, or Merge edit or registered extension that produced it.
+% 执行记录保存经检查的根推导，而此后的每次规则更新都保存产生该更新的经检查 Fork、Restore 或 Merge 编辑或已注册扩展。
 \end{lemma}
 
 \begin{proof}
 Registration contributes only the checked \(\mathcal R\) and \(n\), and deterministic allocation constructs every runtime identifier from them.
 % 注册只提供经检查的 \(\mathcal R\) 和 \(n\)，而确定性分配据此构造每个运行时标识。
-The root judgment and checked maps make the registered structure agree with the runtime state, and the recomputed nonempty fixed point establishes the required-result condition.
-% 根判定与经检查的映射使已注册结构与运行时状态一致，而重新计算的非空不动点建立要求实现结果的条件。
+The root judgment and checked maps make the registered structure agree with the runtime state, and the recomputed nonempty fixed point establishes the condition on required results.
+% 根判定与经检查的映射使已注册结构与运行时状态一致，而重新计算的非空不动点建立关于要求实现结果的条件。
 Empty runtime progress matches the executed calls, the canonical automaton starts at \(q_\epsilon\), and the atomic assignments give every current call an entry in the active rule version.
 % 空运行时进展与已执行调用相符，规范自动机从 \(q_\epsilon\) 开始，而原子赋值为每个当前调用在活动规则版本中提供一个入口。
-Only the initial rule update creates a root origin, and every successful later update stores its checked execution-edit or registered-extension derivation.
-% 只有初始规则更新会创建根来源，而此后的每次成功更新都保存其经检查的执行编辑或已注册扩展推导。
+Only the initial rule update creates a root origin, and every successful later update stores the checked derivation that produced it.
+% 只有初始规则更新会创建根来源，而此后的每次成功更新都保存产生该更新的经检查推导。
 \end{proof}
 
 The following finite pairs use private names except for each displayed request and authorization label.
@@ -818,7 +818,7 @@ At the resulting \(V_{\mathbf E}^0\), check \(u_{\mathbf E}=\mathsf{RestoreRepla
 % 在所得 \(V_{\mathbf E}^0\) 处，检查 \(u_{\mathbf E}=\mathsf{RestoreReplace}(b_L,k,\sigma_{\mathbf E})\) 并得到 \(Y_0\)。
 Its clone of \(x\) reuses \(d\), so the update is safe under \(\mathcal A=\Pref\{a\}\).
 % 其 \(x\) 的克隆复用 \(d\)，所以该更新在 \(\mathcal A=\Pref\{a\}\) 下是安全的。
-Let \(V_{\mathbf E}^0\xrightarrow{\Dispatch(d)}V_{\mathbf E}^1\), which changes only whether the queued request has been released and leaves \(\mathbf P,\mathbf I,\mathbf C\) unchanged.
+Let \(V_{\mathbf E}^0\xrightarrow{\Dispatch(d)}V_{\mathbf E}^1\), which changes only whether the queued request has been sent and leaves \(\mathbf P,\mathbf I,\mathbf C\) unchanged.
 % 令 \(V_{\mathbf E}^0\xrightarrow{\Dispatch(d)}V_{\mathbf E}^1\)；该步骤只改变排队请求是否已经发出，并保持 \(\mathbf P,\mathbf I,\mathbf C\) 不变。
 For the same request \(q_{\mathbf E}=\mathsf{TryUpdate}(u_{\mathbf E},Y_0)\), the rules take effect at \(V_{\mathbf E}^0\), while \(V_{\mathbf E}^1\) returns \(\mathsf{NoCommit}\) because the digest of the checked record has changed.
 % 对于同一个请求 \(q_{\mathbf E}=\mathsf{TryUpdate}(u_{\mathbf E},Y_0)\)，规则在 \(V_{\mathbf E}^0\) 处生效，而 \(V_{\mathbf E}^1\) 因经检查记录的摘要已经改变而返回 \(\mathsf{NoCommit}\)。
@@ -871,8 +871,8 @@ Every exact checker input must distinguish all five pairs.
 \end{proposition}
 
 \begin{proof}
-\Cref{lem:app-boot} gives the common initial state, and the traces above use only modeled Checkpoint, tool-call, execution-edit, and rule-update steps.
-% \Cref{lem:app-boot} 给出共同初始状态，而上述轨迹只使用已建模的 Checkpoint、工具调用、执行编辑和规则更新步骤。
+\Cref{lem:app-boot} gives the common initial state, and the traces above use only modeled Checkpoint, tool-call, Fork/Restore/Merge, and rule-update steps.
+% \Cref{lem:app-boot} 给出共同初始状态，而上述轨迹只使用已建模的 Checkpoint、工具调用、Fork/Restore/Merge 和规则更新步骤。
 For the two correspondence pairs, the empty root completes with \(\epsilon\), and each Fork arm has a one-\Fresh completion labeled \(a\).
 % 对于两组对应关系记录对，空根以 \(\epsilon\) 完成，并且每个 Fork 分支都具有一条标签为 \(a\) 的单次 \Fresh 完成路径。
 Hence every displayed state before its request is reachable under \(\Pref\{a\}\).
@@ -893,8 +893,8 @@ Giving the \(\mathbf P\) pair the same caller description of what should happen 
 % 为 \(\mathbf P\) 记录对提供相同的后续行为调用方描述和相同的完成条件，仍不会改变它们相反的答案。
 The target alone is therefore insufficient.
 % 因此，仅有目标是不够的。
-A generalized nonblocking solver becomes applicable only after the trusted runtime has derived the edited workflow, preserved result identities, and result-specific completion conditions.
-% 只有在可信运行时推导出编辑后的工作流、保留的结果身份以及各结果的完成条件之后，广义非阻塞求解器才适用。
+A generalized nonblocking solver becomes applicable only after the trusted runtime has derived the edited workflow, preserved result identities, and the completion condition for each result.
+% 只有在可信运行时推导出编辑后的工作流、保留的结果身份以及每个结果的完成条件之后，广义非阻塞求解器才适用。
 
 \subsection{Ideal Atomic Execution Machine}
 % 理想原子执行机
@@ -904,8 +904,8 @@ An ideal state \(I=(\kappa,H,\Delta,\mathsf{out},\mathcal A,c,r)\), with \(c=(H_
 % 理想状态 \(I=(\kappa,H,\Delta,\mathsf{out},\mathcal A,c,r)\)，其中 \(c=(H_c,u,L^*,\widehat B^*)\)，包含执行记录、当前规则版本与入口、经检查的安全执行集合和当前部分执行。
 Write \(\Theta_I(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\).
 % 记 \(\Theta_I(u)=(\kappa,H,\Delta,\mathsf{out},\mathcal A,u)\)。
-The runtime state additionally represents the automaton, transaction phase, authentication data, and a prepared rule update.
-% 运行时状态还表示自动机、事务阶段、认证数据和一项已准备的规则更新。
+The runtime state additionally represents the automaton, transaction phase, authorization data, and a prepared rule update.
+% 运行时状态还表示自动机、事务阶段、授权数据和一项已准备的规则更新。
 
 \paragraph{Edit transition}
 % 编辑转移
@@ -929,10 +929,12 @@ One atomic transition applies \(\mathsf{HStep}\), appends \(a\) to \(\chi\), adv
 Any failed premise returns \(\mathsf{deny}(x)\) without changing state or inventing a return value.
 % 任一前提失败都会返回 \(\mathsf{deny}(x)\)，且既不改变状态也不虚构返回值。
 
-\paragraph{Checkpoint, retry, release, and restart}
+\paragraph{Checkpoint, retry, sending, and restart}
 % 检查点、重试、发出请求与重新启动
 \(\mathsf{Checkpoint}(k,b)\), verified retry, \(\Dispatch\), completion updates, and restart after a stop have the state changes in \cref{tab:app-event-matrix}.
 % \(\mathsf{Checkpoint}(k,b)\)、通过验证的重试、\(\Dispatch\)、完成状态更新以及停止后的重新启动具有 \cref{tab:app-event-matrix} 中给出的状态变更。
+The ideal and runtime machines apply the same freshness, current-branch, and remaining-work checks, so they make the same Checkpoint decision.
+% 理想机与运行时机器执行相同的检查点标识新鲜性、当前分支和剩余工作检查，因此作出相同的 Checkpoint 判定。
 This transition system represents external-network completion after \(\Dispatch\) as environmental behavior.
 % 该转移系统把 \(\Dispatch\) 之后的外部网络完成表示为环境行为。
 
@@ -986,7 +988,7 @@ where \(\mathsf{phase}\) records whether each rule version \(\eta\) is unallocat
 % 其中 \(\mathsf{phase}\) 记录每个规则版本 \(\eta\) 是未分配（\(\bot\)）、非活动、活动还是已关闭。
 The initial rule runs only after \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) accepts, and its exact construction appears in \cref{app:boot-pairs}.
 % 初始规则只在 \(\mathsf{CheckReg}(\mathcal W,\mathcal R)\) 接受后运行，其精确构造见 \cref{app:boot-pairs}。
-Each active version stores \(c=(\mathsf{record}_c,H_c^+,u,W,\widehat B,Z)\), which contains the checked execution record, derived target, edit, safe prefixes, result-labeled complete executions, and data needed for the final recheck.
+Each active version stores \(c=(\mathsf{record}_c,H_c^+,u,W,\widehat B,Z)\), which contains the checked execution record, derived target, edit, safe prefixes, complete executions labeled by result, and data needed for the final recheck.
 % 每个当前版本都保存 \(c=(\mathsf{record}_c,H_c^+,u,W,\widehat B,Z)\)，其中包含经检查的执行记录、派生目标、编辑、安全前缀、按结果标记的完整执行，以及最终重新检查所需的数据。
 
 \begin{definition}[Agent runtime invariant]
@@ -1082,8 +1084,8 @@ The rules may take effect only if
 \end{equation}
 \(\mathsf{Ready}(S,u,Y)\) holds when \(Y=\mathsf{Accepted}(\delta,W^\dagger,\widehat B^\dagger,Z)\), the current derivation is \(\delta\), and all state-dependent premises of \cref{eq:update-premise} hold.
 % 当 \(Y=\mathsf{Accepted}(\delta,W^\dagger,\widehat B^\dagger,Z)\)、当前推导为 \(\delta\) 且 \cref{eq:update-premise} 的全部状态相关前提成立时，\(\mathsf{Ready}(S,u,Y)\) 成立。
-The committing domain transaction makes \((\kappa_u,H_u,\mathcal A_u)\) current, closes \(\eta^-\), activates \(\eta^+\), assigns a rule entry to every target workflow call, starts the canonical automaton at \(q^0\), and stores the checked result.
-% 提交的域事务使 \((\kappa_u,H_u,\mathcal A_u)\) 成为当前值、关闭 \(\eta^-\)、激活 \(\eta^+\)、为每个目标工作流调用分配规则入口、在 \(q^0\) 处启动规范自动机，并保存经检查的结果。
+The committing domain transaction makes \((\kappa_u,H_u,\mathcal A_u)\) current, closes \(\eta^-\), activates \(\eta^+\), assigns a rule entry to every target workflow call, starts the canonical automaton at \(q^0\), and stores the checked answer.
+% 提交的域事务使 \((\kappa_u,H_u,\mathcal A_u)\) 成为当前值、关闭 \(\eta^-\)、激活 \(\eta^+\)、为每个目标工作流调用分配规则入口、在 \(q^0\) 处启动规范自动机，并保存经检查的答案。
 For this successor, write
 \[
 c_\delta^+=
@@ -1095,8 +1097,8 @@ Only after activation does it expose \(\mathcal H_u^+\) and emit \(\mathsf{Edge}
 % 只有激活之后，它才暴露 \(\mathcal H_u^+\) 并发出 \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\)。
 Old authorization data then fails, while \Retry still follows its stored authorization-record link.
 % 此后旧授权数据失效，而 \Retry 仍沿其存储的授权记录链接执行。
-A stale result returns \(\mathsf{NoCommit}\) and must be recomputed from the current execution record.
-% 过期结果返回 \(\mathsf{NoCommit}\)，并且必须根据当前执行记录重新计算。
+A stale answer returns \(\mathsf{NoCommit}\) and must be recomputed from the current execution record.
+% 过期答案返回 \(\mathsf{NoCommit}\)，并且必须根据当前执行记录重新计算。
 
 \subsection{Atomic Events Preserve the Invariant}
 % 原子事件保持不变量
@@ -1128,7 +1130,7 @@ Apply \(\mathsf{HStep}\) to \((G,T)\); append \(\Fresh(x,d)\) to global \(\chi\)
 \Alias use &
 Apply \(\mathsf{HStep}\) to \((G,T)\); append \(\Alias(x,d)\) to global \(\chi\); advance \(\mathsf{ver},q\); add only the return-record link; remove the current rule entry. &
 \((c,r\Alias(x,d))\) &
-\(A_1\): authenticated tool action retained.
+\(A_1\): the signed record still names the same tool action.
 \(A_2\): rechecking after the prefix.
 \(A_3\): link names an earlier authorization record and the authorization sequence is unchanged.
 \(A_4\): canonical derivative.
@@ -1167,14 +1169,14 @@ All clauses unchanged.\\
 \(\Dispatch(d)\) &
 Mark exactly the oldest queued canonical request as sent. &
 \((c,r)\) &
-\(A_3\): release order remains a prefix of queue order.
+\(A_3\): sending order remains a prefix of queue order.
 Other clauses unchanged.\\
 Completion update &
 Emit \(\mathsf{Settle}(d,[v]_{\cong})\), advance one authorization record phase, and fill its stable return record. &
 \((c,r)\) &
 \(A_3\): tool action, canonical request, creator, authorization label, and order are immutable.
 Other clauses unchanged.\\
-Stale or malformed result &
+Stale or malformed answer &
 Return \(\mathsf{NoCommit}\); no runtime-state change. &
 \((c,r)\) &
 All clauses unchanged.\\
@@ -1264,7 +1266,7 @@ Request arrival and scheduler choice do not change committed runtime state.
 % 请求到达与调度器选择不会改变已提交的运行时状态。
 Completion updates and delivery emit modeled API observations but leave the checked partial execution unchanged.
 % 完成状态更新与交付会发出已建模 API 观测，但保持经检查的部分执行不变。
-\(\Dispatch\) is observable only when the oldest queued request is recorded as released, and it also leaves the resolved prefix unchanged.
+\(\Dispatch\) is observable only when the oldest queued request is recorded as sent, and it also leaves the resolved prefix unchanged.
 % 只有在最早排队请求被记录为已发出时，\(\Dispatch\) 才可观测；它同样保持已解析前缀不变。
 Therefore none of these events advances the automaton for tool calls.
 % 因此，这些事件都不会推进工具调用自动机。
@@ -1358,22 +1360,22 @@ Equality of \(\alpha_I(I)\) and \(\alpha_S(S;c,r)\) gives both machines the same
 % 编辑转移
 The equality makes both machines form the same current \(\Theta_I(u)\) and record digest \(\gamma(\Theta_I(u))\).
 % 该相等关系使两台机器形成相同的当前 \(\Theta_I(u)\) 与记录摘要 \(\gamma(\Theta_I(u))\)。
-If derivation is undefined, both sides return the same canonical \(\mathsf{Invalid}\) result and leave their states unchanged.
-% 若推导未定义，则两侧返回相同的规范 \(\mathsf{Invalid}\) 结果，并保持各自状态不变。
-If derivation exists but no safe execution set exists, \cref{lem:app-spec-bridge} and deterministic fixed-point checking make both sides return the same canonical \(\mathsf{Reject}\) result and leave their states unchanged.
-% 若推导存在但不存在安全执行集合，则 \cref{lem:app-spec-bridge} 与确定性不动点检查使两侧返回相同的规范 \(\mathsf{Reject}\) 结果，并保持各自状态不变。
+If derivation is undefined, both sides return the same canonical \(\mathsf{Invalid}\) answer and leave their states unchanged.
+% 若推导未定义，则两侧返回相同的规范 \(\mathsf{Invalid}\) 答案，并保持各自状态不变。
+If derivation exists but no safe execution set exists, \cref{lem:app-spec-bridge} and deterministic fixed-point checking make both sides return the same canonical \(\mathsf{Reject}\) answer and leave their states unchanged.
+% 若推导存在但不存在安全执行集合，则 \cref{lem:app-spec-bridge} 与确定性不动点检查使两侧返回相同的规范 \(\mathsf{Reject}\) 答案，并保持各自状态不变。
 Otherwise the ideal machine enables its edit transition and, by \cref{lem:app-spec-bridge}, the runtime checker accepts the same edit and computes the same largest safe prefix set.
 % 否则，理想机启用其编辑转移，并且根据 \cref{lem:app-spec-bridge}，运行时检查器接受同一次编辑并计算相同的最大安全前缀集合。
-The runtime takes an explicit \(\mathsf{Preload}\) transition that records the prepared result in an inactive rule version, exposes no authorization data or Agent-visible result, and preserves \(\mathsf{AgentSec}\).
-% 运行时执行一条显式的 \(\mathsf{Preload}\) 转移，把准备好的结果记录在非活动规则版本中，不暴露授权数据或 Agent 可见结果，并保持 \(\mathsf{AgentSec}\)。
+The runtime takes an explicit \(\mathsf{Preload}\) transition that records the prepared answer in an inactive rule version, exposes no authorization data or Agent-visible answer, and preserves \(\mathsf{AgentSec}\).
+% 运行时执行一条显式的 \(\mathsf{Preload}\) 转移，把准备好的答案记录在非活动规则版本中，不暴露授权数据或 Agent 可见答案，并保持 \(\mathsf{AgentSec}\)。
 The ideal side takes its single atomic edge, and both successors have the same \((\kappa_u,H_u,\mathcal A_u)\), checked safe execution set, empty prefix, active rule version, and target rule entries.
 % 理想机一侧执行单个原子边，而两个后继都具有相同的 \((\kappa_u,H_u,\mathcal A_u)\)、经检查的安全执行集合、空前缀、当前规则版本和目标规则入口。
 Deterministic allocation gives consistently renamed authorization data, so both expose \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\).
 % 确定性分配给出经过一致重命名的授权数据，因此两侧都暴露 \(\mathsf{Edge}(u,[\mathcal H_u^+]_{\cong})\)。
 Conversely, every successful runtime rule update has passed the edit-rule, fixed-point, and record-digest checks, so \cref{lem:app-spec-bridge} enables the matching ideal edge.
 % 反之，每次成功的运行时规则更新都已通过编辑规则、不动点和记录摘要检查，因此 \cref{lem:app-spec-bridge} 会启用匹配的理想边。
-This argument applies uniformly to all six execution-edit forms and the registered extension.
-% 该论证一致地适用于全部六种执行编辑形式与已注册扩展。
+This argument applies uniformly to all six forms of Fork, Restore, and Merge and to the registered extension.
+% 该论证一致地适用于 Fork、Restore 和 Merge 的全部六种形式以及已注册扩展。
 
 \paragraph{Tool calls and submitted requests}
 % 工具调用与提交的请求
@@ -1420,23 +1422,23 @@ If the rule update commits first, it atomically closes \(\eta^-\), activates \(\
 % 如果规则更新先提交，它会原子关闭 \(\eta^-\)、激活 \(\eta^+\)、刷新每个当前规则入口及其授权数据，并且只在激活之后暴露新授权数据。
 The old \Fresh or \Alias use then fails the current-rule-version automaton and is denied without progress.
 % 此时，旧的 \Fresh 或 \Alias 使用无法通过当前规则版本自动机，并在不产生进度的情况下被拒绝。
-The ideal atomic order has exactly the same two cases, so neither side allows a third race result.
+The ideal atomic order has exactly the same two cases, so neither side allows a third race outcome.
 % 理想原子顺序恰好具有相同的两种情形，因此任一侧都不允许第三种竞态结果。
 
-\paragraph{Replies, releases, and silent steps}
+\paragraph{Replies, sent requests, and silent steps}
 % 回复、发出请求与静默步骤
-A retry with valid authorization data, retrieval of that data, or delivery of a result leaves the runtime state unchanged.
-% 使用有效授权数据的重试、该数据的取回或结果交付都不改变运行时状态。
+A retry with valid authorization data, retrieval of that data, or delivery of a returned value leaves the runtime state unchanged.
+% 使用有效授权数据的重试、该数据的取回或返回值交付都不改变运行时状态。
 Both machines follow the same stored link and expose \(\mathsf{Return}(t,[v]_{\cong})\).
 % 两台机器都沿同一条存储链接执行，并暴露 \(\mathsf{Return}(t,[v]_{\cong})\)。
 \(\Dispatch(d)\) is enabled for the same oldest queued request and makes the same observable request-sent update.
 % \(\Dispatch(d)\) 对相同的最早排队请求启用，并产生相同的可观测请求发送更新。
-\(\mathsf{Settle}(d,[v]_{\cong})\) is enabled for the same authorization record and produces the same stable result and normalized update.
-% \(\mathsf{Settle}(d,[v]_{\cong})\) 对相同授权记录启用，并产生相同的稳定结果与规范化更新。
-\(\mathsf{Checkpoint}(k,b)\) takes matching \(\tau\)-steps.
-% \(\mathsf{Checkpoint}(k,b)\) 执行匹配的 \(\tau\) 步。
-Runtime preload and internal \(\mathsf{NoCommit}\) results are \(\tau\)-steps matched by zero ideal steps because \(\alpha_S\) omits inactive prepared data and \(\mathsf{obs}_{\rm api}\) hides internal runtime results.
-% 运行时预加载与内部 \(\mathsf{NoCommit}\) 结果是由零个理想步骤匹配的 \(\tau\) 步，因为 \(\alpha_S\) 忽略非活动的准备数据，而 \(\mathsf{obs}_{\rm api}\) 隐藏内部运行时结果。
+\(\mathsf{Settle}(d,[v]_{\cong})\) is enabled for the same authorization record and produces the same stable returned value and normalized update.
+% \(\mathsf{Settle}(d,[v]_{\cong})\) 对相同授权记录启用，并产生相同的稳定返回值与规范化更新。
+\(\mathsf{Checkpoint}(k,b)\) takes matching visible steps and yields the same decision.
+% \(\mathsf{Checkpoint}(k,b)\) 执行匹配的可见步骤并产生相同判定。
+Runtime preload and internal \(\mathsf{NoCommit}\) answers are \(\tau\)-steps matched by zero ideal steps because \(\alpha_S\) omits inactive prepared data and \(\mathsf{obs}_{\rm api}\) hides internal runtime answers.
+% 运行时预加载与内部 \(\mathsf{NoCommit}\) 答案是由零个理想步骤匹配的 \(\tau\) 步，因为 \(\alpha_S\) 忽略非活动的准备数据，而 \(\mathsf{obs}_{\rm api}\) 隐藏内部运行时答案。
 A stop and restart is matched by a \(\tau\) self-loop on each committed-state machine by \cref{lem:app-restart}.
 % 根据 \cref{lem:app-restart}，每台已提交状态机都用一个 \(\tau\) 自环匹配停止并重新启动。
 
@@ -1454,8 +1456,8 @@ For every step from either side, the corresponding case constructs a path with o
 % 对任一侧的每一步，对应情形都会构造一条观测为 \(\mathsf{obs}_{\rm api}(\ell)\) 的路径，以及一个通过该表中见证相关的后继。
 The construction is symmetric because the ideal and runtime automata accept the same tool calls, while runtime-only steps preserve their common visible state.
 % 该构造是对称的，因为理想自动机与运行时自动机接受相同的工具调用，而仅属于运行时的步骤保持二者共同的可见状态。
-Arbitrary repetition of silent preload, internal \(\mathsf{NoCommit}\), Checkpoint, or restart steps is ignored, which is precisely divergence-insensitive weak matching.
-% 任意重复的静默预加载、内部 \(\mathsf{NoCommit}\)、Checkpoint 或重新启动步骤均被忽略，这恰是发散不敏感弱匹配。
+Arbitrary repetition of silent preload, internal \(\mathsf{NoCommit}\), or restart steps is ignored, which is precisely divergence-insensitive weak matching.
+% 任意重复的静默预加载、内部 \(\mathsf{NoCommit}\) 或重新启动步骤均被忽略，这恰是发散不敏感弱匹配。
 \end{proof}
 
 \subsection{Executable-Artifact Evaluation}

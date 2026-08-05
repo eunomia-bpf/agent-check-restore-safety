@@ -8,6 +8,8 @@ Each call identifies its registered place in the workflow, presents an authoriza
 % 每次调用都要标明其在工作流中的已注册位置、提供授权令牌，并提交具体工具请求。
 The runtime either creates a new authorization, reuses an authorization already recorded in the log, or rejects the call.
 % 运行时要么创建新授权，要么复用日志中已有的授权，要么拒绝该调用。
+We analyze calls in independently enforceable groups.
+% 我们把调用划分为可以独立强制执行的组。
 Calls governed by one policy, one authorization log, and one atomic rule change form a \emph{policy domain}.
 % 由同一策略、同一授权日志和同一次原子规则变更管理的调用构成一个\emph{策略域}。
 For example, the laptop approval, payment, and shipment calls form one policy domain when they share the school's purchase policy and authorization log.
@@ -20,6 +22,12 @@ The \emph{execution record} stores the workflow and checkpoints, which calls ref
 % \emph{执行记录}保存工作流与检查点、哪些调用指向同一个动作、先前的授权与调用进展、排队请求以及当前生效的规则。
 The trusted runtime protects this record from Agent modification.
 % 可信运行时保护该记录不被 Agent 修改。
+The model has one security objective.
+% 该模型具有一个安全目标。
+Every admitted execution must obey policy, remain completable, and preserve a safe completion for every still-required result.
+% 每段获准执行都必须遵守策略、保持可完成，并为每个仍要求实现的结果保留一条安全完成路径。
+The remainder of this section defines the execution facts needed to state that objective precisely.
+% 本节其余部分定义精确表述该目标所需的执行事实。
 
 \subsection{Workflow results and call order}
 % 工作流结果与调用次序
@@ -36,6 +44,10 @@ Several workflow calls may refer to the same action \(d\), in which case they sh
 % 多个工作流调用可以指向同一个动作 \(d\)，此时它们共享一条授权记录。
 The first authorized call creates that record, and calls copied by Fork or Restore later reuse it.
 % 第一个获得授权的调用创建该记录，而 Fork 或 Restore 随后复制出的调用会复用它。
+In this paper, a workflow call is processed when the runtime either authorizes its tool action for the first time or reuses that action's existing authorization record.
+% 在本文中，当运行时首次授权某个工作流调用的工具动作，或复用该动作已有的授权记录时，该工作流调用即被处理。
+Processing does not mean that the remote action has completed: sending a newly authorized request and recording its returned value happen later, and neither adds another processed workflow call.
+% “处理”并不意味着远程操作已完成：发送经新授权的请求和记录返回值发生在后续阶段，且这两者均不会增加已处理工作流调用的计数。
 The execution record also stores where every copied workflow region came from.
 % 执行记录还保存每个复制工作流区域的来源。
 \(T,\Delta,\chi\) denote the current workflow, authorization log, and ordered record of processed workflow calls.
@@ -51,6 +63,8 @@ For the laptop, the contract has results \(o_L,o_R\), and \(p_{o_L}\) orders the
 % 对于笔记本电脑示例，契约包含结果 \(o_L,o_R\)，且 \(p_{o_L}\) 把向 \(L\) 付款的调用排在向 \(L\) 发货的调用之前。
 Each index \(o\) names one allowed result.
 % 每个索引 \(o\) 命名一种允许的结果。
+A result is complete once every workflow call in its pomset has been processed in an allowed order.
+% 当一个结果的偏序事件集中的每个工作流调用都按允许的次序处理后，该结果即告完成。
 Two results remain distinct even if the calls still required for them later become identical.
 % 即使两个结果后来仍需执行的调用变得相同，它们仍保持不同。
 Write \(X_{\mathcal C}=\bigcup_{o\in O}X_{p_o}\) and \(\mathsf{CL}(\mathcal C)=\bigcup_{o\in O}\Lin(p_o)\).
@@ -126,7 +140,8 @@ Both contradict the condition that no complete sequence strictly prefixes anothe
 
 \subsubsection{Recorded structure and current workflow}
 % 已记录结构与当前工作流
-
+The record separates immutable execution history, the current workflow, registered edit rules, call identities, progress, and the active rule version.
+% 该记录区分不可变的执行历史、当前工作流、已注册编辑规则、调用身份、进展以及当前规则版本。
 The workflow part of the execution record is
 % 执行记录中的工作流部分为
 \begin{equation}
@@ -303,6 +318,8 @@ Each entry in \(\chi\) points either to the authorization record it created or t
 % \(\mathsf{lab}(\Delta)\) 是创建授权记录的调用所带授权标签的序列。
 Restore may reconstruct workspace data but leaves \(\Delta\) unchanged.
 % Restore 可以重建工作区数据，但保持 \(\Delta\) 不变。
+A returned value may lead the Agent to request another registered edit, which the runtime checks from the updated execution record.
+% 返回值可能促使 Agent 请求另一次已注册编辑，运行时会根据更新后的执行记录检查该请求。
 
 The execution record \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) is \emph{well formed} when \(H\) is well formed, \(\mathsf{lab}(\Delta)\in\mathcal A\), each action has at most one authorization record, each processed call names the record it created or reused, the authorization log, request queue, and policy belong to \(\omega\), and the queue preserves the order of new authorizations.
 % 当 \(H\) 良构、\(\mathsf{lab}(\Delta)\in\mathcal A\)、每个动作至多有一条授权记录、每个已处理调用都指明它创建或复用的记录、授权日志/请求队列/策略均属于 \(\omega\)，且队列保持新授权的顺序时，执行记录 \((\kappa,H,\Delta,\mathsf{out},\mathcal A)\) 是\emph{良构的}。
@@ -323,11 +340,11 @@ In the laptop example, the school is the policy authority: it signs the one-purc
 The trusted runtime registers tool calls, actions, and authorization tokens, and it derives and checks each edit.
 % 可信运行时注册工具调用、动作与授权令牌，并推导和检查每次编辑。
 The trusted runtime checks the answer again before atomically changing the rules in force.
-% 可信运行时在原子改变当前规则之前再次检查判定结果。
+% 可信运行时在原子改变当前规则之前再次检查答案。
 The policy authority, trusted runtime, registries, authorization log, proof verifier, and transaction mechanism form the trusted computing base (TCB).
 % 策略权限方、可信运行时、注册表、授权日志、证明验证器和事务机制共同构成可信计算基（TCB）。
-Within one policy domain, the TCB checks every tool call and commits every state change and edit result returned to the Agent through a linearizable transaction.
-% 在一个策略域内，TCB 检查每次工具调用，并通过线性化事务提交每项状态变更以及返回给 Agent 的编辑结果。
+Within one policy domain, the TCB checks every tool call and commits every state change and edit answer returned to the Agent through a linearizable transaction.
+% 在一个策略域内，TCB 检查每次工具调用，并通过线性化事务提交每项状态变更以及返回给 Agent 的编辑答案。
 After an unexpected stop and restart, each transaction appears entirely before or entirely after its linearization point.
 % 在意外停止并重新启动后，每项事务都完整呈现在线性化点之前或之后。
 Before the checker reads the execution record, the trusted runtime may instantiate finitely many registered templates for tool calls.
@@ -349,8 +366,8 @@ Registration turns the tool-call behavior of a typed Agent workflow into the fin
 % 注册把类型化 Agent 工作流的工具调用行为转换为有限模型 \(\mathcal R\)。
 \(\mathsf{CheckReg}\) verifies exact correspondence of results, call order, actions, and first-time authorization records.
 % \(\mathsf{CheckReg}\) 验证结果、调用次序、工具动作及首次授权记录的精确对应关系。
-The model stores these traces as result-indexed runs \(\mathsf{BRuns}(\mathcal R)\), together with a map \(\lambda\) from source traces.
-% 该模型把这些轨迹存为带结果索引的执行 \(\mathsf{BRuns}(\mathcal R)\)，并存储从源轨迹出发的映射 \(\lambda\)。
+The model stores these traces as runs labeled by result, written \(\mathsf{BRuns}(\mathcal R)\), together with a map \(\lambda\) from source traces.
+% 该模型把这些轨迹存为按结果标记的执行 \(\mathsf{BRuns}(\mathcal R)\)，并存储从源轨迹出发的映射 \(\lambda\)。
 Write \(\mathcal W\sqsubseteq_\lambda\mathcal R\) when \(\lambda\) is a bijection preserving results, which calls refer to the same action, call order, result authority, and authorization-log updates.
 % 当 \(\lambda\) 是保持结果、哪些调用指向同一个动作、调用次序、结果权限和授权日志更新的双射时，记作 \(\mathcal W\sqsubseteq_\lambda\mathcal R\)。
 \Cref{def:registration-refinement,lem:registration-reflection} give the exact finite check and proof.
@@ -482,7 +499,7 @@ It holds exactly when every named object belongs to \(\mathsf{addr}(T)\), every 
 % 当且仅当每个具名对象属于 \(\mathsf{addr}(T)\)、每个引入对象属于 \(\omega\)、源状态模式匹配、保持映射与不交覆盖成立、每个仍然要求实现的结果都被覆盖、每次移除都具有适当权限且 \(\sem{T'}\) 有定义时，该判定才成立。
 The policy authority may authorize removal of the unselected arm of a typed \(\mathsf{MergeSelect}\) or the current branch of \(\mathsf{RestoreReplace}\), using the signed sets defined below.
 % 策略权限方可以授权移除类型化 \(\mathsf{MergeSelect}\) 中未被选择的分支，或 \(\mathsf{RestoreReplace}\) 的当前分支，并使用下文定义的签名集合。
-\subsubsection{Required-result preservation}
+\subsubsection{Preserving Required Results}
 % 要求实现结果的保留
 
 The registered edit rule determines every result that the edit must account for.
@@ -648,8 +665,10 @@ Here \(H'\) is the derived target record.
 % 此处 \(H'\) 是推导得到的目标记录。
 It becomes current and activates \(\eta^+\) only through the atomic rule update.
 % 它仅通过原子规则更新成为当前记录并激活 \(\eta^+\)。
-In this record, \(G\mathbin{\cdot}e_u\) retains earlier progress, result-authority records, and existing nodes, and initializes each copied or added branch from its remaining registered contract with inherited or rule-signed result authority and no progress.
-% 其中 \(G\mathbin{\cdot}e_u\) 保留先前进展、结果权限记录和已有节点，并从剩余已注册契约初始化每个复制或新增分支，同时赋予继承或规则签名的结果权限且进展为空。
+In this record, \(G\mathbin{\cdot}e_u\) retains earlier progress, the authority record for each result, and existing nodes.
+% 其中 \(G\mathbin{\cdot}e_u\) 保留先前进展、每个结果的权限记录和已有节点。
+It initializes each copied or added branch from its remaining registered contract, gives each result an inherited or rule-signed authority record, and records no progress for the new branch.
+% 它根据剩余的已注册契约初始化每个复制或新增分支，为每个结果提供继承或由规则签名的权限记录，并且不为新分支记录任何进展。
 Thus the derivation preserves \(K,\Sigma_\zeta,\chi\), appends one record of the edit and its target nodes, and prepares a new rule entry and authorization token for every target call under \(\eta^+\).
 % 因此，该推导保持 \(K,\Sigma_\zeta,\chi\)，追加一条编辑记录及其目标节点，并在 \(\eta^+\) 下为每个目标调用准备新的规则入口和授权令牌。
 Table constructors determine new group modes, while carried nested modes remain unchanged.

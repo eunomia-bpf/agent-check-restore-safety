@@ -2,13 +2,11 @@
 % 结论
 \label{sec:conclusion}
 
-Safe execution editing has an exact criterion.
-% 安全执行编辑具有一个精确判据。
-Past tool actions remain unchanged, and every still-required result retains a policy-safe completion.
-% 过去的工具动作保持不变，并且每个仍要求实现的结果都保留一条策略安全的完成路径。
-For Checkpoint, the six forms of Fork, Restore, and Merge, and registered extensions, our checker either verifies the operation directly, computes the largest safe execution set, or returns a finite proof that no safe runtime implementation exists.
-% 对于 Checkpoint、Fork/Restore/Merge 的六种形式以及已注册扩展，我们的检查器会直接验证该操作、计算最大安全执行集合，或者返回一份有限证明，说明不存在安全运行时实现。
-Together, the formal results connect this exact decision to decision-relevant distinctions from all four parts of the execution record, the atomic rule update, repeated execution edits, and equivalence with an ideal atomic machine.
+Safe execution editing requires the runtime to derive from the execution record what each edit must preserve.
+% 安全执行编辑要求运行时根据执行记录推导每次编辑必须保留的内容。
+Earlier authorizations remain fixed, and every still-required result retains a policy-safe completion.
+% 先前的授权保持不变，并且每个仍要求实现的结果都保留一条策略安全的完成路径。
+For Checkpoint, the six forms of Fork, Restore, and Merge, and registered extensions, our checker either applies the direct Checkpoint check, computes the largest safe execution set, or returns a finite proof that no runtime rule set can enforce the edit safely.
+% 对于 Checkpoint、Fork/Restore/Merge 的六种形式以及已注册扩展，我们的检查器会应用直接的 Checkpoint 检查、计算最大安全执行集合，或者返回一份有限证明，说明不存在能够安全实施该编辑的运行时规则集合。
+The formal results connect this exact decision to decision-relevant distinctions from all four parts of the execution record, the atomic rule update, repeated execution edits, and equivalence with an ideal atomic machine.
 % 这些形式结果共同把这一精确判定与执行记录全部四个部分中同判定相关的区分、原子规则更新、重复执行编辑以及同理想原子机器的等价性连接起来。
-Together, these results provide a formal foundation for Agent runtimes that support Checkpoint, Fork, Restore, and Merge.
-% 这些结果共同为支持 Checkpoint、Fork、Restore 和 Merge 的 Agent 运行时提供形式化基础。

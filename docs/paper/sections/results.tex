@@ -43,7 +43,7 @@ For \(J\subseteq\{\mathbf P,\mathbf I,\mathbf E,\mathbf C\}\), \(\mathsf{Keep}_J
 \Cref{app:record-information} gives one record pair for each part and a fifth pair for the correspondence between earlier authorizations and actions.
 % \Cref{app:record-information} 为每个部分给出一组记录对，并为先前授权与动作之间的对应关系给出第五组记录对。
 
-\paragraph{Required-result preservation}
+\paragraph{Preserving required results}
 % 要求实现结果的保留
 \[
 \begin{aligned}
@@ -59,10 +59,10 @@ Thus every required source result appears in an accepted target result.
 
 \paragraph{Visible runtime behavior}
 % 可见运行时行为
-\(\mathcal O_{\rm api}\) includes edit answers tied to the checked record, edits put into effect, tool-call answers, sent requests, completion updates, and returned values.
-% \(\mathcal O_{\rm api}\) 包括与所检查记录对应的编辑答案、已经生效的编辑、工具调用答案、已发送请求、完成更新和返回值。
-It hides internal computation, Checkpoint, stale candidates, and restart bookkeeping.
-% 它隐藏内部计算、Checkpoint、过期候选结果和重启记录工作。
+\(\mathcal O_{\rm api}\) includes Checkpoint decisions, edit answers tied to the checked record, edits put into effect, tool-call answers, sent requests, completion updates, and returned values.
+% \(\mathcal O_{\rm api}\) 包括 Checkpoint 判定、与所检查记录对应的编辑答案、已经生效的编辑、工具调用答案、已发送请求、完成更新和返回值。
+It hides internal computation, stale candidates, and restart bookkeeping.
+% 它隐藏内部计算、过期候选答案和重启记录工作。
 \[
 \mathsf{obs}_{\rm api}(\ell)=
 \begin{cases}
@@ -91,10 +91,18 @@ Malformed registrations fail before startup.
 
 For the remaining results, assume accepted registration, trusted checking of every tool call, and linearizable transactions that remain atomic after a restart within each policy domain.
 % 对于其余结果，假设注册已通过、每次工具调用都由可信组件检查，并且每个策略域内的可线性化事务在重启后仍保持原子性。
-\(\mathsf{Checkpoint}(k,b)\) succeeds exactly when \(k\) is fresh, \(b\) is current, and the stored work matches the branch's remaining registered work: \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\).
-% 当且仅当 \(k\) 是新的检查点标识、\(b\) 是当前分支，且所存工作与该分支剩余的已注册工作匹配时，\(\mathsf{Checkpoint}(k,b)\) 才成功：\(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\)。
-A successful Checkpoint preserves \(\mathsf{AgentSec}\) without changing the current workflow or any earlier authorization.
-% 成功的 Checkpoint 保持 \(\mathsf{AgentSec}\)，且不改变当前工作流或任何先前授权。
+
+\begin{theorem}[Exact Checkpoint]
+% 精确 Checkpoint
+\label{thm:exact-checkpoint}
+The ideal and runtime machines make the same decision for \(\mathsf{Checkpoint}(k,b)\).
+% 理想机与运行时机器对 \(\mathsf{Checkpoint}(k,b)\) 作出相同判定。
+They accept exactly when \(k\) is fresh, \(b\) is current, and the stored work matches the branch's remaining registered work: \(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\).
+% 当且仅当 \(k\) 是新的检查点标识、\(b\) 是当前分支，且所存工作与该分支剩余的已注册工作匹配时，两台机器才接受：\(\mathcal C_b=\Gamma_b/\mathsf{raw}(\chi_b)\)。
+Acceptance preserves \(\mathsf{AgentSec}\) without changing the current workflow or any earlier authorization.
+% 接受该请求会保持 \(\mathsf{AgentSec}\)，且不改变当前工作流或任何先前授权。
+\end{theorem}
+
 Let \(\mathsf{Ext}=\{\mathsf{Extend}(\xi)\mid \xi\text{ is verified}\}\).
 % 令 \(\mathsf{Ext}=\{\mathsf{Extend}(\xi)\mid \xi\text{ 已通过验证}\}\)。
 The theorems below hold for every \(u\in\mathsf{Edit}_6\uplus\mathsf{Ext}\) at every finite reachable \(\mathsf{AgentSec}\) state.
@@ -132,8 +140,8 @@ The \(\mathsf{Drop}_{ra}\) row shows that retaining authorization records and ac
 % \(\mathsf{Drop}_{ra}\) 行表明，仅保留授权记录与动作而不记录它们之间的对应关系同样不够。
 In particular, a checker is not exact if it forgets which calls or authorization records refer to the same action, or if it sees only the caller's description of what should happen next.
 % 特别地，如果检查器忘记哪些调用或授权记录指向同一个动作，或者只看到调用方对后续执行的描述，它就不是精确的。
-Generalized nonblocking can serve as an exact solver only after the trusted runtime derives the workflow and result-specific completion conditions.
-% 只有在可信运行时推导出工作流以及特定于结果的完成条件之后，广义非阻塞才能作为精确求解器。
+Generalized nonblocking can serve as an exact solver only after the trusted runtime derives the workflow and the completion condition for each result.
+% 只有在可信运行时推导出工作流以及每个结果的完成条件之后，广义非阻塞才能作为精确求解器。
 \end{theorem}
 
 \begin{theorem}[Repeated-Use Safety]
@@ -150,14 +158,16 @@ Therefore, the guarantees hold after every finite reachable sequence of edits, r
 \label{thm:runtime-correctness}
 \(\mathcal B\) is a divergence-insensitive weak bisimulation under \(\mathsf{obs}_{\rm api}\), so every pair related by \(\mathcal B\) satisfies \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\).
 % \(\mathcal B\) 在 \(\mathsf{obs}_{\rm api}\) 下是发散不敏感弱互模拟，因此由 \(\mathcal B\) 关联的每对状态均满足 \(S_0\approx_{\mathcal O_{\rm api}}^{\mathsf{di}}I_0\)。
-The observation records edit answers tied to the checked record, new authorization data, and returned values.
-% 该观测记录与所检查记录对应的编辑答案、新授权数据与返回值。
+The observation records Checkpoint decisions, edit answers tied to the checked record, new authorization data, and returned values.
+% 该观测记录 Checkpoint 判定、与所检查记录对应的编辑答案、新授权数据与返回值。
 \end{theorem}
 
 \paragraph{Proof roadmap}
 % 证明路线
 Registration reflection follows by enumerating the finite tool-call traces and checking their order- and identity-preserving correspondence.
 % 注册反射通过枚举有限工具调用轨迹并检查其保持次序与标识的对应关系得到。
+The matching Checkpoint transitions prove exact Checkpoint.
+% 相互匹配的 Checkpoint 转移证明 Checkpoint 的精确性。
 The edit-rule checks and greatest-fixed-point argument prove exact checking.
 % 编辑规则检查与最大不动点论证证明精确检查。
 Every safe execution set is contained in the computed family, and a nonempty computed family yields a safe runtime implementation.

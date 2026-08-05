@@ -12,16 +12,16 @@ It also proves that executable workflow editing is sound and complete for all si
 % 它还证明可执行工作流编辑对全部六种编辑形式既可靠又完备。
 An accepted edit produces an atomic rule update, and every finite continuation preserves Lean's \path{AgentSec}.
 % 被接受的编辑会产生原子规则更新，且每段有限延续均保持 Lean 中的 \path{AgentSec}。
-Separate proofs cover both possible orders between a tool call and that update, as well as preparation before the update takes effect.
+Separate proofs cover both orders between a tool call and that update, as well as preparation before it takes effect.
 % 另外的证明覆盖工具调用与该更新之间的两种可能次序，以及更新生效前的准备过程。
-The appendix proves the general pomset lift, source-result preservation maps, information lower bound, and ideal--runtime weak bisimulation in \cref{app:spec-bridge,app:schema-fidelity-proof,app:record-information,app:bisimulation}.
-% 附录在 \cref{app:spec-bridge,app:schema-fidelity-proof,app:record-information,app:bisimulation} 中证明一般偏序事件集提升、源结果保持映射、信息下界以及理想机—运行时弱互模拟。
+The appendix proves the general pomset lift, the maps that preserve source results, the information lower bound, and ideal--runtime weak bisimulation in \cref{app:spec-bridge,app:schema-fidelity-proof,app:record-information,app:bisimulation}.
+% 附录在 \cref{app:spec-bridge,app:schema-fidelity-proof,app:record-information,app:bisimulation} 中证明一般偏序事件集提升、保持源结果的映射、信息下界以及理想机—运行时弱互模拟。
 
 All 19 paper-specific tests pass, together with 62 authorization and checker regression tests for supporting components.
 % 全部 19 项论文专用测试以及面向支撑组件的 62 项授权与检查器回归测试均通过。
-Across accepted instances with 2--128 results, checker time is \(0.11\)--\(53.47\) ms.
+Across accepted instances with 2--128 results, the checker takes \(0.11\)--\(53.47\) ms.
 % 在具有 2--128 个结果的接受实例中，检查器耗时为 \(0.11\)--\(53.47\) ms。
-Rejected instances take \(0.11\)--\(5.51\) ms, and enumerating 6--720 unordered completions takes \(0.33\)--\(50.35\) ms.
+Rejected instances take \(0.11\)--\(5.51\) ms, while enumerating 6--720 unordered completions takes \(0.33\)--\(50.35\) ms.
 % 拒绝实例耗时为 \(0.11\)--\(5.51\) ms，枚举 6--720 条无序完成路径耗时为 \(0.33\)--\(50.35\) ms。
 \Cref{app:artifact-bounds} reports the complete measurement protocol and executable coverage.
 % \Cref{app:artifact-bounds} 给出完整测量协议与可执行覆盖。
