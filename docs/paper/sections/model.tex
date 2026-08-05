@@ -71,14 +71,16 @@ Write \(X_{\mathcal C}=\bigcup_{o\in O}X_{p_o}\) and \(\mathsf{CL}(\mathcal C)=\
 % 记 \(X_{\mathcal C}=\bigcup_{o\in O}X_{p_o}\) 且 \(\mathsf{CL}(\mathcal C)=\bigcup_{o\in O}\Lin(p_o)\)。
 We require the runtime to distinguish completed work from work that has more calls.
 % 我们要求运行时能够区分已经完成的工作与仍有更多调用的工作。
+For sequences \(v,w\), write \(v\preceq w\) when \(w=vs\) for some sequence \(s\).
+% 对于序列 \(v,w\)，若存在序列 \(s\) 使得 \(w=vs\)，则记 \(v\preceq w\)。
 \[
  v,w\in\mathsf{CL}(\mathcal C)\ \land\
  v\preceq w \quad\Longrightarrow\quad v=w .
 \]
 This condition permits incomparable traces and different results with the same trace, so it does not require deterministic results.
 % 该条件允许不可比较的轨迹以及共享同一轨迹的不同结果，因此并不要求结果具有确定性。
-It requires a registered workflow call whenever continuing after a shared partial execution performs more work.
-% 如果在一段共享的部分执行之后继续会执行更多工作，该条件要求存在一个已注册工作流调用来表示继续。
+It requires a registered workflow call whenever more work can follow the same sequence of processed calls.
+% 如果同一段已处理调用序列之后还可能继续执行更多工作，该条件要求存在一个已注册工作流调用来表示继续。
 The interface represents a choice between stopping and continuing by a registered terminal workflow call checked by the trusted runtime.
 % 该接口通过由可信运行时检查的已注册终止工作流调用表示停止与继续之间的选择。
 
@@ -140,8 +142,8 @@ Both contradict the condition that no complete sequence can be properly extended
 
 \subsubsection{Recorded structure and current workflow}
 % 已记录结构与当前工作流
-The record separates immutable execution history, the current workflow, registered edit rules, call identities, progress, and the active rule version.
-% 该记录区分不可变的执行历史、当前工作流、已注册编辑规则、调用身份、进展以及当前规则版本。
+The execution record separates immutable past events, the current workflow, registered edit rules, call identities, progress, and the active rule version.
+% 执行记录区分不可变的过去事件、当前工作流、已注册编辑规则、调用身份、进展以及当前规则版本。
 The workflow part of the execution record is
 % 执行记录中的工作流部分为
 \begin{equation}
@@ -394,8 +396,8 @@ For example, at the laptop Fork, the set must retain both supplier results unles
 % 例如，在笔记本电脑的 Fork 处，除非学校授权移除某个供应商结果，否则该集合必须保留两个结果；它只能接纳策略允许的审批--付款--发货次序，并且对每段获准的部分执行以及仍与该执行兼容的每个供应商结果保留一条完成路径。
 Thus the checker cannot call the edit safe merely because the surviving \(L\) execution obeys policy after all completions of \(R\) have been pruned.
 % 因此，检查器不能仅因为删去 \(R\) 的所有完成路径后剩余的 \(L\) 执行遵守策略，就把该编辑判为安全。
-The last requirement rejects the example in \cref{sec:lifecycle}, where separately safe results cannot remain safe under one set of runtime rules.
-% 最后一项要求拒绝 \cref{sec:lifecycle} 中的示例：分别安全的结果无法在同一组运行时规则下持续保持安全。
+The last requirement rejects the release example in \cref{sec:implications}, where separately safe results cannot remain safe under one set of runtime rules.
+% 最后一项要求拒绝 \cref{sec:implications} 中的发布示例：分别安全的结果无法在同一组运行时规则下持续保持安全。
 \Cref{def:safe-execution-set} states these requirements over executions labeled by result.
 % \Cref{def:safe-execution-set} 在按结果标记的执行上表述这些要求。
 \Cref{lem:largest-safe-family} then proves that the checker computes the largest safe execution set.

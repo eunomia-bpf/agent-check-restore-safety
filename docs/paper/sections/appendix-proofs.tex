@@ -1312,8 +1312,8 @@ A rule update cannot activate a new version without closing the old version and 
 \label{lem:app-restart}
 Let \(S_0\to S_1\to\cdots\to S_n\) be the modeled path whose atomic transitions correspond to \(t_1,\ldots,t_n\) in the order above.
 % 令 \(S_0\to S_1\to\cdots\to S_n\) 为建模路径，其中原子转移依次对应上述顺序中的 \(t_1,\ldots,t_n\)。
-If committed state \(D\) refines \(S_0\), then restart after transactions \(t_1\cdots t_k\) commit yields a state refining \(S_k\).
-% 若已提交状态 \(D\) 精化 \(S_0\)，则在事务 \(t_1\cdots t_k\) 提交后重新启动会得到一个精化 \(S_k\) 的状态。
+If committed state \(D\) refines \(S_0\), then restarting after exactly \(t_1,\ldots,t_k\) have committed yields a state refining \(S_k\).
+% 若已提交状态 \(D\) 精化 \(S_0\)，则在恰好 \(t_1,\ldots,t_k\) 已提交后重新启动会得到一个精化 \(S_k\) 的状态。
 At committed-state boundaries, stopping and restarting without another commit is consequently a \(\tau\) self-loop.
 % 在已提交状态边界上，若没有新的提交，停止并重新启动因而是一个 \(\tau\) 自环。
 \end{lemma}

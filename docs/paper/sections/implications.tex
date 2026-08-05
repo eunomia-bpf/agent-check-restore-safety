@@ -1,0 +1,99 @@
+\section{Implications of Execution-Edit Safety}
+% 执行编辑安全的含义
+\label{sec:implications}
+
+Removing behavior can make an edit unsafe.
+% 删除行为可能使一次编辑变得不安全。
+In the laptop example, suppose the Agent proposes a target that keeps only supplier \(L\).
+% 在笔记本电脑例子中，假设 Agent 提议一个只保留供应商 \(L\) 的目标工作流。
+Every remaining call sequence may obey the purchase policy, yet the edit silently removes the supplier-\(R\) result that the school still requires to remain available.
+% 每条剩余调用序列都可能遵守采购策略，但该编辑会悄悄删除学校仍要求保留的供应商 \(R\) 结果。
+The runtime may remove that result only if the recorded execution already satisfies it or the authority that required it authorizes its removal.
+% 只有当所记录执行已经满足该结果，或提出该要求的权限方授权移除时，运行时才能删除它。
+Thus a smaller, apparently safer target can still be an unsafe edit, and the runtime must derive the results to preserve from the execution record rather than from the proposed target.
+% 因此，一个更小、看似更安全的目标仍可能构成不安全编辑；运行时必须根据执行记录而非提议目标推导需要保留的结果。
+
+Every complete plan can obey policy even though the runtime has no safe choice for the next call.
+% 每个完整计划都可能遵守策略，但运行时仍无法安全决定下一次调用。
+Let \(X\) deploy a release, \(Y\) obtain prior approval, and \(Z\) file an emergency report after deployment.
+% 令 \(X\) 表示发布，\(Y\) 表示事先取得审批，\(Z\) 表示发布后提交紧急报告。
+The workflow \(X\otimes(Y\oplus Z)\) has a normal result \(yx\) and an emergency result \(xz\), both allowed by \(\mathcal A=\{\epsilon,x,y,xz,yx\}\).
+% 工作流 \(X\otimes(Y\oplus Z)\) 具有普通结果 \(yx\) 和紧急结果 \(xz\)，二者都被 \(\mathcal A=\{\epsilon,x,y,xz,yx\}\) 允许。
+If the runtime allows \(x\) first, that shared call does not select the emergency result, so the normal result still counts but can finish only as the forbidden sequence \(xy\).
+% 如果运行时先允许共享调用 \(x\)，该调用并不会选中紧急结果，因此普通结果仍需保留，却只能以被禁止的序列 \(xy\) 完成。
+If the runtime withholds \(x\), the emergency result cannot begin because policy does not permit \(z\) before \(x\).
+% 如果运行时不允许 \(x\)，紧急结果又无法开始，因为策略不允许 \(z\) 先于 \(x\)。
+An explicit normal-or-emergency choice before deployment would remove the conflict; without it, separately safe plans have no safe online controller.
+% 在发布前显式选择普通或紧急模式可以消除冲突；若无此选择，分别安全的计划不存在共同的安全在线控制器。
+
+A next call can therefore be permitted by policy and still be unsafe to authorize.
+% 因而，下一次调用可能被策略允许，却仍不宜授权。
+At the start of the release example, the policy permits \(x\) because it begins the allowed emergency sequence \(xz\).
+% 在发布例子的起点，策略允许 \(x\)，因为它开启了获准的紧急序列 \(xz\)。
+A monitor that checks only the authorization sequence would allow \(x\), but doing so destroys the still-required normal result.
+% 只检查授权序列的监控器会允许 \(x\)，但这样会破坏仍然要求保留的普通结果。
+The exact checker must instead reject the requested workflow because denying \(x\) would destroy the emergency result as well.
+% 精确检查器必须拒绝所请求的工作流，因为禁止 \(x\) 同样会破坏紧急结果。
+The runtime must therefore ask what the next call would make impossible, not just whether that call or some complete plan containing it appears in policy.
+% 因此，运行时必须判断下一次调用会使哪些结果变得不可能，而不只是判断该调用或包含它的某个完整计划是否出现在策略中。
+
+No new authorization does not mean that nothing relevant has changed.
+% 没有新授权并不意味着没有发生与安全相关的变化。
+In \cref{fig:two-histories}, Restore creates a new approval call \(x_a'\) that refers to the already authorized action \(d_a\).
+% 在 \cref{fig:two-histories} 中，Restore 创建新的审批调用 \(x_a'\)，但它指向已经授权的动作 \(d_a\)。
+Processing \(x_a'\) reuses the existing authorization record, so the authorization log is unchanged, but the restored branch advances past approval and may select an open choice.
+% 处理 \(x_a'\) 会复用已有授权记录，因此授权日志不变，但恢复后的分支会越过审批，并可能选择一个开放分支。
+That progress can invalidate a concurrent Merge or Restore decision computed just before the reuse.
+% 该进展会使复用发生前刚计算出的并发 Merge 或 Restore 判定失效。
+A runtime must therefore version every processed workflow call, including reuse, rather than treating the authorization log as the complete execution state.
+% 因此，运行时必须为每个已处理工作流调用记录版本，包括复用调用，而不能把授权日志当作完整执行状态。
+
+Copying a workflow call does not determine whether the external action is new.
+% 复制工作流调用并不能确定外部动作是否为新动作。
+A restored call for ``approve purchase 42'' should reuse that purchase's authorization record and, once available, its returned value, whereas a call for ``approve purchase 43'' requires a new authorization.
+% 恢复出的“批准第 42 号采购”调用应复用该采购已有的授权记录，并在返回值可用后复用该值；“批准第 43 号采购”则需要新授权。
+Under a one-purchase policy, confusing these cases changes the correct decision from acceptance to rejection or the reverse.
+% 在只允许一次采购的策略下，混淆这两种情况会使正确判定在接受与拒绝之间翻转。
+The runtime therefore needs stable action identities, the mapping from workflow calls to actions, and the mapping from earlier authorization records to those actions; call IDs, tool names, and restored text are not substitutes.
+% 因此，运行时需要稳定的动作标识、工作流调用到动作的映射，以及先前授权记录到这些动作的映射；调用标识、工具名称和恢复后的文本都不能替代这些信息。
+
+A correct edit decision can expire even when the policy and authorization log do not change.
+% 即使策略和授权日志都未改变，一个正确的编辑判定也可能过期。
+After the runtime computes an answer, an authorization reuse can advance a branch, or a queued request can be sent, before the new rules take effect.
+% 运行时计算出答案之后，在新规则生效之前，一次授权复用可能推进分支，或一项排队请求可能被发送。
+The final update must therefore compare the complete checked record, not just the policy and authorization sequence.
+% 因此，最终更新必须比较完整的经检查记录，而不只是策略与授权序列。
+If an old call commits first, the candidate edit is discarded and checked again; if the edit commits first, the old rule version and authorization tokens stop working.
+% 如果旧调用先提交，候选编辑会被丢弃并重新检查；如果编辑先提交，旧规则版本与授权令牌将停止生效。
+This ordering rules out a third execution that uses part of the old rules and part of the new ones.
+% 这一顺序排除了部分使用旧规则、部分使用新规则的第三种执行。
+
+The restored workspace, target workflow, or authorization log cannot by itself determine the correct decision.
+% 恢复后的工作区、目标工作流或授权日志都无法单独确定正确判定。
+Those views cannot reveal whether two copied approval calls name the same purchase, whether a branch advanced through authorization reuse, whether a queued request was sent, or whether prepared rules belong to the active rule version.
+% 这些视图无法揭示两个复制审批调用是否指向同一次采购、某个分支是否通过授权复用取得进展、某项排队请求是否已经发送，或准备好的规则是否属于当前规则版本。
+For each such fact, \cref{thm:necessary-state} constructs two executions that differ only there but require opposite decisions.
+% 对于每项此类事实，\cref{thm:necessary-state} 都构造两段仅在该处不同、却要求相反判定的执行。
+An exact runtime must consequently retain the workflow and required results, action identities, authorization and call progress, queued requests, and active rule version instead of reconstructing them from Agent text.
+% 因此，精确运行时必须保留工作流与要求结果、动作标识、授权与调用进展、排队请求以及当前规则版本，而不能根据 Agent 文本重建这些信息。
+
+Exact rejection identifies a conflict in the requested workflow rather than a conservative choice by the checker.
+% 精确拒绝识别的是所请求工作流中的冲突，而不是检查器作出的保守选择。
+In the release example, allowing deployment destroys the normal result, while withholding deployment destroys the emergency result, so the runtime cannot safely decide either way.
+% 在发布例子中，允许发布会破坏普通结果，而不允许发布会破坏紧急结果，因此运行时无论怎样决定都不安全。
+Changing the decision requires changing the workflow, policy, or required results, for example by selecting the release mode before deployment.
+% 要改变判定，就必须改变工作流、策略或要求结果，例如在发布前先选择发布模式。
+Conversely, acceptance returns the largest safe execution set, so the generated runtime rules retain every behavior that any safe implementation could allow.
+% 相反，接受会返回最大安全执行集合，因此生成的运行时规则会保留任何安全实现可能允许的全部行为。
+
+The guarantee continues after the first accepted edit.
+% 该保证在第一次接受编辑之后仍然持续成立。
+After an accepted edit, the Agent may issue more calls and request another Restore or Merge; checking the workflow that remains yields exactly the behavior left by the first check.
+% 在一次编辑被接受后，Agent 可以继续发起调用并请求另一次 Restore 或 Merge；检查剩余工作流会得到第一次检查留下的完全相同行为。
+The same invariant is preserved across later edits, tool calls, authorization reuse, rule updates, stops, and restarts.
+% 同一不变量会在后续编辑、工具调用、授权复用、规则更新、停止与重启之间保持。
+Thus the result is an online runtime guarantee for repeated execution editing, not a one-time validation of one proposed target.
+% 因而，该结果是面向重复执行编辑的在线运行时保证，而不是对某个提议目标的一次性验证。
+
+\Cref{sec:model} states the execution state and security objective precisely, \cref{sec:exact-check} constructs the exact checker, and \cref{sec:enforcement,sec:results} connect its verdict to atomic enforcement and the formal guarantees.
+% \Cref{sec:model} 精确定义执行状态与安全目标，\cref{sec:exact-check} 构造精确检查器，\cref{sec:enforcement,sec:results} 则把检查判定与原子强制执行及形式保证连接起来。

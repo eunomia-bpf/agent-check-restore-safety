@@ -6,11 +6,11 @@
 
 **首选**
 
-> An execution edit is safe exactly when the protected execution record supports ways to continue that respect past authorizations and keep every still-required result safely completable after every allowed partial execution; exact checking and atomic installation make that condition enforceable at runtime.
+> An execution edit is safe exactly when the protected execution record supports ways to continue that respect past authorizations and keep every still-required result safely completable throughout execution; exact checking and atomic installation make that condition enforceable at runtime.
 
 **备选 1**
 
-> Restoring workspace state is insufficient for security: a runtime must derive each execution edit from the protected execution record, admit only partial executions that preserve every required completion, and install that decision atomically.
+> Restoring workspace state is insufficient for security: a runtime must derive each execution edit from the protected execution record, allow execution only while every required result remains completable, and install that decision atomically.
 
 **备选 2**
 

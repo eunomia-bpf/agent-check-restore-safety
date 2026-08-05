@@ -28,7 +28,7 @@
 \newcommand{\Resolve}{\ensuremath{\mathsf{Resolve}}\xspace}
 \newcommand{\Comp}{\ensuremath{\mathsf{Comp}}\xspace}
 \newcommand{\Lin}{\ensuremath{\mathsf{Lin}}\xspace}
-\newcommand{\Partial}{\ensuremath{\mathsf{Part}}\xspace}
+\newcommand{\Partial}{\ensuremath{\mathord{\downarrow}}\xspace}
 \newcommand{\sem}[1]{\mathopen{[\![}#1\mathclose{]\!]}}
 
 \title{When Can Agents Safely Checkpoint, Fork, Restore, and Merge?\\
@@ -75,6 +75,7 @@ Lean mechanizes the finite checker and runtime invariant, and tests validate all
 \input{sections/lifecycle-figure}
 \input{sections/introduction}
 \input{sections/lifecycle}
+\input{sections/implications}
 \input{sections/model}
 \input{sections/semantics}
 \input{sections/algorithm}

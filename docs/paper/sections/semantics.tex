@@ -1,7 +1,7 @@
 This section defines the checker semantics in two steps.
 % 本节分两步定义检查器语义。
-It first classifies each workflow call as a new authorization or reuse and then computes the largest set of executions that remains safe after every partial execution.
-% 它首先把每个工作流调用分类为新授权或授权复用，然后计算在每段部分执行之后都保持安全的最大执行集合。
+It first classifies each workflow call as a new authorization or reuse and then computes the largest set of executions that remains safe throughout execution.
+% 它首先把每个工作流调用分类为新授权或授权复用，然后计算在整个执行过程中都保持安全的最大执行集合。
 
 Recall the authorization-label alphabet \(\mathcal U\) and regular policy \(\mathcal A\subseteq\mathcal U^*\), which is closed under truncation.
 % 回顾授权标签字母表 \(\mathcal U\) 和对截短操作闭合的正则策略 \(\mathcal A\subseteq\mathcal U^*\)。
@@ -119,6 +119,9 @@ For an annotated partial execution \(z\), let
  \{o\mid \mathsf{raw}(z)\preceq w
 		          \text{ for some }w\in\Lin(p_o)\}.
 \]
+For a set \(B\) of finite sequences, write
+\(\Partial B=\{z\mid \exists y\in B.\ z\preceq y\}\).
+% 对于有限序列集合 \(B\)，记 \(\Partial B=\{z\mid \exists y\in B.\ z\preceq y\}\)。
 \(\mathsf{PreservesRequired}(H,u,\widehat B)\) means that every result in \(\mathsf{StillRequired}_u\) is covered by some target result represented in \(\widehat B\):
 % \(\mathsf{PreservesRequired}(H,u,\widehat B)\) 表示 \(\mathsf{StillRequired}_u\) 中的每个结果都被 \(\widehat B\) 所表示的某个目标结果覆盖：
 \[
@@ -240,8 +243,8 @@ When such a pair exists, write its unique value as \(\mathsf{SafeBehavior}(\Thet
 \subsubsection{Why Result-by-Result Checking Fails}
 % 逐结果检查的反例
 
-\Cref{sec:lifecycle} introduced the contract \(X\otimes(Y\oplus Z)\) under policy \(\Partial\{yx,xz\}\).
-% \Cref{sec:lifecycle} 已介绍策略 \(\Partial\{yx,xz\}\) 下的契约 \(X\otimes(Y\oplus Z)\)。
+\Cref{sec:implications} introduced the contract \(X\otimes(Y\oplus Z)\) under policy \(\{\epsilon,x,y,xz,yx\}\).
+% \Cref{sec:implications} 已介绍策略 \(\{\epsilon,x,y,xz,yx\}\) 下的契约 \(X\otimes(Y\oplus Z)\)。
 For its annotated calls, write \(\bar x=\Fresh(x_o,d_x)\), \(\bar y=\Fresh(y_o,d_y)\), and \(\bar z=\Fresh(z_o,d_z)\).
 % 对其带标注调用，记 \(\bar x=\Fresh(x_o,d_x)\)、\(\bar y=\Fresh(y_o,d_y)\) 和 \(\bar z=\Fresh(z_o,d_z)\)。
 The candidate family initially contains \(\bar y\bar x\) and \(\bar x\bar z\).

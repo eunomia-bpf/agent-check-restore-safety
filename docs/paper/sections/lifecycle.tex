@@ -87,79 +87,9 @@ Thus \(M_{o_L}=\{z_L\}\) and \(M_{o_R}=\{z_R\}\).
 % 因此，\(M_{o_L}=\{z_L\}\) 且 \(M_{o_R}=\{z_R\}\)。
 These sequences contain the calls after the edit, while the existing log contributes the earlier authorization sequence \(ra\).
 % 这些序列包含编辑后的调用，而现有日志提供先前的授权序列 \(ra\)。
-The verdict is \(\mathsf{Accepted}\): both supplier results remain possible, every permitted partial execution obeys policy, and each can reach a complete result.
-% 判定为 \(\mathsf{Accepted}\)：两个供应商结果仍然可能，每段获准的部分执行都满足策略，并且都能到达完整结果。
+The verdict is \(\mathsf{Accepted}\): both supplier results remain possible, the calls performed so far always obey policy, and each result can be completed.
+% 判定为 \(\mathsf{Accepted}\)：两个供应商结果仍然可能，已经执行的调用始终满足策略，并且每个结果都能完成。
 If policy excludes \(rap_Rs\), then \(M_{o_R}=\varnothing\), and the Fork is rejected because pruning supplier \(R\) would change its meaning.
 % 如果策略排除 \(rap_Rs\)，则 \(M_{o_R}=\varnothing\)，并且该 Fork 会被拒绝，因为剪除供应商 \(R\) 将改变其含义。
 Rejection returns a proof listing the order in which completions were removed and the reason for each removal, rather than letting the Agent weaken the requested edit.
 % 拒绝会返回一份证明，列出完成路径的移除顺序及每次移除的原因，而不会让 Agent 弱化请求的编辑。
-
-\subsection{Why Safe Endpoints Are Not Enough}
-% 为什么安全终点仍然不够
-
-The previous rejection is visible at the start because one result has no safe completion.
-% 前述拒绝在起点即可看出，因为其中一个结果没有安全完成路径。
-A harder failure occurs when every result is initially safe in isolation, but no single set of runtime rules can keep all of them completable.
-% 更困难的失败情形是：每个结果单独看起初都安全，但不存在一组运行时规则能让它们始终均可完成。
-Let \(X,Y,Z\) be single-call contracts with authorization labels \(x,y,z\), respectively, and consider
-% 令 \(X,Y,Z\) 分别为授权标签为 \(x,y,z\) 的单调用契约，并考虑
-\[
-  X\otimes(Y\oplus Z)
-  \qquad\text{under}\qquad
-  \mathcal A=\Partial\{yx,xz\}.
-\]
-The two results have safe complete traces \(yx\) and \(xz\).
-% 两个结果分别具有安全完整轨迹 \(yx\) 和 \(xz\)。
-However, executing the shared \(x\) call first keeps the \(X\otimes Y\) result possible while leaving only the forbidden remaining sequence \(xy\).
-% 然而，若先执行共享的 \(x\) 调用，\(X\otimes Y\) 结果仍然可能，但只剩下被禁止的剩余序列 \(xy\)。
-Allowing \(x\) is therefore unsafe, while forbidding \(x\) destroys the \(X\otimes Z\) result.
-% 因而，允许 \(x\) 并不安全，而禁止 \(x\) 又会破坏 \(X\otimes Z\) 结果。
-The exact verdict is \(\mathsf{Reject}\), even though a result-by-result check would accept.
-% 精确判定为\emph{拒绝}，尽管逐结果检查会接受。
-\Cref{sec:exact-check} detects this failure by repeatedly removing executions that leave some required result with no safe completion.
-% \Cref{sec:exact-check} 通过反复移除会使某个要求实现的结果失去安全完成方式的执行来检测这一失败。
-
-\subsection{Calls During the Atomic Rule Update}
-% 原子规则更新期间的调用
-
-\Cref{fig:two-histories} separates the current workflow, the authorization log, and the rules that must change atomically.
-% \Cref{fig:two-histories} 区分当前工作流、授权日志以及必须原子变更的规则。
-
-\paragraph{New authorization during the rule update}
-% 规则更新期间的新授权
-After the shared approval and before either payment, the Agent requests \(\mathsf{MergeSelect}(g,L,\sigma)\).
-% 在共享审批之后、任一付款之前，Agent 请求 \(\mathsf{MergeSelect}(g,L,\sigma)\)。
-If the payment call \(x_R^p\) from the old supplier-\(R\) branch is authorized first, it selects \(R\) and changes \(\mathsf{lab}(\Delta)\) from \(ra\) to \(rap_R\).
-% 如果旧供应商 \(R\) 分支的付款调用 \(x_R^p\) 先获得授权，它就会选择 \(R\)，并将 \(\mathsf{lab}(\Delta)\) 从 \(ra\) 改为 \(rap_R\)。
-The runtime must therefore check the Merge again and reject it.
-% 因此，运行时必须重新检查该 Merge 并拒绝它。
-If the Merge rule update occurs first, the old rules stop applying and every current call receives a new authorization token before any later \(x_R^p\) can be authorized.
-% 如果 Merge 的规则更新先发生，旧规则将停止生效，并在后续任何 \(x_R^p\) 获得授权之前为每个当前调用提供新的授权令牌。
-Leaving the old rules active would allow both payments.
-% 让旧规则继续有效会允许两笔付款。
-
-\paragraph{Authorization reuse during the rule update}
-% 规则更新期间的授权复用
-Now consider the Restore that keeps both branches in \cref{fig:two-histories}.
-% 现在考虑 \cref{fig:two-histories} 中保留两个分支的 Restore。
-Restoring \(k\) creates a new approval call \(x_a'\), but both calls refer to action \(d_a\).
-% Restore 到 \(k\) 会创建新的审批调用 \(x_a'\)，但两个调用都指向动作 \(d_a\)。
-Executing \(x_a'\) reuses \(d_a\)'s existing authorization record.
-% 执行 \(x_a'\) 会复用 \(d_a\) 已有的授权记录。
-The restored branch advances past approval without a new authorization record.
-% 恢复后的分支越过审批，而不会创建新的授权记录。
-That progress invalidates an earlier concurrent Merge or Restore answer even though the authorization log is unchanged.
-% 即使授权日志未改变，该进展也会使较早的并发 Merge 或 Restore 答案失效。
-The final check must therefore compare both the authorization log and the ordered record \(\chi\) of executed workflow calls.
-% 因此，最终检查必须同时比较授权日志和记录已执行工作流调用顺序的 \(\chi\)。
-For this \(\mathsf{RestoreLive}\) request, the runtime puts the newly computed rules into effect only if the execution record is unchanged.
-% 对于该 \(\mathsf{RestoreLive}\) 请求，运行时仅在执行记录未改变时使新计算出的规则生效。
-Otherwise, it discards the outdated answer and checks the request again against the current record.
-% 否则，运行时丢弃已过期的答案，并根据当前记录重新检查该请求。
-
-Together, these executions give the paper's end-to-end safety rule.
-% 这些执行共同给出本文的端到端安全规则。
-An edit satisfies this rule when (1) it preserves every result still required by the execution record, (2) every allowed step obeys policy and can still reach a complete execution, (3) every required result that remains possible after those steps still has a safe way to finish, and (4) the new rules and authorization tokens take effect atomically with concurrent calls.
-% 当一次编辑满足以下条件时，它符合该规则：(1) 保留执行记录仍要求实现的每个结果；(2) 每个获准步骤都遵守策略且仍能到达完整执行；(3) 每个在这些步骤之后仍然可能实现的要求结果都保留安全完成方式；(4) 新规则与授权令牌相对于并发调用原子生效。
-\Cref{sec:model} states this rule precisely, and \cref{sec:exact-check} constructs the exact checker.
-% \Cref{sec:model} 精确定义这一规则，\cref{sec:exact-check} 则构造精确检查器。

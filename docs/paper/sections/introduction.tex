@@ -79,8 +79,8 @@ This idea creates three technical problems.
 % 这一思想带来三个技术问题。
 First, calls copied by Fork or Restore may refer to the same underlying action, so the runtime must distinguish a new authorization from reuse of an earlier authorization and return value.
 % 第一，由 Fork 或 Restore 复制的调用可能指向同一个底层动作，因此运行时必须区分新授权与对先前授权及返回值的复用。
-Second, after every allowed partial execution, every result that is still required and still possible must retain a safe way to finish.
-% 第二，在每段允许的部分执行之后，每个仍被要求且仍有可能实现的结果都必须保留安全完成方式。
+Second, throughout every allowed execution, every result that is still required and still possible must retain a safe way to finish.
+% 第二，在每次允许的执行过程中，每个仍被要求且仍有可能实现的结果都必须保留安全完成方式。
 The checker must enforce this condition without forbidding additional safe behavior.
 % 检查器必须执行这一条件，同时不能额外禁止安全行为。
 Third, the rules for an accepted edit must take effect atomically with calls that overlap the edit and remain valid if the runtime or machine stops unexpectedly and later recovers.
@@ -90,8 +90,8 @@ We give an exact checker that computes every safe way for a requested edit to pr
 % 我们给出一个精确检查器，它计算所请求编辑安全推进的全部方式，或者证明每种可能方式都不安全。
 For a requested edit, the runtime constructs every allowed complete execution from the current record.
 % 对于一次编辑请求，运行时根据当前记录构造所有允许的完整执行。
-It removes an execution if any partial execution would leave a still-required result without a safe completion.
-% 如果任何部分执行会使仍要求实现的结果失去安全完成方式，检查器就删除该完整执行。
+It removes an execution if allowing its calls one at a time could leave a still-required result without a safe completion.
+% 如果逐个允许其中的调用可能使仍要求实现的结果失去安全完成方式，检查器就删除该完整执行。
 If none remains, the runtime returns an independently checkable proof that no runtime rule set can enforce the edit safely.
 % 如果没有执行留下，运行时返回一份可独立检查的证明，说明不存在能够安全实施该编辑的运行时规则集合。
 Otherwise, the remaining executions contain every safe way for the edit to proceed.
