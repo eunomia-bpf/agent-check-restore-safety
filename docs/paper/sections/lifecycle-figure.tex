@@ -44,7 +44,7 @@
     \draw[arr] (a) -- (pa);
     \draw[arr] (pa) -- (s);
     \node[align=center] at (9.75,1.12)
-      {\(\Alias(x_a',d_a)\)\\no new authorization record};
+      {\(\Alias(x_a',d_a)\)\\reuses earlier authorization};
 
     \node[lab] at (0,-0.75) {rules in force};
     \node[box] (e0) at (0.85,-0.75) {$\eta_0$};
@@ -57,9 +57,9 @@
   \end{tikzpicture}
   \caption{Fork, Restore, and Merge change the current workflow but do not erase recorded calls.
   % Fork、Restore 和 Merge 会改变当前工作流，但不会抹去已经记录的调用。
-  Restore creates a new workflow call that refers to the same action as the original call.
-% Restore 会创建一个新的工作流调用，该调用与原调用指向同一个动作。
-  The atomic rule update orders both creation and reuse of an authorization record against the rule change.}
-% 原子规则更新确定授权记录的创建或复用与规则变更之间的先后顺序。
+  Restore creates a new call that refers to the same action as the original call.
+% Restore 会创建一个新的调用，该调用与原调用指向同一个动作。
+  The atomic rule update orders authorization creation and reuse against the rule change.}
+% 原子规则更新确定新授权或授权复用与规则变更之间的先后顺序。
   \label{fig:two-histories}
 \end{figure*}

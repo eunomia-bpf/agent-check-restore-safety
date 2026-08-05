@@ -40,6 +40,8 @@ The runtime makes its security decision when authorizing a tool request.
 % 运行时在授权工具请求时作出安全决定。
 Sending the request later and recording its return cannot undo that decision.
 % 随后发送请求和记录返回值都不能撤销该决定。
+The runtime stores that decision in an \emph{authorization record}, which later calls may reuse.
+% 运行时把该决定保存在一条\emph{授权记录}中，后续调用可以复用该记录。
 Our security goal is therefore to prevent an edit from authorizing a tool action forbidden by policy or discarding a result that the task still requires.
 % 因此，我们的安全目标是防止编辑授权策略禁止的工具动作，或丢弃任务仍要求实现的结果。
 Meeting this goal requires four facts: (1) the task structure and its required results, (2) which calls refer to the same action, (3) earlier authorizations and call progress, and (4) which rules govern a call that overlaps the edit.
@@ -84,8 +86,8 @@ The checker must enforce this condition without forbidding additional safe behav
 Third, the rules for an accepted edit must take effect atomically with calls that overlap the edit and remain valid if the runtime or machine stops unexpectedly and later recovers.
 % 第三，被接受编辑的规则必须与重叠编辑的调用原子排序，并在运行时或机器意外停止后恢复时继续有效。
 
-We give an exact checker that computes every safe way for a requested operation to proceed or proves that every possible way is unsafe.
-% 我们给出一个精确检查器，它计算所请求操作安全推进的全部方式，或者证明每种可能方式都不安全。
+We give an exact checker that computes every safe way for a requested edit to proceed or proves that every possible way is unsafe.
+% 我们给出一个精确检查器，它计算所请求编辑安全推进的全部方式，或者证明每种可能方式都不安全。
 For a requested edit, the runtime constructs every allowed complete execution from the current record.
 % 对于一次编辑请求，运行时根据当前记录构造所有允许的完整执行。
 It removes an execution if any partial execution would leave a still-required result without a safe completion.

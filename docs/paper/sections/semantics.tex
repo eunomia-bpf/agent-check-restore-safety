@@ -36,8 +36,8 @@ We abbreviate the fixed parameters by writing \(H,u\).
 
 \subsection{New and Reused Authorizations}
 % 新授权与授权复用
-The same external action may appear at several workflow-call positions after Fork or Restore, but it must be authorized at most once.
-% Fork 或 Restore 之后，同一个外部动作可能出现在多个工作流调用位置，但最多只能获得一次授权。
+The same tool action may appear at several workflow-call positions after Fork or Restore, but it must be authorized at most once.
+% Fork 或 Restore 之后，同一个工具动作可能出现在多个工作流调用位置，但最多只能获得一次授权。
 Function \(\Resolve^{\rho_u}_\Delta\) keeps every workflow call and annotates it as creating a new authorization or reusing an earlier one.
 % 函数 \(\Resolve^{\rho_u}_\Delta\) 保留每个工作流调用，并标注它是创建新授权还是复用先前授权。
 Starting with \(D_0=D_\Delta\), it maps a call sequence \(w=x_1\cdots x_n\) to annotated sequence \(z_1\cdots z_n\).
