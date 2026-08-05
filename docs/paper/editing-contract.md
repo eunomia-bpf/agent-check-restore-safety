@@ -97,20 +97,15 @@ Contribution 不允许引用 theorem 名称，不允许写 “We prove...”、�
 
 ## 7. Core Vocabulary
 
-**保留并要求 reviewer 长期记忆（10 个）：**
+**保留并要求 reviewer 长期记忆（5 个）：**
 
 1. execution edit
 2. execution record
 3. workflow call
-4. protected action
-5. required outcome
-6. authorization record
-7. safe execution set
-8. exact checker
-9. policy domain
-10. atomic rule update
+4. tool action
+5. authorization record
 
-**弱化为局部形式词汇：** workflow contract、pomset、edit rule、new/reuse classification、safe runtime implementation、`AgentSec`。首次出现时解释用途，但不让其承担故事主线。
+**弱化为局部形式词汇：** workflow contract、safe execution set、exact checker、policy domain、atomic rule update、pomset、edit rule、new/reuse classification、safe runtime implementation、`AgentSec`。首次出现时解释用途，但不让其承担故事主线。
 
 **避免 reader-facing 使用：** `HStep`、`HRes`、`addr`、`carry`、`clone`、`Copy`、`Keep`、`BRuns`、`Theta` 及 Lean 内部 theorem/module 名；`\Fresh/\Alias` 在叙事层写成 new authorization/reuse；旧版 authority-continuity、residual、rectangularity 和 promotion-order 术语不得出现。
 
