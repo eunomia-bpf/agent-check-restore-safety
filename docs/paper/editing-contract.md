@@ -1,16 +1,16 @@
 # CSF Paper Editing Contract
 
-本文件是后续编辑的唯一标准。不得重新引入旧版 `authority continuity`、`residual`、`rectangularity` 或 `promotion-order` 故事；不得新增模型、术语、定理、贡献、实验或 claim。
+本文件是后续编辑的唯一标准。不得重新引入旧版术语与故事线；不得新增模型、术语、定理、贡献、实验或 claim。
 
 ## 1. Central Thesis
 
 **首选**
 
-> An execution edit is safe exactly when the protected execution record supports continuations that respect past authorizations and keep every still-required outcome safely completable after every allowed prefix; exact checking and atomic installation make that condition enforceable at runtime.
+> An execution edit is safe exactly when the protected execution record supports ways to continue that respect past authorizations and keep every still-required result safely completable after every allowed partial execution; exact checking and atomic installation make that condition enforceable at runtime.
 
 **备选 1**
 
-> Restoring workspace state is insufficient for security: a runtime must derive each execution edit from protected history, admit only prefixes that preserve every required completion, and install that decision atomically.
+> Restoring workspace state is insufficient for security: a runtime must derive each execution edit from the protected execution record, admit only partial executions that preserve every required completion, and install that decision atomically.
 
 **备选 2**
 
@@ -39,7 +39,7 @@
 ## 3. 三项 Contribution
 
 1. **缺失的安全状态与判定目标。** 以前只看 workspace、trace 或 authorization log 不能判断 edit 是否仍尊重过去授权和未来义务；本文以受保护 execution record 建立安全条件，并说明精确判定需要哪四类事实；reviewer 获得明确的安全输入、信任边界和必要性依据。
-2. **精确的 edit 准入判定。** 以前只检查终点或逐 outcome 检查可能接受会在中间前缀卡死必要结果的 edit；本文通过最大不动点返回最大安全继续集合或不存在安全实现的证明；reviewer 获得同时说明 safety 与 permissiveness 的判定结果。
+2. **精确的 edit 准入判定。** 以前只检查终点或逐 outcome 检查可能接受会在执行中途卡死必要结果的 edit；本文通过最大不动点返回最大安全继续集合或不存在安全实现的证明；reviewer 获得同时说明 safety 与 permissiveness 的判定结果。
 3. **可持续执行的判定。** 以前离线 checker 结果可能被并发 call 变成 stale，且一次性安全结论不足以覆盖重复 edit 和 restart；本文用重新检查、原子规则安装和 invariant preservation 连接 checker 与 runtime；reviewer 获得一个条件化、可执行且证据范围清楚的端到端保证。
 
 **Editing rule:**
@@ -93,7 +93,7 @@ Contribution 不允许引用 theorem 名称，不允许写 “We prove...”、�
 
 当前学校采购例子足够作为唯一 running example：一次审批、供应商 \(L/R\)、付款、发货、Restore 和 Merge 已能覆盖重复授权、互斥 outcome、顺序约束、authorization reuse 和规则更新竞态。不得新增第二个例子。
 
-需要持续回指该例子的部分仅包括：Section III 的 call/action/outcome/record 映射；Section IV 的 new/reuse、bad-prefix pruning 和三种 verdict；Section V 的 stale candidate 与 atomic cut；Section VI 的 theorem intuition；Section VII 的 bounded fixture 含义。
+需要持续回指该例子的部分仅包括：Section III 的 call/action/outcome/record 映射；Section IV 的 new/reuse、iterative pruning 和三种 verdict；Section V 的 stale candidate 与 atomic cut；Section VI 的 theorem intuition；Section VII 的 bounded fixture 含义。
 
 ## 7. Core Vocabulary
 
@@ -107,7 +107,7 @@ Contribution 不允许引用 theorem 名称，不允许写 “We prove...”、�
 
 **弱化为局部形式词汇：** workflow contract、safe execution set、exact checker、policy domain、atomic rule update、pomset、edit rule、new/reuse classification、safe runtime implementation、`AgentSec`。首次出现时解释用途，但不让其承担故事主线。
 
-**避免 reader-facing 使用：** `HStep`、`HRes`、`addr`、`carry`、`clone`、`Copy`、`Keep`、`BRuns`、`Theta` 及 Lean 内部 theorem/module 名；`\Fresh/\Alias` 在叙事层写成 new authorization/reuse；旧版 authority-continuity、residual、rectangularity 和 promotion-order 术语不得出现。
+**避免 reader-facing 使用：** `HStep`、`HRes`、`addr`、`carry`、`clone`、`Copy`、`Keep`、`BRuns`、`Theta` 及 Lean 内部 theorem/module 名；`\Fresh/\Alias` 在叙事层写成 new authorization/reuse；旧版术语不得出现。
 
 ## 8. 每个 Section 的唯一职责
 

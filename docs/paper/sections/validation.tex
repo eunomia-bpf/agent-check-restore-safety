@@ -10,8 +10,8 @@ It proves that registration checks every tool call and preserves the exact answe
 % 它证明注册会检查每次工具调用，并保持当前执行记录上的精确答案。
 It also proves that executable workflow editing is sound and complete for all six edit forms.
 % 它还证明可执行工作流编辑对全部六种编辑形式既可靠又完备。
-An accepted edit produces an atomic rule update, and every finite continuation preserves Lean's \path{AgentSec}.
-% 被接受的编辑会产生原子规则更新，且每段有限延续均保持 Lean 中的 \path{AgentSec}。
+An accepted edit produces an atomic rule update, and every finite sequence of later calls preserves Lean's \path{AgentSec}.
+% 被接受的编辑会产生原子规则更新，且后续调用的每段有限序列均保持 Lean 中的 \path{AgentSec}。
 Separate proofs cover both orders between a tool call and that update, as well as preparation before it takes effect.
 % 另外的证明覆盖工具调用与该更新之间的两种可能次序，以及更新生效前的准备过程。
 The appendix proves the general pomset lift, the maps that preserve source results, the information lower bound, and ideal--runtime weak bisimulation in \cref{app:spec-bridge,app:schema-fidelity-proof,app:record-information,app:bisimulation}.

@@ -57,8 +57,8 @@ Budget reservation contributes \(r\), approval contributes \(a\), the two paymen
 % 预算预留贡献 \(r\)，审批贡献 \(a\)，两种付款分别贡献 \(p_L\) 和 \(p_R\)，发货贡献 \(s\)。
 At the Fork request, \(\mathsf{lab}(\Delta)=ra\).
 % 在 Fork 请求处，\(\mathsf{lab}(\Delta)=ra\)。
-The policy allows prefixes of \(rap_Ls\) and \(rap_Rs\), but never both payments or a payment before approval.
-% 策略允许 \(rap_Ls\) 和 \(rap_Rs\) 的前缀，但绝不允许两笔付款都发生，也不允许付款先于审批。
+The policy allows every partial authorization sequence of \(rap_Ls\) and \(rap_Rs\), but never both payments or a payment before approval.
+% 策略允许 \(rap_Ls\) 和 \(rap_Rs\) 的每段部分授权序列，但绝不允许两笔付款都发生，也不允许付款先于审批。
 Although the supplier results are exclusive, both must still have a safe way to finish when the Fork is checked.
 % 尽管两个供应商结果互斥，但在检查 Fork 时，二者都必须仍有安全完成方式。
 
@@ -85,10 +85,10 @@ Each result has one allowed call order:
 \]
 Thus \(M_{o_L}=\{z_L\}\) and \(M_{o_R}=\{z_R\}\).
 % 因此，\(M_{o_L}=\{z_L\}\) 且 \(M_{o_R}=\{z_R\}\)。
-These sequences contain the calls after the edit, while the existing log contributes the earlier prefix \(ra\).
-% 这些序列包含编辑后的调用，而现有日志提供先前的前缀 \(ra\)。
-The verdict is \(\mathsf{Accepted}\): both supplier results remain possible, every permitted prefix is policy safe, and each can reach a complete result.
-% 判定为 \(\mathsf{Accepted}\)：两个供应商结果仍然可能，每个获准前缀都满足策略，并且都能到达完整结果。
+These sequences contain the calls after the edit, while the existing log contributes the earlier authorization sequence \(ra\).
+% 这些序列包含编辑后的调用，而现有日志提供先前的授权序列 \(ra\)。
+The verdict is \(\mathsf{Accepted}\): both supplier results remain possible, every permitted partial execution obeys policy, and each can reach a complete result.
+% 判定为 \(\mathsf{Accepted}\)：两个供应商结果仍然可能，每段获准的部分执行都满足策略，并且都能到达完整结果。
 If policy excludes \(rap_Rs\), then \(M_{o_R}=\varnothing\), and the Fork is rejected because pruning supplier \(R\) would change its meaning.
 % 如果策略排除 \(rap_Rs\)，则 \(M_{o_R}=\varnothing\)，并且该 Fork 会被拒绝，因为剪除供应商 \(R\) 将改变其含义。
 Rejection returns a proof listing the order in which completions were removed and the reason for each removal, rather than letting the Agent weaken the requested edit.
@@ -106,12 +106,12 @@ Let \(X,Y,Z\) be single-call contracts with authorization labels \(x,y,z\), resp
 \[
   X\otimes(Y\oplus Z)
   \qquad\text{under}\qquad
-  \mathcal A=\Pref\{yx,xz\}.
+  \mathcal A=\Partial\{yx,xz\}.
 \]
 The two results have safe complete traces \(yx\) and \(xz\).
 % 两个结果分别具有安全完整轨迹 \(yx\) 和 \(xz\)。
-However, executing the shared \(x\) call first keeps the \(X\otimes Y\) result possible while leaving only the forbidden continuation \(xy\).
-% 然而，若先执行共享的 \(x\) 调用，\(X\otimes Y\) 结果仍然可能，但只剩下被禁止的后续轨迹 \(xy\)。
+However, executing the shared \(x\) call first keeps the \(X\otimes Y\) result possible while leaving only the forbidden remaining sequence \(xy\).
+% 然而，若先执行共享的 \(x\) 调用，\(X\otimes Y\) 结果仍然可能，但只剩下被禁止的剩余序列 \(xy\)。
 Allowing \(x\) is therefore unsafe, while forbidding \(x\) destroys the \(X\otimes Z\) result.
 % 因而，允许 \(x\) 并不安全，而禁止 \(x\) 又会破坏 \(X\otimes Z\) 结果。
 The exact verdict is \(\mathsf{Reject}\), even though a result-by-result check would accept.

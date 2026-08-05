@@ -69,11 +69,11 @@ Two results remain distinct even if the calls still required for them later beco
 % 即使两个结果后来仍需执行的调用变得相同，它们仍保持不同。
 Write \(X_{\mathcal C}=\bigcup_{o\in O}X_{p_o}\) and \(\mathsf{CL}(\mathcal C)=\bigcup_{o\in O}\Lin(p_o)\).
 % 记 \(X_{\mathcal C}=\bigcup_{o\in O}X_{p_o}\) 且 \(\mathsf{CL}(\mathcal C)=\bigcup_{o\in O}\Lin(p_o)\)。
-We require the runtime to distinguish completion from continuation.
-% 我们要求运行时能够区分完成与继续执行。
+We require the runtime to distinguish completed work from work that has more calls.
+% 我们要求运行时能够区分已经完成的工作与仍有更多调用的工作。
 \[
  v,w\in\mathsf{CL}(\mathcal C)\ \land\
- v\preceq_{\rm pref}w \quad\Longrightarrow\quad v=w .
+ v\preceq w \quad\Longrightarrow\quad v=w .
 \]
 This condition permits incomparable traces and different results with the same trace, so it does not require deterministic results.
 % 该条件允许不可比较的轨迹以及共享同一轨迹的不同结果，因此并不要求结果具有确定性。
@@ -84,8 +84,8 @@ The interface represents a choice between stopping and continuing by a registere
 
 Contracts use the three partial constructors below.
 % 契约使用下列三个偏构造器。
-Each constructor requires operands with disjoint workflow calls and preserves the condition that no complete call sequence is a strict prefix of another.
-% 每个构造器都要求操作数的工作流调用互不相交，并保持“任何完整调用序列都不是另一完整调用序列真前缀”这一条件。
+Each constructor requires operands with disjoint workflow calls and preserves the condition that no complete call sequence can be properly extended into another.
+% 每个构造器都要求操作数的工作流调用互不相交，并保持“任何完整调用序列都不能适当扩展成另一完整调用序列”这一条件。
 \begin{equation}
 \label{eq:contract-algebra}
 \begin{aligned}
@@ -109,8 +109,8 @@ In \cref{eq:contract-algebra}, \(\uplus\) adds no cross-order and \(\trianglerig
 % 在 \cref{eq:contract-algebra} 中，\(\uplus\) 不添加跨操作数次序，\(\triangleright\) 将 \(p\) 的每个事件置于 \(q\) 的每个事件之前，而选择使用带标签的结果索引不交并，并行和顺序则使用笛卡尔积。
 Consequently, choice retains each arm's full indexed family, parallel pairs results while permitting every causal linearization, and sequence adds a barrier.
 % 因此，选择保留每个分支的完整带索引结果族，并行对结果配对并允许每种因果线性化，而顺序添加一道屏障。
-After call prefix \(w\), \(\mathcal C/w\) retains each result whose pomset has a linearization prefixed by \(w\), then removes the workflow calls in \(w\) and their order edges.
-% 在调用前缀 \(w\) 之后，\(\mathcal C/w\) 保留其偏序事件集存在以 \(w\) 为前缀的线性化的每个结果，再移除 \(w\) 中的工作流调用及其次序边。
+After call sequence \(w\), \(\mathcal C/w\) retains each result whose pomset has a linearization beginning with \(w\), then removes the workflow calls in \(w\) and their order edges.
+% 在调用序列 \(w\) 之后，\(\mathcal C/w\) 保留其偏序事件集存在以 \(w\) 开头的线性化的每个结果，再移除 \(w\) 中的工作流调用及其次序边。
 The expression is undefined if no result remains.
 % 若没有索引保留，则其无定义。
 This operational ``remaining contract'' preserves result and workflow call identity.
@@ -121,18 +121,18 @@ For example, after the \(L\)-payment call, the remaining contract for \(o_L\) co
 \begin{lemma}[Completion remains unambiguous]
 % 完成状态保持无歧义
 \label{lem:observable-completion}
-For every defined \(\mathcal C/w\), no complete sequence is a strict prefix of another, and either every retained pomset is empty or none is empty.
-% 对于每个有定义的 \(\mathcal C/w\)，任何完整序列都不是另一完整序列的真前缀，并且保留的偏序事件集要么全为空，要么全都非空。
+For every defined \(\mathcal C/w\), no complete sequence can be properly extended into another, and either every retained pomset is empty or none is empty.
+% 对于每个有定义的 \(\mathcal C/w\)，任何完整序列都不能适当扩展成另一完整序列，并且保留的偏序事件集要么全为空，要么全都非空。
 \end{lemma}
 \begin{proof}
-If a remaining suffix \(v\) strictly prefixes \(v'\), then \(wv\) strictly prefixes \(wv'\) in \(\mathsf{CL}(\mathcal C)\).
-% 如果剩余后缀 \(v\) 是 \(v'\) 的真前缀，那么在 \(\mathsf{CL}(\mathcal C)\) 中，\(wv\) 是 \(wv'\) 的真前缀。
+If a remaining sequence \(v\) can be properly extended into \(v'\), then \(wv\) can be properly extended into \(wv'\) in \(\mathsf{CL}(\mathcal C)\).
+% 如果剩余序列 \(v\) 能适当扩展成 \(v'\)，那么在 \(\mathsf{CL}(\mathcal C)\) 中，\(wv\) 能适当扩展成 \(wv'\)。
 If one retained pomset is empty and another is nonempty, choose a nonempty linearization \(v\) of the latter.
 % 如果一个保留的偏序事件集为空而另一个非空，则选择后者的一条非空线性化 \(v\)。
-Then \(w\) strictly prefixes \(wv\).
-% 此时 \(w\) 是 \(wv\) 的真前缀。
-Both contradict the condition that no complete sequence strictly prefixes another.
-% 两种情况都与“任何完整序列都不是真前缀”这一条件矛盾。
+Then \(w\) can be properly extended into \(wv\).
+% 此时 \(w\) 能适当扩展成 \(wv\)。
+Both contradict the condition that no complete sequence can be properly extended into another.
+% 两种情况都与“任何完整序列都不能适当扩展成另一完整序列”这一条件矛盾。
 \end{proof}
 
 \subsection{Execution Record}
@@ -190,8 +190,8 @@ Processing a workflow call updates the work remaining at its leaf without deleti
 % 处理一个工作流调用会更新其叶节点仍需执行的工作，但不会删除已记录结构。
 Because sequence checks \(\mathsf{complete}\), it retains completed results from its left operand, so an isolated completed leaf remains available for a later Fork or Restore.
 % 由于顺序检查 \(\mathsf{complete}\)，它会保留左操作数中的已完成结果，因此孤立的已完成叶节点仍可供后续 Fork 或 Restore 使用。
-Joining removes \(g\) immediately but keeps its continuation behind a barrier until both arms complete.
-% Join 会立即移除 \(g\)，但在两个分支都完成之前，将其延续保持在屏障之后。
+Joining removes \(g\) immediately but keeps its remaining work behind a barrier until both arms complete.
+% Join 会立即移除 \(g\)，但在两个分支都完成之前，将其剩余工作保持在屏障之后。
 A workflow call is enabled when it is minimal in some pomset of \(\sem{T}\).
 % 当一个工作流调用在 \(\sem{T}\) 的某个偏序事件集中为极小元时，它即被启用。
 Disjoint workflow calls and unique context decomposition give every enabled \(x\) a unique current leaf \(\mathsf{leaf}_T(x)=b\).
@@ -286,8 +286,8 @@ Processed workflow calls are downward closed in their pomset, consistent with ev
 % \(\operatorname{dom}(\beta)=X_{\sem T}\)，且 \(\beta\) 把每个当前工作流调用 \(x\) 映射到当前规则版本 \(\eta\) 下唯一的入口 \(j_x\)。
 Every current leaf \(b{:}\mathcal C\) equals its immutable registered contract \(\Gamma_b\) after removing the workflow calls recorded in \(\chi_b\); the caller cannot replace it with a smaller result set.
 % 每个当前叶节点 \(b{:}\mathcal C\) 都等于其不可变已注册契约 \(\Gamma_b\) 移除 \(\chi_b\) 中所记录工作流调用后的结果；调用方无法把它替换为更小的结果集合。
-Every constructor in \(T\) is defined, so no complete sequence in any subtree is a strict prefix of another.
-% \(T\) 中的每个构造器都有定义，因此任何子树中的完整序列都不是另一完整序列的真前缀。
+Every constructor in \(T\) is defined, so no complete sequence in any subtree can be properly extended into another.
+% \(T\) 中的每个构造器都有定义，因此任何子树中的完整序列都不能适当扩展成另一完整序列。
 \item \emph{Edit rules and domain.}
 % \emph{编辑规则与域。}
 Every edge and introduced contract follows one immutable edit rule at version \(\zeta\).
@@ -304,8 +304,8 @@ The policy domain has exactly one active rule version, namely the version record
 \subsubsection{Authorization and completion}
 % 授权与完成
 
-The remaining parts of the execution record are policy version \(\kappa\), a regular prefix-closed authorization policy \(\mathcal A\subseteq\mathcal U^*\), authorization log \(\Delta\), and queue \(\mathsf{out}\) of requests waiting to be sent.
-% 执行记录的其余部分是策略版本 \(\kappa\)、正则且前缀闭合的授权策略 \(\mathcal A\subseteq\mathcal U^*\)、授权日志 \(\Delta\)，以及等待发出的请求队列 \(\mathsf{out}\)。
+The remaining parts of the execution record are policy version \(\kappa\), a regular authorization policy \(\mathcal A\subseteq\mathcal U^*\) closed under truncation, authorization log \(\Delta\), and queue \(\mathsf{out}\) of requests waiting to be sent.
+% 执行记录的其余部分是策略版本 \(\kappa\)、对截短操作闭合的正则授权策略 \(\mathcal A\subseteq\mathcal U^*\)、授权日志 \(\Delta\)，以及等待发出的请求队列 \(\mathsf{out}\)。
 Authorization records can only be appended.
 % 授权记录只能追加。
 A completion update advances an authorization record's status and stores the returned value.
@@ -384,14 +384,14 @@ For an edit derived from the execution record, a safe execution set satisfies fo
 % 对于从执行记录派生的编辑，安全执行集合满足四项要求。
 First, it preserves every source result that is neither already satisfied nor explicitly authorized for removal, and every allowed execution belongs to the derived target workflow.
 % 第一，它保留每个既未满足、也未被明确授权移除的源结果，并且每段获准执行都属于派生目标工作流。
-Second, every allowed prefix obeys the policy after accounting for authorization records already present in the append-only log.
-% 第二，在计入仅追加日志中已经存在的授权记录后，每个获准前缀都满足策略。
-Third, each allowed prefix extends to a complete allowed execution.
-% 第三，每个获准前缀都能扩展为一段完整的获准执行。
-Fourth, every result still compatible with an allowed prefix retains such a completion.
-% 第四，每个仍与获准前缀兼容的结果都保留这样一条完成路径。
-For example, at the laptop Fork, the set must retain both supplier results unless the school authorizes removing one, admit only approval--payment--shipment orders allowed by policy, and preserve a completion from every admitted prefix for each supplier result still compatible with that prefix.
-% 例如，在笔记本电脑的 Fork 处，除非学校授权移除某个供应商结果，否则该集合必须保留两个结果；它只能接纳策略允许的审批--付款--发货次序，并且对每个获准前缀以及仍与该前缀兼容的每个供应商结果保留一条完成路径。
+Second, every allowed partial execution obeys the policy after accounting for authorization records already present in the append-only log.
+% 第二，在计入仅追加日志中已经存在的授权记录后，每段获准的部分执行都满足策略。
+Third, each allowed partial execution extends to a complete allowed execution.
+% 第三，每段获准的部分执行都能扩展为一段完整的获准执行。
+Fourth, every result still compatible with an allowed partial execution retains such a completion.
+% 第四，每个仍与获准部分执行兼容的结果都保留这样一条完成路径。
+For example, at the laptop Fork, the set must retain both supplier results unless the school authorizes removing one, admit only approval--payment--shipment orders allowed by policy, and preserve a completion from every admitted partial execution for each supplier result still compatible with that execution.
+% 例如，在笔记本电脑的 Fork 处，除非学校授权移除某个供应商结果，否则该集合必须保留两个结果；它只能接纳策略允许的审批--付款--发货次序，并且对每段获准的部分执行以及仍与该执行兼容的每个供应商结果保留一条完成路径。
 Thus the checker cannot call the edit safe merely because the surviving \(L\) execution obeys policy after all completions of \(R\) have been pruned.
 % 因此，检查器不能仅因为删去 \(R\) 的所有完成路径后剩余的 \(L\) 执行遵守策略，就把该编辑判为安全。
 The last requirement rejects the example in \cref{sec:lifecycle}, where separately safe results cannot remain safe under one set of runtime rules.
@@ -407,8 +407,8 @@ The last requirement rejects the example in \cref{sec:lifecycle}, where separate
 
 The checker first derives the edited workflow prescribed by the execution record and the requested edit.
 % 检查器首先根据执行记录与所请求编辑推导编辑后的工作流。
-It then decides whether each workflow call creates or reuses an authorization record and removes precisely those complete executions that violate the security objective after some prefix.
-% 随后，它判断每个工作流调用创建还是复用授权记录，并精确移除那些在某个前缀之后违反安全目标的完整执行。
+It then decides whether each workflow call creates or reuses an authorization record and removes precisely those complete executions that violate the security objective after some partial execution.
+% 随后，它判断每个工作流调用创建还是复用授权记录，并精确移除那些在某段部分执行之后违反安全目标的完整执行。
 
 \subsection{Constructing the Edited Workflow}
 % 构造编辑后的工作流
