@@ -121,8 +121,8 @@ We construct an executable checker that returns every safe way to proceed or a p
 % 我们构造一个可执行检查器，它返回安全推进的全部方式，或者返回不存在安全方式的证明。
 Checkpoint has an exact check, and the checker accepts each of the six forms of Fork, Restore, and Merge exactly when the safety condition is enforceable.
 % Checkpoint 具有精确检查，而对于 Fork、Restore 和 Merge 的六种形式，当且仅当安全条件可实施时，检查器才接受。
-Our formal runtime protocol rechecks the record, atomically installs accepted rules, preserves safety across repeated edits and restarts, and has the same Agent-visible behavior as an ideal atomic machine.
-% 我们的形式化运行时协议重新检查记录、原子安装被接受的规则、在重复编辑和重启中保持安全，并与理想原子机器具有相同的 Agent 可见行为。
+Our formal runtime protocol rechecks the record, makes accepted rules take effect atomically, preserves safety across repeated edits and restarts, and has the same Agent-visible behavior as an ideal atomic machine.
+% 我们的形式化运行时协议重新检查记录、让被接受的规则原子生效、在重复编辑和重启中保持安全，并与理想原子机器具有相同的 Agent 可见行为。
 
 \item \textbf{Mechanization and executable validation.}
 % \textbf{机械化与可执行验证。}

@@ -396,8 +396,8 @@ For example, at the laptop Fork, the set must retain both supplier results unles
 % 例如，在笔记本电脑的 Fork 处，除非学校授权移除某个供应商结果，否则该集合必须保留两个结果；它只能接纳策略允许的审批--付款--发货次序，并且对每段获准的部分执行以及仍与该执行兼容的每个供应商结果保留一条完成路径。
 Thus the checker cannot call the edit safe merely because the surviving \(L\) execution obeys policy after all completions of \(R\) have been pruned.
 % 因此，检查器不能仅因为删去 \(R\) 的所有完成路径后剩余的 \(L\) 执行遵守策略，就把该编辑判为安全。
-The last requirement rejects the release example in \cref{sec:implications}, where separately safe results cannot remain safe under one set of runtime rules.
-% 最后一项要求拒绝 \cref{sec:implications} 中的发布示例：分别安全的结果无法在同一组运行时规则下持续保持安全。
+The last requirement rejects the two-result example in \cref{sec:implications}, where separately safe results cannot remain safe under one set of runtime rules.
+% 最后一项要求拒绝 \cref{sec:implications} 中的双结果示例：分别安全的结果无法在同一组运行时规则下持续保持安全。
 \Cref{def:safe-execution-set} states these requirements over executions labeled by result.
 % \Cref{def:safe-execution-set} 在按结果标记的执行上表述这些要求。
 \Cref{lem:largest-safe-family} then proves that the checker computes the largest safe execution set.
