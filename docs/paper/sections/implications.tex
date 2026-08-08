@@ -2,105 +2,100 @@
 % 执行编辑安全的含义
 \label{sec:implications}
 
-This section explains seven practical consequences for a runtime.
-% 本节说明对运行时有直接意义的七个结论。
+This section explains six consequences of our formal results for runtime design.
+% 本节说明我们的形式化结果对运行时设计产生的六个结论。
 Here, a \emph{result} means one way the task can finish, such as completing the laptop purchase through supplier \(L\) or \(R\).
 % 这里的\emph{结果}是任务的一种完成方式，例如通过供应商 \(L\) 或 \(R\) 完成笔记本电脑采购。
 It is not a value returned by a tool.
 % 它不是工具返回值。
-The runtime must preserve a required result until the record shows that it has finished or that the party requiring it allowed its removal.
-% 运行时必须保留一个要求结果，直到记录表明该结果已经完成，或提出该要求的一方允许移除它。
+A result remains required until the execution record shows that it has finished or that the party requiring it allowed its removal.
+% 一个结果会持续受到要求，直到执行记录表明它已经完成，或提出该要求的一方允许移除它。
 
-\paragraph{Removing a branch can be unsafe}
-% 删除一个分支可能不安全。
-In the laptop example, the Agent edits a workflow that can buy through supplier \(L\) or supplier \(R\) to keep only \(L\).
-% 在笔记本电脑例子中，Agent 把一个可通过供应商 \(L\) 或供应商 \(R\) 完成采购的工作流改为只保留 \(L\)。
-All calls through \(L\) may obey the purchase policy, but the edit removes the still-required \(R\) result.
-% 通过 \(L\) 的所有调用都可能遵守采购策略，但该编辑删除了仍然受到要求的 \(R\) 结果。
-The runtime may accept only if the record shows that the \(R\) purchase has finished or that the school allowed its removal.
-% 只有当记录表明通过 \(R\) 的采购已经完成，或学校允许移除它时，运行时才能接受。
-Thus the runtime cannot judge the edit from the new workflow alone.
-% 因此，运行时不能只根据新工作流判定该编辑。
-It must derive from the record whether earlier results, such as \(R\), still need to be kept.
-% 它必须根据记录推导 \(R\) 等先前结果是否仍需保留。
+\paragraph{A smaller workflow can be less safe}
+% 更小的工作流反而可能更不安全。
+In the laptop example, the current workflow allows the school to buy through supplier \(L\) or supplier \(R\).
+% 在笔记本电脑例子中，当前工作流允许学校通过供应商 \(L\) 或供应商 \(R\) 完成采购。
+Suppose the Agent edits it to keep only \(L\).
+% 假设 Agent 编辑该工作流，只保留 \(L\)。
+Every remaining call may obey the purchase policy, but the edit removes the still-required \(R\) result.
+% 剩余的每个调用都可能遵守采购策略，但该编辑删除了仍然受到要求的 \(R\) 结果。
+The edit is safe only if the record shows that the \(R\) purchase has finished or that the school allowed its removal.
+% 只有当记录表明通过 \(R\) 的采购已经完成，或学校允许移除它时，该编辑才是安全的。
+The runtime must therefore derive what the edit must preserve from the execution record, not from the proposed workflow.
+% 因此，运行时必须根据执行记录而不是提议的工作流推导该编辑必须保留什么。
 
-\paragraph{Two valid plans can be impossible to support together}
-% 两个各自有效的计划可能无法同时得到支持。
+\paragraph{Two safe plans may have no safe way to run together}
+% 两个分别安全的计划可能无法安全地共同运行。
 Suppose a release workflow must support both normal release and emergency release.
 % 假设一个发布工作流必须同时支持普通发布和紧急发布。
 The normal plan obtains approval \(y\) before deployment \(x\), producing \(yx\).
 % 普通计划先取得审批 \(y\)，再执行发布 \(x\)，形成 \(yx\)。
 The emergency plan deploys first and then files an emergency report \(z\), producing \(xz\).
 % 紧急计划先执行发布，再提交紧急报告 \(z\)，形成 \(xz\)。
-The policy \(\mathcal A=\{\epsilon,x,y,xz,yx\}\) permits both orders, so a checker that examines one plan at a time accepts both.
-% 策略 \(\mathcal A=\{\epsilon,x,y,xz,yx\}\) 允许这两种次序，因此逐个检查计划的检查器会接受二者。
+The policy \(\mathcal A=\{\epsilon,x,y,xz,yx\}\) permits both orders, so either plan is safe when checked alone.
+% 策略 \(\mathcal A=\{\epsilon,x,y,xz,yx\}\) 允许这两种次序，因此单独检查时，每个计划都是安全的。
 In the combined workflow \(X\otimes(Y\oplus Z)\), both plans contain \(x\).
 % 在组合工作流 \(X\otimes(Y\oplus Z)\) 中，两个计划都包含 \(x\)。
-Running \(x\) first therefore does not select the emergency plan, and the normal plan can finish only in the forbidden order \(xy\).
-% 因此，先执行 \(x\) 并不会选中紧急计划，而普通计划只能按被禁止的次序 \(xy\) 完成。
-Blocking \(x\) instead makes the emergency plan impossible.
-% 反过来，阻止 \(x\) 会使紧急计划无法执行。
-Neither allowing nor blocking \(x\) first keeps both plans safe, so the exact checker returns \(\mathsf{Reject}\).
-% 无论允许还是阻止 \(x\) 先执行，都无法保证两个计划安全，因此精确检查器返回 \(\mathsf{Reject}\)。
+Allowing \(x\) first leaves the normal plan able to finish only in the forbidden order \(xy\), while blocking \(x\) makes the emergency plan impossible.
+% 先允许 \(x\) 会使普通计划只能按被禁止的次序 \(xy\) 完成，而阻止 \(x\) 又会使紧急计划无法执行。
+The runtime cannot make either choice while keeping both plans safe, so the exact checker returns \(\mathsf{Reject}\).
+% 运行时无论如何选择都无法保证两个计划安全，因此精确检查器返回 \(\mathsf{Reject}\)。
 
-\paragraph{Reusing an authorization still moves the restored branch}
-% 复用授权仍会推进恢复后的分支。
+\paragraph{An edit can change from Accepted to Reject without a new authorization}
+% 即使没有新授权，编辑也可能从 Accepted 变为 Reject。
+An edit verdict applies only to the execution record that the checker examined.
+% 编辑判定只适用于检查器所检查的那份执行记录。
 In \cref{fig:two-histories}, Restore copies an approval call as \(x_a'\).
 % 在 \cref{fig:two-histories} 中，Restore 把一个审批调用复制为 \(x_a'\)。
-The original call and \(x_a'\) refer to the same authorized action \(d_a\), so processing \(x_a'\) adds no authorization-log entry but still moves the restored branch past approval.
-% 原调用和 \(x_a'\) 指向同一个已授权动作 \(d_a\)，因此处理 \(x_a'\) 不会增加授权日志记录，但仍会使恢复后的分支越过审批。
-This change can invalidate a Merge or Restore decision made before the call.
-% 这一变化可能使该调用之前作出的 Merge 或 Restore 判定失效。
-The runtime must therefore record processed workflow calls, not just authorizations.
-% 因此，运行时必须记录已经处理的工作流调用，而不能只记录授权。
+The original call and \(x_a'\) refer to the same authorized action \(d_a\).
+% 原调用和 \(x_a'\) 指向同一个已授权动作 \(d_a\)。
+Processing \(x_a'\) therefore adds no authorization-log entry, but it still moves the restored branch past approval.
+% 因此，处理 \(x_a'\) 不会增加授权日志记录，但仍会使恢复后的分支越过审批。
+A concurrent Merge or Restore that was Accepted before this call may be rejected afterward.
+% 在该调用之前被接受的并发 Merge 或 Restore，可能在该调用之后被拒绝。
+If the new verdict is Reject, the edit must not take effect in that execution state.
+% 如果新判定是 Reject，该编辑就不能在该执行状态下生效。
+Requesting authorization for \(d_a\) again cannot undo this progress because the runtime reuses \(d_a\)'s existing authorization record.
+% 再次请求对 \(d_a\) 的授权无法撤销这一进展，因为运行时会复用 \(d_a\) 已有的授权记录。
+The runtime must discard the earlier verdict and check the edit against the new record.
+% 运行时必须丢弃先前判定，并根据新记录重新检查编辑。
+A later check can change its answer after a relevant fact changes, such as completing a required result or authorizing its removal, but not by resetting recorded history.
+% 在相关事实发生变化后，例如某个要求结果已经完成或其移除获得授权，后续检查可以改变答案，但不能通过重置已记录历史来改变答案。
 
-\paragraph{A copied call may need a new authorization}
-% 复制出的调用可能需要新授权。
-Two restored approval calls may look alike but refer to different purchases.
-% 两个恢复出的审批调用可能看起来相同，却指向不同的采购。
-A call for ``approve purchase 42'' reuses purchase 42's authorization, whereas a call for ``approve purchase 43'' needs a new authorization.
-% “批准第 42 号采购”的调用会复用第 42 号采购的授权，而“批准第 43 号采购”的调用需要新授权。
-The tool name and call text are not enough to distinguish these cases.
-% 工具名称和调用文本不足以区分这两种情况。
-The runtime must record the action for each workflow call and authorization.
-% 运行时必须记录每个工作流调用和每项授权所对应的动作。
-\Cref{thm:necessary-state} proves that a checker without these links can return the wrong verdict.
-% \Cref{thm:necessary-state} 证明，缺少这些对应关系的检查器可能返回错误判定。
+\paragraph{Saving every call and authorization is still not enough}
+% 保存每个调用和授权仍然不够。
+Suppose the runtime retains all workflow calls, actions, and authorization records but loses the links among them.
+% 假设运行时保留所有工作流调用、动作和授权记录，却丢失它们之间的对应关系。
+It can no longer tell whether a restored ``approve purchase 42'' call reuses purchase 42's authorization or needs a new one.
+% 它将无法判断恢复出的“批准第 42 号采购”调用是复用第 42 号采购的授权，还是需要新授权。
+The tool name and call text cannot recover this information.
+% 工具名称和调用文本无法恢复这一信息。
+\Cref{thm:necessary-state} proves that two records containing the same calls, actions, and authorizations can require opposite verdicts when these links differ.
+% \Cref{thm:necessary-state} 证明，两份包含相同调用、动作和授权的记录，在这些对应关系不同时可能要求相反判定。
+An exact runtime must therefore record which action each workflow call and authorization refers to.
+% 因此，精确运行时必须记录每个工作流调用和每项授权指向哪个动作。
 
-\paragraph{The runtime must recheck an edit if execution changes}
-% 如果执行发生变化，运行时必须重新检查编辑。
-The checker reads the execution record and decides whether to accept the edit.
-% 检查器读取执行记录，并判定是否接受编辑。
-An old call may change the record before the new rules are installed, so the runtime installs them only if the current record still matches the checked record.
-% 一个旧调用可能在安装新规则之前改变记录，因此只有当当前记录仍与接受检查的记录一致时，运行时才会安装新规则。
-If the runtime processes the old call first, it checks the edit again.
-% 如果运行时先处理旧调用，它会重新检查编辑。
-If the edit takes effect first, the runtime disables the old rules and tokens.
-% 如果编辑先生效，运行时会禁用旧规则和令牌。
-This ordering prevents one execution from combining old and new rules.
-% 这种顺序可以防止同一次执行混合使用新旧规则。
+\paragraph{There is one largest safe set of call orders}
+% 存在一个最大的安全调用次序集合。
+Safety could in principle admit several incomparable rule sets, each allowing call orders that the others block.
+% 原则上，安全性可能允许多个不可比较的规则集合，每个集合都允许其他集合所阻止的调用次序。
+\Cref{sec:model} instead proves that the checker returns one safe execution set containing every other safe execution set.
+% \Cref{sec:model} 则证明，检查器返回一个包含所有其他安全执行集合的安全执行集合。
+The generated runtime rules therefore combine all call orders that can coexist without violating policy or preventing a required result from finishing.
+% 因此，生成的运行时规则会合并所有能够共存且不会违反策略、也不会阻止要求结果完成的调用次序。
 
-\paragraph{Reject means that the runtime cannot make the current request safe}
-% Reject 意味着运行时无法使当前请求安全。
-Under the same policy and required results, Reject means that every choice of allowed calls either permits a forbidden order or prevents a required result from finishing.
-% 在策略和要求结果保持不变时，Reject 意味着每种调用允许方式都会允许被禁止的次序，或阻止某个要求结果完成。
-The Agent must change the workflow, policy, or required results before the request can be accepted.
-% Agent 必须改变工作流、策略或要求结果，才能使请求被接受。
-On acceptance, the checker keeps every execution that can run safely, forming the largest safe execution set defined in \cref{sec:model}.
-% 在接受时，检查器会保留每种能够安全运行的执行，从而形成 \cref{sec:model} 中定义的最大安全执行集合。
-
-\paragraph{Safety continues after more calls and edits}
-% 在更多调用和编辑之后，安全性仍然保持。
-An accepted edit remains safe as execution continues.
-% 被接受的编辑会在执行继续推进时保持安全。
-If the runtime executes calls allowed by the first check, checking again returns the same safe ways to finish the remaining workflow.
-% 如果运行时执行第一次检查允许的调用，再次检查会返回相同的安全方式来完成剩余工作流。
+\paragraph{Exactness survives later calls, edits, and restarts}
+% Exactness 会在后续调用、编辑和重启之后继续成立。
+The exact guarantee is not limited to the first accepted edit.
+% 精确保证并不局限于第一次被接受的编辑。
+After allowed calls have run, checking the remaining workflow again gives the same safe ways to finish as the installed rules.
+% 在获准调用执行后，再次检查剩余工作流会得到与已安装规则相同的安全完成方式。
 Later Fork, Restore, and Merge requests, rule updates, stops, and restarts preserve the same guarantee.
 % 后续 Fork、Restore、Merge 请求、规则更新、停止及重启都会保持同一保证。
-The Agent can therefore continue editing without losing the safety guarantee.
-% 因此，Agent 可以继续编辑，而不会失去安全保证。
+Every later edit is therefore checked under the same exact safety condition as the first.
+% 因此，每个后续编辑都会按照与第一次相同的精确安全条件进行检查。
 
 \Cref{sec:model} formalizes the execution record and safety goal.
 % \Cref{sec:model} 形式化定义执行记录和安全目标。
-\Cref{sec:exact-check} defines the checker, and \cref{sec:enforcement,sec:results} show how the runtime installs the new rules atomically and preserves the guarantees above.
-% \Cref{sec:exact-check} 定义检查器，\cref{sec:enforcement,sec:results} 说明运行时如何原子地安装新规则并保持上述保证。
+\Cref{sec:exact-check} defines the checker, and \cref{sec:enforcement,sec:results} show how the runtime installs its rules atomically and preserves the guarantees above.
+% \Cref{sec:exact-check} 定义检查器，\cref{sec:enforcement,sec:results} 说明运行时如何原子地安装规则并保持上述保证。
