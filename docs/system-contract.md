@@ -176,14 +176,21 @@ serialization, or keeping every old version indefinitely.
    a systematic crash matrix.
 3. Run a maintained multi-service application behind enforced egress and
    change it while requests are active.
-4. Add a complete QEMU/KVM guest, host network enforcement, snapshot/restore,
-   and device-output tests.
-5. Connect Codex App Server and Claude tool calls to the same Operation gateway.
-6. Replace bounded enumeration with a symbolic backend and cross-check it
+4. **Complete Linux VM restore path — implemented for the HTTP boundary.** A
+   checksum-pinned Ubuntu image boots under rootless QEMU TCG with
+   `restrict=on` and only fixed metadata/control forwards. QEMU saves the live
+   guest before an Operation, payment commits and loses its response, and QEMU
+   restores the whole guest. Host History turns the repeated call into one
+   successful Operation with one remote commit. Device-output mediation remains
+   open.
+5. Connect the VM path to the isolated service deployment and add block/device
+   output tests.
+6. Connect Codex App Server and Claude tool calls to the same Operation gateway.
+7. Replace bounded enumeration with a symbolic backend and cross-check it
    against the existing exact Python oracle.
-7. Prove the generic finite theorem, the durable control refinement, and each
+8. Prove the generic finite theorem, the durable control refinement, and each
    adapter correspondence in Lean.
-8. Run scale, availability, fault, usability, and strongest-baseline studies;
+9. Run scale, availability, fault, usability, and strongest-baseline studies;
    only then rebuild the paper around the larger result.
 
 ## Kill tests

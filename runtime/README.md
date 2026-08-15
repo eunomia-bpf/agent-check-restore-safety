@@ -1,9 +1,8 @@
-# Runtime: first vertical slice
+# Runtime: cross-domain system
 
-This directory contains the first runnable slice of a control layer for
-changing live systems after external operations may already have happened. It
-is deliberately small, but it crosses a real network and durability boundary;
-it is not an architecture placeholder.
+This directory contains a runnable control layer for changing live systems
+after external operations may already have happened. It crosses process,
+container, network, durability, and full-VM restore boundaries.
 
 The only five core terms are:
 
@@ -11,8 +10,8 @@ The only five core terms are:
 - **Requirement**: results that must remain achievable and resource limits that
   every possible outcome must respect.
 - **Operation**: one stable external action across retries and control-state
-  recovery; future adapters must preserve the same identity across their own
-  branch, restart, and restore mechanisms.
+  recovery; future adapters must preserve the same identity across restart and
+  restore mechanisms.
 - **Rule**: the currently enforced set of actions that cannot strand a required
   result.
 - **Certificate**: history-bound evidence for activating a Rule or for reporting
@@ -27,6 +26,7 @@ make runtime-build
 make runtime-test
 make runtime-demo
 make runtime-microservice-demo
+make runtime-vm-demo
 make runtime-verify
 ```
 
@@ -80,6 +80,49 @@ with both Operations succeeded. Set `KEEP_DEMO=1` to leave the containers and
 temporary evidence running, or `KEEP_STATE=1` to retain only the evidence
 directory printed by the script.
 
+## Restore a complete Linux VM after a remote commit
+
+`make runtime-vm-demo` runs the stronger restore experiment on a complete,
+unmodified Ubuntu 24.04 cloud image. The first run downloads the 595 MiB image
+from the [official Ubuntu release directory](https://cloud-images.ubuntu.com/releases/noble/release-20260725/)
+and requires the published SHA-256
+`d1940f7d69d343355e183dff1e08a59852d32e7309baa7a4bad8365b11b005ac`.
+Later runs reuse the verified user cache. The base image remains read-only; each
+run creates a temporary qcow2 overlay.
+
+The runner uses QEMU TCG by default, so it does not require root or `/dev/kvm`:
+
+```sh
+make runtime-vm-demo
+```
+
+If the current session can open `/dev/kvm`, the same runner accepts:
+
+```sh
+make runtime-vm-demo VM_ACCEL=kvm
+```
+
+The runner creates one QEMU user network with `restrict=on`, disables all
+implicit NICs, and defines only two fixed guest forwards: metadata/gate and the
+Operation API. There is no forward to payment. The checked sequence is:
+
+1. Boot Ubuntu and wait at a guest-visible gate before its Operation.
+2. Stop QEMU and use `savevm` to save RAM, devices, and the qcow2 guest disk.
+3. Resume the guest. Its direct connection to payment must fail. Its gateway
+   request reaches payment, which syncs one commit and drops the response,
+   leaving the Operation `unknown` in host History.
+4. Stop QEMU, use `loadvm` to restore the complete guest to the saved point,
+   and resume it. Host History and payment state are outside that restore.
+5. The restored guest again fails to reach payment directly and repeats the
+   identical stable call. The runtime retries the frozen Operation, obtains its
+   receipt, and returns `succeeded` without a second payment commit.
+
+The retained TCG run booted kernel `6.8.0-136-generic`, observed two remote
+deliveries and one commit, and ended at host History sequence 6. The runner
+also asks `qemu-img` to verify that the named internal snapshot exists. Use
+`cd runtime && go run ./cmd/vm-demo -keep` to retain the guest overlay, serial
+console, QEMU log, History, head anchor, and payment state for inspection.
+
 ## Implemented now
 
 - a single-writer, length-framed History with SHA-256 chaining, `fsync`, strict
@@ -110,9 +153,11 @@ directory printed by the script.
   strict JSON API;
 - adapter credentials bound to one domain and an allowed kind set, with the
   Operation identity derived server-side from that domain and call identity;
-  and
 - History-based recovery of a previously registered Operation's frozen kind,
-  method, and target after the calling process changes globally.
+  method, and target after the calling process changes globally; and
+- a rootless QEMU guest path with a host-owned restricted network, a verified
+  Ubuntu base image, whole-VM save/restore, and host History outside the guest
+  restore domain.
 
 Run the daemon directly:
 
@@ -148,8 +193,9 @@ process with the same host account outside the Docker deployment.
 This is an early system slice, not the complete system. It does not yet provide:
 
 - general host-level prevention of direct network or device access beyond the
-  demonstrated Docker payment boundary;
-- a QEMU/KVM guest adapter or a real VM snapshot experiment;
+  demonstrated Docker and QEMU payment boundaries;
+- mediation of VM block devices, GPUs, passthrough devices, or arbitrary host
+  interfaces beyond the demonstrated restricted HTTP path;
 - Codex and Claude adapters to this new control layer;
 - a replicated control service;
 - authenticated remote evidence or query-based unknown-result recovery;
