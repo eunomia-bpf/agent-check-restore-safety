@@ -2,9 +2,15 @@ module github.com/eunomia-bpf/agent-check-restore-safety/runtime
 
 go 1.22
 
-require go.mongodb.org/mongo-driver/v2 v2.8.0
+require (
+	github.com/jackc/pgx/v5 v5.7.4
+	go.mongodb.org/mongo-driver/v2 v2.8.0
+)
 
 require (
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
+	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/klauspost/compress v1.17.6 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.2.0 // indirect
