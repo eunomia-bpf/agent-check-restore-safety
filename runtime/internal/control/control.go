@@ -209,6 +209,28 @@ func (c *Control) Snapshot() *kernel.State {
 	return c.state.Clone()
 }
 
+// Operation returns the frozen meaning of a previously registered Operation.
+func (c *Control) Operation(id string) (kernel.Operation, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	operation, ok := c.state.Operations[id]
+	if !ok {
+		return kernel.Operation{}, false
+	}
+	operation.Costs = cloneCountMap(operation.Costs)
+	operation.Produces = cloneCountMap(operation.Produces)
+	operation.ResultBody = append([]byte(nil), operation.ResultBody...)
+	return operation, true
+}
+
+func cloneCountMap(input map[string]uint32) map[string]uint32 {
+	output := make(map[string]uint32, len(input))
+	for key, value := range input {
+		output[key] = value
+	}
+	return output
+}
+
 func (c *Control) Events() []history.Event {
 	c.mu.RLock()
 	defer c.mu.RUnlock()

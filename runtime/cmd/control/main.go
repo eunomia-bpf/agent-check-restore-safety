@@ -29,6 +29,7 @@ func main() {
 	var operationTokenPath string
 	var operationDomain string
 	var operationKinds string
+	var allowNonLoopback bool
 	flag.StringVar(&historyPath, "history", "runtime.history", "path for the durable History")
 	flag.StringVar(&anchorPath, "head-anchor", "", "host path outside the History restore domain")
 	flag.StringVar(&listenAddress, "listen", "127.0.0.1:8787", "HTTP listen address")
@@ -36,6 +37,7 @@ func main() {
 	flag.StringVar(&operationTokenPath, "operation-token-file", "", "path to the Operation API token")
 	flag.StringVar(&operationDomain, "operation-domain", "local-adapter", "domain bound to the Operation API token")
 	flag.StringVar(&operationKinds, "operation-kinds", "", "comma-separated operation kinds allowed for the token")
+	flag.BoolVar(&allowNonLoopback, "allow-nonloopback", false, "allow an explicitly isolated non-loopback listener")
 	flag.Parse()
 	if anchorPath == "" {
 		anchorPath = historyPath + ".head-anchor"
@@ -71,9 +73,9 @@ func main() {
 		listener.Close()
 		log.Fatal("control API requires a TCP listener")
 	}
-	if !address.IP.IsLoopback() {
+	if !listenerAllowed(address, allowNonLoopback) {
 		listener.Close()
-		log.Fatal("refusing non-loopback control API; remote transport is not implemented")
+		log.Fatal("refusing non-loopback control API without -allow-nonloopback; remote TLS is not implemented")
 	}
 
 	c, err := control.OpenWithAnchor(historyPath, anchorPath)
@@ -111,6 +113,10 @@ func main() {
 	if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
+}
+
+func listenerAllowed(address *net.TCPAddr, allowNonLoopback bool) bool {
+	return allowNonLoopback || address.IP.IsLoopback()
 }
 
 func parseKinds(value string) ([]string, error) {

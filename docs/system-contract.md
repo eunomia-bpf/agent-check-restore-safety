@@ -166,18 +166,24 @@ serialization, or keeping every old version indefinitely.
    and a separately synced payment file now run under public commands. The demo
    currently reopens the control object; process-kill evidence belongs to the
    next fault matrix.
-1. Separate compiler and checker binaries; add authenticated query evidence and
+1. **Enforced multi-process change — implemented.** Separate order, control,
+   payment, and fixed-ingress containers now replace the whole order process
+   after a committed payment loses its response. The changed process contains
+   only v2 configuration; History supplies the old Operation meaning. Internal
+   Docker networks make control the only process that can reach payment, and
+   the scenario restarts control before completing old work.
+2. Separate compiler and checker binaries; add authenticated query evidence and
    a systematic crash matrix.
-2. Run a real multi-service application behind enforced egress and change it
-   while requests are active.
-3. Add a complete QEMU/KVM guest, host network enforcement, snapshot/restore,
+3. Run a maintained multi-service application behind enforced egress and
+   change it while requests are active.
+4. Add a complete QEMU/KVM guest, host network enforcement, snapshot/restore,
    and device-output tests.
-4. Connect Codex App Server and Claude tool calls to the same Operation gateway.
-5. Replace bounded enumeration with a symbolic backend and cross-check it
+5. Connect Codex App Server and Claude tool calls to the same Operation gateway.
+6. Replace bounded enumeration with a symbolic backend and cross-check it
    against the existing exact Python oracle.
-6. Prove the generic finite theorem, the durable control refinement, and each
+7. Prove the generic finite theorem, the durable control refinement, and each
    adapter correspondence in Lean.
-7. Run scale, availability, fault, usability, and strongest-baseline studies;
+8. Run scale, availability, fault, usability, and strongest-baseline studies;
    only then rebuild the paper around the larger result.
 
 ## Kill tests

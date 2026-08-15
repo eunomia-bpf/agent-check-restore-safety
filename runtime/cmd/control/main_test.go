@@ -1,10 +1,25 @@
 package main
 
 import (
+	"net"
 	"os"
 	"path/filepath"
 	"testing"
 )
+
+func TestListenerPolicy(t *testing.T) {
+	loopback := &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 8787}
+	remote := &net.TCPAddr{IP: net.ParseIP("172.20.0.2"), Port: 8787}
+	if !listenerAllowed(loopback, false) {
+		t.Fatal("loopback listener was rejected")
+	}
+	if listenerAllowed(remote, false) {
+		t.Fatal("non-loopback listener was accepted without the explicit flag")
+	}
+	if !listenerAllowed(remote, true) {
+		t.Fatal("explicitly allowed isolated listener was rejected")
+	}
+}
 
 func TestLoadOrCreateTokenIsPrivateAndStable(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "control.token")

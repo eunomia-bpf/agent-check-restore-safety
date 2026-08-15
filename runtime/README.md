@@ -26,6 +26,7 @@ From the repository root:
 make runtime-build
 make runtime-test
 make runtime-demo
+make runtime-microservice-demo
 make runtime-verify
 ```
 
@@ -42,6 +43,42 @@ The same run also shows that:
 - a Certificate becomes stale after any Operation progress, even when a view
   containing only authorization events would be unchanged; and
 - a settled retry returns the recorded result without another network call.
+
+## Replace a real service process
+
+`make runtime-microservice-demo` builds and runs four separate containers:
+
+- an order service with one process-wide release file and no old-state
+  conversion code;
+- the durable control service;
+- an independently durable payment service; and
+- a fixed ingress that exposes order and administration without opening the
+  internal service network.
+
+The order service and payment service share no Docker network. Only control
+can reach payment. Both service networks are marked internal, every container
+runs as the invoking host UID/GID with a read-only root filesystem, all Linux
+capabilities removed, and `no-new-privileges` enabled.
+
+The executable scenario performs these steps:
+
+1. Start release v1 and activate a Requirement containing only `charge-v1`.
+2. Submit order A-17. Payment syncs one commit, then closes the connection
+   before returning a receipt, leaving its Operation `unknown`.
+3. Activate a new Requirement containing only `charge-v2`, replace the entire
+   order container with a release file containing only the v2 kind and target,
+   and restart the control process.
+4. Submit A-17 through the changed process. Its stable call identity finds the
+   existing Operation in History, so control uses its frozen v1 kind and target
+   while still requiring the request body to match.
+5. Submit a new order B-18, which uses v2, and verify that the order container
+   cannot connect directly to payment.
+
+The checked result is three network deliveries but two durable payment
+commits: two v1 deliveries for A-17 and one v2 delivery for B-18. History ends
+with both Operations succeeded. Set `KEEP_DEMO=1` to leave the containers and
+temporary evidence running, or `KEEP_STATE=1` to retain only the evidence
+directory printed by the script.
 
 ## Implemented now
 
@@ -67,10 +104,15 @@ The same run also shows that:
 - live-dispatch ownership that prevents two callers from concurrently sending
   the same Operation and keeps shutdown from releasing History while a request
   is live;
-- a loopback-only control daemon exposing state, History, compilation, Rule
-  activation, and gateway execution over a strict JSON API; and
+- a control daemon that defaults to loopback and permits a non-loopback bind
+  only under an explicit flag for an isolated container network, exposing
+  state, History, compilation, Rule activation, and gateway execution over a
+  strict JSON API;
 - adapter credentials bound to one domain and an allowed kind set, with the
-  Operation identity derived server-side from that domain and call identity.
+  Operation identity derived server-side from that domain and call identity;
+  and
+- History-based recovery of a previously registered Operation's frozen kind,
+  method, and target after the calling process changes globally.
 
 Run the daemon directly:
 
@@ -89,19 +131,24 @@ must be on the host or a remote monotonic store, not inside the guest image.
 The adjacent default anchor catches isolated History replacement but not a
 snapshot that rolls back both files.
 
-The API listens on `127.0.0.1:8787` and refuses non-loopback addresses. On first
-start it creates separate private token files for administration and adapter
-execution. Only the administration token can inspect History, compile, or
-activate a Rule. The adapter token can call only its configured operation
-kinds, and its domain is not caller supplied. These tokens do not prevent
-another process running as the same Unix user from bypassing the gateway, so
-this API is not yet the host enforcement boundary.
+The API listens on `127.0.0.1:8787` and refuses non-loopback addresses by
+default. The multi-service deployment uses the explicit non-loopback flag only
+inside an internal Docker network and exposes it through a fixed loopback
+ingress. On first start it creates separate private token files for
+administration and adapter execution. Only the administration token can
+inspect History, compile, or activate a Rule. The adapter token can create only
+its configured operation kinds, and its domain is not caller supplied. A
+previously created Operation remains executable under its frozen old meaning
+by a credential for the same domain; this is what lets changed code finish old
+work. These bearer tokens do not provide remote TLS or protection from another
+process with the same host account outside the Docker deployment.
 
 ## Honest boundary
 
-This is milestone zero, not the complete system. It does not yet provide:
+This is an early system slice, not the complete system. It does not yet provide:
 
-- host-level prevention of direct network or device access;
+- general host-level prevention of direct network or device access beyond the
+  demonstrated Docker payment boundary;
 - a QEMU/KVM guest adapter or a real VM snapshot experiment;
 - Codex and Claude adapters to this new control layer;
 - a replicated control service;

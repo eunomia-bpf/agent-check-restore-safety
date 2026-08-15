@@ -18,8 +18,15 @@ Run the current system evidence:
 make runtime-build
 make runtime-test
 make runtime-demo
+make runtime-microservice-demo
 make runtime-verify
 ```
+
+The multi-service demo builds separate order, control, payment, and fixed
+ingress containers. It changes and replaces the order process after a payment
+has committed but its response was lost. Docker network separation prevents
+the order process from reaching payment directly; the durable control path
+finishes the old order and sends a new order to the new payment endpoint.
 
 The scientific and system contract is in
 [`docs/system-contract.md`](docs/system-contract.md). The current paper source

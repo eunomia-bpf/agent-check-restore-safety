@@ -106,6 +106,15 @@ func TestLocalAPICompilesActivatesAndExecutes(t *testing.T) {
 	server := httptest.NewServer(api.Handler())
 	defer server.Close()
 
+	health, err := server.Client().Get(server.URL + "/healthz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	health.Body.Close()
+	if health.StatusCode != http.StatusOK {
+		t.Fatalf("health status = %d", health.StatusCode)
+	}
+
 	request, _ := http.NewRequest(http.MethodGet, server.URL+"/v1/state", nil)
 	response, err := server.Client().Do(request)
 	if err != nil {

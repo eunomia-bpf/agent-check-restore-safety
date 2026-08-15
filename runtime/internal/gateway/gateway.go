@@ -115,6 +115,17 @@ func (g *Gateway) Execute(ctx context.Context, request Request) (Outcome, error)
 		return Outcome{}, err
 	}
 	defer release()
+	if prior, ok := g.control.Operation(request.ID); ok {
+		if prior.Domain != request.Domain {
+			return Outcome{}, errors.New("stable operation identity belongs to another adapter domain")
+		}
+		// A changed caller need not retain an old per-state migration branch.
+		// History supplies the frozen operation kind and network target. The
+		// request body and non-owned headers must still hash identically.
+		request.Kind = prior.Kind
+		request.URL = prior.Target
+		request.Method = prior.Method
+	}
 	if request.Method == "" {
 		request.Method = http.MethodPost
 	}

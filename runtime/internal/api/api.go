@@ -101,6 +101,17 @@ func New(c *control.Control, client *http.Client, credentials Credentials) (*Ser
 
 func (s *Server) Handler() http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path == "/healthz" {
+			if request.Method != http.MethodGet {
+				writer.Header().Set("Allow", http.MethodGet)
+				writeError(writer, http.StatusMethodNotAllowed, errors.New("health check requires GET"))
+				return
+			}
+			writeJSON(writer, http.StatusOK, struct {
+				Status string `json:"status"`
+			}{Status: "ok"})
+			return
+		}
 		token := strings.TrimPrefix(request.Header.Get("Authorization"), "Bearer ")
 		admin := secureEqual(token, s.adminToken)
 		if request.URL.Path == "/v1/execute" {
@@ -241,12 +252,18 @@ func (s *Server) execute(writer http.ResponseWriter, request *http.Request, adap
 		writeError(writer, http.StatusBadRequest, errors.New("adapter call identity is too large"))
 		return
 	}
-	if !adapter.kinds[body.Kind] {
+	operationID := deriveOperationID(adapter.domain, body.CallID)
+	prior, exists := s.control.Operation(operationID)
+	if exists && prior.Domain != adapter.domain {
+		writeError(writer, http.StatusForbidden, errors.New("operation identity belongs to another adapter domain"))
+		return
+	}
+	if !exists && !adapter.kinds[body.Kind] {
 		writeError(writer, http.StatusForbidden, errors.New("adapter credential does not allow this operation kind"))
 		return
 	}
 	outcome, err := s.gateway.Execute(request.Context(), gateway.Request{
-		ID:      deriveOperationID(adapter.domain, body.CallID),
+		ID:      operationID,
 		Domain:  adapter.domain,
 		Kind:    body.Kind,
 		Method:  body.Method,

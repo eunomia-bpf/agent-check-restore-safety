@@ -1,4 +1,4 @@
-.PHONY: runtime-build runtime-test runtime-demo runtime-verify
+.PHONY: runtime-build runtime-test runtime-demo runtime-microservice-demo runtime-verify
 
 runtime-build:
 	cd runtime && go build ./...
@@ -11,6 +11,9 @@ runtime-demo:
 	cd runtime && go run ./cmd/demo \
 		-history "$$runtime_demo_dir/runtime.history" \
 		-sink "$$runtime_demo_dir/payment.history"
+
+runtime-microservice-demo:
+	bash runtime/deploy/microservice/run.sh
 
 runtime-verify:
 	cd runtime && go build ./...

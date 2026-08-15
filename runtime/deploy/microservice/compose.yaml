@@ -1,0 +1,131 @@
+services:
+  payment:
+    image: ${RUNTIME_IMAGE}
+    user: ${DEMO_UID}:${DEMO_GID}
+    command:
+      - /usr/local/bin/payment
+      - -listen=0.0.0.0:8081
+      - -state=/state/payment.history
+      - -drop-first-response=true
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - type: bind
+        source: ${DEMO_STATE_DIR}/payment
+        target: /state
+    networks: [effects]
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:8081/healthz]
+      interval: 1s
+      timeout: 1s
+      retries: 30
+
+  control:
+    image: ${RUNTIME_IMAGE}
+    user: ${DEMO_UID}:${DEMO_GID}
+    build:
+      context: ../..
+      dockerfile: deploy/microservice/Dockerfile
+    command:
+      - /usr/local/bin/control
+      - -listen=0.0.0.0:8787
+      - -allow-nonloopback=true
+      - -history=/state/runtime.history
+      - -head-anchor=/anchor/runtime.head
+      - -admin-token-file=/state/admin-token
+      - -operation-token-file=/state/operation-token
+      - -operation-domain=orders
+      - -operation-kinds=charge-v1,charge-v2
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - type: bind
+        source: ${DEMO_STATE_DIR}/control
+        target: /state
+      - type: bind
+        source: ${DEMO_STATE_DIR}/anchor
+        target: /anchor
+    networks: [control, effects]
+    depends_on:
+      payment:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:8787/healthz]
+      interval: 1s
+      timeout: 1s
+      retries: 30
+
+  order:
+    image: ${RUNTIME_IMAGE}
+    user: ${DEMO_UID}:${DEMO_GID}
+    command:
+      - /usr/local/bin/order
+      - -listen=0.0.0.0:8080
+      - -release=/config/order.json
+      - -control=http://control:8787
+      - -operation-token-file=/control-state/operation-token
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - type: bind
+        source: ${DEMO_STATE_DIR}/order-config
+        target: /config
+        read_only: true
+      - type: bind
+        source: ${DEMO_STATE_DIR}/control
+        target: /control-state
+        read_only: true
+    networks: [control]
+    depends_on:
+      control:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:8080/healthz]
+      interval: 1s
+      timeout: 1s
+      retries: 30
+
+  ingress:
+    image: ${RUNTIME_IMAGE}
+    user: ${DEMO_UID}:${DEMO_GID}
+    command:
+      - /usr/local/bin/ingress
+      - -control-listen=0.0.0.0:8787
+      - -order-listen=0.0.0.0:8080
+      - -control-upstream=http://control:8787
+      - -order-upstream=http://order:8080
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    networks: [front, control]
+    ports:
+      - 127.0.0.1:${CONTROL_PORT}:8787
+      - 127.0.0.1:${ORDER_PORT}:8080
+    depends_on:
+      control:
+        condition: service_healthy
+      order:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:8787/healthz]
+      interval: 1s
+      timeout: 1s
+      retries: 30
+
+networks:
+  front: {}
+  control:
+    internal: true
+  effects:
+    internal: true

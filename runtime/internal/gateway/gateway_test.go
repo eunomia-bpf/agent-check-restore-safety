@@ -337,3 +337,91 @@ func TestFinalizedRequestRejectsAmbiguousHeaders(t *testing.T) {
 		}
 	}
 }
+
+func TestChangedCallerRetriesFrozenOperationWithoutStateMigration(t *testing.T) {
+	var mu sync.Mutex
+	deliveries := map[string]int{}
+	committed := map[string]bool{}
+	dropFirst := true
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		id := request.Header.Get("X-Operation-ID")
+		mu.Lock()
+		deliveries[request.URL.Path]++
+		firstCommit := !committed[id]
+		committed[id] = true
+		drop := firstCommit && dropFirst
+		if drop {
+			dropFirst = false
+		}
+		mu.Unlock()
+		if drop {
+			connection, _, err := writer.(http.Hijacker).Hijack()
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			_ = connection.Close()
+			return
+		}
+		writeTestReceipt(t, writer, id, kernel.Succeeded)
+	}))
+	defer server.Close()
+
+	v1Target := server.URL + "/v1/charge"
+	v2Target := server.URL + "/v2/charge"
+	requirement := func(id, kind, target string, results uint32) kernel.Requirement {
+		return kernel.Requirement{
+			ID: id, Results: map[string]uint32{"paid": results},
+			Capacities: map[string]uint32{"money": 2},
+			Kinds: map[string]kernel.KindSpec{
+				kind: {
+					Costs: map[string]uint32{"money": 1}, Produces: map[string]uint32{"paid": 1},
+					RetrySafe: true, Target: target, Method: http.MethodPost,
+					ResponseClassifier: ResponseReceiptV1,
+				},
+			},
+		}
+	}
+	c, err := control.Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	activate := func(r kernel.Requirement) {
+		certificate, err := c.Compile(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := c.Activate(certificate); err != nil {
+			t.Fatal(err)
+		}
+	}
+	activate(requirement("orders-v1", "charge-v1", v1Target, 1))
+	gateway, err := New(c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := []byte(`{"order":"A-17","amount":42}`)
+	first := Request{ID: "order-A-17", Domain: "orders", Kind: "charge-v1", URL: v1Target, Body: body}
+	if outcome, err := gateway.Execute(context.Background(), first); !errors.Is(err, ErrOutcomeUnknown) || outcome.Phase != kernel.Unknown {
+		t.Fatalf("first outcome=%+v error=%v", outcome, err)
+	}
+	activate(requirement("orders-v2", "charge-v2", v2Target, 2))
+
+	// The new caller knows only its global v2 configuration. The runtime finds
+	// the existing ID in History and sends the original v1 Operation instead.
+	changedCaller := Request{ID: first.ID, Domain: first.Domain, Kind: "charge-v2", URL: v2Target, Body: body}
+	if outcome, err := gateway.Execute(context.Background(), changedCaller); err != nil || outcome.Phase != kernel.Succeeded {
+		t.Fatalf("changed-caller retry outcome=%+v error=%v", outcome, err)
+	}
+	newOrder := Request{ID: "order-B-18", Domain: "orders", Kind: "charge-v2", URL: v2Target,
+		Body: []byte(`{"order":"B-18","amount":7}`)}
+	if outcome, err := gateway.Execute(context.Background(), newOrder); err != nil || outcome.Phase != kernel.Succeeded {
+		t.Fatalf("new v2 operation outcome=%+v error=%v", outcome, err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if deliveries["/v1/charge"] != 2 || deliveries["/v2/charge"] != 1 || len(committed) != 2 {
+		t.Fatalf("deliveries=%v committed=%d", deliveries, len(committed))
+	}
+}
