@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "transport": "curl",
+  "exit_code": 52,
+  "http_status": "000",
+  "response_bytes": 0,
+  "stderr": "curl: (52) Empty reply from server\n"
+}

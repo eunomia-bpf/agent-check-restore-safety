@@ -1,0 +1,149 @@
+{
+  "schema": 1,
+  "services": [
+    {
+      "service": "attractions",
+      "container_id": "0f904201ba5d7215e4ed8d1a7bb4fae77d0964f8c647e10ab704c3d25a7df453",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "consul",
+      "container_id": "f9595189b905541a193f24d409aa653558551d033052621fadd7d8718f280f36",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "frontend",
+      "compose_scaled_to_zero": true,
+      "running": false
+    },
+    {
+      "service": "geo",
+      "container_id": "2f0a90a88dba1e96e694dded6a9d53fcbb50d2d506b7c4d8ca5fd52d380e1bed",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "jaeger",
+      "container_id": "c2b1b909a9155da383aca7448f3ab1dcef7c730979e96dbd722a144aa82e6ca9",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "memcached-profile",
+      "container_id": "507f9a4916dfefe60139633b021f88cbf213bb0076779f243961177d559bf620",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "memcached-rate",
+      "container_id": "305ab6f97143a8e8d8b2dab5d6aefa9b2a5152ec5012a4806432dcb7a2fd8abd",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "memcached-reserve",
+      "container_id": "0f985250de6cfec88f88147e52c106e3a7b0f8515a45de3ea51bdae1401ae612",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "memcached-review",
+      "container_id": "9e8c3432384151357e927b883f56c9c9e3f0152a2eee921295675e1f6365d2a5",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "mongodb-attractions",
+      "container_id": "ef8cc5b1f6fad1d55dcadf07075b5d52418c014225f2e76d3673a0eb93a0a69a",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "mongodb-geo",
+      "container_id": "f6c1d9810a323efc584873e324ec794c5c707bf99372d4c9477458dd5b1cfd6d",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "mongodb-profile",
+      "container_id": "99e1b7afe06fa319730861abc53d1d3faccae4c06903b589e8428c86810eccb1",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "mongodb-rate",
+      "container_id": "1ff22e46f56b5241aeb168edbceb4d58c758f76f63f49f3a8bc3a112f42ce733",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "mongodb-recommendation",
+      "container_id": "3b621dbdec5d4ebf3d60acdf4a61ee4eb2f1931b9721060c55ec821bd05f2b1b",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "mongodb-reservation",
+      "container_id": "3119f3f2c80216e2dc42f930b5e8af81810618cb5b297c53c5881064566ad901",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "mongodb-review",
+      "container_id": "2e2e825f2e7433fda1115aa0de81545a1d125abaf6eb310cf58fd1aab0791df2",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "mongodb-user",
+      "container_id": "5a5e63e81ef5c727289b259c0ab48232a519fa1b9c82d841cb9b67deaab5f14f",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "profile",
+      "container_id": "f15ec21bad8c372d03d6dcc6db68e45b44e8da9fea7e1bf041394df910be66e7",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "rate",
+      "container_id": "30bf8804a58893fc24ae05de01c59e9dc2c443ca7d683f6123c8237621620605",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "recommendation",
+      "container_id": "1446106b5557df5c8abfc08f9896c6ba0f333568e63f49cc29b0e003032334e3",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "reservation",
+      "container_id": "6ae7cc553d858c1667b40b8871e64e0816eabbc8f6047d7db1404aaa3f0c7498",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "review",
+      "container_id": "3a025e7f93fadde28622974935e1d363c3ea93da530186eb0fa883b6d42d0119",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "search",
+      "container_id": "582c519d69a98144b0305d736f698b15969af6848a8df52d5f7fccae4b40c5d4",
+      "compose_scaled_to_zero": false,
+      "running": true
+    },
+    {
+      "service": "user",
+      "container_id": "4bb16143bc1e130c4715a50163e33fc3da42e8a18c6a6998b57fd296a0409cb6",
+      "compose_scaled_to_zero": false,
+      "running": true
+    }
+  ],
+  "pass": true
+}

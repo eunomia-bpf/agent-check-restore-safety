@@ -1,0 +1,238 @@
+[
+    {
+        "Id": "089d44c44805bce4d6525014174dc8a5e6242049e240922b984fab792df96c2c",
+        "Created": "2026-08-15T15:19:10.166668957Z",
+        "Path": "/frontend",
+        "Args": [],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 1763503,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-08-15T15:19:10.284264755Z",
+            "FinishedAt": "0001-01-01T00:00:00Z"
+        },
+        "Image": "sha256:f2bd57d25b669d6d790d5d2c3209dbd4b54eacf169868d3821a443233618bbd9",
+        "ResolvConfPath": "/var/lib/docker/containers/089d44c44805bce4d6525014174dc8a5e6242049e240922b984fab792df96c2c/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/089d44c44805bce4d6525014174dc8a5e6242049e240922b984fab792df96c2c/hostname",
+        "HostsPath": "/var/lib/docker/containers/089d44c44805bce4d6525014174dc8a5e6242049e240922b984fab792df96c2c/hosts",
+        "LogPath": "/var/lib/docker/containers/089d44c44805bce4d6525014174dc8a5e6242049e240922b984fab792df96c2c/089d44c44805bce4d6525014174dc8a5e6242049e240922b984fab792df96c2c-json.log",
+        "Name": "/safe-change-step15-frontend-v1",
+        "RestartCount": 0,
+        "Driver": "overlayfs",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "docker-default",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": null,
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "266075a9ccd05a27edba2273a3350adf5e8ea261dc03aedf3120f5ce3a0c440a",
+            "PortBindings": {},
+            "RestartPolicy": {
+                "Name": "no",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "private",
+            "Dns": null,
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": [],
+            "BlkioDeviceReadBps": [],
+            "BlkioDeviceWriteBps": [],
+            "BlkioDeviceReadIOps": [],
+            "BlkioDeviceWriteIOps": [],
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": [],
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": null,
+            "PidsLimit": null,
+            "Ulimits": [],
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "Mounts": [
+                {
+                    "Type": "bind",
+                    "Source": "/tmp/safe-change-deathstar-step15.Kazatb/v1/hotelReservation/config.json",
+                    "Target": "/config.json",
+                    "ReadOnly": true
+                }
+            ],
+            "MaskedPaths": [
+                "/proc/acpi",
+                "/proc/asound",
+                "/proc/interrupts",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/sys/devices/virtual/powercap",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "Storage": {
+            "RootFS": {
+                "Snapshot": {
+                    "Name": "overlayfs"
+                }
+            }
+        },
+        "Mounts": [
+            {
+                "Type": "bind",
+                "Source": "/tmp/safe-change-deathstar-step15.Kazatb/v1/hotelReservation/config.json",
+                "Destination": "/config.json",
+                "Mode": "",
+                "RW": false,
+                "Propagation": "rprivate"
+            }
+        ],
+        "Config": {
+            "Hostname": "089d44c44805",
+            "Domainname": "",
+            "User": "65532",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt"
+            ],
+            "Cmd": [
+                "/frontend"
+            ],
+            "Image": "safe-change-step15/deathstar:hotel-reservation-0.2.2",
+            "Volumes": null,
+            "WorkingDir": "/",
+            "Entrypoint": null,
+            "Labels": {
+                "org.opencontainers.image.revision": "25ccc81c1f6a1e7fe4d6b726d6a310cd2b607fa9",
+                "org.opencontainers.image.source": "https://github.com/delimitrou/DeathStarBench.git",
+                "safe-change.step": "15"
+            }
+        },
+        "NetworkSettings": {
+            "SandboxID": "417140529b13ccc0723a4e8ebf730a49a6c9dc7f1ce9bdc5fc11390a7cb6767b",
+            "SandboxKey": "/var/run/docker/netns/417140529b13",
+            "Ports": {},
+            "Networks": {
+                "safe-change-deathstar-step15_default": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": null,
+                    "DriverOpts": null,
+                    "GwPriority": 0,
+                    "NetworkID": "266075a9ccd05a27edba2273a3350adf5e8ea261dc03aedf3120f5ce3a0c440a",
+                    "EndpointID": "6ca151dd63570f0ee2f4c24a0d3acb89e6566009d3de8036d911f7a9a4543d4b",
+                    "Gateway": "172.21.0.1",
+                    "IPAddress": "172.21.0.25",
+                    "MacAddress": "1a:01:5d:9a:70:b7",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": [
+                        "safe-change-step15-frontend-v1",
+                        "089d44c44805"
+                    ]
+                },
+                "safe-change-step15-frontdoor": {
+                    "IPAMConfig": {},
+                    "Links": null,
+                    "Aliases": [
+                        "frontend-v1"
+                    ],
+                    "DriverOpts": {},
+                    "GwPriority": 0,
+                    "NetworkID": "d2951cfb0d7d5756f355a0cd153f024bcd7b4afe9efa9b558b1abe67852e39ea",
+                    "EndpointID": "d2e04cba608d27dd9f62b5c25bd2281280b48d3ef362de84a3c135b0623b65d6",
+                    "Gateway": "172.19.0.1",
+                    "IPAddress": "172.19.0.3",
+                    "MacAddress": "9a:27:46:10:13:53",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": [
+                        "safe-change-step15-frontend-v1",
+                        "frontend-v1",
+                        "089d44c44805"
+                    ]
+                }
+            }
+        },
+        "ImageManifestDescriptor": {
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "digest": "sha256:5c4ae095daac35a80c00841993d309ffab50f71783cbe00253b8294de8514d4b",
+            "size": 4282,
+            "platform": {
+                "architecture": "amd64",
+                "os": "linux"
+            }
+        }
+    }
+]

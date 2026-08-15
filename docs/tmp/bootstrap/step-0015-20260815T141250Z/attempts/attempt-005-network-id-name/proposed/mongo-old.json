@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "operation_id": "op-9e386660bd1441bde31aa4f9f88e4038304877eab9563a09fc20c1b0bc6b8c6a",
+  "filter": {
+    "customerName": "safe-op-9e386660bd1441bde31aa4f9f88e4038304877eab9563a09fc20c1b0bc6b8c6a",
+    "hotelId": "1",
+    "inDate": "2015-04-09",
+    "outDate": "2015-04-10",
+    "number": 1
+  },
+  "count": 1,
+  "facts": [
+    {
+      "customer_name": "safe-op-9e386660bd1441bde31aa4f9f88e4038304877eab9563a09fc20c1b0bc6b8c6a",
+      "hotel_id": "1",
+      "in_date": "2015-04-09",
+      "out_date": "2015-04-10",
+      "rooms": 1
+    }
+  ]
+}

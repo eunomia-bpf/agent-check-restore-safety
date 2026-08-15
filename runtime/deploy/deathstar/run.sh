@@ -240,11 +240,13 @@ docker network create --label safe-change.step=15 "$CONTROL_NETWORK" >/dev/null
 docker network create --label safe-change.step=15 "$FRONTDOOR_NETWORK" >/dev/null
 docker network create --label safe-change.step=15 "$OBSERVATION_NETWORK" >/dev/null
 "${compose[@]}" up -d --no-build --scale frontend=0
-application_network="$(docker network ls -q \
+application_network_id="$(docker network ls -q \
   --filter "label=com.docker.compose.project=$PROJECT" \
   --filter 'label=com.docker.compose.network=default')"
-[[ -n "$application_network" ]]
-[[ "$(wc -w <<< "$application_network")" -eq 1 ]]
+[[ -n "$application_network_id" ]]
+[[ "$(wc -w <<< "$application_network_id")" -eq 1 ]]
+application_network="$(docker network inspect -f '{{.Name}}' "$application_network_id")"
+[[ "$application_network" == "${PROJECT}_default" ]]
 reservation_container="$("${compose[@]}" ps -q reservation)"
 mongo_container="$("${compose[@]}" ps -q mongodb-reservation)"
 [[ -n "$reservation_container" && -n "$mongo_container" ]]
