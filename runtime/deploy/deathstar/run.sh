@@ -370,6 +370,12 @@ direct_effect_post() {
   container_name="safe-change-step15-$alias"
   host_address="$(docker port "$container_name" 8090/tcp)"
   [[ "$host_address" == 127.0.0.1:* ]]
+  # curl need not create its -o target when the peer closes before sending any
+  # HTTP bytes. Create all capture files first so a zero-byte response is
+  # evidence rather than a harness error.
+  : > "$response_file"
+  : > "$transport_file.headers"
+  : > "$transport_file.curl-stderr"
   set +e
   http_status="$(curl --noproxy '*' --fail-with-body -sS --max-time 35 -X POST \
     -A safe-change-runtime/1 -H 'Accept:' -H 'Accept-Encoding: identity' \
