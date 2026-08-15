@@ -16,7 +16,12 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 from typing import Any, Iterable, Mapping, Sequence
+
+ROOT = Path(__file__).resolve().parents[1]
+if __package__ in (None, ""):
+    sys.path.insert(0, str(ROOT))
 
 from adapter.check_codex_isolated_evidence import (
     EvidenceError,
@@ -31,7 +36,6 @@ from adapter.check_codex_isolated_evidence import (
 )
 
 
-ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_RUNTIME = ROOT / "runtime"
 ZERO_HASH = "0" * 64
 V1_TAG = "hotelReservation-0.2.2"

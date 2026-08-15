@@ -422,7 +422,10 @@ func (s *ObserverService) query(writer http.ResponseWriter, request *http.Reques
 	}
 	outcome := "inconclusive"
 	factHash := ""
-	facts := append([]ReservationFact(nil), match.Facts...)
+	// Preserve the distinction between "no facts" and an absent field in the
+	// retained evidence contract. Both unique and inconclusive observations
+	// therefore encode facts as a JSON array, never null.
+	facts := append([]ReservationFact{}, match.Facts...)
 	if match.Count == 1 {
 		outcome = "succeeded"
 		factHash = canonicalFactHash(facts)

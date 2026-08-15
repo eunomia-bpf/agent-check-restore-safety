@@ -355,6 +355,11 @@ func TestObserverZeroAndMultipleRowsAreInconclusive(t *testing.T) {
 			}) {
 				t.Fatalf("query did not exactly bind request: %+v", store.last)
 			}
+			factsResponse := httptest.NewRecorder()
+			service.Handler().ServeHTTP(factsResponse, httptest.NewRequest(http.MethodGet, "/v1/stats/facts", nil))
+			if factsResponse.Code != http.StatusOK || !strings.Contains(factsResponse.Body.String(), `"facts":[]`) {
+				t.Fatalf("inconclusive evidence encoded an absent rather than empty fact set: %s", factsResponse.Body.String())
+			}
 		})
 	}
 }

@@ -1,0 +1,1 @@
+{"outcome":{"operation_id":"op-9e386660bd1441bde31aa4f9f88e4038304877eab9563a09fc20c1b0bc6b8c6a","phase":"unknown","result_hash":"","reused":false,"recovered_by_query":false},"error":"external operation outcome is unknown: Post \"http://effect-v1:8090/v1/reserve\": EOF"}
