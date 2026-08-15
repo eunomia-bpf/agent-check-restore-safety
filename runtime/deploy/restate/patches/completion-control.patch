@@ -1,0 +1,104 @@
+diff --git a/typescript/end-to-end-applications/food-ordering/app/src/order-app/clients/completion_client.ts b/typescript/end-to-end-applications/food-ordering/app/src/order-app/clients/completion_client.ts
+new file mode 100644
+--- /dev/null
++++ b/typescript/end-to-end-applications/food-ordering/app/src/order-app/clients/completion_client.ts
+@@ -0,0 +1,84 @@
++/*
++ * Copyright (c) 2024 - Restate Software, Inc., Restate GmbH
++ *
++ * This file is part of the Restate examples,
++ * which is released under the MIT license.
++ *
++ * You can find a copy of the license in the file LICENSE
++ * in the root directory of this repository or package or at
++ * https://github.com/restatedev/examples/
++ */
++
++import axios from "axios";
++import { readFileSync } from "node:fs";
++
++type RuntimeOutcome = {
++  phase: string;
++  body?: string;
++};
++
++type OperationReceipt = {
++  schema: number;
++  outcome: string;
++};
++
++function requiredEnvironment(name: string): string {
++  const value = process.env[name];
++  if (value === undefined || value.length === 0) {
++    throw new Error(`Missing required environment variable ${name}`);
++  }
++  return value;
++}
++
++const CONTROL_URL = requiredEnvironment("SAFE_CHANGE_CONTROL_URL").replace(/\/+$/, "");
++const FINISH_KIND = requiredEnvironment("SAFE_CHANGE_FINISH_KIND");
++const FINISH_TARGET = requiredEnvironment("SAFE_CHANGE_FINISH_TARGET");
++const OPERATION_TOKEN = readFileSync(
++  requiredEnvironment("SAFE_CHANGE_OPERATION_TOKEN_FILE"),
++  "utf8",
++).trim();
++
++if (OPERATION_TOKEN.length < 32) {
++  throw new Error("Operation token must contain at least 32 bytes");
++}
++
++class CompletionClient {
++  async complete(id: string): Promise<boolean> {
++    console.info(`[${id}] Recording terminal delivery`);
++    const completionBody = Buffer.from(
++      JSON.stringify({ order_id: id, status: "DELIVERED" }),
++      "utf8",
++    );
++    const response = await axios.post<RuntimeOutcome>(
++      `${CONTROL_URL}/v1/execute`,
++      {
++        call_id: `order/${id}/completion`,
++        kind: FINISH_KIND,
++        method: "POST",
++        url: FINISH_TARGET,
++        body: completionBody.toString("base64"),
++      },
++      {
++        headers: {
++          Authorization: `Bearer ${OPERATION_TOKEN}`,
++          "Content-Type": "application/json",
++        },
++        timeout: 0,
++      },
++    );
++    if (response.data.phase !== "succeeded" || typeof response.data.body !== "string") {
++      throw new Error(`Runtime returned completion phase ${response.data.phase}`);
++    }
++    const receipt = JSON.parse(
++      Buffer.from(response.data.body, "base64").toString("utf8"),
++    ) as OperationReceipt;
++    if (receipt.schema !== 1 || receipt.outcome !== "succeeded") {
++      throw new Error("Runtime returned an invalid completion receipt");
++    }
++    return true;
++  }
++}
++
++export function getCompletionClient() {
++  return new CompletionClient();
++}
+diff --git a/typescript/end-to-end-applications/food-ordering/app/src/order-app/order_workflow/impl.ts b/typescript/end-to-end-applications/food-ordering/app/src/order-app/order_workflow/impl.ts
+--- a/typescript/end-to-end-applications/food-ordering/app/src/order-app/order_workflow/impl.ts
++++ b/typescript/end-to-end-applications/food-ordering/app/src/order-app/order_workflow/impl.ts
+@@ -16,2 +16,3 @@ import type { DeliveryManager } from "../delivery_manager/api";
+ import { getPaymentClient } from "../clients/payment_client";
++import { getCompletionClient } from "../clients/completion_client";
+ import { getRestaurantClient } from "../clients/restaurant_client";
+@@ -26,2 +27,3 @@ const restaurant = getRestaurantClient();
+ const paymentClient = getPaymentClient();
++const completionClient = getCompletionClient();
+ const DeliveryManagerObject: DeliveryManager = { name: "delivery-manager" };
+@@ -66,2 +68,3 @@ export default restate.workflow({
+       await ctx.promise("delivery_finished");
++      await ctx.run("completion", () => completionClient.complete(id));
+       ctx.set("status", Status.DELIVERED);

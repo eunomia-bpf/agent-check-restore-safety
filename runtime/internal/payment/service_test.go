@@ -343,3 +343,40 @@ func TestPaymentResponseLossModesAreExclusive(t *testing.T) {
 		t.Fatal("mutually exclusive response-loss modes were accepted")
 	}
 }
+
+func TestCompletionEndpointUsesIndependentReferencePrefix(t *testing.T) {
+	service, err := OpenWithOptions(filepath.Join(t.TempDir(), "completion.history"), Options{
+		ReferencePrefix: "completion",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer service.Close()
+	server := httptest.NewServer(service.Handler())
+	defer server.Close()
+	response, err := sendCharge(t, server.Client(), server.URL+"/v1/complete", "op-finish-A-17",
+		[]byte(`{"order_id":"A-17","status":"DELIVERED"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	var receipt struct {
+		RemoteReference string `json:"remote_reference"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&receipt); err != nil {
+		t.Fatal(err)
+	}
+	if response.StatusCode != http.StatusOK || receipt.RemoteReference != "completion/op-finish-A-17" {
+		t.Fatalf("completion status=%d reference=%q", response.StatusCode, receipt.RemoteReference)
+	}
+	if stats := service.Stats(); stats.Deliveries != 1 || stats.Commits != 1 || stats.Paths["/v1/complete"] != 1 {
+		t.Fatalf("completion stats: %+v", stats)
+	}
+}
+
+func TestReferencePrefixIsValidated(t *testing.T) {
+	_, err := OpenWithOptions(filepath.Join(t.TempDir(), "payment.history"), Options{ReferencePrefix: "../bad"})
+	if err == nil {
+		t.Fatal("invalid remote-reference prefix was accepted")
+	}
+}

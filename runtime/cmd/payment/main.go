@@ -22,6 +22,7 @@ func main() {
 	var holdBeforeCommit bool
 	var holdAfterCommit bool
 	var nonIdempotent bool
+	var referencePrefix string
 	flag.StringVar(&listenAddress, "listen", "127.0.0.1:8081", "HTTP listen address")
 	flag.StringVar(&statePath, "state", "payment.history", "independent durable payment state")
 	flag.BoolVar(&dropFirst, "drop-first-response", false, "commit the first new payment and drop its response")
@@ -29,12 +30,13 @@ func main() {
 	flag.BoolVar(&holdBeforeCommit, "hold-before-commit", false, "hold every new payment before commit until its connection is canceled")
 	flag.BoolVar(&holdAfterCommit, "hold-after-commit", false, "commit every new payment and hold until its connection is canceled")
 	flag.BoolVar(&nonIdempotent, "non-idempotent", false, "commit repeated deliveries of identical Operation work independently")
+	flag.StringVar(&referencePrefix, "reference-prefix", "payment", "label used in durable remote references")
 	flag.Parse()
 
 	service, err := payment.OpenWithOptions(statePath, payment.Options{
 		DropFirstResponse: dropFirst, AlwaysDropBeforeCommit: alwaysDropBeforeCommit,
 		HoldBeforeCommit: holdBeforeCommit, HoldAfterCommit: holdAfterCommit,
-		NonIdempotent: nonIdempotent,
+		NonIdempotent: nonIdempotent, ReferencePrefix: referencePrefix,
 	})
 	if err != nil {
 		log.Fatal(err)

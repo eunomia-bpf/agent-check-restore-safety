@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -48,6 +49,7 @@ type Options struct {
 	HoldBeforeCommit       bool
 	HoldAfterCommit        bool
 	NonIdempotent          bool
+	ReferencePrefix        string
 }
 
 type Service struct {
@@ -61,6 +63,7 @@ type Service struct {
 	holdBeforeCommit bool
 	holdAfterCommit  bool
 	nonIdempotent    bool
+	referencePrefix  string
 	closed           bool
 }
 
@@ -69,6 +72,12 @@ func Open(path string, dropFirstResponse bool) (*Service, error) {
 }
 
 func OpenWithOptions(path string, options Options) (*Service, error) {
+	if options.ReferencePrefix == "" {
+		options.ReferencePrefix = "payment"
+	}
+	if !validReferencePrefix(options.ReferencePrefix) {
+		return nil, errors.New("payment reference prefix must use letters, digits, dot, underscore, or hyphen")
+	}
 	faultModes := 0
 	for _, enabled := range []bool{
 		options.DropFirstResponse, options.AlwaysDropBeforeCommit,
@@ -151,6 +160,7 @@ func OpenWithOptions(path string, options Options) (*Service, error) {
 	service.holdBeforeCommit = options.HoldBeforeCommit
 	service.holdAfterCommit = options.HoldAfterCommit
 	service.nonIdempotent = options.NonIdempotent
+	service.referencePrefix = options.ReferencePrefix
 	return service, nil
 }
 
@@ -225,6 +235,7 @@ func (s *Service) Handler() http.Handler {
 	})
 	mux.HandleFunc("POST /v1/charge", s.charge)
 	mux.HandleFunc("POST /v2/charge", s.charge)
+	mux.HandleFunc("POST /v1/complete", s.charge)
 	mux.HandleFunc("POST /v1/query", s.observe)
 	return mux
 }
@@ -278,7 +289,7 @@ func (s *Service) charge(writer http.ResponseWriter, request *http.Request) {
 	drop := false
 	hold := false
 	if willCommit {
-		item = newRecord(id, requestHash, request.URL.Path, len(items)+1, s.nonIdempotent)
+		item = newRecord(id, requestHash, request.URL.Path, len(items)+1, s.nonIdempotent, s.referencePrefix)
 		encoded, err := json.Marshal(item)
 		if err != nil {
 			s.mu.Unlock()
@@ -359,7 +370,7 @@ func (s *Service) observe(writer http.ResponseWriter, request *http.Request) {
 	observation := operationObservationV1{
 		Schema: 1, OperationID: id, RequestHash: requestHash,
 		Outcome: "inconclusive", FactHash: "",
-		RemoteReference: fmt.Sprintf("payment/%s/count=%d", id, len(items)),
+		RemoteReference: fmt.Sprintf("%s/%s/count=%d", s.referencePrefix, id, len(items)),
 	}
 	if len(items) == 1 {
 		observation.Outcome = string(kernel.Succeeded)
@@ -378,18 +389,34 @@ type operationObservationV1 struct {
 	RemoteReference string `json:"remote_reference"`
 }
 
-func newRecord(id, requestHash, path string, instance int, nonIdempotent bool) record {
+func newRecord(id, requestHash, path string, instance int, nonIdempotent bool, referencePrefix string) record {
 	resultInput := "charged\x00" + id
-	remoteReference := "payment/" + id
+	remoteReference := referencePrefix + "/" + id
 	if nonIdempotent {
 		resultInput = fmt.Sprintf("charged\x00%s\x00%d", id, instance)
-		remoteReference = fmt.Sprintf("payment/%s/commit-%d", id, instance)
+		remoteReference = fmt.Sprintf("%s/%s/commit-%d", referencePrefix, id, instance)
 	}
 	result := sha256.Sum256([]byte(resultInput))
 	return record{
 		OperationID: id, RequestHash: requestHash,
 		ResultHash: hex.EncodeToString(result[:]), RemoteReference: remoteReference, Path: path,
 	}
+}
+
+func validReferencePrefix(value string) bool {
+	if value == "" || len(value) > 64 {
+		return false
+	}
+	for _, character := range value {
+		if (character >= 'a' && character <= 'z') ||
+			(character >= 'A' && character <= 'Z') ||
+			(character >= '0' && character <= '9') ||
+			strings.ContainsRune("._-", character) {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 func holdUntilCanceled(request *http.Request) {
