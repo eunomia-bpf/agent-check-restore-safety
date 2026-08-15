@@ -65,6 +65,13 @@ func effectRequest(body io.Reader) *http.Request {
 	return request
 }
 
+func idempotentEffectRequest(key string, body io.Reader) *http.Request {
+	request := effectRequest(body)
+	request.Header.Del(headerCallID)
+	request.Header.Set(headerIdempotencyKey, key)
+	return request
+}
+
 func decodeError(t *testing.T, recorder *httptest.ResponseRecorder) errorBody {
 	t.Helper()
 	var body errorBody
@@ -114,6 +121,106 @@ func TestProxyBindsTargetAndForwardsOnlySafeContentType(t *testing.T) {
 	}
 	if recorder.Header().Get("Content-Type") != "application/octet-stream" || recorder.Header().Get("X-Content-Type-Options") != "nosniff" {
 		t.Fatalf("response safety headers = %#v", recorder.Header())
+	}
+}
+
+func TestProxyDomainsIdempotencyKeyByLogicalRoute(t *testing.T) {
+	config := testConfig()
+	config.Routes = append(config.Routes, Route{
+		Name: "refund", Kind: "refund-payment", Method: http.MethodPost,
+		URL: "https://provider.internal/fixed/refund", ContentTypes: []string{"application/json"},
+	})
+	executor := &recordingExecutor{outcome: gateway.Outcome{
+		OperationID: "op-fixed", Phase: kernel.Succeeded, StatusCode: http.StatusOK,
+		ResultHash: strings.Repeat("a", 64),
+	}}
+	proxy, err := New(executor, config, Options{ExecutionTimeout: time.Second})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, route := range []string{"charge", "refund"} {
+		request := idempotentEffectRequest("order/A-17:payment", strings.NewReader(`{}`))
+		request.URL.Path = "/v1/effects/" + route
+		// The compatibility header is identity input, never caller-controlled
+		// provider authority forwarded through ExecuteRequest.Headers.
+		request.Header.Set("Authorization", "Bearer workload-secret")
+		recorder := httptest.NewRecorder()
+		proxy.Handler().ServeHTTP(recorder, request)
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("route=%s status=%d body=%q", route, recorder.Code, recorder.Body.String())
+		}
+	}
+
+	calls := executor.calls()
+	if len(calls) != 2 {
+		t.Fatalf("Execute calls = %d", len(calls))
+	}
+	if calls[0].CallID != "effect-route-idempotency-v1:6:charge:order/A-17:payment" {
+		t.Fatalf("charge CallID = %q", calls[0].CallID)
+	}
+	if calls[1].CallID != "effect-route-idempotency-v1:6:refund:order/A-17:payment" {
+		t.Fatalf("refund CallID = %q", calls[1].CallID)
+	}
+	if calls[0].CallID == calls[1].CallID {
+		t.Fatal("the same Idempotency-Key crossed logical route domains")
+	}
+	for _, call := range calls {
+		if len(call.Headers) != 1 || call.Headers["Content-Type"] != "application/json" {
+			t.Fatalf("forwarded headers = %#v", call.Headers)
+		}
+		if _, ok := call.Headers[headerIdempotencyKey]; ok {
+			t.Fatalf("Idempotency-Key was forwarded: %#v", call.Headers)
+		}
+	}
+}
+
+func TestProxyPreservesDedicatedCallIDWireValue(t *testing.T) {
+	executor := &recordingExecutor{outcome: gateway.Outcome{
+		OperationID: "op-fixed", Phase: kernel.Succeeded, StatusCode: http.StatusOK,
+		ResultHash: strings.Repeat("a", 64),
+	}}
+	request := effectRequest(strings.NewReader(`{}`))
+	request.Header.Set(headerCallID, "effect-route-idempotency-v1:6:charge:literal")
+	recorder := httptest.NewRecorder()
+	newTestProxy(t, executor).Handler().ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%q", recorder.Code, recorder.Body.String())
+	}
+	calls := executor.calls()
+	if len(calls) != 1 || calls[0].CallID != "effect-route-idempotency-v1:6:charge:literal" {
+		t.Fatalf("Execute calls = %+v", calls)
+	}
+}
+
+func TestProxyBoundsRouteScopedIdempotencyCallID(t *testing.T) {
+	const prefix = "effect-route-idempotency-v1:6:charge:"
+	maxKeyBytes := MaxCallIDBytes - len(prefix)
+	executor := &recordingExecutor{outcome: gateway.Outcome{
+		OperationID: "op-fixed", Phase: kernel.Succeeded, StatusCode: http.StatusOK,
+		ResultHash: strings.Repeat("a", 64),
+	}}
+	proxy := newTestProxy(t, executor)
+
+	accepted := idempotentEffectRequest(strings.Repeat("x", maxKeyBytes), strings.NewReader(`{}`))
+	acceptedRecorder := httptest.NewRecorder()
+	proxy.Handler().ServeHTTP(acceptedRecorder, accepted)
+	if acceptedRecorder.Code != http.StatusOK {
+		t.Fatalf("maximum key status=%d body=%q", acceptedRecorder.Code, acceptedRecorder.Body.String())
+	}
+	calls := executor.calls()
+	if len(calls) != 1 || len(calls[0].CallID) != MaxCallIDBytes {
+		t.Fatalf("maximum encoded CallID calls=%d length=%d", len(calls), len(calls[0].CallID))
+	}
+
+	rejected := idempotentEffectRequest(strings.Repeat("x", maxKeyBytes+1), strings.NewReader(`{}`))
+	rejectedRecorder := httptest.NewRecorder()
+	proxy.Handler().ServeHTTP(rejectedRecorder, rejected)
+	if rejectedRecorder.Code != http.StatusBadRequest {
+		t.Fatalf("oversized key status=%d body=%q", rejectedRecorder.Code, rejectedRecorder.Body.String())
+	}
+	if calls := executor.calls(); len(calls) != 1 {
+		t.Fatalf("Execute called for oversized route-scoped identity: %d total calls", len(calls))
 	}
 }
 
@@ -189,15 +296,44 @@ func TestProxyRejectsRequestMutationsBeforeExecution(t *testing.T) {
 			request.Header.Del(headerCallID)
 			return request
 		},
+		"both-identity-headers": func() *http.Request {
+			request := effectRequest(strings.NewReader(`{}`))
+			request.Header.Set(headerIdempotencyKey, "same-action")
+			return request
+		},
 		"duplicate-call-id": func() *http.Request {
 			request := effectRequest(strings.NewReader(`{}`))
 			request.Header.Add(headerCallID, "other")
+			return request
+		},
+		"empty-call-id": func() *http.Request {
+			request := effectRequest(strings.NewReader(`{}`))
+			request.Header.Set(headerCallID, "")
+			return request
+		},
+		"control-call-id": func() *http.Request {
+			request := effectRequest(strings.NewReader(`{}`))
+			request.Header.Set(headerCallID, "run-7\x07bell")
 			return request
 		},
 		"oversized-call-id": func() *http.Request {
 			request := effectRequest(strings.NewReader(`{}`))
 			request.Header.Set(headerCallID, strings.Repeat("x", MaxCallIDBytes+1))
 			return request
+		},
+		"duplicate-idempotency-key": func() *http.Request {
+			request := idempotentEffectRequest("same-action", strings.NewReader(`{}`))
+			request.Header.Add(headerIdempotencyKey, "other")
+			return request
+		},
+		"empty-idempotency-key": func() *http.Request {
+			return idempotentEffectRequest("", strings.NewReader(`{}`))
+		},
+		"control-idempotency-key": func() *http.Request {
+			return idempotentEffectRequest("same-action\x07bell", strings.NewReader(`{}`))
+		},
+		"unstable-idempotency-key": func() *http.Request {
+			return idempotentEffectRequest(" same-action ", strings.NewReader(`{}`))
 		},
 		"unstable-call-id": func() *http.Request {
 			request := effectRequest(strings.NewReader(`{}`))

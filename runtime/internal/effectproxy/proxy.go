@@ -25,6 +25,7 @@ const (
 
 const (
 	headerCallID           = "X-Safe-Change-Call-ID"
+	headerIdempotencyKey   = "Idempotency-Key"
 	headerOperationID      = "X-Safe-Change-Operation-ID"
 	headerPhase            = "X-Safe-Change-Phase"
 	headerResultHash       = "X-Safe-Change-Result-Hash"
@@ -137,7 +138,11 @@ func (p *Proxy) serveHTTP(writer http.ResponseWriter, request *http.Request) {
 		writeError(writer, http.StatusBadRequest, errorBody{Error: "effect route does not accept query parameters"})
 		return
 	}
-	callID, err := callIdentity(request.Header.Values(headerCallID))
+	callID, err := callIdentity(
+		routeName,
+		request.Header.Values(headerCallID),
+		request.Header.Values(headerIdempotencyKey),
+	)
 	if err != nil {
 		writeError(writer, http.StatusBadRequest, errorBody{Error: err.Error()})
 		return
@@ -213,17 +218,38 @@ func (p *Proxy) writeExecutionError(writer http.ResponseWriter, outcome gateway.
 	})
 }
 
-func callIdentity(values []string) (string, error) {
+func callIdentity(routeName string, callIDValues, idempotencyKeyValues []string) (string, error) {
+	hasCallID := len(callIDValues) != 0
+	hasIdempotencyKey := len(idempotencyKeyValues) != 0
+	if hasCallID == hasIdempotencyKey {
+		return "", fmt.Errorf("exactly one %s or %s header is required", headerCallID, headerIdempotencyKey)
+	}
+	if hasCallID {
+		return stableIdentityHeader(headerCallID, callIDValues, MaxCallIDBytes)
+	}
+
+	// Length-frame the operator-defined logical route before the caller's key.
+	// The resulting mapping from (route, key) to CallID is injective even when a
+	// key contains delimiter-like bytes, and it cannot cross a route boundary.
+	prefix := "effect-route-idempotency-v1:" + strconv.Itoa(len(routeName)) + ":" + routeName + ":"
+	key, err := stableIdentityHeader(headerIdempotencyKey, idempotencyKeyValues, MaxCallIDBytes-len(prefix))
+	if err != nil {
+		return "", err
+	}
+	return prefix + key, nil
+}
+
+func stableIdentityHeader(name string, values []string, maxBytes int) (string, error) {
 	if len(values) != 1 {
-		return "", errors.New("exactly one X-Safe-Change-Call-ID header is required")
+		return "", fmt.Errorf("exactly one %s header is required", name)
 	}
 	value := values[0]
-	if value == "" || len(value) > MaxCallIDBytes || strings.TrimSpace(value) != value || !utf8.ValidString(value) {
-		return "", fmt.Errorf("X-Safe-Change-Call-ID must contain between 1 and %d stable bytes", MaxCallIDBytes)
+	if value == "" || len(value) > maxBytes || strings.TrimSpace(value) != value || !utf8.ValidString(value) {
+		return "", fmt.Errorf("%s must contain between 1 and %d stable bytes", name, maxBytes)
 	}
 	for _, character := range value {
 		if unicode.IsControl(character) {
-			return "", errors.New("X-Safe-Change-Call-ID contains a control character")
+			return "", fmt.Errorf("%s contains a control character", name)
 		}
 	}
 	return value, nil
