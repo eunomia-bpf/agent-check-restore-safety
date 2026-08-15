@@ -1,6 +1,58 @@
 # Literature, Novelty, and CSF Fit
 
-**Status:** living claim-oriented audit, last updated 2026-08-03. A paper is listed here only after at least its abstract, introduction, claimed contributions, model, and evidence sections have been inspected. “Not found” means not found in the searched corpus, not a universal priority claim.
+**Status:** living claim-oriented audit, last updated 2026-08-15. A paper is listed here only after at least its abstract, introduction, claimed contributions, model, and evidence sections have been inspected. “Not found” means not found in the searched corpus, not a universal priority claim.
+
+## 2026-08-15 audit for the cross-domain runtime
+
+The active project is no longer scoped to one Agent edit checker. It asks
+whether actual execution records can drive safe changes across Agent runtimes,
+complete virtual machines, microservices, and external effects. The older
+CSF-oriented map below is retained as provenance, not as the current venue
+contract.
+
+### Search log
+
+| Area | Primary sources inspected | Consequence |
+|---|---|---|
+| Dynamic update | [Dynamic Update of Discrete Event Controllers](https://ri.conicet.gov.ar/bitstream/handle/11336/98861/CONICET_Digital_Nro.dcf186e8-df7a-448b-b997-540176c8d2dc_A.pdf?isAllowed=n&sequence=2), [Live Synthesis](https://arxiv.org/abs/2107.01136), [K42 live update](https://www.usenix.org/conference/2007-usenix-annual-technical-conference/reboots-are-hardware-challenges-and-solutions) | Safe live change, carried obligations, and complete controller synthesis are established. |
+| Control and coordination | [Ramadge--Wonham](https://epubs.siam.org/doi/10.1137/0325036), [supervisor localization](https://control.eng.osaka-cu.ac.jp/publication/CaiWonham_10TAC.pdf), [I-confluence](https://www.vldb.org/pvldb/vol8/p185-bailis.pdf), [Complete CALM](https://arxiv.org/abs/2602.09435) | Maximal rules and broad history/coordination boundaries cannot be headline novelty. |
+| External results | [RIFL](https://web.stanford.edu/~ouster/cgi-bin/papers/rifl.pdf), [ExoFlow](https://www.usenix.org/system/files/osdi23-zhuang.pdf), [machine-checked dual-write recovery](https://arxiv.org/abs/2608.00501) | Stable identity, result reuse, and unobservable remote acceptance are established foundations. |
+| VM recovery | [Remus](https://www.usenix.org/legacy/event/nsdi08/tech/full_papers/cully/cully_html/index.html), [rollback-recovery survey](https://www.cs.cornell.edu/courses/cs614/2004sp/papers/EAWJ02.pdf), [QEMU replay](https://www.qemu.org/docs/master/system/replay.html) | Local restore cannot retract external output; buffering/replay alone does not solve live semantic change. |
+| Distributed updates | [consistent network updates](https://conferences.sigcomm.org/sigcomm/2012/paper/sigcomm/p323.pdf), [update synthesis](https://www.cs.cornell.edu/~jnfoster/papers/frenetic-update-synthesis-pldi15.pdf), [FlexPlan](https://www.usenix.org/conference/nsdi23/presentation/qiu) | Safe intermediate states and update ordering are established in a strong domain. |
+| Durable workflows | [Temporal Worker Versioning](https://github.com/temporalio/temporal/blob/main/docs/worker-versioning.md), [Azure orchestration versioning](https://learn.microsoft.com/en-us/azure/durable-task/common/durable-orchestration-versioning), [Restate versioning](https://docs.restate.dev/services/versioning) | Production systems mainly pin, branch, drain, or manually version old executions. |
+
+### Claim-oriented novelty map
+
+| Candidate claim | Closest work | Verdict |
+|---|---|---|
+| Synthesize the largest safe live behavior | Supervisory control; dynamic controller update | Established; use as backend. |
+| Finish old obligations after a change | Live Synthesis | Established. |
+| Retry one remote action safely | RIFL; exactly-once systems | Established under receiver cooperation. |
+| Prove unknown remote acceptance cannot be inferred locally | dual-write recovery; output-commit literature | Established. |
+| Decide when coordination is required | I-confluence; CALM; supervisor localization | Established broadly. |
+| Derive change-specific control input from real execution and enforce it across Agent/VM/service effects | No inspected work supplies this complete record-to-enforcement chain | Defensible target, still requiring a stronger exhaustive audit and real artifact. |
+
+### Mandatory baselines and workloads
+
+- MTSA dynamic controller update and its runnable tool;
+- Temporal/Restate version pinning and old-version draining;
+- QEMU save/restore and record/replay;
+- Kubernetes rolling or blue-green deployment;
+- idempotent retry, Saga/compensation, deny-all, and global serialization;
+- Atomix or the closest available Agent effect-runtime artifact; and
+- a real cross-domain workload built around DeathStarBench Hotel Reservation or
+  an equivalent maintained service, with a full VM and an independently durable
+  payment or infrastructure sink.
+
+### Novelty verdict
+
+The project remains viable only if it automatically derives substantially more
+from History than existing update tools require developers to write, and if it
+proves the concrete enforcement boundary rather than assuming it. Three
+adapters around a classical synthesis engine are insufficient. The strongest
+surviving claim is the combination of answer-preserving History abstraction,
+change-specific model derivation, crash-safe cross-domain enforcement, and
+checkable refusal tied to real external evidence.
 
 ## 1. Venue contract: CSF 2027
 

@@ -681,3 +681,49 @@ capable of acting; history admission characterizes exactly when such a rewrite
 has a policy-safe, completion-preserving realization and compiles every
 admitted Fork, Restore, or Merge into a runtime globally equivalent to an
 ideal atomic Agent-history machine.
+
+## 2026-08-15 Scope Evolution: Safe Change After External Operations
+
+The user raised the target from an Agent-only theorem and adapter to a real
+OS-like runtime spanning Codex/Claude, complete Linux virtual machines, and
+microservices. Fresh closest-work review changed the scientific center rather
+than merely enlarging the artifact.
+
+Dynamic controller update, Live Synthesis, supervisory control, workflow
+versioning, stable request identity, output commit, safe network update, and
+unknown-result impossibility already own most obvious component claims. The
+project therefore does not claim a new maximal controller or a first theory of
+live update.
+
+The new thesis is:
+
+> From the complete execution record and a requested semantic change,
+> automatically derive the remaining obligations, stable external identities,
+> observable uncertainty, and controllable actions; synthesize a safe Rule
+> using established control theory; then enforce it atomically across Agents,
+> virtual machines, services, and external effects. If no Rule exists, return
+> evidence tied to the actual execution and external boundary.
+
+The public vocabulary is reduced to five terms: History, Requirement,
+Operation, Rule, and Certificate. The existing Exact Agent History Realization
+result becomes the Agent frontend and a special theorem instance. Its fixed
+point and coordination results become reusable lemmas; its SQLite/Codex adapter
+becomes a differential oracle for the new control service.
+
+The proposed theoretical breakthrough is answer-preserving normalization of
+History plus end-to-end correspondence between concrete adapters and the
+abstract Rule. A two-way correspondence permits exact acceptance and refusal;
+a one-way correspondence supports safety only. The proposed systems
+breakthrough is one crash-safe external-action boundary shared by Agent tools,
+VM network/device output, and microservice RPCs, with Rule changes serialized
+against real Operation progress.
+
+Step 0008 implements the first real slice in `runtime/`: a synced hash-linked
+History, stable Operation lifecycle, exact bounded non-stranding planner,
+history-bound Certificate, HTTP gateway, and a separate payment durability file
+reached over HTTP. The demo recovers a lost payment response across a durable
+control-state reopen with two network deliveries but one commit, blocks a
+locally valid action that would make another result impossible, and rejects a
+stale Certificate after Operation progress. Full VM enforcement, Agent
+integration, symbolic scale, an independent checker binary, and the generic
+Lean theorem remain open.

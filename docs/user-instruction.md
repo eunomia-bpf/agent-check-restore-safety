@@ -441,3 +441,9 @@ evolve
 ### Message 70
 
 之后只要一个审稿, 不需要四个.
+
+## 2026-08-15 follow-up message
+
+### Message 71
+
+我觉得得要真实的系统和真实的应用程序, 包括 claude / codex, 完整的虚拟机, 微服务等等. 是去往 best paper + test of time, 对领域有 20 年影响的方向做, 做一个完整的 OS / runtime 是不是可以? 去做, 一步步完善, 可以不一定遵守 skills, skills 只是给你参考, 总之要做到真实的系统, 并且实现理论 + 系统两方面的突破
