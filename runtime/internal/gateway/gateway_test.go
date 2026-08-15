@@ -140,6 +140,59 @@ func writeTestObservation(t *testing.T, writer http.ResponseWriter, operationID,
 	}
 }
 
+func TestReceiptClassifierUsesDeclaredFactAndRejectsAmbiguousJSON(t *testing.T) {
+	operationID := "operation-7"
+	factHash := strings.Repeat("a", 64)
+	valid := fmt.Sprintf(
+		`{"schema":1,"operation_id":%q,"outcome":"succeeded","result_hash":%q,"remote_reference":"remote-7"}`,
+		operationID, factHash,
+	)
+	response := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json"}},
+	}
+	phase, gotHash, reference, err := classifyResponse(
+		ResponseReceiptV1, operationID, response, []byte(valid),
+	)
+	if err != nil || phase != kernel.Succeeded || gotHash != factHash || reference != "remote-7" {
+		t.Fatalf("valid receipt rejected: phase=%s hash=%q reference=%q error=%v", phase, gotHash, reference, err)
+	}
+
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "identity mismatch", body: strings.Replace(valid, operationID, "operation-8", 1)},
+		{name: "extra field", body: strings.Replace(valid, `}`, `,"guess":true}`, 1)},
+		{name: "missing field", body: strings.Replace(valid, `,"result_hash":"`+factHash+`"`, ``, 1)},
+		{name: "duplicate field", body: strings.Replace(valid, `"schema":1`, `"schema":1,"schema":1`, 1)},
+		{name: "null field", body: strings.Replace(valid, `"result_hash":"`+factHash+`"`, `"result_hash":null`, 1)},
+		{name: "uppercase hash", body: strings.Replace(valid, factHash, strings.Repeat("A", 64), 1)},
+		{name: "unsettled", body: strings.Replace(valid, `"outcome":"succeeded"`, `"outcome":"inconclusive"`, 1)},
+		{name: "multiple values", body: valid + `{}`},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if _, _, _, err := classifyResponse(
+				ResponseReceiptV1, operationID, response, []byte(test.body),
+			); err == nil {
+				t.Fatal("invalid receipt was accepted")
+			}
+		})
+	}
+
+	failedWithoutReference := fmt.Sprintf(
+		`{"schema":1,"operation_id":%q,"outcome":"failed","result_hash":%q}`,
+		operationID, factHash,
+	)
+	phase, gotHash, reference, err = classifyResponse(
+		ResponseReceiptV1, operationID, response, []byte(failedWithoutReference),
+	)
+	if err != nil || phase != kernel.Failed || gotHash != factHash || reference != "" {
+		t.Fatalf("valid failed receipt rejected: phase=%s hash=%q reference=%q error=%v", phase, gotHash, reference, err)
+	}
+}
+
 func TestObservationClassifierRejectsAmbiguousOrMismatchedFacts(t *testing.T) {
 	operationID := "operation-7"
 	requestHash := strings.Repeat("b", 64)
@@ -243,12 +296,16 @@ func TestLostResponseRetryUsesOneRemoteOperation(t *testing.T) {
 	if secondOutcome.Phase != kernel.Succeeded || secondOutcome.StatusCode != http.StatusOK {
 		t.Fatalf("second outcome = %+v", secondOutcome)
 	}
+	if secondOutcome.ResultHash != strings.Repeat("0", 64) {
+		t.Fatalf("direct settlement ignored provider fact hash: %+v", secondOutcome)
+	}
 	thirdOutcome, err := secondGateway.Execute(context.Background(), request)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !thirdOutcome.Reused || thirdOutcome.Phase != kernel.Succeeded ||
-		thirdOutcome.StatusCode != http.StatusOK || len(thirdOutcome.Body) == 0 {
+		thirdOutcome.StatusCode != http.StatusOK || len(thirdOutcome.Body) == 0 ||
+		thirdOutcome.ResultHash != secondOutcome.ResultHash {
 		t.Fatalf("settled retry did not reuse durable result: %+v", thirdOutcome)
 	}
 	mu.Lock()

@@ -294,8 +294,10 @@ func (g *Gateway) Execute(ctx context.Context, request Request) (Outcome, error)
 		}
 		return Outcome{OperationID: operation.ID, Phase: kernel.Unknown}, fmt.Errorf("%w: %v", ErrOutcomeUnknown, readErr)
 	}
-	hash := resultHash(response.StatusCode, body)
-	phase, remoteReference, classifyErr := classifyResponse(operation.ResponseClassifier, operation.ID, response, body)
+	rawHash := resultHash(response.StatusCode, body)
+	phase, factHash, remoteReference, classifyErr := classifyResponse(
+		operation.ResponseClassifier, operation.ID, response, body,
+	)
 	if classifyErr != nil {
 		if moveErr := g.control.Move(operation.ID, kernel.OperationUpdate{Phase: kernel.Unknown}); moveErr != nil {
 			return Outcome{}, errors.Join(classifyErr, moveErr)
@@ -304,12 +306,12 @@ func (g *Gateway) Execute(ctx context.Context, request Request) (Outcome, error)
 			OperationID: operation.ID,
 			Phase:       kernel.Unknown,
 			StatusCode:  response.StatusCode,
-			ResultHash:  hash,
+			ResultHash:  rawHash,
 		}, fmt.Errorf("%w: %v", ErrOutcomeUnknown, classifyErr)
 	}
 	if err := g.control.Move(operation.ID, kernel.OperationUpdate{
 		Phase:           phase,
-		ResultHash:      hash,
+		ResultHash:      factHash,
 		StatusCode:      response.StatusCode,
 		ResultBody:      body,
 		RemoteReference: remoteReference,
@@ -321,7 +323,7 @@ func (g *Gateway) Execute(ctx context.Context, request Request) (Outcome, error)
 		Phase:       phase,
 		StatusCode:  response.StatusCode,
 		Body:        body,
-		ResultHash:  hash,
+		ResultHash:  factHash,
 	}, nil
 }
 

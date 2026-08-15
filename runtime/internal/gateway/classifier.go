@@ -36,12 +36,12 @@ type operationObservationV1 struct {
 	RemoteReference string `json:"remote_reference"`
 }
 
-func classifyResponse(classifier string, operationID string, response *http.Response, body []byte) (kernel.Phase, string, error) {
+func classifyResponse(classifier string, operationID string, response *http.Response, body []byte) (kernel.Phase, string, string, error) {
 	switch classifier {
 	case ResponseReceiptV1:
 		return classifyReceiptV1(operationID, response, body)
 	default:
-		return "", "", fmt.Errorf("unsupported response classifier %q", classifier)
+		return "", "", "", fmt.Errorf("unsupported response classifier %q", classifier)
 	}
 }
 
@@ -113,52 +113,97 @@ func classifyObservation(classifier, operationID, requestHash string, response *
 }
 
 func decodeObservationObject(body []byte) (map[string]json.RawMessage, error) {
-	decoder := json.NewDecoder(bytes.NewReader(body))
-	start, err := decoder.Token()
-	if err != nil || start != json.Delim('{') {
-		return nil, errors.New("operation observation is not a JSON object")
-	}
-	want := map[string]bool{
+	required := map[string]bool{
 		"schema": true, "operation_id": true, "request_hash": true,
 		"outcome": true, "fact_hash": true, "remote_reference": true,
 	}
-	fields := make(map[string]json.RawMessage, len(want))
+	return decodeJSONObject(body, "operation observation", required, nil)
+}
+
+func decodeReceiptV1(body []byte) (operationReceiptV1, error) {
+	required := map[string]bool{
+		"schema": true, "operation_id": true, "outcome": true, "result_hash": true,
+	}
+	optional := map[string]bool{"remote_reference": true}
+	fields, err := decodeJSONObject(body, "operation receipt", required, optional)
+	if err != nil {
+		return operationReceiptV1{}, err
+	}
+	var receipt operationReceiptV1
+	for name, target := range map[string]any{
+		"schema": &receipt.Schema, "operation_id": &receipt.OperationID,
+		"outcome": &receipt.Outcome, "result_hash": &receipt.ResultHash,
+		"remote_reference": &receipt.RemoteReference,
+	} {
+		raw, present := fields[name]
+		if !present {
+			continue
+		}
+		if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+			return operationReceiptV1{}, fmt.Errorf("operation receipt field %q is null", name)
+		}
+		if err := json.Unmarshal(raw, target); err != nil {
+			return operationReceiptV1{}, fmt.Errorf("decode operation receipt field %q: %w", name, err)
+		}
+	}
+	return receipt, nil
+}
+
+func decodeJSONObject(
+	body []byte,
+	label string,
+	required map[string]bool,
+	optional map[string]bool,
+) (map[string]json.RawMessage, error) {
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	start, err := decoder.Token()
+	if err != nil || start != json.Delim('{') {
+		return nil, fmt.Errorf("%s is not a JSON object", label)
+	}
+	allowed := make(map[string]bool, len(required)+len(optional))
+	for name := range required {
+		allowed[name] = true
+	}
+	for name := range optional {
+		allowed[name] = true
+	}
+	fields := make(map[string]json.RawMessage, len(allowed))
 	for decoder.More() {
 		token, err := decoder.Token()
 		if err != nil {
-			return nil, fmt.Errorf("decode operation observation key: %w", err)
+			return nil, fmt.Errorf("decode %s key: %w", label, err)
 		}
 		name, ok := token.(string)
 		if !ok {
-			return nil, errors.New("operation observation key is not a string")
+			return nil, fmt.Errorf("%s key is not a string", label)
 		}
-		if !want[name] {
-			return nil, fmt.Errorf("operation observation contains unknown field %q", name)
+		if !allowed[name] {
+			return nil, fmt.Errorf("%s contains unknown field %q", label, name)
 		}
 		if _, duplicate := fields[name]; duplicate {
-			return nil, fmt.Errorf("operation observation contains duplicate field %q", name)
+			return nil, fmt.Errorf("%s contains duplicate field %q", label, name)
 		}
 		var raw json.RawMessage
 		if err := decoder.Decode(&raw); err != nil {
-			return nil, fmt.Errorf("decode operation observation field %q: %w", name, err)
+			return nil, fmt.Errorf("decode %s field %q: %w", label, name, err)
 		}
 		fields[name] = raw
 	}
 	end, err := decoder.Token()
 	if err != nil || end != json.Delim('}') {
-		return nil, errors.New("operation observation has an invalid terminator")
+		return nil, fmt.Errorf("%s has an invalid terminator", label)
 	}
-	for name := range want {
+	for name := range required {
 		if _, ok := fields[name]; !ok {
-			return nil, fmt.Errorf("operation observation is missing field %q", name)
+			return nil, fmt.Errorf("%s is missing field %q", label, name)
 		}
 	}
 	var extra any
 	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
 		if err == nil {
-			return nil, errors.New("operation observation contains multiple JSON values")
+			return nil, fmt.Errorf("%s contains multiple JSON values", label)
 		}
-		return nil, fmt.Errorf("decode operation observation end: %w", err)
+		return nil, fmt.Errorf("decode %s end: %w", label, err)
 	}
 	return fields, nil
 }
@@ -171,52 +216,39 @@ func canonicalSHA256(value string) bool {
 	return err == nil && len(decoded) == 32 && hex.EncodeToString(decoded) == value
 }
 
-func classifyReceiptV1(operationID string, response *http.Response, body []byte) (kernel.Phase, string, error) {
+func classifyReceiptV1(operationID string, response *http.Response, body []byte) (kernel.Phase, string, string, error) {
 	if response.StatusCode != http.StatusOK {
-		return "", "", fmt.Errorf("receipt response status is %d, want 200", response.StatusCode)
+		return "", "", "", fmt.Errorf("receipt response status is %d, want 200", response.StatusCode)
 	}
 	mediaType, _, err := mime.ParseMediaType(response.Header.Get("Content-Type"))
 	if err != nil || mediaType != "application/json" {
-		return "", "", errors.New("receipt response is not application/json")
+		return "", "", "", errors.New("receipt response is not application/json")
 	}
-	decoder := json.NewDecoder(bytes.NewReader(body))
-	decoder.DisallowUnknownFields()
-	var receipt operationReceiptV1
-	if err := decoder.Decode(&receipt); err != nil {
-		return "", "", fmt.Errorf("decode operation receipt: %w", err)
-	}
-	var extra any
-	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
-		if err == nil {
-			return "", "", errors.New("operation receipt contains multiple JSON values")
-		}
-		return "", "", fmt.Errorf("decode operation receipt end: %w", err)
+	receipt, err := decodeReceiptV1(body)
+	if err != nil {
+		return "", "", "", err
 	}
 	if receipt.Schema != 1 {
-		return "", "", fmt.Errorf("unsupported operation receipt schema %d", receipt.Schema)
+		return "", "", "", fmt.Errorf("unsupported operation receipt schema %d", receipt.Schema)
 	}
 	if len(receipt.RemoteReference) > 1024 {
-		return "", "", errors.New("operation receipt remote reference is too large")
+		return "", "", "", errors.New("operation receipt remote reference is too large")
 	}
 	if receipt.OperationID != operationID {
-		return "", "", errors.New("operation receipt identity does not match request")
+		return "", "", "", errors.New("operation receipt identity does not match request")
 	}
-	if len(receipt.ResultHash) != 64 {
-		return "", "", errors.New("operation receipt result hash is invalid")
-	}
-	decodedHash, err := hex.DecodeString(receipt.ResultHash)
-	if err != nil || hex.EncodeToString(decodedHash) != receipt.ResultHash {
-		return "", "", errors.New("operation receipt result hash is invalid")
+	if !canonicalSHA256(receipt.ResultHash) {
+		return "", "", "", errors.New("operation receipt result hash is invalid")
 	}
 	switch kernel.Phase(receipt.Outcome) {
 	case kernel.Succeeded:
 		if receipt.RemoteReference == "" {
-			return "", "", errors.New("successful operation receipt has no remote reference")
+			return "", "", "", errors.New("successful operation receipt has no remote reference")
 		}
-		return kernel.Succeeded, receipt.RemoteReference, nil
+		return kernel.Succeeded, receipt.ResultHash, receipt.RemoteReference, nil
 	case kernel.Failed:
-		return kernel.Failed, receipt.RemoteReference, nil
+		return kernel.Failed, receipt.ResultHash, receipt.RemoteReference, nil
 	default:
-		return "", "", fmt.Errorf("operation receipt outcome %q is not settled", receipt.Outcome)
+		return "", "", "", fmt.Errorf("operation receipt outcome %q is not settled", receipt.Outcome)
 	}
 }
