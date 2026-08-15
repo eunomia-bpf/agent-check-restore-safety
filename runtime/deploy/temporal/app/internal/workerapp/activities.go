@@ -20,13 +20,15 @@ import (
 const maxEffectResponseBytes = 1 << 20
 
 type Activities struct {
-	effectURL string
-	client    *http.Client
+	paymentURL    string
+	completionURL string
+	client        *http.Client
 }
 
-func NewActivities(effectURL string) *Activities {
+func NewActivities(paymentURL, completionURL string) *Activities {
 	return &Activities{
-		effectURL: strings.TrimRight(effectURL, "/"),
+		paymentURL:    strings.TrimRight(paymentURL, "/"),
+		completionURL: strings.TrimRight(completionURL, "/"),
 		// The Activity deadline owns cancellation. A client timeout would make
 		// the deterministic before/after-commit holds ambiguous.
 		client: &http.Client{},
@@ -34,14 +36,14 @@ func NewActivities(effectURL string) *Activities {
 }
 
 func (a *Activities) ChargePayment(ctx context.Context, request harness.EffectRequest) (harness.EffectReceipt, error) {
-	return a.invoke(ctx, "/v1/charge", request)
+	return a.invoke(ctx, a.paymentURL, "/v1/charge", request)
 }
 
 func (a *Activities) CompleteOrder(ctx context.Context, request harness.EffectRequest) (harness.EffectReceipt, error) {
-	return a.invoke(ctx, "/v1/complete", request)
+	return a.invoke(ctx, a.completionURL, "/v1/complete", request)
 }
 
-func (a *Activities) invoke(ctx context.Context, path string, input harness.EffectRequest) (harness.EffectReceipt, error) {
+func (a *Activities) invoke(ctx context.Context, baseURL, path string, input harness.EffectRequest) (harness.EffectReceipt, error) {
 	if input.OrderID == "" || input.OperationID == "" {
 		return harness.EffectReceipt{}, errors.New("order_id and operation_id are required")
 	}
@@ -52,7 +54,7 @@ func (a *Activities) invoke(ctx context.Context, path string, input harness.Effe
 	if err != nil {
 		return harness.EffectReceipt{}, err
 	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, a.effectURL+path, bytes.NewReader(body))
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+path, bytes.NewReader(body))
 	if err != nil {
 		return harness.EffectReceipt{}, err
 	}

@@ -8,7 +8,11 @@ import (
 )
 
 func main() {
-	if err := workerapp.Run(os.Getenv("TEMPORAL_ADDRESS"), os.Getenv("EFFECT_URL")); err != nil {
+	if err := workerapp.Run(
+		os.Getenv("TEMPORAL_ADDRESS"),
+		os.Getenv("PAYMENT_URL"),
+		os.Getenv("COMPLETION_URL"),
+	); err != nil {
 		log.Fatal(err)
 	}
 }

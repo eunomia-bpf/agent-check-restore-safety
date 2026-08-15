@@ -24,7 +24,7 @@ func runOrderWorkflow(ctx workflow.Context, order harness.Order) (harness.OrderR
 		return harness.OrderResult{}, err
 	}
 	options := workflow.ActivityOptions{
-		StartToCloseTimeout: 10 * time.Second,
+		StartToCloseTimeout: 30 * time.Second,
 		RetryPolicy:         &temporal.RetryPolicy{MaximumAttempts: 1},
 	}
 	activityCtx := workflow.WithActivityOptions(ctx, options)

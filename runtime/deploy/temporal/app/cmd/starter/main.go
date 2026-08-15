@@ -41,7 +41,10 @@ func run() error {
 	} else if behavior != "pinned" {
 		return errors.New("behavior must be pinned or autoupgrade")
 	}
-	temporalClient, err := client.Dial(client.Options{HostPort: address})
+	temporalClient, err := client.Dial(client.Options{
+		HostPort: address,
+		Identity: "safe-change-temporal-starter",
+	})
 	if err != nil {
 		return err
 	}
