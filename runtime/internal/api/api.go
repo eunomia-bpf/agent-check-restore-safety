@@ -95,6 +95,7 @@ func New(c *control.Control, client *http.Client, credentials Credentials) (*Ser
 	server.mux.HandleFunc("GET /v1/state", server.state)
 	server.mux.HandleFunc("GET /v1/history", server.history)
 	server.mux.HandleFunc("POST /v1/compile", server.compile)
+	server.mux.HandleFunc("POST /v1/certificate-state", server.certificateState)
 	server.mux.HandleFunc("POST /v1/activate", server.activate)
 	return server, nil
 }
@@ -210,6 +211,20 @@ func (s *Server) compile(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	writeJSON(writer, http.StatusOK, certificate)
+}
+
+func (s *Server) certificateState(writer http.ResponseWriter, request *http.Request) {
+	var certificate kernel.Certificate
+	if err := decode(request, &certificate); err != nil {
+		writeError(writer, http.StatusBadRequest, err)
+		return
+	}
+	projection, err := s.control.CertificateState(certificate)
+	if err != nil {
+		writeError(writer, http.StatusUnprocessableEntity, err)
+		return
+	}
+	writeJSON(writer, http.StatusOK, projection)
 }
 
 func (s *Server) activate(writer http.ResponseWriter, request *http.Request) {

@@ -401,16 +401,65 @@ func TestResourceLimitCannotValidateAsImpossibleCertificate(t *testing.T) {
 	}
 }
 
-func TestAggregateCounterOverflowIsResourceError(t *testing.T) {
-	facts := facts{
-		used:    map[string]uint32{"resource": ^uint32(0)},
-		results: map[string]uint32{"done": ^uint32(0)},
+func TestImpossibleWitnessSelectsResourceDeterministically(t *testing.T) {
+	state := NewState()
+	state.Operations["open"] = Operation{
+		ID: "open", Domain: "test", Kind: "legacy", RequestHash: "request",
+		Costs:     map[string]uint32{"beta": 1, "alpha": 1},
+		Produces:  map[string]uint32{"legacy": 1},
+		RetrySafe: true, Phase: Prepared,
 	}
-	if err := addSuccess(&facts, map[string]uint32{"resource": 1}, nil); !errors.Is(err, ErrResourceLimit) {
-		t.Fatalf("resource counter overflow was not typed: %v", err)
+	requirement := Requirement{
+		ID: "deterministic-witness", Results: map[string]uint32{"done": 1},
+		Capacities: map[string]uint32{"beta": 0, "alpha": 0},
+		Kinds: map[string]KindSpec{
+			"finish": {Produces: map[string]uint32{"done": 1}, RetrySafe: true},
+		},
 	}
-	if err := addSuccess(&facts, nil, map[string]uint32{"done": 1}); !errors.Is(err, ErrResourceLimit) {
-		t.Fatalf("result counter overflow was not typed: %v", err)
+	var digest string
+	for iteration := 0; iteration < 100; iteration++ {
+		certificate, err := Compile(state, requirement, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if certificate.Decision != Impossible || certificate.Witness == nil {
+			t.Fatalf("expected Impossible, got %+v", certificate)
+		}
+		if certificate.Witness.Reason != `resource "alpha" already uses 1 above capacity 0` {
+			t.Fatalf("noncanonical witness: %+v", certificate.Witness)
+		}
+		if iteration == 0 {
+			digest = certificate.Digest
+		} else if certificate.Digest != digest {
+			t.Fatalf("identical input produced digest %s, want %s", certificate.Digest, digest)
+		}
+	}
+}
+
+func TestFactsProjectionSaturatesResultsAndTracksUndeclaredResource(t *testing.T) {
+	requirement := Requirement{
+		ID: "projection", Results: map[string]uint32{"done": 1},
+		Capacities: map[string]uint32{"slot": 1},
+		Kinds: map[string]KindSpec{
+			"finish": {Produces: map[string]uint32{"done": 1}, RetrySafe: true},
+		},
+	}
+	facts := emptyFacts()
+	for iteration := 0; iteration < 10_000; iteration++ {
+		if err := addSuccess(&facts, requirement,
+			map[string]uint32{"slot": 1, "z-old": 1, "a-old": 1},
+			map[string]uint32{"done": MaxModelValue, fmt.Sprintf("extra-%d", iteration): MaxModelValue}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if facts.results["done"] != 1 || len(facts.results) != 1 {
+		t.Fatalf("required result was not saturated and projected: %+v", facts.results)
+	}
+	if facts.used["slot"] != 10_000 {
+		t.Fatalf("declared resource use was not exact: %+v", facts.used)
+	}
+	if facts.undeclaredResource != "a-old" {
+		t.Fatalf("undeclared resource was not canonical: %+v", facts)
 	}
 }
 

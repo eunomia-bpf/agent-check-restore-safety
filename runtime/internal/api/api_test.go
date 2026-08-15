@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/certcheck"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/control"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/gateway"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/kernel"
@@ -132,6 +133,18 @@ func TestLocalAPICompilesActivatesAndExecutes(t *testing.T) {
 	}
 	if certificate.Decision != kernel.Activate || certificate.Rule == nil {
 		t.Fatalf("certificate = %+v", certificate)
+	}
+	var projection json.RawMessage
+	if status := postJSON(t, server.Client(), server.URL+"/v1/certificate-state", adminToken, certificate, &projection); status != http.StatusOK {
+		t.Fatalf("Certificate State status = %d", status)
+	}
+	certificateJSON, err := json.Marshal(certificate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	verdict, err := certcheck.CheckJSON(projection, certificateJSON)
+	if err != nil || !verdict.Valid || verdict.RuleVersion != 1 {
+		t.Fatalf("offline Certificate verdict=%+v error=%v", verdict, err)
 	}
 	if status := postJSON(t, server.Client(), server.URL+"/v1/activate", operationToken, certificate, &errorBody{}); status != http.StatusUnauthorized {
 		t.Fatalf("operation token activated a Rule: status=%d", status)

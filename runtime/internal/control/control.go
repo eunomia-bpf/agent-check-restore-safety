@@ -12,8 +12,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"sync"
 
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/certcheck"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/headanchor"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/history"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/kernel"
@@ -46,6 +48,31 @@ type phaseEvent struct {
 	SemanticVersion int                    `json:"semantic_version"`
 	ID              string                 `json:"id"`
 	Update          kernel.OperationUpdate `json:"update"`
+}
+
+// certificateState is the versioned, answer-preserving projection consumed by
+// the independent checker. Response bodies, remote metadata, and settled
+// Operation identities cannot affect the bounded answer and are deliberately
+// excluded from this trust boundary.
+type certificateState struct {
+	Schema         int                             `json:"schema"`
+	History        kernel.HistoryPoint             `json:"history"`
+	FromRule       uint64                          `json:"from_rule"`
+	Settled        certificateSettled              `json:"settled"`
+	OpenOperations map[string]certificateOperation `json:"open_operations"`
+}
+
+type certificateSettled struct {
+	Used               map[string]uint64 `json:"used"`
+	Results            map[string]uint32 `json:"results"`
+	UndeclaredResource string            `json:"undeclared_resource,omitempty"`
+}
+
+type certificateOperation struct {
+	ID        string            `json:"id"`
+	Costs     map[string]uint32 `json:"costs"`
+	Produces  map[string]uint32 `json:"produces"`
+	RetrySafe bool              `json:"retry_safe"`
 }
 
 type Control struct {
@@ -256,7 +283,14 @@ func (c *Control) Compile(requirement kernel.Requirement) (kernel.Certificate, e
 	if c.state.Rule != nil {
 		next = c.state.Rule.Version + 1
 	}
-	return kernel.Compile(c.state, requirement, next)
+	certificate, err := kernel.Compile(c.state, requirement, next)
+	if err != nil {
+		return kernel.Certificate{}, err
+	}
+	if err := checkCertificate(c.state, certificate); err != nil {
+		return kernel.Certificate{}, err
+	}
+	return certificate, nil
 }
 
 func (c *Control) Activate(certificate kernel.Certificate) error {
@@ -270,6 +304,9 @@ func (c *Control) Activate(certificate kernel.Certificate) error {
 	}
 	if c.failed != nil {
 		return fmt.Errorf("%w: %v", ErrNeedsReopen, c.failed)
+	}
+	if err := checkCertificate(c.state, certificate); err != nil {
+		return err
 	}
 	next := c.state.Clone()
 	if err := next.Activate(certificate); err != nil {
@@ -287,6 +324,139 @@ func (c *Control) Activate(certificate kernel.Certificate) error {
 	next.History = kernel.HistoryPoint{Sequence: event.Sequence, Hash: event.Hash}
 	c.state = next
 	return nil
+}
+
+func checkCertificate(state *kernel.State, certificate kernel.Certificate) error {
+	stateJSON, err := certificateStateJSON(state, certificate.Requirement)
+	if err != nil {
+		return fmt.Errorf("derive State for independent Certificate checker: %w", err)
+	}
+	certificateJSON, err := json.Marshal(certificate)
+	if err != nil {
+		return fmt.Errorf("encode Certificate for independent checker: %w", err)
+	}
+	if _, err := certcheck.CheckJSON(stateJSON, certificateJSON); err != nil {
+		return fmt.Errorf("independent Certificate checker: %w", err)
+	}
+	return nil
+}
+
+func addSettledProjection(target kernel.Requirement, settled *certificateSettled,
+	costs, produces map[string]uint32) {
+	for resource, amount := range costs {
+		if _, declared := target.Capacities[resource]; !declared {
+			if amount != 0 && (settled.UndeclaredResource == "" || resource < settled.UndeclaredResource) {
+				settled.UndeclaredResource = resource
+			}
+			continue
+		}
+		settled.Used[resource] += uint64(amount)
+	}
+	for result, amount := range produces {
+		need, required := target.Results[result]
+		if !required {
+			continue
+		}
+		current := settled.Results[result]
+		if current >= need {
+			continue
+		}
+		if amount >= need-current {
+			settled.Results[result] = need
+		} else {
+			settled.Results[result] = current + amount
+		}
+	}
+}
+
+func certificateStateJSON(state *kernel.State, target kernel.Requirement) ([]byte, error) {
+	if state == nil {
+		return nil, errors.New("nil State")
+	}
+	if len(state.Operations) > kernel.MaxTrackedOperations {
+		return nil, fmt.Errorf("tracked Operations exceed %d", kernel.MaxTrackedOperations)
+	}
+	fromRule := uint64(0)
+	if state.Rule != nil {
+		fromRule = state.Rule.Version
+	}
+	projection := certificateState{
+		Schema: certcheck.StateSchema, History: state.History, FromRule: fromRule,
+		Settled: certificateSettled{
+			Used: make(map[string]uint64), Results: make(map[string]uint32),
+		},
+		OpenOperations: make(map[string]certificateOperation),
+	}
+	ids := make([]string, 0, len(state.Operations))
+	for id := range state.Operations {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		operation := state.Operations[id]
+		if id != operation.ID || id == "" || len(id) > kernel.MaxNameBytes {
+			return nil, fmt.Errorf("Operation map identity %q is invalid", id)
+		}
+		if len(operation.Costs) > kernel.MaxRequirementResources || len(operation.Produces) > kernel.MaxOperationResults {
+			return nil, fmt.Errorf("Operation %q exceeds semantic dimension limits", id)
+		}
+		for resource, amount := range operation.Costs {
+			if resource == "" || len(resource) > kernel.MaxNameBytes || amount == 0 || amount > kernel.MaxModelValue {
+				return nil, fmt.Errorf("Operation %q has an invalid frozen cost", id)
+			}
+		}
+		if len(operation.Produces) == 0 {
+			return nil, fmt.Errorf("Operation %q produces no result", id)
+		}
+		for result, amount := range operation.Produces {
+			if result == "" || len(result) > kernel.MaxNameBytes || amount == 0 || amount > kernel.MaxModelValue {
+				return nil, fmt.Errorf("Operation %q has an invalid frozen result", id)
+			}
+		}
+		switch operation.Phase {
+		case kernel.Succeeded:
+			addSettledProjection(target, &projection.Settled, operation.Costs, operation.Produces)
+		case kernel.Prepared:
+			if !operation.RetrySafe {
+				continue
+			}
+			fallthrough
+		case kernel.Dispatched, kernel.Unknown:
+			projection.OpenOperations[id] = certificateOperation{
+				ID: id, Costs: cloneCountMap(operation.Costs),
+				Produces: cloneCountMap(operation.Produces), RetrySafe: operation.RetrySafe,
+			}
+		case kernel.Failed, kernel.Cancelled:
+		default:
+			return nil, fmt.Errorf("Operation %q has invalid phase %q", id, operation.Phase)
+		}
+	}
+	if len(projection.OpenOperations) > kernel.MaxOpenOperations {
+		return nil, fmt.Errorf("open Operations exceed %d", kernel.MaxOpenOperations)
+	}
+	return json.Marshal(projection)
+}
+
+// CertificateState returns the exact compact State projection used by online
+// checking. Its History point must still be compared with a trusted external
+// head when the result is checked outside this Control instance.
+func (c *Control) CertificateState(certificate kernel.Certificate) (json.RawMessage, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.history == nil {
+		return nil, history.ErrClosed
+	}
+	if c.closing {
+		return nil, ErrClosing
+	}
+	if c.failed != nil {
+		return nil, fmt.Errorf("%w: %v", ErrNeedsReopen, c.failed)
+	}
+	encoded, err := certificateStateJSON(c.state, certificate.Requirement)
+	if err != nil {
+		return nil, err
+	}
+	return json.RawMessage(encoded), nil
 }
 
 func (c *Control) Prepare(id, domain, kind, requestHash string) (kernel.Operation, error) {
@@ -385,6 +555,9 @@ func apply(state *kernel.State, operation string, data json.RawMessage) error {
 		}
 		if event.SemanticVersion != semanticVersion {
 			return fmt.Errorf("unsupported rule semantic version %d", event.SemanticVersion)
+		}
+		if err := checkCertificate(state, event.Certificate); err != nil {
+			return err
 		}
 		return state.Activate(event.Certificate)
 	case eventOperationPrepare:

@@ -14,6 +14,7 @@ import AuthorityContinuity.AgentHistoryAdmission.RegistrationRefinement
 import AuthorityContinuity.AgentHistoryAdmission.CompilationBridge
 import AuthorityContinuity.AgentHistoryAdmission.InformationLowerBound
 import AuthorityContinuity.AgentHistoryAdmission.PaperTheorems
+import AuthorityContinuity.RuntimeCertificate
 
 /-!
 # Frozen theorem audit
@@ -706,5 +707,31 @@ installed live-extension closure. -/
 
 #check AgentHistoryAdmission.InformationLowerBound.exactView_separates_each_dimension
 #print axioms AgentHistoryAdmission.InformationLowerBound.exactView_separates_each_dimension
+
+/-! Independent runtime Certificate semantics. -/
+
+#check RuntimeCertificate.History.mem_worlds_iff
+#print axioms RuntimeCertificate.History.mem_worlds_iff
+
+#check RuntimeCertificate.mem_canonicalRule_iff
+#print axioms RuntimeCertificate.mem_canonicalRule_iff
+
+#check RuntimeCertificate.canonicalRule_safe
+#print axioms RuntimeCertificate.canonicalRule_safe
+
+#check RuntimeCertificate.safeRule_subset_canonical
+#print axioms RuntimeCertificate.safeRule_subset_canonical
+
+#check RuntimeCertificate.verifyActivate_iff_canonicalRule
+#print axioms RuntimeCertificate.verifyActivate_iff_canonicalRule
+
+#check RuntimeCertificate.verifyImpossible_iff_not_viable
+#print axioms RuntimeCertificate.verifyImpossible_iff_not_viable
+
+#check RuntimeCertificate.verifyCertificate_iff_correct
+#print axioms RuntimeCertificate.verifyCertificate_iff_correct
+
+#check RuntimeCertificate.activate_and_impossible_disjoint
+#print axioms RuntimeCertificate.activate_and_impossible_disjoint
 
 end AuthorityContinuity

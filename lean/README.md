@@ -87,6 +87,13 @@ The legacy lifecycle names and logical roles above are frozen by the prior
 mechanization plan; the history-admission and controller-cover rows freeze the
 new compiler-facing theory layer.  Reserve and direct-admission Merge expose
 executable target-AC checks.
+
+`RuntimeCertificate.lean` separately defines the finite semantics used by the
+new Go Certificate checker: all open-Operation outcome worlds, bounded
+completion, the canonical largest Rule, and mutually exclusive activate and
+impossible decisions.  Its audited theorems prove the semantic checker exact
+for that model.  They do not yet prove that Go projection construction, JSON
+decoding, hashing, or numeric limits refine the Lean definitions.
 Restriction, Prepare, ticket cases, and the four canonical Fork/Restore cases
 derive their targets without target AC/WF premises.  Canonical checkers inspect
 only source-local freshness, transfer, and owner facts; the exact target

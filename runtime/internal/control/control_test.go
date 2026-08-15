@@ -1,16 +1,33 @@
 package control
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/certcheck"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/headanchor"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/history"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/kernel"
 )
+
+func resignCertificate(t *testing.T, certificate *kernel.Certificate) {
+	t.Helper()
+	certificate.Digest = ""
+	encoded, err := json.Marshal(certificate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest := sha256.Sum256(encoded)
+	certificate.Digest = hex.EncodeToString(digest[:])
+}
 
 func requirement(id string) kernel.Requirement {
 	return kernel.Requirement{
@@ -107,6 +124,121 @@ func TestReplayRefusesUnknownSemanticVersionBeforeAdvancingAnchor(t *testing.T) 
 	}
 	if point.Sequence != 0 {
 		t.Fatalf("invalid event advanced external anchor to %+v", point)
+	}
+}
+
+func TestActivationAndReplayRequireIndependentCertificateCheck(t *testing.T) {
+	directory := t.TempDir()
+	path := filepath.Join(directory, "runtime.history")
+	control, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	certificate, err := control.Compile(requirement("invoice-v1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	certificate.Rule.Allow = nil
+	resignCertificate(t, &certificate)
+	if err := control.Activate(certificate); err == nil || !strings.Contains(err.Error(), "independent Certificate checker") {
+		t.Fatalf("online activation bypassed independent checker: %v", err)
+	}
+	if len(control.Events()) != 0 {
+		t.Fatal("rejected Certificate was appended to History")
+	}
+	if err := control.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	record, err := history.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := record.Append(eventRuleActivated, ruleEvent{
+		SemanticVersion: semanticVersion,
+		Certificate:     certificate,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := record.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if reopened, err := Open(path); err == nil || !strings.Contains(err.Error(), "independent Certificate checker") {
+		if reopened != nil {
+			_ = reopened.Close()
+		}
+		t.Fatalf("History replay bypassed independent checker: %v", err)
+	}
+	anchor, err := headanchor.Open(path + ".head-anchor")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer anchor.Close()
+	point, err := anchor.Current()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if point.Sequence != 0 {
+		t.Fatalf("rejected Certificate advanced external anchor to %+v", point)
+	}
+}
+
+func TestCertificateProjectionExcludesLargeResponsePayloads(t *testing.T) {
+	control, err := Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer control.Close()
+	payload := bytes.Repeat([]byte("r"), 1024)
+	remote := strings.Repeat("x", 1024)
+	for index := 0; index < 10_000; index++ {
+		id := fmt.Sprintf("settled-%05d", index)
+		control.state.Operations[id] = kernel.Operation{
+			ID: id, Domain: "old-service", Kind: "old-kind", RequestHash: "old-request",
+			Produces: map[string]uint32{fmt.Sprintf("old-result-%05d", index): 1},
+			Phase:    kernel.Succeeded, ResultHash: "result", ResultBody: payload,
+			RemoteReference: remote,
+		}
+	}
+	for index := 0; index < kernel.MaxOpenOperations; index++ {
+		id := fmt.Sprintf("open-%02d", index)
+		control.state.Operations[id] = kernel.Operation{
+			ID: id, Domain: "old-service", Kind: "old-kind", RequestHash: "old-request",
+			Produces:  map[string]uint32{fmt.Sprintf("open-result-%02d", index): 1},
+			RetrySafe: true, Phase: kernel.Unknown,
+		}
+	}
+	target := kernel.Requirement{
+		ID: "large-History-change", Results: map[string]uint32{"done": 1},
+		Kinds: map[string]kernel.KindSpec{
+			"finish": {Produces: map[string]uint32{"done": 1}, RetrySafe: true},
+		},
+	}
+	certificate, err := control.Compile(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fullState, err := json.Marshal(control.state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fullState) <= certcheck.MaxDocumentBytes {
+		t.Fatalf("test State is only %d bytes; expected it to exceed the old checker limit", len(fullState))
+	}
+	projection, err := control.CertificateState(certificate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(projection) >= 1<<20 {
+		t.Fatalf("answer-preserving projection is unexpectedly large: %d bytes", len(projection))
+	}
+	certificateJSON, err := json.Marshal(certificate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	verdict, err := certcheck.CheckJSON(projection, certificateJSON)
+	if err != nil || !verdict.Valid {
+		t.Fatalf("large-History Certificate verdict=%+v error=%v", verdict, err)
 	}
 }
 

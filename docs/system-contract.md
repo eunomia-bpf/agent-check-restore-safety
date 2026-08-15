@@ -171,8 +171,13 @@ serialization, or keeping every old version indefinitely.
    only v2 configuration; History supplies the old Operation meaning. Internal
    Docker networks make control the only process that can reach payment, and
    the scenario restarts control before completing old work.
-2. Separate compiler and checker binaries; add authenticated query evidence and
-   a systematic crash matrix.
+2. **Independent checking — implemented; compiler isolation remains.** A
+   standard-library-only checker binary independently reconstructs the exact
+   bounded answer using a separate implementation. Compilation, live
+   activation, and History replay all require its verdict over a versioned,
+   answer-preserving State projection. The compiler still shares the control
+   process; proof-object Certificates, authenticated query evidence, and a
+   systematic crash matrix remain open.
 3. Run a maintained multi-service application behind enforced egress and
    change it while requests are active.
 4. **Complete Linux VM restore path — implemented for the HTTP boundary.** A

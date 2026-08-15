@@ -17,6 +17,7 @@ Run the current system evidence:
 ```sh
 make runtime-build
 make runtime-test
+make runtime-certcheck
 make runtime-demo
 make runtime-microservice-demo
 make runtime-vm-demo

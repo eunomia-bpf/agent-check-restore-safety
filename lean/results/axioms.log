@@ -2147,3 +2147,78 @@ AuthorityContinuity.AgentHistoryAdmission.InformationLowerBound.exactView_separa
   view AgentHistoryAdmission.InformationLowerBound.allFalse ≠
     view (AgentHistoryAdmission.InformationLowerBound.singleTrue dimension)
 'AuthorityContinuity.AgentHistoryAdmission.InformationLowerBound.exactView_separates_each_dimension' does not depend on any axioms
+AuthorityContinuity.RuntimeCertificate.History.mem_worlds_iff.{uResult, uResource, uOperation} {Result : Type uResult}
+  {Resource : Type uResource} {OperationId : Type uOperation} [Fintype Result] [DecidableEq Result] [Fintype Resource]
+  [DecidableEq Resource] [Fintype OperationId] [DecidableEq OperationId]
+  (history : RuntimeCertificate.History Result Resource OperationId) (succeeded : Finset OperationId) :
+  succeeded ∈ history.worlds ↔ succeeded ⊆ history.openOperations
+'AuthorityContinuity.RuntimeCertificate.History.mem_worlds_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RuntimeCertificate.mem_canonicalRule_iff.{uResult, uResource, uKind, uOperation}
+  {Result : Type uResult} {Resource : Type uResource} {Kind : Type uKind} {OperationId : Type uOperation}
+  [Fintype Result] [DecidableEq Result] [Fintype Resource] [DecidableEq Resource] [Fintype Kind] [DecidableEq Kind]
+  [Fintype OperationId] [DecidableEq OperationId] (requirement : RuntimeCertificate.Requirement Result Resource Kind)
+  (history : RuntimeCertificate.History Result Resource OperationId) (kind : Kind) :
+  kind ∈ RuntimeCertificate.canonicalRule requirement history ↔ RuntimeCertificate.SafeNext requirement history kind
+'AuthorityContinuity.RuntimeCertificate.mem_canonicalRule_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RuntimeCertificate.canonicalRule_safe.{uResult, uResource, uKind, uOperation}
+  {Result : Type uResult} {Resource : Type uResource} {Kind : Type uKind} {OperationId : Type uOperation}
+  [Fintype Result] [DecidableEq Result] [Fintype Resource] [DecidableEq Resource] [Fintype Kind] [DecidableEq Kind]
+  [Fintype OperationId] [DecidableEq OperationId] (requirement : RuntimeCertificate.Requirement Result Resource Kind)
+  (history : RuntimeCertificate.History Result Resource OperationId) (kind : Kind) :
+  kind ∈ RuntimeCertificate.canonicalRule requirement history → RuntimeCertificate.SafeNext requirement history kind
+'AuthorityContinuity.RuntimeCertificate.canonicalRule_safe' depends on axioms: [propext, Classical.choice, Quot.sound]
+AuthorityContinuity.RuntimeCertificate.safeRule_subset_canonical.{uResult, uResource, uKind, uOperation}
+  {Result : Type uResult} {Resource : Type uResource} {Kind : Type uKind} {OperationId : Type uOperation}
+  [Fintype Result] [DecidableEq Result] [Fintype Resource] [DecidableEq Resource] [Fintype Kind] [DecidableEq Kind]
+  [Fintype OperationId] [DecidableEq OperationId] (requirement : RuntimeCertificate.Requirement Result Resource Kind)
+  (history : RuntimeCertificate.History Result Resource OperationId) (candidate : Finset Kind)
+  (safe : ∀ kind ∈ candidate, RuntimeCertificate.SafeNext requirement history kind) :
+  candidate ⊆ RuntimeCertificate.canonicalRule requirement history
+'AuthorityContinuity.RuntimeCertificate.safeRule_subset_canonical' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RuntimeCertificate.verifyActivate_iff_canonicalRule.{uResult, uResource, uKind, uOperation}
+  {Result : Type uResult} {Resource : Type uResource} {Kind : Type uKind} {OperationId : Type uOperation}
+  [Fintype Result] [DecidableEq Result] [Fintype Resource] [DecidableEq Resource] [Fintype Kind] [DecidableEq Kind]
+  [Fintype OperationId] [DecidableEq OperationId] (requirement : RuntimeCertificate.Requirement Result Resource Kind)
+  (history : RuntimeCertificate.History Result Resource OperationId) (rule : RuntimeCertificate.Rule Kind) :
+  RuntimeCertificate.verifyCertificate requirement history (RuntimeCertificate.Certificate.activate rule) = true ↔
+    RuntimeCertificate.Viable requirement history ∧ rule.allow = RuntimeCertificate.canonicalRule requirement history
+'AuthorityContinuity.RuntimeCertificate.verifyActivate_iff_canonicalRule' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RuntimeCertificate.verifyImpossible_iff_not_viable.{uResult, uResource, uKind, uOperation}
+  {Result : Type uResult} {Resource : Type uResource} {Kind : Type uKind} {OperationId : Type uOperation}
+  [Fintype Result] [DecidableEq Result] [Fintype Resource] [DecidableEq Resource] [Fintype Kind] [DecidableEq Kind]
+  [Fintype OperationId] [DecidableEq OperationId] (requirement : RuntimeCertificate.Requirement Result Resource Kind)
+  (history : RuntimeCertificate.History Result Resource OperationId) :
+  RuntimeCertificate.verifyCertificate requirement history RuntimeCertificate.Certificate.impossible = true ↔
+    ¬RuntimeCertificate.Viable requirement history
+'AuthorityContinuity.RuntimeCertificate.verifyImpossible_iff_not_viable' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RuntimeCertificate.verifyCertificate_iff_correct.{uResult, uResource, uKind, uOperation}
+  {Result : Type uResult} {Resource : Type uResource} {Kind : Type uKind} {OperationId : Type uOperation}
+  [Fintype Result] [DecidableEq Result] [Fintype Resource] [DecidableEq Resource] [Fintype Kind] [DecidableEq Kind]
+  [Fintype OperationId] [DecidableEq OperationId] (requirement : RuntimeCertificate.Requirement Result Resource Kind)
+  (history : RuntimeCertificate.History Result Resource OperationId)
+  (certificate : RuntimeCertificate.Certificate Kind) :
+  RuntimeCertificate.verifyCertificate requirement history certificate = true ↔
+    RuntimeCertificate.Correct requirement history certificate
+'AuthorityContinuity.RuntimeCertificate.verifyCertificate_iff_correct' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+AuthorityContinuity.RuntimeCertificate.activate_and_impossible_disjoint.{uResult, uResource, uKind, uOperation}
+  {Result : Type uResult} {Resource : Type uResource} {Kind : Type uKind} {OperationId : Type uOperation}
+  [Fintype Result] [DecidableEq Result] [Fintype Resource] [DecidableEq Resource] [Fintype Kind] [DecidableEq Kind]
+  [Fintype OperationId] [DecidableEq OperationId] (requirement : RuntimeCertificate.Requirement Result Resource Kind)
+  (history : RuntimeCertificate.History Result Resource OperationId) (rule : RuntimeCertificate.Rule Kind) :
+  ¬(RuntimeCertificate.Correct requirement history (RuntimeCertificate.Certificate.activate rule) ∧
+      RuntimeCertificate.Correct requirement history RuntimeCertificate.Certificate.impossible)
+'AuthorityContinuity.RuntimeCertificate.activate_and_impossible_disjoint' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]

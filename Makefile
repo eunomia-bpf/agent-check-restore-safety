@@ -1,4 +1,4 @@
-.PHONY: runtime-build runtime-test runtime-demo runtime-microservice-demo runtime-vm-demo runtime-codex-demo runtime-verify
+.PHONY: runtime-build runtime-test runtime-certcheck runtime-demo runtime-microservice-demo runtime-vm-demo runtime-codex-demo runtime-verify
 
 VM_ACCEL ?= tcg
 
@@ -7,6 +7,9 @@ runtime-build:
 
 runtime-test:
 	cd runtime && go test ./...
+
+runtime-certcheck:
+	cd runtime && go test ./internal/certcheck ./cmd/check-certificate
 
 runtime-demo:
 	@runtime_demo_dir="$$(mktemp -d)"; \

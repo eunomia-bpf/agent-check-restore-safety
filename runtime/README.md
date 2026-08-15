@@ -24,6 +24,7 @@ From the repository root:
 ```sh
 make runtime-build
 make runtime-test
+make runtime-certcheck
 make runtime-demo
 make runtime-microservice-demo
 make runtime-vm-demo
@@ -112,6 +113,35 @@ This first live composition does not yet place Codex and payment in disjoint
 network namespaces. The Docker service demo and QEMU demo enforce that network
 boundary separately; combining it with the live model is the next increment.
 
+## Check a Certificate outside the control service
+
+`check-certificate` is a read-only binary with its own wire types, validation,
+and finite-state algorithm. Its production package imports only the Go standard
+library; it does not link the Rule compiler, control service, History code, or
+gateway. After `/v1/compile`, post that Certificate to
+`/v1/certificate-state` to obtain the versioned, compact pre-activation State
+used by the checker. It contains only the facts that can change the answer, not
+stored response bodies or remote metadata. Then run:
+
+```sh
+cd runtime
+go run ./cmd/check-certificate \
+  -state /path/to/state.json \
+  -certificate /path/to/certificate.json
+```
+
+Online activation and every `rule.activated` History replay must pass this
+checker before the original in-process verifier runs. Compilation itself also
+runs the checker, so it cannot return a Certificate that its activation path
+will reject. The compiler uses recursive search; the checker uses a separately
+implemented explicit stack over the same bounded, canonical search order.
+
+The standalone verdict is conditional on the supplied State. The binary does
+not replay History, inspect the control service, or read the external head
+anchor. A remote verifier must compare the verdict's History sequence and hash
+with a trusted head anchor; only the online locked path derives State directly
+from replayed control state.
+
 ## Restore a complete Linux VM after a remote commit
 
 `make runtime-vm-demo` runs the stronger restore experiment on a complete,
@@ -171,7 +201,7 @@ console, QEMU log, History, head anchor, and payment state for inspection.
 - an exact finite planner that checks whether all required results still fit
   within remaining resources;
 - Rule activation tied to the complete History head and serialized with all
-  Operation progress; and
+  Operation progress;
 - an HTTP gateway that records before network I/O, reports lost responses as
   unknown, refuses redirects away from the registered target, and retries only
   when the Operation contract says reuse is safe; HTTP status alone never
@@ -186,13 +216,15 @@ console, QEMU log, History, head anchor, and payment state for inspection.
 - adapter credentials bound to one domain and an allowed kind set, with the
   Operation identity derived server-side from that domain and call identity;
 - History-based recovery of a previously registered Operation's frozen kind,
-  method, and target after the calling process changes globally; and
+  method, and target after the calling process changes globally;
 - a rootless QEMU guest path with a host-owned restricted network, a verified
   Ubuntu base image, whole-VM save/restore, and host History outside the guest
-  restore domain; and
+  restore domain;
 - a real logged-in Codex App Server path whose dynamic-tool callback remains
   pending across control-process replacement and completes an Operation after
-  a lost remote response.
+  a lost remote response; and
+- a separately implemented, standard-library-only Certificate checker binary,
+  required by both live Rule activation and durable History replay.
 
 Run the daemon directly:
 
@@ -236,7 +268,8 @@ This is an early system slice, not the complete system. It does not yet provide:
 - a replicated control service;
 - authenticated remote evidence or query-based unknown-result recovery;
 - a symbolic solver for large models;
-- a separately implemented Certificate checker; or
+- a proof-object Certificate schema that avoids full semantic recomputation;
+- a compiler isolated from the privileged control-service process; or
 - an end-to-end proof that concrete Agent, VM, and service executions refine the
   finite model.
 

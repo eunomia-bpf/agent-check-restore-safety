@@ -75,39 +75,60 @@ func (b *analysisBudget) expandState(depth uint64) error {
 }
 
 type facts struct {
-	used    map[string]uint32
-	results map[string]uint32
+	used               map[string]uint64
+	results            map[string]uint32
+	undeclaredResource string
 }
 
 func emptyFacts() facts {
-	return facts{used: make(map[string]uint32), results: make(map[string]uint32)}
+	return facts{used: make(map[string]uint64), results: make(map[string]uint32)}
 }
 
 func cloneFacts(in facts) facts {
-	return facts{used: cloneMap(in.used), results: cloneMap(in.results)}
+	used := make(map[string]uint64, len(in.used))
+	for resource, amount := range in.used {
+		used[resource] = amount
+	}
+	return facts{
+		used: used, results: cloneMap(in.results),
+		undeclaredResource: in.undeclaredResource,
+	}
 }
 
-func addSuccess(f *facts, costs, produces map[string]uint32) error {
+// addSuccess retains only distinctions that can change the answer for r.
+// Resource use stays exact; required results saturate at their lower bound;
+// extra results are irrelevant. For undeclared resources, only the canonical
+// first name is needed because any positive use already makes completion fail.
+func addSuccess(f *facts, r Requirement, costs, produces map[string]uint32) error {
 	for resource, amount := range costs {
-		current := f.used[resource]
-		actual := uint64(current) + uint64(amount)
-		if actual > uint64(^uint32(0)) {
-			return resourceLimit(fmt.Sprintf("aggregate resource counter %q", resource), uint64(^uint32(0)), actual)
+		if _, declared := r.Capacities[resource]; !declared {
+			if amount != 0 && (f.undeclaredResource == "" || resource < f.undeclaredResource) {
+				f.undeclaredResource = resource
+			}
+			continue
 		}
-		f.used[resource] = current + amount
+		current := f.used[resource]
+		f.used[resource] = current + uint64(amount)
 	}
 	for result, amount := range produces {
-		current := f.results[result]
-		actual := uint64(current) + uint64(amount)
-		if actual > uint64(^uint32(0)) {
-			return resourceLimit(fmt.Sprintf("aggregate result counter %q", result), uint64(^uint32(0)), actual)
+		need, required := r.Results[result]
+		if !required {
+			continue
 		}
-		f.results[result] = current + amount
+		current := f.results[result]
+		if current >= need {
+			continue
+		}
+		if amount >= need-current {
+			f.results[result] = need
+		} else {
+			f.results[result] = current + amount
+		}
 	}
 	return nil
 }
 
-func baseAndOpen(state *State) (facts, []Operation, error) {
+func baseAndOpen(state *State, target Requirement) (facts, []Operation, error) {
 	if len(state.Operations) > MaxTrackedOperations {
 		return facts{}, nil, resourceLimit(
 			"tracked operations", MaxTrackedOperations, uint64(len(state.Operations)),
@@ -152,7 +173,7 @@ func baseAndOpen(state *State) (facts, []Operation, error) {
 		}
 		switch op.Phase {
 		case Succeeded:
-			if err := addSuccess(&base, op.Costs, op.Produces); err != nil {
+			if err := addSuccess(&base, target, op.Costs, op.Produces); err != nil {
 				return facts{}, nil, err
 			}
 		case Prepared:
@@ -185,23 +206,22 @@ func completionPlan(r Requirement, start facts, budget *analysisBudget) (bool, s
 	if err := budget.beginCompletion(); err != nil {
 		return false, "", err
 	}
-	for resource, used := range start.used {
+	if start.undeclaredResource != "" {
+		return false, fmt.Sprintf("history uses resource %q absent from the target requirement", start.undeclaredResource), nil
+	}
+	// Witnesses are part of the signed Certificate in schema 1. Choose the
+	// first violated resource canonically so identical inputs cannot produce
+	// different diagnostic text and digests through Go map iteration order.
+	for _, resource := range sortedKeys(start.used) {
+		used := start.used[resource]
 		capacity, declared := r.Capacities[resource]
 		if !declared {
 			return false, fmt.Sprintf("history uses resource %q absent from the target requirement", resource), nil
 		}
-		if used > capacity {
+		if used > uint64(capacity) {
 			return false, fmt.Sprintf("resource %q already uses %d above capacity %d", resource, used, capacity), nil
 		}
 	}
-	for result := range start.results {
-		if _, declared := r.Results[result]; !declared {
-			// Extra historical results are facts, but do not invalidate a target
-			// requirement by themselves.
-			continue
-		}
-	}
-
 	resultNames := sortedKeys(r.Results)
 	resourceNames := sortedKeys(r.Capacities)
 	kindNames := sortedKeys(r.Kinds)
@@ -215,7 +235,7 @@ func completionPlan(r Requirement, start facts, budget *analysisBudget) (bool, s
 		}
 	}
 	for index, name := range resourceNames {
-		remaining[index] = r.Capacities[name] - start.used[name]
+		remaining[index] = r.Capacities[name] - uint32(start.used[name])
 	}
 
 	encode := func(d, c []uint32) string {
@@ -328,8 +348,8 @@ type scenario struct {
 	succeeded []string
 }
 
-func scenarios(state *State) ([]scenario, error) {
-	base, open, err := baseAndOpen(state)
+func scenarios(state *State, target Requirement) ([]scenario, error) {
+	base, open, err := baseAndOpen(state, target)
 	if err != nil {
 		return nil, err
 	}
@@ -345,7 +365,7 @@ func scenarios(state *State) ([]scenario, error) {
 			if mask&(1<<index) == 0 {
 				continue
 			}
-			if err := addSuccess(&current, op.Costs, op.Produces); err != nil {
+			if err := addSuccess(&current, target, op.Costs, op.Produces); err != nil {
 				return nil, err
 			}
 			ids = append(ids, op.ID)
@@ -358,7 +378,7 @@ func scenarios(state *State) ([]scenario, error) {
 func allowedKinds(state *State, r Requirement) ([]string, *Witness, error) {
 	// Validate and bound the complete model before deriving any semantic
 	// witness. Otherwise an early impossible case could mask an oversized input.
-	all, err := scenarios(state)
+	all, err := scenarios(state, r)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -400,7 +420,7 @@ func allowedKinds(state *State, r Requirement) ([]string, *Witness, error) {
 		safe := true
 		for _, current := range all {
 			success := cloneFacts(current.facts)
-			if err := addSuccess(&success, spec.Costs, spec.Produces); err != nil {
+			if err := addSuccess(&success, r, spec.Costs, spec.Produces); err != nil {
 				return nil, nil, err
 			}
 			ok, _, err := completionPlan(r, success, budget)
@@ -564,6 +584,14 @@ func (s *State) RefreshRule() error {
 func (s *State) Prepare(id, domain, kind, requestHash string) (Operation, error) {
 	if id == "" || domain == "" || kind == "" || requestHash == "" {
 		return Operation{}, errors.New("operation identity, domain, kind, and request hash are required")
+	}
+	for _, field := range []struct{ label, value string }{
+		{"operation identity", id}, {"operation domain", domain},
+		{"operation kind", kind}, {"request hash", requestHash},
+	} {
+		if len(field.value) > MaxNameBytes {
+			return Operation{}, resourceLimit(field.label+" bytes", MaxNameBytes, uint64(len(field.value)))
+		}
 	}
 	if prior, ok := s.Operations[id]; ok {
 		if prior.Domain != domain || prior.Kind != kind || prior.RequestHash != requestHash {

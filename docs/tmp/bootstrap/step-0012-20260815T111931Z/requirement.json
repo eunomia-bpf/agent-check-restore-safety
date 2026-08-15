@@ -1,0 +1,31 @@
+{
+  "id": "independent-checker-process-run",
+  "results": {
+    "done": 1
+  },
+  "capacities": {
+    "slot": 1
+  },
+  "kinds": {
+    "finish": {
+      "costs": {
+        "slot": 1
+      },
+      "produces": {
+        "done": 1
+      },
+      "retry_safe": true,
+      "queryable": false
+    },
+    "waste": {
+      "costs": {
+        "slot": 1
+      },
+      "produces": {
+        "wasted": 1
+      },
+      "retry_safe": true,
+      "queryable": false
+    }
+  }
+}

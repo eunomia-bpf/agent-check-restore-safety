@@ -206,6 +206,14 @@ frozen_constants=(
   fourFactor_exactView_injective
   fourFactor_exactView_card_lower_bound
   exactView_separates_each_dimension
+  mem_worlds_iff
+  mem_canonicalRule_iff
+  canonicalRule_safe
+  safeRule_subset_canonical
+  verifyActivate_iff_canonicalRule
+  verifyImpossible_iff_not_viable
+  verifyCertificate_iff_correct
+  activate_and_impossible_disjoint
 )
 
 # Named executable controls are elaborated through `AuthorityContinuity.Main`.
