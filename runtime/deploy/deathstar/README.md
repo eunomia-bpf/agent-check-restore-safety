@@ -24,3 +24,14 @@ creates and prints a directory under `/tmp`; evidence is never removed by the
 cleanup trap. Set `KEEP_DEMO=1` only for interactive inspection. The script
 uses the fixed Compose project `safe-change-deathstar-step15` and refuses to
 start if resources with its exact names already exist.
+
+The retained repository result is checked without starting Docker:
+
+```sh
+make runtime-deathstar-check
+```
+
+The checker does not import this runner. It independently replays the binary
+History and joins it to raw Mongo, source, container, removal, and network
+evidence. Its mutation tests must reject altered History bytes, request bodies,
+Mongo facts, observer identities, final Rules, and Docker topology.

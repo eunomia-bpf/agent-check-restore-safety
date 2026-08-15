@@ -26,6 +26,8 @@ make runtime-codex-isolated-demo
 make runtime-codex-isolated-check
 make runtime-integrated-demo
 make runtime-integrated-check
+make runtime-deathstar-demo
+make runtime-deathstar-check
 make runtime-verify
 ```
 
@@ -74,6 +76,16 @@ evaluation. Its evidence and remaining limits are recorded in
 The account-free `make runtime-integrated-check` command independently replays
 the retained History and joins it with the effect, Docker, App Server, and QEMU
 records.
+
+The first unmodified application result uses two pinned DeathStarBench Hotel
+Reservation releases. After v1 commits a real Mongo reservation and its reply
+is lost, the runtime deletes the v1 frontend and effect process, restarts over
+the same History, settles the old Operation from one exact database fact, and
+then completes new work through v2. A raw retry produces two database rows;
+keeping v1 avoids duplication only by staying unavailable. The independent
+`make runtime-deathstar-check` path replays History and joins the raw Mongo,
+upstream source, container-removal, and four-network evidence without starting
+Docker.
 
 The scientific and system contract is in
 [`docs/system-contract.md`](docs/system-contract.md). The current paper source

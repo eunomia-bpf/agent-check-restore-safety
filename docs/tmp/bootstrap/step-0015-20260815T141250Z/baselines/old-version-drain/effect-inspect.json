@@ -1,0 +1,274 @@
+[
+    {
+        "Id": "56a2ece3b682b8637d16a54b43d5cb81bdd16447102e35f5434cfd8225e3b757",
+        "Created": "2026-08-15T15:21:50.006670192Z",
+        "Path": "deathstar-adapter",
+        "Args": [
+            "-mode",
+            "effect",
+            "-listen",
+            "0.0.0.0:8090",
+            "-frontend",
+            "http://frontend-v1:5000",
+            "-audit",
+            "/adapter.audit.jsonl",
+            "-drop-first-response"
+        ],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 1782138,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-08-15T15:21:50.127569962Z",
+            "FinishedAt": "0001-01-01T00:00:00Z"
+        },
+        "Image": "sha256:6e2cd18fb37291e7c5fc772a9df9e11d5a108314fb2c09ec81f2b8300e73007e",
+        "ResolvConfPath": "/var/lib/docker/containers/56a2ece3b682b8637d16a54b43d5cb81bdd16447102e35f5434cfd8225e3b757/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/56a2ece3b682b8637d16a54b43d5cb81bdd16447102e35f5434cfd8225e3b757/hostname",
+        "HostsPath": "/var/lib/docker/containers/56a2ece3b682b8637d16a54b43d5cb81bdd16447102e35f5434cfd8225e3b757/hosts",
+        "LogPath": "/var/lib/docker/containers/56a2ece3b682b8637d16a54b43d5cb81bdd16447102e35f5434cfd8225e3b757/56a2ece3b682b8637d16a54b43d5cb81bdd16447102e35f5434cfd8225e3b757-json.log",
+        "Name": "/safe-change-step15-effect-drain",
+        "RestartCount": 0,
+        "Driver": "overlayfs",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "docker-default",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": null,
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "safe-change-step15-frontdoor",
+            "PortBindings": {
+                "8090/tcp": [
+                    {
+                        "HostIp": "127.0.0.1",
+                        "HostPort": ""
+                    }
+                ]
+            },
+            "RestartPolicy": {
+                "Name": "no",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "private",
+            "Dns": null,
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": [],
+            "BlkioDeviceReadBps": [],
+            "BlkioDeviceWriteBps": [],
+            "BlkioDeviceReadIOps": [],
+            "BlkioDeviceWriteIOps": [],
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": [],
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": null,
+            "PidsLimit": null,
+            "Ulimits": [],
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "Mounts": [
+                {
+                    "Type": "bind",
+                    "Source": "/home/will/agent-check-restore-safety/docs/tmp/bootstrap/step-0015-20260815T141250Z/baselines/old-version-drain/adapter-audit.jsonl",
+                    "Target": "/adapter.audit.jsonl"
+                }
+            ],
+            "MaskedPaths": [
+                "/proc/acpi",
+                "/proc/asound",
+                "/proc/interrupts",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/sys/devices/virtual/powercap",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "Storage": {
+            "RootFS": {
+                "Snapshot": {
+                    "Name": "overlayfs"
+                }
+            }
+        },
+        "Mounts": [
+            {
+                "Type": "bind",
+                "Source": "/home/will/agent-check-restore-safety/docs/tmp/bootstrap/step-0015-20260815T141250Z/baselines/old-version-drain/adapter-audit.jsonl",
+                "Destination": "/adapter.audit.jsonl",
+                "Mode": "",
+                "RW": true,
+                "Propagation": "rprivate"
+            }
+        ],
+        "Config": {
+            "Hostname": "56a2ece3b682",
+            "Domainname": "",
+            "User": "1001:1002",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "ExposedPorts": {
+                "8090/tcp": {}
+            },
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            ],
+            "Cmd": [
+                "deathstar-adapter",
+                "-mode",
+                "effect",
+                "-listen",
+                "0.0.0.0:8090",
+                "-frontend",
+                "http://frontend-v1:5000",
+                "-audit",
+                "/adapter.audit.jsonl",
+                "-drop-first-response"
+            ],
+            "Image": "safe-change-step15/runtime:local",
+            "Volumes": null,
+            "WorkingDir": "/",
+            "Entrypoint": null,
+            "Labels": {
+                "org.opencontainers.image.revision": "798d9fb27b4f2c8a5d1915b11d98da7e9ea58ffa",
+                "safe-change.step": "15"
+            }
+        },
+        "NetworkSettings": {
+            "SandboxID": "2fbd541a055d6e373655d4fd1bb7ab1b801bbc4b88ad558bc67b4bba0afb98af",
+            "SandboxKey": "/var/run/docker/netns/2fbd541a055d",
+            "Ports": {
+                "8090/tcp": [
+                    {
+                        "HostIp": "127.0.0.1",
+                        "HostPort": "32797"
+                    }
+                ]
+            },
+            "Networks": {
+                "safe-change-step15-control": {
+                    "IPAMConfig": {},
+                    "Links": null,
+                    "Aliases": [
+                        "effect-drain"
+                    ],
+                    "DriverOpts": {},
+                    "GwPriority": 0,
+                    "NetworkID": "5cef591c5c77051fbfa0d5918cccaaa9ca09910a53bb3db92fd87617c78daa47",
+                    "EndpointID": "316ff01a66a9039b961c05fb2e3d06734e0c702a010e3180ca71192e6789f962",
+                    "Gateway": "172.18.0.1",
+                    "IPAddress": "172.18.0.3",
+                    "MacAddress": "6e:2f:38:7d:9a:c6",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": [
+                        "safe-change-step15-effect-drain",
+                        "effect-drain",
+                        "56a2ece3b682"
+                    ]
+                },
+                "safe-change-step15-frontdoor": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": [
+                        "effect-drain"
+                    ],
+                    "DriverOpts": null,
+                    "GwPriority": 0,
+                    "NetworkID": "a502503c81b7e9fe67d588127f2881608cb9644d57ee43f333b2606f9ae1e300",
+                    "EndpointID": "fb3d4df7aba59e8d73ad5c831fe4608a1bf6604964da982f47a23d1c3e6f2bcc",
+                    "Gateway": "172.19.0.1",
+                    "IPAddress": "172.19.0.4",
+                    "MacAddress": "92:8e:38:75:f2:2c",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": [
+                        "safe-change-step15-effect-drain",
+                        "effect-drain",
+                        "56a2ece3b682"
+                    ]
+                }
+            }
+        },
+        "ImageManifestDescriptor": {
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "digest": "sha256:7af8f857559a0dc1a33f7bef0044976c58ad9110cdc00362827de97898229816",
+            "size": 865,
+            "platform": {
+                "architecture": "amd64",
+                "os": "linux"
+            }
+        }
+    }
+]

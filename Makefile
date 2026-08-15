@@ -1,8 +1,9 @@
-.PHONY: runtime-build runtime-test runtime-certcheck runtime-demo runtime-microservice-demo runtime-vm-demo runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-verify
+.PHONY: runtime-build runtime-test runtime-certcheck runtime-demo runtime-microservice-demo runtime-vm-demo runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
 
 VM_ACCEL ?= tcg
 CODEX_ISOLATED_EVIDENCE ?= docs/tmp/bootstrap/step-0013-20260815T124944Z
 INTEGRATED_EVIDENCE ?= docs/tmp/bootstrap/step-0014-20260815T133621Z
+DEATHSTAR_EVIDENCE ?= docs/tmp/bootstrap/step-0015-20260815T141250Z
 
 runtime-build:
 	cd runtime && go build ./...
@@ -46,6 +47,15 @@ runtime-integrated-check:
 	python3 -m adapter.check_codex_integrated_evidence \
 		"$(INTEGRATED_EVIDENCE)" --runtime-dir runtime
 
+# Explicit real-application target. It builds and starts the complete pinned
+# DeathStarBench graph and is intentionally not part of runtime-verify.
+runtime-deathstar-demo:
+	bash runtime/deploy/deathstar/run.sh
+
+runtime-deathstar-check:
+	python3 -m adapter.check_deathstar_evidence \
+		"$(DEATHSTAR_EVIDENCE)" --runtime-dir runtime
+
 runtime-verify:
 	cd runtime && go build ./...
 	cd runtime && go test -race ./...
@@ -55,6 +65,8 @@ runtime-verify:
 		adapter.test_codex_isolated_runtime_demo \
 		adapter.test_check_codex_isolated_evidence \
 		adapter.test_codex_integrated_runtime_demo \
-		adapter.test_check_codex_integrated_evidence
+		adapter.test_check_codex_integrated_evidence \
+		adapter.test_check_deathstar_evidence
 	$(MAKE) runtime-codex-isolated-check
 	$(MAKE) runtime-integrated-check
+	$(MAKE) runtime-deathstar-check

@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "repository": "https://github.com/delimitrou/DeathStarBench.git",
+  "releases": {
+    "v1": {
+      "tag": "hotelReservation-0.2.2",
+      "commit": "25ccc81c1f6a1e7fe4d6b726d6a310cd2b607fa9",
+      "tree": "9846449187fdeb286127885ab747cef24bdba3fd",
+      "image": "safe-change-step15/deathstar:hotel-reservation-0.2.2",
+      "image_id": "sha256:3314100e4c5bb205e7ef058fd16a62f675937ed1d795cd56075770c2464ef18d",
+      "source_clean_before_build": true,
+      "source_clean_after_build": true,
+      "status_porcelain_before_build": "",
+      "status_porcelain_after_build": ""
+    },
+    "v2": {
+      "tag": "hotelReservation-0.3.5",
+      "commit": "6ecb09706140f8730b5385c08f1386c654c3c526",
+      "tree": "0ac0fd6d4ccfa1472d3895384d45fef5c6246b03",
+      "image": "safe-change-step15/deathstar:hotel-reservation-0.3.5",
+      "image_id": "sha256:1c24ec238428e6f6319da3c7a4e16759ab6785b3d8ee258296121624b41e8e23",
+      "source_clean_before_build": true,
+      "source_clean_after_build": true,
+      "status_porcelain_before_build": "",
+      "status_porcelain_after_build": ""
+    }
+  },
+  "runtime": {
+    "git_head": "798d9fb27b4f2c8a5d1915b11d98da7e9ea58ffa",
+    "image": "safe-change-step15/runtime:local",
+    "image_id": "sha256:6e2cd18fb37291e7c5fc772a9df9e11d5a108314fb2c09ec81f2b8300e73007e",
+    "checker_sha256": "a65284dfaaec5c93c7473dec57e42b1d2223bbd28cceb2f98743c5bce880a199",
+    "source_clean_before_build": true,
+    "source_clean_after_build": true,
+    "status_porcelain_before_build": "",
+    "status_porcelain_after_build": ""
+  },
+  "identities": {
+    "domain": "deathstar-step15",
+    "raw_retry": {
+      "call_id": "raw-retry-17",
+      "operation_id": "op-f7e11431b30df50bb7a81e4e571f787f3075e761a0a3c04f5dd65bcce1fb2547"
+    },
+    "old_version_drain": {
+      "call_id": "old-version-drain-18",
+      "operation_id": "op-553d24c3272b7448b2f890dd435e057d6ba5aa25ebb887fbf54e3aa17303250c"
+    },
+    "proposed_old": {
+      "call_id": "proposed-old-19",
+      "operation_id": "op-9e386660bd1441bde31aa4f9f88e4038304877eab9563a09fc20c1b0bc6b8c6a"
+    },
+    "proposed_new": {
+      "call_id": "proposed-new-20",
+      "operation_id": "op-4a8ccc3894780e05e62d86160e3b6b1b29ea323ac900b9b8d66b01e21c33c6b9"
+    },
+    "unexecuted": {
+      "call_id": "never-executed-21",
+      "operation_id": "op-3583c02a6faee462c3f7cf53972ab604d8680258531b5d4590622ef1398d873a"
+    },
+    "multi_night": {
+      "call_id": "multi-night-16",
+      "operation_id": "op-0ef7121c331053a02b5c732e6e8dc5a8bdc74f7d0dd70b7caad86df122a769c0"
+    }
+  },
+  "urls": {
+    "raw_effect": "http://effect-raw:8090/v1/reserve",
+    "drain_effect": "http://effect-drain:8090/v1/reserve",
+    "effect_v1": "http://effect-v1:8090/v1/reserve",
+    "effect_v2": "http://effect-v2:8090/v1/reserve",
+    "query": "http://observer:8090/v1/query"
+  }
+}

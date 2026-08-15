@@ -33,6 +33,8 @@ make runtime-codex-isolated-demo
 make runtime-codex-isolated-check
 make runtime-integrated-demo
 make runtime-integrated-check
+make runtime-deathstar-demo
+make runtime-deathstar-check
 make runtime-verify
 ```
 
@@ -295,6 +297,52 @@ reruns both Certificate checks, and joins the effect, Docker, App Server, and
 QEMU records. Mutation tests require it to reject changed History bytes, QMP
 restore commands, network membership, Codex tool identity, and inventory paths.
 
+## Delete an old real-service version after its effect commits
+
+`make runtime-deathstar-demo` runs against two pinned, source-clean releases of
+the unmodified DeathStarBench Hotel Reservation application. It starts the
+complete 24-service v2 Compose definition with its official frontend scaled to
+zero, then supplies separately built v1 and v2 frontends. Project code provides
+only the protected effect endpoint and a read-only Mongo observer.
+
+The deterministic fault occurs after the official application has inserted a
+reservation document but before the protected endpoint returns any HTTP bytes.
+Three matched conditions show the boundary:
+
+| Condition | Deliveries | Mongo rows | Available | Keeps v1 |
+|---|---:|---:|---|---|
+| raw retry | 2 | 2 | yes, but duplicates | yes |
+| old-version drain | 1 | 1 | no | yes |
+| History query recovery | 2 total across old and new work | 2 | yes | no |
+
+In the runtime condition, the old Operation is delivered exactly once. The
+runner activates Rule v2, removes both the v1 frontend and v1 effect process,
+starts their v2 replacements, and restarts control over the same History. The
+replacement runtime asks the frozen observer contract about the old Operation;
+one exact Mongo document settles it without another effect delivery. A new v2
+Operation then commits through the v2 frontend. Four Docker networks enforce
+that effect cannot reach Mongo, observer cannot reach the application path, and
+control cannot reach application state directly.
+
+The retained run ends at History sequence 9 and is independently checked with:
+
+```sh
+make runtime-deathstar-check
+```
+
+The checker replays the binary History, reruns both Certificate checks, and
+joins raw Mongo documents, five observations, two upstream Git trees, the
+24-service graph, old-container removal, and eight network probes. All 12
+evidence mutations are rejected. Full provenance and limitations are in
+[`step-report.md`](../docs/tmp/bootstrap/step-0015-20260815T141250Z/step-report.md).
+
+This is a deliberately narrow positive result: one hotel, one night, one room,
+and a unique customer derived from the Operation identity. Exactly one matching
+document proves success; zero or multiple matches remain inconclusive. The
+observer is a local trusted component, and recovery still requires the caller
+to resupply request bytes matching the hash in History. This is neither a
+general exactly-once claim nor proof that every unknown Operation can finish.
+
 ## Implemented now
 
 - a single-writer, length-framed History with SHA-256 chaining, `fsync`, strict
@@ -306,16 +354,17 @@ restore commands, network membership, Codex tool identity, and inventory paths.
 - durable `prepared`, `dispatched`, `unknown`, `succeeded`, `failed`, and
   `cancelled` phases;
 - bounded analysis of every possible outcome of up to 12 open Operations,
-  exact within the currently implemented stable-retry subclass, with explicit
+  exact relative to declared stable-retry and query capabilities, with explicit
   model and search budgets reported as resource errors rather than refusals;
 - an exact finite planner that checks whether all required results still fit
   within remaining resources;
 - Rule activation tied to the complete History head and serialized with all
   Operation progress;
 - an HTTP gateway that records before network I/O, reports lost responses as
-  unknown, refuses redirects away from the registered target, and retries only
-  when the Operation contract says reuse is safe; HTTP status alone never
-  settles an Operation;
+  unknown, refuses redirects away from the registered target, queries the
+  frozen observer contract before any retry, and retries only when the
+  Operation contract says reuse is safe; HTTP status alone never settles an
+  Operation;
 - live-dispatch ownership that prevents two callers from concurrently sending
   the same Operation and keeps shutdown from releasing History while a request
   is live;
@@ -333,7 +382,10 @@ restore commands, network membership, Codex tool identity, and inventory paths.
 - a real logged-in Codex App Server path whose hardened container cannot reach
   any of three effect services by network name or IP, and one integrated run in
   which the pending callback spans an order-container replacement, a control
-  restart, a Rule change, and a complete QEMU VM restore; and
+  restart, a Rule change, and a complete QEMU VM restore;
+- an unmodified DeathStarBench application path where a Mongo commit with a
+  lost response is recovered after deleting v1, without redispatch, and a v2
+  Operation then completes through the replacement frontend; and
 - a separately implemented, standard-library-only Certificate checker binary,
   required by both live Rule activation and durable History replay.
 
@@ -370,15 +422,16 @@ process with the same host account outside the Docker deployment.
 
 This is an early system slice, not the complete system. It does not yet provide:
 
-- a maintained real application workload rather than the purpose-built order
-  and effect services;
+- a maintained production application workload; DeathStarBench is a real,
+  unmodified benchmark but not the eventual maintained order/payment target;
 - general host-level prevention of direct network or device access beyond the
   demonstrated Docker and QEMU HTTP boundaries;
 - mediation of VM block devices, GPUs, passthrough devices, or arbitrary host
   interfaces beyond the demonstrated restricted HTTP path;
 - a live Claude adapter and a provider-independent Agent protocol;
 - a replicated control service;
-- signed remote evidence or query-based unknown-result recovery;
+- signed or remotely attested observation evidence and complete negative
+  observations; the current Mongo observer is local and trusted;
 - repeated KVM runs, scale measurements, and comparisons with the declared
   system baselines;
 - a symbolic solver for large models;
@@ -388,13 +441,15 @@ This is an early system slice, not the complete system. It does not yet provide:
   finite model.
 
 The bounded planner is useful executable evidence, not a novelty claim about
-maximally permissive control. It currently refuses kinds whose lost response
-cannot be recovered by the implemented gateway; the `Queryable` field is
-reserved for the next adapter and is not treated as working evidence. The
-current HTTP adapter accepts only a registered, strictly decoded receipt that
-binds a settled outcome to the Operation identity. A 202, 5xx, redirect, or
-unrecognized 2xx body remains unknown. The receipt is a fixed durable schema,
-so arbitrary service response bodies are not copied into History. The endpoint
-and transport are still trusted; authenticated query evidence is not yet
-implemented. The planned contribution is the derivation of the model from real
-execution records and its enforced correspondence to concrete systems.
+maximally permissive control. It refuses kinds whose lost response has neither
+stable retry nor a registered query contract. `Queryable` is a strong model
+assumption: an implementation must eventually produce a definitive observation
+for the liveness reasoning to apply. The DeathStarBench observer establishes
+only the positive one-document case and fails closed on zero or multiple rows,
+so the retained run proves the fixed commit-then-loss History rather than that
+assumption for every fault timing. Receipts and observations are strictly
+decoded and bound to the Operation identity and request hash; an unrecognized
+response remains unknown. The endpoint, transport, and local observer are still
+trusted, and authenticated remote evidence is not yet implemented. The planned
+contribution is the derivation of the model from real execution records and its
+enforced correspondence to concrete systems.

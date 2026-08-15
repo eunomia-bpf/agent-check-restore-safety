@@ -1,0 +1,404 @@
+[
+    {
+        "Name": "safe-change-step15-control",
+        "Id": "5cef591c5c77051fbfa0d5918cccaaa9ca09910a53bb3db92fd87617c78daa47",
+        "Created": "2026-08-15T15:21:35.50079266Z",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv4": true,
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "172.18.0.0/16",
+                    "Gateway": "172.18.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Options": {},
+        "Labels": {
+            "safe-change.step": "15"
+        },
+        "Containers": {
+            "29c70548b3df3584ba42ee2e32755480b649d8c27be98574fa8ea18db02a06fc": {
+                "Name": "safe-change-step15-control",
+                "EndpointID": "1947d00e135d8333c35aba8217d731c016f54b3017e49942b4528ea0005954e7",
+                "MacAddress": "aa:df:b9:d8:b5:dc",
+                "IPv4Address": "172.18.0.3/16",
+                "IPv6Address": ""
+            },
+            "6290d15771f860f6b1fed23a99b81af878c3a196520dd01254e35858d8685eb4": {
+                "Name": "safe-change-step15-effect-v2",
+                "EndpointID": "d543cd77cf945cc0c3575c90cbd48700cb73d1dc67e133969d72cfc16d8ce413",
+                "MacAddress": "72:38:d2:d4:88:8f",
+                "IPv4Address": "172.18.0.4/16",
+                "IPv6Address": ""
+            },
+            "b188994358c00a541b6d5712223ee295cd851a178192aa481b561446262faa32": {
+                "Name": "safe-change-step15-observer",
+                "EndpointID": "c8874ba718a37621f2096194bf1c63c936bb18bd8e5b53d4c078e632dc837b95",
+                "MacAddress": "5e:ad:e7:85:a5:bd",
+                "IPv4Address": "172.18.0.2/16",
+                "IPv6Address": ""
+            }
+        },
+        "Status": {
+            "IPAM": {
+                "Subnets": {
+                    "172.18.0.0/16": {
+                        "IPsInUse": 6,
+                        "DynamicIPsAvailable": 65530
+                    }
+                }
+            }
+        }
+    },
+    {
+        "Name": "safe-change-step15-frontdoor",
+        "Id": "a502503c81b7e9fe67d588127f2881608cb9644d57ee43f333b2606f9ae1e300",
+        "Created": "2026-08-15T15:21:36.168014764Z",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv4": true,
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "172.19.0.0/16",
+                    "Gateway": "172.19.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Options": {},
+        "Labels": {
+            "safe-change.step": "15"
+        },
+        "Containers": {
+            "5ae7a94ce3941b8c78818dccb7159da7f5a16761cc077d6e9d5141aa80a55c8b": {
+                "Name": "safe-change-step15-frontend-v2",
+                "EndpointID": "93fe02ba63340cc4d24bd8017b4afa84fd42195230a82a25d1204965c5db9b4e",
+                "MacAddress": "e6:1c:84:fb:82:2f",
+                "IPv4Address": "172.19.0.3/16",
+                "IPv6Address": ""
+            },
+            "6290d15771f860f6b1fed23a99b81af878c3a196520dd01254e35858d8685eb4": {
+                "Name": "safe-change-step15-effect-v2",
+                "EndpointID": "cc683d963ede15dd9beca7aeefb0299199cd06e623e96139b50b2c5a815b8861",
+                "MacAddress": "26:61:3b:f7:7b:34",
+                "IPv4Address": "172.19.0.4/16",
+                "IPv6Address": ""
+            },
+            "87097bd948c0ef1f77a6826e1cdff32afd450297b1ef4f53ca8fd5e84de910ea": {
+                "Name": "safe-change-step15-front-client",
+                "EndpointID": "04cdedbd63773d3fbc4b480d05b60e371bcb19b6381b99ce308e9d0ba5cc02cf",
+                "MacAddress": "32:f0:3e:3a:da:57",
+                "IPv4Address": "172.19.0.2/16",
+                "IPv6Address": ""
+            }
+        },
+        "Status": {
+            "IPAM": {
+                "Subnets": {
+                    "172.19.0.0/16": {
+                        "IPsInUse": 6,
+                        "DynamicIPsAvailable": 65530
+                    }
+                }
+            }
+        }
+    },
+    {
+        "Name": "safe-change-step15-observation",
+        "Id": "270566af06db71a6f971395ee6a4a8b772f10d8806007f9f8ec4afdc729bd136",
+        "Created": "2026-08-15T15:21:36.227660992Z",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv4": true,
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "172.20.0.0/16",
+                    "Gateway": "172.20.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Options": {},
+        "Labels": {
+            "safe-change.step": "15"
+        },
+        "Containers": {
+            "86a8a546797f5d7d247af9a620c9c3e17809dd0629e001bb7fc8d6873c5eb251": {
+                "Name": "safe-change-deathstar-step15-mongodb-reservation-1",
+                "EndpointID": "b31d0bfcf7aaed890a953e40d0dc4d267224116b7b7c50c40de84ec3d8c2f485",
+                "MacAddress": "3a:97:cd:86:91:a7",
+                "IPv4Address": "172.20.0.2/16",
+                "IPv6Address": ""
+            },
+            "b188994358c00a541b6d5712223ee295cd851a178192aa481b561446262faa32": {
+                "Name": "safe-change-step15-observer",
+                "EndpointID": "ede9546e8eab791fd9c360e5cce269afc71ea98e23367526854a2265196d4d60",
+                "MacAddress": "da:46:54:a7:35:40",
+                "IPv4Address": "172.20.0.4/16",
+                "IPv6Address": ""
+            },
+            "cbdf67aa0f51a282ec70d877694cbdd80bea86dcb110616673c97ba1cfd696a2": {
+                "Name": "safe-change-step15-observation-client",
+                "EndpointID": "055ac8721cf5462ae51b9cfd4bb14b82aaf4a2d4ce20015448155144f185c34a",
+                "MacAddress": "de:ae:49:81:11:6f",
+                "IPv4Address": "172.20.0.3/16",
+                "IPv6Address": ""
+            }
+        },
+        "Status": {
+            "IPAM": {
+                "Subnets": {
+                    "172.20.0.0/16": {
+                        "IPsInUse": 6,
+                        "DynamicIPsAvailable": 65530
+                    }
+                }
+            }
+        }
+    },
+    {
+        "Name": "safe-change-deathstar-step15_default",
+        "Id": "f570717f6b31fe77ace8fd22092976587b5ccce1a8944c7dac2c1c178f2ac6e0",
+        "Created": "2026-08-15T15:21:36.474780614Z",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv4": true,
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.21.0.0/16",
+                    "Gateway": "172.21.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Options": {},
+        "Labels": {
+            "com.docker.compose.config-hash": "75ca8d2c51ace08a0519d4b1d26e074c83f66d2318bc6f9e9413158b5280c3e3",
+            "com.docker.compose.network": "default",
+            "com.docker.compose.project": "safe-change-deathstar-step15",
+            "com.docker.compose.version": "5.3.1"
+        },
+        "Containers": {
+            "03364fd0f307ad9cf7950eedcb806d821a0ff48580d4b19d0c7f52581c4fe4fa": {
+                "Name": "safe-change-deathstar-step15-jaeger-1",
+                "EndpointID": "43c5044f76b3b075ebd37c79bdce99729d3f3c0872dbfe2a92ca00fb24ad43b8",
+                "MacAddress": "2e:8d:88:b8:67:95",
+                "IPv4Address": "172.21.0.5/16",
+                "IPv6Address": ""
+            },
+            "13ba4d4f3d22cd03a69de441b2d024cfaf2ba5f3b2cfbae7aaa478fa5552c742": {
+                "Name": "safe-change-deathstar-step15-memcached-review-1",
+                "EndpointID": "a6a4ee61c239060d731f50f0aebd69044d31e9831e7341d282a384ae31dd8366",
+                "MacAddress": "3e:5e:cc:73:0a:28",
+                "IPv4Address": "172.21.0.10/16",
+                "IPv6Address": ""
+            },
+            "1d3aad6a04838105c98b6f1ec8a848b1dd233cddbf13fe4c6a22fa85a2465f9e": {
+                "Name": "safe-change-deathstar-step15-memcached-profile-1",
+                "EndpointID": "557f67da030914ad5d15100cd293109aa11da910066bad0e2435652c5cd6f266",
+                "MacAddress": "92:1d:5b:a5:05:08",
+                "IPv4Address": "172.21.0.4/16",
+                "IPv6Address": ""
+            },
+            "27d69160f86afd1ff995d0e192f73d9d27cb198954331d9514a7351fb3b4ba16": {
+                "Name": "safe-change-deathstar-step15-attractions-1",
+                "EndpointID": "5541256458a98bfa8dfbc8ecc9a0f427038db8f4f64da09f1bcff0b026d7d5f3",
+                "MacAddress": "fa:48:b7:92:b8:4b",
+                "IPv4Address": "172.21.0.22/16",
+                "IPv6Address": ""
+            },
+            "2b2f216d1884edbd2d69af163d4892e50ecf803900ec33d19689c8614808acf4": {
+                "Name": "safe-change-deathstar-step15-mongodb-attractions-1",
+                "EndpointID": "c8b8752c093f230a313c4ab21f9c502e4ab9eba5007fd00b969864e1be2ca334",
+                "MacAddress": "fa:d1:f0:7e:a9:f5",
+                "IPv4Address": "172.21.0.14/16",
+                "IPv6Address": ""
+            },
+            "2d0e680516ed5ead179fdcc2acd2804539f6e8c0c83fa35aa0a5e5fc247e3d88": {
+                "Name": "safe-change-deathstar-step15-review-1",
+                "EndpointID": "6a16d14120a1068d6ae2cb8c8cd2aea98e13dd3c4108235d4fd712b00e389e30",
+                "MacAddress": "ba:83:f1:9c:96:7c",
+                "IPv4Address": "172.21.0.20/16",
+                "IPv6Address": ""
+            },
+            "344200d532a143016cfe51c53816fed0556d81a6127bc25199437c4ee815ada2": {
+                "Name": "safe-change-deathstar-step15-mongodb-recommendation-1",
+                "EndpointID": "1757e3df0019897c5db01e012ce26222b4d7b884c3c31e10c4a0bc5e3b266521",
+                "MacAddress": "6a:b5:8c:06:47:0b",
+                "IPv4Address": "172.21.0.6/16",
+                "IPv6Address": ""
+            },
+            "437d1197801d62cfb37fd6d74ab9a1b701f37e0715247efef84555571ca1e7e3": {
+                "Name": "safe-change-deathstar-step15-mongodb-geo-1",
+                "EndpointID": "bd1511ae2a24bb693a582b12bb900f353385440866096979202bd18ee9a8469e",
+                "MacAddress": "32:fa:2f:fc:ab:c9",
+                "IPv4Address": "172.21.0.11/16",
+                "IPv6Address": ""
+            },
+            "4ffbbe17b3ccb4a1dcf96b234d66f09e7c7376a9c6c18621706c859e2df80b4c": {
+                "Name": "safe-change-deathstar-step15-search-1",
+                "EndpointID": "46d860b6308078fd2e5988d77a000f7a287987d20709f6bafc8bb4f76c85a4d1",
+                "MacAddress": "66:a8:09:ae:ea:31",
+                "IPv4Address": "172.21.0.21/16",
+                "IPv6Address": ""
+            },
+            "505c671039aea2dd9a1adda4ac8de41380732c4acc522e992eaedec5508a39fb": {
+                "Name": "safe-change-deathstar-step15-mongodb-user-1",
+                "EndpointID": "d8c779db2b06b7a90a62a453d79192d27636b2bd3b5e4ece90011213a938d627",
+                "MacAddress": "42:38:b7:89:14:17",
+                "IPv4Address": "172.21.0.9/16",
+                "IPv6Address": ""
+            },
+            "51b2cb7ff1cfc69c5e6218ef9072cc9b4fb796f3097687958378bc75e70364f5": {
+                "Name": "safe-change-deathstar-step15-consul-1",
+                "EndpointID": "9a59b0c08a855a1dd3b9bd46d46fcc6b70db5308f0caf48922f3021ab97271ab",
+                "MacAddress": "9a:bb:48:76:36:60",
+                "IPv4Address": "172.21.0.13/16",
+                "IPv6Address": ""
+            },
+            "5ae7a94ce3941b8c78818dccb7159da7f5a16761cc077d6e9d5141aa80a55c8b": {
+                "Name": "safe-change-step15-frontend-v2",
+                "EndpointID": "f0febedd87400c2d69e3ca9134279ca816a53eca43b7f4ae57328c8ea144fec5",
+                "MacAddress": "86:2e:78:35:06:04",
+                "IPv4Address": "172.21.0.25/16",
+                "IPv6Address": ""
+            },
+            "60941f29e41e5f08de267ee45d3c1935ebc602b5307bbd31b4f51ce6e3ef1e21": {
+                "Name": "safe-change-deathstar-step15-user-1",
+                "EndpointID": "047e2cd0c1be391c68f90861912d4b54196eb3d700123a8bb48b7c46775b1c25",
+                "MacAddress": "96:68:c5:21:b1:09",
+                "IPv4Address": "172.21.0.17/16",
+                "IPv6Address": ""
+            },
+            "64a56ce9214d5c1c4666c79fc13ae534f381076705de539cb5b121655f5e7276": {
+                "Name": "safe-change-deathstar-step15-recommendation-1",
+                "EndpointID": "f7dfa8db14bfd7f5c38cf79dff17aea0304d91c55f0356995ff6c040e0b810c6",
+                "MacAddress": "ee:d9:e3:6a:bb:ad",
+                "IPv4Address": "172.21.0.19/16",
+                "IPv6Address": ""
+            },
+            "70dbb44745ec4750e1df9290c348304ac921a0f22ee82210bcbe58f8231d214a": {
+                "Name": "safe-change-deathstar-step15-profile-1",
+                "EndpointID": "3fa8e259bcba28bb1be6ec60a2e34df8836614149bbee0785422e60513870932",
+                "MacAddress": "a6:e4:68:26:3b:16",
+                "IPv4Address": "172.21.0.24/16",
+                "IPv6Address": ""
+            },
+            "7b25fd0b126234fb28f49d07c31527871002bc06678b3cfffefb017b22d30603": {
+                "Name": "safe-change-deathstar-step15-reservation-1",
+                "EndpointID": "ac9608fd7759227961c1f8b3a94d4182aae6e75ae154e03127814597e5553555",
+                "MacAddress": "f2:42:b4:94:65:6b",
+                "IPv4Address": "172.21.0.23/16",
+                "IPv6Address": ""
+            },
+            "86a8a546797f5d7d247af9a620c9c3e17809dd0629e001bb7fc8d6873c5eb251": {
+                "Name": "safe-change-deathstar-step15-mongodb-reservation-1",
+                "EndpointID": "f03fab962ab434d8992eb08fb25bfcd01c6a0c60d696a06a44184bc01ada9943",
+                "MacAddress": "9a:d1:13:37:5b:35",
+                "IPv4Address": "172.21.0.12/16",
+                "IPv6Address": ""
+            },
+            "90029bd97d3de53ed24d7f76d3709340ea50445b95c23624202bd0655f8a537b": {
+                "Name": "safe-change-deathstar-step15-mongodb-profile-1",
+                "EndpointID": "30583df7ed3c6cf8e60be7ce21c73b969e27ad23ff840a11d076273cc49aa1f7",
+                "MacAddress": "be:f6:31:8c:ce:14",
+                "IPv4Address": "172.21.0.15/16",
+                "IPv6Address": ""
+            },
+            "b550931c50b91d0cbff90c7ffe169e80ee180c6858d8cc5f28f476df59cae6b0": {
+                "Name": "safe-change-deathstar-step15-geo-1",
+                "EndpointID": "5899b79b890f16a7735b73ea1f1de734a385808d7ff7b6d89b85baff00a634f3",
+                "MacAddress": "02:d4:ed:7e:ed:8c",
+                "IPv4Address": "172.21.0.16/16",
+                "IPv6Address": ""
+            },
+            "b5b35ab7706b8f5573f47e35cb766c27309fe088f25fe9e8ef5f6ce8c68a141a": {
+                "Name": "safe-change-deathstar-step15-memcached-rate-1",
+                "EndpointID": "48fb2610d969166557a06accac28a5871b56797a135465322ceb42c2d691b1f0",
+                "MacAddress": "42:04:0c:c8:14:af",
+                "IPv4Address": "172.21.0.2/16",
+                "IPv6Address": ""
+            },
+            "ea6dbcdfe070cf24d21dd7009e90b93e8b86641c5fecb3c736b0143455902db0": {
+                "Name": "safe-change-deathstar-step15-memcached-reserve-1",
+                "EndpointID": "559685934cde91cf451f377f019c94079d51310932beea9b0cd79686dbd54dcb",
+                "MacAddress": "46:5d:ce:36:e7:79",
+                "IPv4Address": "172.21.0.8/16",
+                "IPv6Address": ""
+            },
+            "f3e52fc2a070cc92c62e1674e4e348ace8e1bd5b8ae5d39c026e09b4f4766b90": {
+                "Name": "safe-change-deathstar-step15-mongodb-rate-1",
+                "EndpointID": "9776738f836bc950f85a63692f780a08512d1975e740b5181c8e4981a1a6b6fa",
+                "MacAddress": "66:4d:df:d3:9e:31",
+                "IPv4Address": "172.21.0.3/16",
+                "IPv6Address": ""
+            },
+            "f76c70247cceca064a6847159fa7976e20aa346343036e28a945d8ad2b1f6776": {
+                "Name": "safe-change-deathstar-step15-rate-1",
+                "EndpointID": "121c144015336dbd7f4eb559e473e44963f8ce7c8e1b513d7142eebfddd39db4",
+                "MacAddress": "fe:77:6f:9f:f8:ec",
+                "IPv4Address": "172.21.0.18/16",
+                "IPv6Address": ""
+            },
+            "fa4cd77db600950fd55ab52aec9539da4fa1d71847631768b5c76e6264611ffb": {
+                "Name": "safe-change-deathstar-step15-mongodb-review-1",
+                "EndpointID": "6d1f3c7c4a018146724d2bc58f5481c7f24aa1c97af57a71280be3b2637a42a6",
+                "MacAddress": "7a:ff:44:28:3f:f4",
+                "IPv4Address": "172.21.0.7/16",
+                "IPv6Address": ""
+            }
+        },
+        "Status": {
+            "IPAM": {
+                "Subnets": {
+                    "172.21.0.0/16": {
+                        "IPsInUse": 27,
+                        "DynamicIPsAvailable": 65509
+                    }
+                }
+            }
+        }
+    }
+]

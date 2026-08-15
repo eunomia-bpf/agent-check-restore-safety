@@ -1,0 +1,12 @@
+{"schema":1,"seq":1,"at_ns":1786807273580476948,"event":"source_clone_started","details":{}}
+{"schema":1,"seq":2,"at_ns":1786807275733956159,"event":"source_commits_verified","details":{"v1":"25ccc81c1f6a1e7fe4d6b726d6a310cd2b607fa9","v2":"6ecb09706140f8730b5385c08f1386c654c3c526"}}
+{"schema":1,"seq":3,"at_ns":1786807295248574012,"event":"images_built","details":{"v1":"sha256:3314100e4c5bb205e7ef058fd16a62f675937ed1d795cd56075770c2464ef18d","v2":"sha256:1c24ec238428e6f6319da3c7a4e16759ab6785b3d8ee258296121624b41e8e23","runtime":"sha256:6e2cd18fb37291e7c5fc772a9df9e11d5a108314fb2c09ec81f2b8300e73007e"}}
+{"schema":1,"seq":4,"at_ns":1786807299332035349,"event":"official_service_graph_started","details":{"project":"safe-change-deathstar-step15","frontend_scaled_to_zero":true}}
+{"schema":1,"seq":5,"at_ns":1786807308009884492,"event":"frontend_v1_ready","details":{}}
+{"schema":1,"seq":6,"at_ns":1786807309843109499,"event":"raw_retry_completed","details":{"deliveries":2,"commits":2,"mongo_rows":2}}
+{"schema":1,"seq":7,"at_ns":1786807311400627957,"event":"old_version_drain_sampled","details":{"known_result":false,"old_version_retained":true,"mongo_rows":1}}
+{"schema":1,"seq":8,"at_ns":1786807312740501309,"event":"proposed_old_response_lost","details":{"operation_id":"op-9e386660bd1441bde31aa4f9f88e4038304877eab9563a09fc20c1b0bc6b8c6a","phase":"unknown","commits":1}}
+{"schema":1,"seq":9,"at_ns":1786807313312059762,"event":"old_processes_removed","details":{}}
+{"schema":1,"seq":10,"at_ns":1786807314915939551,"event":"control_restarted","details":{"pid_before":"1782534","pid_after":"1783394"}}
+{"schema":1,"seq":11,"at_ns":1786807315199954965,"event":"old_operation_recovered_by_query","details":{"operation_id":"op-9e386660bd1441bde31aa4f9f88e4038304877eab9563a09fc20c1b0bc6b8c6a","redispatched":false}}
+{"schema":1,"seq":12,"at_ns":1786807347416578860,"event":"run_passed","details":{"history_sequence":9,"history_hash":"b0e8953b290f6915552e38d260ee8c7c92d9418742caac62ecb430d15b0e1bcd"}}
