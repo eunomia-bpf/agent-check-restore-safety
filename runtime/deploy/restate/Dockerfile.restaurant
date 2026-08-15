@@ -1,0 +1,20 @@
+ARG NODE_IMAGE
+FROM ${NODE_IMAGE} AS build
+
+WORKDIR /src
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY src/restaurant ./src/restaurant
+RUN ./node_modules/.bin/esbuild src/restaurant/server.ts \
+    --bundle --platform=node --target=es2020 --outfile=/out/server.js
+
+FROM ${NODE_IMAGE}
+ARG UPSTREAM_COMMIT
+LABEL org.opencontainers.image.source="https://github.com/restatedev/examples" \
+      org.opencontainers.image.revision="${UPSTREAM_COMMIT}" \
+      org.opencontainers.image.version="restaurant-only"
+WORKDIR /app
+COPY --from=build /out/server.js ./server.js
+COPY LICENSE.restate-examples /licenses/restate-examples-LICENSE
+EXPOSE 5050
+ENTRYPOINT ["node", "./server.js"]

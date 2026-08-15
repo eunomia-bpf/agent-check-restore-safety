@@ -1,0 +1,15 @@
+ARG WEBUI_NODE_IMAGE
+FROM ${WEBUI_NODE_IMAGE}
+
+ARG UPSTREAM_COMMIT
+LABEL org.opencontainers.image.source="https://github.com/restatedev/examples" \
+      org.opencontainers.image.revision="${UPSTREAM_COMMIT}"
+
+WORKDIR /app
+ENV PATH=/app/node_modules/.bin:$PATH
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . ./
+
+EXPOSE 3000
+CMD ["npm", "start"]

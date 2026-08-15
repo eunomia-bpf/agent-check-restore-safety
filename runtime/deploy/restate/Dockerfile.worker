@@ -1,0 +1,18 @@
+ARG NODE_IMAGE
+FROM ${NODE_IMAGE}
+
+ARG UPSTREAM_COMMIT
+ARG WORKER_VARIANT
+LABEL org.opencontainers.image.source="https://github.com/restatedev/examples" \
+      org.opencontainers.image.revision="${UPSTREAM_COMMIT}" \
+      org.opencontainers.image.version="${WORKER_VARIANT}"
+
+WORKDIR /usr/src/app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . ./
+RUN npm run build && npm prune --omit=dev
+
+ENV NODE_ENV=production
+EXPOSE 9080
+ENTRYPOINT ["node", "./dist/order-app/app.js"]

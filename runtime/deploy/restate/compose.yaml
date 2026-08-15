@@ -1,0 +1,240 @@
+services:
+  broker:
+    image: ${KAFKA_IMAGE}
+    environment:
+      KAFKA_BROKER_ID: "1"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NODE_ID: "1"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@broker:29093
+      KAFKA_LISTENERS: PLAINTEXT://broker:29092,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    networks: [application]
+    healthcheck:
+      test: [CMD-SHELL, "kafka-topics --bootstrap-server 127.0.0.1:9092 --list >/dev/null 2>&1"]
+      interval: 2s
+      timeout: 2s
+      retries: 60
+
+  init-kafka:
+    image: ${KAFKA_IMAGE}
+    depends_on:
+      broker:
+        condition: service_healthy
+    entrypoint: [bash, -ec]
+    command:
+      - |
+        kafka-topics --bootstrap-server broker:29092 --create --if-not-exists \
+          --topic driver-updates --replication-factor 1 --partitions 1
+        kafka-topics --bootstrap-server broker:29092 --list
+    networks: [application]
+    restart: "no"
+
+  jaeger:
+    image: ${JAEGER_IMAGE}
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - 127.0.0.1:${JAEGER_PORT}:16686
+    networks: [application]
+
+  payment:
+    image: ${SAFE_CHANGE_RUNTIME_IMAGE}
+    command:
+      - /usr/local/bin/payment
+      - -listen=0.0.0.0:8081
+      - -state=/state/payment.history
+      - -non-idempotent=true
+      - -hold-after-commit=${PAYMENT_HOLD_AFTER_COMMIT:-false}
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - payment-state:/state
+    networks: [effects]
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:8081/healthz]
+      interval: 1s
+      timeout: 1s
+      retries: 60
+
+  completion:
+    image: ${SAFE_CHANGE_RUNTIME_IMAGE}
+    command:
+      - /usr/local/bin/payment
+      - -listen=0.0.0.0:8081
+      - -state=/state/completion.history
+      - -reference-prefix=completion
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - completion-state:/state
+    networks: [effects]
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:8081/healthz]
+      interval: 1s
+      timeout: 1s
+      retries: 60
+
+  control:
+    image: ${SAFE_CHANGE_RUNTIME_IMAGE}
+    command:
+      - /usr/local/bin/control
+      - -listen=0.0.0.0:8787
+      - -allow-nonloopback=true
+      - -history=/state/runtime.history
+      - -head-anchor=/anchor/runtime.head
+      - -admin-token-file=/state/admin-token
+      - -operation-token-file=/operation-token/token
+      - -operation-domain=restate-order-workflow
+      - -operation-kinds=charge-v1,finish
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - control-state:/state
+      - control-anchor:/anchor
+      - operation-token:/operation-token
+    networks: [admin, control, effects]
+    ports:
+      - 127.0.0.1:${CONTROL_PORT}:8787
+    depends_on:
+      completion:
+        condition: service_healthy
+      payment:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:8787/healthz]
+      interval: 1s
+      timeout: 1s
+      retries: 60
+
+  restaurant-pos:
+    image: ${RESTAURANT_IMAGE}
+    environment:
+      RESTATE_RUNTIME_ENDPOINT: http://restate:8080
+    init: true
+    networks: [application]
+    healthcheck:
+      test: [CMD, node, -e, "const s=require('net').connect(5050,'127.0.0.1');s.on('connect',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))"]
+      interval: 1s
+      timeout: 1s
+      retries: 60
+
+  order-v1:
+    image: ${ORDER_V1_IMAGE}
+    environment: &order-environment
+      RESTATE_DEBUG_LOGGING: JOURNAL
+      RESTAURANT_ENDPOINT: http://restaurant-pos:5050
+      KAFKA_BOOTSTRAP_SERVERS: broker:29092
+      SAFE_CHANGE_CONTROL_URL: http://control:8787
+      SAFE_CHANGE_PAYMENT_KIND: charge-v1
+      SAFE_CHANGE_PAYMENT_TARGET: http://payment:8081/v1/charge
+      SAFE_CHANGE_FINISH_KIND: finish
+      SAFE_CHANGE_FINISH_TARGET: http://completion:8081/v1/complete
+      SAFE_CHANGE_OPERATION_TOKEN_FILE: /operation-token/token
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - operation-token:/operation-token:ro
+    networks: [application, control]
+    depends_on:
+      broker:
+        condition: service_healthy
+      control:
+        condition: service_healthy
+      restaurant-pos:
+        condition: service_healthy
+    healthcheck: &worker-healthcheck
+      test: [CMD, node, -e, "const s=require('net').connect(9080,'127.0.0.1');s.on('connect',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))"]
+      interval: 1s
+      timeout: 1s
+      retries: 60
+
+  order-v2:
+    image: ${ORDER_V2_IMAGE}
+    profiles: [target]
+    environment: *order-environment
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - operation-token:/operation-token:ro
+    networks: [application, control]
+    depends_on:
+      broker:
+        condition: service_healthy
+      control:
+        condition: service_healthy
+      restaurant-pos:
+        condition: service_healthy
+    healthcheck: *worker-healthcheck
+
+  restate:
+    image: ${RESTATE_SERVER_IMAGE}
+    environment:
+      RESTATE_CONFIG: /restate.toml
+    volumes:
+      - ./restate.toml:/restate.toml:ro
+      - restate-data:/restate-data
+    ports:
+      - 127.0.0.1:${RESTATE_INGRESS_PORT}:8080
+      - 127.0.0.1:${RESTATE_ADMIN_PORT}:9070
+    networks: [application]
+    depends_on:
+      init-kafka:
+        condition: service_completed_successfully
+      order-v1:
+        condition: service_healthy
+      restaurant-pos:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+
+  webui:
+    image: ${WEBUI_IMAGE}
+    environment:
+      REACT_APP_RESTATE_HOST: http://localhost:${RESTATE_INGRESS_PORT}
+      BROWSER: none
+    ports:
+      - 127.0.0.1:${WEBUI_PORT}:3000
+    networks: [application]
+    depends_on:
+      restate:
+        condition: service_started
+
+networks:
+  admin: {}
+  application: {}
+  control:
+    internal: true
+  effects:
+    internal: true
+
+volumes:
+  completion-state: {}
+  control-anchor: {}
+  control-state: {}
+  payment-state: {}
+  operation-token: {}
+  restate-data: {}
