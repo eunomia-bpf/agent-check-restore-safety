@@ -12,6 +12,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -69,7 +70,18 @@ func (c commonFlags) client(factory clientFactory) (controlAPI, error) {
 	if err != nil {
 		return nil, fmt.Errorf("admin token: %w", err)
 	}
-	return factory(c.controlURL, token, &http.Client{Timeout: c.timeout})
+	return factory(c.controlURL, token, directHTTPClient(c.timeout))
+}
+
+func directHTTPClient(timeout time.Duration) *http.Client {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	// The admin credential is scoped to one control API. Never route it through
+	// an ambient HTTP_PROXY inherited from the operator's shell.
+	transport.Proxy = nil
+	transport.DialContext = (&net.Dialer{Timeout: 5 * time.Second, KeepAlive: 30 * time.Second}).DialContext
+	transport.TLSHandshakeTimeout = 5 * time.Second
+	transport.ResponseHeaderTimeout = timeout
+	return &http.Client{Transport: transport, Timeout: timeout}
 }
 
 type planOutput struct {

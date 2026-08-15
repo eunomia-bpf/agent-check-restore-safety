@@ -1,4 +1,4 @@
-.PHONY: runtime-build runtime-test runtime-certcheck runtime-demo runtime-microservice-demo runtime-vm-demo runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
+.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-demo runtime-microservice-demo runtime-vm-demo runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
 
 VM_ACCEL ?= tcg
 CODEX_ISOLATED_EVIDENCE ?= docs/tmp/bootstrap/step-0013-20260815T124944Z
@@ -19,6 +19,8 @@ runtime-demo:
 	cd runtime && go run ./cmd/demo \
 		-history "$$runtime_demo_dir/runtime.history" \
 		-sink "$$runtime_demo_dir/payment.history"
+
+safe-change-demo: runtime-microservice-demo
 
 runtime-microservice-demo:
 	bash runtime/deploy/microservice/run.sh

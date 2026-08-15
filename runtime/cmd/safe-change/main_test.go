@@ -122,6 +122,10 @@ func factoryFor(t *testing.T, expectedToken string, client *fakeControlAPI) clie
 		if httpClient.Timeout == 0 {
 			t.Fatal("HTTP timeout is absent")
 		}
+		transport, ok := httpClient.Transport.(*http.Transport)
+		if !ok || transport.Proxy != nil || transport.DialContext == nil {
+			t.Fatalf("unsafe HTTP transport = %#v", httpClient.Transport)
+		}
 		return client, nil
 	}
 }

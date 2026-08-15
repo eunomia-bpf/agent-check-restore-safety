@@ -1,8 +1,36 @@
-# Runtime: cross-domain system
+# Runtime: protect live changes after external effects
 
-This directory contains a runnable control layer for changing live systems
-after external operations may already have happened. It crosses process,
-container, network, durability, and full-VM restore boundaries.
+This directory contains a runnable control layer for replacing or restoring
+software after a payment, message, or other external effect may already have
+happened. Business services use a small HTTP interface; operators keep the
+credentials, provider addresses, and change approval path outside those
+services.
+
+## Try the end-to-end service demo
+
+On a Linux host with Docker Compose v2, `make`, `curl`, `jq`, and Python 3,
+run this from the repository root:
+
+```sh
+make runtime-microservice-demo
+```
+
+The command builds the runtime image, starts six hardened service containers,
+changes an order service from v1 to v2, restarts the control process, and checks
+the result. It also checks that the order service has no adapter token, admin
+token, or real payment address, and cannot connect directly to the control or
+payment service. A successful run reports three payment deliveries, two durable
+commits, and successful completion of both the old and new orders.
+
+To keep the run data after the containers stop:
+
+```sh
+KEEP_STATE=1 make runtime-microservice-demo
+```
+
+The script prints the retained directory. Inspect the JSON records in its
+`results/` directory. Treat the complete retained directory as private because
+it also contains the credentials generated for that run.
 
 The only five core terms are:
 
@@ -17,10 +45,30 @@ The only five core terms are:
 - **Certificate**: history-bound evidence for activating a Rule or for reporting
   that no Rule exists in the declared model.
 
-## Protect an existing HTTP effect
+## Add it to an HTTP service
 
-The reusable path requires no workflow-engine plugin. Build the two operator
-tools:
+The business-service integration requires no workflow-engine plugin or SDK. It
+sends only:
+
+- a stable business call ID;
+- a logical route name; and
+- the business payload.
+
+For example:
+
+```sh
+curl -X POST http://127.0.0.1:8788/v1/effects/payment \
+  -H 'X-Safe-Change-Call-ID: order/A-17/payment' \
+  -H 'Content-Type: application/json' \
+  --data '{"order_id":"A-17","amount":42}'
+```
+
+The call ID must identify the same business action across retries; do not add
+an attempt number. The business service needs the proxy address and logical
+route, but no adapter token, admin token, operation kind, or real provider
+address.
+
+Build the operator tools:
 
 ```sh
 cd runtime
@@ -67,8 +115,9 @@ safe-change apply \
   -certificate certificate.json
 ```
 
-Do not give the workload the adapter token or the payment address. Put both in
-an operator-owned route file and run the proxy beside the workload:
+Put the adapter token and exact provider address behind the business service.
+The operator-owned route file maps each allowed logical route to the operation
+declared in the Requirement:
 
 ```json
 {
@@ -91,22 +140,11 @@ effect-proxy \
   -config routes.json
 ```
 
-Application code now sends only a stable logical call ID and its business
-payload:
-
-```sh
-curl -X POST http://127.0.0.1:8788/v1/effects/payment \
-  -H 'X-Safe-Change-Call-ID: order/A-17/payment' \
-  -H 'Content-Type: application/json' \
-  --data '{"order_id":"A-17","amount":42}'
-```
-
-The call ID must identify the same business action across retries and must not
-contain an attempt number. The proxy makes one control call, never accepts a
-caller-selected target, forwards no caller credentials, and returns `409` when
-an external outcome is not safely settled. In a container deployment, place
-the workload, proxy, control, and effect on successive isolated networks so
-each process can reach only its next hop.
+The proxy accepts only configured routes, never accepts a caller-selected
+target, forwards no caller credentials, and returns `409` while an external
+outcome is not safely settled. In a container deployment, place the business
+service, proxy, control, and provider on isolated networks so each process can
+reach only the component it needs.
 
 ## Reproduce the current result
 
@@ -145,39 +183,50 @@ The same run also shows that:
 
 ## Replace a real service process
 
-`make runtime-microservice-demo` builds and runs four separate containers:
+`make runtime-microservice-demo` runs six long-lived containers plus the
+`safe-change` CLI in short-lived one-shot containers:
 
-- an order service with one process-wide release file and no old-state
-  conversion code;
-- the durable control service;
-- an independently durable payment service; and
-- a fixed ingress that exposes order and administration without opening the
-  internal service network.
+- `order-ingress` and `order` receive business requests;
+- `effect-proxy` converts a stable call ID, logical route, and payload into a
+  control request;
+- `control` records progress and is the only component that can reach
+  `payment`;
+- `payment` keeps its own durable commit record; and
+- `control-ingress` gives the operator a separate path to `control`.
 
-The order service and payment service share no Docker network. Only control
-can reach payment. Both service networks are marked internal, every container
-runs as the invoking host UID/GID with a read-only root filesystem, all Linux
-capabilities removed, and `no-new-privileges` enabled.
+The business path is `order-ingress` to `order` to `effect-proxy` to `control`
+to `payment`. Separate internal Docker networks enforce every boundary:
+`order` shares no network with `control` or `payment`, and `effect-proxy`
+shares no network with `payment`. The short-lived CLI joins only the control
+network when it plans or applies a change.
+
+The `order` container mounts only its release configuration. That configuration
+contains the proxy address and route name, but no adapter token, admin token,
+operation kind, or payment address. All six containers run as the invoking host
+UID/GID with read-only root filesystems, all Linux capabilities removed, and
+`no-new-privileges` enabled.
 
 The executable scenario performs these steps:
 
-1. Start release v1 and activate a Requirement containing only `charge-v1`.
+1. Start release v1, then use `safe-change plan` and `safe-change apply` to
+   activate its Requirement.
 2. Submit order A-17. Payment syncs one commit, then closes the connection
    before returning a receipt, leaving its Operation `unknown`.
-3. Activate a new Requirement containing only `charge-v2`, replace the entire
-   order container with a release file containing only the v2 kind and target,
-   and restart the control process.
-4. Submit A-17 through the changed process. Its stable call identity finds the
-   existing Operation in History, so control uses its frozen v1 kind and target
-   while still requiring the request body to match.
+3. Plan and apply the v2 Requirement, replace the proxy route and entire order
+   container, and restart the control process.
+4. Submit A-17 through the changed process. Its stable call ID finds the
+   existing Operation in History, so control completes it with the v1 operation
+   details while still requiring the request body to match.
 5. Submit a new order B-18, which uses v2, and verify that the order container
-   cannot connect directly to payment.
+   has no protected credentials or provider address and cannot connect directly
+   to control or payment.
 
 The checked result is three network deliveries but two durable payment
 commits: two v1 deliveries for A-17 and one v2 delivery for B-18. History ends
-with both Operations succeeded. Set `KEEP_DEMO=1` to leave the containers and
-temporary evidence running, or `KEEP_STATE=1` to retain only the evidence
-directory printed by the script.
+with both Operations succeeded. Use `KEEP_STATE=1` to stop the containers but
+retain the state and JSON results in the directory printed by the script. Use
+`KEEP_DEMO=1` only when you want to leave both the containers and state running
+for interactive inspection.
 
 ## Keep a real Codex call alive across control replacement
 

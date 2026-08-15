@@ -1,9 +1,24 @@
 # Safe change after external operations
 
-This repository is evolving from an exact Agent-history checker into a real
-runtime for changing live systems after they have interacted with the outside
-world. The long-term target is one control layer for Agent runtimes, complete
-Linux virtual machines, and microservices.
+Change a live service without letting an interrupted external operation run
+twice or silently move to the new destination. Try the current end-to-end
+prototype with one command:
+
+```sh
+make safe-change-demo
+```
+
+The demo starts an order service whose payment commits while its response is
+lost, activates a new release, replaces the order service and effect proxy, and
+restarts the control service. Retrying the interrupted order completes against
+its original payment operation; a new order uses the new release. The order
+service submits only a stable call ID, the logical `payment` route, and its
+payload. It holds neither an operation token nor a physical payment target.
+
+This repository is evolving from an exact Agent-history checker into a common
+control layer for changing Agent runtimes, complete Linux virtual machines, and
+microservices after they have interacted with the outside world. It is a
+runnable research prototype, not a production-ready system.
 
 The current runnable slice is under [`runtime/`](runtime/). It already uses a
 durable execution record, a restore-domain-external head anchor, stable external
@@ -12,7 +27,7 @@ gateway with a strict receipt contract. The existing Python and Lean artifacts
 remain the reference semantics and proof base; they are not presented as a
 production runtime.
 
-Run the current system evidence:
+Run the broader system and research evidence:
 
 ```sh
 make runtime-build
@@ -31,10 +46,11 @@ make runtime-deathstar-check
 make runtime-verify
 ```
 
-The multi-service demo builds separate order, control, payment, and fixed
-ingress containers. It changes and replaces the order process after a payment
-has committed but its response was lost. Docker network separation prevents
-the order process from reaching payment directly; the durable control path
+The multi-service demo runs order, effect-proxy, control, and payment containers,
+separate order and control ingress containers, and short-lived `safe-change`
+CLI jobs. It changes and replaces the order process after a payment has
+committed but its response was lost. Docker network separation prevents both
+order and effect-proxy from reaching payment directly; the durable control path
 finishes the old order and sends a new order to the new payment endpoint.
 
 The VM demo boots a checksum-pinned Ubuntu 24.04 cloud image under QEMU, saves

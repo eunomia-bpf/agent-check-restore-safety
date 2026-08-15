@@ -25,18 +25,14 @@ func main() {
 	flag.StringVar(&controlURL, "control", "http://127.0.0.1:8787", "control service URL")
 	flag.StringVar(&tokenPath, "operation-token-file", "", "path to the Operation API token")
 	flag.Parse()
-	if configPath == "" || tokenPath == "" {
-		log.Fatal("-release and -operation-token-file are required")
+	if configPath == "" {
+		log.Fatal("-release is required")
 	}
 	config, err := order.LoadConfig(configPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	tokenBytes, err := os.ReadFile(tokenPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	service, err := order.New(config, controlURL, strings.TrimSpace(string(tokenBytes)), nil)
+	service, err := serviceForRelease(config, controlURL, tokenPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -56,4 +52,21 @@ func main() {
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
+}
+
+func serviceForRelease(config order.Config, controlURL, tokenPath string) (*order.Service, error) {
+	if config.UsesEffectProxy() {
+		if tokenPath != "" {
+			return nil, errors.New("-operation-token-file must not be set for a proxy release")
+		}
+		return order.NewProxy(config, nil)
+	}
+	if tokenPath == "" {
+		return nil, errors.New("-operation-token-file is required for a legacy release")
+	}
+	tokenBytes, err := os.ReadFile(tokenPath)
+	if err != nil {
+		return nil, err
+	}
+	return order.New(config, controlURL, strings.TrimSpace(string(tokenBytes)), nil)
 }
