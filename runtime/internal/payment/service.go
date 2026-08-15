@@ -37,17 +37,50 @@ type Stats struct {
 	Paths      map[string]int `json:"paths"`
 }
 
+// Options keeps the default service idempotent while making provider behavior
+// and fault timing explicit for experiments. At most one fault mode can be
+// selected. The hold modes publish their progress through the existing Stats
+// counters, release the service lock, and wait until the client connection is
+// canceled without writing an HTTP response.
+type Options struct {
+	DropFirstResponse      bool
+	AlwaysDropBeforeCommit bool
+	HoldBeforeCommit       bool
+	HoldAfterCommit        bool
+	NonIdempotent          bool
+}
+
 type Service struct {
-	mu         sync.Mutex
-	file       *os.File
-	records    map[string]record
-	paths      map[string]int
-	deliveries int
-	dropNext   bool
-	closed     bool
+	mu               sync.Mutex
+	file             *os.File
+	records          map[string][]record
+	paths            map[string]int
+	deliveries       int
+	dropNext         bool
+	dropBeforeCommit bool
+	holdBeforeCommit bool
+	holdAfterCommit  bool
+	nonIdempotent    bool
+	closed           bool
 }
 
 func Open(path string, dropFirstResponse bool) (*Service, error) {
+	return OpenWithOptions(path, Options{DropFirstResponse: dropFirstResponse})
+}
+
+func OpenWithOptions(path string, options Options) (*Service, error) {
+	faultModes := 0
+	for _, enabled := range []bool{
+		options.DropFirstResponse, options.AlwaysDropBeforeCommit,
+		options.HoldBeforeCommit, options.HoldAfterCommit,
+	} {
+		if enabled {
+			faultModes++
+		}
+	}
+	if faultModes > 1 {
+		return nil, errors.New("payment response-loss modes are mutually exclusive")
+	}
 	_, statErr := os.Stat(path)
 	created := errors.Is(statErr, os.ErrNotExist)
 	if statErr != nil && !created {
@@ -89,7 +122,7 @@ func Open(path string, dropFirstResponse bool) (*Service, error) {
 		return fail(err)
 	}
 	service := &Service{
-		file: file, records: make(map[string]record), paths: make(map[string]int),
+		file: file, records: make(map[string][]record), paths: make(map[string]int),
 	}
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -100,13 +133,12 @@ func Open(path string, dropFirstResponse bool) (*Service, error) {
 		if err := validateRecord(item); err != nil {
 			return fail(fmt.Errorf("invalid payment state: %w", err))
 		}
-		if prior, ok := service.records[item.OperationID]; ok {
-			if prior != item {
+		if prior := service.records[item.OperationID]; len(prior) > 0 {
+			if prior[0].RequestHash != item.RequestHash || prior[0].Path != item.Path {
 				return fail(fmt.Errorf("conflicting durable payment identity %q", item.OperationID))
 			}
-			continue
 		}
-		service.records[item.OperationID] = item
+		service.records[item.OperationID] = append(service.records[item.OperationID], item)
 	}
 	if err := scanner.Err(); err != nil {
 		return fail(err)
@@ -114,7 +146,11 @@ func Open(path string, dropFirstResponse bool) (*Service, error) {
 	if _, err := file.Seek(0, io.SeekEnd); err != nil {
 		return fail(err)
 	}
-	service.dropNext = dropFirstResponse && len(service.records) == 0
+	service.dropNext = options.DropFirstResponse && len(service.records) == 0
+	service.dropBeforeCommit = options.AlwaysDropBeforeCommit
+	service.holdBeforeCommit = options.HoldBeforeCommit
+	service.holdAfterCommit = options.HoldAfterCommit
+	service.nonIdempotent = options.NonIdempotent
 	return service, nil
 }
 
@@ -172,7 +208,11 @@ func (s *Service) Stats() Stats {
 	for path, count := range s.paths {
 		paths[path] = count
 	}
-	return Stats{Deliveries: s.deliveries, Commits: len(s.records), Paths: paths}
+	commits := 0
+	for _, items := range s.records {
+		commits += len(items)
+	}
+	return Stats{Deliveries: s.deliveries, Commits: commits, Paths: paths}
 }
 
 func (s *Service) Handler() http.Handler {
@@ -185,6 +225,7 @@ func (s *Service) Handler() http.Handler {
 	})
 	mux.HandleFunc("POST /v1/charge", s.charge)
 	mux.HandleFunc("POST /v2/charge", s.charge)
+	mux.HandleFunc("POST /v1/query", s.observe)
 	return mux
 }
 
@@ -206,57 +247,170 @@ func (s *Service) charge(writer http.ResponseWriter, request *http.Request) {
 	requestHash := hashRequest(request.Method, request.URL.Path, body)
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	if s.closed {
+		s.mu.Unlock()
 		writeError(writer, http.StatusServiceUnavailable, errors.New("payment service is closed"))
 		return
 	}
 	s.deliveries++
 	s.paths[request.URL.Path]++
-	item, exists := s.records[id]
-	if exists && item.RequestHash != requestHash {
+	items := s.records[id]
+	if len(items) > 0 && (items[0].RequestHash != requestHash || items[0].Path != request.URL.Path) {
+		s.mu.Unlock()
 		writeError(writer, http.StatusConflict, errors.New("Operation identity is bound to different payment work"))
 		return
 	}
-	if !exists {
-		result := sha256.Sum256([]byte("charged\x00" + id))
-		item = record{
-			OperationID: id, RequestHash: requestHash,
-			ResultHash:      hex.EncodeToString(result[:]),
-			RemoteReference: "payment/" + id, Path: request.URL.Path,
+	willCommit := len(items) == 0 || s.nonIdempotent
+	if willCommit && (s.dropBeforeCommit || s.holdBeforeCommit) {
+		drop := s.dropBeforeCommit
+		s.mu.Unlock()
+		if drop {
+			if err := dropResponse(writer); err != nil {
+				writeError(writer, http.StatusInternalServerError, err)
+			}
+		} else {
+			holdUntilCanceled(request)
 		}
+		return
+	}
+
+	var item record
+	drop := false
+	hold := false
+	if willCommit {
+		item = newRecord(id, requestHash, request.URL.Path, len(items)+1, s.nonIdempotent)
 		encoded, err := json.Marshal(item)
 		if err != nil {
+			s.mu.Unlock()
 			writeError(writer, http.StatusInternalServerError, err)
 			return
 		}
 		if _, err := s.file.Write(append(encoded, '\n')); err != nil {
+			s.mu.Unlock()
 			writeError(writer, http.StatusInternalServerError, err)
 			return
 		}
 		if err := s.file.Sync(); err != nil {
+			s.mu.Unlock()
 			writeError(writer, http.StatusInternalServerError, err)
 			return
 		}
-		s.records[id] = item
-		if s.dropNext {
+		s.records[id] = append(items, item)
+		drop = s.dropNext
+		if drop {
 			s.dropNext = false
-			hijacker, ok := writer.(http.Hijacker)
-			if !ok {
-				writeError(writer, http.StatusInternalServerError, errors.New("response loss injection requires an HTTP connection"))
-				return
-			}
-			connection, _, err := hijacker.Hijack()
-			if err == nil {
-				_ = connection.Close()
-			}
-			return
 		}
+		hold = s.holdAfterCommit
+	} else {
+		item = items[0]
+	}
+	s.mu.Unlock()
+	if hold {
+		holdUntilCanceled(request)
+		return
+	}
+	if drop {
+		if err := dropResponse(writer); err != nil {
+			writeError(writer, http.StatusInternalServerError, err)
+		}
+		return
 	}
 	writeJSON(writer, http.StatusOK, map[string]any{
 		"schema": 1, "operation_id": id, "outcome": kernel.Succeeded,
 		"result_hash": item.ResultHash, "remote_reference": item.RemoteReference,
 	})
+}
+
+func (s *Service) observe(writer http.ResponseWriter, request *http.Request) {
+	body, err := io.ReadAll(io.LimitReader(request.Body, maxRequestBytes+1))
+	if err != nil {
+		writeError(writer, http.StatusBadRequest, err)
+		return
+	}
+	if len(body) > maxRequestBytes {
+		writeError(writer, http.StatusRequestEntityTooLarge, errors.New("payment observation request exceeds size limit"))
+		return
+	}
+	id := request.Header.Get("X-Operation-ID")
+	requestHash := request.Header.Get("X-Operation-Request-Hash")
+	if id == "" || len(id) > 1024 {
+		writeError(writer, http.StatusBadRequest, errors.New("valid Operation identity is required"))
+		return
+	}
+	if !validDigest(requestHash) {
+		writeError(writer, http.StatusBadRequest, errors.New("valid Operation request hash is required"))
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		writeError(writer, http.StatusServiceUnavailable, errors.New("payment service is closed"))
+		return
+	}
+	items := s.records[id]
+	// The observer receives the exact stored effect body from the gateway. The
+	// durable record freezes the original effect path, so hashing that path and
+	// this body checks both the Operation identity and its complete work.
+	if len(items) > 0 && hashRequest(http.MethodPost, items[0].Path, body) != items[0].RequestHash {
+		writeError(writer, http.StatusConflict, errors.New("Operation observation body does not match durable payment work"))
+		return
+	}
+	observation := operationObservationV1{
+		Schema: 1, OperationID: id, RequestHash: requestHash,
+		Outcome: "inconclusive", FactHash: "",
+		RemoteReference: fmt.Sprintf("payment/%s/count=%d", id, len(items)),
+	}
+	if len(items) == 1 {
+		observation.Outcome = string(kernel.Succeeded)
+		observation.FactHash = items[0].ResultHash
+		observation.RemoteReference = items[0].RemoteReference
+	}
+	writeJSON(writer, http.StatusOK, observation)
+}
+
+type operationObservationV1 struct {
+	Schema          int    `json:"schema"`
+	OperationID     string `json:"operation_id"`
+	RequestHash     string `json:"request_hash"`
+	Outcome         string `json:"outcome"`
+	FactHash        string `json:"fact_hash"`
+	RemoteReference string `json:"remote_reference"`
+}
+
+func newRecord(id, requestHash, path string, instance int, nonIdempotent bool) record {
+	resultInput := "charged\x00" + id
+	remoteReference := "payment/" + id
+	if nonIdempotent {
+		resultInput = fmt.Sprintf("charged\x00%s\x00%d", id, instance)
+		remoteReference = fmt.Sprintf("payment/%s/commit-%d", id, instance)
+	}
+	result := sha256.Sum256([]byte(resultInput))
+	return record{
+		OperationID: id, RequestHash: requestHash,
+		ResultHash: hex.EncodeToString(result[:]), RemoteReference: remoteReference, Path: path,
+	}
+}
+
+func holdUntilCanceled(request *http.Request) {
+	<-request.Context().Done()
+}
+
+func dropResponse(writer http.ResponseWriter) error {
+	hijacker, ok := writer.(http.Hijacker)
+	if !ok {
+		return errors.New("response loss injection requires an HTTP connection")
+	}
+	connection, _, err := hijacker.Hijack()
+	if err != nil {
+		return fmt.Errorf("inject response loss: %w", err)
+	}
+	return connection.Close()
+}
+
+func validDigest(value string) bool {
+	decoded, err := hex.DecodeString(value)
+	return err == nil && len(decoded) == sha256.Size && hex.EncodeToString(decoded) == value
 }
 
 func hashRequest(method, path string, body []byte) string {

@@ -1,0 +1,72 @@
+diff --git a/typescript/end-to-end-applications/food-ordering/app/src/order-app/clients/payment_client.ts b/typescript/end-to-end-applications/food-ordering/app/src/order-app/clients/payment_client.ts
+index 1bf0121..f701ded 100644
+--- a/typescript/end-to-end-applications/food-ordering/app/src/order-app/clients/payment_client.ts
++++ b/typescript/end-to-end-applications/food-ordering/app/src/order-app/clients/payment_client.ts
+@@ -12 +12,34 @@
++import axios from "axios";
++import { readFileSync } from "node:fs";
++
++type RuntimeOutcome = {
++  phase: string;
++  body?: string;
++};
++
++type OperationReceipt = {
++  schema: number;
++  outcome: string;
++};
++
++function requiredEnvironment(name: string): string {
++  const value = process.env[name];
++  if (value === undefined || value.length === 0) {
++    throw new Error(`Missing required environment variable ${name}`);
++  }
++  return value;
++}
++
++const CONTROL_URL = requiredEnvironment("SAFE_CHANGE_CONTROL_URL").replace(/\/+$/, "");
++const PAYMENT_KIND = requiredEnvironment("SAFE_CHANGE_PAYMENT_KIND");
++const PAYMENT_TARGET = requiredEnvironment("SAFE_CHANGE_PAYMENT_TARGET");
++const OPERATION_TOKEN = readFileSync(
++  requiredEnvironment("SAFE_CHANGE_OPERATION_TOKEN_FILE"),
++  "utf8",
++).trim();
++
++if (OPERATION_TOKEN.length < 32) {
++  throw new Error("Operation token must contain at least 32 bytes");
++}
++
+ class PaymentClient {
+@@ -26,3 +59,31 @@ class PaymentClient {
+     console.info(`[${id}] Executing payment with token ${token} for $${amount}`);
+-    // do the call
++    const paymentBody = Buffer.from(JSON.stringify({ order_id: id, amount }), "utf8");
++    const response = await axios.post<RuntimeOutcome>(
++      `${CONTROL_URL}/v1/execute`,
++      {
++        // token comes from ctx.rand.uuidv4() in the unmodified workflow. It is
++        // therefore the stable call identity across Restate retries.
++        call_id: token,
++        kind: PAYMENT_KIND,
++        method: "POST",
++        url: PAYMENT_TARGET,
++        body: paymentBody.toString("base64"),
++      },
++      {
++        headers: {
++          Authorization: `Bearer ${OPERATION_TOKEN}`,
++          "Content-Type": "application/json",
++        },
++        timeout: 0,
++      },
++    );
++    if (response.data.phase !== "succeeded" || typeof response.data.body !== "string") {
++      throw new Error(`Runtime returned payment phase ${response.data.phase}`);
++    }
++    const receipt = JSON.parse(
++      Buffer.from(response.data.body, "base64").toString("utf8"),
++    ) as OperationReceipt;
++    if (receipt.schema !== 1 || receipt.outcome !== "succeeded") {
++      throw new Error("Runtime returned an invalid payment receipt");
++    }
+     return true;
