@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1.7
+
+ARG GO_IMAGE
+ARG RUNTIME_IMAGE
+FROM ${GO_IMAGE} AS build
+
+WORKDIR /src/runtime
+COPY runtime/go.mod runtime/go.sum ./
+RUN go mod download
+COPY runtime/cmd/payment/ ./cmd/payment/
+COPY runtime/internal/kernel/ ./internal/kernel/
+COPY runtime/internal/payment/ ./internal/payment/
+RUN CGO_ENABLED=0 go build -trimpath -o /out/payment ./cmd/payment
+
+FROM ${RUNTIME_IMAGE}
+
+ARG GIT_REVISION
+ARG RUNTIME_SOURCE_SHA256
+ARG GO_IMAGE
+ARG RUNTIME_IMAGE
+LABEL org.opencontainers.image.title="safe-change non-idempotent effects service" \
+      org.opencontainers.image.source="https://github.com/eunomia-bpf/agent-check-restore-safety" \
+      org.opencontainers.image.revision="${GIT_REVISION}" \
+      org.opencontainers.image.base.name="${RUNTIME_IMAGE}" \
+      io.safe-change.source.sha256="${RUNTIME_SOURCE_SHA256}" \
+      io.safe-change.runtime.source.sha256="${RUNTIME_SOURCE_SHA256}" \
+      io.safe-change.build.target="effects" \
+      io.safe-change.builder.base="${GO_IMAGE}"
+COPY --from=build --chmod=0555 /out/payment /usr/local/bin/payment
+USER 65532:65532
+ENTRYPOINT ["/usr/local/bin/payment"]

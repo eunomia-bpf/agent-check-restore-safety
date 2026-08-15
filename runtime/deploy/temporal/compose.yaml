@@ -1,0 +1,136 @@
+services:
+  temporal:
+    image: ${TEMPORAL_IMAGE}
+    command:
+      - server
+      - start-dev
+      - --headless
+      - --ip=0.0.0.0
+      - --port=7233
+      - --db-filename=/state/temporal.db
+      - --dynamic-config-value=frontend.WorkflowPauseEnabled=true
+      - --log-level=warn
+    environment:
+      HOME: /tmp
+      USER: temporal
+    user: ${DEMO_UID}:${DEMO_GID}
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - type: bind
+        source: ${TEMPORAL_STATE_DIR}
+        target: /state
+    networks: [control]
+    healthcheck:
+      test: [CMD, temporal, operator, cluster, health, --address, 127.0.0.1:7233]
+      interval: 1s
+      timeout: 2s
+      retries: 120
+
+  payment:
+    image: ${EFFECTS_ID}
+    command:
+      - -listen=0.0.0.0:8081
+      - -state=/state/payment.history
+      - -hold-before-commit=${PAYMENT_HOLD_BEFORE_COMMIT}
+      - -hold-after-commit=${PAYMENT_HOLD_AFTER_COMMIT}
+      - -non-idempotent=true
+      - -reference-prefix=temporal-payment
+    user: ${DEMO_UID}:${DEMO_GID}
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - type: bind
+        source: ${PAYMENT_STATE_DIR}
+        target: /state
+    networks: [effects]
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:8081/healthz]
+      interval: 1s
+      timeout: 1s
+      retries: 120
+
+  completion:
+    image: ${EFFECTS_ID}
+    command:
+      - -listen=0.0.0.0:8081
+      - -state=/state/completion.history
+      - -non-idempotent=true
+      - -reference-prefix=temporal-completion
+    user: ${DEMO_UID}:${DEMO_GID}
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - type: bind
+        source: ${COMPLETION_STATE_DIR}
+        target: /state
+    networks: [effects]
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:8081/healthz]
+      interval: 1s
+      timeout: 1s
+      retries: 120
+
+  worker-v1:
+    image: ${WORKER_V1_ID}
+    environment:
+      HOME: /tmp
+      TEMPORAL_ADDRESS: temporal:7233
+      PAYMENT_URL: http://payment:8081
+      COMPLETION_URL: http://completion:8081
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    networks: [control, effects]
+    depends_on:
+      temporal: {condition: service_healthy}
+      payment: {condition: service_healthy}
+      completion: {condition: service_healthy}
+
+  worker-v2:
+    image: ${WORKER_V2_ID}
+    environment:
+      HOME: /tmp
+      TEMPORAL_ADDRESS: temporal:7233
+      PAYMENT_URL: http://payment:8081
+      COMPLETION_URL: http://completion:8081
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    networks: [control, effects]
+    depends_on:
+      temporal: {condition: service_healthy}
+      payment: {condition: service_healthy}
+      completion: {condition: service_healthy}
+
+  starter:
+    image: ${STARTER_ID}
+    environment:
+      HOME: /tmp
+      TEMPORAL_ADDRESS: temporal:7233
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    networks: [control]
+    depends_on:
+      temporal: {condition: service_healthy}
+
+networks:
+  control:
+    internal: true
+  effects:
+    internal: true
