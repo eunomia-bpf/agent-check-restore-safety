@@ -1,0 +1,54 @@
+{
+  "capacities": {
+    "audit-slot": 1,
+    "inventory-slot": 1,
+    "payment-slot": 1
+  },
+  "id": "purchase-v2/safe-change-integrated-1578928-3523f0c4",
+  "kinds": {
+    "append-audit": {
+      "costs": {
+        "audit-slot": 1
+      },
+      "method": "POST",
+      "produces": {
+        "audited": 1
+      },
+      "queryable": false,
+      "response_classifier": "operation-receipt-v1",
+      "retry_safe": true,
+      "target": "http://ledger:8081/v1/charge"
+    },
+    "charge-invoice": {
+      "costs": {
+        "payment-slot": 1
+      },
+      "method": "POST",
+      "produces": {
+        "paid": 1
+      },
+      "queryable": false,
+      "response_classifier": "operation-receipt-v1",
+      "retry_safe": true,
+      "target": "http://payment:8081/v1/charge"
+    },
+    "reserve-v2": {
+      "costs": {
+        "inventory-slot": 1
+      },
+      "method": "POST",
+      "produces": {
+        "reserved": 1
+      },
+      "queryable": false,
+      "response_classifier": "operation-receipt-v1",
+      "retry_safe": true,
+      "target": "http://inventory:8081/v2/charge"
+    }
+  },
+  "results": {
+    "audited": 1,
+    "paid": 1,
+    "reserved": 1
+  }
+}

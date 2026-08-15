@@ -1,0 +1,37 @@
+[
+  {
+    "event": "snapshot-ready",
+    "guest_kernel": "6.8.0-136-generic",
+    "observed_time_ns": 1786801196572357040
+  },
+  {
+    "event": "first-succeeded",
+    "observed_time_ns": 1786801242024828375,
+    "operation_call_id": "purchase/A-17-3523f0c4/audit"
+  },
+  {
+    "accelerator": "tcg",
+    "base_image_sha256": "d1940f7d69d343355e183dff1e08a59852d32e7309baa7a4bad8365b11b005ac",
+    "cpus": 2,
+    "direct_effect": "blocked_before_and_after_restore",
+    "event": "completed",
+    "first_operation_reused": false,
+    "full_linux_guest": true,
+    "guest_forwards": [
+      "metadata-gate",
+      "shared-control"
+    ],
+    "guest_kernel": "6.8.0-136-generic",
+    "implicit_nics_disabled": true,
+    "machine": "q35",
+    "memory_mib": 1024,
+    "network_backend": "qemu-user-restrict-on",
+    "observed_time_ns": 1786801249916594539,
+    "operation_call_id": "purchase/A-17-3523f0c4/audit",
+    "operation_kind": "append-audit",
+    "restored_operation_reused": true,
+    "schema": 1,
+    "snapshot": "before_purchase",
+    "whole_vm_restored": true
+  }
+]

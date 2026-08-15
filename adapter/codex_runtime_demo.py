@@ -257,7 +257,11 @@ def _protocol_evidence(
     turn_id: str,
     provider_call_id: str,
     callback_request_id: int | str,
+    expected_tool: str = TOOL_NAME,
+    expected_arguments: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    if expected_arguments is None:
+        expected_arguments = {"effect_id": EFFECT_ID}
     records = _read_jsonl(path)
     payloads = [
         (record.get("direction"), record.get("payload")) for record in records
@@ -323,11 +327,12 @@ def _protocol_evidence(
         raise DemoError(f"expected one Codex tool call, observed {len(tool_calls)}")
     tool_call = tool_calls[0]
     params = tool_call.get("params")
-    if not isinstance(params, dict) or params.get("tool") != TOOL_NAME:
+    if not isinstance(params, dict) or params.get("tool") != expected_tool:
         raise DemoError("Codex called an unexpected dynamic tool")
-    if params.get("callId") != provider_call_id or params.get("arguments") != {
-        "effect_id": EFFECT_ID
-    }:
+    if (
+        params.get("callId") != provider_call_id
+        or params.get("arguments") != expected_arguments
+    ):
         raise DemoError("Codex tool identity or arguments changed in the raw protocol")
     callback_responses = [
         payload

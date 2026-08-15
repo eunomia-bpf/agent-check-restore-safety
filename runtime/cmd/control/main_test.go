@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"net"
 	"os"
 	"path/filepath"
@@ -57,4 +58,75 @@ func TestLoadOrCreateTokenRejectsSharedFile(t *testing.T) {
 	if _, err := loadOrCreateToken(path); err == nil {
 		t.Fatal("shared token file was accepted")
 	}
+}
+
+func TestLoadAdaptersUsesIndependentDomainsAndPrivateTokens(t *testing.T) {
+	directory := t.TempDir()
+	configuration := adapterConfig{Schema: 1, Adapters: []adapterConfigEntry{
+		{Domain: "orders", TokenFile: filepath.Join(directory, "orders.token"), Kinds: []string{"charge-v1", "charge-v2"}},
+		{Domain: "full-linux-vm", TokenFile: filepath.Join(directory, "vm.token"), Kinds: []string{"vm-audit"}},
+	}}
+	data, err := json.Marshal(configuration)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(directory, "adapters.json")
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	credentials, err := loadAdapters(path, "", "local-adapter", "", filepath.Join(directory, "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(credentials) != 2 || credentials[0].Domain != "orders" || credentials[1].Domain != "full-linux-vm" {
+		t.Fatalf("credentials = %+v", credentials)
+	}
+	if credentials[0].Token == credentials[1].Token {
+		t.Fatal("independent adapters received the same token")
+	}
+	for _, entry := range configuration.Adapters {
+		info, err := os.Stat(entry.TokenFile)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if info.Mode().Perm() != 0o600 {
+			t.Fatalf("token %s mode = %o", entry.TokenFile, info.Mode().Perm())
+		}
+	}
+}
+
+func TestLoadAdaptersRejectsAmbiguousOrAliasedConfiguration(t *testing.T) {
+	directory := t.TempDir()
+	token := filepath.Join(directory, "shared.token")
+	configuration := `{"schema":1,"adapters":[` +
+		`{"domain":"orders","token_file":` + quoted(token) + `,"kinds":["charge"]},` +
+		`{"domain":"orders","token_file":` + quoted(filepath.Join(directory, "other.token")) + `,"kinds":["audit"]}]}`
+	path := filepath.Join(directory, "duplicate.json")
+	if err := os.WriteFile(path, []byte(configuration), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadAdapters(path, "", "local-adapter", "", filepath.Join(directory, "runtime.history")); err == nil {
+		t.Fatal("duplicate adapter domain was accepted")
+	}
+	if _, err := loadAdapters(path, token, "local-adapter", "", filepath.Join(directory, "runtime.history")); err == nil {
+		t.Fatal("adapter config combined with a legacy token was accepted")
+	}
+}
+
+func TestLoadAdaptersRejectsUnknownFields(t *testing.T) {
+	directory := t.TempDir()
+	path := filepath.Join(directory, "unknown.json")
+	data := `{"schema":1,"adapters":[{"domain":"orders","token_file":"/tmp/token",` +
+		`"kinds":["charge"],"authority":"admin"}]}`
+	if err := os.WriteFile(path, []byte(data), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadAdapters(path, "", "local-adapter", "", filepath.Join(directory, "runtime.history")); err == nil {
+		t.Fatal("unknown adapter config field was accepted")
+	}
+}
+
+func quoted(value string) string {
+	encoded, _ := json.Marshal(value)
+	return string(encoded)
 }

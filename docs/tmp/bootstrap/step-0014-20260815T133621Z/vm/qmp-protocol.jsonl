@@ -1,0 +1,20 @@
+{"direction":"server_to_client","payload":{"QMP":{"version":{"qemu":{"micro":2,"minor":2,"major":8},"package":"Debian 1:8.2.2+ds-0ubuntu1.18"},"capabilities":["oob"]}},"sequence":1,"time_ns":1786801012493487960}
+{"direction":"client_to_server","payload":{"execute":"qmp_capabilities","id":"command-1"},"sequence":2,"time_ns":1786801012515047050}
+{"direction":"server_to_client","payload":{"id":"command-1","return":{}},"sequence":3,"time_ns":1786801012520071415}
+{"direction":"client_to_server","payload":{"execute":"stop","id":"command-2"},"sequence":4,"time_ns":1786801193124825094}
+{"direction":"server_to_client","payload":{"data":{"path":"/machine/peripheral-anon/device[0]/virtio-backend"},"event":"NIC_RX_FILTER_CHANGED","timestamp":{"seconds":1786801097,"microseconds":928685}},"sequence":5,"time_ns":1786801193138743014}
+{"direction":"server_to_client","payload":{"event":"STOP","timestamp":{"seconds":1786801193,"microseconds":139375}},"sequence":6,"time_ns":1786801193143152007}
+{"direction":"server_to_client","payload":{"id":"command-2","return":{}},"sequence":7,"time_ns":1786801193147458097}
+{"direction":"client_to_server","payload":{"arguments":{"command-line":"savevm before_purchase"},"execute":"human-monitor-command","id":"command-3"},"sequence":8,"time_ns":1786801193151811968}
+{"direction":"server_to_client","payload":{"id":"command-3","return":""},"sequence":9,"time_ns":1786801196569399008}
+{"direction":"client_to_server","payload":{"execute":"cont","id":"command-4"},"sequence":10,"time_ns":1786801240612337766}
+{"direction":"server_to_client","payload":{"event":"RESUME","timestamp":{"seconds":1786801240,"microseconds":616525}},"sequence":11,"time_ns":1786801240616661757}
+{"direction":"server_to_client","payload":{"id":"command-4","return":{}},"sequence":12,"time_ns":1786801240620296843}
+{"direction":"client_to_server","payload":{"execute":"stop","id":"command-5"},"sequence":13,"time_ns":1786801244097387030}
+{"direction":"server_to_client","payload":{"event":"STOP","timestamp":{"seconds":1786801244,"microseconds":102301}},"sequence":14,"time_ns":1786801244102427665}
+{"direction":"server_to_client","payload":{"id":"command-5","return":{}},"sequence":15,"time_ns":1786801244109750448}
+{"direction":"client_to_server","payload":{"arguments":{"command-line":"loadvm before_purchase"},"execute":"human-monitor-command","id":"command-6"},"sequence":16,"time_ns":1786801244114109419}
+{"direction":"server_to_client","payload":{"id":"command-6","return":""},"sequence":17,"time_ns":1786801247507019680}
+{"direction":"client_to_server","payload":{"execute":"cont","id":"command-7"},"sequence":18,"time_ns":1786801247510560174}
+{"direction":"server_to_client","payload":{"event":"RESUME","timestamp":{"seconds":1786801247,"microseconds":513744}},"sequence":19,"time_ns":1786801247513805541}
+{"direction":"server_to_client","payload":{"id":"command-7","return":{}},"sequence":20,"time_ns":1786801247517569000}

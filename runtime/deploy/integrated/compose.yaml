@@ -1,0 +1,174 @@
+services:
+  payment:
+    image: ${RUNTIME_IMAGE}
+    user: ${DEMO_UID}:${DEMO_GID}
+    command:
+      - /usr/local/bin/payment
+      - -listen=0.0.0.0:8081
+      - -state=/state/payment.history
+      - -drop-first-response=true
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - type: bind
+        source: ${DEMO_STATE_DIR}/payment
+        target: /state
+    networks: [effects]
+    healthcheck: &effect-health
+      test: [CMD, wget, -qO-, http://127.0.0.1:8081/healthz]
+      interval: 1s
+      timeout: 1s
+      retries: 30
+
+  inventory:
+    image: ${RUNTIME_IMAGE}
+    user: ${DEMO_UID}:${DEMO_GID}
+    command:
+      - /usr/local/bin/payment
+      - -listen=0.0.0.0:8081
+      - -state=/state/inventory.history
+      - -drop-first-response=true
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - type: bind
+        source: ${DEMO_STATE_DIR}/inventory
+        target: /state
+    networks: [effects]
+    healthcheck: *effect-health
+
+  ledger:
+    image: ${RUNTIME_IMAGE}
+    user: ${DEMO_UID}:${DEMO_GID}
+    command:
+      - /usr/local/bin/payment
+      - -listen=0.0.0.0:8081
+      - -state=/state/ledger.history
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - type: bind
+        source: ${DEMO_STATE_DIR}/ledger
+        target: /state
+    networks: [effects]
+    healthcheck: *effect-health
+
+  control:
+    image: ${RUNTIME_IMAGE}
+    user: ${DEMO_UID}:${DEMO_GID}
+    build:
+      context: ../..
+      dockerfile: deploy/microservice/Dockerfile
+    command:
+      - /usr/local/bin/control
+      - -listen=0.0.0.0:8787
+      - -allow-nonloopback=true
+      - -history=/state/runtime.history
+      - -head-anchor=/anchor/runtime.head
+      - -admin-token-file=/credentials/admin-token
+      - -adapter-config=/config/adapters.json
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - type: bind
+        source: ${DEMO_STATE_DIR}/control
+        target: /state
+      - type: bind
+        source: ${DEMO_STATE_DIR}/anchor
+        target: /anchor
+      - type: bind
+        source: ${DEMO_STATE_DIR}/credentials
+        target: /credentials
+        read_only: true
+      - type: bind
+        source: ${DEMO_STATE_DIR}/control-config
+        target: /config
+        read_only: true
+    networks: [application, effects]
+    depends_on:
+      payment: {condition: service_healthy}
+      inventory: {condition: service_healthy}
+      ledger: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:8787/healthz]
+      interval: 1s
+      timeout: 1s
+      retries: 30
+
+  order:
+    image: ${RUNTIME_IMAGE}
+    user: ${DEMO_UID}:${DEMO_GID}
+    command:
+      - /usr/local/bin/order
+      - -listen=0.0.0.0:8080
+      - -release=/config/order.json
+      - -control=http://control:8787
+      - -operation-token-file=/credentials/order-token
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - type: bind
+        source: ${DEMO_STATE_DIR}/order-config
+        target: /config
+        read_only: true
+      - type: bind
+        source: ${DEMO_STATE_DIR}/credentials/order-token
+        target: /credentials/order-token
+        read_only: true
+    networks: [application]
+    depends_on:
+      control: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:8080/healthz]
+      interval: 1s
+      timeout: 1s
+      retries: 30
+
+  ingress:
+    image: ${RUNTIME_IMAGE}
+    user: ${DEMO_UID}:${DEMO_GID}
+    command:
+      - /usr/local/bin/ingress
+      - -control-listen=0.0.0.0:8787
+      - -order-listen=0.0.0.0:8080
+      - -control-upstream=http://control:8787
+      - -order-upstream=http://order:8080
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    networks: [agent, application]
+    ports:
+      - 127.0.0.1:${CONTROL_PORT}:8787
+      - 127.0.0.1:${ORDER_PORT}:8080
+    depends_on:
+      control: {condition: service_healthy}
+      order: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:8787/healthz]
+      interval: 1s
+      timeout: 1s
+      retries: 30
+
+networks:
+  agent: {}
+  application:
+    internal: true
+  effects:
+    internal: true

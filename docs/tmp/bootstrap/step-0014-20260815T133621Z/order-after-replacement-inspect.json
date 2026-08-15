@@ -1,0 +1,63 @@
+[
+  {
+    "Config": {
+      "Cmd": [
+        "/usr/local/bin/order",
+        "-listen=0.0.0.0:8080",
+        "-release=/config/order.json",
+        "-control=http://control:8787",
+        "-operation-token-file=/credentials/order-token"
+      ],
+      "Entrypoint": null,
+      "Hostname": "8ba1b66c78e9",
+      "Image": "safe-change-runtime:safe-change-integrated-1578928-3523f0c4",
+      "Labels": {
+        "com.docker.compose.container-number": "1",
+        "com.docker.compose.project": "safe-change-integrated-1578928-3523f0c4",
+        "com.docker.compose.service": "order"
+      },
+      "User": "1001:1002",
+      "WorkingDir": "/"
+    },
+    "HostConfig": {
+      "CapDrop": [
+        "ALL"
+      ],
+      "NetworkMode": "safe-change-integrated-1578928-3523f0c4_application",
+      "Privileged": false,
+      "ReadonlyRootfs": true,
+      "SecurityOpt": [
+        "no-new-privileges:true"
+      ],
+      "Tmpfs": {
+        "/tmp": ""
+      }
+    },
+    "Id": "8ba1b66c78e939eb11bc5218b11dbc2e42e8db230129e35267885ba66e4cacf1",
+    "Mounts": [
+      {
+        "Destination": "/credentials/order-token",
+        "RW": false,
+        "Type": "bind"
+      },
+      {
+        "Destination": "/config",
+        "RW": false,
+        "Type": "bind"
+      }
+    ],
+    "Name": "/safe-change-integrated-1578928-3523f0c4-order-1",
+    "NetworkSettings": {
+      "Networks": {
+        "safe-change-integrated-1578928-3523f0c4_application": {
+          "IPAddress": "172.19.0.3"
+        }
+      }
+    },
+    "State": {
+      "Pid": 1608522,
+      "Running": true,
+      "StartedAt": "2026-08-15T13:40:42.898279869Z"
+    }
+  }
+]

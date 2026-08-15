@@ -1,0 +1,59 @@
+[
+  {
+    "Containers": {
+      "05d0d5dafc9d13f6ae9fe9a1da0511f30fe19c054fc031246163482af43734d0": {
+        "IPv4Address": "172.20.0.2/16",
+        "Name": "safe-change-integrated-1578928-3523f0c4-ingress-1"
+      },
+      "bae27e76a34c83baaf7ed9d1e3d0264a9b905e31bf41c832c08f3dfa1228412a": {
+        "IPv4Address": "172.20.0.3/16",
+        "Name": "safe-change-codex-6a13dfecba122f9c"
+      }
+    },
+    "Id": "14d1e5e3764b26f4deb593e19a94031d5d42deed396f595c051feabfbd675199",
+    "Internal": false,
+    "Name": "safe-change-integrated-1578928-3523f0c4_agent"
+  },
+  {
+    "Containers": {
+      "05d0d5dafc9d13f6ae9fe9a1da0511f30fe19c054fc031246163482af43734d0": {
+        "IPv4Address": "172.19.0.4/16",
+        "Name": "safe-change-integrated-1578928-3523f0c4-ingress-1"
+      },
+      "9498359a0078f3efc1e26a9e19a61d892e413270c0288507b48c014bb2f5ddac": {
+        "IPv4Address": "172.19.0.3/16",
+        "Name": "safe-change-integrated-1578928-3523f0c4-order-1"
+      },
+      "a03a2f44c9ff5e8d807a69b0fee65e997d06615b2191d73eefc61d835b872f41": {
+        "IPv4Address": "172.19.0.2/16",
+        "Name": "safe-change-integrated-1578928-3523f0c4-control-1"
+      }
+    },
+    "Id": "5c28ec324a9fe9d85b82307e8a70a139f20c2e65d5c76e59f18cd4f54ad76bdd",
+    "Internal": true,
+    "Name": "safe-change-integrated-1578928-3523f0c4_application"
+  },
+  {
+    "Containers": {
+      "5433d8c92a5ee564d162aac4349fb3e9806d1f17c5ee4eeedf503027fb02bb75": {
+        "IPv4Address": "172.18.0.3/16",
+        "Name": "safe-change-integrated-1578928-3523f0c4-ledger-1"
+      },
+      "86fb9455e0bc985909fc6dce89d8504431da706b1e83865e31ffc62a49408e66": {
+        "IPv4Address": "172.18.0.2/16",
+        "Name": "safe-change-integrated-1578928-3523f0c4-inventory-1"
+      },
+      "a03a2f44c9ff5e8d807a69b0fee65e997d06615b2191d73eefc61d835b872f41": {
+        "IPv4Address": "172.18.0.5/16",
+        "Name": "safe-change-integrated-1578928-3523f0c4-control-1"
+      },
+      "b2ee5de2b050de76eee4e1716f59f7d00cbacc0685b148308fe7b35703590911": {
+        "IPv4Address": "172.18.0.4/16",
+        "Name": "safe-change-integrated-1578928-3523f0c4-payment-1"
+      }
+    },
+    "Id": "066fce21ab2079e7cdcd2e3b2afb1f5e9ce799b2c4f66d4781b70e709f2bc95b",
+    "Internal": true,
+    "Name": "safe-change-integrated-1578928-3523f0c4_effects"
+  }
+]

@@ -1,0 +1,77 @@
+{
+  "certificates_valid": 2,
+  "codex_protocol": {
+    "callback_responses": 1,
+    "completed_turns": 1,
+    "dynamic_tool_calls": 1,
+    "final_agent_message": "DONE",
+    "model": "gpt-5.6-sol",
+    "model_provider": "openai",
+    "real_app_server_process": true,
+    "records": 40
+  },
+  "external_effects": {
+    "by_service": {
+      "inventory": {
+        "commits": 1,
+        "deliveries": 2,
+        "paths": {
+          "/v1/charge": 2
+        }
+      },
+      "ledger": {
+        "commits": 1,
+        "deliveries": 1,
+        "paths": {
+          "/v1/charge": 1
+        }
+      },
+      "payment": {
+        "commits": 1,
+        "deliveries": 2,
+        "paths": {
+          "/v1/charge": 2
+        }
+      }
+    },
+    "commits": 3,
+    "deliveries": 5
+  },
+  "fault_correlations": {
+    "control_process_restarted": true,
+    "dispatch_owner_changed": true,
+    "order_process_replaced": true,
+    "raw_clock_order_valid": true,
+    "restored_vm_operation_reused": true,
+    "v2_process_recovered_v1_operation": true,
+    "whole_vm_restored": true
+  },
+  "history_chain_replayed": true,
+  "history_hash": "877b997d9092dfde27ba2ea02d12b7ae951b2d09e9aac202e558665f210b95cd",
+  "history_sequence": 15,
+  "network_isolation": {
+    "attested": true,
+    "direct_agent_effect_paths": 0,
+    "direct_order_effect_paths": 0,
+    "negative_probes": 12
+  },
+  "operation_ids": {
+    "codex": "op-d94cfde088108ff7b33c98aedb7d27b1d5c49dee168552717e19d91414eef7a1",
+    "order": "op-c255fda4aa813124f95a6def57f54dd315a84b2b7749fce146d0e1fdb8d76bcc",
+    "vm": "op-2c63d5a0adc8123aed61a6119bbfa244adc333c4b7f8772baf19d62d15f61e99"
+  },
+  "purchase_id": "A-17-3523f0c4",
+  "rule_transition": {
+    "from_version": 1,
+    "to_version": 2,
+    "v2_new_work_allow_count": 0
+  },
+  "run_id": "safe-change-integrated-1578928-3523f0c4",
+  "valid": true,
+  "vm": {
+    "accelerator": "tcg",
+    "base_image_sha256": "d1940f7d69d343355e183dff1e08a59852d32e7309baa7a4bad8365b11b005ac",
+    "qmp_records": 20,
+    "snapshot": "before_purchase"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "error": "external operation outcome is unknown: Post \"http://payment:8081/v1/charge\": EOF",
+  "outcome": {
+    "operation_id": "op-d94cfde088108ff7b33c98aedb7d27b1d5c49dee168552717e19d91414eef7a1",
+    "phase": "unknown",
+    "result_hash": "",
+    "reused": false
+  }
+}

@@ -158,6 +158,17 @@ Success requires both safety and useful continuation: the runtime must preserve
 substantially more live executions or concurrency than deny-all, global
 serialization, or keeping every old version indefinitely.
 
+The first vertical system smoke now exists. One live run combined a logged-in
+Codex App Server, a replaceable order service, a complete Ubuntu QEMU guest,
+and three durable external services under one History. It changed Rule v1 to
+v2, replaced order, restarted control, and restored the VM. The observed result
+was five deliveries and three commits, with old Operation meaning preserved
+across the v2 process and the restored VM receiving its recorded result. This
+meets the integration milestone, not the evaluation contract above: the
+services are purpose-built and the run used TCG once without baselines. A
+separate checker independently replays the retained cross-domain evidence and
+fails closed under mutations to each recorded runtime boundary.
+
 ## Build sequence
 
 0. **Durable control path — implemented.** A Go History, external head anchor,
@@ -187,8 +198,16 @@ serialization, or keeping every old version indefinitely.
    restores the whole guest. Host History turns the repeated call into one
    successful Operation with one remote commit. Device-output mediation remains
    open.
-5. Connect the VM path to the isolated service deployment and add block/device
-   output tests.
+5. **VM and isolated-service composition — implemented for the HTTP path.**
+   One real Codex callback now spans a replaceable order container, a complete
+   Ubuntu QEMU VM, and separate payment, inventory, and ledger services, all
+   using one History. During the same purchase, Rule v1 changes to v2, order is
+   replaced, control restarts, and QEMU loads its saved whole-VM state. The v2
+   order process requests `reserve-v2`, but stable identity recovers the old
+   `reserve-v1` Operation and its v1 target; the restored guest reuses its
+   recorded audit result without another ledger delivery. Docker and QEMU
+   network boundaries block direct effect access. Block and device output tests
+   remain open.
 6. **Real Codex App Server path — implemented with enforced network
    isolation.** A logged-in model runs in a hardened container and invokes one
    strict dynamic tool. Codex and payment share no Docker network; control is
@@ -204,6 +223,13 @@ serialization, or keeping every old version indefinitely.
    adapter correspondence in Lean.
 9. Run scale, availability, fault, usability, and strongest-baseline studies;
    only then rebuild the paper around the larger result.
+
+The current composition is not yet the intended final system or evaluation. It
+still needs a maintained real application; a live Claude frontend; an Agent
+running inside the full guest rather than beside it; repeated KVM experiments
+and the declared baselines; block, GPU, passthrough, and other device-output
+mediation; signed remote evidence; replicated control; and an end-to-end
+refinement proof connecting each concrete adapter to the finite model.
 
 ## Kill tests
 

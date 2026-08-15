@@ -1,0 +1,11 @@
+order-1      | 2026/08/15 13:40:43 order release v2 listening on http://0.0.0.0:8080
+ingress-1    | 2026/08/15 13:36:49 fixed ingress listening on control=0.0.0.0:8787 order=0.0.0.0:8080
+payment-1    | 2026/08/15 13:36:44 payment service listening on http://0.0.0.0:8081
+inventory-1  | 2026/08/15 13:36:44 payment service listening on http://0.0.0.0:8081
+control-1    | control API listening on http://[::]:8787
+control-1    | admin token: /credentials/admin-token
+control-1    | adapter credentials: 3
+control-1    | control API listening on http://[::]:8787
+control-1    | admin token: /credentials/admin-token
+control-1    | adapter credentials: 3
+ledger-1     | 2026/08/15 13:36:44 payment service listening on http://0.0.0.0:8081

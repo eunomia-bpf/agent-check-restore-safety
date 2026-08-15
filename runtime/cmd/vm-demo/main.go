@@ -5,6 +5,8 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -18,6 +20,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -39,12 +42,17 @@ const (
 )
 
 type options struct {
-	imagePath string
-	imageURL  string
-	imageSHA  string
-	accel     string
-	keep      bool
-	timeout   time.Duration
+	imagePath               string
+	imageURL                string
+	imageSHA                string
+	accel                   string
+	keep                    bool
+	timeout                 time.Duration
+	externalControlPort     int
+	externalTokenPath       string
+	externalRequestPath     string
+	externalDirectProbe     string
+	externalEvidenceDirPath string
 }
 
 func main() {
@@ -55,6 +63,11 @@ func main() {
 	flag.StringVar(&configuration.accel, "accel", "tcg", "QEMU accelerator: tcg or kvm")
 	flag.BoolVar(&configuration.keep, "keep", false, "retain the VM evidence directory")
 	flag.DurationVar(&configuration.timeout, "timeout", 12*time.Minute, "whole-demo timeout")
+	flag.IntVar(&configuration.externalControlPort, "external-control-port", 0, "host loopback port for an existing shared control service")
+	flag.StringVar(&configuration.externalTokenPath, "external-token-file", "", "private VM adapter token for shared-control mode")
+	flag.StringVar(&configuration.externalRequestPath, "external-request", "", "strict execute-request JSON for shared-control mode")
+	flag.StringVar(&configuration.externalDirectProbe, "external-direct-probe", "", "effect URL that the restored guest must not reach directly")
+	flag.StringVar(&configuration.externalEvidenceDirPath, "external-evidence-dir", "", "empty directory for sanitized shared-control VM evidence")
 	flag.Parse()
 	if err := run(configuration); err != nil {
 		log.Printf("VM demo failed: %v", err)
@@ -90,8 +103,15 @@ func run(configuration options) error {
 	configuration.imagePath, _ = filepath.Abs(configuration.imagePath)
 	ctx, cancel := context.WithTimeout(context.Background(), configuration.timeout)
 	defer cancel()
+	external, err := validateExternalOptions(configuration)
+	if err != nil {
+		return err
+	}
 	if err := ensureImage(ctx, configuration.imagePath, configuration.imageURL, configuration.imageSHA); err != nil {
 		return err
+	}
+	if external {
+		return runExternal(ctx, configuration, netcatPath, os.Stdin, os.Stdout)
 	}
 
 	work, err := os.MkdirTemp("", "safe-change-vm-")
@@ -335,6 +355,446 @@ func run(configuration options) error {
 	return nil
 }
 
+type externalExecuteRequest struct {
+	CallID  string            `json:"call_id"`
+	Kind    string            `json:"kind"`
+	Method  string            `json:"method"`
+	URL     string            `json:"url"`
+	Headers map[string]string `json:"headers,omitempty"`
+	Body    []byte            `json:"body"`
+}
+
+func validateExternalOptions(configuration options) (bool, error) {
+	requested := configuration.externalControlPort != 0 ||
+		configuration.externalTokenPath != "" ||
+		configuration.externalRequestPath != "" ||
+		configuration.externalDirectProbe != "" ||
+		configuration.externalEvidenceDirPath != ""
+	if !requested {
+		return false, nil
+	}
+	if configuration.externalControlPort <= 0 || configuration.externalControlPort > 65535 {
+		return false, errors.New("shared-control mode requires -external-control-port between 1 and 65535")
+	}
+	if configuration.externalTokenPath == "" || configuration.externalRequestPath == "" ||
+		configuration.externalDirectProbe == "" || configuration.externalEvidenceDirPath == "" {
+		return false, errors.New("shared-control mode requires token, request, direct probe, and evidence directory")
+	}
+	if configuration.keep {
+		return false, errors.New("-keep cannot be combined with shared-control mode")
+	}
+	probe, err := url.Parse(configuration.externalDirectProbe)
+	if err != nil || probe.Scheme != "http" || probe.Host == "" || probe.User != nil || probe.Fragment != "" {
+		return false, errors.New("external direct probe must be an absolute plain HTTP URL")
+	}
+	return true, nil
+}
+
+func runExternal(ctx context.Context, configuration options, netcatPath string, input io.Reader, output io.Writer) error {
+	token, err := readExternalToken(configuration.externalTokenPath)
+	if err != nil {
+		return err
+	}
+	requestData, request, err := readExternalRequest(configuration.externalRequestPath)
+	if err != nil {
+		return err
+	}
+	evidenceDirectory, err := filepath.Abs(configuration.externalEvidenceDirPath)
+	if err != nil {
+		return err
+	}
+	if err := requireEmptyPrivateDirectory(evidenceDirectory); err != nil {
+		return err
+	}
+	overlayPath := filepath.Join(evidenceDirectory, "guest.qcow2")
+	serialPath := filepath.Join(evidenceDirectory, "guest.serial.log")
+	qemuLogPath := filepath.Join(evidenceDirectory, "qemu.log")
+	qmpPath := filepath.Join(evidenceDirectory, "qmp.sock")
+	if commandOutput, err := exec.CommandContext(
+		ctx,
+		"qemu-img",
+		"create",
+		"-q",
+		"-f",
+		"qcow2",
+		"-F",
+		"qcow2",
+		"-b",
+		configuration.imagePath,
+		overlayPath,
+		"8G",
+	).CombinedOutput(); err != nil {
+		return fmt.Errorf("create external guest overlay: %w: %s", err, commandOutput)
+	}
+
+	var gate atomic.Bool
+	guestScript := makeExternalGuestScript(
+		base64.StdEncoding.EncodeToString([]byte(token)),
+		base64.StdEncoding.EncodeToString(requestData),
+		base64.StdEncoding.EncodeToString([]byte(configuration.externalDirectProbe)),
+	)
+	userData := makeUserData(guestScript)
+	seedListener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return err
+	}
+	seedServer := &http.Server{
+		Handler: seedHandler(userData, &gate), ReadHeaderTimeout: 5 * time.Second,
+	}
+	go serve(seedServer, seedListener)
+	defer shutdown(seedServer)
+
+	qemuLog, err := os.OpenFile(qemuLogPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+	if err != nil {
+		return err
+	}
+	qemuLogClosed := false
+	defer func() {
+		if !qemuLogClosed {
+			_ = qemuLog.Close()
+		}
+	}()
+	netdev := fmt.Sprintf(
+		"user,id=opnet,restrict=on,guestfwd=tcp:10.0.2.100:8000-cmd:%s 127.0.0.1 %d,guestfwd=tcp:10.0.2.100:8787-cmd:%s 127.0.0.1 %d",
+		netcatPath,
+		seedListener.Addr().(*net.TCPAddr).Port,
+		netcatPath,
+		configuration.externalControlPort,
+	)
+	qemuArgs := []string{
+		"-name", "safe-change-shared-history-vm", "-machine", "q35", "-m", "1024", "-smp", "2",
+		"-drive", "file=" + overlayPath + ",if=virtio,format=qcow2,cache=none",
+		"-display", "none", "-serial", "file:" + serialPath, "-monitor", "none",
+		"-qmp", "unix:" + qmpPath + ",server=on,wait=off", "-no-reboot", "-nic", "none",
+		"-netdev", netdev, "-device", "virtio-net-pci,netdev=opnet",
+		"-smbios", "type=1,serial=ds=nocloud;s=http://10.0.2.100:8000/",
+	}
+	if configuration.accel == "tcg" {
+		qemuArgs = append(qemuArgs, "-accel", "tcg,thread=multi")
+	} else {
+		qemuArgs = append(qemuArgs, "-accel", "kvm")
+	}
+	if err := writeExternalQEMUCommand(
+		filepath.Join(evidenceDirectory, "qemu-command.json"),
+		qemuArgs,
+		evidenceDirectory,
+		configuration.imagePath,
+	); err != nil {
+		return err
+	}
+	qemu := exec.CommandContext(ctx, "qemu-system-x86_64", qemuArgs...)
+	qemu.Stdout, qemu.Stderr = qemuLog, qemuLog
+	if err := qemu.Start(); err != nil {
+		return err
+	}
+	qemuDone := make(chan error, 1)
+	go func() { qemuDone <- qemu.Wait() }()
+	finished := false
+	defer func() {
+		if !finished && qemu.Process != nil {
+			_ = qemu.Process.Kill()
+			<-qemuDone
+		}
+	}()
+
+	qmp, err := dialQMPWithTrace(
+		ctx,
+		qmpPath,
+		filepath.Join(evidenceDirectory, "qmp-protocol.jsonl"),
+	)
+	if err != nil {
+		return withQEMULog(err, qemuLogPath)
+	}
+	defer qmp.Close()
+	if err := waitForText(ctx, serialPath, "SAFE_CHANGE_VM_EXTERNAL_READY", 5*time.Minute); err != nil {
+		return withQEMULog(err, qemuLogPath)
+	}
+	guestKernel := markerFieldFromLast(serialPath, "SAFE_CHANGE_VM_EXTERNAL_READY kernel=")
+	if guestKernel == "" {
+		return errors.New("shared-control guest kernel marker is missing")
+	}
+	if err := qmp.command("stop", nil); err != nil {
+		return err
+	}
+	if err := qmp.human("savevm before_purchase"); err != nil {
+		return err
+	}
+	if err := writeExternalEvent(output, map[string]any{
+		"event": "snapshot-ready", "guest_kernel": guestKernel,
+	}); err != nil {
+		return err
+	}
+	commands := bufio.NewScanner(input)
+	if err := expectExternalCommand(ctx, commands, "start"); err != nil {
+		return err
+	}
+	gate.Store(true)
+	if err := qmp.command("cont", nil); err != nil {
+		return err
+	}
+	if err := waitForText(ctx, serialPath, "SAFE_CHANGE_VM_FIRST_SUCCEEDED reused=false", 2*time.Minute); err != nil {
+		return err
+	}
+	if err := writeExternalEvent(output, map[string]any{
+		"event": "first-succeeded", "operation_call_id": request.CallID,
+	}); err != nil {
+		return err
+	}
+	if err := expectExternalCommand(ctx, commands, "restore"); err != nil {
+		return err
+	}
+	if err := qmp.command("stop", nil); err != nil {
+		return err
+	}
+	if err := qmp.human("loadvm before_purchase"); err != nil {
+		return err
+	}
+	if err := qmp.command("cont", nil); err != nil {
+		return err
+	}
+	if err := waitForText(ctx, serialPath, "SAFE_CHANGE_VM_RESTORED_SUCCEEDED reused=true", 2*time.Minute); err != nil {
+		return err
+	}
+	select {
+	case err := <-qemuDone:
+		finished = true
+		if err != nil {
+			return withQEMULog(err, qemuLogPath)
+		}
+	case <-time.After(90 * time.Second):
+		return errors.New("shared-control guest did not power off after reused Operation")
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	if err := qemuLog.Sync(); err != nil {
+		return err
+	}
+	if err := qemuLog.Close(); err != nil {
+		return err
+	}
+	qemuLogClosed = true
+
+	serial, err := os.ReadFile(serialPath)
+	if err != nil {
+		return err
+	}
+	serialText := string(serial)
+	if strings.Contains(serialText, "SAFE_CHANGE_VM_DIRECT_EFFECT_REACHABLE") ||
+		strings.Count(serialText, "SAFE_CHANGE_VM_DIRECT_EFFECT_BLOCKED") != 2 {
+		return errors.New("shared-control guest direct-effect isolation check failed")
+	}
+	snapshotOutput, err := exec.CommandContext(ctx, "qemu-img", "snapshot", "-l", overlayPath).CombinedOutput()
+	if err != nil || !strings.Contains(string(snapshotOutput), "before_purchase") {
+		return fmt.Errorf("shared-control guest snapshot is absent: %w: %s", err, snapshotOutput)
+	}
+	if err := os.WriteFile(filepath.Join(evidenceDirectory, "snapshots.txt"), snapshotOutput, 0o600); err != nil {
+		return err
+	}
+	projection := map[string]any{
+		"schema":                    1,
+		"accelerator":               configuration.accel,
+		"base_image_sha256":         configuration.imageSHA,
+		"full_linux_guest":          true,
+		"guest_kernel":              guestKernel,
+		"machine":                   "q35",
+		"memory_mib":                1024,
+		"cpus":                      2,
+		"implicit_nics_disabled":    true,
+		"network_backend":           "qemu-user-restrict-on",
+		"guest_forwards":            []string{"metadata-gate", "shared-control"},
+		"direct_effect":             "blocked_before_and_after_restore",
+		"snapshot":                  "before_purchase",
+		"whole_vm_restored":         true,
+		"first_operation_reused":    false,
+		"restored_operation_reused": true,
+		"operation_call_id":         request.CallID,
+		"operation_kind":            request.Kind,
+	}
+	encodedProjection, err := json.MarshalIndent(projection, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(evidenceDirectory, "result.json"), append(encodedProjection, '\n'), 0o600); err != nil {
+		return err
+	}
+	if err := removeExternalPrivateFiles(overlayPath, qmpPath); err != nil {
+		return err
+	}
+	completed := make(map[string]any, len(projection)+1)
+	for key, value := range projection {
+		completed[key] = value
+	}
+	completed["event"] = "completed"
+	return writeExternalEvent(output, completed)
+}
+
+func readExternalToken(path string) (string, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", err
+	}
+	if !info.Mode().IsRegular() || info.Mode().Perm()&0o077 != 0 {
+		return "", errors.New("external VM token must be a private regular file")
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	token := strings.TrimSpace(string(data))
+	if len(token) < 32 {
+		return "", errors.New("external VM token is too short")
+	}
+	return token, nil
+}
+
+func readExternalRequest(path string) ([]byte, externalExecuteRequest, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, externalExecuteRequest{}, err
+	}
+	if len(data) > 1<<20 {
+		return nil, externalExecuteRequest{}, errors.New("external VM request exceeds 1 MiB")
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	var request externalExecuteRequest
+	if err := decoder.Decode(&request); err != nil {
+		return nil, externalExecuteRequest{}, err
+	}
+	var extra any
+	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
+		return nil, externalExecuteRequest{}, errors.New("external VM request has trailing JSON")
+	}
+	target, parseErr := url.Parse(request.URL)
+	if request.CallID == "" || request.Kind == "" || request.Method != http.MethodPost ||
+		parseErr != nil || target.Scheme != "http" || target.Host == "" || target.User != nil || target.Fragment != "" {
+		return nil, externalExecuteRequest{}, errors.New("external VM request has an invalid identity or HTTP contract")
+	}
+	return data, request, nil
+}
+
+func requireEmptyPrivateDirectory(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() || info.Mode().Perm()&0o077 != 0 {
+		return errors.New("external VM evidence directory must be private")
+	}
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return err
+	}
+	if len(entries) != 0 {
+		return errors.New("external VM evidence directory must be empty")
+	}
+	return nil
+}
+
+func makeExternalGuestScript(encodedToken, encodedRequest, encodedDirectProbe string) string {
+	return fmt.Sprintf(`#!/usr/bin/env bash
+set -uo pipefail
+log_marker() { printf '%%s\n' "$1" > /dev/ttyS0; }
+log_marker "SAFE_CHANGE_VM_EXTERNAL_READY kernel=$(uname -r)"
+until curl -fsS --connect-timeout 2 --max-time 3 http://10.0.2.100:8000/go >/dev/null; do sleep 1; done
+direct_url=$(printf '%%s' '%s' | base64 -d)
+if curl -fsS --connect-timeout 2 --max-time 3 "$direct_url" >/dev/null; then
+  log_marker SAFE_CHANGE_VM_DIRECT_EFFECT_REACHABLE
+  /sbin/poweroff -f
+  exit 1
+fi
+log_marker SAFE_CHANGE_VM_DIRECT_EFFECT_BLOCKED
+printf '%%s' '%s' | base64 -d > /run/safe-change-execute.json
+token=$(printf '%%s' '%s' | base64 -d)
+status=$(curl -sS --max-time 45 -o /run/safe-change-response.json -w '%%{http_code}' \
+  -X POST -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+  --data-binary @/run/safe-change-execute.json http://10.0.2.100:8787/v1/execute) || status=transport-error
+read -r phase reused < <(python3 -c 'import json; d=json.load(open("/run/safe-change-response.json")); print(d.get("phase", ""), str(bool(d.get("reused", False))).lower())' 2>/dev/null || true)
+if [[ "$status" == 200 && "$phase" == succeeded && "$reused" == false ]]; then
+  log_marker "SAFE_CHANGE_VM_FIRST_SUCCEEDED reused=false"
+  sync
+  while true; do sleep 60; done
+fi
+if [[ "$status" == 200 && "$phase" == succeeded && "$reused" == true ]]; then
+  log_marker "SAFE_CHANGE_VM_RESTORED_SUCCEEDED reused=true"
+  sync
+  /sbin/poweroff -f
+  exit 0
+fi
+log_marker "SAFE_CHANGE_VM_EXTERNAL_UNEXPECTED status=$status phase=$phase reused=$reused"
+/sbin/poweroff -f
+exit 1
+`, encodedDirectProbe, encodedRequest, encodedToken)
+}
+
+func expectExternalCommand(ctx context.Context, scanner *bufio.Scanner, expected string) error {
+	result := make(chan error, 1)
+	go func() {
+		if !scanner.Scan() {
+			if err := scanner.Err(); err != nil {
+				result <- err
+				return
+			}
+			result <- fmt.Errorf("shared-control VM input closed while waiting for %q", expected)
+			return
+		}
+		if strings.TrimSpace(scanner.Text()) != expected {
+			result <- fmt.Errorf("shared-control VM expected %q command", expected)
+			return
+		}
+		result <- nil
+	}()
+	select {
+	case err := <-result:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func writeExternalEvent(writer io.Writer, value map[string]any) error {
+	return json.NewEncoder(writer).Encode(value)
+}
+
+func writeExternalQEMUCommand(path string, arguments []string, evidenceDirectory, imagePath string) error {
+	redacted := make([]string, len(arguments))
+	for index, argument := range arguments {
+		argument = strings.ReplaceAll(argument, evidenceDirectory, "<vm-evidence>")
+		argument = strings.ReplaceAll(argument, imagePath, "<verified-base-image>")
+		redacted[index] = argument
+	}
+	value := map[string]any{
+		"schema":     1,
+		"executable": "qemu-system-x86_64",
+		"arguments":  redacted,
+	}
+	var encoded bytes.Buffer
+	encoder := json.NewEncoder(&encoded)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(value); err != nil {
+		return err
+	}
+	return os.WriteFile(path, encoded.Bytes(), 0o600)
+}
+
+func markerFieldFromLast(path, marker string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return markerField(string(data), marker)
+}
+
+func removeExternalPrivateFiles(paths ...string) error {
+	for _, path := range paths {
+		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+	}
+	return nil
+}
+
 func serve(server *http.Server, listener net.Listener) {
 	if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Printf("HTTP server failed: %v", err)
@@ -568,10 +1028,16 @@ type qmpClient struct {
 	connection net.Conn
 	decoder    *json.Decoder
 	encoder    *json.Encoder
+	trace      *os.File
+	traceSeq   uint64
 	nextID     uint64
 }
 
 func dialQMP(ctx context.Context, path string) (*qmpClient, error) {
+	return dialQMPWithTrace(ctx, path, "")
+}
+
+func dialQMPWithTrace(ctx context.Context, path, tracePath string) (*qmpClient, error) {
 	var connection net.Conn
 	var err error
 	for connection == nil {
@@ -585,24 +1051,68 @@ func dialQMP(ctx context.Context, path string) (*qmpClient, error) {
 		case <-time.After(100 * time.Millisecond):
 		}
 	}
-	client := &qmpClient{connection: connection, decoder: json.NewDecoder(connection), encoder: json.NewEncoder(connection)}
+	client := &qmpClient{
+		connection: connection,
+		decoder:    json.NewDecoder(connection),
+		encoder:    json.NewEncoder(connection),
+	}
+	if tracePath != "" {
+		client.trace, err = os.OpenFile(
+			tracePath,
+			os.O_CREATE|os.O_EXCL|os.O_WRONLY,
+			0o600,
+		)
+		if err != nil {
+			connection.Close()
+			return nil, err
+		}
+	}
 	var greeting map[string]json.RawMessage
 	if err := client.decoder.Decode(&greeting); err != nil {
-		connection.Close()
+		client.Close()
+		return nil, err
+	}
+	if err := client.record("server_to_client", greeting); err != nil {
+		client.Close()
 		return nil, err
 	}
 	if _, ok := greeting["QMP"]; !ok {
-		connection.Close()
+		client.Close()
 		return nil, errors.New("QMP greeting is missing")
 	}
 	if err := client.command("qmp_capabilities", nil); err != nil {
-		connection.Close()
+		client.Close()
 		return nil, err
 	}
 	return client, nil
 }
 
-func (q *qmpClient) Close() error { return q.connection.Close() }
+func (q *qmpClient) Close() error {
+	connectionErr := q.connection.Close()
+	var traceErr error
+	if q.trace != nil {
+		traceErr = q.trace.Close()
+		q.trace = nil
+	}
+	return errors.Join(connectionErr, traceErr)
+}
+
+func (q *qmpClient) record(direction string, payload any) error {
+	if q.trace == nil {
+		return nil
+	}
+	q.traceSeq++
+	record := map[string]any{
+		"sequence":  q.traceSeq,
+		"time_ns":   time.Now().UnixNano(),
+		"direction": direction,
+		"payload":   payload,
+	}
+	if err := json.NewEncoder(q.trace).Encode(record); err != nil {
+		return err
+	}
+	return q.trace.Sync()
+}
 
 func (q *qmpClient) command(name string, arguments any) error {
 	_, err := q.commandResult(name, arguments)
@@ -616,10 +1126,20 @@ func (q *qmpClient) commandResult(name string, arguments any) (json.RawMessage, 
 	if arguments != nil {
 		request["arguments"] = arguments
 	}
+	if err := q.record("client_to_server", request); err != nil {
+		return nil, err
+	}
 	if err := q.encoder.Encode(request); err != nil {
 		return nil, err
 	}
 	for {
+		var raw map[string]json.RawMessage
+		if err := q.decoder.Decode(&raw); err != nil {
+			return nil, err
+		}
+		if err := q.record("server_to_client", raw); err != nil {
+			return nil, err
+		}
 		var response struct {
 			ID     string          `json:"id"`
 			Return json.RawMessage `json:"return"`
@@ -628,7 +1148,11 @@ func (q *qmpClient) commandResult(name string, arguments any) (json.RawMessage, 
 				Desc  string `json:"desc"`
 			} `json:"error"`
 		}
-		if err := q.decoder.Decode(&response); err != nil {
+		encoded, err := json.Marshal(raw)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(encoded, &response); err != nil {
 			return nil, err
 		}
 		if response.ID != id {

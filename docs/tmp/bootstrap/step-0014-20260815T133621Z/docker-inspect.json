@@ -1,0 +1,432 @@
+[
+  {
+    "Config": {
+      "Cmd": [
+        "app-server",
+        "--stdio",
+        "-c",
+        "analytics.enabled=false",
+        "-c",
+        "features.responses_websockets=false",
+        "-c",
+        "features.apps=false",
+        "-c",
+        "features.enable_mcp_apps=false",
+        "-c",
+        "features.plugins=false",
+        "-c",
+        "mcp_servers={}"
+      ],
+      "Entrypoint": [
+        "<redacted-home>/.local/share/codex-runtime/npm/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/bin/codex"
+      ],
+      "Hostname": "bae27e76a34c",
+      "Image": "safe-change-runtime:safe-change-integrated-1578928-3523f0c4",
+      "Labels": {
+        "com.docker.compose.project": "safe-change-integrated-1578928-3523f0c4",
+        "com.docker.compose.service": "control"
+      },
+      "User": "1001:1002",
+      "WorkingDir": "/tmp/safe-change-integrated-private-fr6sg2d3/agent-workspace"
+    },
+    "HostConfig": {
+      "CapDrop": [
+        "ALL"
+      ],
+      "NetworkMode": "safe-change-integrated-1578928-3523f0c4_agent",
+      "Privileged": false,
+      "ReadonlyRootfs": true,
+      "SecurityOpt": [
+        "no-new-privileges=true"
+      ],
+      "Tmpfs": {
+        "/tmp": "rw,nosuid,nodev,mode=1777"
+      }
+    },
+    "Id": "bae27e76a34c83baaf7ed9d1e3d0264a9b905e31bf41c832c08f3dfa1228412a",
+    "Mounts": [
+      {
+        "Destination": "/tmp/safe-change-integrated-private-fr6sg2d3/agent-workspace",
+        "RW": false,
+        "Type": "bind"
+      },
+      {
+        "Destination": "/var/lib/safe-change/codex-home",
+        "RW": true,
+        "Type": "bind"
+      },
+      {
+        "Destination": "<redacted-home>/.local/share/codex-runtime/npm/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl",
+        "RW": false,
+        "Type": "bind"
+      }
+    ],
+    "Name": "/safe-change-codex-6a13dfecba122f9c",
+    "NetworkSettings": {
+      "Networks": {
+        "safe-change-integrated-1578928-3523f0c4_agent": {
+          "IPAddress": "172.20.0.3"
+        }
+      }
+    },
+    "State": {
+      "Pid": 1602448,
+      "Running": true,
+      "StartedAt": "2026-08-15T13:39:57.844023771Z"
+    }
+  },
+  {
+    "Config": {
+      "Cmd": [
+        "/usr/local/bin/ingress",
+        "-control-listen=0.0.0.0:8787",
+        "-order-listen=0.0.0.0:8080",
+        "-control-upstream=http://control:8787",
+        "-order-upstream=http://order:8080"
+      ],
+      "Entrypoint": null,
+      "Hostname": "05d0d5dafc9d",
+      "Image": "safe-change-runtime:safe-change-integrated-1578928-3523f0c4",
+      "Labels": {
+        "com.docker.compose.container-number": "1",
+        "com.docker.compose.project": "safe-change-integrated-1578928-3523f0c4",
+        "com.docker.compose.service": "ingress"
+      },
+      "User": "1001:1002",
+      "WorkingDir": "/"
+    },
+    "HostConfig": {
+      "CapDrop": [
+        "ALL"
+      ],
+      "NetworkMode": "safe-change-integrated-1578928-3523f0c4_agent",
+      "Privileged": false,
+      "ReadonlyRootfs": true,
+      "SecurityOpt": [
+        "no-new-privileges:true"
+      ],
+      "Tmpfs": {
+        "/tmp": ""
+      }
+    },
+    "Id": "05d0d5dafc9d13f6ae9fe9a1da0511f30fe19c054fc031246163482af43734d0",
+    "Mounts": [],
+    "Name": "/safe-change-integrated-1578928-3523f0c4-ingress-1",
+    "NetworkSettings": {
+      "Networks": {
+        "safe-change-integrated-1578928-3523f0c4_agent": {
+          "IPAddress": "172.20.0.2"
+        },
+        "safe-change-integrated-1578928-3523f0c4_application": {
+          "IPAddress": "172.19.0.4"
+        }
+      }
+    },
+    "State": {
+      "Pid": 1582076,
+      "Running": true,
+      "StartedAt": "2026-08-15T13:36:49.67322935Z"
+    }
+  },
+  {
+    "Config": {
+      "Cmd": [
+        "/usr/local/bin/order",
+        "-listen=0.0.0.0:8080",
+        "-release=/config/order.json",
+        "-control=http://control:8787",
+        "-operation-token-file=/credentials/order-token"
+      ],
+      "Entrypoint": null,
+      "Hostname": "9498359a0078",
+      "Image": "safe-change-runtime:safe-change-integrated-1578928-3523f0c4",
+      "Labels": {
+        "com.docker.compose.container-number": "1",
+        "com.docker.compose.project": "safe-change-integrated-1578928-3523f0c4",
+        "com.docker.compose.service": "order"
+      },
+      "User": "1001:1002",
+      "WorkingDir": "/"
+    },
+    "HostConfig": {
+      "CapDrop": [
+        "ALL"
+      ],
+      "NetworkMode": "safe-change-integrated-1578928-3523f0c4_application",
+      "Privileged": false,
+      "ReadonlyRootfs": true,
+      "SecurityOpt": [
+        "no-new-privileges:true"
+      ],
+      "Tmpfs": {
+        "/tmp": ""
+      }
+    },
+    "Id": "9498359a0078f3efc1e26a9e19a61d892e413270c0288507b48c014bb2f5ddac",
+    "Mounts": [
+      {
+        "Destination": "/config",
+        "RW": false,
+        "Type": "bind"
+      },
+      {
+        "Destination": "/credentials/order-token",
+        "RW": false,
+        "Type": "bind"
+      }
+    ],
+    "Name": "/safe-change-integrated-1578928-3523f0c4-order-1",
+    "NetworkSettings": {
+      "Networks": {
+        "safe-change-integrated-1578928-3523f0c4_application": {
+          "IPAddress": "172.19.0.3"
+        }
+      }
+    },
+    "State": {
+      "Pid": 1581905,
+      "Running": true,
+      "StartedAt": "2026-08-15T13:36:47.990446742Z"
+    }
+  },
+  {
+    "Config": {
+      "Cmd": [
+        "/usr/local/bin/control",
+        "-listen=0.0.0.0:8787",
+        "-allow-nonloopback=true",
+        "-history=/state/runtime.history",
+        "-head-anchor=/anchor/runtime.head",
+        "-admin-token-file=/credentials/admin-token",
+        "-adapter-config=/config/adapters.json"
+      ],
+      "Entrypoint": null,
+      "Hostname": "a03a2f44c9ff",
+      "Image": "safe-change-runtime:safe-change-integrated-1578928-3523f0c4",
+      "Labels": {
+        "com.docker.compose.container-number": "1",
+        "com.docker.compose.project": "safe-change-integrated-1578928-3523f0c4",
+        "com.docker.compose.service": "control"
+      },
+      "User": "1001:1002",
+      "WorkingDir": "/"
+    },
+    "HostConfig": {
+      "CapDrop": [
+        "ALL"
+      ],
+      "NetworkMode": "safe-change-integrated-1578928-3523f0c4_application",
+      "Privileged": false,
+      "ReadonlyRootfs": true,
+      "SecurityOpt": [
+        "no-new-privileges:true"
+      ],
+      "Tmpfs": {
+        "/tmp": ""
+      }
+    },
+    "Id": "a03a2f44c9ff5e8d807a69b0fee65e997d06615b2191d73eefc61d835b872f41",
+    "Mounts": [
+      {
+        "Destination": "/anchor",
+        "RW": true,
+        "Type": "bind"
+      },
+      {
+        "Destination": "/credentials",
+        "RW": false,
+        "Type": "bind"
+      },
+      {
+        "Destination": "/config",
+        "RW": false,
+        "Type": "bind"
+      },
+      {
+        "Destination": "/state",
+        "RW": true,
+        "Type": "bind"
+      }
+    ],
+    "Name": "/safe-change-integrated-1578928-3523f0c4-control-1",
+    "NetworkSettings": {
+      "Networks": {
+        "safe-change-integrated-1578928-3523f0c4_application": {
+          "IPAddress": "172.19.0.2"
+        },
+        "safe-change-integrated-1578928-3523f0c4_effects": {
+          "IPAddress": "172.18.0.5"
+        }
+      }
+    },
+    "State": {
+      "Pid": 1581713,
+      "Running": true,
+      "StartedAt": "2026-08-15T13:36:46.230382284Z"
+    }
+  },
+  {
+    "Config": {
+      "Cmd": [
+        "/usr/local/bin/payment",
+        "-listen=0.0.0.0:8081",
+        "-state=/state/payment.history",
+        "-drop-first-response=true"
+      ],
+      "Entrypoint": null,
+      "Hostname": "b2ee5de2b050",
+      "Image": "safe-change-runtime:safe-change-integrated-1578928-3523f0c4",
+      "Labels": {
+        "com.docker.compose.container-number": "1",
+        "com.docker.compose.project": "safe-change-integrated-1578928-3523f0c4",
+        "com.docker.compose.service": "payment"
+      },
+      "User": "1001:1002",
+      "WorkingDir": "/"
+    },
+    "HostConfig": {
+      "CapDrop": [
+        "ALL"
+      ],
+      "NetworkMode": "safe-change-integrated-1578928-3523f0c4_effects",
+      "Privileged": false,
+      "ReadonlyRootfs": true,
+      "SecurityOpt": [
+        "no-new-privileges:true"
+      ],
+      "Tmpfs": {
+        "/tmp": ""
+      }
+    },
+    "Id": "b2ee5de2b050de76eee4e1716f59f7d00cbacc0685b148308fe7b35703590911",
+    "Mounts": [
+      {
+        "Destination": "/state",
+        "RW": true,
+        "Type": "bind"
+      }
+    ],
+    "Name": "/safe-change-integrated-1578928-3523f0c4-payment-1",
+    "NetworkSettings": {
+      "Networks": {
+        "safe-change-integrated-1578928-3523f0c4_effects": {
+          "IPAddress": "172.18.0.4"
+        }
+      }
+    },
+    "State": {
+      "Pid": 1581504,
+      "Running": true,
+      "StartedAt": "2026-08-15T13:36:44.490662627Z"
+    }
+  },
+  {
+    "Config": {
+      "Cmd": [
+        "/usr/local/bin/payment",
+        "-listen=0.0.0.0:8081",
+        "-state=/state/inventory.history",
+        "-drop-first-response=true"
+      ],
+      "Entrypoint": null,
+      "Hostname": "86fb9455e0bc",
+      "Image": "safe-change-runtime:safe-change-integrated-1578928-3523f0c4",
+      "Labels": {
+        "com.docker.compose.container-number": "1",
+        "com.docker.compose.project": "safe-change-integrated-1578928-3523f0c4",
+        "com.docker.compose.service": "inventory"
+      },
+      "User": "1001:1002",
+      "WorkingDir": "/"
+    },
+    "HostConfig": {
+      "CapDrop": [
+        "ALL"
+      ],
+      "NetworkMode": "safe-change-integrated-1578928-3523f0c4_effects",
+      "Privileged": false,
+      "ReadonlyRootfs": true,
+      "SecurityOpt": [
+        "no-new-privileges:true"
+      ],
+      "Tmpfs": {
+        "/tmp": ""
+      }
+    },
+    "Id": "86fb9455e0bc985909fc6dce89d8504431da706b1e83865e31ffc62a49408e66",
+    "Mounts": [
+      {
+        "Destination": "/state",
+        "RW": true,
+        "Type": "bind"
+      }
+    ],
+    "Name": "/safe-change-integrated-1578928-3523f0c4-inventory-1",
+    "NetworkSettings": {
+      "Networks": {
+        "safe-change-integrated-1578928-3523f0c4_effects": {
+          "IPAddress": "172.18.0.2"
+        }
+      }
+    },
+    "State": {
+      "Pid": 1581495,
+      "Running": true,
+      "StartedAt": "2026-08-15T13:36:44.480914144Z"
+    }
+  },
+  {
+    "Config": {
+      "Cmd": [
+        "/usr/local/bin/payment",
+        "-listen=0.0.0.0:8081",
+        "-state=/state/ledger.history"
+      ],
+      "Entrypoint": null,
+      "Hostname": "5433d8c92a5e",
+      "Image": "safe-change-runtime:safe-change-integrated-1578928-3523f0c4",
+      "Labels": {
+        "com.docker.compose.container-number": "1",
+        "com.docker.compose.project": "safe-change-integrated-1578928-3523f0c4",
+        "com.docker.compose.service": "ledger"
+      },
+      "User": "1001:1002",
+      "WorkingDir": "/"
+    },
+    "HostConfig": {
+      "CapDrop": [
+        "ALL"
+      ],
+      "NetworkMode": "safe-change-integrated-1578928-3523f0c4_effects",
+      "Privileged": false,
+      "ReadonlyRootfs": true,
+      "SecurityOpt": [
+        "no-new-privileges:true"
+      ],
+      "Tmpfs": {
+        "/tmp": ""
+      }
+    },
+    "Id": "5433d8c92a5ee564d162aac4349fb3e9806d1f17c5ee4eeedf503027fb02bb75",
+    "Mounts": [
+      {
+        "Destination": "/state",
+        "RW": true,
+        "Type": "bind"
+      }
+    ],
+    "Name": "/safe-change-integrated-1578928-3523f0c4-ledger-1",
+    "NetworkSettings": {
+      "Networks": {
+        "safe-change-integrated-1578928-3523f0c4_effects": {
+          "IPAddress": "172.18.0.3"
+        }
+      }
+    },
+    "State": {
+      "Pid": 1581502,
+      "Running": true,
+      "StartedAt": "2026-08-15T13:36:44.48793972Z"
+    }
+  }
+]

@@ -1,0 +1,38 @@
+{
+  "from_rule": 1,
+  "history": {
+    "hash": "ab4a937df3486f424e6ac1b7f25f07f9c7046f9ab7409f09e8e69c64a4bd36fb",
+    "sequence": 10
+  },
+  "open_operations": {
+    "op-c255fda4aa813124f95a6def57f54dd315a84b2b7749fce146d0e1fdb8d76bcc": {
+      "costs": {
+        "inventory-slot": 1
+      },
+      "id": "op-c255fda4aa813124f95a6def57f54dd315a84b2b7749fce146d0e1fdb8d76bcc",
+      "produces": {
+        "reserved": 1
+      },
+      "retry_safe": true
+    },
+    "op-d94cfde088108ff7b33c98aedb7d27b1d5c49dee168552717e19d91414eef7a1": {
+      "costs": {
+        "payment-slot": 1
+      },
+      "id": "op-d94cfde088108ff7b33c98aedb7d27b1d5c49dee168552717e19d91414eef7a1",
+      "produces": {
+        "paid": 1
+      },
+      "retry_safe": true
+    }
+  },
+  "schema": 1,
+  "settled": {
+    "results": {
+      "audited": 1
+    },
+    "used": {
+      "audit-slot": 1
+    }
+  }
+}

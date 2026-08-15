@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -29,6 +32,7 @@ func main() {
 	var operationTokenPath string
 	var operationDomain string
 	var operationKinds string
+	var adapterConfigPath string
 	var allowNonLoopback bool
 	flag.StringVar(&historyPath, "history", "runtime.history", "path for the durable History")
 	flag.StringVar(&anchorPath, "head-anchor", "", "host path outside the History restore domain")
@@ -37,31 +41,33 @@ func main() {
 	flag.StringVar(&operationTokenPath, "operation-token-file", "", "path to the Operation API token")
 	flag.StringVar(&operationDomain, "operation-domain", "local-adapter", "domain bound to the Operation API token")
 	flag.StringVar(&operationKinds, "operation-kinds", "", "comma-separated operation kinds allowed for the token")
+	flag.StringVar(&adapterConfigPath, "adapter-config", "", "strict JSON file containing independently scoped adapter credentials")
 	flag.BoolVar(&allowNonLoopback, "allow-nonloopback", false, "allow an explicitly isolated non-loopback listener")
 	flag.Parse()
 	if anchorPath == "" {
 		anchorPath = historyPath + ".head-anchor"
 	}
-	allowedKinds, err := parseKinds(operationKinds)
-	if err != nil {
-		log.Fatal(err)
-	}
 	if adminTokenPath == "" {
 		adminTokenPath = historyPath + ".admin-token"
-	}
-	if operationTokenPath == "" {
-		operationTokenPath = historyPath + ".operation-token"
 	}
 	adminToken, err := loadOrCreateToken(adminTokenPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	operationToken, err := loadOrCreateToken(operationTokenPath)
+	adapters, err := loadAdapters(
+		adapterConfigPath,
+		operationTokenPath,
+		operationDomain,
+		operationKinds,
+		historyPath,
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if adminToken == operationToken {
-		log.Fatal("admin and Operation tokens must differ")
+	for _, adapter := range adapters {
+		if adminToken == adapter.Token {
+			log.Fatal("admin and adapter tokens must differ")
+		}
 	}
 
 	listener, err := net.Listen("tcp", listenAddress)
@@ -86,9 +92,7 @@ func main() {
 	defer c.Close()
 	apiServer, err := api.New(c, nil, api.Credentials{
 		AdminToken: adminToken,
-		Adapters: []api.AdapterCredential{{
-			Token: operationToken, Domain: operationDomain, Kinds: allowedKinds,
-		}},
+		Adapters:   adapters,
 	})
 	if err != nil {
 		listener.Close()
@@ -109,10 +113,107 @@ func main() {
 		_ = server.Shutdown(shutdown)
 	}()
 	fmt.Printf("control API listening on http://%s\n", listener.Addr())
-	fmt.Printf("admin token: %s\nOperation token: %s\n", adminTokenPath, operationTokenPath)
+	fmt.Printf("admin token: %s\nadapter credentials: %d\n", adminTokenPath, len(adapters))
 	if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
+}
+
+const maxAdapterConfigBytes = 1 << 20
+
+type adapterConfig struct {
+	Schema   int                  `json:"schema"`
+	Adapters []adapterConfigEntry `json:"adapters"`
+}
+
+type adapterConfigEntry struct {
+	Domain    string   `json:"domain"`
+	TokenFile string   `json:"token_file"`
+	Kinds     []string `json:"kinds"`
+}
+
+func loadAdapters(configPath, legacyTokenPath, legacyDomain, legacyKinds, historyPath string) ([]api.AdapterCredential, error) {
+	if configPath == "" {
+		allowedKinds, err := parseKinds(legacyKinds)
+		if err != nil {
+			return nil, err
+		}
+		if legacyTokenPath == "" {
+			legacyTokenPath = historyPath + ".operation-token"
+		}
+		token, err := loadOrCreateToken(legacyTokenPath)
+		if err != nil {
+			return nil, err
+		}
+		return []api.AdapterCredential{{
+			Token: token, Domain: legacyDomain, Kinds: allowedKinds,
+		}}, nil
+	}
+	if legacyTokenPath != "" || legacyDomain != "local-adapter" || legacyKinds != "" {
+		return nil, errors.New("-adapter-config cannot be combined with legacy Operation credential flags")
+	}
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > maxAdapterConfigBytes {
+		return nil, fmt.Errorf("adapter config exceeds %d bytes", maxAdapterConfigBytes)
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	var configuration adapterConfig
+	if err := decoder.Decode(&configuration); err != nil {
+		return nil, fmt.Errorf("decode adapter config: %w", err)
+	}
+	var extra any
+	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
+		if err == nil {
+			return nil, errors.New("adapter config contains multiple JSON values")
+		}
+		return nil, fmt.Errorf("decode adapter config trailer: %w", err)
+	}
+	if configuration.Schema != 1 {
+		return nil, fmt.Errorf("unsupported adapter config schema %d", configuration.Schema)
+	}
+	if len(configuration.Adapters) == 0 || len(configuration.Adapters) > 32 {
+		return nil, errors.New("adapter config must contain between 1 and 32 adapters")
+	}
+	credentials := make([]api.AdapterCredential, 0, len(configuration.Adapters))
+	seenDomains := make(map[string]bool)
+	seenTokenFiles := make(map[string]bool)
+	seenTokens := make(map[string]bool)
+	for index, entry := range configuration.Adapters {
+		if entry.Domain == "" || seenDomains[entry.Domain] {
+			return nil, fmt.Errorf("adapter %d has an empty or duplicate domain", index)
+		}
+		seenDomains[entry.Domain] = true
+		if entry.TokenFile == "" || seenTokenFiles[entry.TokenFile] {
+			return nil, fmt.Errorf("adapter %d has an empty or duplicate token file", index)
+		}
+		seenTokenFiles[entry.TokenFile] = true
+		if len(entry.Kinds) == 0 {
+			return nil, fmt.Errorf("adapter %d has no allowed kind", index)
+		}
+		seenKinds := make(map[string]bool)
+		for _, kind := range entry.Kinds {
+			if kind == "" || seenKinds[kind] {
+				return nil, fmt.Errorf("adapter %d has an empty or duplicate kind", index)
+			}
+			seenKinds[kind] = true
+		}
+		token, err := loadOrCreateToken(entry.TokenFile)
+		if err != nil {
+			return nil, fmt.Errorf("load adapter %q token: %w", entry.Domain, err)
+		}
+		if seenTokens[token] {
+			return nil, fmt.Errorf("adapter %q reuses another adapter token", entry.Domain)
+		}
+		seenTokens[token] = true
+		credentials = append(credentials, api.AdapterCredential{
+			Token: token, Domain: entry.Domain, Kinds: append([]string(nil), entry.Kinds...),
+		})
+	}
+	return credentials, nil
 }
 
 func listenerAllowed(address *net.TCPAddr, allowNonLoopback bool) bool {

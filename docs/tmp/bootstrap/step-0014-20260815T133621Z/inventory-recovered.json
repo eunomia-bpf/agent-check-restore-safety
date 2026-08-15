@@ -1,0 +1,13 @@
+{
+  "release_version": "v2",
+  "requested_kind": "reserve-v2",
+  "requested_target": "http://inventory:8081/v2/charge",
+  "runtime": {
+    "body": "eyJvcGVyYXRpb25faWQiOiJvcC1jMjU1ZmRhNGFhODEzMTI0Zjk1YTZkZWY1N2Y1NGRkMzE1YTg0YjJiNzc0OWZjZTE0NmQwZTFmZGI4ZDc2YmNjIiwib3V0Y29tZSI6InN1Y2NlZWRlZCIsInJlbW90ZV9yZWZlcmVuY2UiOiJwYXltZW50L29wLWMyNTVmZGE0YWE4MTMxMjRmOTVhNmRlZjU3ZjU0ZGQzMTVhODRiMmI3NzQ5ZmNlMTQ2ZDBlMWZkYjhkNzZiY2MiLCJyZXN1bHRfaGFzaCI6IjRkOTA2Mzc1NzU0MGZhOTQ0YmMxMDZhNWFiNzZmMjg4ZTg4M2VkZjM5ZTcwNzBiM2EzMGNmOWQ2MTQxNjMyYTciLCJzY2hlbWEiOjF9Cg==",
+    "operation_id": "op-c255fda4aa813124f95a6def57f54dd315a84b2b7749fce146d0e1fdb8d76bcc",
+    "phase": "succeeded",
+    "result_hash": "60202a99534d08acf6f0dd1a1926b181ff2a7ac45e167b59713d855af6873f96",
+    "reused": false,
+    "status_code": 200
+  }
+}

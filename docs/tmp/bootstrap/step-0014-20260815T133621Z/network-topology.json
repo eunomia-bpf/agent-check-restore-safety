@@ -1,0 +1,34 @@
+{
+  "agent_to_effect_shared_networks": [],
+  "fixed_actor_paths": {
+    "codex": "ingress->control",
+    "order": "control",
+    "vm": "qemu-guestfwd->ingress->control"
+  },
+  "networks": {
+    "codex": [
+      "safe-change-integrated-1578928-3523f0c4_agent"
+    ],
+    "control": [
+      "safe-change-integrated-1578928-3523f0c4_application",
+      "safe-change-integrated-1578928-3523f0c4_effects"
+    ],
+    "ingress": [
+      "safe-change-integrated-1578928-3523f0c4_agent",
+      "safe-change-integrated-1578928-3523f0c4_application"
+    ],
+    "inventory": [
+      "safe-change-integrated-1578928-3523f0c4_effects"
+    ],
+    "ledger": [
+      "safe-change-integrated-1578928-3523f0c4_effects"
+    ],
+    "order": [
+      "safe-change-integrated-1578928-3523f0c4_application"
+    ],
+    "payment": [
+      "safe-change-integrated-1578928-3523f0c4_effects"
+    ]
+  },
+  "order_to_effect_shared_networks": []
+}

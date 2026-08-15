@@ -31,6 +31,8 @@ make runtime-vm-demo
 make runtime-codex-demo
 make runtime-codex-isolated-demo
 make runtime-codex-isolated-check
+make runtime-integrated-demo
+make runtime-integrated-check
 make runtime-verify
 ```
 
@@ -224,6 +226,75 @@ also asks `qemu-img` to verify that the named internal snapshot exists. Use
 `cd runtime && go run ./cmd/vm-demo -keep` to retain the guest overlay, serial
 console, QEMU log, History, head anchor, and payment state for inspection.
 
+## Run one purchase across Codex, a service, and a full VM
+
+`make runtime-integrated-demo` is the first vertical system target. It requires
+an existing `codex login` and combines, in one purchase and one History:
+
+- a real logged-in Codex App Server in a hardened container;
+- a replaceable order microservice;
+- a complete Ubuntu 24.04 QEMU guest restored from a live `savevm` snapshot;
+- one durable control service; and
+- separate payment, inventory, and ledger services with separate synced files.
+
+Codex calls `complete_purchase` once and waits for one callback that covers all
+three Operations. Its payment Operation and the order service's inventory
+Operation each commit remotely and lose their first response. The VM's ledger
+Operation succeeds before the Rule change. Against History head sequence 10,
+the runner compiles Rule v2, whose order kind is `reserve-v2`, and records its
+activation at sequence 11. It then replaces the order container and restarts
+the control process. The new order process requests the v2 kind and
+`/v2/charge`, but its stable call identity recovers the earlier Operation, so
+control preserves the frozen `reserve-v1` kind and `/v1/charge` target. No
+request reaches the inventory v2 path.
+
+The runner next loads the complete VM snapshot. The guest repeats the same
+audit call, receives the result already recorded in History, and reports
+`reused=true`; ledger receives no second delivery. The replacement control
+recovers the unknown payment and inventory Operations, settled retries reuse
+both results, and Codex receives the three results and replies exactly `DONE`.
+History ends at sequence 15 with all three Operations succeeded. The observed
+external totals are:
+
+| Service | Deliveries | Durable commits | Observed path |
+|---|---:|---:|---|
+| payment | 2 | 1 | `/v1/charge` |
+| inventory | 2 | 1 | `/v1/charge` |
+| ledger | 1 | 1 | `/v1/charge` |
+
+Docker provides three network domains. Codex joins only the agent network;
+order joins only the internal application network; payment, inventory, and
+ledger join only the internal effects network. Fixed ingress and control form
+the only cross-network path. Saved probes show that Codex and order can reach
+their intended next hop but cannot reach any effect service by either name or
+address. QEMU has no implicit NIC and uses one `restrict=on` user network with
+only metadata and shared-control guest forwards; the guest's direct effect
+probe fails both before and after restore.
+
+The retained run used TCG. It is evidence that the composition and whole-VM
+save/load path execute, not a latency, throughput, or KVM claim. The order and
+effect services are purpose-built test services, not a maintained application.
+Run a fresh live experiment with, for example:
+
+```sh
+make runtime-integrated-demo VM_ACCEL=tcg \
+  INTEGRATED_DEMO_ARGS='--output-dir /tmp/integrated-runtime-evidence'
+```
+
+The retained evidence and its current verification status are documented in
+[`step-report.md`](../docs/tmp/bootstrap/step-0014-20260815T133621Z/step-report.md).
+The live target is excluded from `runtime-verify` so ordinary tests cannot use
+account quota. The retained run is checked without account access:
+
+```sh
+make runtime-integrated-check
+```
+
+That checker does not import the live runner. It replays the binary History,
+reruns both Certificate checks, and joins the effect, Docker, App Server, and
+QEMU records. Mutation tests require it to reject changed History bytes, QMP
+restore commands, network membership, Codex tool identity, and inventory paths.
+
 ## Implemented now
 
 - a single-writer, length-framed History with SHA-256 chaining, `fsync`, strict
@@ -260,9 +331,9 @@ console, QEMU log, History, head anchor, and payment state for inspection.
   Ubuntu base image, whole-VM save/restore, and host History outside the guest
   restore domain;
 - a real logged-in Codex App Server path whose hardened container cannot reach
-  payment by network name or IP, whose dynamic-tool callback remains pending
-  across control-container replacement, and whose Operation completes after a
-  lost remote response; and
+  any of three effect services by network name or IP, and one integrated run in
+  which the pending callback spans an order-container replacement, a control
+  restart, a Rule change, and a complete QEMU VM restore; and
 - a separately implemented, standard-library-only Certificate checker binary,
   required by both live Rule activation and durable History replay.
 
@@ -299,13 +370,17 @@ process with the same host account outside the Docker deployment.
 
 This is an early system slice, not the complete system. It does not yet provide:
 
+- a maintained real application workload rather than the purpose-built order
+  and effect services;
 - general host-level prevention of direct network or device access beyond the
-  demonstrated Docker and QEMU payment boundaries;
+  demonstrated Docker and QEMU HTTP boundaries;
 - mediation of VM block devices, GPUs, passthrough devices, or arbitrary host
   interfaces beyond the demonstrated restricted HTTP path;
 - a live Claude adapter and a provider-independent Agent protocol;
 - a replicated control service;
-- authenticated remote evidence or query-based unknown-result recovery;
+- signed remote evidence or query-based unknown-result recovery;
+- repeated KVM runs, scale measurements, and comparisons with the declared
+  system baselines;
 - a symbolic solver for large models;
 - a proof-object Certificate schema that avoids full semantic recomputation;
 - a compiler isolated from the privileged control-service process; or

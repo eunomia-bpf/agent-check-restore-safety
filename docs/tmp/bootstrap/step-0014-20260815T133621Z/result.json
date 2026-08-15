@@ -1,0 +1,118 @@
+{
+  "codex": {
+    "login_status": "Logged in using ChatGPT",
+    "model": "gpt-5.6-sol",
+    "model_provider": "openai",
+    "native_binary_sha256": "cb0a15567e9a60a5820d54b0f6ae86d504dc3805c1eab21a47f70e3eb7b73a40",
+    "real_app_server": true,
+    "version": "codex-cli 0.147.0"
+  },
+  "effect_ips": {
+    "inventory": "172.18.0.2",
+    "ledger": "172.18.0.3",
+    "payment": "172.18.0.4"
+  },
+  "effects": {
+    "inventory": {
+      "commits": 1,
+      "deliveries": 2,
+      "paths": {
+        "/v1/charge": 2
+      }
+    },
+    "ledger": {
+      "commits": 1,
+      "deliveries": 1,
+      "paths": {
+        "/v1/charge": 1
+      }
+    },
+    "payment": {
+      "commits": 1,
+      "deliveries": 2,
+      "paths": {
+        "/v1/charge": 2
+      }
+    }
+  },
+  "evidence_directory": "step-0014-20260815T133621Z",
+  "faults": {
+    "control_pid_after": 1608892,
+    "control_pid_before": 1581713,
+    "control_process_restarted": true,
+    "order_container_after": "8ba1b66c78e939eb11bc5218b11dbc2e42e8db230129e35267885ba66e4cacf1",
+    "order_container_before": "9498359a0078f3efc1e26a9e19a61d892e413270c0288507b48c014bb2f5ddac",
+    "order_process_replaced": true,
+    "whole_vm_restored": true
+  },
+  "history": {
+    "active_requirement": "purchase-v2/safe-change-integrated-1578928-3523f0c4",
+    "hash": "877b997d9092dfde27ba2ea02d12b7ae951b2d09e9aac202e558665f210b95cd",
+    "operations": {
+      "codex": "op-d94cfde088108ff7b33c98aedb7d27b1d5c49dee168552717e19d91414eef7a1",
+      "order": "op-c255fda4aa813124f95a6def57f54dd315a84b2b7749fce146d0e1fdb8d76bcc",
+      "vm": "op-2c63d5a0adc8123aed61a6119bbfa244adc333c4b7f8772baf19d62d15f61e99"
+    },
+    "sequence": 15
+  },
+  "network": {
+    "agent_to_effect_shared_networks": [],
+    "fixed_actor_paths": {
+      "codex": "ingress->control",
+      "order": "control",
+      "vm": "qemu-guestfwd->ingress->control"
+    },
+    "networks": {
+      "codex": [
+        "safe-change-integrated-1578928-3523f0c4_agent"
+      ],
+      "control": [
+        "safe-change-integrated-1578928-3523f0c4_application",
+        "safe-change-integrated-1578928-3523f0c4_effects"
+      ],
+      "ingress": [
+        "safe-change-integrated-1578928-3523f0c4_agent",
+        "safe-change-integrated-1578928-3523f0c4_application"
+      ],
+      "inventory": [
+        "safe-change-integrated-1578928-3523f0c4_effects"
+      ],
+      "ledger": [
+        "safe-change-integrated-1578928-3523f0c4_effects"
+      ],
+      "order": [
+        "safe-change-integrated-1578928-3523f0c4_application"
+      ],
+      "payment": [
+        "safe-change-integrated-1578928-3523f0c4_effects"
+      ]
+    },
+    "order_to_effect_shared_networks": []
+  },
+  "protocol": {
+    "approval_policy": "never",
+    "callback_responses": 1,
+    "completed_turns": 1,
+    "custom_model_provider_installed": false,
+    "dynamic_tool_calls": 1,
+    "final_agent_message": "DONE",
+    "model": "gpt-5.6-sol",
+    "model_provider": "openai",
+    "provider_call_id": "exec-338463cd-d6f3-4d85-b61e-81aeb4acff98",
+    "raw_records": 40,
+    "real_app_server_process": true,
+    "sandbox_network_access": false,
+    "sandbox_type": "readOnly",
+    "thread_id": "01a005a6-95b8-7b83-b674-e95edf58ec73",
+    "turn_id": "01a005a6-95cc-7ed1-9e12-7c45cbf808ed"
+  },
+  "purchase_id": "A-17-3523f0c4",
+  "run_id": "safe-change-integrated-1578928-3523f0c4",
+  "vm": {
+    "accelerator": "tcg",
+    "first_reused": false,
+    "restored_reused": true,
+    "runner_pid": 1582535,
+    "snapshot": "before_purchase"
+  }
+}
