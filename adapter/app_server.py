@@ -1,8 +1,10 @@
-"""Minimal real Codex App Server boundary used by the RQ3 experiment.
+"""Minimal real Codex App Server boundary used by the runtime experiments.
 
 The client owns one protected dynamic-tool callback.  It intentionally has no
 dependency on the authority controller, replay checker, or evaluation oracle;
-callers decide when and how to answer the pending callback.
+callers decide when and how to answer the pending callback.  Deterministic
+tests use a loopback model endpoint; the locally logged-in Codex account is
+available only through an explicit opt-in and never installs a custom provider.
 """
 
 from __future__ import annotations
@@ -112,24 +114,31 @@ class CodexAppServer:
     def __init__(
         self,
         *,
-        model_base_url: str,
+        model_base_url: str | None,
         workspace: str | os.PathLike[str],
         raw_jsonl_path: str | os.PathLike[str],
         codex_binary: str = "codex",
-        model: str = "gpt-5.6-sol",
+        model: str | None = None,
+        use_logged_in_account: bool = False,
         rpc_timeout: float = RPC_TIMEOUT_SECONDS,
         turn_timeout: float = TURN_TIMEOUT_SECONDS,
     ) -> None:
-        parsed = urlsplit(model_base_url)
-        if (
-            parsed.scheme != "http"
-            or parsed.hostname not in _LOOPBACK_HOSTS
-            or parsed.username is not None
-            or parsed.password is not None
-        ):
+        if use_logged_in_account != (model_base_url is None):
             raise ValueError(
-                "the deterministic model endpoint must be unauthenticated loopback HTTP"
+                "explicit logged-in account use requires both model_base_url=None and "
+                "use_logged_in_account=True"
             )
+        if model_base_url is not None:
+            parsed = urlsplit(model_base_url)
+            if (
+                parsed.scheme != "http"
+                or parsed.hostname not in _LOOPBACK_HOSTS
+                or parsed.username is not None
+                or parsed.password is not None
+            ):
+                raise ValueError(
+                    "the deterministic model endpoint must be unauthenticated loopback HTTP"
+                )
         resolved_binary = shutil.which(codex_binary)
         if resolved_binary is None:
             raise FileNotFoundError(f"Codex executable not found: {codex_binary}")
@@ -139,11 +148,18 @@ class CodexAppServer:
         if rpc_timeout <= 0 or turn_timeout <= 0:
             raise ValueError("timeouts must be positive")
 
-        self.model_base_url = model_base_url.rstrip("/")
+        self.model_base_url = (
+            model_base_url.rstrip("/") if model_base_url is not None else None
+        )
         self.workspace = workspace_path
         self.raw_jsonl_path = Path(raw_jsonl_path).resolve()
         self.codex_binary = resolved_binary
-        self.model = model
+        self.model = (
+            model
+            if model is not None or use_logged_in_account
+            else "gpt-5.6-sol"
+        )
+        self._uses_logged_in_account = use_logged_in_account
         self.rpc_timeout = float(rpc_timeout)
         self.turn_timeout = float(turn_timeout)
 
@@ -173,7 +189,25 @@ class CodexAppServer:
         with self._events_condition:
             return tuple(self._unexpected_mcp_events)
 
+    @property
+    def uses_logged_in_account(self) -> bool:
+        return self._uses_logged_in_account
+
     def _command(self) -> list[str]:
+        if self.uses_logged_in_account:
+            overrides = [
+                "analytics.enabled=false",
+                "features.responses_websockets=false",
+                "features.apps=false",
+                "features.enable_mcp_apps=false",
+                "features.plugins=false",
+                "mcp_servers={}",
+            ]
+            command = [self.codex_binary, "app-server", "--stdio"]
+            for override in overrides:
+                command.extend(("-c", override))
+            return command
+
         provider = (
             "{"
             f"name={_toml_string('Authority Continuity deterministic fixture')},"
@@ -525,6 +559,52 @@ class CodexAppServer:
             raise AppServerProtocolError("persisted seed thread has no rollout path")
         if result.get("modelProvider") != _PROVIDER_ID:
             raise AppServerProtocolError("seed thread escaped the local model provider")
+        return thread
+
+    def create_account_thread(
+        self,
+        *,
+        tool_name: str,
+        tool_description: str,
+        input_schema: Mapping[str, Any],
+        developer_instructions: str | None = None,
+    ) -> dict[str, Any]:
+        """Create one ephemeral thread backed by the locally logged-in account."""
+
+        if not self.uses_logged_in_account:
+            raise AppServerProtocolError(
+                "account-backed thread requires explicit logged-in account mode"
+            )
+        if not tool_name or not tool_description or not isinstance(input_schema, Mapping):
+            raise ValueError("a named dynamic tool with an input schema is required")
+        params: dict[str, Any] = {
+            "cwd": str(self.workspace),
+            "ephemeral": True,
+            "sandbox": "read-only",
+            "approvalPolicy": "never",
+            "environments": [],
+            "serviceName": "safe_change_runtime",
+            "dynamicTools": [
+                {
+                    "type": "function",
+                    "name": tool_name,
+                    "description": tool_description,
+                    "inputSchema": dict(input_schema),
+                }
+            ],
+        }
+        if self.model:
+            params["model"] = self.model
+        if developer_instructions:
+            params["developerInstructions"] = developer_instructions
+        result = self.request("thread/start", params)
+        thread = result.get("thread")
+        if not isinstance(thread, dict) or not isinstance(thread.get("id"), str):
+            raise AppServerProtocolError("thread/start omitted the account thread id")
+        if thread.get("ephemeral") is not True or thread.get("path") is not None:
+            raise AppServerProtocolError("account thread is not ephemeral")
+        if result.get("modelProvider") == _PROVIDER_ID:
+            raise AppServerProtocolError("account thread escaped to the test provider")
         return thread
 
     def start_turn_and_wait(

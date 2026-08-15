@@ -1,0 +1,3 @@
+control API listening on http://127.0.0.1:36199
+admin token: /tmp/safe-change-codex-private-ozi8mfew/control/admin-token
+Operation token: /tmp/safe-change-codex-private-ozi8mfew/control/operation-token

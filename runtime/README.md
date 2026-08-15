@@ -27,6 +27,7 @@ make runtime-test
 make runtime-demo
 make runtime-microservice-demo
 make runtime-vm-demo
+make runtime-codex-demo
 make runtime-verify
 ```
 
@@ -79,6 +80,37 @@ commits: two v1 deliveries for A-17 and one v2 delivery for B-18. History ends
 with both Operations succeeded. Set `KEEP_DEMO=1` to leave the containers and
 temporary evidence running, or `KEEP_STATE=1` to retain only the evidence
 directory printed by the script.
+
+## Keep a real Codex call alive across control replacement
+
+`make runtime-codex-demo` is an explicit live-account experiment. It requires
+an existing `codex login`, starts the official Codex App Server in an empty
+temporary workspace, and does not install the deterministic model provider.
+The thread is ephemeral and read-only, has sandbox network access disabled,
+uses no approvals, and has MCP servers, apps, and plugins disabled. Its only
+application tool accepts one fixed `effect_id`.
+
+The real model calls that tool once. Payment durably commits and drops its
+first response, so the Operation becomes `unknown`. While the App Server's
+tool request is still pending, the runner terminates the control process and
+starts a new one over the same History and external head anchor. The adapter
+retries the same stable Operation, returns the receipt to Codex, and requires
+the turn to finish with `DONE`. A final settled retry must be served from
+History without contacting payment. The checked outcome is two deliveries,
+one payment commit, one Codex tool call, and one callback response.
+
+The live target is deliberately excluded from `runtime-verify`, so tests cannot
+silently use account quota. Pass an explicit output path or model through, for
+example:
+
+```sh
+make runtime-codex-demo \
+  CODEX_DEMO_ARGS='--output-dir /tmp/codex-runtime-evidence'
+```
+
+This first live composition does not yet place Codex and payment in disjoint
+network namespaces. The Docker service demo and QEMU demo enforce that network
+boundary separately; combining it with the live model is the next increment.
 
 ## Restore a complete Linux VM after a remote commit
 
@@ -157,7 +189,10 @@ console, QEMU log, History, head anchor, and payment state for inspection.
   method, and target after the calling process changes globally; and
 - a rootless QEMU guest path with a host-owned restricted network, a verified
   Ubuntu base image, whole-VM save/restore, and host History outside the guest
-  restore domain.
+  restore domain; and
+- a real logged-in Codex App Server path whose dynamic-tool callback remains
+  pending across control-process replacement and completes an Operation after
+  a lost remote response.
 
 Run the daemon directly:
 
@@ -196,7 +231,8 @@ This is an early system slice, not the complete system. It does not yet provide:
   demonstrated Docker and QEMU payment boundaries;
 - mediation of VM block devices, GPUs, passthrough devices, or arbitrary host
   interfaces beyond the demonstrated restricted HTTP path;
-- Codex and Claude adapters to this new control layer;
+- a Claude adapter and container-enforced network isolation for the live Codex
+  path;
 - a replicated control service;
 - authenticated remote evidence or query-based unknown-result recovery;
 - a symbolic solver for large models;

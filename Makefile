@@ -1,4 +1,4 @@
-.PHONY: runtime-build runtime-test runtime-demo runtime-microservice-demo runtime-vm-demo runtime-verify
+.PHONY: runtime-build runtime-test runtime-demo runtime-microservice-demo runtime-vm-demo runtime-codex-demo runtime-verify
 
 VM_ACCEL ?= tcg
 
@@ -19,6 +19,10 @@ runtime-microservice-demo:
 
 runtime-vm-demo:
 	cd runtime && go run ./cmd/vm-demo -accel "$(VM_ACCEL)"
+
+# Explicit live-account target. It is intentionally not part of runtime-verify.
+runtime-codex-demo:
+	python3 -m adapter.codex_runtime_demo $(CODEX_DEMO_ARGS)
 
 runtime-verify:
 	cd runtime && go build ./...

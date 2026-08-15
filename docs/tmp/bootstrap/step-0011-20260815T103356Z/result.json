@@ -1,0 +1,47 @@
+{
+  "boundaries": {
+    "codex_workspace": "empty temporary read-only workspace",
+    "control_history_outside_codex_process": true,
+    "direct_codex_to_payment_network_isolation": false,
+    "payment_state_outside_control_process": true
+  },
+  "codex": {
+    "binary": "/home/will/.local/bin/codex",
+    "binary_sha256": "2ed7c37ac579b60a7aff81111f13e7dff7c50dac1c6d096caf8bc4a5843f390d",
+    "login_status": "Logged in using ChatGPT",
+    "mock_model_endpoint": false,
+    "model": "account-default",
+    "version": "codex-cli 0.147.0"
+  },
+  "evidence_directory": "/home/will/agent-check-restore-safety/docs/tmp/bootstrap/step-0011-20260815T103356Z",
+  "fault": {
+    "control_pid_after": 1421454,
+    "control_pid_before": 1421253,
+    "control_process_replaced_while_callback_pending": true
+  },
+  "operation": {
+    "effect_id": "codex-order-A-17",
+    "first_result": "unknown",
+    "operation_id": "op-9f20f3b6cf55834925b6ce5685cf6ffb80bb6397092e5f102e43d2bd7f2a7563",
+    "provider_call_id_is_operation_identity": false,
+    "recovered_result": "succeeded",
+    "settled_retry_reused": true,
+    "stable_call_id": "protected_payment/v1/codex-order-A-17"
+  },
+  "payment": {
+    "deliveries": 2,
+    "durability_records": 1,
+    "durable_commits": 1
+  },
+  "protocol": {
+    "callback_responses": 1,
+    "completed_turns": 1,
+    "custom_model_provider_installed": false,
+    "dynamic_tool_calls": 1,
+    "provider_call_id": "exec-cb9ed489-4060-4a38-9b48-4e74337e4ed4",
+    "raw_records": 32,
+    "real_app_server_process": true,
+    "thread_id": "01a004fc-4ac7-7301-9417-760f178a217d",
+    "turn_id": "01a004fc-4b0f-76e0-93ec-e497dfb2c850"
+  }
+}

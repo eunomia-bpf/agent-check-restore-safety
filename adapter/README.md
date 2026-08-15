@@ -7,6 +7,12 @@ separate SQLite-backed controller worker is hard-killed and restarted.  The
 model endpoint and protected sink are deterministic local fixtures; the run
 does not contact a live model or a production service.
 
+The directory also contains a separate, explicit live-account system path:
+`python -m adapter.codex_runtime_demo`. That runner uses the account selected by
+`codex login`, a real model, the Go control daemon, and the independently
+durable Go payment service. The fixed experiment above remains deterministic;
+ordinary adapter tests never opt into the logged-in account.
+
 The scientific boundary is narrow and intentional.  Codex supplies native
 history IDs, exact fork boundaries, and the real `item/tool/call` seam.  The
 adapter supplies the choice/parallel meaning of a fork, replacing/live restore,
@@ -40,6 +46,17 @@ python -m adapter.check_results \
   --input "$adapter_run_dir/litmus.json" \
   --output "$adapter_run_dir/check.json"
 ```
+
+Run the real-model system path only when account use is intended:
+
+```bash
+make runtime-codex-demo
+```
+
+It registers one strict dynamic tool, keeps its callback pending while the Go
+control process is replaced, recovers a payment whose first response was lost,
+and checks two deliveries but one durable commit. The evidence directory is
+printed at completion. It never copies control API tokens into that directory.
 
 The first two commands test the implementation and verify the retained run;
 the remaining commands create and check a fresh run.  The runner refuses an

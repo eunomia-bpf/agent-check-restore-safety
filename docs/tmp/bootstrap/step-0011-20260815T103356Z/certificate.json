@@ -1,0 +1,41 @@
+{
+  "decision": "activate",
+  "digest": "d3341a56e48bd61cfed5ad1ea306dab28f6c38779ddfa2d296dfcb5a4538727f",
+  "from_rule": 0,
+  "history": {
+    "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "sequence": 0
+  },
+  "requirement": {
+    "capacities": {
+      "charge": 1
+    },
+    "id": "codex-payment-v1",
+    "kinds": {
+      "charge-invoice": {
+        "costs": {
+          "charge": 1
+        },
+        "method": "POST",
+        "produces": {
+          "paid": 1
+        },
+        "queryable": false,
+        "response_classifier": "operation-receipt-v1",
+        "retry_safe": true,
+        "target": "http://127.0.0.1:40447/v1/charge"
+      }
+    },
+    "results": {
+      "paid": 1
+    }
+  },
+  "rule": {
+    "allow": [
+      "charge-invoice"
+    ],
+    "requirement_hash": "9c740856d9020e3f2b1626f9266d446ff971d05ecfb2384c183cd16f8a8b223b",
+    "version": 1
+  },
+  "schema": 1
+}

@@ -1,0 +1,140 @@
+[
+  {
+    "data": {
+      "certificate": {
+        "decision": "activate",
+        "digest": "d3341a56e48bd61cfed5ad1ea306dab28f6c38779ddfa2d296dfcb5a4538727f",
+        "from_rule": 0,
+        "history": {
+          "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 0
+        },
+        "requirement": {
+          "capacities": {
+            "charge": 1
+          },
+          "id": "codex-payment-v1",
+          "kinds": {
+            "charge-invoice": {
+              "costs": {
+                "charge": 1
+              },
+              "method": "POST",
+              "produces": {
+                "paid": 1
+              },
+              "queryable": false,
+              "response_classifier": "operation-receipt-v1",
+              "retry_safe": true,
+              "target": "http://127.0.0.1:40447/v1/charge"
+            }
+          },
+          "results": {
+            "paid": 1
+          }
+        },
+        "rule": {
+          "allow": [
+            "charge-invoice"
+          ],
+          "requirement_hash": "9c740856d9020e3f2b1626f9266d446ff971d05ecfb2384c183cd16f8a8b223b",
+          "version": 1
+        },
+        "schema": 1
+      },
+      "semantic_version": 1
+    },
+    "hash": "cc116ca291df29528a2cf73578a997da5859880594b516c429fe566bb5a369ce",
+    "operation": "rule.activated",
+    "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "sequence": 1
+  },
+  {
+    "data": {
+      "operation": {
+        "costs": {
+          "charge": 1
+        },
+        "domain": "codex-app-server",
+        "id": "op-9f20f3b6cf55834925b6ce5685cf6ffb80bb6397092e5f102e43d2bd7f2a7563",
+        "kind": "charge-invoice",
+        "method": "POST",
+        "phase": "prepared",
+        "produces": {
+          "paid": 1
+        },
+        "queryable": false,
+        "request_hash": "03c17ffa2a85afe513e1d23c7b2ff2a3f6318845dac7c5d8a23702759c9aa9a7",
+        "response_classifier": "operation-receipt-v1",
+        "retry_safe": true,
+        "rule_version": 1,
+        "target": "http://127.0.0.1:40447/v1/charge"
+      },
+      "semantic_version": 1
+    },
+    "hash": "530ebf69db6a5bb9e6d67030bb99afc90c43b464dd5a4e31e1afeab70bd24f1f",
+    "operation": "operation.prepared",
+    "previous_hash": "cc116ca291df29528a2cf73578a997da5859880594b516c429fe566bb5a369ce",
+    "sequence": 2
+  },
+  {
+    "data": {
+      "id": "op-9f20f3b6cf55834925b6ce5685cf6ffb80bb6397092e5f102e43d2bd7f2a7563",
+      "semantic_version": 1,
+      "update": {
+        "dispatch_generation": 1,
+        "dispatch_owner": "4c8f90e6b85d5e4939fc41ce08c57492",
+        "phase": "dispatched"
+      }
+    },
+    "hash": "75590d72610151a80084b4fd4cc72742509279884472b306886bd81ad80dbac9",
+    "operation": "operation.phase",
+    "previous_hash": "530ebf69db6a5bb9e6d67030bb99afc90c43b464dd5a4e31e1afeab70bd24f1f",
+    "sequence": 3
+  },
+  {
+    "data": {
+      "id": "op-9f20f3b6cf55834925b6ce5685cf6ffb80bb6397092e5f102e43d2bd7f2a7563",
+      "semantic_version": 1,
+      "update": {
+        "phase": "unknown"
+      }
+    },
+    "hash": "cdb32d7ed7dc5e23b262f1addac6a15f3dd31600ed829db1a2865223411e936d",
+    "operation": "operation.phase",
+    "previous_hash": "75590d72610151a80084b4fd4cc72742509279884472b306886bd81ad80dbac9",
+    "sequence": 4
+  },
+  {
+    "data": {
+      "id": "op-9f20f3b6cf55834925b6ce5685cf6ffb80bb6397092e5f102e43d2bd7f2a7563",
+      "semantic_version": 1,
+      "update": {
+        "dispatch_generation": 2,
+        "dispatch_owner": "1372afefd7c7207ed9de4b9848db06fe",
+        "phase": "dispatched"
+      }
+    },
+    "hash": "e85c607ea730a2611e8866bf779ef166a2ce02e46b69a44486017474f6f04fa3",
+    "operation": "operation.phase",
+    "previous_hash": "cdb32d7ed7dc5e23b262f1addac6a15f3dd31600ed829db1a2865223411e936d",
+    "sequence": 5
+  },
+  {
+    "data": {
+      "id": "op-9f20f3b6cf55834925b6ce5685cf6ffb80bb6397092e5f102e43d2bd7f2a7563",
+      "semantic_version": 1,
+      "update": {
+        "phase": "succeeded",
+        "remote_reference": "payment/op-9f20f3b6cf55834925b6ce5685cf6ffb80bb6397092e5f102e43d2bd7f2a7563",
+        "result_body": "eyJvcGVyYXRpb25faWQiOiJvcC05ZjIwZjNiNmNmNTU4MzQ5MjViNmNlNTY4NWNmNmZmYjgwYmI2Mzk3MDkyZTVmMTAyZTQzZDJiZDdmMmE3NTYzIiwib3V0Y29tZSI6InN1Y2NlZWRlZCIsInJlbW90ZV9yZWZlcmVuY2UiOiJwYXltZW50L29wLTlmMjBmM2I2Y2Y1NTgzNDkyNWI2Y2U1Njg1Y2Y2ZmZiODBiYjYzOTcwOTJlNWYxMDJlNDNkMmJkN2YyYTc1NjMiLCJyZXN1bHRfaGFzaCI6IjI0OWQxYjlhNjgzZTVmZTgxYTU5NjZhNmYwMDk1M2MzNWRkNGVmYjNhMTQ4MDRkMDYwNjBmZTUxNTEyOTVhM2EiLCJzY2hlbWEiOjF9Cg==",
+        "result_hash": "ae9082aed384ed4cb2f9d9ce4bbfe23a917c48d4fa9bfcd13c8624a9195e2e63",
+        "status_code": 200
+      }
+    },
+    "hash": "80034484b4df8e4fd4530bee2947054d9b203ed428e18b1a5e165bc94300e55a",
+    "operation": "operation.phase",
+    "previous_hash": "e85c607ea730a2611e8866bf779ef166a2ce02e46b69a44486017474f6f04fa3",
+    "sequence": 6
+  }
+]

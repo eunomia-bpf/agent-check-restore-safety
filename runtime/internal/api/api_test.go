@@ -13,6 +13,7 @@ import (
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/control"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/gateway"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/kernel"
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/payment"
 )
 
 const (
@@ -151,6 +152,66 @@ func TestLocalAPICompilesActivatesAndExecutes(t *testing.T) {
 	}
 	if outcome.Phase != kernel.Succeeded || deliveries.Load() != 1 {
 		t.Fatalf("outcome=%+v deliveries=%d", outcome, deliveries.Load())
+	}
+}
+
+func TestAPIRecoversLostPaymentResponseAndReusesSettlement(t *testing.T) {
+	service, err := payment.Open(filepath.Join(t.TempDir(), "payment.history"), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer service.Close()
+	paymentServer := httptest.NewServer(service.Handler())
+	defer paymentServer.Close()
+
+	c, err := control.Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	serverAPI, err := New(c, nil, testCredentials())
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(serverAPI.Handler())
+	defer server.Close()
+
+	requirement := testRequirement("lost-response", paymentServer.URL+"/v1/charge")
+	certificate, err := c.Compile(requirement)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Activate(certificate); err != nil {
+		t.Fatal(err)
+	}
+	request := executeRequest{
+		CallID: "payment-1", Kind: "finish", Method: http.MethodPost,
+		URL: paymentServer.URL + "/v1/charge", Body: []byte(`{"amount":42}`),
+	}
+	var unknown struct {
+		Outcome gateway.Outcome `json:"outcome"`
+		Error   string          `json:"error"`
+	}
+	if status := postJSON(t, server.Client(), server.URL+"/v1/execute", operationToken, request, &unknown); status != http.StatusConflict {
+		t.Fatalf("first execute status=%d outcome=%+v error=%q", status, unknown.Outcome, unknown.Error)
+	}
+	if unknown.Outcome.Phase != kernel.Unknown {
+		t.Fatalf("first outcome=%+v", unknown.Outcome)
+	}
+	var recovered gateway.Outcome
+	if status := postJSON(t, server.Client(), server.URL+"/v1/execute", operationToken, request, &recovered); status != http.StatusOK {
+		t.Fatalf("recovery status=%d outcome=%+v", status, recovered)
+	}
+	if recovered.Phase != kernel.Succeeded || recovered.Reused {
+		t.Fatalf("recovered outcome=%+v", recovered)
+	}
+	var reused gateway.Outcome
+	if status := postJSON(t, server.Client(), server.URL+"/v1/execute", operationToken, request, &reused); status != http.StatusOK {
+		t.Fatalf("reuse status=%d outcome=%+v", status, reused)
+	}
+	stats := service.Stats()
+	if reused.Phase != kernel.Succeeded || !reused.Reused || stats.Deliveries != 2 || stats.Commits != 1 {
+		t.Fatalf("reused=%+v stats=%+v", reused, stats)
 	}
 }
 

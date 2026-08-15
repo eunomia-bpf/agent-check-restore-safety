@@ -20,6 +20,7 @@ make runtime-test
 make runtime-demo
 make runtime-microservice-demo
 make runtime-vm-demo
+make runtime-codex-demo
 make runtime-verify
 ```
 
@@ -34,6 +35,13 @@ the complete running guest before an Operation, then restores the guest after
 the remote payment committed but its response was lost. A host-owned restricted
 network exposes only metadata and control to the guest. The restored guest
 repeats the call, History recovers it, and payment still commits once.
+
+The Codex demo uses the locally logged-in account and the real Codex App Server,
+not a model fixture. A strict dynamic tool requests one application-chosen
+Operation. Payment commits and loses its first response; while the tool callback
+is pending, the control process is replaced. The restarted control process
+finishes the same Operation, Codex replies `DONE`, and payment retains one
+durable commit. This explicit live-account target is not run by ordinary tests.
 
 The scientific and system contract is in
 [`docs/system-contract.md`](docs/system-contract.md). The current paper source

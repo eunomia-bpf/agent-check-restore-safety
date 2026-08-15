@@ -163,9 +163,8 @@ serialization, or keeping every old version indefinitely.
 0. **Durable control path — implemented.** A Go History, external head anchor,
    stable Operation lifecycle, resource/result planner, history-bound
    Certificate, strict-receipt HTTP gateway, local control daemon, state replay,
-   and a separately synced payment file now run under public commands. The demo
-   currently reopens the control object; process-kill evidence belongs to the
-   next fault matrix.
+   and a separately synced payment file now run under public commands. Later
+   container and Codex paths replace the complete control process.
 1. **Enforced multi-process change — implemented.** Separate order, control,
    payment, and fixed-ingress containers now replace the whole order process
    after a committed payment loses its response. The changed process contains
@@ -185,7 +184,12 @@ serialization, or keeping every old version indefinitely.
    open.
 5. Connect the VM path to the isolated service deployment and add block/device
    output tests.
-6. Connect Codex App Server and Claude tool calls to the same Operation gateway.
+6. **Real Codex App Server path — implemented without network isolation.** A
+   logged-in model invokes one strict dynamic tool; its callback remains pending
+   while control is replaced after payment commits and loses its response. The
+   replacement completes the same Operation, and payment commits once. Moving
+   this live path into the isolated container topology and adding Claude remain
+   open.
 7. Replace bounded enumeration with a symbolic backend and cross-check it
    against the existing exact Python oracle.
 8. Prove the generic finite theorem, the durable control refinement, and each

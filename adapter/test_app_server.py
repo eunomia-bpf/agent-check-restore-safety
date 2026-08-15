@@ -356,6 +356,53 @@ class DeterministicResponsesServerTests(unittest.TestCase):
             self.assertIn('"name":"protected_commit"', bodies[1])
 
 
+class CodexAppServerModeTests(unittest.TestCase):
+    def test_logged_in_account_requires_explicit_opt_in(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="codex-mode-test-") as directory:
+            root = Path(directory)
+            with self.assertRaisesRegex(ValueError, "explicit logged-in account"):
+                CodexAppServer(
+                    model_base_url=None,
+                    workspace=root,
+                    raw_jsonl_path=root / "implicit.jsonl",
+                )
+            with self.assertRaisesRegex(ValueError, "logged-in account use"):
+                CodexAppServer(
+                    model_base_url="http://127.0.0.1:1",
+                    use_logged_in_account=True,
+                    workspace=root,
+                    raw_jsonl_path=root / "contradictory.jsonl",
+                )
+
+    def test_logged_in_account_command_has_no_test_provider(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="codex-mode-test-") as directory:
+            root = Path(directory)
+            client = CodexAppServer(
+                model_base_url=None,
+                use_logged_in_account=True,
+                workspace=root,
+                raw_jsonl_path=root / "live.jsonl",
+            )
+            command = " ".join(client._command())
+            self.assertTrue(client.uses_logged_in_account)
+            self.assertIsNone(client.model)
+            self.assertNotIn("model_providers", command)
+            self.assertNotIn("authority_continuity_mock", command)
+            self.assertIn("mcp_servers={}", command)
+
+    def test_deterministic_mode_keeps_the_pinned_default_model(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="codex-mode-test-") as directory:
+            root = Path(directory)
+            client = CodexAppServer(
+                model_base_url="http://127.0.0.1:1",
+                workspace=root,
+                raw_jsonl_path=root / "fixture.jsonl",
+            )
+            self.assertFalse(client.uses_logged_in_account)
+            self.assertEqual(client.model, "gpt-5.6-sol")
+            self.assertIn("authority_continuity_mock", " ".join(client._command()))
+
+
 @unittest.skipUnless(shutil.which("codex"), "installed codex executable required")
 class RealCodexAppServerTests(unittest.TestCase):
     def test_preflight_with_real_stdio_server(self) -> None:
