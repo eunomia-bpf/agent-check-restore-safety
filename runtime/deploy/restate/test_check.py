@@ -348,8 +348,7 @@ class Fixture:
                     "id": invocation, "target": f"order-workflow/{self.order_id}/run",
                     "status": "paused", "pinned_deployment_id": self.deployment_v1,
                     "pinned_service_protocol_version": 6,
-                    "last_attempt_deployment_id": self.deployment_v1,
-                    "retry_count": 1, "journal_size": 2,
+                    "journal_size": 2,
                     "created_at": "2026-08-15T00:02:00Z", "modified_at": "2026-08-15T00:03:00Z",
                 }],
             }
@@ -473,12 +472,45 @@ class CheckerTests(unittest.TestCase):
     def check(self) -> dict[str, object]:
         return CHECK.check_evidence(self.root, fresh_certificates=False)
 
+    def set_h1_status_field(self, field: str, value: object) -> None:
+        status_relative = "h1/restate-status.raw.json"
+        status = json.loads((self.root / status_relative).read_text())
+        status["rows"][0][field] = value
+        self.fixture.replace_json(status_relative, status)
+        cut_relative = "h1/restate-cut.json"
+        cut = json.loads((self.root / cut_relative).read_text())
+        cut["raw_status_sha256"] = self.fixture.artifacts[status_relative]["sha256"]
+        self.fixture.replace_json(cut_relative, cut)
+        self.fixture.refresh_manifest()
+
     def test_accepts_complete_joined_evidence(self) -> None:
         verdict = self.check()
         self.assertTrue(verdict["valid"])
         self.assertEqual(verdict["h0_decision"], "impossible")
         self.assertEqual(verdict["h1_decision"], "activate")
         self.assertEqual(verdict["h1_payment_commits"], 1)
+
+    def test_restate_status_accepts_omitted_nullable_columns(self) -> None:
+        status = json.loads((self.root / "h1/restate-status.raw.json").read_text())["rows"][0]
+        self.assertNotIn("last_attempt_deployment_id", status)
+        self.assertNotIn("retry_count", status)
+        self.assertNotIn("next_retry_at", status)
+        self.assertTrue(self.check()["valid"])
+
+    def test_rejects_bad_present_optional_last_deployment(self) -> None:
+        self.set_h1_status_field("last_attempt_deployment_id", "dp_wrong")
+        with self.assertRaisesRegex(CHECK.EvidenceError, "optional last Restate deployment differs"):
+            self.check()
+
+    def test_rejects_bad_present_optional_retry_count(self) -> None:
+        self.set_h1_status_field("retry_count", -1)
+        with self.assertRaisesRegex(CHECK.EvidenceError, "optional Restate retry count is invalid"):
+            self.check()
+
+    def test_rejects_bad_present_optional_next_retry_time(self) -> None:
+        self.set_h1_status_field("next_retry_at", "not-a-time")
+        with self.assertRaisesRegex(CHECK.EvidenceError, "optional Restate next retry time is not a timestamp"):
+            self.check()
 
     def test_rejects_second_durable_charge_even_when_manifest_is_rehashed(self) -> None:
         relative = "h1/payment.history"

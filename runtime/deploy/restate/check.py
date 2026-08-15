@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+from datetime import datetime
 from hashlib import sha256
 import json
 import os
@@ -77,6 +78,16 @@ def _list(value: Any, label: str) -> list[Any]:
 
 def _digest(value: Any, label: str) -> str:
     _require(isinstance(value, str) and HEX_64.fullmatch(value) is not None, f"{label} is not SHA-256")
+    return value
+
+
+def _rfc3339(value: Any, label: str) -> str:
+    _require(isinstance(value, str) and value, f"{label} is not a timestamp")
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as error:
+        raise EvidenceError(f"{label} is not a timestamp") from error
+    _require(parsed.tzinfo is not None, f"{label} has no timezone")
     return value
 
 
@@ -454,26 +465,35 @@ def _raw_restate_evidence(
     }
     required_status = {
         "id", "target", "status", "pinned_deployment_id",
-        "pinned_service_protocol_version", "last_attempt_deployment_id",
-        "retry_count", "journal_size", "created_at", "modified_at",
+        "pinned_service_protocol_version", "journal_size", "created_at", "modified_at",
     }
     _require(
         required_status <= set(status) <= allowed_status
         and status.get("id") == cut["invocation_id"]
         and status.get("status") == "paused"
         and status.get("pinned_deployment_id") == cut["deployment_id"]
-        and status.get("last_attempt_deployment_id") == cut["deployment_id"]
         and type(status.get("pinned_service_protocol_version")) is int
         and 5 <= status["pinned_service_protocol_version"] <= 7
-        and type(status.get("retry_count")) is int
-        and status["retry_count"] >= 0
         and type(status.get("journal_size")) is int
         and isinstance(status.get("target"), str)
         and order["order_id"] in status["target"],
         f"{label} raw Restate invocation status differs",
     )
+    if "last_attempt_deployment_id" in status:
+        _require(
+            isinstance(status["last_attempt_deployment_id"], str)
+            and status["last_attempt_deployment_id"] == cut["deployment_id"],
+            f"{label} optional last Restate deployment differs",
+        )
+    if "retry_count" in status:
+        _require(
+            type(status["retry_count"]) is int and status["retry_count"] >= 0,
+            f"{label} optional Restate retry count is invalid",
+        )
+    if "next_retry_at" in status:
+        _rfc3339(status["next_retry_at"], f"{label} optional Restate next retry time")
     for field in ("created_at", "modified_at"):
-        _require(isinstance(status.get(field), str) and status[field], f"{label} Restate {field} is absent")
+        _rfc3339(status.get(field), f"{label} Restate {field}")
 
     journal_document = _object(_json(raw_journal, label + " raw Restate journal"), label + " raw Restate journal")
     _require(set(journal_document) == {"rows"}, f"{label} raw Restate journal query fields changed")
