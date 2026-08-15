@@ -1,0 +1,4 @@
+{"schema":1,"seq":1,"at_ns":1786806297182283582,"event":"source_clone_started","details":{}}
+{"schema":1,"seq":2,"at_ns":1786806300285581057,"event":"source_commits_verified","details":{"v1":"25ccc81c1f6a1e7fe4d6b726d6a310cd2b607fa9","v2":"6ecb09706140f8730b5385c08f1386c654c3c526"}}
+{"schema":1,"seq":3,"at_ns":1786806322459559368,"event":"images_built","details":{"v1":"sha256:27571eafe3e019367c487216629e2e43a2e9354918e27cb6d0a008540834baa4","v2":"sha256:92a97ee2b3af9ac5464b0ff02ca07d633fd56d4a41334f725f4665955823d3ec","runtime":"sha256:c87042507019458a1b71e4c75cbfac6763b1fca48b4b43efb2b513c503b35bcb"}}
+{"schema":1,"seq":4,"at_ns":1786806326749928722,"event":"official_service_graph_started","details":{"project":"safe-change-deathstar-step15","frontend_scaled_to_zero":true}}

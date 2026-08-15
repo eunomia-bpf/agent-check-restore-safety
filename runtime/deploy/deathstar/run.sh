@@ -134,6 +134,11 @@ git -C "$work_dir/repository" worktree add --quiet --detach --no-checkout "$work
 git -C "$work_dir/v2" sparse-checkout init --cone
 git -C "$work_dir/v2" sparse-checkout set hotelReservation
 git -C "$work_dir/v2" checkout --quiet --detach "$V2_COMMIT"
+# This host runs with umask 0077, while the pinned frontend images run as
+# uid 65532 and read the bind-mounted upstream config directly. Git does not
+# track the group/other read bits of regular files, so normalizing these modes
+# changes neither source content nor the recorded upstream tree.
+chmod 0644 "$work_dir/v1/hotelReservation/config.json" "$work_dir/v2/hotelReservation/config.json"
 v1_tree="$(git -C "$work_dir/repository" rev-parse "$V1_COMMIT:hotelReservation")"
 v2_tree="$(git -C "$work_dir/repository" rev-parse "$V2_COMMIT:hotelReservation")"
 assert_source_clean() {
