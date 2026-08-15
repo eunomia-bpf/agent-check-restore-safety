@@ -17,7 +17,9 @@ Using COALESCE is part of schema 1: Restate omits nullable columns in JSON,
 while this checker deliberately requires a boolean ``completed`` value.  H0
 must contain neither a registered/running target v2 nor a continuation.  H1's
 target-v2 container projection must bind its start to a History sequence at or
-after the target Rule activation.
+after the target Rule activation.  Payment, replacement completion, and the
+reported terminal Restate state must all retain the manifest's business order
+identity; completing a newly named order is not continuation evidence.
 """
 
 from __future__ import annotations
@@ -51,6 +53,7 @@ HEX_64 = re.compile(r"[0-9a-f]{64}\Z")
 IMAGE_ID = re.compile(r"sha256:[0-9a-f]{64}\Z")
 OPERATION_ID = re.compile(r"op-[0-9a-f]{64}\Z")
 BOOT_ID = re.compile(r"[0-9a-f]{32}\Z")
+CONTAINER_ID = re.compile(r"[0-9a-f]{64}\Z")
 
 
 class EvidenceError(ValueError):
@@ -324,14 +327,18 @@ def _records(path: Path, label: str) -> list[dict[str, Any]]:
     return output
 
 
-def _base64_json(value: Any, label: str) -> dict[str, Any]:
+def _base64_bytes(value: Any, label: str) -> bytes:
     _require(isinstance(value, str), f"{label} is not base64")
     try:
         decoded = base64.b64decode(value, validate=True)
     except (ValueError, base64.binascii.Error) as error:
         raise EvidenceError(f"{label} is not canonical base64") from error
     _require(base64.b64encode(decoded).decode() == value, f"{label} is not canonical base64")
-    return _object(_loads(decoded, label), label)
+    return decoded
+
+
+def _base64_json(value: Any, label: str) -> dict[str, Any]:
+    return _object(_loads(_base64_bytes(value, label), label), label)
 
 
 def _prepare_events(events: Sequence[Mapping[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -358,6 +365,22 @@ def _updates(events: Sequence[Mapping[str, Any]], operation_id: str) -> list[tup
         if data.get("id") == operation_id:
             output.append((int(event["sequence"]), _object(data.get("update"), "Operation update")))
     return output
+
+
+def _replayed_operation(operation: Mapping[str, Any], updates: Sequence[tuple[int, Mapping[str, Any]]]) -> dict[str, Any]:
+    """Apply the kernel's durable phase updates to one prepared Operation."""
+    replayed = dict(operation)
+    outcome_fields = {"result_hash", "status_code", "result_body", "remote_reference", "settlement"}
+    for _, update in updates:
+        replayed["phase"] = update.get("phase")
+        for field in outcome_fields:
+            replayed.pop(field, None)
+            if field in update:
+                replayed[field] = update[field]
+        if update.get("phase") == "dispatched":
+            replayed["dispatch_owner"] = update.get("dispatch_owner")
+            replayed["dispatch_generation"] = update.get("dispatch_generation")
+    return replayed
 
 
 def _artifact_map(root: Path, case: Mapping[str, Any], label: str) -> dict[str, Path]:
@@ -726,13 +749,19 @@ def _check_containers(
 def _check_removal(path: Path, activation_sequence: int, label: str) -> None:
     value = _object(_json(path, label + " v1 removal"), label + " v1 removal")
     _require(
-        set(value) == {"schema", "container", "inspect_exit_code", "stderr", "fenced_before_history_sequence"}
+        set(value) == {
+            "schema", "compose_service", "container_id", "remove_exit_code",
+            "inspect_exit_code", "stderr", "fenced_before_history_sequence",
+        }
         and value.get("schema") == 1
-        and value.get("container") == "order-v1"
+        and value.get("compose_service") == "order-v1"
+        and CONTAINER_ID.fullmatch(str(value.get("container_id"))) is not None
+        and value.get("remove_exit_code") == 0
         and type(value.get("inspect_exit_code")) is int
         and value["inspect_exit_code"] != 0
         and isinstance(value.get("stderr"), str)
         and "no such" in value["stderr"].lower()
+        and value["container_id"] in value["stderr"]
         and type(value.get("fenced_before_history_sequence")) is int
         and value["fenced_before_history_sequence"] <= activation_sequence,
         f"{label} did not prove v1 fenced by the edit decision boundary",
@@ -1005,34 +1034,36 @@ def _check_case(
         _require(completion_updates[0][0] > activation_sequence, "H1 completion ran before target activation")
         _require(len(completions) == 1, "H1 must contain exactly one terminal completion")
         completion_record = completions[0]
-        expected_completion_result = sha256(b"charged\x00" + completion_id.encode()).hexdigest()
+        expected_completion_fact = sha256(b"charged\x00" + completion_id.encode()).hexdigest()
         _require(
             completion_record
             == {
                 "operation_id": completion_id,
                 "request_hash": _provider_hash("/v1/complete", completion_body),
-                "result_hash": expected_completion_result,
+                "result_hash": expected_completion_fact,
                 "remote_reference": f"completion/{completion_id}",
                 "path": "/v1/complete",
             },
             "H1 durable completion record differs",
         )
         completion_success = completion_updates[1][1]
+        receipt_body = _base64_bytes(completion_success.get("result_body"), "H1 completion receipt")
+        expected_gateway_result = sha256(b"200\x00" + receipt_body).hexdigest()
         _require(
             set(completion_success) == {"phase", "result_hash", "status_code", "result_body", "remote_reference"}
-            and completion_success.get("result_hash") == expected_completion_result
+            and completion_success.get("result_hash") == expected_gateway_result
             and completion_success.get("status_code") == 200
             and completion_success.get("remote_reference") == completion_record["remote_reference"],
             "H1 completion success marker differs",
         )
-        receipt = _base64_json(completion_success.get("result_body"), "H1 completion receipt")
+        receipt = _object(_loads(receipt_body, "H1 completion receipt"), "H1 completion receipt")
         _require(
             receipt
             == {
                 "schema": 1,
                 "operation_id": completion_id,
                 "outcome": "succeeded",
-                "result_hash": expected_completion_result,
+                "result_hash": expected_completion_fact,
                 "remote_reference": completion_record["remote_reference"],
             },
             "H1 completion receipt does not authenticate the durable completion record",
@@ -1040,7 +1071,7 @@ def _check_case(
         final_rule = _object(final_state.get("rule"), "H1 final Rule")
         _require(
             final_state.get("requirement") == requirement
-            and final_rule == {"version": rule["version"], "requirement_hash": rule["requirement_hash"], "allow": []},
+            and final_rule == {"version": rule["version"], "requirement_hash": rule["requirement_hash"], "allow": ["finish"]},
             "H1 did not finish paid and delivered Results",
         )
     else:
@@ -1069,13 +1100,12 @@ def _check_case(
     _require(set(prepared) == expected_prepared, f"{name} History contains an unexpected external Operation")
     final_operations = _object(final_state.get("operations"), f"{name} final Operations")
     _require(set(final_operations) == expected_prepared, f"{name} final State contains an unexpected external Operation")
-    _require(
-        _object(final_operations[payment_id], f"{name} final payment").get("phase")
-        == ("succeeded" if name == "h1" else "unknown"),
-        f"{name} final payment phase differs",
-    )
-    if name == "h1":
-        _require(_object(final_operations[completion_id], "H1 final completion").get("phase") == "succeeded", "H1 final completion phase differs")
+    for operation_id in expected_prepared:
+        _require(
+            _object(final_operations[operation_id], f"{name} final Operation")
+            == _replayed_operation(prepared[operation_id], _updates(events, operation_id)),
+            f"{name} final Operation differs from History replay",
+        )
 
     _require(all(seq < activation_sequence for seq, _ in dispatches), f"{name} issued a v1 payment after target activation")
     _check_containers(paths["containers"], target, name, activation_sequence)
@@ -1083,10 +1113,11 @@ def _check_case(
     final = _object(_json(paths["restate_final"], name + " Restate final"), name + " Restate final")
     if name == "h1":
         _require(
-            set(final) == {"schema", "source_invocation_id", "source_status", "target_endpoint", "target_program_sha256", "continuation_started", "order_status"}
+            set(final) == {"schema", "source_invocation_id", "source_status", "order_id", "target_endpoint", "target_program_sha256", "continuation_started", "order_status"}
             and final.get("schema") == 1
             and final.get("source_invocation_id") == cut["invocation_id"]
             and final.get("source_status") == "fenced"
+            and final.get("order_id") == order["order_id"]
             and final.get("target_endpoint") == "order-v2"
             and final.get("target_program_sha256") == target["program_sha256"]
             and final.get("continuation_started") is True
@@ -1095,10 +1126,11 @@ def _check_case(
         )
     else:
         _require(
-            set(final) == {"schema", "source_invocation_id", "source_status", "planned_target_endpoint", "planned_target_program_sha256", "continuation_started", "order_status"}
+            set(final) == {"schema", "source_invocation_id", "source_status", "order_id", "planned_target_endpoint", "planned_target_program_sha256", "continuation_started", "order_status"}
             and final.get("schema") == 1
             and final.get("source_invocation_id") == cut["invocation_id"]
             and final.get("source_status") == "fenced"
+            and final.get("order_id") == order["order_id"]
             and final.get("planned_target_endpoint") == "order-v2"
             and final.get("planned_target_program_sha256") == target["program_sha256"]
             and final.get("continuation_started") is False

@@ -201,10 +201,11 @@ class Fixture:
                     "result_hash": self.completion_result,
                     "remote_reference": f"completion/{self.completion_id}",
                 }) + b"\n"
+                gateway_result = sha256(b"200\x00" + receipt).hexdigest()
                 self.add_event(events, frames, "operation.phase", {
                     "semantic_version": 1, "id": self.completion_id,
                     "update": {
-                        "phase": "succeeded", "result_hash": self.completion_result,
+                        "phase": "succeeded", "result_hash": gateway_result,
                         "status_code": 200, "result_body": base64.b64encode(receipt).decode(),
                         "remote_reference": f"completion/{self.completion_id}",
                     },
@@ -305,26 +306,18 @@ class Fixture:
                 verdict["rule_version"] = 2
             verdict_artifact = self.write_json(prefix + "certificate-verdict.json", verdict)
 
-            final_payment = dict(self.payment_operation())
-            final_payment.update({"phase": "unknown", "dispatch_owner": "a" * 32, "dispatch_generation": 1})
-            operations: dict[str, object] = {self.payment_id: final_payment}
-            if name == "h1":
-                final_payment.update({
-                    "phase": "succeeded", "result_hash": self.payment_result, "status_code": 200,
-                    "remote_reference": f"payment/{self.payment_id}/commit-1", "settlement": "query",
-                })
-                final_completion = dict(self.completion_operation())
-                final_completion.update({
-                    "phase": "succeeded", "dispatch_owner": "b" * 32, "dispatch_generation": 1,
-                    "result_hash": self.completion_result, "status_code": 200,
-                    "remote_reference": f"completion/{self.completion_id}",
-                })
-                operations[self.completion_id] = final_completion
+            prepared_operations = CHECK._prepare_events(events)
+            operations = {
+                operation_id: CHECK._replayed_operation(
+                    operation, CHECK._updates(events, operation_id),
+                )
+                for operation_id, operation in prepared_operations.items()
+            }
             final_state = {
                 "history": {"sequence": len(events), "hash": events[-1]["hash"]},
                 "requirement": (requirement if name == "h1" else self.source_certificate()["requirement"]),
                 "rule": (
-                    {"version": 2, "requirement_hash": self.requirement_hash, "allow": []}
+                    {"version": 2, "requirement_hash": self.requirement_hash, "allow": ["finish"]}
                     if name == "h1" else self.source_certificate()["rule"]
                 ),
                 "operations": operations,
@@ -393,6 +386,7 @@ class Fixture:
             cut_artifact = self.write_json(prefix + "restate-cut.json", cut)
             restate_final = {
                 "schema": 1, "source_invocation_id": invocation, "source_status": "fenced",
+                "order_id": self.order_id,
                 "continuation_started": name == "h1",
                 "order_status": "DELIVERED" if name == "h1" else "PAYMENT_PENDING",
             }
@@ -420,8 +414,9 @@ class Fixture:
             }
             containers_artifact = self.write_json(prefix + "containers.json", containers)
             removal_artifact = self.write_json(prefix + "v1-removal.json", {
-                "schema": 1, "container": "order-v1", "inspect_exit_code": 1,
-                "stderr": "Error: No such container: order-v1",
+                "schema": 1, "compose_service": "order-v1", "container_id": "f" * 64,
+                "remove_exit_code": 0, "inspect_exit_code": 1,
+                "stderr": "Error: No such container: " + "f" * 64,
                 "fenced_before_history_sequence": 5 if name == "h1" else 4,
             })
             case_artifacts[name] = {
@@ -621,6 +616,33 @@ class CheckerTests(unittest.TestCase):
         artifact.replace(real_file)
         artifact.symlink_to(real_file)
         with self.assertRaisesRegex(CHECK.EvidenceError, "crosses a symbolic link"):
+            self.check()
+
+    def test_rejects_fixture_only_empty_final_rule(self) -> None:
+        relative = "h1/final-state.json"
+        state = json.loads((self.root / relative).read_text())
+        state["rule"]["allow"] = []
+        self.fixture.replace_json(relative, state)
+        self.fixture.refresh_manifest()
+        with self.assertRaisesRegex(CHECK.EvidenceError, "did not finish paid and delivered Results"):
+            self.check()
+
+    def test_rejects_different_replacement_business_order(self) -> None:
+        relative = "h1/restate-final.json"
+        final = json.loads((self.root / relative).read_text())
+        final["order_id"] = "another-order"
+        self.fixture.replace_json(relative, final)
+        self.fixture.refresh_manifest()
+        with self.assertRaisesRegex(CHECK.EvidenceError, "H1 did not finish under fenced-v1/v2"):
+            self.check()
+
+    def test_rejects_receipt_fact_hash_as_gateway_result_hash(self) -> None:
+        relative = "h1/final-state.json"
+        state = json.loads((self.root / relative).read_text())
+        state["operations"][self.fixture.completion_id]["result_hash"] = self.fixture.completion_result
+        self.fixture.replace_json(relative, state)
+        self.fixture.refresh_manifest()
+        with self.assertRaisesRegex(CHECK.EvidenceError, "final Operation differs from History replay"):
             self.check()
 
 
