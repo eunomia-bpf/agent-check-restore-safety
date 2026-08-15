@@ -1,9 +1,11 @@
 module github.com/eunomia-bpf/agent-check-restore-safety/runtime
 
-go 1.22
+go 1.25.0
+
+toolchain go1.25.13
 
 require (
-	github.com/jackc/pgx/v5 v5.7.4
+	github.com/jackc/pgx/v5 v5.9.2
 	go.mongodb.org/mongo-driver/v2 v2.8.0
 )
 
@@ -17,6 +19,6 @@ require (
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	golang.org/x/crypto v0.33.0 // indirect
-	golang.org/x/sync v0.11.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/sync v0.21.0 // indirect
+	golang.org/x/text v0.39.0 // indirect
 )

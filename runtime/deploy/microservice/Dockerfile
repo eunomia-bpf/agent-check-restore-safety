@@ -1,7 +1,7 @@
-FROM golang:1.22.2-alpine3.19 AS build
+FROM docker.io/library/golang:1.25.13-alpine@sha256:844b27705f54e73773e0f9bc3c780633b9d7f4b4831bf35cdad02a81a4c80bd0 AS build
 
 WORKDIR /src
-COPY go.mod ./
+COPY go.mod go.sum ./
 COPY . ./
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/control ./cmd/control && \
     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/safe-change ./cmd/safe-change && \
@@ -11,6 +11,6 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/control ./cmd/cont
     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/ingress ./cmd/ingress && \
     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/deathstar-adapter ./cmd/deathstar-adapter
 
-FROM alpine:3.19
+FROM docker.io/library/alpine:3.22.2@sha256:4b7ce07002c69e8f3d704a9c5d6fd3053be500b7f1c69fc0d80990c2ad8dd412
 RUN apk add --no-cache ca-certificates
 COPY --from=build /out/control /out/safe-change /out/effect-proxy /out/order /out/payment /out/ingress /out/deathstar-adapter /usr/local/bin/
