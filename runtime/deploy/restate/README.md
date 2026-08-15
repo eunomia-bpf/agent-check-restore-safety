@@ -45,6 +45,26 @@ compiled and activated, then waits for health before registration. The
 restaurant POS uses a separate image built only from `src/restaurant/server.ts`;
 it does not retain or execute either order-workflow variant.
 
+The stronger H1 preflight injects a response loss after the non-idempotent
+payment provider has synced its commit:
+
+```sh
+SKIP_BUILD=1 HARNESS_BUILD_ENV=/tmp/restate-build.env \
+  runtime/deploy/restate/run-h1-preflight.sh
+```
+
+It pauses the v1 invocation at its incomplete payment Run, removes v1,
+recovers the unknown Operation by querying the durable payment fact, activates
+v2 before starting or registering it, then kills and purges the old Restate
+invocation. It re-enters v2 with the same workflow key and the exact same order
+input, and requires that new generation to reach `DELIVERED` without another
+payment delivery. A separate non-idempotent provider receives the same naive
+request twice and must commit twice; this rules out provider idempotency as the
+explanation for the protected provider's one delivery and one commit. The
+script retains raw `/query` rows, binary History and head files, provider
+records, deployments, container evidence, and a summary. It is a focused H1
+preflight, not the complete H0/H1 manifest consumed by `check.py`.
+
 The upstream source is MIT licensed:
 <https://github.com/restatedev/examples/tree/2d429daae784d20982691fb31431702b4ad30a6b/typescript/end-to-end-applications/food-ordering>.
 The upstream WebUI retains its attribution to the MIT-licensed

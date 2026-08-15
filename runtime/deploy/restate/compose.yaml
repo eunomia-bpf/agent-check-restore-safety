@@ -89,6 +89,28 @@ services:
       timeout: 1s
       retries: 60
 
+  naive-payment:
+    image: ${SAFE_CHANGE_RUNTIME_IMAGE}
+    profiles: [h1]
+    command:
+      - /usr/local/bin/payment
+      - -listen=0.0.0.0:8081
+      - -state=/state/naive-payment.history
+      - -non-idempotent=true
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - naive-payment-state:/state
+    networks: [effects]
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:8081/healthz]
+      interval: 1s
+      timeout: 1s
+      retries: 60
+
   control:
     image: ${SAFE_CHANGE_RUNTIME_IMAGE}
     command:
@@ -236,5 +258,6 @@ volumes:
   control-anchor: {}
   control-state: {}
   payment-state: {}
+  naive-payment-state: {}
   operation-token: {}
   restate-data: {}
