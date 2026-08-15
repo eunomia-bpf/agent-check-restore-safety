@@ -155,10 +155,6 @@ func secureEqual(left, right string) bool {
 	return subtle.ConstantTimeCompare([]byte(left), []byte(right)) == 1
 }
 
-type errorBody struct {
-	Error string `json:"error"`
-}
-
 func writeJSON(writer http.ResponseWriter, status int, value any) {
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(status)
@@ -245,17 +241,8 @@ func (s *Server) activate(writer http.ResponseWriter, request *http.Request) {
 	writeJSON(writer, http.StatusOK, s.control.Snapshot())
 }
 
-type executeRequest struct {
-	CallID  string            `json:"call_id"`
-	Kind    string            `json:"kind"`
-	Method  string            `json:"method,omitempty"`
-	URL     string            `json:"url"`
-	Headers map[string]string `json:"headers,omitempty"`
-	Body    []byte            `json:"body,omitempty"`
-}
-
 func (s *Server) execute(writer http.ResponseWriter, request *http.Request, adapter adapterCredential) {
-	var body executeRequest
+	var body ExecuteRequest
 	if err := decode(request, &body); err != nil {
 		writeError(writer, http.StatusBadRequest, err)
 		return
@@ -292,10 +279,7 @@ func (s *Server) execute(writer http.ResponseWriter, request *http.Request, adap
 		if errors.Is(err, gateway.ErrOutcomeUnknown) {
 			status = http.StatusConflict
 		}
-		writeJSON(writer, status, struct {
-			Outcome gateway.Outcome `json:"outcome"`
-			Error   string          `json:"error"`
-		}{Outcome: outcome, Error: err.Error()})
+		writeJSON(writer, status, OperationError{Outcome: outcome, Error: err.Error()})
 		return
 	}
 	writeJSON(writer, http.StatusOK, outcome)
@@ -316,10 +300,7 @@ func (s *Server) recover(writer http.ResponseWriter, request *http.Request) {
 		case errors.Is(err, gateway.ErrOutcomeUnknown):
 			status = http.StatusConflict
 		}
-		writeJSON(writer, status, struct {
-			Outcome gateway.Outcome `json:"outcome"`
-			Error   string          `json:"error"`
-		}{Outcome: outcome, Error: err.Error()})
+		writeJSON(writer, status, OperationError{Outcome: outcome, Error: err.Error()})
 		return
 	}
 	writeJSON(writer, http.StatusOK, outcome)

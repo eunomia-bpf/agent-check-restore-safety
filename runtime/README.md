@@ -17,6 +17,97 @@ The only five core terms are:
 - **Certificate**: history-bound evidence for activating a Rule or for reporting
   that no Rule exists in the declared model.
 
+## Protect an existing HTTP effect
+
+The reusable path requires no workflow-engine plugin. Build the two operator
+tools:
+
+```sh
+cd runtime
+go install ./cmd/safe-change ./cmd/effect-proxy
+```
+
+Declare the result that must remain achievable and the fixed HTTP operation
+that can produce it:
+
+```json
+{
+  "id": "orders-v1",
+  "results": {"paid": 1},
+  "capacities": {"charge": 1},
+  "kinds": {
+    "charge": {
+      "costs": {"charge": 1},
+      "produces": {"paid": 1},
+      "retry_safe": true,
+      "queryable": false,
+      "target": "http://payment.internal/v1/charge",
+      "method": "POST",
+      "response_classifier": "operation-receipt-v1"
+    }
+  }
+}
+```
+
+With `control` already running, plan and apply the change. `plan` obtains a
+Certificate and checks it with the independent implementation before writing
+it. `apply` checks it again against the current History, so a stale or
+`impossible` decision never reaches activation.
+
+```sh
+safe-change plan \
+  -control http://127.0.0.1:8787 \
+  -admin-token-file /run/safe-change/admin-token \
+  -requirement requirement.json \
+  -out certificate.json
+
+safe-change apply \
+  -control http://127.0.0.1:8787 \
+  -admin-token-file /run/safe-change/admin-token \
+  -certificate certificate.json
+```
+
+Do not give the workload the adapter token or the payment address. Put both in
+an operator-owned route file and run the proxy beside the workload:
+
+```json
+{
+  "schema": 1,
+  "routes": [{
+    "name": "payment",
+    "kind": "charge",
+    "method": "POST",
+    "url": "http://payment.internal/v1/charge",
+    "content_types": ["application/json"]
+  }]
+}
+```
+
+```sh
+effect-proxy \
+  -listen 127.0.0.1:8788 \
+  -control-url http://127.0.0.1:8787 \
+  -adapter-token-file /run/safe-change/adapter-token \
+  -config routes.json
+```
+
+Application code now sends only a stable logical call ID and its business
+payload:
+
+```sh
+curl -X POST http://127.0.0.1:8788/v1/effects/payment \
+  -H 'X-Safe-Change-Call-ID: order/A-17/payment' \
+  -H 'Content-Type: application/json' \
+  --data '{"order_id":"A-17","amount":42}'
+```
+
+The call ID must identify the same business action across retries and must not
+contain an attempt number. The proxy makes one control call, never accepts a
+caller-selected target, forwards no caller credentials, and returns `409` when
+an external outcome is not safely settled. In a container deployment, place
+the workload, proxy, control, and effect on successive isolated networks so
+each process can reach only its next hop.
+
 ## Reproduce the current result
 
 From the repository root:
