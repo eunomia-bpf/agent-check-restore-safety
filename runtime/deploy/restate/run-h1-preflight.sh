@@ -16,7 +16,7 @@ results_dir="$H1_STATE_DIR/results"
 mkdir -p "$results_dir"
 chmod 700 "$H1_STATE_DIR" "$results_dir"
 
-for command in awk cmp curl date docker go jq python3 realpath sed seq sha256sum tail tr wc; do
+for command in awk cmp curl date docker go jq python3 realpath sed seq sha256sum sort tail tr wc; do
   command -v "$command" >/dev/null || {
     echo "required command not found: $command" >&2
     exit 1
@@ -198,6 +198,105 @@ wait_control_phase() {
   return 1
 }
 
+capture_project_containers() {
+  local activation_sequence=$1
+  local raw="$results_dir/containers.raw.json"
+  local normalized="$results_dir/containers.json"
+  local -a container_ids=()
+
+  mapfile -t container_ids < <(
+    docker ps --all --quiet \
+      --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME" | sort
+  )
+  if [[ ${#container_ids[@]} -eq 0 ]]; then
+    echo "Compose project has no containers to inspect" >&2
+    return 1
+  fi
+  docker inspect "${container_ids[@]}" >"$raw"
+  jq -e --arg project "$COMPOSE_PROJECT_NAME" '
+    type == "array" and length > 0 and
+    all(.[];
+      .Config.Labels["com.docker.compose.project"] == $project and
+      ((.Config.Labels["com.docker.compose.service"] // "") | length) > 0
+    )
+  ' "$raw" >/dev/null
+
+  if [[ "$preflight_case" == h0 ]]; then
+    jq -e '
+      ([.[] | select(
+        .Config.Labels["com.docker.compose.service"] == "order-v1"
+      )] | length) == 0 and
+      ([.[] | select(
+        .Config.Labels["com.docker.compose.service"] == "order-v2"
+      )] | length) == 0
+    ' "$raw" >/dev/null
+  else
+    jq -e --arg image "$ORDER_V2_IMAGE" '
+      ([.[] | select(
+        .Config.Labels["com.docker.compose.service"] == "order-v1"
+      )] | length) == 0 and
+      ([.[] | select(
+        .Config.Labels["com.docker.compose.service"] == "order-v2" and
+        .State.Running == true and .Image == $image
+      )] | length) == 1 and
+      ([.[] | select(
+        .Config.Labels["com.docker.compose.service"] == "order-v2"
+      )] | length) == 1
+    ' "$raw" >/dev/null
+  fi
+
+  jq -S --argjson activation "$activation_sequence" '{
+    schema:1,
+    items:(
+      [.[] |
+        select(.State.Running == true) |
+        (.Config.Labels["com.docker.compose.service"] // "") as $service |
+        {
+          role:(
+            if $service == "order-v1" then "source-v1"
+            elif $service == "order-v2" then "target-v2"
+            else $service
+            end
+          ),
+          name:(.Name | ltrimstr("/")),
+          image_id:.Image,
+          running:.State.Running,
+          networks:((.NetworkSettings.Networks // {}) | keys | sort)
+        } |
+        if $service == "order-v2" then
+          . + {started_after_history_sequence:$activation}
+        else
+          .
+        end
+      ] | sort_by(.role)
+    )
+  }' "$raw" >"$normalized"
+
+  if [[ "$preflight_case" == h0 ]]; then
+    jq -e '
+      .schema == 1 and
+      ([.items[] | select(.role == "restate")] | length) == 1 and
+      ([.items[] | select(.role == "control")] | length) == 1 and
+      ([.items[] | select(.role == "source-v1")] | length) == 0 and
+      ([.items[] | select(.role == "target-v2")] | length) == 0 and
+      all(.items[]; .running == true)
+    ' "$normalized" >/dev/null
+  else
+    jq -e --arg image "$ORDER_V2_IMAGE" --argjson activation "$activation_sequence" '
+      .schema == 1 and
+      ([.items[] | select(.role == "restate")] | length) == 1 and
+      ([.items[] | select(.role == "control")] | length) == 1 and
+      ([.items[] | select(.role == "source-v1")] | length) == 0 and
+      ([.items[] | select(
+        .role == "target-v2" and .image_id == $image and
+        .running == true and
+        .started_after_history_sequence == $activation
+      )] | length) == 1 and
+      all(.items[]; .running == true)
+    ' "$normalized" >/dev/null
+  fi
+}
+
 register_deployment v1 http://order-v1:9080 "$results_dir/deployment-v1.json"
 v1_deployment_id="$(jq -r '.id' "$results_dir/deployment-v1.json")"
 curl -fsS "$restate_admin_url/services" >"$results_dir/services-v1.json"
@@ -306,7 +405,7 @@ if [[ $fault_reached -ne 1 ]]; then
   exit 1
 fi
 
-source_lookup_sql="SELECT id,target,status,pinned_deployment_id,pinned_service_protocol_version,last_attempt_deployment_id,retry_count,next_retry_at,journal_size,created_at,modified_at FROM sys_invocation WHERE target_service_name = 'order-workflow' AND target_service_key = '$order_id' AND target_handler_name = 'run'"
+source_lookup_sql="SELECT id,target,status,pinned_deployment_id,pinned_service_protocol_version,last_attempt_deployment_id,retry_count,next_retry_at,journal_size,created_at,modified_at FROM sys_invocation WHERE target_service_name = 'order-workflow' AND target_service_key = '$order_id' AND target_handler_name = 'run' ORDER BY id"
 for _ in $(seq 1 120); do
   raw_query "$source_lookup_sql" "$results_dir/source-running.json"
   if jq -e --arg deployment "$v1_deployment_id" '
@@ -472,9 +571,21 @@ if [[ "$preflight_case" == h0 ]]; then
     echo "H0 query recovery did not fail closed with HTTP 409" >&2
     exit 1
   fi
-  jq -e '
-    .outcome.phase == "unknown" and
-    (.error | test("inconclusive|outcome is unknown"; "i"))
+  printf '%s\n' "$recovery_http_status" \
+    >"$results_dir/payment-recovery.http-status.txt"
+  jq -e --arg operation "$payment_operation_id" '
+    keys == ["error","outcome"] and
+    .outcome == {
+      operation_id:$operation,
+      phase:"unknown",
+      result_hash:"",
+      reused:false,
+      recovered_by_query:false
+    } and
+    .error == (
+      "external operation outcome is unknown: query operation \"" +
+      $operation + "\" was inconclusive"
+    )
   ' "$results_dir/payment-recovery.json" >/dev/null
 
   control_get /v1/state "$results_dir/control-after-query.json"
@@ -535,6 +646,25 @@ if [[ "$preflight_case" == h0 ]]; then
     (.rows | length) == 1 and .rows[0].id == $invocation and
     .rows[0].status == "paused"
   ' "$results_dir/source-final-status.json" >/dev/null
+  raw_query "$source_lookup_sql" \
+    "$results_dir/source-final-whole-key-invocations.json"
+  jq -e -s \
+    --arg invocation "$source_invocation_id" \
+    --arg deployment "$v1_deployment_id" \
+    --arg target "order-workflow/$order_id/run" '
+      (.[0].rows | length) == 1 and
+      .[0].rows[0] == .[1].rows[0] and
+      .[0].rows[0].id == $invocation and
+      .[0].rows[0].target == $target and
+      .[0].rows[0].status == "paused" and
+      .[0].rows[0].pinned_deployment_id == $deployment and
+      (.[0].rows[0].pinned_service_protocol_version | type) == "number" and
+      (.[0].rows[0].journal_size | type) == "number"
+    ' "$results_dir/source-final-whole-key-invocations.json" \
+      "$results_dir/source-cut-status.json" >/dev/null
+  source_inbox_sql="SELECT service_name,service_key,id,sequence_number,created_at FROM sys_inbox WHERE service_name = 'order-workflow' AND service_key = '$order_id' ORDER BY sequence_number,id"
+  raw_query "$source_inbox_sql" "$results_dir/source-final-inbox.json"
+  jq -e '.rows == []' "$results_dir/source-final-inbox.json" >/dev/null
   control_get /v1/state "$results_dir/final-control-state.json"
   jq -e --arg operation "$payment_operation_id" '
     .requirement.id == "food-ordering-v1" and
@@ -544,6 +674,8 @@ if [[ "$preflight_case" == h0 ]]; then
     ([.operations[] | select(.kind == "finish")] | length) == 0
   ' "$results_dir/final-control-state.json" >/dev/null
   control_get /v1/history "$results_dir/final-control-history.json"
+
+  capture_project_containers 0
 
   control_container="$("${compose_all[@]}" ps --quiet control)"
   payment_container="$("${compose_all[@]}" ps --quiet payment)"
@@ -616,8 +748,9 @@ fi
 curl -fsS --request POST --header "Authorization: Bearer $admin_token" \
   "$control_url/v1/operations/$payment_operation_id/recover" \
   >"$results_dir/payment-recovery.json"
-jq -e '
-  .phase == "succeeded" and .recovered_by_query == true and .reused == false
+jq -e --arg operation "$payment_operation_id" '
+  .operation_id == $operation and .phase == "succeeded" and
+  .recovered_by_query == true and .reused == false
 ' "$results_dir/payment-recovery.json" >/dev/null
 wait_control_phase charge-v1 succeeded "$results_dir/control-recovered.json"
 jq -e --arg operation "$payment_operation_id" '
@@ -829,6 +962,7 @@ curl -fsS "$restate_admin_url/services" >"$results_dir/services-v2.json"
 jq -e --argjson expected "$expected_services" \
   '([.services[].name] | sort) == $expected' "$results_dir/services-v2.json" >/dev/null
 docker inspect "$target_container" >"$results_dir/target-container.json"
+capture_project_containers "$activation_sequence"
 
 jq -n \
   --arg upstream_commit "$RESTATE_EXAMPLES_COMMIT" \
