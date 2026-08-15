@@ -36,6 +36,19 @@ NONDETERMINISM_MESSAGE = (
     "scheduleEventID: 5, activityID: 5"
 )
 
+
+def _workflow_name(mode: str) -> str:
+    _require(mode in {"auto_upgrade", "pinned"}, "Temporal mode differs")
+    return "FoodOrderAutoUpgrade" if mode == "auto_upgrade" else "FoodOrderPinned"
+
+
+def _versioning_behavior(mode: str) -> str:
+    _require(mode in {"auto_upgrade", "pinned"}, "Temporal mode differs")
+    if mode == "auto_upgrade":
+        return "VERSIONING_BEHAVIOR_AUTO_UPGRADE"
+    return "VERSIONING_BEHAVIOR_PINNED"
+
+
 EXPECTED_CUT_TYPES = [
     "EVENT_TYPE_WORKFLOW_EXECUTION_STARTED",
     "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
@@ -280,7 +293,9 @@ def _normalize_history(history: dict[str, Any], run_id: str) -> dict[str, Any]:
     return normalized
 
 
-def _check_cut_history(results: Path, run_id: str) -> tuple[dict[str, Any], str]:
+def _check_cut_history(
+    results: Path, run_id: str, mode: str = "auto_upgrade",
+) -> tuple[dict[str, Any], str]:
     before_data = _read(results / "cut-show-before.json")
     _require(before_data == _read(results / "cut-show-after.json"), "cut History double-read is unstable")
     history = _json(results / "cut-show-before.json")
@@ -301,7 +316,7 @@ def _check_cut_history(results: Path, run_id: str) -> tuple[dict[str, Any], str]
         },
         "Workflow start fields differ",
     )
-    _require(started["workflowType"] == {"name": "FoodOrderAutoUpgrade"}, "Workflow type differs")
+    _require(started["workflowType"] == {"name": _workflow_name(mode)}, "Workflow type differs")
     _require(started["taskQueue"] == {"name": TASK_QUEUE, "kind": "TASK_QUEUE_KIND_NORMAL"}, "Workflow task queue differs")
     expected_order = b'{"order_id":"order-1","amount_cents":4200,"payment_token":"payment-token-1"}'
     _require(_payload_bytes(started["input"], "Workflow input") == expected_order, "Workflow input bytes differ")
@@ -340,7 +355,7 @@ def _check_cut_history(results: Path, run_id: str) -> tuple[dict[str, Any], str]
         completed.get("workerVersion") == {"buildId": V1_BUILD, "useVersioning": True} and
         completed.get("sdkMetadata") == {"langUsedFlags": [3], "sdkName": "temporal-go", "sdkVersion": "1.47.0"} and
         completed.get("meteringMetadata") == {} and
-        completed.get("versioningBehavior") == "VERSIONING_BEHAVIOR_AUTO_UPGRADE" and
+        completed.get("versioningBehavior") == _versioning_behavior(mode) and
         completed.get("workerDeploymentName") == DEPLOYMENT and
         completed.get("deploymentVersion") == {"buildId": V1_BUILD, "deploymentName": DEPLOYMENT},
         "Workflow task completion/version differs",
@@ -375,17 +390,19 @@ def _check_cut_history(results: Path, run_id: str) -> tuple[dict[str, Any], str]
     return _normalize_history(history, run_id), operation_id
 
 
-def _check_cut_describe(results: Path, run_id: str) -> dict[str, Any]:
+def _check_cut_describe(
+    results: Path, run_id: str, mode: str = "auto_upgrade",
+) -> dict[str, Any]:
     value = _json(results / "cut-describe.json")
     info = _object(value.get("workflowExecutionInfo"), "cut Workflow info")
     _require(info.get("execution") == {"workflowId": WORKFLOW_ID, "runId": run_id}, "cut Workflow execution differs")
-    _require(info.get("type") == {"name": "FoodOrderAutoUpgrade"}, "cut Workflow type differs")
+    _require(info.get("type") == {"name": _workflow_name(mode)}, "cut Workflow type differs")
     _require(info.get("status") == "WORKFLOW_EXECUTION_STATUS_RUNNING", "cut Workflow is not running")
     _require(info.get("taskQueue") == TASK_QUEUE and info.get("workerDeploymentName") == DEPLOYMENT, "cut queue/deployment differs")
     _require(info.get("mostRecentWorkerVersionStamp") == {"buildId": V1_BUILD, "useVersioning": True}, "cut worker version differs")
     versioning = _object(info.get("versioningInfo"), "cut versioning info")
     _require(
-        versioning.get("behavior") == "VERSIONING_BEHAVIOR_AUTO_UPGRADE" and
+        versioning.get("behavior") == _versioning_behavior(mode) and
         versioning.get("version") == f"{DEPLOYMENT}.{V1_BUILD}" and
         versioning.get("deploymentVersion") == {"buildId": V1_BUILD, "deploymentName": DEPLOYMENT} and
         versioning.get("revisionNumber") == "1",
@@ -626,7 +643,10 @@ def _check_pre_v2(results: Path, run_id: str, cut: dict[str, Any]) -> dict[str, 
     return normalized
 
 
-def _check_final(results: Path, run_id: str, pre_v2: dict[str, Any]) -> int:
+def _check_final(
+    results: Path, run_id: str, pre_v2: dict[str, Any], mode: str = "auto_upgrade",
+) -> int:
+    _require(mode in {"auto_upgrade", "pinned"}, "Temporal mode differs")
     history = _json(results / "final-history.json")
     events = _array(history.get("events"), "final History")
     _require(history["events"][:8] == _json(results / "pre-v2-history.json")["events"], "final History does not extend pre-v2 History")
@@ -644,21 +664,58 @@ def _check_final(results: Path, run_id: str, pre_v2: dict[str, Any]) -> int:
         event for event in events
         if isinstance(event, dict) and event.get("eventType") == "EVENT_TYPE_WORKFLOW_TASK_FAILED"
     ]
-    _require(len(failures) >= 1, "v2 did not produce a Workflow task failure")
-    for event in failures:
-        attributes = _object(event.get("workflowTaskFailedEventAttributes"), "Workflow task failure")
-        failure = _object(attributes.get("failure"), "Workflow task failure detail")
-        _require(
-            attributes.get("cause") == NONDETERMINISM and attributes.get("identity") == V2_IDENTITY and
-            failure.get("message") == NONDETERMINISM_MESSAGE and failure.get("source") == "GoSDK",
-            "v2 failure is not the expected replay nondeterminism",
-        )
     later_starts = [
         event.get("workflowTaskStartedEventAttributes", {}).get("identity")
         for event in events[8:]
         if isinstance(event, dict) and event.get("eventType") == "EVENT_TYPE_WORKFLOW_TASK_STARTED"
     ]
-    _require(later_starts and all(identity == V2_IDENTITY for identity in later_starts), "a post-cut Workflow task ran on the wrong worker")
+    if mode == "auto_upgrade":
+        _require(len(failures) >= 1, "v2 did not produce a Workflow task failure")
+        for event in failures:
+            attributes = _object(event.get("workflowTaskFailedEventAttributes"), "Workflow task failure")
+            failure = _object(attributes.get("failure"), "Workflow task failure detail")
+            _require(
+                attributes.get("cause") == NONDETERMINISM and attributes.get("identity") == V2_IDENTITY and
+                failure.get("message") == NONDETERMINISM_MESSAGE and failure.get("source") == "GoSDK",
+                "v2 failure is not the expected replay nondeterminism",
+            )
+        _require(
+            later_starts and all(identity == V2_IDENTITY for identity in later_starts),
+            "a post-cut Workflow task ran on the wrong worker",
+        )
+    else:
+        _require(not failures, "Pinned execution produced a Workflow task failure")
+        _require(not later_starts, "Pinned execution ran after its v1 worker stopped")
+        tail = events[8:]
+        expected_tail = sorted([
+            "EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED",
+            "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+            "EVENT_TYPE_WORKFLOW_TASK_TIMED_OUT",
+        ])
+        _require(
+            len(tail) == 3 and all(isinstance(event, dict) for event in tail) and
+            sorted(event.get("eventType") for event in tail) == expected_tail,
+            "Pinned final History tail differs",
+        )
+        timed_out = next(
+            event for event in tail if event.get("eventType") == "EVENT_TYPE_WORKFLOW_TASK_TIMED_OUT"
+        )
+        _require(
+            timed_out.get("workflowTaskTimedOutEventAttributes") == {
+                "scheduledEventId": "8", "timeoutType": "TIMEOUT_TYPE_SCHEDULE_TO_START",
+            },
+            "Pinned Workflow task timeout differs",
+        )
+        scheduled = next(
+            event for event in tail if event.get("eventType") == "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED"
+        )
+        _require(
+            scheduled.get("workflowTaskScheduledEventAttributes") == {
+                "taskQueue": {"name": TASK_QUEUE, "kind": "TASK_QUEUE_KIND_NORMAL"},
+                "startToCloseTimeout": "10s", "attempt": 1,
+            },
+            "Pinned Workflow task reschedule differs",
+        )
     terminal = {
         "EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED", "EVENT_TYPE_WORKFLOW_EXECUTION_FAILED",
         "EVENT_TYPE_WORKFLOW_EXECUTION_CANCELED", "EVENT_TYPE_WORKFLOW_EXECUTION_TERMINATED",
@@ -686,13 +743,35 @@ def _check_final(results: Path, run_id: str, pre_v2: dict[str, Any]) -> int:
     info = _object(final.get("workflowExecutionInfo"), "final Workflow info")
     _require(info.get("execution") == {"workflowId": WORKFLOW_ID, "runId": run_id}, "final execution differs")
     _require(info.get("status") == "WORKFLOW_EXECUTION_STATUS_RUNNING", "final Workflow is not running")
-    versioning = _object(info.get("versioningInfo"), "final versioning info")
+    _require(info.get("type") == {"name": _workflow_name(mode)}, "final Workflow type differs")
     _require(
-        versioning.get("behavior") == "VERSIONING_BEHAVIOR_AUTO_UPGRADE" and
-        versioning.get("deploymentVersion") == {"buildId": V1_BUILD, "deploymentName": DEPLOYMENT} and
-        versioning.get("versionTransition", {}).get("deploymentVersion") == {"buildId": V2_BUILD, "deploymentName": DEPLOYMENT},
-        "final v2 version transition differs",
+        info.get("taskQueue") == TASK_QUEUE and info.get("workerDeploymentName") == DEPLOYMENT and
+        info.get("mostRecentWorkerVersionStamp") == {"buildId": V1_BUILD, "useVersioning": True},
+        "final Workflow queue/version differs",
     )
+    versioning = _object(info.get("versioningInfo"), "final versioning info")
+    if mode == "auto_upgrade":
+        _require(
+            versioning.get("behavior") == "VERSIONING_BEHAVIOR_AUTO_UPGRADE" and
+            versioning.get("deploymentVersion") == {"buildId": V1_BUILD, "deploymentName": DEPLOYMENT} and
+            versioning.get("versionTransition", {}).get("deploymentVersion") == {"buildId": V2_BUILD, "deploymentName": DEPLOYMENT},
+            "final v2 version transition differs",
+        )
+    else:
+        _require(
+            versioning.get("behavior") == "VERSIONING_BEHAVIOR_PINNED" and
+            versioning.get("version") == f"{DEPLOYMENT}.{V1_BUILD}" and
+            versioning.get("deploymentVersion") == {"buildId": V1_BUILD, "deploymentName": DEPLOYMENT} and
+            versioning.get("revisionNumber") == "1" and "versionTransition" not in versioning,
+            "Pinned execution did not remain bound to v1",
+        )
+        pending = _object(final.get("pendingWorkflowTask"), "final pending Workflow task")
+        _require(
+            pending.get("state") == "PENDING_WORKFLOW_TASK_STATE_SCHEDULED" and
+            pending.get("attempt") == 1 and isinstance(pending.get("scheduledTime"), str) and
+            isinstance(pending.get("originalScheduledTime"), str),
+            "Pinned execution is not stranded waiting for v1",
+        )
     return len(failures)
 
 
@@ -703,29 +782,33 @@ def _check_case(root: Path, case_name: str) -> dict[str, Any]:
     versions_data, build_data, build = _check_build(results)
     versions = _parse_env(versions_data, "versions.env")
 
+    observed = _json(results / "observed.json")
+    mode = observed.get("mode")
+    _require(mode in {"auto_upgrade", "pinned"}, f"{case_name} Temporal mode differs")
+
     start = _json(results / "start.json")
+    expected_behavior = "autoupgrade" if mode == "auto_upgrade" else "pinned"
     _require(
         set(start) == {"schema", "behavior", "workflow_id", "run_id"} and
-        start.get("schema") == 1 and start.get("behavior") == "autoupgrade" and
+        start.get("schema") == 1 and start.get("behavior") == expected_behavior and
         start.get("workflow_id") == WORKFLOW_ID and isinstance(start.get("run_id"), str) and start["run_id"],
         f"{case_name} start record differs",
     )
     run_id = start["run_id"]
-    cut_history, operation_id = _check_cut_history(results, run_id)
-    cut_describe = _check_cut_describe(results, run_id)
+    cut_history, operation_id = _check_cut_history(results, run_id, mode)
+    cut_describe = _check_cut_describe(results, run_id, mode)
     _check_provider(results, case_name, operation_id)
     _check_deployments(results)
     _check_containers(results, build, versions)
     pre_v2 = _check_pre_v2(results, run_id, cut_history)
-    failure_count = _check_final(results, run_id, pre_v2)
+    failure_count = _check_final(results, run_id, pre_v2, mode)
 
-    observed = _json(results / "observed.json")
     expected_commits = 0 if case_name == "h0" else 1
     _require(
         observed == {
             "schema": 1,
             "case": case_name,
-            "mode": "auto_upgrade",
+            "mode": mode,
             "workflow_id": WORKFLOW_ID,
             "run_id": run_id,
             "final_status": "WORKFLOW_EXECUTION_STATUS_RUNNING",
@@ -746,6 +829,7 @@ def _check_case(root: Path, case_name: str) -> dict[str, Any]:
         "cut_describe": cut_describe,
         "pre_v2": pre_v2,
         "failure_count": failure_count,
+        "mode": mode,
     }
 
 
@@ -754,6 +838,7 @@ def check_pair(h0_root: Path, h1_root: Path) -> dict[str, Any]:
     h1 = _check_case(h1_root, "h1")
     _require(h0["versions_data"] == h1["versions_data"], "H0/H1 versions differ")
     _require(h0["build_data"] == h1["build_data"], "H0/H1 builds differ")
+    _require(h0["mode"] == h1["mode"], "H0/H1 Temporal modes differ")
     _require(h0["operation_id"] == h1["operation_id"], "H0/H1 Operation identity differs")
     _require(h0["cut_history"] == h1["cut_history"], "H0/H1 cut History semantics differ")
     _require(h0["cut_describe"] == h1["cut_describe"], "H0/H1 pending Activity semantics differ")
@@ -761,7 +846,7 @@ def check_pair(h0_root: Path, h1_root: Path) -> dict[str, Any]:
     _require(h0["run_id"] != h1["run_id"], "H0/H1 unexpectedly reused a Temporal run")
     return {
         "valid": True,
-        "mode": "auto_upgrade",
+        "mode": h0["mode"],
         "workflow_id": WORKFLOW_ID,
         "operation_id": h0["operation_id"],
         "cut_history_equal": True,

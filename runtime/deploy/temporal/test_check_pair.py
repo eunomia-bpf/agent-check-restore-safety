@@ -252,7 +252,9 @@ class PairCheckerTests(unittest.TestCase):
                     "2" * 64, "4" * 40, CHECK.V2_BUILD,
                 )
 
-    def make_final(self, root: Path, cause: str = CHECK.NONDETERMINISM) -> None:
+    def make_final(
+        self, root: Path, cause: str = CHECK.NONDETERMINISM, mode: str = "auto_upgrade",
+    ) -> None:
         pre_events = [{"eventId": str(index), "eventType": event_type} for index, event_type in enumerate(CHECK.EXPECTED_PRE_V2_TYPES, 1)]
         pre_events[4]["activityTaskScheduledEventAttributes"] = {"activityType": {"name": "ChargePayment"}}
         self.write_json(root, "pre-v2-history.json", {"events": pre_events})
@@ -263,7 +265,9 @@ class PairCheckerTests(unittest.TestCase):
                     "signalName": "complete", "input": {}, "identity": CHECK.SIGNAL_IDENTITY,
                 },
             },
-            {
+        ]
+        if mode == "auto_upgrade":
+            final_events.extend([{
                 "eventId": "10", "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
                 "workflowTaskStartedEventAttributes": {"identity": CHECK.V2_IDENTITY},
             },
@@ -273,22 +277,52 @@ class PairCheckerTests(unittest.TestCase):
                     "cause": cause, "identity": CHECK.V2_IDENTITY,
                     "failure": {"message": CHECK.NONDETERMINISM_MESSAGE, "source": "GoSDK"},
                 },
-            },
-        ]
+            }])
+        else:
+            final_events.extend([{
+                "eventId": "10", "eventType": "EVENT_TYPE_WORKFLOW_TASK_TIMED_OUT",
+                "workflowTaskTimedOutEventAttributes": {
+                    "scheduledEventId": "8", "timeoutType": "TIMEOUT_TYPE_SCHEDULE_TO_START",
+                },
+            }, {
+                "eventId": "11", "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+                "workflowTaskScheduledEventAttributes": {
+                    "taskQueue": {"name": CHECK.TASK_QUEUE, "kind": "TASK_QUEUE_KIND_NORMAL"},
+                    "startToCloseTimeout": "10s", "attempt": 1,
+                },
+            }])
         self.write_json(root, "final-history.json", {"events": final_events})
-        self.write_json(root, "final-describe.json", {
+        versioning_info = {
+            "behavior": "VERSIONING_BEHAVIOR_AUTO_UPGRADE",
+            "deploymentVersion": {"buildId": CHECK.V1_BUILD, "deploymentName": CHECK.DEPLOYMENT},
+            "versionTransition": {
+                "deploymentVersion": {"buildId": CHECK.V2_BUILD, "deploymentName": CHECK.DEPLOYMENT},
+            },
+        }
+        final_describe = {
             "workflowExecutionInfo": {
                 "execution": {"workflowId": CHECK.WORKFLOW_ID, "runId": "run-1"},
                 "status": "WORKFLOW_EXECUTION_STATUS_RUNNING",
-                "versioningInfo": {
-                    "behavior": "VERSIONING_BEHAVIOR_AUTO_UPGRADE",
-                    "deploymentVersion": {"buildId": CHECK.V1_BUILD, "deploymentName": CHECK.DEPLOYMENT},
-                    "versionTransition": {
-                        "deploymentVersion": {"buildId": CHECK.V2_BUILD, "deploymentName": CHECK.DEPLOYMENT},
-                    },
-                },
+                "type": {"name": CHECK._workflow_name(mode)},
+                "taskQueue": CHECK.TASK_QUEUE,
+                "workerDeploymentName": CHECK.DEPLOYMENT,
+                "mostRecentWorkerVersionStamp": {"buildId": CHECK.V1_BUILD, "useVersioning": True},
+                "versioningInfo": versioning_info,
             },
-        })
+        }
+        if mode == "pinned":
+            versioning_info.clear()
+            versioning_info.update({
+                "behavior": "VERSIONING_BEHAVIOR_PINNED",
+                "version": f"{CHECK.DEPLOYMENT}.{CHECK.V1_BUILD}",
+                "deploymentVersion": {"buildId": CHECK.V1_BUILD, "deploymentName": CHECK.DEPLOYMENT},
+                "revisionNumber": "1",
+            })
+            final_describe["pendingWorkflowTask"] = {
+                "state": "PENDING_WORKFLOW_TASK_STATE_SCHEDULED",
+                "scheduledTime": "time-2", "originalScheduledTime": "time-2", "attempt": 1,
+            }
+        self.write_json(root, "final-describe.json", final_describe)
 
     def test_final_accepts_observed_nondeterminism(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -302,6 +336,35 @@ class PairCheckerTests(unittest.TestCase):
             self.make_final(root, "WORKFLOW_TASK_FAILED_CAUSE_WORKFLOW_WORKER_UNHANDLED_FAILURE")
             with self.assertRaisesRegex(CHECK.EvidenceError, "expected replay nondeterminism"):
                 CHECK._check_final(root, "run-1", {})
+
+    def test_final_accepts_observed_pinned_stranding(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_final(root, mode="pinned")
+            self.assertEqual(CHECK._check_final(root, "run-1", {}, "pinned"), 0)
+
+    def test_rejects_pinned_execution_on_v2(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_final(root, mode="pinned")
+            value = json.loads((root / "final-history.json").read_bytes())
+            value["events"].append({
+                "eventId": "12", "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+                "workflowTaskStartedEventAttributes": {"identity": CHECK.V2_IDENTITY},
+            })
+            self.write_json(root, "final-history.json", value)
+            with self.assertRaisesRegex(CHECK.EvidenceError, "ran after its v1 worker stopped"):
+                CHECK._check_final(root, "run-1", {}, "pinned")
+
+    def test_rejects_forged_pinned_timeout(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.make_final(root, mode="pinned")
+            value = json.loads((root / "final-history.json").read_bytes())
+            value["events"][9]["workflowTaskTimedOutEventAttributes"]["scheduledEventId"] = "99"
+            self.write_json(root, "final-history.json", value)
+            with self.assertRaisesRegex(CHECK.EvidenceError, "timeout differs"):
+                CHECK._check_final(root, "run-1", {}, "pinned")
 
     def test_rejects_checksum_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

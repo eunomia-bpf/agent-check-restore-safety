@@ -3,8 +3,8 @@ set -Eeuo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 mode="${MODE:-auto_upgrade}"
-if [[ "$mode" != auto_upgrade ]]; then
-  echo "the checked paired runner currently supports MODE=auto_upgrade" >&2
+if [[ "$mode" != auto_upgrade && "$mode" != pinned ]]; then
+  echo "MODE must be auto_upgrade or pinned" >&2
   exit 64
 fi
 
