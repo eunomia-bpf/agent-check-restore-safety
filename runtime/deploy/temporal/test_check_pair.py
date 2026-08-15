@@ -184,14 +184,25 @@ class PairCheckerTests(unittest.TestCase):
             with self.assertRaisesRegex(CHECK.EvidenceError, "pending Payment state/version differs"):
                 CHECK._check_cut_describe(root, "run-1")
 
-    def make_provider(self, root: Path, case_name: str) -> None:
+    def make_provider(self, root: Path, case_name: str, mode: str = "auto_upgrade") -> None:
         commits = 0 if case_name == "h0" else 1
         stats = {"deliveries": 1, "commits": commits, "paths": {"/v1/charge": 1}}
         for name in ("payment-cut-stats.json", "payment-before-v2-stats.json", "payment-final-stats.json"):
             self.write_json(root, name, stats)
-        self.write_json(root, "completion-final-stats.json", {"deliveries": 0, "commits": 0, "paths": {}})
+        completion_expected = mode == "manual_branch" and case_name == "h1"
+        self.write_json(root, "completion-final-stats.json", {
+            "deliveries": 1 if completion_expected else 0,
+            "commits": 1 if completion_expected else 0,
+            "paths": {"/v1/complete": 1} if completion_expected else {},
+        })
         (root / "completion-cut.history").write_bytes(b"")
-        (root / "completion-final.history").write_bytes(b"")
+        completion = b""
+        if completion_expected:
+            record = CHECK._expected_provider_record(
+                CHECK._completion_operation_id(), "/v1/complete", "temporal-completion",
+            )
+            completion = json.dumps(record, separators=(",", ":")).encode() + b"\n"
+        (root / "completion-final.history").write_bytes(completion)
         payment = b""
         if case_name == "h1":
             operation_id = CHECK._operation_id()
@@ -213,6 +224,16 @@ class PairCheckerTests(unittest.TestCase):
                 root = Path(temporary)
                 self.make_provider(root, case_name)
                 CHECK._check_provider(root, case_name, CHECK._operation_id())
+
+    def test_provider_accepts_manual_completion_split(self) -> None:
+        for case_name in ("h0", "h1"):
+            with self.subTest(case=case_name), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                self.make_provider(root, case_name, "manual_branch")
+                facts = CHECK._check_provider(
+                    root, case_name, CHECK._operation_id(), "manual_branch",
+                )
+                self.assertEqual(facts["completion"] is not None, case_name == "h1")
 
     def test_rejects_tampered_provider_commit(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -365,6 +386,78 @@ class PairCheckerTests(unittest.TestCase):
             self.write_json(root, "final-history.json", value)
             with self.assertRaisesRegex(CHECK.EvidenceError, "timeout differs"):
                 CHECK._check_final(root, "run-1", {}, "pinned")
+
+    def test_rejects_manual_query_outcome_mutation(self) -> None:
+        expected = CHECK._manual_query_observation("h0", CHECK._operation_id(), None)
+        CHECK._check_manual_query_result(
+            payload(json.dumps(expected, separators=(",", ":")).encode()),
+            "h0", CHECK._operation_id(), None,
+        )
+        expected["outcome"] = "succeeded"
+        with self.assertRaisesRegex(CHECK.EvidenceError, "does not match the payment provider fact"):
+            CHECK._check_manual_query_result(
+                payload(json.dumps(expected, separators=(",", ":")).encode()),
+                "h0", CHECK._operation_id(), None,
+            )
+
+    def test_rejects_manual_query_hash_mutation(self) -> None:
+        payment_fact = CHECK._expected_provider_record(
+            CHECK._operation_id(), "/v1/charge", "temporal-payment",
+        )
+        expected = CHECK._manual_query_observation("h1", CHECK._operation_id(), payment_fact)
+        CHECK._check_manual_query_result(
+            payload(json.dumps(expected, separators=(",", ":")).encode()),
+            "h1", CHECK._operation_id(), payment_fact,
+        )
+        expected["request_hash"] = "0" * 64
+        with self.assertRaisesRegex(CHECK.EvidenceError, "does not match the payment provider fact"):
+            CHECK._check_manual_query_result(
+                payload(json.dumps(expected, separators=(",", ":")).encode()),
+                "h1", CHECK._operation_id(), payment_fact,
+            )
+
+    def manual_h0_terminal(self) -> dict[str, object]:
+        return {
+            "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_FAILED",
+            "workflowExecutionFailedEventAttributes": {
+                "failure": {
+                    "message": "manual payment reconciliation was inconclusive",
+                    "source": "GoSDK",
+                    "applicationFailureInfo": {
+                        "type": "ManualPaymentReconciliationFailed", "nonRetryable": True,
+                    },
+                },
+                "retryState": "RETRY_STATE_RETRY_POLICY_NOT_SET",
+                "workflowTaskCompletedEventId": "17",
+            },
+        }
+
+    def manual_h1_terminal(self) -> dict[str, object]:
+        result = json.dumps(CHECK._manual_order_result(), separators=(",", ":")).encode()
+        return {
+            "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED",
+            "workflowExecutionCompletedEventAttributes": {
+                "result": payload(result), "workflowTaskCompletedEventId": "23",
+            },
+        }
+
+    def test_rejects_manual_h0_terminal_behavior_mutation(self) -> None:
+        event = self.manual_h0_terminal()
+        CHECK._check_manual_terminal_event(event, "h0")
+        event["workflowExecutionFailedEventAttributes"]["failure"]["applicationFailureInfo"]["nonRetryable"] = False
+        with self.assertRaisesRegex(CHECK.EvidenceError, "exact nonretryable reconciliation failure"):
+            CHECK._check_manual_terminal_event(event, "h0")
+
+    def test_rejects_manual_h1_terminal_behavior_mutation(self) -> None:
+        event = self.manual_h1_terminal()
+        CHECK._check_manual_terminal_event(event, "h1")
+        changed = CHECK._manual_order_result()
+        changed["phase"] = "PAYMENT_COMMITTED"
+        event["workflowExecutionCompletedEventAttributes"]["result"] = payload(
+            json.dumps(changed, separators=(",", ":")).encode(),
+        )
+        with self.assertRaisesRegex(CHECK.EvidenceError, "terminal result differs"):
+            CHECK._check_manual_terminal_event(event, "h1")
 
     def test_rejects_checksum_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

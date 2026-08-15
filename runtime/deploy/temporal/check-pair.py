@@ -38,13 +38,18 @@ NONDETERMINISM_MESSAGE = (
 
 
 def _workflow_name(mode: str) -> str:
-    _require(mode in {"auto_upgrade", "pinned"}, "Temporal mode differs")
-    return "FoodOrderAutoUpgrade" if mode == "auto_upgrade" else "FoodOrderPinned"
+    names = {
+        "auto_upgrade": "FoodOrderAutoUpgrade",
+        "pinned": "FoodOrderPinned",
+        "manual_branch": "FoodOrderManualBranch",
+    }
+    _require(mode in names, "Temporal mode differs")
+    return names[mode]
 
 
 def _versioning_behavior(mode: str) -> str:
-    _require(mode in {"auto_upgrade", "pinned"}, "Temporal mode differs")
-    if mode == "auto_upgrade":
+    _require(mode in {"auto_upgrade", "pinned", "manual_branch"}, "Temporal mode differs")
+    if mode in {"auto_upgrade", "manual_branch"}:
         return "VERSIONING_BEHAVIOR_AUTO_UPGRADE"
     return "VERSIONING_BEHAVIOR_PINNED"
 
@@ -273,6 +278,11 @@ def _operation_id() -> str:
     return "op-" + sha256(value).hexdigest()
 
 
+def _completion_operation_id() -> str:
+    value = b"operation-id-v1\0temporal-order-workflow\0complete:" + ORDER_ID.encode()
+    return "op-" + sha256(value).hexdigest()
+
+
 def _normalize_history(history: dict[str, Any], run_id: str) -> dict[str, Any]:
     normalized = copy.deepcopy(history)
     for event in normalized["events"]:
@@ -449,39 +459,68 @@ def _check_stats(results: Path, name: str, deliveries: int, commits: int, paths:
     _require(value == {"deliveries": deliveries, "commits": commits, "paths": paths}, f"{name} counts differ")
 
 
-def _check_provider(results: Path, case_name: str, operation_id: str) -> None:
+def _expected_provider_record(operation_id: str, path: str, reference_prefix: str) -> dict[str, str]:
+    body = b'{"order_id":"order-1","amount_cents":4200}'
+    return {
+        "operation_id": operation_id,
+        "request_hash": sha256(b"POST\0" + path.encode() + b"\0" + body).hexdigest(),
+        "result_hash": sha256(b"charged\0" + operation_id.encode() + b"\0" + b"1").hexdigest(),
+        "remote_reference": f"{reference_prefix}/{operation_id}/commit-1",
+        "path": path,
+    }
+
+
+def _one_provider_record(data: bytes, label: str) -> dict[str, Any]:
+    _require(data.endswith(b"\n") and data.count(b"\n") == 1, f"{label} must contain exactly one record")
+    try:
+        record = json.loads(data)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise EvidenceError(f"{label} is not JSON") from error
+    return _object(record, label)
+
+
+def _check_provider(
+    results: Path, case_name: str, operation_id: str, mode: str = "auto_upgrade",
+) -> dict[str, dict[str, Any] | None]:
+    _require(case_name in {"h0", "h1"}, "provider case differs")
+    _require(mode in {"auto_upgrade", "pinned", "manual_branch"}, "Temporal mode differs")
     commits = 0 if case_name == "h0" else 1
     for name in ("payment-cut-stats.json", "payment-before-v2-stats.json", "payment-final-stats.json"):
         _check_stats(results, name, 1, commits, {"/v1/charge": 1})
-    _check_stats(results, "completion-final-stats.json", 0, 0, {})
+
+    completion_expected = mode == "manual_branch" and case_name == "h1"
+    _check_stats(
+        results, "completion-final-stats.json",
+        1 if completion_expected else 0,
+        1 if completion_expected else 0,
+        {"/v1/complete": 1} if completion_expected else {},
+    )
     _require(_read(results / "completion-cut.history") == b"", "completion state is nonempty at cut")
-    _require(_read(results / "completion-final.history") == b"", "completion effect occurred")
+    completion_data = _read(results / "completion-final.history")
+    completion_record: dict[str, Any] | None = None
+    if completion_expected:
+        completion_record = _one_provider_record(completion_data, "H1 completion record")
+        _require(
+            completion_record == _expected_provider_record(
+                _completion_operation_id(), "/v1/complete", "temporal-completion",
+            ),
+            "H1 completion record differs from the scheduled Activity",
+        )
+    else:
+        _require(completion_data == b"", "completion effect occurred")
 
     cut = _read(results / "payment-cut.history")
     final = _read(results / "payment-final.history")
     _require(cut == final, "payment state changed after the cut")
     if case_name == "h0":
         _require(final == b"", "H0 contains a durable payment")
-        return
-    _require(final.endswith(b"\n") and final.count(b"\n") == 1, "H1 must contain exactly one payment record")
-    try:
-        record = json.loads(final)
-    except (UnicodeDecodeError, json.JSONDecodeError) as error:
-        raise EvidenceError("H1 payment record is not JSON") from error
-    record = _object(record, "H1 payment record")
-    body = b'{"order_id":"order-1","amount_cents":4200}'
-    request_hash = sha256(b"POST\0/v1/charge\0" + body).hexdigest()
-    result_hash = sha256(b"charged\0" + operation_id.encode() + b"\0" + b"1").hexdigest()
+        return {"payment": None, "completion": completion_record}
+    record = _one_provider_record(final, "H1 payment record")
     _require(
-        record == {
-            "operation_id": operation_id,
-            "request_hash": request_hash,
-            "result_hash": result_hash,
-            "remote_reference": f"temporal-payment/{operation_id}/commit-1",
-            "path": "/v1/charge",
-        },
+        record == _expected_provider_record(operation_id, "/v1/charge", "temporal-payment"),
         "H1 payment record differs from the scheduled Activity",
     )
+    return {"payment": record, "completion": completion_record}
 
 
 def _check_poller(results: Path, name: str, build_id: str, identity: str) -> None:
@@ -643,10 +682,351 @@ def _check_pre_v2(results: Path, run_id: str, cut: dict[str, Any]) -> dict[str, 
     return normalized
 
 
+def _encoded_payload(data: bytes) -> dict[str, Any]:
+    return {
+        "payloads": [{
+            "metadata": {"encoding": "anNvbi9wbGFpbg=="},
+            "data": base64.b64encode(data).decode("ascii"),
+        }],
+    }
+
+
+def _effect_request_bytes(operation_id: str) -> bytes:
+    return (
+        b'{"order_id":"order-1","amount_cents":4200,"operation_id":"' +
+        operation_id.encode() + b'"}'
+    )
+
+
+def _manual_query_observation(
+    case_name: str, operation_id: str, payment_fact: dict[str, Any] | None,
+) -> dict[str, Any]:
+    expected_payment = _expected_provider_record(operation_id, "/v1/charge", "temporal-payment")
+    if case_name == "h0":
+        _require(payment_fact is None, "H0 query is paired with a durable payment fact")
+        return {
+            "schema": 1,
+            "operation_id": operation_id,
+            "request_hash": expected_payment["request_hash"],
+            "outcome": "inconclusive",
+            "fact_hash": "",
+            "remote_reference": f"temporal-payment/{operation_id}/count=0",
+        }
+    _require(case_name == "h1", "manual query case differs")
+    _require(payment_fact == expected_payment, "H1 query is not paired with the payment provider fact")
+    return {
+        "schema": 1,
+        "operation_id": operation_id,
+        "request_hash": payment_fact["request_hash"],
+        "outcome": "succeeded",
+        "fact_hash": payment_fact["result_hash"],
+        "remote_reference": payment_fact["remote_reference"],
+    }
+
+
+def _check_manual_query_result(
+    value: Any, case_name: str, operation_id: str, payment_fact: dict[str, Any] | None,
+) -> dict[str, Any]:
+    try:
+        observation = json.loads(_payload_bytes(value, "QueryPayment result"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise EvidenceError("QueryPayment result is not JSON") from error
+    observation = _object(observation, "QueryPayment result")
+    expected = _manual_query_observation(case_name, operation_id, payment_fact)
+    _require(observation == expected, "QueryPayment result does not match the payment provider fact")
+    return expected
+
+
+def _manual_order_result() -> dict[str, Any]:
+    return {"schema": 1, "order_id": ORDER_ID, "worker_build": V2_BUILD, "phase": "DELIVERED"}
+
+
+def _check_manual_terminal_event(event: Any, case_name: str) -> None:
+    event = _object(event, "manual terminal event")
+    if case_name == "h0":
+        _require(event.get("eventType") == "EVENT_TYPE_WORKFLOW_EXECUTION_FAILED", "H0 terminal event differs")
+        _require(
+            event.get("workflowExecutionFailedEventAttributes") == {
+                "failure": {
+                    "message": "manual payment reconciliation was inconclusive",
+                    "source": "GoSDK",
+                    "applicationFailureInfo": {
+                        "type": "ManualPaymentReconciliationFailed", "nonRetryable": True,
+                    },
+                },
+                "retryState": "RETRY_STATE_RETRY_POLICY_NOT_SET",
+                "workflowTaskCompletedEventId": "17",
+            },
+            "H0 terminal failure is not the exact nonretryable reconciliation failure",
+        )
+        return
+    _require(case_name == "h1", "manual terminal case differs")
+    _require(event.get("eventType") == "EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED", "H1 terminal event differs")
+    attributes = _object(event.get("workflowExecutionCompletedEventAttributes"), "H1 completion")
+    _require(set(attributes) == {"result", "workflowTaskCompletedEventId"}, "H1 completion fields differ")
+    expected_bytes = json.dumps(_manual_order_result(), separators=(",", ":")).encode()
+    _require(
+        _payload_bytes(attributes["result"], "H1 Workflow result") == expected_bytes and
+        attributes["workflowTaskCompletedEventId"] == "23",
+        "H1 terminal result differs",
+    )
+
+
+def _manual_wft_completion(scheduled_id: str, started_id: str) -> dict[str, Any]:
+    return {
+        "scheduledEventId": scheduled_id,
+        "startedEventId": started_id,
+        "identity": V2_IDENTITY,
+        "workerVersion": {"buildId": V2_BUILD, "useVersioning": True},
+        "sdkMetadata": {},
+        "meteringMetadata": {},
+        "versioningBehavior": "VERSIONING_BEHAVIOR_AUTO_UPGRADE",
+        "workerDeploymentName": DEPLOYMENT,
+        "deploymentVersion": {"buildId": V2_BUILD, "deploymentName": DEPLOYMENT},
+    }
+
+
+def _manual_activity_schedule(
+    activity_id: str, activity_name: str, operation_id: str, completed_wft_id: str,
+) -> dict[str, Any]:
+    return {
+        "activityId": activity_id,
+        "activityType": {"name": activity_name},
+        "taskQueue": {"name": TASK_QUEUE, "kind": "TASK_QUEUE_KIND_NORMAL"},
+        "header": {},
+        "input": _encoded_payload(_effect_request_bytes(operation_id)),
+        "scheduleToCloseTimeout": "0s",
+        "scheduleToStartTimeout": "0s",
+        "startToCloseTimeout": "60s",
+        "heartbeatTimeout": "0s",
+        "workflowTaskCompletedEventId": completed_wft_id,
+        "retryPolicy": {
+            "initialInterval": "1s", "backoffCoefficient": 2,
+            "maximumInterval": "100s", "maximumAttempts": 1,
+        },
+        "useWorkflowBuildId": True,
+    }
+
+
+def _manual_event(event_id: int, event_type: str, attribute_name: str, attributes: dict[str, Any]) -> dict[str, Any]:
+    return {"eventId": str(event_id), "eventType": event_type, attribute_name: attributes}
+
+
+def _manual_sticky_schedule() -> dict[str, Any]:
+    return {
+        "taskQueue": {
+            "name": "<sticky-queue>", "kind": "TASK_QUEUE_KIND_STICKY", "normalName": TASK_QUEUE,
+        },
+        "startToCloseTimeout": "10s",
+        "attempt": 1,
+    }
+
+
+def _expected_manual_tail(
+    case_name: str, operation_id: str, query_observation: dict[str, Any],
+    completion_fact: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    query_bytes = json.dumps(query_observation, separators=(",", ":")).encode()
+    tail = [
+        _manual_event(9, "EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED", "workflowExecutionSignaledEventAttributes", {
+            "signalName": "complete", "input": {}, "identity": SIGNAL_IDENTITY,
+        }),
+        _manual_event(10, "EVENT_TYPE_WORKFLOW_TASK_STARTED", "workflowTaskStartedEventAttributes", {
+            "scheduledEventId": "8", "identity": V2_IDENTITY,
+        }),
+        _manual_event(11, "EVENT_TYPE_WORKFLOW_TASK_COMPLETED", "workflowTaskCompletedEventAttributes",
+                      _manual_wft_completion("8", "10")),
+        _manual_event(12, "EVENT_TYPE_ACTIVITY_TASK_SCHEDULED", "activityTaskScheduledEventAttributes",
+                      _manual_activity_schedule("12", "QueryPayment", operation_id, "11")),
+        _manual_event(13, "EVENT_TYPE_ACTIVITY_TASK_STARTED", "activityTaskStartedEventAttributes", {
+            "scheduledEventId": "12", "identity": V2_IDENTITY, "attempt": 1,
+            "workerVersion": {"buildId": V2_BUILD, "useVersioning": True},
+        }),
+        _manual_event(14, "EVENT_TYPE_ACTIVITY_TASK_COMPLETED", "activityTaskCompletedEventAttributes", {
+            "result": _encoded_payload(query_bytes),
+            "scheduledEventId": "12", "startedEventId": "13", "identity": V2_IDENTITY,
+        }),
+        _manual_event(15, "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED", "workflowTaskScheduledEventAttributes",
+                      _manual_sticky_schedule()),
+        _manual_event(16, "EVENT_TYPE_WORKFLOW_TASK_STARTED", "workflowTaskStartedEventAttributes", {
+            "scheduledEventId": "15", "identity": V2_IDENTITY,
+        }),
+        _manual_event(17, "EVENT_TYPE_WORKFLOW_TASK_COMPLETED", "workflowTaskCompletedEventAttributes",
+                      _manual_wft_completion("15", "16")),
+    ]
+    if case_name == "h0":
+        tail.append(_manual_event(
+            18, "EVENT_TYPE_WORKFLOW_EXECUTION_FAILED", "workflowExecutionFailedEventAttributes", {
+                "failure": {
+                    "message": "manual payment reconciliation was inconclusive",
+                    "source": "GoSDK",
+                    "applicationFailureInfo": {
+                        "type": "ManualPaymentReconciliationFailed", "nonRetryable": True,
+                    },
+                },
+                "retryState": "RETRY_STATE_RETRY_POLICY_NOT_SET",
+                "workflowTaskCompletedEventId": "17",
+            },
+        ))
+        return tail
+
+    _require(case_name == "h1", "manual final case differs")
+    expected_completion = _expected_provider_record(
+        _completion_operation_id(), "/v1/complete", "temporal-completion",
+    )
+    _require(completion_fact == expected_completion, "completion receipt is not paired with the provider fact")
+    receipt = {
+        "schema": 1,
+        "operation_id": expected_completion["operation_id"],
+        "outcome": "succeeded",
+        "result_hash": expected_completion["result_hash"],
+        "remote_reference": expected_completion["remote_reference"],
+    }
+    tail.extend([
+        _manual_event(18, "EVENT_TYPE_ACTIVITY_TASK_SCHEDULED", "activityTaskScheduledEventAttributes",
+                      _manual_activity_schedule("18", "CompleteOrder", _completion_operation_id(), "17")),
+        _manual_event(19, "EVENT_TYPE_ACTIVITY_TASK_STARTED", "activityTaskStartedEventAttributes", {
+            "scheduledEventId": "18", "identity": V2_IDENTITY, "attempt": 1,
+            "workerVersion": {"buildId": V2_BUILD, "useVersioning": True},
+        }),
+        _manual_event(20, "EVENT_TYPE_ACTIVITY_TASK_COMPLETED", "activityTaskCompletedEventAttributes", {
+            "result": _encoded_payload(json.dumps(receipt, separators=(",", ":")).encode()),
+            "scheduledEventId": "18", "startedEventId": "19", "identity": V2_IDENTITY,
+        }),
+        _manual_event(21, "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED", "workflowTaskScheduledEventAttributes",
+                      _manual_sticky_schedule()),
+        _manual_event(22, "EVENT_TYPE_WORKFLOW_TASK_STARTED", "workflowTaskStartedEventAttributes", {
+            "scheduledEventId": "21", "identity": V2_IDENTITY,
+        }),
+        _manual_event(23, "EVENT_TYPE_WORKFLOW_TASK_COMPLETED", "workflowTaskCompletedEventAttributes",
+                      _manual_wft_completion("21", "22")),
+        _manual_event(24, "EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED", "workflowExecutionCompletedEventAttributes", {
+            "result": _encoded_payload(json.dumps(_manual_order_result(), separators=(",", ":")).encode()),
+            "workflowTaskCompletedEventId": "23",
+        }),
+    ])
+    return tail
+
+
+def _check_final_manual(
+    results: Path, run_id: str, case_name: str, operation_id: str,
+    provider_facts: dict[str, dict[str, Any] | None],
+) -> int:
+    history = _json(results / "final-history.json")
+    _require(set(history) == {"events"}, "manual final History fields differ")
+    events = _array(history["events"], "manual final History events")
+    _require(history["events"][:8] == _json(results / "pre-v2-history.json")["events"], "final History does not extend pre-v2 History")
+    expected_length = 18 if case_name == "h0" else 24
+    _require(len(events) == expected_length, "manual final History length differs")
+    for index, event in enumerate(events, 1):
+        event = _object(event, "manual final History event")
+        _require(event.get("eventId") == str(index), "manual final History event IDs differ")
+        _require(isinstance(event.get("eventTime"), str) and event["eventTime"], "manual final event time is absent")
+        _require(isinstance(event.get("taskId"), str) and event["taskId"].isdigit(), "manual final task ID differs")
+
+    for index in (15,) if case_name == "h0" else (15, 21):
+        queue = events[index - 1].get("workflowTaskScheduledEventAttributes", {}).get("taskQueue", {})
+        _require(isinstance(queue.get("name"), str) and queue["name"], "manual sticky queue name is absent")
+    for index in (10, 16) if case_name == "h0" else (10, 16, 22):
+        attributes = events[index - 1].get("workflowTaskStartedEventAttributes", {})
+        _require(isinstance(attributes.get("requestId"), str) and attributes["requestId"], "manual Workflow task request ID is absent")
+        _require(isinstance(attributes.get("historySizeBytes"), str) and attributes["historySizeBytes"].isdigit(), "manual Workflow task history size differs")
+    for index in (13,) if case_name == "h0" else (13, 19):
+        attributes = events[index - 1].get("activityTaskStartedEventAttributes", {})
+        _require(isinstance(attributes.get("requestId"), str) and attributes["requestId"], "manual Activity request ID is absent")
+
+    query_attributes = _object(events[13].get("activityTaskCompletedEventAttributes"), "QueryPayment completion")
+    query_observation = _check_manual_query_result(
+        query_attributes.get("result"), case_name, operation_id, provider_facts.get("payment"),
+    )
+    _check_manual_terminal_event(events[-1], case_name)
+    expected_tail = _expected_manual_tail(
+        case_name, operation_id, query_observation, provider_facts.get("completion"),
+    )
+    normalized = _normalize_history(history, run_id)
+    _require(normalized["events"][8:] == expected_tail, "manual final History tail differs")
+    _require(
+        not any(
+            event.get("eventType") == "EVENT_TYPE_WORKFLOW_TASK_FAILED"
+            for event in events if isinstance(event, dict)
+        ),
+        "manual execution produced a Workflow task failure",
+    )
+
+    final = _json(results / "final-describe.json")
+    expected_keys = {"closeEvent", "executionConfig", "workflowExecutionInfo", "workflowExtendedInfo"}
+    if case_name == "h1":
+        expected_keys.add("result")
+    _require(set(final) == expected_keys, "manual final describe fields differ")
+    info = _object(final.get("workflowExecutionInfo"), "manual final Workflow info")
+    expected_status = (
+        "WORKFLOW_EXECUTION_STATUS_FAILED" if case_name == "h0" else
+        "WORKFLOW_EXECUTION_STATUS_COMPLETED"
+    )
+    _require(info.get("execution") == {"workflowId": WORKFLOW_ID, "runId": run_id}, "manual final execution differs")
+    _require(info.get("firstRunId") == run_id, "manual final first run differs")
+    _require(info.get("rootExecution") == {"workflowId": WORKFLOW_ID, "runId": run_id}, "manual final root execution differs")
+    _require(info.get("status") == expected_status, "manual final Workflow status differs")
+    _require(info.get("historyLength") == str(expected_length), "manual final History length metadata differs")
+    _require(info.get("type") == {"name": "FoodOrderManualBranch"}, "manual final Workflow type differs")
+    _require(
+        info.get("taskQueue") == TASK_QUEUE and info.get("workerDeploymentName") == DEPLOYMENT and
+        info.get("mostRecentWorkerVersionStamp") == {"buildId": V2_BUILD, "useVersioning": True},
+        "manual final Workflow queue/version differs",
+    )
+    _require(
+        info.get("versioningInfo") == {
+            "behavior": "VERSIONING_BEHAVIOR_AUTO_UPGRADE",
+            "deploymentVersion": {"buildId": V2_BUILD, "deploymentName": DEPLOYMENT},
+            "revisionNumber": "2",
+            "version": f"{DEPLOYMENT}.{V2_BUILD}",
+        },
+        "manual final execution is not bound to v2",
+    )
+
+    close = _object(final.get("closeEvent"), "manual close event")
+    close_attribute = (
+        "workflowExecutionFailedEventAttributes" if case_name == "h0" else
+        "workflowExecutionCompletedEventAttributes"
+    )
+    _require(
+        set(close) == {"eventId", "eventTime", "eventType", "taskId", close_attribute},
+        "manual close event fields differ",
+    )
+    _require(close.get("eventId") == str(expected_length), "manual close event ID differs")
+    _require(close.get("eventType") == events[-1].get("eventType"), "manual close event type differs")
+    _require(close.get("eventTime") == events[-1].get("eventTime"), "manual close event time differs")
+    _require(close.get("taskId") == events[-1].get("taskId"), "manual close task ID differs")
+    if case_name == "h0":
+        _require("result" not in final, "H0 unexpectedly contains a Workflow result")
+        _require(
+            close.get("workflowExecutionFailedEventAttributes") ==
+            events[-1].get("workflowExecutionFailedEventAttributes"),
+            "H0 close failure differs from History",
+        )
+    else:
+        result = _manual_order_result()
+        _require(final.get("result") == result, "H1 final result differs")
+        _require(
+            close.get("workflowExecutionCompletedEventAttributes") == {
+                "result": [result], "workflowTaskCompletedEventId": "23",
+            },
+            "H1 close result differs from History",
+        )
+    return 0
+
+
 def _check_final(
     results: Path, run_id: str, pre_v2: dict[str, Any], mode: str = "auto_upgrade",
+    case_name: str | None = None, operation_id: str | None = None,
+    provider_facts: dict[str, dict[str, Any] | None] | None = None,
 ) -> int:
-    _require(mode in {"auto_upgrade", "pinned"}, "Temporal mode differs")
+    _require(mode in {"auto_upgrade", "pinned", "manual_branch"}, "Temporal mode differs")
+    if mode == "manual_branch":
+        _require(case_name in {"h0", "h1"}, "manual final case differs")
+        _require(isinstance(operation_id, str), "manual Operation identity is absent")
+        _require(provider_facts is not None, "manual provider facts are absent")
+        return _check_final_manual(results, run_id, case_name, operation_id, provider_facts)
     history = _json(results / "final-history.json")
     events = _array(history.get("events"), "final History")
     _require(history["events"][:8] == _json(results / "pre-v2-history.json")["events"], "final History does not extend pre-v2 History")
@@ -784,10 +1164,12 @@ def _check_case(root: Path, case_name: str) -> dict[str, Any]:
 
     observed = _json(results / "observed.json")
     mode = observed.get("mode")
-    _require(mode in {"auto_upgrade", "pinned"}, f"{case_name} Temporal mode differs")
+    _require(mode in {"auto_upgrade", "pinned", "manual_branch"}, f"{case_name} Temporal mode differs")
 
     start = _json(results / "start.json")
-    expected_behavior = "autoupgrade" if mode == "auto_upgrade" else "pinned"
+    expected_behavior = {
+        "auto_upgrade": "autoupgrade", "pinned": "pinned", "manual_branch": "manual",
+    }[mode]
     _require(
         set(start) == {"schema", "behavior", "workflow_id", "run_id"} and
         start.get("schema") == 1 and start.get("behavior") == expected_behavior and
@@ -797,13 +1179,22 @@ def _check_case(root: Path, case_name: str) -> dict[str, Any]:
     run_id = start["run_id"]
     cut_history, operation_id = _check_cut_history(results, run_id, mode)
     cut_describe = _check_cut_describe(results, run_id, mode)
-    _check_provider(results, case_name, operation_id)
+    provider_facts = _check_provider(results, case_name, operation_id, mode)
     _check_deployments(results)
     _check_containers(results, build, versions)
     pre_v2 = _check_pre_v2(results, run_id, cut_history)
-    failure_count = _check_final(results, run_id, pre_v2, mode)
+    failure_count = _check_final(
+        results, run_id, pre_v2, mode, case_name, operation_id, provider_facts,
+    )
 
     expected_commits = 0 if case_name == "h0" else 1
+    completion_commits = 1 if mode == "manual_branch" and case_name == "h1" else 0
+    final_status = "WORKFLOW_EXECUTION_STATUS_RUNNING"
+    if mode == "manual_branch":
+        final_status = (
+            "WORKFLOW_EXECUTION_STATUS_FAILED" if case_name == "h0" else
+            "WORKFLOW_EXECUTION_STATUS_COMPLETED"
+        )
     _require(
         observed == {
             "schema": 1,
@@ -811,10 +1202,14 @@ def _check_case(root: Path, case_name: str) -> dict[str, Any]:
             "mode": mode,
             "workflow_id": WORKFLOW_ID,
             "run_id": run_id,
-            "final_status": "WORKFLOW_EXECUTION_STATUS_RUNNING",
+            "final_status": final_status,
             "workflow_task_failures": failure_count,
             "payment": {"deliveries": 1, "commits": expected_commits, "paths": {"/v1/charge": 1}},
-            "completion": {"deliveries": 0, "commits": 0, "paths": {}},
+            "completion": {
+                "deliveries": completion_commits,
+                "commits": completion_commits,
+                "paths": {"/v1/complete": 1} if completion_commits else {},
+            },
         },
         f"{case_name} observed summary does not match raw evidence",
     )
@@ -829,6 +1224,7 @@ def _check_case(root: Path, case_name: str) -> dict[str, Any]:
         "cut_describe": cut_describe,
         "pre_v2": pre_v2,
         "failure_count": failure_count,
+        "final_status": final_status,
         "mode": mode,
     }
 
@@ -853,8 +1249,8 @@ def check_pair(h0_root: Path, h1_root: Path) -> dict[str, Any]:
         "pending_activity_equal": True,
         "h0_payment_commits": 0,
         "h1_payment_commits": 1,
-        "h0_final_status": "WORKFLOW_EXECUTION_STATUS_RUNNING",
-        "h1_final_status": "WORKFLOW_EXECUTION_STATUS_RUNNING",
+        "h0_final_status": h0["final_status"],
+        "h1_final_status": h1["final_status"],
         "h0_nondeterministic_tasks": h0["failure_count"],
         "h1_nondeterministic_tasks": h1["failure_count"],
     }
