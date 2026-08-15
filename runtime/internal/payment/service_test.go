@@ -345,7 +345,8 @@ func TestPaymentResponseLossModesAreExclusive(t *testing.T) {
 }
 
 func TestCompletionEndpointUsesIndependentReferencePrefix(t *testing.T) {
-	service, err := OpenWithOptions(filepath.Join(t.TempDir(), "completion.history"), Options{
+	path := filepath.Join(t.TempDir(), "completion.history")
+	service, err := OpenWithOptions(path, Options{
 		ReferencePrefix: "completion",
 	})
 	if err != nil {
@@ -371,6 +372,18 @@ func TestCompletionEndpointUsesIndependentReferencePrefix(t *testing.T) {
 	}
 	if stats := service.Stats(); stats.Deliveries != 1 || stats.Commits != 1 || stats.Paths["/v1/complete"] != 1 {
 		t.Fatalf("completion stats: %+v", stats)
+	}
+	server.Close()
+	if err := service.Close(); err != nil {
+		t.Fatal(err)
+	}
+	reopened, err := OpenWithOptions(path, Options{ReferencePrefix: "completion"})
+	if err != nil {
+		t.Fatalf("reopen durable completion state: %v", err)
+	}
+	defer reopened.Close()
+	if stats := reopened.Stats(); stats.Deliveries != 0 || stats.Commits != 1 {
+		t.Fatalf("reopened completion stats: %+v", stats)
 	}
 }
 

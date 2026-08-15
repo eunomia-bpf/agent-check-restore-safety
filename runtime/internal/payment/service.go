@@ -168,7 +168,7 @@ func validateRecord(item record) error {
 	if item.OperationID == "" || len(item.OperationID) > 1024 {
 		return errors.New("invalid Operation identity")
 	}
-	if item.Path != "/v1/charge" && item.Path != "/v2/charge" {
+	if item.Path != "/v1/charge" && item.Path != "/v2/charge" && item.Path != "/v1/complete" {
 		return errors.New("invalid payment path")
 	}
 	for _, digest := range []string{item.RequestHash, item.ResultHash} {
