@@ -21,6 +21,7 @@ import (
 const (
 	MaxRequestBytes = int64(kernel.MaxOperationRequestBodyBytes)
 	MaxCallIDBytes  = 1024
+	OutcomeSchema   = 1
 )
 
 const (
@@ -57,11 +58,27 @@ type boundRoute struct {
 	contentTypes map[string]bool
 }
 
+// Outcome is the workload-facing settlement contract. It intentionally does
+// not expose the provider receipt or query-observation body: those are
+// control-plane evidence formats and differ by settlement path.
+type Outcome struct {
+	Schema           int          `json:"schema"`
+	OperationID      string       `json:"operation_id"`
+	Phase            kernel.Phase `json:"phase"`
+	ResultHash       string       `json:"result_hash"`
+	Reused           bool         `json:"reused"`
+	RecoveredByQuery bool         `json:"recovered_by_query"`
+}
+
 type errorBody struct {
-	Error       string       `json:"error"`
-	Detail      string       `json:"detail,omitempty"`
-	OperationID string       `json:"operation_id,omitempty"`
-	Phase       kernel.Phase `json:"phase,omitempty"`
+	Schema           int          `json:"schema"`
+	Error            string       `json:"error"`
+	Detail           string       `json:"detail,omitempty"`
+	OperationID      string       `json:"operation_id,omitempty"`
+	Phase            kernel.Phase `json:"phase,omitempty"`
+	ResultHash       string       `json:"result_hash,omitempty"`
+	Reused           bool         `json:"reused"`
+	RecoveredByQuery bool         `json:"recovered_by_query"`
 }
 
 func New(executor Executor, config Config, options Options) (*Proxy, error) {
@@ -194,12 +211,11 @@ func (p *Proxy) serveHTTP(writer http.ResponseWriter, request *http.Request) {
 		writeError(writer, http.StatusBadGateway, errorBody{Error: "control API returned invalid operation metadata"})
 		return
 	}
-	// Every currently registered settlement contract is strict JSON. Expose
-	// that contract to ordinary HTTP callers instead of making them guess from
-	// an opaque content type.
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(outcome.StatusCode)
-	_, _ = writer.Write(outcome.Body)
+	writeJSON(writer, outcome.StatusCode, Outcome{
+		Schema: OutcomeSchema, OperationID: outcome.OperationID, Phase: outcome.Phase,
+		ResultHash: outcome.ResultHash, Reused: outcome.Reused,
+		RecoveredByQuery: outcome.RecoveredByQuery,
+	})
 }
 
 func (p *Proxy) writeExecutionError(writer http.ResponseWriter, outcome gateway.Outcome, err error) {
@@ -218,6 +234,8 @@ func (p *Proxy) writeExecutionError(writer http.ResponseWriter, outcome gateway.
 	}
 	writeError(writer, status, errorBody{
 		Error: message, Detail: err.Error(), OperationID: outcome.OperationID, Phase: outcome.Phase,
+		ResultHash: outcome.ResultHash, Reused: outcome.Reused,
+		RecoveredByQuery: outcome.RecoveredByQuery,
 	})
 }
 
@@ -318,5 +336,6 @@ func writeJSON(writer http.ResponseWriter, status int, value any) {
 }
 
 func writeError(writer http.ResponseWriter, status int, body errorBody) {
+	body.Schema = OutcomeSchema
 	writeJSON(writer, status, body)
 }

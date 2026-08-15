@@ -150,7 +150,15 @@ effect-proxy \
 The proxy accepts only configured routes, never accepts a caller-selected
 target, forwards no caller credentials, and returns `409` while an external
 outcome is not safely settled. Settled responses are strict JSON and include
-the Operation ID, phase, and fact hash as response headers. In a container
+the Operation ID, phase, and fact hash as response headers and in one stable
+workload envelope:
+
+```json
+{"schema":1,"operation_id":"op-...","phase":"succeeded","result_hash":"...","reused":false,"recovered_by_query":false}
+```
+
+The proxy does not expose the adapter's internal receipt or observation body.
+In a container
 deployment, place the business service, proxy, control, and provider on
 isolated networks so each process can reach only the component it needs.
 

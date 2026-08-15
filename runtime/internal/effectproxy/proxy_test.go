@@ -81,6 +81,21 @@ func decodeError(t *testing.T, recorder *httptest.ResponseRecorder) errorBody {
 	return body
 }
 
+func decodeOutcome(t *testing.T, recorder *httptest.ResponseRecorder) Outcome {
+	t.Helper()
+	var body Outcome
+	decoder := json.NewDecoder(bytes.NewReader(recorder.Body.Bytes()))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		t.Fatalf("outcome response is not strict JSON: %v: %q", err, recorder.Body.String())
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+		t.Fatalf("outcome response contains trailing data: %v: %q", err, recorder.Body.String())
+	}
+	return body
+}
+
 func TestProxyBindsTargetAndForwardsOnlySafeContentType(t *testing.T) {
 	executor := &recordingExecutor{outcome: gateway.Outcome{
 		OperationID: "op-fixed", Phase: kernel.Succeeded, StatusCode: http.StatusCreated,
@@ -96,8 +111,16 @@ func TestProxyBindsTargetAndForwardsOnlySafeContentType(t *testing.T) {
 
 	proxy.Handler().ServeHTTP(recorder, request)
 
-	if recorder.Code != http.StatusCreated || recorder.Body.String() != `{"receipt":"paid"}` {
+	if recorder.Code != http.StatusCreated {
 		t.Fatalf("response status=%d body=%q", recorder.Code, recorder.Body.String())
+	}
+	response := decodeOutcome(t, recorder)
+	if response.Schema != OutcomeSchema || response.OperationID != "op-fixed" || response.Phase != kernel.Succeeded ||
+		response.ResultHash != strings.Repeat("a", 64) || response.Reused || response.RecoveredByQuery {
+		t.Fatalf("outcome response = %+v", response)
+	}
+	if strings.Contains(recorder.Body.String(), "receipt") || strings.Contains(recorder.Body.String(), "paid") {
+		t.Fatalf("provider receipt leaked to workload response: %q", recorder.Body.String())
 	}
 	calls := executor.calls()
 	if len(calls) != 1 {
@@ -121,6 +144,73 @@ func TestProxyBindsTargetAndForwardsOnlySafeContentType(t *testing.T) {
 	}
 	if recorder.Header().Get("Content-Type") != "application/json" || recorder.Header().Get("X-Content-Type-Options") != "nosniff" {
 		t.Fatalf("response safety headers = %#v", recorder.Header())
+	}
+}
+
+func TestProxySettlementEnvelopeIsStableAcrossReceiptQueryAndRetry(t *testing.T) {
+	resultHash := strings.Repeat("c", 64)
+	tests := []struct {
+		name      string
+		outcome   gateway.Outcome
+		wantReuse bool
+		wantQuery bool
+		secret    string
+	}{
+		{
+			name: "direct-receipt",
+			outcome: gateway.Outcome{
+				OperationID: "op-stable", Phase: kernel.Succeeded, StatusCode: http.StatusOK,
+				ResultHash: resultHash, Body: []byte(`{"schema":1,"receipt_private":"direct-secret"}`),
+			},
+			secret: "direct-secret",
+		},
+		{
+			name: "direct-receipt-retry",
+			outcome: gateway.Outcome{
+				OperationID: "op-stable", Phase: kernel.Succeeded, StatusCode: http.StatusOK,
+				ResultHash: resultHash, Reused: true,
+				Body: []byte(`{"schema":1,"receipt_private":"direct-retry-secret"}`),
+			},
+			wantReuse: true, secret: "direct-retry-secret",
+		},
+		{
+			name: "query-recovery",
+			outcome: gateway.Outcome{
+				OperationID: "op-stable", Phase: kernel.Succeeded, StatusCode: http.StatusOK,
+				ResultHash: resultHash, RecoveredByQuery: true,
+				Body: []byte(`{"schema":1,"observation_private":"query-secret"}`),
+			},
+			wantQuery: true, secret: "query-secret",
+		},
+		{
+			name: "query-recovery-retry",
+			outcome: gateway.Outcome{
+				OperationID: "op-stable", Phase: kernel.Succeeded, StatusCode: http.StatusOK,
+				ResultHash: resultHash, Reused: true, RecoveredByQuery: true,
+				Body: []byte(`{"schema":1,"observation_private":"query-retry-secret"}`),
+			},
+			wantReuse: true, wantQuery: true, secret: "query-retry-secret",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			newTestProxy(t, &recordingExecutor{outcome: test.outcome}).Handler().ServeHTTP(
+				recorder, effectRequest(strings.NewReader(`{}`)),
+			)
+			if recorder.Code != http.StatusOK || recorder.Header().Get("Content-Type") != "application/json" {
+				t.Fatalf("response status=%d headers=%#v body=%q", recorder.Code, recorder.Header(), recorder.Body.String())
+			}
+			body := decodeOutcome(t, recorder)
+			if body.Schema != OutcomeSchema || body.OperationID != "op-stable" || body.Phase != kernel.Succeeded ||
+				body.ResultHash != resultHash || body.Reused != test.wantReuse || body.RecoveredByQuery != test.wantQuery {
+				t.Fatalf("outcome response = %+v", body)
+			}
+			if strings.Contains(recorder.Body.String(), test.secret) || strings.Contains(recorder.Body.String(), "receipt_private") ||
+				strings.Contains(recorder.Body.String(), "observation_private") {
+				t.Fatalf("internal settlement body leaked: %q", recorder.Body.String())
+			}
+		})
 	}
 }
 
@@ -246,7 +336,10 @@ func TestProxyFailsClosedWithoutRetry(t *testing.T) {
 				t.Fatalf("status=%d headers=%#v body=%q", recorder.Code, recorder.Header(), recorder.Body.String())
 			}
 			body := decodeError(t, recorder)
-			if body.Error == "" || body.Detail != test.err.Error() {
+			if body.Schema != OutcomeSchema || body.Error == "" || body.Detail != test.err.Error() ||
+				body.OperationID != test.outcome.OperationID || body.Phase != test.outcome.Phase ||
+				body.ResultHash != test.outcome.ResultHash || body.Reused != test.outcome.Reused ||
+				body.RecoveredByQuery != test.outcome.RecoveredByQuery {
 				t.Fatalf("error body = %+v", body)
 			}
 			if calls := executor.calls(); len(calls) != 1 {
@@ -256,16 +349,24 @@ func TestProxyFailsClosedWithoutRetry(t *testing.T) {
 	}
 }
 
-func TestProxyReturnsSettledProviderFailureVerbatim(t *testing.T) {
+func TestProxyReturnsSettledProviderFailureEnvelope(t *testing.T) {
 	executor := &recordingExecutor{outcome: gateway.Outcome{
 		OperationID: "op-declined", Phase: kernel.Failed, StatusCode: http.StatusPaymentRequired,
-		Body: []byte("declined"), ResultHash: strings.Repeat("b", 64), Reused: true,
+		Body: []byte(`{"private_provider_reason":"super-secret-provider-detail"}`), ResultHash: strings.Repeat("b", 64), Reused: true,
 	}}
 	recorder := httptest.NewRecorder()
 	newTestProxy(t, executor).Handler().ServeHTTP(recorder, effectRequest(strings.NewReader(`{}`)))
-	if recorder.Code != http.StatusPaymentRequired || recorder.Body.String() != "declined" ||
-		recorder.Header().Get(headerPhase) != "failed" || recorder.Header().Get(headerReused) != "true" {
+	if recorder.Code != http.StatusPaymentRequired || recorder.Header().Get(headerPhase) != "failed" ||
+		recorder.Header().Get(headerReused) != "true" {
 		t.Fatalf("response status=%d headers=%#v body=%q", recorder.Code, recorder.Header(), recorder.Body.String())
+	}
+	response := decodeOutcome(t, recorder)
+	if response.Schema != OutcomeSchema || response.OperationID != "op-declined" || response.Phase != kernel.Failed ||
+		response.ResultHash != strings.Repeat("b", 64) || !response.Reused || response.RecoveredByQuery {
+		t.Fatalf("outcome response = %+v", response)
+	}
+	if strings.Contains(recorder.Body.String(), "private_provider_reason") || strings.Contains(recorder.Body.String(), "super-secret-provider-detail") {
+		t.Fatalf("provider failure body leaked to workload response: %q", recorder.Body.String())
 	}
 }
 

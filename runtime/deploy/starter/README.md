@@ -139,7 +139,15 @@ Idempotency-Key: record/2026-000042/submit
 
 Send exactly one of `Idempotency-Key` or `X-Safe-Change-Call-ID`. Its value must
 be stable for one logical external action and must not be reused for different
-bytes. Preserve the returned Operation ID for recovery.
+bytes. Preserve the returned Operation ID for recovery. A settled workload
+response uses one schema whether it was completed directly or recovered by
+query:
+
+```json
+{"schema":1,"operation_id":"op-...","phase":"succeeded","result_hash":"...","reused":false,"recovered_by_query":true}
+```
+
+This is the safe-change workload contract, not a provider-native response.
 
 ## Change to provider adapter v2
 

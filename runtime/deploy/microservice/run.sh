@@ -211,11 +211,11 @@ control_pid_after="$(docker inspect -f '{{.State.Pid}}' "$control_container")"
 
 submit_order A-17 42 "$DEMO_STATE_DIR/results/retried-order.json" 200
 jq -e '.release_version == "v2" and .proxy == true and
-  .requested_route == "payment" and .runtime.outcome == "succeeded"' \
+  .requested_route == "payment" and .runtime.phase == "succeeded"' \
   "$DEMO_STATE_DIR/results/retried-order.json" >/dev/null
 submit_order B-18 7 "$DEMO_STATE_DIR/results/new-order.json" 200
 jq -e '.release_version == "v2" and .proxy == true and
-  .requested_route == "payment" and .runtime.outcome == "succeeded"' \
+  .requested_route == "payment" and .runtime.phase == "succeeded"' \
   "$DEMO_STATE_DIR/results/new-order.json" >/dev/null
 
 if "${compose[@]}" exec -T order wget -T 2 -qO- http://payment:8081/v1/stats >/dev/null 2>&1; then
