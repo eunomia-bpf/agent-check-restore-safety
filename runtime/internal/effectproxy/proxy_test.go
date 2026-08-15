@@ -119,7 +119,7 @@ func TestProxyBindsTargetAndForwardsOnlySafeContentType(t *testing.T) {
 		recorder.Header().Get(headerRecoveredByQuery) != "false" {
 		t.Fatalf("metadata headers = %#v", recorder.Header())
 	}
-	if recorder.Header().Get("Content-Type") != "application/octet-stream" || recorder.Header().Get("X-Content-Type-Options") != "nosniff" {
+	if recorder.Header().Get("Content-Type") != "application/json" || recorder.Header().Get("X-Content-Type-Options") != "nosniff" {
 		t.Fatalf("response safety headers = %#v", recorder.Header())
 	}
 }

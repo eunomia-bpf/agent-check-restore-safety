@@ -194,7 +194,10 @@ func (p *Proxy) serveHTTP(writer http.ResponseWriter, request *http.Request) {
 		writeError(writer, http.StatusBadGateway, errorBody{Error: "control API returned invalid operation metadata"})
 		return
 	}
-	writer.Header().Set("Content-Type", "application/octet-stream")
+	// Every currently registered settlement contract is strict JSON. Expose
+	// that contract to ordinary HTTP callers instead of making them guess from
+	// an opaque content type.
+	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(outcome.StatusCode)
 	_, _ = writer.Write(outcome.Body)
 }
