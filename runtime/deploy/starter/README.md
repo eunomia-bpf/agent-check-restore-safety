@@ -71,6 +71,11 @@ POST http://provider-adapter-v1:8080/v1/submit
 POST http://provider-adapter-v1:8080/v1/submit/query
 ```
 
+Go adapters can use the public [`provideradapter`](../../provideradapter/)
+package to validate these requests and produce the exact response contracts;
+its executable example is in
+[`example_test.go`](../../provideradapter/example_test.go).
+
 The `provider` network is internal. If the adapter must call an Internet API,
 attach only that adapter to a second egress-enabled network; never add egress
 to `control`, `effect-proxy`, or the `provider` network itself.

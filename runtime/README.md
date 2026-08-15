@@ -149,9 +149,17 @@ effect-proxy \
 
 The proxy accepts only configured routes, never accepts a caller-selected
 target, forwards no caller credentials, and returns `409` while an external
-outcome is not safely settled. In a container deployment, place the business
-service, proxy, control, and provider on isolated networks so each process can
-reach only the component it needs.
+outcome is not safely settled. Settled responses are strict JSON and include
+the Operation ID, phase, and fact hash as response headers. In a container
+deployment, place the business service, proxy, control, and provider on
+isolated networks so each process can reach only the component it needs.
+
+Use the public [`provideradapter`](provideradapter/) Go package to implement the
+provider-facing endpoint. It validates the runtime protocol, keeps raw request
+headers away from provider code, writes receipts and observations, and
+provides a provider HTTP client that cannot silently replay a rewindable body.
+Its end-to-end test commits at a fake provider, loses the response, recovers by
+query, and verifies that the provider secret never entered History.
 
 ## Reproduce the current result
 
