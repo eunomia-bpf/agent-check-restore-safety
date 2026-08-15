@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "operation_id": "op-0ef7121c331053a02b5c732e6e8dc5a8bdc74f7d0dd70b7caad86df122a769c0",
+  "filter": {
+    "customerName": "safe-op-0ef7121c331053a02b5c732e6e8dc5a8bdc74f7d0dd70b7caad86df122a769c0",
+    "hotelId": "1",
+    "inDate": "2015-04-09",
+    "outDate": "2015-04-11",
+    "number": 1
+  },
+  "count": 0,
+  "facts": []
+}

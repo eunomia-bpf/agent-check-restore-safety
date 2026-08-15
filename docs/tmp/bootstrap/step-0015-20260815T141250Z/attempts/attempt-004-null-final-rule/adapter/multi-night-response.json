@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "http_status": 400,
+  "outcome": "rejected-before-dispatch",
+  "transport": {
+    "schema": 1,
+    "transport": "curl",
+    "exit_code": 22,
+    "http_status": "400",
+    "response_bytes": 66,
+    "stderr": "curl: (22) The requested URL returned error: 400\nHTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\nDate: Sat, 15 Aug 2026 15:15:43 GMT\r\nContent-Length: 66\r\n\r\n"
+  }
+}

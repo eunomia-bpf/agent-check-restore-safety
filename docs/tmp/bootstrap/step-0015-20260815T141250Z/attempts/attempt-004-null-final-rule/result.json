@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "upstream": {
+    "v1": {
+      "tag": "hotelReservation-0.2.2",
+      "commit": "25ccc81c1f6a1e7fe4d6b726d6a310cd2b607fa9",
+      "tree": "9846449187fdeb286127885ab747cef24bdba3fd",
+      "image": "safe-change-step15/deathstar:hotel-reservation-0.2.2",
+      "image_id": "sha256:fdbd237357dcd949fa4cc25db99839892192323097f08ab8ad38a26a52e20ab1",
+      "source_clean_before_build": true,
+      "source_clean_after_build": true,
+      "status_porcelain_before_build": "",
+      "status_porcelain_after_build": ""
+    },
+    "v2": {
+      "tag": "hotelReservation-0.3.5",
+      "commit": "6ecb09706140f8730b5385c08f1386c654c3c526",
+      "tree": "0ac0fd6d4ccfa1472d3895384d45fef5c6246b03",
+      "image": "safe-change-step15/deathstar:hotel-reservation-0.3.5",
+      "image_id": "sha256:c6cf355304a22fd1bbdded55d814d0de010bc05772ba6a52d3d1a36e3e52a453",
+      "source_clean_before_build": true,
+      "source_clean_after_build": true,
+      "status_porcelain_before_build": "",
+      "status_porcelain_after_build": ""
+    }
+  },
+  "conditions": {
+    "raw-retry": {
+      "condition": "raw-retry",
+      "safety": false,
+      "availability": true,
+      "old_version_retained": true,
+      "deliveries": 2,
+      "commits": 2,
+      "mongo_rows": 2,
+      "recovered_by_query": false,
+      "pass": true
+    },
+    "old-version-drain": {
+      "condition": "old-version-drain",
+      "safety": true,
+      "availability": false,
+      "old_version_retained": true,
+      "deliveries": 1,
+      "commits": 1,
+      "mongo_rows": 1,
+      "recovered_by_query": false,
+      "pass": true
+    },
+    "history-query-recovery": {
+      "condition": "history-query-recovery",
+      "safety": true,
+      "availability": true,
+      "old_version_retained": false,
+      "deliveries": 2,
+      "commits": 2,
+      "mongo_rows": 2,
+      "recovered_by_query": true,
+      "pass": true
+    }
+  },
+  "history": {
+    "sequence": 9,
+    "hash": "870c017d5bcb7a5fbda0b89d92cc230e219aa37d96601059fa2518d67e2da02b"
+  },
+  "network_isolation": true,
+  "pass": true
+}

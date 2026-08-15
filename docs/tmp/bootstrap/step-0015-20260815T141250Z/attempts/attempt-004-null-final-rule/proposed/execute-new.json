@@ -1,0 +1,1 @@
+{"call_id":"proposed-new-20","kind":"reserve-v2","method":"POST","url":"http://effect-v2:8090/v1/reserve","headers":{"Content-Type":"application/json"},"body":"eyJob3RlbF9pZCI6IjEiLCJpbl9kYXRlIjoiMjAxNS0wNC0wOSIsIm91dF9kYXRlIjoiMjAxNS0wNC0xMCIsInJvb21zIjoxLCJ1c2VybmFtZSI6IkNvcm5lbGxfMzAiLCJwYXNzd29yZCI6IjAwMDAwMDAwMDAifQ=="}

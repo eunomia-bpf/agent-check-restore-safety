@@ -1,0 +1,135 @@
+{
+  "schema": 1,
+  "networks": {
+    "control": "safe-change-step15-control",
+    "frontdoor": "safe-change-step15-frontdoor",
+    "observation": "safe-change-step15-observation",
+    "application": "7acb956192a1"
+  },
+  "members": {
+    "control": [
+      "safe-change-step15-control",
+      "safe-change-step15-effect-v2",
+      "safe-change-step15-observer"
+    ],
+    "frontdoor": [
+      "safe-change-step15-effect-v2",
+      "safe-change-step15-front-client",
+      "safe-change-step15-frontend-v2"
+    ],
+    "observation": [
+      "safe-change-deathstar-step15-mongodb-reservation-1",
+      "safe-change-step15-observation-client",
+      "safe-change-step15-observer"
+    ],
+    "application": [
+      "safe-change-deathstar-step15-attractions-1",
+      "safe-change-deathstar-step15-consul-1",
+      "safe-change-deathstar-step15-geo-1",
+      "safe-change-deathstar-step15-jaeger-1",
+      "safe-change-deathstar-step15-memcached-profile-1",
+      "safe-change-deathstar-step15-memcached-rate-1",
+      "safe-change-deathstar-step15-memcached-reserve-1",
+      "safe-change-deathstar-step15-memcached-review-1",
+      "safe-change-deathstar-step15-mongodb-attractions-1",
+      "safe-change-deathstar-step15-mongodb-geo-1",
+      "safe-change-deathstar-step15-mongodb-profile-1",
+      "safe-change-deathstar-step15-mongodb-rate-1",
+      "safe-change-deathstar-step15-mongodb-recommendation-1",
+      "safe-change-deathstar-step15-mongodb-reservation-1",
+      "safe-change-deathstar-step15-mongodb-review-1",
+      "safe-change-deathstar-step15-mongodb-user-1",
+      "safe-change-deathstar-step15-profile-1",
+      "safe-change-deathstar-step15-rate-1",
+      "safe-change-deathstar-step15-recommendation-1",
+      "safe-change-deathstar-step15-reservation-1",
+      "safe-change-deathstar-step15-review-1",
+      "safe-change-deathstar-step15-search-1",
+      "safe-change-deathstar-step15-user-1",
+      "safe-change-step15-frontend-v2"
+    ]
+  },
+  "component_networks": {
+    "control": [
+      "safe-change-step15-control"
+    ],
+    "effect_v1": [
+      "safe-change-step15-control",
+      "safe-change-step15-frontdoor"
+    ],
+    "effect_v2": [
+      "safe-change-step15-control",
+      "safe-change-step15-frontdoor"
+    ],
+    "observer": [
+      "safe-change-step15-control",
+      "safe-change-step15-observation"
+    ],
+    "frontend_v1": [
+      "safe-change-deathstar-step15_default",
+      "safe-change-step15-frontdoor"
+    ],
+    "frontend_v2": [
+      "safe-change-deathstar-step15_default",
+      "safe-change-step15-frontdoor"
+    ],
+    "reservation": [
+      "safe-change-deathstar-step15_default"
+    ],
+    "mongo": [
+      "safe-change-deathstar-step15_default",
+      "safe-change-step15-observation"
+    ]
+  },
+  "assertions": {
+    "effect_mongo_disjoint": true,
+    "observer_frontend_disjoint": true,
+    "observer_reservation_disjoint": true,
+    "control_frontend_disjoint": true,
+    "control_reservation_disjoint": true,
+    "control_mongo_disjoint": true,
+    "control_effect_shared": true,
+    "control_observer_shared": true
+  },
+  "direct_probes": {
+    "effect_to_mongo": {
+      "exit_code": 1,
+      "stderr": "wget: bad address 'reservation-mongo:27017'\n"
+    },
+    "observer_to_frontend": {
+      "exit_code": 1,
+      "stderr": "wget: bad address 'frontend-v2:5000'\n"
+    },
+    "observer_to_reservation": {
+      "exit_code": 1,
+      "stderr": "wget: bad address 'reservation:8087'\n"
+    },
+    "control_to_frontend": {
+      "exit_code": 1,
+      "stderr": "wget: bad address 'frontend-v2:5000'\n"
+    },
+    "control_to_reservation": {
+      "exit_code": 1,
+      "stderr": "wget: bad address 'reservation:8087'\n"
+    },
+    "control_to_mongo": {
+      "exit_code": 1,
+      "stderr": "wget: bad address 'reservation-mongo:27017'\n"
+    },
+    "control_to_effect": {
+      "exit_code": 0,
+      "response": {
+        "mode": "effect",
+        "status": "ok"
+      }
+    },
+    "control_to_observer": {
+      "exit_code": 0,
+      "response": {
+        "mode": "observer",
+        "status": "ok"
+      }
+    }
+  },
+  "pass": true
+}

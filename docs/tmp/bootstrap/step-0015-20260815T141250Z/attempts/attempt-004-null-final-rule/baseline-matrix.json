@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "rows": [
+    {
+      "condition": "raw-retry",
+      "safety": false,
+      "availability": true,
+      "old_version_retained": true,
+      "deliveries": 2,
+      "commits": 2,
+      "mongo_rows": 2,
+      "recovered_by_query": false,
+      "pass": true
+    },
+    {
+      "condition": "old-version-drain",
+      "safety": true,
+      "availability": false,
+      "old_version_retained": true,
+      "deliveries": 1,
+      "commits": 1,
+      "mongo_rows": 1,
+      "recovered_by_query": false,
+      "pass": true
+    },
+    {
+      "condition": "history-query-recovery",
+      "safety": true,
+      "availability": true,
+      "old_version_retained": false,
+      "deliveries": 2,
+      "commits": 2,
+      "mongo_rows": 2,
+      "recovered_by_query": true,
+      "pass": true
+    }
+  ],
+  "pass": true
+}

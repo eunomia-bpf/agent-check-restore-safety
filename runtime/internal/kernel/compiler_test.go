@@ -65,6 +65,9 @@ func TestPolicyCompliantOperationCanStillBeBlocked(t *testing.T) {
 	if len(state.Rule.Allow) != 0 {
 		t.Fatalf("active Rule view was not refreshed: %+v", state.Rule.Allow)
 	}
+	if state.Rule.Allow == nil || state.Clone().Rule.Allow == nil {
+		t.Fatal("empty Rule allow set became an absent value during state cloning")
+	}
 }
 
 func TestStableIdentityCannotBeRebound(t *testing.T) {

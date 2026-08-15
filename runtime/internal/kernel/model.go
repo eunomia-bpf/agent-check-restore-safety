@@ -172,7 +172,7 @@ func (s *State) Clone() *State {
 	}
 	if s.Rule != nil {
 		rule := *s.Rule
-		rule.Allow = append([]string(nil), s.Rule.Allow...)
+		rule.Allow = append([]string{}, s.Rule.Allow...)
 		out.Rule = &rule
 	}
 	for id, operation := range s.Operations {

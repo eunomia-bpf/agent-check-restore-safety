@@ -533,7 +533,7 @@ func (s *State) Activate(c Certificate) error {
 	}
 	requirement := cloneRequirement(c.Requirement)
 	rule := *c.Rule
-	rule.Allow = append([]string(nil), c.Rule.Allow...)
+	rule.Allow = append([]string{}, c.Rule.Allow...)
 	sort.Strings(rule.Allow)
 	s.Requirement = &requirement
 	s.Rule = &rule
@@ -679,7 +679,7 @@ func (s *State) MoveOperation(id string, update OperationUpdate) error {
 		return errors.New("only a dispatch can change dispatch ownership")
 	}
 	previous := op
-	priorAllow := []string(nil)
+	priorAllow := []string{}
 	if s.Rule != nil {
 		priorAllow = append(priorAllow, s.Rule.Allow...)
 	}
