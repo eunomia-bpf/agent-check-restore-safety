@@ -2,16 +2,21 @@
 set -Eeuo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+preflight_case="${PREFLIGHT_CASE:-h1}"
+if [[ "$preflight_case" != h0 && "$preflight_case" != h1 ]]; then
+  echo "PREFLIGHT_CASE must be h0 or h1" >&2
+  exit 1
+fi
 compose_file="$script_dir/compose.yaml"
 if [[ -z "${H1_STATE_DIR:-}" ]]; then
-  H1_STATE_DIR="$(mktemp -d /tmp/safe-change-restate-h1.XXXXXX)"
+  H1_STATE_DIR="$(mktemp -d "/tmp/safe-change-restate-$preflight_case.XXXXXX")"
 fi
 H1_STATE_DIR="$(realpath "$H1_STATE_DIR")"
 results_dir="$H1_STATE_DIR/results"
 mkdir -p "$results_dir"
 chmod 700 "$H1_STATE_DIR" "$results_dir"
 
-for command in awk curl date docker go jq python3 realpath sed seq sha256sum tail tr wc; do
+for command in awk cmp curl date docker go jq python3 realpath sed seq sha256sum tail tr wc; do
   command -v "$command" >/dev/null || {
     echo "required command not found: $command" >&2
     exit 1
@@ -56,10 +61,16 @@ RESTATE_ADMIN_PORT="${RESTATE_ADMIN_PORT:-$default_admin_port}"
 CONTROL_PORT="${CONTROL_PORT:-$default_control_port}"
 JAEGER_PORT="${JAEGER_PORT:-$default_jaeger_port}"
 WEBUI_PORT="${WEBUI_PORT:-$default_webui_port}"
-COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-safe-change-restate-h1-$$}"
-PAYMENT_HOLD_AFTER_COMMIT=true
+COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-safe-change-restate-$preflight_case-$$}"
+if [[ "$preflight_case" == h0 ]]; then
+  PAYMENT_HOLD_BEFORE_COMMIT=true
+  PAYMENT_HOLD_AFTER_COMMIT=false
+else
+  PAYMENT_HOLD_BEFORE_COMMIT=false
+  PAYMENT_HOLD_AFTER_COMMIT=true
+fi
 export RESTATE_INGRESS_PORT RESTATE_ADMIN_PORT CONTROL_PORT JAEGER_PORT WEBUI_PORT
-export COMPOSE_PROJECT_NAME PAYMENT_HOLD_AFTER_COMMIT
+export COMPOSE_PROJECT_NAME PAYMENT_HOLD_BEFORE_COMMIT PAYMENT_HOLD_AFTER_COMMIT
 
 compose=(docker compose --project-name "$COMPOSE_PROJECT_NAME" --file "$compose_file")
 compose_h1=(docker compose --project-name "$COMPOSE_PROJECT_NAME" --file "$compose_file" --profile h1)
@@ -72,7 +83,7 @@ cleanup() {
   if [[ "${KEEP_HARNESS:-0}" != "1" ]]; then
     "${compose_all[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
   fi
-  echo "Restate H1 preflight evidence: $H1_STATE_DIR" >&2
+  echo "Restate ${preflight_case^^} preflight evidence: $H1_STATE_DIR" >&2
   exit "$status"
 }
 trap cleanup EXIT
@@ -115,7 +126,11 @@ application_network="${COMPOSE_PROJECT_NAME}_application"
 
 "${compose[@]}" config --quiet
 "${compose_all[@]}" config >"$results_dir/compose-config.yaml"
-"${compose_h1[@]}" up --detach
+if [[ "$preflight_case" == h0 ]]; then
+  "${compose[@]}" up --detach
+else
+  "${compose_h1[@]}" up --detach
+fi
 wait_url "$control_url/healthz"
 wait_url "$restate_admin_url/health"
 wait_url "$webui_url" 240
@@ -250,7 +265,11 @@ control_post /v1/certificate-state "$results_dir/certificate-v1.json" \
 ) >"$results_dir/certificate-verdict-v1.json"
 control_post /v1/activate "$results_dir/certificate-v1.json" "$results_dir/active-v1.json"
 
-order_id="h1-order-$(date +%s)-$$"
+order_id="${ORDER_ID:-$preflight_case-order-$(date +%s)-$$}"
+if [[ ! "$order_id" =~ ^[A-Za-z0-9._-]{1,128}$ ]]; then
+  echo "ORDER_ID must contain only letters, digits, dot, underscore, or hyphen" >&2
+  exit 1
+fi
 jq -n --arg id "$order_id" '{
   id:$id,restaurantId:"restaurant-01",
   products:[{productId:"pizza-01",description:"Pizza",quantity:1}],
@@ -262,19 +281,28 @@ curl -fsS --request POST --header 'Content-Type: application/json' \
   "$restate_ingress_url/order-workflow/$order_id/run/send" \
   >"$results_dir/source-submit.json"
 
-committed=0
+fault_reached=0
 for _ in $(seq 1 180); do
   provider_stats payment "$results_dir/payment-at-commit.json"
-  if jq -e '
-    .deliveries == 1 and .commits == 1 and .paths["/v1/charge"] == 1
-  ' "$results_dir/payment-at-commit.json" >/dev/null; then
-    committed=1
-    break
+  if [[ "$preflight_case" == h0 ]]; then
+    if jq -e '
+      .deliveries == 1 and .commits == 0 and .paths["/v1/charge"] == 1
+    ' "$results_dir/payment-at-commit.json" >/dev/null; then
+      fault_reached=1
+      break
+    fi
+  else
+    if jq -e '
+      .deliveries == 1 and .commits == 1 and .paths["/v1/charge"] == 1
+    ' "$results_dir/payment-at-commit.json" >/dev/null; then
+      fault_reached=1
+      break
+    fi
   fi
   sleep 1
 done
-if [[ $committed -ne 1 ]]; then
-  echo "payment did not commit at the injected hold" >&2
+if [[ $fault_reached -ne 1 ]]; then
+  echo "payment did not reach the injected $preflight_case hold" >&2
   exit 1
 fi
 
@@ -361,10 +389,27 @@ if [[ "$payment_operation_id" != "$expected_payment_operation_id" ]]; then
   exit 1
 fi
 
+jq -n \
+  --arg compose_service order-v1 \
+  --arg container_id "$source_container" \
+  --argjson remove_exit_code "$source_remove_exit_code" \
+  --argjson inspect_exit_code "$source_inspect_exit_code" \
+  --arg stderr "$(cat "$results_dir/source-container-after-rm.stderr")" \
+  --argjson fenced_before_history_sequence "$(jq -r '.history.sequence' "$results_dir/control-unknown.json")" \
+  '{schema:1,compose_service:$compose_service,container_id:$container_id,remove_exit_code:$remove_exit_code,inspect_exit_code:$inspect_exit_code,stderr:$stderr,fenced_before_history_sequence:$fenced_before_history_sequence}' \
+  >"$results_dir/source-v1-removal.json"
+jq -e --arg container "$source_container" '
+  .compose_service == "order-v1" and .container_id == $container and
+  .remove_exit_code == 0 and .inspect_exit_code != 0 and
+  (.stderr | contains($container))
+' "$results_dir/source-v1-removal.json" >/dev/null
+
 source_status_sql="SELECT id,target,status,pinned_deployment_id,pinned_service_protocol_version,last_attempt_deployment_id,retry_count,next_retry_at,journal_size,created_at,modified_at FROM sys_invocation WHERE id = '$source_invocation_id'"
 source_journal_sql="SELECT index,version,entry_type,name,COALESCE(completed,false) AS completed,raw,raw_length,entry_lite_json FROM sys_journal WHERE id = '$source_invocation_id' ORDER BY index"
+source_workflow_state_sql="SELECT service_name,service_key,key,value,value_utf8,value_length FROM state WHERE service_name = 'order-workflow' AND service_key = '$order_id' ORDER BY key"
 raw_query "$source_status_sql" "$results_dir/source-cut-status.json"
 raw_query "$source_journal_sql" "$results_dir/source-cut-journal.json"
+raw_query "$source_workflow_state_sql" "$results_dir/source-cut-workflow-state.json"
 jq -e --arg invocation "$source_invocation_id" --arg deployment "$v1_deployment_id" '
   (.rows | length) == 1 and .rows[0].id == $invocation and
   .rows[0].status == "paused" and .rows[0].pinned_deployment_id == $deployment
@@ -388,16 +433,185 @@ else
 fi
 raw_query "$source_status_sql" "$results_dir/source-cut-status-after-window.json"
 raw_query "$source_journal_sql" "$results_dir/source-cut-journal-after-window.json"
+raw_query "$source_workflow_state_sql" "$results_dir/source-cut-workflow-state-after-window.json"
 jq -e -s '.[0] == .[1]' \
   "$results_dir/source-cut-status.json" \
   "$results_dir/source-cut-status-after-window.json" >/dev/null
 jq -e -s '.[0] == .[1]' \
   "$results_dir/source-cut-journal.json" \
   "$results_dir/source-cut-journal-after-window.json" >/dev/null
+jq -e -s '.[0] == .[1]' \
+  "$results_dir/source-cut-workflow-state.json" \
+  "$results_dir/source-cut-workflow-state-after-window.json" >/dev/null
 jq -n --arg next_retry_at "$cut_next_retry_at" \
   --argjson observed_at_epoch "$(date +%s)" \
   '{stable:true,next_retry_at:($next_retry_at | if length == 0 then null else . end),observed_at_epoch:$observed_at_epoch}' \
   >"$results_dir/source-cut-stability.json"
+
+if [[ "$preflight_case" == h0 ]]; then
+  provider_stats payment "$results_dir/payment-before-query.json"
+  jq -e '
+    .deliveries == 1 and .commits == 0 and .paths["/v1/charge"] == 1
+  ' "$results_dir/payment-before-query.json" >/dev/null
+  control_get /v1/history "$results_dir/control-history-before-query.json"
+  jq -S . "$results_dir/control-unknown.json" \
+    >"$results_dir/control-state-before-query.normalized.json"
+  jq -S . "$results_dir/control-history-before-query.json" \
+    >"$results_dir/control-history-before-query.normalized.json"
+
+  set +e
+  recovery_http_status="$(
+    curl -sS --output "$results_dir/payment-recovery.json" \
+      --write-out '%{http_code}' --request POST \
+      --header "Authorization: Bearer $admin_token" \
+      "$control_url/v1/operations/$payment_operation_id/recover"
+  )"
+  recovery_curl_exit=$?
+  set -e
+  if [[ $recovery_curl_exit -ne 0 || "$recovery_http_status" != 409 ]]; then
+    echo "H0 query recovery did not fail closed with HTTP 409" >&2
+    exit 1
+  fi
+  jq -e '
+    .outcome.phase == "unknown" and
+    (.error | test("inconclusive|outcome is unknown"; "i"))
+  ' "$results_dir/payment-recovery.json" >/dev/null
+
+  control_get /v1/state "$results_dir/control-after-query.json"
+  control_get /v1/history "$results_dir/control-history-after-query.json"
+  jq -S . "$results_dir/control-after-query.json" \
+    >"$results_dir/control-state-after-query.normalized.json"
+  jq -S . "$results_dir/control-history-after-query.json" \
+    >"$results_dir/control-history-after-query.normalized.json"
+  cmp "$results_dir/control-state-before-query.normalized.json" \
+    "$results_dir/control-state-after-query.normalized.json"
+  cmp "$results_dir/control-history-before-query.normalized.json" \
+    "$results_dir/control-history-after-query.normalized.json"
+  provider_stats payment "$results_dir/payment-after-recovery.json"
+  jq -e '
+    .deliveries == 1 and .commits == 0 and .paths["/v1/charge"] == 1
+  ' "$results_dir/payment-after-recovery.json" >/dev/null
+
+  control_post /v1/compile "$results_dir/requirement-v2.json" \
+    "$results_dir/certificate-v2.json"
+  jq -e '
+    .decision == "impossible" and .rule == null and .witness != null
+  ' "$results_dir/certificate-v2.json" >/dev/null
+  control_post /v1/certificate-state "$results_dir/certificate-v2.json" \
+    "$results_dir/certificate-state-v2.json"
+  (
+    cd "$script_dir/../.."
+    go run ./cmd/check-certificate \
+      -state "$results_dir/certificate-state-v2.json" \
+      -certificate "$results_dir/certificate-v2.json"
+  ) >"$results_dir/certificate-verdict-v2.json"
+  jq -e '.valid == true and .decision == "impossible"' \
+    "$results_dir/certificate-verdict-v2.json" >/dev/null
+
+  if [[ -n "$("${compose_all[@]}" ps --all --quiet order-v2)" ]]; then
+    echo "H0 created a refused target v2 container" >&2
+    exit 1
+  fi
+  jq -n '{present:false}' >"$results_dir/target-final.json"
+  curl -fsS "$restate_admin_url/deployments" >"$results_dir/deployments.json"
+  jq -e '
+    (.deployments | length) == 1 and
+    .deployments[0].uri == "http://order-v1:9080/"
+  ' "$results_dir/deployments.json" >/dev/null
+  curl -fsS "$restate_admin_url/services" >"$results_dir/services-final.json"
+  jq -e --argjson expected "$expected_services" '
+    ([.services[].name] | sort) == $expected and
+    ([.services[].revision] | unique) == [1]
+  ' "$results_dir/services-final.json" >/dev/null
+
+  raw_query "SELECT id,target,status FROM sys_invocation WHERE target_service_name IN ('driver-mobile-app','driver-digital-twin','driver-delivery-matcher','delivery-manager') ORDER BY id" \
+    "$results_dir/driver-invocations.json"
+  jq -e '.rows == []' "$results_dir/driver-invocations.json" >/dev/null
+  provider_stats completion "$results_dir/final-completion-stats.json"
+  jq -e '.deliveries == 0 and .commits == 0 and .paths == {}' \
+    "$results_dir/final-completion-stats.json" >/dev/null
+  raw_query "$source_status_sql" "$results_dir/source-final-status.json"
+  jq -e --arg invocation "$source_invocation_id" '
+    (.rows | length) == 1 and .rows[0].id == $invocation and
+    .rows[0].status == "paused"
+  ' "$results_dir/source-final-status.json" >/dev/null
+  control_get /v1/state "$results_dir/final-control-state.json"
+  jq -e --arg operation "$payment_operation_id" '
+    .requirement.id == "food-ordering-v1" and
+    ([.operations[] | select(
+      .id == $operation and .kind == "charge-v1" and .phase == "unknown"
+    )] | length) == 1 and
+    ([.operations[] | select(.kind == "finish")] | length) == 0
+  ' "$results_dir/final-control-state.json" >/dev/null
+  control_get /v1/history "$results_dir/final-control-history.json"
+
+  control_container="$("${compose_all[@]}" ps --quiet control)"
+  payment_container="$("${compose_all[@]}" ps --quiet payment)"
+  completion_container="$("${compose_all[@]}" ps --quiet completion)"
+  docker cp "$control_container:/state/runtime.history" "$results_dir/runtime.history"
+  docker cp "$control_container:/anchor/runtime.head" "$results_dir/runtime.head"
+  docker cp "$payment_container:/state/payment.history" "$results_dir/payment.history"
+  docker cp "$completion_container:/state/completion.history" "$results_dir/completion.history"
+  [[ "$(wc -c <"$results_dir/payment.history")" -eq 0 ]]
+  [[ "$(wc -c <"$results_dir/completion.history")" -eq 0 ]]
+
+  jq -n \
+    --arg upstream_commit "$RESTATE_EXAMPLES_COMMIT" \
+    --arg upstream_archive_sha256 "$UPSTREAM_ARCHIVE_SHA256" \
+    --arg restate_image "$RESTATE_SERVER_IMAGE" \
+    --arg order_id "$order_id" \
+    --arg order_input_sha256 "$order_input_sha256" \
+    --arg payment_token "$payment_token" \
+    --arg payment_operation_id "$payment_operation_id" \
+    --arg source_invocation_id "$source_invocation_id" \
+    --arg source_created_at "$(jq -r '.rows[0].created_at' "$results_dir/source-cut-status.json")" \
+    --arg v1_deployment_id "$v1_deployment_id" \
+    --arg v1_image "$ORDER_V1_IMAGE" \
+    --arg planned_v2_image "$ORDER_V2_IMAGE" \
+    --arg recovery_http_status "$recovery_http_status" \
+    --argjson cut_status "$(cat "$results_dir/source-cut-status.json")" \
+    --argjson cut_journal "$(cat "$results_dir/source-cut-journal.json")" \
+    --argjson cut_workflow_state "$(cat "$results_dir/source-cut-workflow-state.json")" \
+    --argjson recovery "$(cat "$results_dir/payment-recovery.json")" \
+    --argjson certificate "$(cat "$results_dir/certificate-v2.json")" \
+    --argjson payment "$(cat "$results_dir/payment-after-recovery.json")" \
+    --argjson completion "$(cat "$results_dir/final-completion-stats.json")" '{
+      case:"h0",
+      upstream:{commit:$upstream_commit,archive_sha256:$upstream_archive_sha256},
+      restate:{image:$restate_image},
+      order:{id:$order_id,input_sha256:$order_input_sha256,status:"CREATED"},
+      payment:{
+        token:$payment_token,operation_id:$payment_operation_id,
+        provider:$payment,
+        recovery:{http_status:($recovery_http_status | tonumber),body:$recovery}
+      },
+      source:{
+        invocation_id:$source_invocation_id,created_at:$source_created_at,
+        deployment_id:$v1_deployment_id,image_id:$v1_image,
+        cut_status:$cut_status,cut_journal:$cut_journal,
+        cut_workflow_state:$cut_workflow_state,
+        fenced_and_removed:true,final_status:"paused"
+      },
+      target:{
+        planned_image_id:$planned_v2_image,certificate:$certificate,
+        container_present:false,deployment_present:false,
+        drivers_started:false,completion_started:false,
+        continuation_started:false
+      },
+      providers:{payment:$payment,completion:$completion},
+      invariants:{
+        source_paused_with_incomplete_payment_run:true,
+        source_cut_stable_after_retry_window:true,
+        query_recovery_inconclusive:true,
+        query_recovery_changed_operation:false,
+        target_decision_impossible:true,
+        target_side_activity_absent:true
+      }
+    }' >"$results_dir/summary.json"
+
+  cat "$results_dir/summary.json"
+  exit 0
+fi
 
 curl -fsS --request POST --header "Authorization: Bearer $admin_token" \
   "$control_url/v1/operations/$payment_operation_id/recover" \
@@ -436,15 +650,6 @@ jq -n '{present:false}' >"$results_dir/target-before-activation.json"
 control_post /v1/activate "$results_dir/certificate-v2.json" "$results_dir/active-v2.json"
 activation_sequence="$(jq -r '.history.sequence' "$results_dir/active-v2.json")"
 
-jq -n \
-  --arg compose_service order-v1 \
-  --arg container_id "$source_container" \
-  --argjson remove_exit_code "$source_remove_exit_code" \
-  --argjson inspect_exit_code "$source_inspect_exit_code" \
-  --arg stderr "$(cat "$results_dir/source-container-after-rm.stderr")" \
-  --argjson fenced_before_history_sequence "$(jq -r '.history.sequence' "$results_dir/control-unknown.json")" \
-  '{schema:1,compose_service:$compose_service,container_id:$container_id,remove_exit_code:$remove_exit_code,inspect_exit_code:$inspect_exit_code,stderr:$stderr,fenced_before_history_sequence:$fenced_before_history_sequence}' \
-  >"$results_dir/source-v1-removal.json"
 jq -e --arg container "$source_container" --argjson activation "$activation_sequence" '
   .compose_service == "order-v1" and .container_id == $container and
   .remove_exit_code == 0 and .inspect_exit_code != 0 and

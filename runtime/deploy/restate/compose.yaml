@@ -53,6 +53,7 @@ services:
       - -listen=0.0.0.0:8081
       - -state=/state/payment.history
       - -non-idempotent=true
+      - -hold-before-commit=${PAYMENT_HOLD_BEFORE_COMMIT:-false}
       - -hold-after-commit=${PAYMENT_HOLD_AFTER_COMMIT:-false}
     init: true
     read_only: true

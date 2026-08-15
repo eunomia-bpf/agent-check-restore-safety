@@ -65,6 +65,26 @@ script retains raw `/query` rows, binary History and head files, provider
 records, deployments, container evidence, and a summary. It is a focused H1
 preflight, not the complete H0/H1 manifest consumed by `check.py`.
 
+The H0 runner stops the same payment immediately before its durable commit.
+The recovery query is then inconclusive, so the target Certificate must be
+`impossible` and the target worker and continuation must remain absent:
+
+```sh
+SKIP_BUILD=1 HARNESS_BUILD_ENV=/tmp/restate-build.env \
+  runtime/deploy/restate/run-h0-preflight.sh
+```
+
+The paired runner executes H0 and H1 in two fresh Compose projects with the
+same order bytes and the same v1/v2 images. It fails unless the target
+Requirement, payment identity, Restate invocation identity, raw journal, and
+raw workflow state agree at the cut, while the durable payment fact alone
+changes the decision from `impossible` to `activate`:
+
+```sh
+SKIP_BUILD=1 HARNESS_BUILD_ENV=/tmp/restate-build.env \
+  runtime/deploy/restate/run-paired-preflight.sh
+```
+
 The upstream source is MIT licensed:
 <https://github.com/restatedev/examples/tree/2d429daae784d20982691fb31431702b4ad30a6b/typescript/end-to-end-applications/food-ordering>.
 The upstream WebUI retains its attribution to the MIT-licensed
