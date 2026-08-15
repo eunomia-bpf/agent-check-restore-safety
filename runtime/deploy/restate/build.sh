@@ -82,6 +82,8 @@ if "      const token = ctx.rand.uuidv4();" not in v2:
 if 'ctx.run("payment"' in v2 or "if (!paid)" in v2:
     raise SystemExit("v2 still contains payment execution or its rejection branch")
 PY
+v1_program_hash="$(sha256sum "$v1_workflow" | awk '{print $1}')"
+v2_program_hash="$(sha256sum "$v2_workflow" | awk '{print $1}')"
 
 food_root="typescript/end-to-end-applications/food-ordering"
 v1_app="$v1_tree/$food_root/app"
@@ -214,6 +216,8 @@ temporary_env="$output_env.next"
   printf 'V2_PATCH_SHA256=%q\n' "$v2_patch_hash"
   printf 'V1_CONTEXT_SHA256=%q\n' "$v1_context_hash"
   printf 'V2_CONTEXT_SHA256=%q\n' "$v2_context_hash"
+  printf 'V1_PROGRAM_SHA256=%q\n' "$v1_program_hash"
+  printf 'V2_PROGRAM_SHA256=%q\n' "$v2_program_hash"
   printf 'RESTAURANT_CONTEXT_SHA256=%q\n' "$restaurant_context_hash"
   printf 'APP_LOCK_FILE=%q\n' "$app_lock_file"
   printf 'WEBUI_LOCK_FILE=%q\n' "$webui_lock_file"
@@ -227,6 +231,8 @@ Built pinned Restate food-ordering images
   upstream:  $RESTATE_EXAMPLES_COMMIT ($archive_hash)
   worker v1: $order_v1_image ($v1_context_hash)
   worker v2: $order_v2_image ($v2_context_hash)
+  program v1: $v1_program_hash
+  program v2: $v2_program_hash
   webui:     $webui_image
   restaurant:$restaurant_image ($restaurant_context_hash)
   runtime:   $runtime_image
