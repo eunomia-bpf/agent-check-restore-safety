@@ -1,0 +1,37 @@
+# syntax=docker/dockerfile:1.7
+
+ARG GO_IMAGE
+ARG RUNTIME_IMAGE
+FROM ${GO_IMAGE} AS build
+
+ARG WORKER_TAG
+WORKDIR /src
+COPY runtime/deploy/temporal/app/go.mod runtime/deploy/temporal/app/go.sum ./
+RUN go mod download
+COPY runtime/deploy/temporal/app/ ./
+RUN case "${WORKER_TAG}" in worker_v1|worker_v2) ;; *) exit 64 ;; esac \
+    && CGO_ENABLED=0 go build -trimpath -tags "${WORKER_TAG}" -o /out/worker ./cmd/worker
+
+FROM ${RUNTIME_IMAGE}
+
+ARG GIT_REVISION
+ARG SOURCE_SHA256
+ARG WORKER_TAG
+ARG WORKER_BUILD_ID
+ARG GO_IMAGE
+ARG RUNTIME_IMAGE
+ARG TEMPORAL_SAMPLES_COMMIT
+ARG TEMPORAL_GO_SDK_VERSION
+LABEL org.opencontainers.image.title="safe-change Temporal ${WORKER_BUILD_ID} worker" \
+      org.opencontainers.image.source="https://github.com/eunomia-bpf/agent-check-restore-safety" \
+      org.opencontainers.image.revision="${GIT_REVISION}" \
+      org.opencontainers.image.base.name="${RUNTIME_IMAGE}" \
+      io.safe-change.source.sha256="${SOURCE_SHA256}" \
+      io.safe-change.build.target="${WORKER_TAG}" \
+      io.safe-change.worker.build-id="${WORKER_BUILD_ID}" \
+      io.safe-change.builder.base="${GO_IMAGE}" \
+      io.safe-change.temporal.samples.revision="${TEMPORAL_SAMPLES_COMMIT}" \
+      io.safe-change.temporal.go-sdk.version="${TEMPORAL_GO_SDK_VERSION}"
+COPY --from=build --chmod=0555 /out/worker /usr/local/bin/worker
+USER 65532:65532
+ENTRYPOINT ["/usr/local/bin/worker"]
