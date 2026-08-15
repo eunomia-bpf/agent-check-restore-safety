@@ -1,0 +1,70 @@
+[
+  {
+    "Config": {
+      "Cmd": [
+        "/usr/local/bin/control",
+        "-listen=0.0.0.0:8787",
+        "-allow-nonloopback=true",
+        "-history=/state/runtime.history",
+        "-head-anchor=/anchor/runtime.head",
+        "-admin-token-file=/state/admin-token",
+        "-operation-token-file=/state/operation-token",
+        "-operation-domain=codex-app-server",
+        "-operation-kinds=charge-invoice"
+      ],
+      "Entrypoint": null,
+      "Hostname": "faba2fb94a1a",
+      "Image": "safe-change-runtime:safe-change-codex-1496410-354c5121",
+      "Labels": {
+        "com.docker.compose.container-number": "1",
+        "com.docker.compose.project": "safe-change-codex-1496410-354c5121",
+        "com.docker.compose.service": "control"
+      },
+      "User": "1001:1002",
+      "WorkingDir": "/"
+    },
+    "HostConfig": {
+      "CapDrop": [
+        "ALL"
+      ],
+      "NetworkMode": "safe-change-codex-1496410-354c5121_agent",
+      "Privileged": false,
+      "ReadonlyRootfs": true,
+      "SecurityOpt": [
+        "no-new-privileges:true"
+      ],
+      "Tmpfs": {
+        "/tmp": ""
+      }
+    },
+    "Id": "faba2fb94a1ac3ae72d4ce35649d192ebf000b3eb48008736f8f6e40548844c9",
+    "Mounts": [
+      {
+        "Destination": "/anchor",
+        "RW": true,
+        "Type": "bind"
+      },
+      {
+        "Destination": "/state",
+        "RW": true,
+        "Type": "bind"
+      }
+    ],
+    "Name": "/safe-change-codex-1496410-354c5121-control-1",
+    "NetworkSettings": {
+      "Networks": {
+        "safe-change-codex-1496410-354c5121_agent": {
+          "IPAddress": "172.18.0.2"
+        },
+        "safe-change-codex-1496410-354c5121_effects": {
+          "IPAddress": "172.19.0.3"
+        }
+      }
+    },
+    "State": {
+      "Pid": 1498423,
+      "Running": true,
+      "StartedAt": "2026-08-15T12:50:04.621273896Z"
+    }
+  }
+]

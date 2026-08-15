@@ -1,0 +1,7 @@
+payment-1  | 2026/08/15 12:49:46 payment service listening on http://0.0.0.0:8081
+control-1  | control API listening on http://[::]:8787
+control-1  | admin token: /state/admin-token
+control-1  | Operation token: /state/operation-token
+control-1  | control API listening on http://[::]:8787
+control-1  | admin token: /state/admin-token
+control-1  | Operation token: /state/operation-token

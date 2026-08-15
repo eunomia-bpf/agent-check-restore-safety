@@ -1,0 +1,69 @@
+services:
+  payment:
+    image: ${RUNTIME_IMAGE}
+    user: ${DEMO_UID}:${DEMO_GID}
+    command:
+      - /usr/local/bin/payment
+      - -listen=0.0.0.0:8081
+      - -state=/state/payment.history
+      - -drop-first-response=true
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - type: bind
+        source: ${DEMO_STATE_DIR}/payment
+        target: /state
+    networks: [effects]
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:8081/healthz]
+      interval: 1s
+      timeout: 1s
+      retries: 30
+
+  control:
+    image: ${RUNTIME_IMAGE}
+    user: ${DEMO_UID}:${DEMO_GID}
+    build:
+      context: ../..
+      dockerfile: deploy/microservice/Dockerfile
+    command:
+      - /usr/local/bin/control
+      - -listen=0.0.0.0:8787
+      - -allow-nonloopback=true
+      - -history=/state/runtime.history
+      - -head-anchor=/anchor/runtime.head
+      - -admin-token-file=/state/admin-token
+      - -operation-token-file=/state/operation-token
+      - -operation-domain=codex-app-server
+      - -operation-kinds=charge-invoice
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - type: bind
+        source: ${DEMO_STATE_DIR}/control
+        target: /state
+      - type: bind
+        source: ${DEMO_STATE_DIR}/anchor
+        target: /anchor
+    networks: [agent, effects]
+    ports:
+      - 127.0.0.1:${CONTROL_PORT}:8787
+    depends_on:
+      payment:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:8787/healthz]
+      interval: 1s
+      timeout: 1s
+      retries: 30
+
+networks:
+  agent: {}
+  effects:
+    internal: true

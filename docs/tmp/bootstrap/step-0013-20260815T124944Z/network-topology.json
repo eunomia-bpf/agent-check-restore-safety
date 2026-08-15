@@ -1,0 +1,19 @@
+{
+  "codex_payment_shared_networks": [],
+  "control_health_from_codex": "reachable",
+  "control_is_only_bridge": true,
+  "direct_payment_by_ip_from_codex": "blocked",
+  "direct_payment_by_name_from_codex": "blocked",
+  "networks": {
+    "codex": [
+      "safe-change-codex-1496410-354c5121_agent"
+    ],
+    "control": [
+      "safe-change-codex-1496410-354c5121_agent",
+      "safe-change-codex-1496410-354c5121_effects"
+    ],
+    "payment": [
+      "safe-change-codex-1496410-354c5121_effects"
+    ]
+  }
+}

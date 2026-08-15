@@ -22,6 +22,8 @@ make runtime-demo
 make runtime-microservice-demo
 make runtime-vm-demo
 make runtime-codex-demo
+make runtime-codex-isolated-demo
+make runtime-codex-isolated-check
 make runtime-verify
 ```
 
@@ -43,6 +45,15 @@ Operation. Payment commits and loses its first response; while the tool callback
 is pending, the control process is replaced. The restarted control process
 finishes the same Operation, Codex replies `DONE`, and payment retains one
 durable commit. This explicit live-account target is not run by ordinary tests.
+
+The stronger isolated target runs that same real App Server inside a hardened
+Docker boundary. Codex and payment share no network; control is the only
+container attached to both networks. After a positive control-health probe, the
+retained run proves that both DNS and direct-IP probes from Codex to payment
+fail, while the protected Operation
+survives control-process replacement. A separate checker replays the binary
+History and joins it with the external head, payment record, and raw App Server
+protocol without importing the live runner.
 
 The scientific and system contract is in
 [`docs/system-contract.md`](docs/system-contract.md). The current paper source

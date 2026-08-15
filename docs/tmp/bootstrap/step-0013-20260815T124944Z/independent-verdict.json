@@ -1,0 +1,17 @@
+{
+  "callback_restart_order_valid": true,
+  "certificate_valid": true,
+  "codex_protocol_records": 32,
+  "codex_tool_calls": 1,
+  "control_process_replaced": true,
+  "external_head_valid": true,
+  "history_chain_replayed": true,
+  "history_hash": "ac2d18d549441a6bc60e21756965accd848b91142512c1c6b207324f22114221",
+  "history_sequence": 6,
+  "network_cut_attested": true,
+  "operation_id": "op-9f20f3b6cf55834925b6ce5685cf6ffb80bb6397092e5f102e43d2bd7f2a7563",
+  "payment_commits": 1,
+  "payment_deliveries": 2,
+  "run_id": "safe-change-codex-1496410-354c5121",
+  "valid": true
+}

@@ -1,0 +1,24 @@
+{
+  "capacities": {
+    "charge": 1
+  },
+  "id": "codex-payment-isolated-v1/safe-change-codex-1496410-354c5121",
+  "kinds": {
+    "charge-invoice": {
+      "costs": {
+        "charge": 1
+      },
+      "method": "POST",
+      "produces": {
+        "paid": 1
+      },
+      "queryable": false,
+      "response_classifier": "operation-receipt-v1",
+      "retry_safe": true,
+      "target": "http://payment:8081/v1/charge"
+    }
+  },
+  "results": {
+    "paid": 1
+  }
+}

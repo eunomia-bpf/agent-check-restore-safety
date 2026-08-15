@@ -1,0 +1,63 @@
+{
+  "codex": {
+    "login_status": "Logged in using ChatGPT",
+    "model": "gpt-5.6-sol",
+    "model_provider": "openai",
+    "native_binary_sha256": "cb0a15567e9a60a5820d54b0f6ae86d504dc3805c1eab21a47f70e3eb7b73a40",
+    "real_app_server": true,
+    "version": "codex-cli 0.147.0"
+  },
+  "evidence_directory": "step-0013-20260815T124944Z",
+  "fault": {
+    "control_pid_after": 1498423,
+    "control_pid_before": 1496787,
+    "control_restarted_while_callback_pending": true
+  },
+  "network": {
+    "codex_payment_shared_networks": [],
+    "control_health_from_codex": "reachable",
+    "control_is_only_bridge": true,
+    "direct_payment_by_ip_from_codex": "blocked",
+    "direct_payment_by_name_from_codex": "blocked",
+    "networks": {
+      "codex": [
+        "safe-change-codex-1496410-354c5121_agent"
+      ],
+      "control": [
+        "safe-change-codex-1496410-354c5121_agent",
+        "safe-change-codex-1496410-354c5121_effects"
+      ],
+      "payment": [
+        "safe-change-codex-1496410-354c5121_effects"
+      ]
+    }
+  },
+  "operation": {
+    "first_result": "unknown",
+    "operation_id": "op-9f20f3b6cf55834925b6ce5685cf6ffb80bb6397092e5f102e43d2bd7f2a7563",
+    "recovered_result": "succeeded",
+    "settled_retry_reused": true
+  },
+  "payment": {
+    "deliveries": 2,
+    "durable_commits": 1
+  },
+  "protocol": {
+    "approval_policy": "never",
+    "callback_responses": 1,
+    "completed_turns": 1,
+    "custom_model_provider_installed": false,
+    "dynamic_tool_calls": 1,
+    "final_agent_message": "DONE",
+    "model": "gpt-5.6-sol",
+    "model_provider": "openai",
+    "provider_call_id": "exec-1fafeffb-310d-4209-ac26-4d6da814e6aa",
+    "raw_records": 32,
+    "real_app_server_process": true,
+    "sandbox_network_access": false,
+    "sandbox_type": "readOnly",
+    "thread_id": "01a00578-b711-7021-b041-591aa81eb23d",
+    "turn_id": "01a00578-b72b-76b3-ae28-0b34c92c503e"
+  },
+  "run_id": "safe-change-codex-1496410-354c5121"
+}

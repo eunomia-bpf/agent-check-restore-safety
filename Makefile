@@ -1,6 +1,7 @@
-.PHONY: runtime-build runtime-test runtime-certcheck runtime-demo runtime-microservice-demo runtime-vm-demo runtime-codex-demo runtime-verify
+.PHONY: runtime-build runtime-test runtime-certcheck runtime-demo runtime-microservice-demo runtime-vm-demo runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-verify
 
 VM_ACCEL ?= tcg
+CODEX_ISOLATED_EVIDENCE ?= docs/tmp/bootstrap/step-0013-20260815T124944Z
 
 runtime-build:
 	cd runtime && go build ./...
@@ -27,7 +28,20 @@ runtime-vm-demo:
 runtime-codex-demo:
 	python3 -m adapter.codex_runtime_demo $(CODEX_DEMO_ARGS)
 
+# Stronger explicit live-account target: Codex and payment share no network.
+runtime-codex-isolated-demo:
+	python3 -m adapter.codex_isolated_runtime_demo $(CODEX_ISOLATED_DEMO_ARGS)
+
+runtime-codex-isolated-check:
+	python3 -m adapter.check_codex_isolated_evidence \
+		"$(CODEX_ISOLATED_EVIDENCE)" --runtime-dir runtime
+
 runtime-verify:
 	cd runtime && go build ./...
 	cd runtime && go test -race ./...
 	cd runtime && go vet ./...
+	python3 -m unittest \
+		adapter.test_docker_codex \
+		adapter.test_codex_isolated_runtime_demo \
+		adapter.test_check_codex_isolated_evidence
+	$(MAKE) runtime-codex-isolated-check

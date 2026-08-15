@@ -1,0 +1,53 @@
+[
+  {
+    "command": [
+      "docker",
+      "exec",
+      "safe-change-codex-cdb603260ffb18f1",
+      "wget",
+      "-T",
+      "2",
+      "-qO-",
+      "http://control:8787/healthz"
+    ],
+    "finished_time_ns": 1786798196895552164,
+    "label": "control-health",
+    "output": "{\"status\":\"ok\"}\n",
+    "returncode": 0,
+    "started_time_ns": 1786798196811175646
+  },
+  {
+    "command": [
+      "docker",
+      "exec",
+      "safe-change-codex-cdb603260ffb18f1",
+      "wget",
+      "-T",
+      "2",
+      "-qO-",
+      "http://payment:8081/v1/stats"
+    ],
+    "finished_time_ns": 1786798201975549200,
+    "label": "payment-name",
+    "output": "wget: bad address 'payment:8081'\n",
+    "returncode": 1,
+    "started_time_ns": 1786798196895591925
+  },
+  {
+    "command": [
+      "docker",
+      "exec",
+      "safe-change-codex-cdb603260ffb18f1",
+      "wget",
+      "-T",
+      "2",
+      "-qO-",
+      "http://172.19.0.2:8081/v1/stats"
+    ],
+    "finished_time_ns": 1786798204050692600,
+    "label": "payment-ip",
+    "output": "wget: download timed out\n",
+    "returncode": 1,
+    "started_time_ns": 1786798201975558161
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "from_rule": 0,
+  "history": {
+    "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "sequence": 0
+  },
+  "open_operations": {},
+  "schema": 1,
+  "settled": {
+    "results": {},
+    "used": {}
+  }
+}

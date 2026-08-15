@@ -1,0 +1,32 @@
+[
+  {
+    "Containers": {
+      "e9f060ebcaf1d71e8bf9c8426870197b3e1275f5850e0f15b3300aec47b4a8c0": {
+        "IPv4Address": "172.18.0.3/16",
+        "Name": "safe-change-codex-cdb603260ffb18f1"
+      },
+      "faba2fb94a1ac3ae72d4ce35649d192ebf000b3eb48008736f8f6e40548844c9": {
+        "IPv4Address": "172.18.0.2/16",
+        "Name": "safe-change-codex-1496410-354c5121-control-1"
+      }
+    },
+    "Id": "6d355b151643ad843aa904226f89271434011394140ab1f4c239576659b4f767",
+    "Internal": false,
+    "Name": "safe-change-codex-1496410-354c5121_agent"
+  },
+  {
+    "Containers": {
+      "f4dbd56346f6874461177cf730efcdb23598be539eba1e971ad0afb68308fc73": {
+        "IPv4Address": "172.19.0.2/16",
+        "Name": "safe-change-codex-1496410-354c5121-payment-1"
+      },
+      "faba2fb94a1ac3ae72d4ce35649d192ebf000b3eb48008736f8f6e40548844c9": {
+        "IPv4Address": "172.19.0.3/16",
+        "Name": "safe-change-codex-1496410-354c5121-control-1"
+      }
+    },
+    "Id": "fc1d5227fbc36c6e90d018688ed8952c366f353c81d6220188d7e25199f35fa1",
+    "Internal": true,
+    "Name": "safe-change-codex-1496410-354c5121_effects"
+  }
+]

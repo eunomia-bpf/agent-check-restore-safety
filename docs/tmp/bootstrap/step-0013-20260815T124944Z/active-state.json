@@ -1,0 +1,38 @@
+{
+  "history": {
+    "hash": "287c0422b890dab9c6fdf71ec54fd162ed73b585b5a67787d5b83f38f89f0f60",
+    "sequence": 1
+  },
+  "operations": {},
+  "requirement": {
+    "capacities": {
+      "charge": 1
+    },
+    "id": "codex-payment-isolated-v1/safe-change-codex-1496410-354c5121",
+    "kinds": {
+      "charge-invoice": {
+        "costs": {
+          "charge": 1
+        },
+        "method": "POST",
+        "produces": {
+          "paid": 1
+        },
+        "queryable": false,
+        "response_classifier": "operation-receipt-v1",
+        "retry_safe": true,
+        "target": "http://payment:8081/v1/charge"
+      }
+    },
+    "results": {
+      "paid": 1
+    }
+  },
+  "rule": {
+    "allow": [
+      "charge-invoice"
+    ],
+    "requirement_hash": "5a71fa8b1bde1860e0dd4ef151d2cbcdd6dc76aa76fba59eff811f320ed92326",
+    "version": 1
+  }
+}

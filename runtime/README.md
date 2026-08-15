@@ -29,6 +29,8 @@ make runtime-demo
 make runtime-microservice-demo
 make runtime-vm-demo
 make runtime-codex-demo
+make runtime-codex-isolated-demo
+make runtime-codex-isolated-check
 make runtime-verify
 ```
 
@@ -110,8 +112,45 @@ make runtime-codex-demo \
 ```
 
 This first live composition does not yet place Codex and payment in disjoint
-network namespaces. The Docker service demo and QEMU demo enforce that network
-boundary separately; combining it with the live model is the next increment.
+network namespaces. Use the stronger target below for an enforced composition.
+
+### Enforce the boundary around the real model
+
+`make runtime-codex-isolated-demo` builds the control/payment image and runs the
+logged-in Codex App Server in a separate hardened container. Its root filesystem
+and workspace are read-only, Linux capabilities are removed, and only a private
+temporary copy of `auth.json` is mounted read-write. Codex has the agent network
+needed for its model connection; payment has only an internal effects network;
+control is the sole bridge. Before any payment, the runner first requires a
+control-health request from inside Codex to succeed, then checks both the
+payment DNS name and its actual effects-network IP and requires both to fail.
+After the model emits its tool call, the temporary account copy is deleted
+before control may contact payment. Codex completes the pending turn without
+that file, and the original account file is never mounted or modified.
+
+The model's callback stays pending while payment commits, its first response is
+lost, and the complete control container restarts over the same History. The
+second delivery returns the one durable receipt, the settled retry reuses that
+receipt, and Codex replies exactly `DONE`. Before Rule activation, the separate
+Certificate checker validates the exported state. After shutdown, another
+checker independently replays the binary History chain and cross-checks the
+external head, payment file, privacy-filtered App Server JSONL, final state, and
+minimal saved Docker container and network projections. The retained protocol
+contains one dynamic-tool item and no built-in-tool item; this is an observation
+about that turn, not a claim that the executable has no other capabilities. The
+retained run is checked without using account quota:
+
+```sh
+make runtime-codex-isolated-check
+```
+
+The live target remains deliberately excluded from `runtime-verify`; its saved
+evidence checker is included. A new live run accepts, for example:
+
+```sh
+make runtime-codex-isolated-demo \
+  CODEX_ISOLATED_DEMO_ARGS='--output-dir /tmp/codex-isolated-evidence'
+```
 
 ## Check a Certificate outside the control service
 
@@ -220,9 +259,10 @@ console, QEMU log, History, head anchor, and payment state for inspection.
 - a rootless QEMU guest path with a host-owned restricted network, a verified
   Ubuntu base image, whole-VM save/restore, and host History outside the guest
   restore domain;
-- a real logged-in Codex App Server path whose dynamic-tool callback remains
-  pending across control-process replacement and completes an Operation after
-  a lost remote response; and
+- a real logged-in Codex App Server path whose hardened container cannot reach
+  payment by network name or IP, whose dynamic-tool callback remains pending
+  across control-container replacement, and whose Operation completes after a
+  lost remote response; and
 - a separately implemented, standard-library-only Certificate checker binary,
   required by both live Rule activation and durable History replay.
 
@@ -263,8 +303,7 @@ This is an early system slice, not the complete system. It does not yet provide:
   demonstrated Docker and QEMU payment boundaries;
 - mediation of VM block devices, GPUs, passthrough devices, or arbitrary host
   interfaces beyond the demonstrated restricted HTTP path;
-- a Claude adapter and container-enforced network isolation for the live Codex
-  path;
+- a live Claude adapter and a provider-independent Agent protocol;
 - a replicated control service;
 - authenticated remote evidence or query-based unknown-result recovery;
 - a symbolic solver for large models;

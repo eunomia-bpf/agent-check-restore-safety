@@ -189,12 +189,15 @@ serialization, or keeping every old version indefinitely.
    open.
 5. Connect the VM path to the isolated service deployment and add block/device
    output tests.
-6. **Real Codex App Server path — implemented without network isolation.** A
-   logged-in model invokes one strict dynamic tool; its callback remains pending
-   while control is replaced after payment commits and loses its response. The
-   replacement completes the same Operation, and payment commits once. Moving
-   this live path into the isolated container topology and adding Claude remain
-   open.
+6. **Real Codex App Server path — implemented with enforced network
+   isolation.** A logged-in model runs in a hardened container and invokes one
+   strict dynamic tool. Codex and payment share no Docker network; control is
+   the only bridge. A control-health probe from Codex must succeed before
+   direct payment name and IP probes must fail. The
+   callback remains pending while payment commits, loses its response, and the
+   control container restarts. A separate checker then joins raw App Server
+   JSONL with a replayed binary History, external head, and payment record.
+   Adding Claude and a provider-independent Agent protocol remain open.
 7. Replace bounded enumeration with a symbolic backend and cross-check it
    against the existing exact Python oracle.
 8. Prove the generic finite theorem, the durable control refinement, and each
