@@ -17,3 +17,7 @@ func registerVariantActivities(worker.Worker, *Activities) {}
 func runOrderWorkflow(workflow.Context, harness.Order) (harness.OrderResult, error) {
 	return harness.OrderResult{}, errors.New("worker build tag is required")
 }
+
+func runManualBranchOrderWorkflow(workflow.Context, harness.Order) (harness.OrderResult, error) {
+	return harness.OrderResult{}, errors.New("worker build tag is required")
+}

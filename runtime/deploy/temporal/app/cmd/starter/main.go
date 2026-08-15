@@ -25,7 +25,7 @@ func run() error {
 	var amountCents int64
 	var wait bool
 	flag.StringVar(&address, "address", envOr("TEMPORAL_ADDRESS", client.DefaultHostPort), "Temporal frontend address")
-	flag.StringVar(&behavior, "behavior", "pinned", "workflow behavior: pinned or autoupgrade")
+	flag.StringVar(&behavior, "behavior", "pinned", "workflow behavior: pinned, autoupgrade, or manual")
 	flag.StringVar(&workflowID, "workflow-id", "", "required Temporal Workflow ID")
 	flag.StringVar(&orderID, "order-id", "", "required logical order ID")
 	flag.StringVar(&paymentToken, "payment-token", "", "required stable external payment identity")
@@ -38,8 +38,10 @@ func run() error {
 	workflowName := harness.PinnedWorkflowName
 	if behavior == "autoupgrade" {
 		workflowName = harness.AutoUpgradeWorkflowName
+	} else if behavior == harness.ManualBranchBehavior {
+		workflowName = harness.ManualBranchWorkflowName
 	} else if behavior != "pinned" {
-		return errors.New("behavior must be pinned or autoupgrade")
+		return errors.New("behavior must be pinned, autoupgrade, or manual")
 	}
 	temporalClient, err := client.Dial(client.Options{
 		HostPort: address,

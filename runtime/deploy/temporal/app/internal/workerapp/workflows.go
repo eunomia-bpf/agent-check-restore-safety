@@ -15,6 +15,10 @@ func AutoUpgradeOrderWorkflow(ctx workflow.Context, order harness.Order) (harnes
 	return runOrderWorkflow(ctx, order)
 }
 
+func ManualBranchOrderWorkflow(ctx workflow.Context, order harness.Order) (harness.OrderResult, error) {
+	return runManualBranchOrderWorkflow(ctx, order)
+}
+
 func newStatus(ctx workflow.Context, order harness.Order) (*harness.OrderStatus, error) {
 	if order.OrderID == "" || order.AmountCents <= 0 || order.PaymentToken == "" {
 		return nil, errors.New("order_id, positive amount_cents, and payment_token are required")

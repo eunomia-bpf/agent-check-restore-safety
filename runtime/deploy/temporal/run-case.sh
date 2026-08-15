@@ -8,8 +8,8 @@ if [[ "$case_name" != h0 && "$case_name" != h1 ]]; then
   echo "CASE must be h0 or h1" >&2
   exit 64
 fi
-if [[ "$mode" != auto_upgrade && "$mode" != pinned ]]; then
-  echo "MODE must be auto_upgrade or pinned" >&2
+if [[ "$mode" != auto_upgrade && "$mode" != pinned && "$mode" != manual_branch ]]; then
+  echo "MODE must be auto_upgrade, pinned, or manual_branch" >&2
   exit 64
 fi
 
@@ -143,6 +143,8 @@ amount_cents=4200
 starter_behavior=pinned
 if [[ "$mode" == auto_upgrade ]]; then
   starter_behavior=autoupgrade
+elif [[ "$mode" == manual_branch ]]; then
+  starter_behavior=manual
 fi
 
 "${compose[@]}" config >"$results_dir/compose-config.yaml"
@@ -245,6 +247,11 @@ jq -e --arg case "$case_name" '
   .deliveries == 1 and .commits == (if $case == "h0" then 0 else 1 end)
 ' "$results_dir/payment-before-v2-stats.json" >/dev/null
 
+if [[ "$mode" == manual_branch ]]; then
+  temporal_json "$results_dir/signal-complete.json" workflow signal \
+    --workflow-id "$workflow_id" --run-id "$run_id" --name complete --identity safe-change-harness
+fi
+
 "${compose[@]}" up --detach worker-v2
 wait_poller workflow food-order-v2 "$results_dir/v2-workflow-pollers.json"
 wait_poller activity food-order-v2 "$results_dir/v2-activity-pollers.json"
@@ -261,8 +268,10 @@ jq -e '
   .routingConfig.currentVersionBuildID == "food-order-v2"
 ' "$results_dir/deployment-v2-current.json" >/dev/null
 
-temporal_json "$results_dir/signal-complete.json" workflow signal \
-  --workflow-id "$workflow_id" --run-id "$run_id" --name complete --identity safe-change-harness
+if [[ "$mode" != manual_branch ]]; then
+  temporal_json "$results_dir/signal-complete.json" workflow signal \
+    --workflow-id "$workflow_id" --run-id "$run_id" --name complete --identity safe-change-harness
+fi
 
 final_wait_seconds="${FINAL_WAIT_SECONDS:-12}"
 for _ in $(seq 1 "$final_wait_seconds"); do

@@ -45,3 +45,9 @@ func runOrderWorkflow(ctx workflow.Context, order harness.Order) (harness.OrderR
 	status.Phase = "DELIVERED"
 	return resultFor(status), nil
 }
+
+func runManualBranchOrderWorkflow(ctx workflow.Context, order harness.Order) (harness.OrderResult, error) {
+	// Keep the v1 manual branch byte-for-byte on the existing payment path so
+	// its Activity type, input, timeout, and retry policy are unchanged.
+	return runOrderWorkflow(ctx, order)
+}

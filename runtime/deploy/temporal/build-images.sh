@@ -204,6 +204,10 @@ if grep -Fq '(*Activities).ChargePayment' "$verify_dir/worker-v2.nm"; then
   echo "v2 worker binary unexpectedly contains ChargePayment" >&2
   exit 1
 fi
+if ! grep -Fq '(*Activities).QueryPayment' "$verify_dir/worker-v2.nm"; then
+  echo "v2 worker binary does not contain QueryPayment" >&2
+  exit 1
+fi
 
 worker_v1_id="$(docker image inspect --format '{{.Id}}' "$worker_v1_image")"
 worker_v2_id="$(docker image inspect --format '{{.Id}}' "$worker_v2_image")"

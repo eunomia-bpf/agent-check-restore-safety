@@ -50,6 +50,10 @@ func Run(address, paymentURL, completionURL string) error {
 		Name:               harness.AutoUpgradeWorkflowName,
 		VersioningBehavior: workflow.VersioningBehaviorAutoUpgrade,
 	})
+	w.RegisterWorkflowWithOptions(ManualBranchOrderWorkflow, workflow.RegisterOptions{
+		Name:               harness.ManualBranchWorkflowName,
+		VersioningBehavior: workflow.VersioningBehaviorAutoUpgrade,
+	})
 	registerVariantActivities(w, NewActivities(paymentURL, completionURL))
 	log.Printf("Temporal worker deployment=%s build_id=%s task_queue=%s", harness.DeploymentName, buildID, harness.TaskQueue)
 	return w.Run(worker.InterruptCh())

@@ -6,15 +6,18 @@ import (
 )
 
 const (
-	TaskQueue               = "safe-change-food-orders"
-	DeploymentName          = "safe-change-food-order-worker"
-	PinnedWorkflowName      = "FoodOrderPinned"
-	AutoUpgradeWorkflowName = "FoodOrderAutoUpgrade"
-	StatusQueryName         = "status"
-	CompleteSignalName      = "complete"
-	PaymentActivityName     = "ChargePayment"
-	CompletionActivityName  = "CompleteOrder"
-	OperationDomain         = "temporal-order-workflow"
+	TaskQueue                = "safe-change-food-orders"
+	DeploymentName           = "safe-change-food-order-worker"
+	PinnedWorkflowName       = "FoodOrderPinned"
+	AutoUpgradeWorkflowName  = "FoodOrderAutoUpgrade"
+	ManualBranchWorkflowName = "FoodOrderManualBranch"
+	ManualBranchBehavior     = "manual"
+	StatusQueryName          = "status"
+	CompleteSignalName       = "complete"
+	PaymentActivityName      = "ChargePayment"
+	PaymentQueryActivityName = "QueryPayment"
+	CompletionActivityName   = "CompleteOrder"
+	OperationDomain          = "temporal-order-workflow"
 )
 
 func OperationID(identity string) string {
@@ -39,6 +42,15 @@ type EffectReceipt struct {
 	OperationID     string `json:"operation_id"`
 	Outcome         string `json:"outcome"`
 	ResultHash      string `json:"result_hash"`
+	RemoteReference string `json:"remote_reference"`
+}
+
+type PaymentObservation struct {
+	Schema          int    `json:"schema"`
+	OperationID     string `json:"operation_id"`
+	RequestHash     string `json:"request_hash"`
+	Outcome         string `json:"outcome"`
+	FactHash        string `json:"fact_hash"`
 	RemoteReference string `json:"remote_reference"`
 }
 
