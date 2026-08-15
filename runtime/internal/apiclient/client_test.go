@@ -175,8 +175,19 @@ func TestHTTPErrorPreservesServerStatusAndOperationOutcome(t *testing.T) {
 	client := newClient(t, http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		switch request.URL.Path {
 		case "/v1/execute":
+			var execute api.ExecuteRequest
+			if err := json.NewDecoder(request.Body).Decode(&execute); err != nil {
+				t.Error(err)
+			}
+			if execute.CallID == "conflict" {
+				writeJSON(t, writer, http.StatusConflict, api.OperationError{
+					Outcome: gateway.Outcome{OperationID: "op-conflict", Phase: kernel.Succeeded},
+					Error:   gateway.ErrOperationRequestConflict.Error(), Code: api.OperationErrorRequestConflict,
+				})
+				return
+			}
 			writeJSON(t, writer, http.StatusConflict, api.OperationError{
-				Outcome: partial, Error: gateway.ErrOutcomeUnknown.Error(),
+				Outcome: partial, Error: gateway.ErrOutcomeUnknown.Error(), Code: api.OperationErrorOutcomeUnknown,
 			})
 		case "/v1/operations/missing/recover":
 			writeJSON(t, writer, http.StatusNotFound, api.OperationError{
@@ -197,6 +208,13 @@ func TestHTTPErrorPreservesServerStatusAndOperationOutcome(t *testing.T) {
 	if !errors.As(err, &httpErr) || httpErr.StatusCode != http.StatusConflict ||
 		httpErr.ServerError != gateway.ErrOutcomeUnknown.Error() || !reflect.DeepEqual(httpErr.Outcome, partial) {
 		t.Fatalf("Execute HTTPError = %+v", httpErr)
+	}
+	conflictOutcome, err := client.Execute(context.Background(), api.ExecuteRequest{
+		CallID: "conflict", Kind: "finish", URL: "https://effect.invalid", Body: []byte("different"),
+	})
+	if !errors.Is(err, gateway.ErrOperationRequestConflict) || conflictOutcome.OperationID != "op-conflict" ||
+		conflictOutcome.Phase != kernel.Succeeded {
+		t.Fatalf("request conflict outcome=%+v error=%v", conflictOutcome, err)
 	}
 
 	_, err = client.Recover(context.Background(), "missing")

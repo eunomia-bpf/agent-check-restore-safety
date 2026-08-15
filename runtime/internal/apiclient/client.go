@@ -157,7 +157,7 @@ func (c *Client) Execute(ctx context.Context, request api.ExecuteRequest) (gatew
 		return gateway.Outcome{}, err
 	}
 	if response.statusCode != http.StatusOK {
-		httpErr := operationHTTPError(response, response.statusCode == http.StatusConflict)
+		httpErr := operationHTTPError(response)
 		return httpErr.Outcome, httpErr
 	}
 	var outcome gateway.Outcome
@@ -179,7 +179,7 @@ func (c *Client) Recover(ctx context.Context, operationID string) (gateway.Outco
 		return gateway.Outcome{}, err
 	}
 	if response.statusCode != http.StatusOK {
-		httpErr := operationHTTPError(response, response.statusCode == http.StatusConflict)
+		httpErr := operationHTTPError(response)
 		if response.statusCode == http.StatusNotFound && httpErr.cause == nil {
 			httpErr.cause = gateway.ErrOperationNotFound
 		}
@@ -277,7 +277,7 @@ func controlHTTPError(response wireResponse) *HTTPError {
 	}
 }
 
-func operationHTTPError(response wireResponse, outcomeUnknown bool) *HTTPError {
+func operationHTTPError(response wireResponse) *HTTPError {
 	// Authentication, method, and payload validation fail before an Operation
 	// reaches the gateway and therefore use the ordinary control error shape.
 	if response.statusCode == http.StatusBadRequest ||
@@ -303,8 +303,16 @@ func operationHTTPError(response wireResponse, outcomeUnknown bool) *HTTPError {
 		}
 	}
 	var cause error
-	if outcomeUnknown {
+	switch envelope.Code {
+	case api.OperationErrorOutcomeUnknown:
 		cause = gateway.ErrOutcomeUnknown
+	case api.OperationErrorRequestConflict:
+		cause = gateway.ErrOperationRequestConflict
+	case "":
+		// Accept the original v1 error envelope while peers are upgraded.
+		if response.statusCode == http.StatusConflict {
+			cause = gateway.ErrOutcomeUnknown
+		}
 	}
 	return &HTTPError{
 		Method: response.method, URL: response.url,

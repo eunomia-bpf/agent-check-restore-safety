@@ -204,6 +204,9 @@ func (p *Proxy) writeExecutionError(writer http.ResponseWriter, outcome gateway.
 	if errors.Is(err, gateway.ErrOutcomeUnknown) || outcome.Phase == kernel.Unknown || outcome.Phase == kernel.Dispatched {
 		status = http.StatusConflict
 		message = "effect outcome is not safely settled"
+	} else if errors.Is(err, gateway.ErrOperationRequestConflict) {
+		status = http.StatusConflict
+		message = "effect call identity conflicts with its recorded request"
 	}
 	writeError(writer, status, errorBody{
 		Error: message, Detail: err.Error(), OperationID: outcome.OperationID, Phase: outcome.Phase,

@@ -276,10 +276,15 @@ func (s *Server) execute(writer http.ResponseWriter, request *http.Request, adap
 	})
 	if err != nil {
 		status := http.StatusUnprocessableEntity
+		code := ""
 		if errors.Is(err, gateway.ErrOutcomeUnknown) {
 			status = http.StatusConflict
+			code = OperationErrorOutcomeUnknown
+		} else if errors.Is(err, gateway.ErrOperationRequestConflict) {
+			status = http.StatusConflict
+			code = OperationErrorRequestConflict
 		}
-		writeJSON(writer, status, OperationError{Outcome: outcome, Error: err.Error()})
+		writeJSON(writer, status, OperationError{Outcome: outcome, Error: err.Error(), Code: code})
 		return
 	}
 	writeJSON(writer, http.StatusOK, outcome)
@@ -294,13 +299,15 @@ func (s *Server) recover(writer http.ResponseWriter, request *http.Request) {
 	outcome, err := s.gateway.Recover(request.Context(), operationID)
 	if err != nil {
 		status := http.StatusUnprocessableEntity
+		code := ""
 		switch {
 		case errors.Is(err, gateway.ErrOperationNotFound):
 			status = http.StatusNotFound
 		case errors.Is(err, gateway.ErrOutcomeUnknown):
 			status = http.StatusConflict
+			code = OperationErrorOutcomeUnknown
 		}
-		writeJSON(writer, status, OperationError{Outcome: outcome, Error: err.Error()})
+		writeJSON(writer, status, OperationError{Outcome: outcome, Error: err.Error(), Code: code})
 		return
 	}
 	writeJSON(writer, http.StatusOK, outcome)

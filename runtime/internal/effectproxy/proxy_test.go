@@ -127,6 +127,7 @@ func TestProxyFailsClosedWithoutRetry(t *testing.T) {
 		{"unknown-sentinel", gateway.Outcome{OperationID: "op-1", Phase: kernel.Unknown}, gateway.ErrOutcomeUnknown, http.StatusConflict},
 		{"unknown-phase", gateway.Outcome{OperationID: "op-2", Phase: kernel.Unknown}, errors.New("remote control error"), http.StatusConflict},
 		{"in-flight", gateway.Outcome{OperationID: "op-3", Phase: kernel.Dispatched}, errors.New("already in flight"), http.StatusConflict},
+		{"request-conflict", gateway.Outcome{OperationID: "op-4", Phase: kernel.Succeeded}, gateway.ErrOperationRequestConflict, http.StatusConflict},
 		{"control-failure", gateway.Outcome{}, errors.New("control unavailable"), http.StatusBadGateway},
 	}
 	for _, test := range tests {

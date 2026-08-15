@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"sort"
 	"strings"
@@ -33,6 +34,8 @@ var ErrStoredRequestUnavailable = errors.New("external operation has no stored r
 var ErrOperationNotRecoverable = errors.New("external operation is not eligible for query recovery")
 
 var ErrStoredRequestMismatch = errors.New("stored external request does not match its recorded hash")
+
+var ErrOperationRequestConflict = errors.New("stable operation identity was reused with different request bytes")
 
 type Request struct {
 	ID      string            `json:"id"`
@@ -84,6 +87,29 @@ type headerPair struct {
 	value string
 }
 
+// singleAttemptReader deliberately hides bytes.Reader's rewind support from
+// net/http. The standard Transport may otherwise replay a request carrying an
+// Idempotency-Key after a reused-connection failure, bypassing the durable
+// Unknown state and the runtime's retry decision.
+type singleAttemptReader struct {
+	reader *bytes.Reader
+}
+
+func (reader *singleAttemptReader) Read(destination []byte) (int, error) {
+	return reader.reader.Read(destination)
+}
+
+func newSingleAttemptRequest(ctx context.Context, method, target string, body []byte) (*http.Request, error) {
+	request, err := http.NewRequestWithContext(ctx, method, target, &singleAttemptReader{
+		reader: bytes.NewReader(body),
+	})
+	if err != nil {
+		return nil, err
+	}
+	request.ContentLength = int64(len(body))
+	return request, nil
+}
+
 func requestHash(request *http.Request, body []byte) string {
 	headers := make([]headerPair, 0, len(request.Header))
 	for name, values := range request.Header {
@@ -129,8 +155,20 @@ func (g *Gateway) Execute(ctx context.Context, request Request) (Outcome, error)
 		if prior.Domain != request.Domain {
 			return Outcome{}, errors.New("stable operation identity belongs to another adapter domain")
 		}
+		if !prior.RequestStored {
+			return Outcome{}, fmt.Errorf("%w: operation %q", ErrStoredRequestUnavailable, prior.ID)
+		}
+		callerHeaders, err := canonicalCallerHeaders(request.Headers)
+		if err != nil {
+			return Outcome{}, err
+		}
+		if !bytes.Equal(request.Body, prior.RequestBody) || !maps.Equal(callerHeaders, prior.RequestHeaders) {
+			return Outcome{OperationID: prior.ID, Phase: prior.Phase},
+				fmt.Errorf("%w: operation %q", ErrOperationRequestConflict, prior.ID)
+		}
 		// History, rather than replacement caller state, supplies the complete
-		// request for an existing Operation.
+		// method, target, kind, and request for an existing Operation. The
+		// replacement caller still has to prove that its business bytes match.
 		request, err = requestFromOperation(prior)
 		if err != nil {
 			return Outcome{}, err
@@ -375,7 +413,7 @@ func (g *Gateway) queryUnknown(ctx context.Context, operation kernel.Operation, 
 	if operation.QueryClassifier != kernel.OperationObservationV1 {
 		return queryOutcome{}, fmt.Errorf("unsupported query classifier %q", operation.QueryClassifier)
 	}
-	request, err := http.NewRequestWithContext(ctx, operation.QueryMethod, operation.QueryTarget, bytes.NewReader(effectBody))
+	request, err := newSingleAttemptRequest(ctx, operation.QueryMethod, operation.QueryTarget, effectBody)
 	if err != nil {
 		return queryOutcome{}, err
 	}
@@ -442,7 +480,7 @@ func finalizedRequest(ctx context.Context, request Request) (*http.Request, []by
 		return nil, nil, nil, errors.New("external operation URL is empty")
 	}
 	body := append([]byte(nil), request.Body...)
-	httpRequest, err := http.NewRequestWithContext(ctx, request.Method, request.URL, bytes.NewReader(body))
+	httpRequest, err := newSingleAttemptRequest(ctx, request.Method, request.URL, body)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -455,36 +493,48 @@ func finalizedRequest(ctx context.Context, request Request) (*http.Request, []by
 	// Make transport defaults explicit so the durable digest covers them.
 	httpRequest.Header.Set("User-Agent", "safe-change-runtime/1")
 	httpRequest.Header.Set("Accept-Encoding", "identity")
-	seen := make(map[string]bool, len(request.Headers))
-	callerHeaders := make(map[string]string, len(request.Headers))
-	for name, value := range request.Headers {
-		lower := strings.ToLower(name)
-		if seen[lower] {
-			return nil, nil, nil, fmt.Errorf("duplicate case-insensitive HTTP header %q", name)
-		}
-		seen[lower] = true
-		if reservedHeader(lower) {
-			return nil, nil, nil, fmt.Errorf("HTTP header %q is owned by the gateway", name)
-		}
-		if !validHeaderName(name) || strings.ContainsAny(value, "\r\n\x00") {
-			return nil, nil, nil, fmt.Errorf("invalid HTTP header %q", name)
-		}
-		canonicalName := http.CanonicalHeaderKey(name)
-		httpRequest.Header.Set(canonicalName, value)
-		callerHeaders[canonicalName] = value
+	callerHeaders, err := canonicalCallerHeaders(request.Headers)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	for name, value := range callerHeaders {
+		httpRequest.Header.Set(name, value)
 	}
 	httpRequest.Header.Set("Idempotency-Key", request.ID)
 	httpRequest.Header.Set("X-Operation-ID", request.ID)
-	if len(callerHeaders) == 0 {
-		callerHeaders = nil
-	}
 	return httpRequest, body, callerHeaders, nil
+}
+
+func canonicalCallerHeaders(headers map[string]string) (map[string]string, error) {
+	seen := make(map[string]bool, len(headers))
+	canonical := make(map[string]string, len(headers))
+	for name, value := range headers {
+		lower := strings.ToLower(name)
+		if seen[lower] {
+			return nil, fmt.Errorf("duplicate case-insensitive HTTP header %q", name)
+		}
+		seen[lower] = true
+		if reservedHeader(lower) {
+			return nil, fmt.Errorf("HTTP header %q is owned by the gateway", name)
+		}
+		if !validHeaderName(name) || strings.ContainsAny(value, "\r\n\x00") {
+			return nil, fmt.Errorf("invalid HTTP header %q", name)
+		}
+		canonicalName := http.CanonicalHeaderKey(name)
+		canonical[canonicalName] = value
+	}
+	if len(canonical) == 0 {
+		return nil, nil
+	}
+	return canonical, nil
 }
 
 func reservedHeader(lower string) bool {
 	switch lower {
 	case "host", "content-length", "transfer-encoding", "connection", "trailer",
-		"idempotency-key", "x-operation-id", "x-operation-request-hash":
+		"idempotency-key", "x-operation-id", "x-operation-request-hash",
+		"authorization", "proxy-authorization", "cookie", "set-cookie",
+		"x-api-key", "api-key", "apikey":
 		return true
 	default:
 		return false

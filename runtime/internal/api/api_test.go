@@ -178,6 +178,16 @@ func TestLocalAPICompilesActivatesAndExecutes(t *testing.T) {
 	if outcome.Phase != kernel.Succeeded || deliveries.Load() != 1 {
 		t.Fatalf("outcome=%+v deliveries=%d", outcome, deliveries.Load())
 	}
+	conflicting := finish
+	conflicting.Body = []byte(`{"different":true}`)
+	var conflict OperationError
+	if status := postJSON(t, server.Client(), server.URL+"/v1/execute", operationToken, conflicting, &conflict); status != http.StatusConflict {
+		t.Fatalf("request-conflict status=%d response=%+v", status, conflict)
+	}
+	if conflict.Code != OperationErrorRequestConflict || conflict.Outcome.OperationID != outcome.OperationID ||
+		conflict.Outcome.Phase != kernel.Succeeded || deliveries.Load() != 1 {
+		t.Fatalf("request-conflict response=%+v deliveries=%d", conflict, deliveries.Load())
+	}
 }
 
 func TestAPIRecoversLostPaymentResponseAndReusesSettlement(t *testing.T) {

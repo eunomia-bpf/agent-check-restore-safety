@@ -1,11 +1,13 @@
 package gateway
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -256,6 +258,132 @@ func TestLostResponseRetryUsesOneRemoteOperation(t *testing.T) {
 	}
 }
 
+func TestOneExecuteCannotBeReplayedInsideHTTPTransport(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	var deliveries atomic.Int32
+	serverDone := make(chan error, 1)
+	go func() {
+		firstConnection, err := listener.Accept()
+		if err != nil {
+			serverDone <- err
+			return
+		}
+		reader := bufio.NewReader(firstConnection)
+		first, err := http.ReadRequest(reader)
+		if err != nil {
+			_ = firstConnection.Close()
+			serverDone <- err
+			return
+		}
+		_, _ = io.Copy(io.Discard, first.Body)
+		_ = first.Body.Close()
+		deliveries.Add(1)
+		if err := writeRawReceipt(firstConnection, first.Header.Get("X-Operation-ID"), false); err != nil {
+			_ = firstConnection.Close()
+			serverDone <- err
+			return
+		}
+		second, err := http.ReadRequest(reader)
+		if err != nil {
+			_ = firstConnection.Close()
+			serverDone <- err
+			return
+		}
+		_, _ = io.Copy(io.Discard, second.Body)
+		_ = second.Body.Close()
+		deliveries.Add(1)
+		// The provider committed the second request, but the reused connection
+		// disappeared before a response. A replayable net/http request would be
+		// silently sent again on the next connection by this same Client.Do.
+		_ = firstConnection.Close()
+
+		tcpListener := listener.(*net.TCPListener)
+		if err := tcpListener.SetDeadline(time.Now().Add(500 * time.Millisecond)); err != nil {
+			serverDone <- err
+			return
+		}
+		retryConnection, err := listener.Accept()
+		if timeout, ok := err.(net.Error); ok && timeout.Timeout() {
+			serverDone <- nil
+			return
+		}
+		if err != nil {
+			serverDone <- err
+			return
+		}
+		defer retryConnection.Close()
+		retried, err := http.ReadRequest(bufio.NewReader(retryConnection))
+		if err != nil {
+			serverDone <- err
+			return
+		}
+		_, _ = io.Copy(io.Discard, retried.Body)
+		_ = retried.Body.Close()
+		deliveries.Add(1)
+		serverDone <- writeRawReceipt(retryConnection, retried.Header.Get("X-Operation-ID"), true)
+	}()
+
+	target := "http://" + listener.Addr().String() + "/charge"
+	c, err := control.Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	requirement := paymentRequirement(true, target)
+	requirement.Results["paid"] = 2
+	requirement.Capacities["money"] = 2
+	certificate, err := c.Compile(requirement)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Activate(certificate); err != nil {
+		t.Fatal(err)
+	}
+	transport := &http.Transport{}
+	defer transport.CloseIdleConnections()
+	gateway, err := New(c, &http.Client{Transport: transport, Timeout: 2 * time.Second})
+	if err != nil {
+		t.Fatal(err)
+	}
+	first := Request{ID: "warm-connection", Domain: "orders", Kind: "charge", URL: target, Body: []byte(`{"amount":1}`)}
+	if outcome, err := gateway.Execute(context.Background(), first); err != nil || outcome.Phase != kernel.Succeeded {
+		t.Fatalf("warm request outcome=%+v error=%v", outcome, err)
+	}
+	second := Request{ID: "lost-response", Domain: "orders", Kind: "charge", URL: target, Body: []byte(`{"amount":2}`)}
+	if outcome, err := gateway.Execute(context.Background(), second); !errors.Is(err, ErrOutcomeUnknown) || outcome.Phase != kernel.Unknown {
+		t.Fatalf("one Execute hid a transport replay: outcome=%+v error=%v", outcome, err)
+	}
+	if err := <-serverDone; err != nil {
+		t.Fatal(err)
+	}
+	if got := deliveries.Load(); got != 2 {
+		t.Fatalf("one Execute produced an implicit retry: deliveries=%d, want 2 total", got)
+	}
+}
+
+func writeRawReceipt(connection net.Conn, operationID string, closeConnection bool) error {
+	body, err := json.Marshal(operationReceiptV1{
+		Schema: 1, OperationID: operationID, Outcome: string(kernel.Succeeded),
+		ResultHash: strings.Repeat("0", 64), RemoteReference: "remote-" + operationID,
+	})
+	if err != nil {
+		return err
+	}
+	connectionHeader := "keep-alive"
+	if closeConnection {
+		connectionHeader = "close"
+	}
+	_, err = fmt.Fprintf(connection,
+		"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: %s\r\n\r\n%s",
+		len(body), connectionHeader, body,
+	)
+	return err
+}
+
 func TestLostResponseRecoveredByQueryWithoutRedispatch(t *testing.T) {
 	var deliveries atomic.Int32
 	effect := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
@@ -301,8 +429,8 @@ func TestLostResponseRecoveredByQueryWithoutRedispatch(t *testing.T) {
 	secondControl, secondGateway := openQueryableGateway(t, path, false, effect.URL, observer.URL)
 	replacementRequest := Request{
 		ID: request.ID, Domain: request.Domain, Kind: "replacement-kind",
-		URL: "http://replacement.invalid/v2", Body: []byte(`{"different":true}`),
-		Headers: map[string]string{"Content-Type": "text/plain", "X-Caller-Secret": "replacement"},
+		URL: "http://replacement.invalid/v2", Body: body,
+		Headers: map[string]string{"Content-Type": "application/json", "X-Caller-Secret": "do-not-copy"},
 	}
 	outcome, err := secondGateway.Execute(context.Background(), replacementRequest)
 	if err != nil {
@@ -326,7 +454,10 @@ func TestLostResponseRecoveredByQueryWithoutRedispatch(t *testing.T) {
 	}
 	thirdControl, thirdGateway := openQueryableGateway(t, path, false, effect.URL, observer.URL)
 	defer thirdControl.Close()
-	reused, err := thirdGateway.Execute(context.Background(), Request{ID: request.ID, Domain: request.Domain})
+	reused, err := thirdGateway.Execute(context.Background(), Request{
+		ID: request.ID, Domain: request.Domain, Body: body,
+		Headers: map[string]string{"Content-Type": "application/json", "X-Caller-Secret": "do-not-copy"},
+	})
 	if err != nil || !reused.Reused || !reused.RecoveredByQuery {
 		t.Fatalf("durable query result was not reused: %+v error=%v", reused, err)
 	}
@@ -581,7 +712,7 @@ func TestNonRetryableOperationCannotCrossGateway(t *testing.T) {
 	}
 }
 
-func TestStableIdentityReusesStoredRequestInsteadOfReplacementBytes(t *testing.T) {
+func TestStableIdentityRejectsReplacementBytes(t *testing.T) {
 	var deliveries atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		deliveries.Add(1)
@@ -599,11 +730,18 @@ func TestStableIdentityReusesStoredRequestInsteadOfReplacementBytes(t *testing.T
 	second.Body = []byte("b")
 	second.Headers = map[string]string{"X-Replacement": "ignored"}
 	outcome, err := gateway.Execute(context.Background(), second)
-	if err != nil || !outcome.Reused || outcome.Phase != kernel.Succeeded {
-		t.Fatalf("settled Operation did not ignore replacement bytes: outcome=%+v error=%v", outcome, err)
+	if !errors.Is(err, ErrOperationRequestConflict) || outcome.Reused || outcome.Phase != kernel.Succeeded {
+		t.Fatalf("settled Operation accepted replacement bytes: outcome=%+v error=%v", outcome, err)
 	}
 	if deliveries.Load() != 1 {
 		t.Fatalf("replacement caller caused %d deliveries", deliveries.Load())
+	}
+	retry := first
+	retry.Kind = "new-release-kind"
+	retry.URL = "http://new-release.invalid/charge"
+	outcome, err = gateway.Execute(context.Background(), retry)
+	if err != nil || !outcome.Reused || outcome.Phase != kernel.Succeeded {
+		t.Fatalf("matching retry did not reuse frozen Operation: outcome=%+v error=%v", outcome, err)
 	}
 }
 
@@ -734,6 +872,12 @@ func TestFinalizedRequestRejectsAmbiguousHeaders(t *testing.T) {
 			Headers: map[string]string{"X-Mode": "a", "x-mode": "b"}},
 		{ID: "reserved-header", Domain: "service", Kind: "charge", URL: server.URL,
 			Headers: map[string]string{"Idempotency-Key": "attacker"}},
+		{ID: "authorization-header", Domain: "service", Kind: "charge", URL: server.URL,
+			Headers: map[string]string{"Authorization": "Bearer must-not-enter-History"}},
+		{ID: "cookie-header", Domain: "service", Kind: "charge", URL: server.URL,
+			Headers: map[string]string{"Cookie": "session=must-not-enter-History"}},
+		{ID: "api-key-header", Domain: "service", Kind: "charge", URL: server.URL,
+			Headers: map[string]string{"X-API-Key": "must-not-enter-History"}},
 		{ID: "nul-header", Domain: "service", Kind: "charge", URL: server.URL,
 			Headers: map[string]string{"X-Mode": "a\x00b"}},
 	}
@@ -818,8 +962,7 @@ func TestChangedCallerRetriesFrozenOperationWithoutStateMigration(t *testing.T) 
 	// the existing ID in History and sends the original v1 Operation instead.
 	changedCaller := Request{
 		ID: first.ID, Domain: first.Domain, Kind: "charge-v2", URL: v2Target,
-		Body:    []byte(`{"replacement":"does-not-have-v1-request"}`),
-		Headers: map[string]string{"X-Release": "v2"},
+		Body: body,
 	}
 	if outcome, err := gateway.Execute(context.Background(), changedCaller); err != nil || outcome.Phase != kernel.Succeeded {
 		t.Fatalf("changed-caller retry outcome=%+v error=%v", outcome, err)
