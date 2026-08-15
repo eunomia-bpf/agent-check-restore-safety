@@ -15,6 +15,12 @@ its original payment operation; a new order uses the new release. The order
 service submits only a stable call ID, the logical `payment` route, and its
 payload. It holds neither an operation token nor a physical payment target.
 
+To put the runtime beside your own HTTP service, build the minimal image with
+`make runtime-image` and use the copyable
+[`runtime/deploy/starter/`](runtime/deploy/starter/) Compose skeleton. It keeps
+workload, control, and provider access on separate networks and includes
+checked examples for activating and changing a provider adapter.
+
 This repository is evolving from an exact Agent-history checker into a common
 control layer for changing Agent runtimes, complete Linux virtual machines, and
 microservices after they have interacted with the outside world. It is a
@@ -33,6 +39,8 @@ Run the broader system and research evidence:
 make runtime-build
 make runtime-test
 make runtime-certcheck
+make runtime-image
+make runtime-starter-check
 make runtime-demo
 make runtime-microservice-demo
 make runtime-vm-demo

@@ -1,6 +1,9 @@
-.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-demo runtime-microservice-demo runtime-vm-demo runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
+.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
 
 VM_ACCEL ?= tcg
+RUNTIME_IMAGE ?= safe-change-runtime:local
+RUNTIME_VERSION ?= dev
+RUNTIME_REVISION ?= $(shell git rev-parse --short=12 HEAD)
 CODEX_ISOLATED_EVIDENCE ?= docs/tmp/bootstrap/step-0013-20260815T124944Z
 INTEGRATED_EVIDENCE ?= docs/tmp/bootstrap/step-0014-20260815T133621Z
 DEATHSTAR_EVIDENCE ?= docs/tmp/bootstrap/step-0015-20260815T141250Z
@@ -13,6 +16,16 @@ runtime-test:
 
 runtime-certcheck:
 	cd runtime && go test ./internal/certcheck ./cmd/check-certificate
+
+runtime-image:
+	docker build \
+		--build-arg VERSION="$(RUNTIME_VERSION)" \
+		--build-arg REVISION="$(RUNTIME_REVISION)" \
+		-f runtime/deploy/image/Dockerfile \
+		-t "$(RUNTIME_IMAGE)" runtime
+
+runtime-starter-check:
+	bash runtime/deploy/starter/check.sh
 
 runtime-demo:
 	@runtime_demo_dir="$$(mktemp -d)"; \

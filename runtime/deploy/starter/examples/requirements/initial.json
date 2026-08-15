@@ -1,0 +1,19 @@
+{
+  "id": "submissions-v1",
+  "results": {"accepted": 1},
+  "capacities": {"submission": 1},
+  "kinds": {
+    "submit-v1": {
+      "costs": {"submission": 1},
+      "produces": {"accepted": 1},
+      "retry_safe": false,
+      "queryable": true,
+      "target": "http://provider-adapter-v1:8080/v1/submit",
+      "method": "POST",
+      "response_classifier": "operation-receipt-v1",
+      "query_target": "http://provider-adapter-v1:8080/v1/submit/query",
+      "query_method": "POST",
+      "query_classifier": "operation-observation-v1"
+    }
+  }
+}

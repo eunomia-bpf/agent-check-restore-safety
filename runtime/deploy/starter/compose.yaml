@@ -1,0 +1,129 @@
+services:
+  control:
+    image: ${RUNTIME_IMAGE:?set RUNTIME_IMAGE in .env}
+    user: ${SAFE_CHANGE_UID:?set SAFE_CHANGE_UID in .env}:${SAFE_CHANGE_GID:?set SAFE_CHANGE_GID in .env}
+    command:
+      - /usr/local/bin/control
+      - -listen=0.0.0.0:8787
+      - -allow-nonloopback=true
+      - -history=/history/runtime.history
+      - -head-anchor=/anchor/runtime.head
+      - -admin-token-file=/admin-token/token
+      - -adapter-config=/config/adapters.json
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+    volumes:
+      - type: bind
+        source: ${STARTER_DATA_DIR:?set STARTER_DATA_DIR in .env}/history
+        target: /history
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${STARTER_DATA_DIR:?set STARTER_DATA_DIR in .env}/anchor
+        target: /anchor
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${STARTER_DATA_DIR:?set STARTER_DATA_DIR in .env}/admin-token
+        target: /admin-token
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${STARTER_DATA_DIR:?set STARTER_DATA_DIR in .env}/adapter-token
+        target: /adapter-token
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${STARTER_DATA_DIR:?set STARTER_DATA_DIR in .env}/config
+        target: /config
+        read_only: true
+        bind: {create_host_path: false}
+    networks: [control, provider]
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:8787/healthz]
+      interval: 2s
+      timeout: 1s
+      retries: 30
+
+  effect-proxy:
+    image: ${RUNTIME_IMAGE:?set RUNTIME_IMAGE in .env}
+    user: ${SAFE_CHANGE_UID:?set SAFE_CHANGE_UID in .env}:${SAFE_CHANGE_GID:?set SAFE_CHANGE_GID in .env}
+    command:
+      - /usr/local/bin/effect-proxy
+      - -listen=0.0.0.0:8788
+      - -allow-nonloopback=true
+      - -control-url=http://control:8787
+      - -adapter-token-file=/adapter-token/token
+      - -config=/config/routes.json
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+    volumes:
+      - type: bind
+        source: ${STARTER_DATA_DIR:?set STARTER_DATA_DIR in .env}/adapter-token
+        target: /adapter-token
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${STARTER_DATA_DIR:?set STARTER_DATA_DIR in .env}/config
+        target: /config
+        read_only: true
+        bind: {create_host_path: false}
+    networks: [workload, control]
+    restart: unless-stopped
+    depends_on:
+      control: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:8788/healthz]
+      interval: 2s
+      timeout: 1s
+      retries: 30
+
+  safe-change:
+    profiles: [tools]
+    image: ${RUNTIME_IMAGE:?set RUNTIME_IMAGE in .env}
+    user: ${SAFE_CHANGE_UID:?set SAFE_CHANGE_UID in .env}:${SAFE_CHANGE_GID:?set SAFE_CHANGE_GID in .env}
+    entrypoint: [/usr/local/bin/safe-change]
+    command: [help]
+    environment:
+      SAFE_CHANGE_CONTROL_URL: http://control:8787
+      SAFE_CHANGE_ADMIN_TOKEN_FILE: /admin-token/token
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+    volumes:
+      - type: bind
+        source: ${STARTER_DATA_DIR:?set STARTER_DATA_DIR in .env}/admin-token
+        target: /admin-token
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${STARTER_DATA_DIR:?set STARTER_DATA_DIR in .env}/requirements
+        target: /requirements
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${STARTER_DATA_DIR:?set STARTER_DATA_DIR in .env}/certificates
+        target: /certificates
+        bind: {create_host_path: false}
+    networks: [control]
+    depends_on:
+      control: {condition: service_healthy}
+
+networks:
+  workload:
+    internal: true
+  control:
+    internal: true
+  provider:
+    internal: true

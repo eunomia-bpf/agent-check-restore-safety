@@ -32,6 +32,10 @@ The script prints the retained directory. Inspect the JSON records in its
 `results/` directory. Treat the complete retained directory as private because
 it also contains the credentials generated for that run.
 
+For your own service rather than the demo application, build the minimal image
+with `make runtime-image` and follow the checked Compose skeleton in
+[`deploy/starter/`](deploy/starter/).
+
 The only five core terms are:
 
 - **History**: the append-only, hash-linked execution record.
@@ -58,15 +62,16 @@ For example:
 
 ```sh
 curl -X POST http://127.0.0.1:8788/v1/effects/payment \
-  -H 'X-Safe-Change-Call-ID: order/A-17/payment' \
+  -H 'Idempotency-Key: order/A-17/payment' \
   -H 'Content-Type: application/json' \
   --data '{"order_id":"A-17","amount":42}'
 ```
 
-The call ID must identify the same business action across retries; do not add
-an attempt number. The business service needs the proxy address and logical
-route, but no adapter token, admin token, operation kind, or real provider
-address.
+Use exactly one of the standard `Idempotency-Key` header or
+`X-Safe-Change-Call-ID`. Its value must identify the same business action
+across retries; do not add an attempt number. The business service needs the
+proxy address and logical route, but no adapter token, admin token, operation
+kind, or real provider address.
 
 Build the operator tools:
 
@@ -115,9 +120,11 @@ safe-change apply \
   -certificate certificate.json
 ```
 
-Put the adapter token and exact provider address behind the business service.
-The operator-owned route file maps each allowed logical route to the operation
-declared in the Requirement:
+Put the control adapter token and exact adapter endpoint in the operator-owned
+effect proxy. Keep provider API credentials only in the versioned provider
+adapter: the URL, allowed headers, body, and result sent through control are
+durable History data. The route file maps each allowed logical route to the
+operation declared in the Requirement:
 
 ```json
 {

@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "routes": [
+    {
+      "name": "submit",
+      "kind": "submit-v1",
+      "method": "POST",
+      "url": "http://provider-adapter-v1:8080/v1/submit",
+      "content_types": ["application/json"]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "adapters": [
+    {
+      "domain": "example-provider",
+      "token_file": "/adapter-token/token",
+      "kinds": ["submit-v1", "submit-v2"]
+    }
+  ]
+}
