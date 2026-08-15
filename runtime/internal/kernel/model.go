@@ -13,6 +13,14 @@ import (
 
 const CertificateSchema = 1
 
+const (
+	// Stored requests are part of a prepared Operation and therefore one
+	// History event. Keep their bounds well below the History frame limit.
+	MaxOperationRequestBodyBytes   = 1 << 20
+	MaxOperationRequestHeaders     = 64
+	MaxOperationRequestHeaderBytes = 64 << 10
+)
+
 // ResponseReceiptV1 is the only concrete HTTP response contract implemented
 // by milestone zero. A Requirement cannot count an unsupported adapter as a
 // possible completion.
@@ -88,6 +96,9 @@ type Operation struct {
 	QueryTarget        string            `json:"query_target,omitempty"`
 	QueryMethod        string            `json:"query_method,omitempty"`
 	QueryClassifier    string            `json:"query_classifier,omitempty"`
+	RequestStored      bool              `json:"request_stored,omitempty"`
+	RequestHeaders     map[string]string `json:"request_headers,omitempty"`
+	RequestBody        []byte            `json:"request_body,omitempty"`
 	Phase              Phase             `json:"phase"`
 	ResultHash         string            `json:"result_hash,omitempty"`
 	StatusCode         int               `json:"status_code,omitempty"`
@@ -176,16 +187,33 @@ func (s *State) Clone() *State {
 		out.Rule = &rule
 	}
 	for id, operation := range s.Operations {
-		operation.Costs = cloneMap(operation.Costs)
-		operation.Produces = cloneMap(operation.Produces)
-		operation.ResultBody = append([]byte(nil), operation.ResultBody...)
-		out.Operations[id] = operation
+		out.Operations[id] = cloneOperation(operation)
 	}
 	return out
 }
 
+func cloneOperation(operation Operation) Operation {
+	operation.Costs = cloneMap(operation.Costs)
+	operation.Produces = cloneMap(operation.Produces)
+	operation.RequestHeaders = cloneStringMap(operation.RequestHeaders)
+	operation.RequestBody = append([]byte(nil), operation.RequestBody...)
+	operation.ResultBody = append([]byte(nil), operation.ResultBody...)
+	return operation
+}
+
 func cloneMap(in map[string]uint32) map[string]uint32 {
 	out := make(map[string]uint32, len(in))
+	for key, value := range in {
+		out[key] = value
+	}
+	return out
+}
+
+func cloneStringMap(in map[string]string) map[string]string {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(in))
 	for key, value := range in {
 		out[key] = value
 	}

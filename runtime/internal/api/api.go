@@ -97,6 +97,7 @@ func New(c *control.Control, client *http.Client, credentials Credentials) (*Ser
 	server.mux.HandleFunc("POST /v1/compile", server.compile)
 	server.mux.HandleFunc("POST /v1/certificate-state", server.certificateState)
 	server.mux.HandleFunc("POST /v1/activate", server.activate)
+	server.mux.HandleFunc("POST /v1/operations/{id}/recover", server.recover)
 	return server, nil
 }
 
@@ -289,6 +290,30 @@ func (s *Server) execute(writer http.ResponseWriter, request *http.Request, adap
 	if err != nil {
 		status := http.StatusUnprocessableEntity
 		if errors.Is(err, gateway.ErrOutcomeUnknown) {
+			status = http.StatusConflict
+		}
+		writeJSON(writer, status, struct {
+			Outcome gateway.Outcome `json:"outcome"`
+			Error   string          `json:"error"`
+		}{Outcome: outcome, Error: err.Error()})
+		return
+	}
+	writeJSON(writer, http.StatusOK, outcome)
+}
+
+func (s *Server) recover(writer http.ResponseWriter, request *http.Request) {
+	operationID := request.PathValue("id")
+	if operationID == "" || len(operationID) > kernel.MaxNameBytes {
+		writeError(writer, http.StatusBadRequest, errors.New("valid operation identity is required"))
+		return
+	}
+	outcome, err := s.gateway.Recover(request.Context(), operationID)
+	if err != nil {
+		status := http.StatusUnprocessableEntity
+		switch {
+		case errors.Is(err, gateway.ErrOperationNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, gateway.ErrOutcomeUnknown):
 			status = http.StatusConflict
 		}
 		writeJSON(writer, status, struct {

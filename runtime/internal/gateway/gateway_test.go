@@ -299,7 +299,12 @@ func TestLostResponseRecoveredByQueryWithoutRedispatch(t *testing.T) {
 	}
 
 	secondControl, secondGateway := openQueryableGateway(t, path, false, effect.URL, observer.URL)
-	outcome, err := secondGateway.Execute(context.Background(), request)
+	replacementRequest := Request{
+		ID: request.ID, Domain: request.Domain, Kind: "replacement-kind",
+		URL: "http://replacement.invalid/v2", Body: []byte(`{"different":true}`),
+		Headers: map[string]string{"Content-Type": "text/plain", "X-Caller-Secret": "replacement"},
+	}
+	outcome, err := secondGateway.Execute(context.Background(), replacementRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -321,12 +326,149 @@ func TestLostResponseRecoveredByQueryWithoutRedispatch(t *testing.T) {
 	}
 	thirdControl, thirdGateway := openQueryableGateway(t, path, false, effect.URL, observer.URL)
 	defer thirdControl.Close()
-	reused, err := thirdGateway.Execute(context.Background(), request)
+	reused, err := thirdGateway.Execute(context.Background(), Request{ID: request.ID, Domain: request.Domain})
 	if err != nil || !reused.Reused || !reused.RecoveredByQuery {
 		t.Fatalf("durable query result was not reused: %+v error=%v", reused, err)
 	}
 	if queries.Load() != 1 || thirdControl.Snapshot().Operations[request.ID].Settlement != kernel.SettlementQuery {
 		t.Fatal("query settlement was not durably reused")
+	}
+}
+
+func TestRecoverUnknownByIDUsesStoredRequestAfterRestart(t *testing.T) {
+	var deliveries atomic.Int32
+	effect := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		deliveries.Add(1)
+		connection, _, err := writer.(http.Hijacker).Hijack()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		_ = connection.Close()
+	}))
+	defer effect.Close()
+
+	var queries atomic.Int32
+	var observedBody []byte
+	observer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		queries.Add(1)
+		observedBody, _ = io.ReadAll(request.Body)
+		writeTestObservation(
+			t, writer, request.Header.Get("X-Operation-ID"),
+			request.Header.Get("X-Operation-Request-Hash"), "succeeded", strings.Repeat("c", 64),
+		)
+	}))
+	defer observer.Close()
+
+	path := filepath.Join(t.TempDir(), "runtime.history")
+	firstControl, firstGateway := openQueryableGateway(t, path, false, effect.URL, observer.URL)
+	body := []byte(`{"order":"A-17","amount":42}`)
+	request := Request{
+		ID: "recover-by-id", Domain: "orders", Kind: "charge", URL: effect.URL,
+		Headers: map[string]string{"Content-Type": "application/json"}, Body: body,
+	}
+	if outcome, err := firstGateway.Execute(context.Background(), request); !errors.Is(err, ErrOutcomeUnknown) || outcome.Phase != kernel.Unknown {
+		t.Fatalf("first outcome=%+v error=%v", outcome, err)
+	}
+	if err := firstControl.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	secondControl, secondGateway := openQueryableGateway(t, path, false, effect.URL, observer.URL)
+	defer secondControl.Close()
+	outcome, err := secondGateway.Recover(context.Background(), request.ID)
+	if err != nil || outcome.Phase != kernel.Succeeded || !outcome.RecoveredByQuery {
+		t.Fatalf("recovery outcome=%+v error=%v", outcome, err)
+	}
+	if deliveries.Load() != 1 || queries.Load() != 1 || string(observedBody) != string(body) {
+		t.Fatalf("deliveries=%d queries=%d observed body=%q", deliveries.Load(), queries.Load(), observedBody)
+	}
+	operation := secondControl.Snapshot().Operations[request.ID]
+	if operation.Settlement != kernel.SettlementQuery || !operation.RequestStored {
+		t.Fatalf("recovered Operation=%+v", operation)
+	}
+}
+
+func TestRecoverRejectsMissingMismatchedOrIneligibleStoredRequest(t *testing.T) {
+	var queries atomic.Int32
+	observer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		queries.Add(1)
+		t.Error("invalid recovery reached observer")
+	}))
+	defer observer.Close()
+	effect := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		t.Error("query-only recovery reached effect")
+	}))
+	defer effect.Close()
+
+	moveUnknown := func(t *testing.T, control *control.Control, id string) {
+		t.Helper()
+		if err := control.Move(id, kernel.OperationUpdate{
+			Phase: kernel.Dispatched, DispatchOwner: "test-boot", DispatchGeneration: 1,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if err := control.Move(id, kernel.OperationUpdate{Phase: kernel.Unknown}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	t.Run("missing", func(t *testing.T) {
+		c, gateway := openQueryableGateway(t, filepath.Join(t.TempDir(), "runtime.history"), false, effect.URL, observer.URL)
+		defer c.Close()
+		if _, err := c.Prepare("legacy-operation", "orders", "charge", strings.Repeat("a", 64)); err != nil {
+			t.Fatal(err)
+		}
+		moveUnknown(t, c, "legacy-operation")
+		if _, err := gateway.Recover(context.Background(), "legacy-operation"); !errors.Is(err, ErrStoredRequestUnavailable) {
+			t.Fatalf("missing request error=%v", err)
+		}
+	})
+
+	t.Run("mismatched", func(t *testing.T) {
+		c, gateway := openQueryableGateway(t, filepath.Join(t.TempDir(), "runtime.history"), false, effect.URL, observer.URL)
+		defer c.Close()
+		if _, err := c.PrepareWithRequest(
+			"tampered-operation", "orders", "charge", strings.Repeat("b", 64),
+			map[string]string{"Content-Type": "application/json"}, []byte(`{"amount":42}`),
+		); err != nil {
+			t.Fatal(err)
+		}
+		moveUnknown(t, c, "tampered-operation")
+		if _, err := gateway.Recover(context.Background(), "tampered-operation"); !errors.Is(err, ErrStoredRequestMismatch) {
+			t.Fatalf("mismatched request error=%v", err)
+		}
+	})
+
+	t.Run("wrong-phase", func(t *testing.T) {
+		c, gateway := openQueryableGateway(t, filepath.Join(t.TempDir(), "runtime.history"), false, effect.URL, observer.URL)
+		defer c.Close()
+		if _, err := c.PrepareWithRequest(
+			"prepared-operation", "orders", "charge", strings.Repeat("c", 64), nil, nil,
+		); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := gateway.Recover(context.Background(), "prepared-operation"); !errors.Is(err, ErrOperationNotRecoverable) {
+			t.Fatalf("prepared recovery error=%v", err)
+		}
+	})
+
+	t.Run("not-queryable", func(t *testing.T) {
+		c, gateway := openGateway(t, filepath.Join(t.TempDir(), "runtime.history"), true, effect.URL)
+		defer c.Close()
+		if _, err := c.PrepareWithRequest(
+			"retry-only-operation", "orders", "charge", strings.Repeat("d", 64), nil, nil,
+		); err != nil {
+			t.Fatal(err)
+		}
+		moveUnknown(t, c, "retry-only-operation")
+		if _, err := gateway.Recover(context.Background(), "retry-only-operation"); !errors.Is(err, ErrOperationNotRecoverable) {
+			t.Fatalf("non-queryable recovery error=%v", err)
+		}
+	})
+
+	if queries.Load() != 0 {
+		t.Fatalf("rejected recoveries issued %d observer queries", queries.Load())
 	}
 }
 
@@ -439,8 +581,10 @@ func TestNonRetryableOperationCannotCrossGateway(t *testing.T) {
 	}
 }
 
-func TestStableIdentityBindsExactHTTPRequest(t *testing.T) {
+func TestStableIdentityReusesStoredRequestInsteadOfReplacementBytes(t *testing.T) {
+	var deliveries atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		deliveries.Add(1)
 		writeTestReceipt(t, writer, request.Header.Get("X-Operation-ID"), kernel.Succeeded)
 	}))
 	defer server.Close()
@@ -453,8 +597,13 @@ func TestStableIdentityBindsExactHTTPRequest(t *testing.T) {
 	}
 	second := first
 	second.Body = []byte("b")
-	if _, err := gateway.Execute(context.Background(), second); err == nil {
-		t.Fatal("stable operation identity was rebound to another request")
+	second.Headers = map[string]string{"X-Replacement": "ignored"}
+	outcome, err := gateway.Execute(context.Background(), second)
+	if err != nil || !outcome.Reused || outcome.Phase != kernel.Succeeded {
+		t.Fatalf("settled Operation did not ignore replacement bytes: outcome=%+v error=%v", outcome, err)
+	}
+	if deliveries.Load() != 1 {
+		t.Fatalf("replacement caller caused %d deliveries", deliveries.Load())
 	}
 }
 
@@ -585,6 +734,8 @@ func TestFinalizedRequestRejectsAmbiguousHeaders(t *testing.T) {
 			Headers: map[string]string{"X-Mode": "a", "x-mode": "b"}},
 		{ID: "reserved-header", Domain: "service", Kind: "charge", URL: server.URL,
 			Headers: map[string]string{"Idempotency-Key": "attacker"}},
+		{ID: "nul-header", Domain: "service", Kind: "charge", URL: server.URL,
+			Headers: map[string]string{"X-Mode": "a\x00b"}},
 	}
 	for _, request := range requests {
 		if _, err := gateway.Execute(context.Background(), request); err == nil {
@@ -665,7 +816,11 @@ func TestChangedCallerRetriesFrozenOperationWithoutStateMigration(t *testing.T) 
 
 	// The new caller knows only its global v2 configuration. The runtime finds
 	// the existing ID in History and sends the original v1 Operation instead.
-	changedCaller := Request{ID: first.ID, Domain: first.Domain, Kind: "charge-v2", URL: v2Target, Body: body}
+	changedCaller := Request{
+		ID: first.ID, Domain: first.Domain, Kind: "charge-v2", URL: v2Target,
+		Body:    []byte(`{"replacement":"does-not-have-v1-request"}`),
+		Headers: map[string]string{"X-Release": "v2"},
+	}
 	if outcome, err := gateway.Execute(context.Background(), changedCaller); err != nil || outcome.Phase != kernel.Succeeded {
 		t.Fatalf("changed-caller retry outcome=%+v error=%v", outcome, err)
 	}

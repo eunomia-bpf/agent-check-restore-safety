@@ -245,14 +245,31 @@ func (c *Control) Operation(id string) (kernel.Operation, bool) {
 	if !ok {
 		return kernel.Operation{}, false
 	}
+	return cloneOperation(operation), true
+}
+
+func cloneOperation(operation kernel.Operation) kernel.Operation {
 	operation.Costs = cloneCountMap(operation.Costs)
 	operation.Produces = cloneCountMap(operation.Produces)
+	operation.RequestHeaders = cloneStringMap(operation.RequestHeaders)
+	operation.RequestBody = append([]byte(nil), operation.RequestBody...)
 	operation.ResultBody = append([]byte(nil), operation.ResultBody...)
-	return operation, true
+	return operation
 }
 
 func cloneCountMap(input map[string]uint32) map[string]uint32 {
 	output := make(map[string]uint32, len(input))
+	for key, value := range input {
+		output[key] = value
+	}
+	return output
+}
+
+func cloneStringMap(input map[string]string) map[string]string {
+	if len(input) == 0 {
+		return nil
+	}
+	output := make(map[string]string, len(input))
 	for key, value := range input {
 		output[key] = value
 	}
@@ -462,6 +479,23 @@ func (c *Control) CertificateState(certificate kernel.Certificate) (json.RawMess
 }
 
 func (c *Control) Prepare(id, domain, kind, requestHash string) (kernel.Operation, error) {
+	return c.prepare(id, domain, kind, requestHash, false, nil, nil)
+}
+
+func (c *Control) PrepareWithRequest(
+	id, domain, kind, requestHash string,
+	headers map[string]string,
+	body []byte,
+) (kernel.Operation, error) {
+	return c.prepare(id, domain, kind, requestHash, true, headers, body)
+}
+
+func (c *Control) prepare(
+	id, domain, kind, requestHash string,
+	requestStored bool,
+	headers map[string]string,
+	body []byte,
+) (kernel.Operation, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.history == nil {
@@ -473,16 +507,20 @@ func (c *Control) Prepare(id, domain, kind, requestHash string) (kernel.Operatio
 	if c.failed != nil {
 		return kernel.Operation{}, fmt.Errorf("%w: %v", ErrNeedsReopen, c.failed)
 	}
-	if prior, ok := c.state.Operations[id]; ok {
-		if prior.Domain != domain || prior.Kind != kind || prior.RequestHash != requestHash {
-			return kernel.Operation{}, errors.New("stable operation identity is already bound to different work")
-		}
-		return prior, nil
-	}
+	_, existed := c.state.Operations[id]
 	next := c.state.Clone()
-	operation, err := next.Prepare(id, domain, kind, requestHash)
+	var operation kernel.Operation
+	var err error
+	if requestStored {
+		operation, err = next.PrepareWithRequest(id, domain, kind, requestHash, headers, body)
+	} else {
+		operation, err = next.Prepare(id, domain, kind, requestHash)
+	}
 	if err != nil {
 		return kernel.Operation{}, err
+	}
+	if existed {
+		return cloneOperation(operation), nil
 	}
 	event, err := c.history.Append(eventOperationPrepare, prepareEvent{
 		SemanticVersion: semanticVersion, Operation: operation,
@@ -495,7 +533,7 @@ func (c *Control) Prepare(id, domain, kind, requestHash string) (kernel.Operatio
 	}
 	next.History = kernel.HistoryPoint{Sequence: event.Sequence, Hash: event.Hash}
 	c.state = next
-	return operation, nil
+	return cloneOperation(operation), nil
 }
 
 func (c *Control) Move(id string, update kernel.OperationUpdate) error {
@@ -572,7 +610,16 @@ func apply(state *kernel.State, operation string, data json.RawMessage) error {
 			return fmt.Errorf("unsupported prepare semantic version %d", event.SemanticVersion)
 		}
 		expected := event.Operation
-		actual, err := state.Prepare(expected.ID, expected.Domain, expected.Kind, expected.RequestHash)
+		var actual kernel.Operation
+		var err error
+		if expected.RequestStored {
+			actual, err = state.PrepareWithRequest(
+				expected.ID, expected.Domain, expected.Kind, expected.RequestHash,
+				expected.RequestHeaders, expected.RequestBody,
+			)
+		} else {
+			actual, err = state.Prepare(expected.ID, expected.Domain, expected.Kind, expected.RequestHash)
+		}
 		if err != nil {
 			return err
 		}

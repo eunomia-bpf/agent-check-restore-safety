@@ -297,8 +297,72 @@ func TestDurableReplayPreservesOperationMeaning(t *testing.T) {
 	if op.Phase != kernel.Unknown || op.RemoteReference != "payment-9" {
 		t.Fatalf("replayed operation = %+v", op)
 	}
+	if op.RequestStored {
+		t.Fatal("legacy direct Prepare acquired a request snapshot during replay")
+	}
 	if len(reopened.Events()) != 4 {
 		t.Fatalf("durable event count = %d", len(reopened.Events()))
+	}
+}
+
+func TestStoredRequestReplaysWithoutEnteringCertificateProjection(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.history")
+	first, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	activate(t, first, "invoice-v1")
+	headers := map[string]string{"Content-Type": "application/json", "X-Private": "history-only"}
+	body := []byte(`{"account":"private-account","amount":42}`)
+	prepared, err := first.PrepareWithRequest(
+		"charge-stored", "microservice", "charge", "stored-request-hash", headers, body,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	headers["X-Private"] = "mutated"
+	body[0] = 'x'
+	prepared.RequestHeaders["X-Private"] = "mutated-result"
+	prepared.RequestBody[0] = 'y'
+	stored, ok := first.Operation("charge-stored")
+	if !ok || !stored.RequestStored || stored.RequestHeaders["X-Private"] != "history-only" ||
+		string(stored.RequestBody) != `{"account":"private-account","amount":42}` {
+		t.Fatalf("stored Operation = %+v", stored)
+	}
+
+	state := first.Snapshot()
+	projection, err := certificateStateJSON(state, requirement("invoice-v2"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mutated := state.Clone()
+	mutatedOperation := mutated.Operations["charge-stored"]
+	mutatedOperation.RequestHeaders["X-Private"] = strings.Repeat("z", 1024)
+	mutatedOperation.RequestBody = bytes.Repeat([]byte("secret"), 1024)
+	mutated.Operations["charge-stored"] = mutatedOperation
+	mutatedProjection, err := certificateStateJSON(mutated, requirement("invoice-v2"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(projection, mutatedProjection) {
+		t.Fatalf("stored bytes changed Certificate projection:\n%s\n%s", projection, mutatedProjection)
+	}
+	if bytes.Contains(projection, []byte("history-only")) || bytes.Contains(projection, []byte("private-account")) {
+		t.Fatalf("Certificate projection exposed stored request bytes: %s", projection)
+	}
+	if err := first.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	reopened, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reopened.Close()
+	replayed, ok := reopened.Operation("charge-stored")
+	if !ok || !replayed.RequestStored || replayed.RequestHeaders["X-Private"] != "history-only" ||
+		string(replayed.RequestBody) != `{"account":"private-account","amount":42}` {
+		t.Fatalf("replayed stored Operation = %+v", replayed)
 	}
 }
 

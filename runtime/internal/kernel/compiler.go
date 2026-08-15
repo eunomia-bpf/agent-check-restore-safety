@@ -581,6 +581,47 @@ func (s *State) RefreshRule() error {
 }
 
 func (s *State) Prepare(id, domain, kind, requestHash string) (Operation, error) {
+	return s.prepare(id, domain, kind, requestHash, false, nil, nil)
+}
+
+// PrepareWithRequest creates an Operation whose caller-owned HTTP headers and
+// body can be reconstructed after the caller or control process is replaced.
+// Prepare remains available for replaying older History and non-gateway users;
+// it deliberately does not claim that request bytes were stored.
+func (s *State) PrepareWithRequest(
+	id, domain, kind, requestHash string,
+	headers map[string]string,
+	body []byte,
+) (Operation, error) {
+	return s.prepare(id, domain, kind, requestHash, true, headers, body)
+}
+
+func validateStoredRequest(headers map[string]string, body []byte) error {
+	if len(body) > MaxOperationRequestBodyBytes {
+		return resourceLimit("stored operation request body bytes", MaxOperationRequestBodyBytes, uint64(len(body)))
+	}
+	if len(headers) > MaxOperationRequestHeaders {
+		return resourceLimit("stored operation request headers", MaxOperationRequestHeaders, uint64(len(headers)))
+	}
+	var total uint64
+	for name, value := range headers {
+		if name == "" {
+			return errors.New("stored operation request has an empty header name")
+		}
+		total += uint64(len(name)) + uint64(len(value))
+		if total > MaxOperationRequestHeaderBytes {
+			return resourceLimit("stored operation request header bytes", MaxOperationRequestHeaderBytes, total)
+		}
+	}
+	return nil
+}
+
+func (s *State) prepare(
+	id, domain, kind, requestHash string,
+	requestStored bool,
+	headers map[string]string,
+	body []byte,
+) (Operation, error) {
 	if id == "" || domain == "" || kind == "" || requestHash == "" {
 		return Operation{}, errors.New("operation identity, domain, kind, and request hash are required")
 	}
@@ -592,11 +633,28 @@ func (s *State) Prepare(id, domain, kind, requestHash string) (Operation, error)
 			return Operation{}, resourceLimit(field.label+" bytes", MaxNameBytes, uint64(len(field.value)))
 		}
 	}
+	if requestStored {
+		if err := validateStoredRequest(headers, body); err != nil {
+			return Operation{}, err
+		}
+		headers = cloneStringMap(headers)
+		body = append([]byte(nil), body...)
+	} else if len(headers) != 0 || len(body) != 0 {
+		return Operation{}, errors.New("unstored operation request carries headers or body")
+	}
 	if prior, ok := s.Operations[id]; ok {
 		if prior.Domain != domain || prior.Kind != kind || prior.RequestHash != requestHash {
 			return Operation{}, errors.New("stable operation identity is already bound to different work")
 		}
-		return prior, nil
+		if requestStored {
+			if !prior.RequestStored {
+				return Operation{}, errors.New("stable operation identity has no stored request")
+			}
+			if !reflect.DeepEqual(prior.RequestHeaders, headers) || !reflect.DeepEqual(prior.RequestBody, body) {
+				return Operation{}, errors.New("stable operation identity is already bound to different request bytes")
+			}
+		}
+		return cloneOperation(prior), nil
 	}
 	if err := s.CanPrepare(kind); err != nil {
 		return Operation{}, err
@@ -621,14 +679,17 @@ func (s *State) Prepare(id, domain, kind, requestHash string) (Operation, error)
 		QueryTarget:        spec.QueryTarget,
 		QueryMethod:        spec.QueryMethod,
 		QueryClassifier:    spec.QueryClassifier,
+		RequestStored:      requestStored,
+		RequestHeaders:     headers,
+		RequestBody:        body,
 		Phase:              Prepared,
 	}
-	s.Operations[id] = op
+	s.Operations[id] = cloneOperation(op)
 	if err := s.RefreshRule(); err != nil {
 		delete(s.Operations, id)
 		return Operation{}, err
 	}
-	return op, nil
+	return cloneOperation(op), nil
 }
 
 func (s *State) MoveOperation(id string, update OperationUpdate) error {

@@ -26,6 +26,14 @@ var ErrOutcomeUnknown = errors.New("external operation outcome is unknown")
 
 var ErrOperationInFlight = errors.New("external operation is already in flight")
 
+var ErrOperationNotFound = errors.New("external operation was not found")
+
+var ErrStoredRequestUnavailable = errors.New("external operation has no stored request")
+
+var ErrOperationNotRecoverable = errors.New("external operation is not eligible for query recovery")
+
+var ErrStoredRequestMismatch = errors.New("stored external request does not match its recorded hash")
+
 type Request struct {
 	ID      string            `json:"id"`
 	Domain  string            `json:"domain"`
@@ -116,26 +124,32 @@ func (g *Gateway) Execute(ctx context.Context, request Request) (Outcome, error)
 		return Outcome{}, err
 	}
 	defer release()
-	if prior, ok := g.control.Operation(request.ID); ok {
+	prior, exists := g.control.Operation(request.ID)
+	if exists {
 		if prior.Domain != request.Domain {
 			return Outcome{}, errors.New("stable operation identity belongs to another adapter domain")
 		}
-		// A changed caller need not retain an old per-state migration branch.
-		// History supplies the frozen operation kind and network target. The
-		// request body and non-owned headers must still hash identically.
-		request.Kind = prior.Kind
-		request.URL = prior.Target
-		request.Method = prior.Method
+		// History, rather than replacement caller state, supplies the complete
+		// request for an existing Operation.
+		request, err = requestFromOperation(prior)
+		if err != nil {
+			return Outcome{}, err
+		}
 	}
 	if request.Method == "" {
 		request.Method = http.MethodPost
 	}
-	httpRequest, body, err := finalizedRequest(ctx, request)
+	httpRequest, body, callerHeaders, err := finalizedRequest(ctx, request)
 	if err != nil {
 		return Outcome{}, err
 	}
 	digest := requestHash(httpRequest, body)
-	operation, err := g.control.Prepare(request.ID, request.Domain, request.Kind, digest)
+	if exists && digest != prior.RequestHash {
+		return Outcome{}, ErrStoredRequestMismatch
+	}
+	operation, err := g.control.PrepareWithRequest(
+		request.ID, request.Domain, request.Kind, digest, callerHeaders, body,
+	)
 	if err != nil {
 		return Outcome{}, err
 	}
@@ -176,24 +190,15 @@ func (g *Gateway) Execute(ctx context.Context, request Request) (Outcome, error)
 		fallthrough
 	case kernel.Unknown:
 		if operation.Queryable {
-			observed, observeErr := g.queryUnknown(ctx, operation, httpRequest.Header.Get("Content-Type"), body)
+			recovered, settled, observeErr := g.settleUnknownByQuery(
+				ctx, operation, httpRequest.Header.Get("Content-Type"), body,
+			)
 			if observeErr != nil {
 				return Outcome{OperationID: operation.ID, Phase: kernel.Unknown},
 					fmt.Errorf("%w: query operation %q: %v", ErrOutcomeUnknown, operation.ID, observeErr)
 			}
-			if observed.Phase == kernel.Succeeded || observed.Phase == kernel.Failed {
-				if err := g.control.Move(operation.ID, kernel.OperationUpdate{
-					Phase: observed.Phase, ResultHash: observed.FactHash,
-					StatusCode: observed.StatusCode, ResultBody: observed.Body,
-					RemoteReference: observed.RemoteReference, Settlement: kernel.SettlementQuery,
-				}); err != nil {
-					return Outcome{}, err
-				}
-				return Outcome{
-					OperationID: operation.ID, Phase: observed.Phase,
-					StatusCode: observed.StatusCode, Body: observed.Body,
-					ResultHash: observed.FactHash, RecoveredByQuery: true,
-				}, nil
+			if settled {
+				return recovered, nil
 			}
 		}
 		if !operation.RetrySafe {
@@ -282,6 +287,76 @@ func (g *Gateway) Execute(ctx context.Context, request Request) (Outcome, error)
 	}, nil
 }
 
+// Recover queries exactly one frozen, unknown Operation by its durable ID. It
+// never dispatches the effect endpoint and never compiles or activates a Rule.
+func (g *Gateway) Recover(ctx context.Context, operationID string) (Outcome, error) {
+	release, err := g.control.BeginDispatch()
+	if err != nil {
+		return Outcome{}, err
+	}
+	defer release()
+	operation, ok := g.control.Operation(operationID)
+	if !ok {
+		return Outcome{}, fmt.Errorf("%w: %q", ErrOperationNotFound, operationID)
+	}
+	if operation.Phase != kernel.Unknown || !operation.Queryable {
+		return Outcome{}, fmt.Errorf(
+			"%w: operation %q is %s and queryable=%t",
+			ErrOperationNotRecoverable, operation.ID, operation.Phase, operation.Queryable,
+		)
+	}
+	request, err := requestFromOperation(operation)
+	if err != nil {
+		return Outcome{}, err
+	}
+	httpRequest, body, _, err := finalizedRequest(ctx, request)
+	if err != nil {
+		return Outcome{}, err
+	}
+	if requestHash(httpRequest, body) != operation.RequestHash {
+		return Outcome{}, ErrStoredRequestMismatch
+	}
+	outcome, settled, err := g.settleUnknownByQuery(
+		ctx, operation, httpRequest.Header.Get("Content-Type"), body,
+	)
+	if err != nil {
+		return Outcome{OperationID: operation.ID, Phase: kernel.Unknown},
+			fmt.Errorf("%w: query operation %q: %v", ErrOutcomeUnknown, operation.ID, err)
+	}
+	if !settled {
+		return Outcome{OperationID: operation.ID, Phase: kernel.Unknown},
+			fmt.Errorf("%w: query operation %q was inconclusive", ErrOutcomeUnknown, operation.ID)
+	}
+	return outcome, nil
+}
+
+func (g *Gateway) settleUnknownByQuery(
+	ctx context.Context,
+	operation kernel.Operation,
+	contentType string,
+	effectBody []byte,
+) (Outcome, bool, error) {
+	observed, err := g.queryUnknown(ctx, operation, contentType, effectBody)
+	if err != nil {
+		return Outcome{}, false, err
+	}
+	if observed.Phase != kernel.Succeeded && observed.Phase != kernel.Failed {
+		return Outcome{OperationID: operation.ID, Phase: kernel.Unknown}, false, nil
+	}
+	if err := g.control.Move(operation.ID, kernel.OperationUpdate{
+		Phase: observed.Phase, ResultHash: observed.FactHash,
+		StatusCode: observed.StatusCode, ResultBody: observed.Body,
+		RemoteReference: observed.RemoteReference, Settlement: kernel.SettlementQuery,
+	}); err != nil {
+		return Outcome{}, false, err
+	}
+	return Outcome{
+		OperationID: operation.ID, Phase: observed.Phase,
+		StatusCode: observed.StatusCode, Body: observed.Body,
+		ResultHash: observed.FactHash, RecoveredByQuery: true,
+	}, true, nil
+}
+
 type queryOutcome struct {
 	Phase           kernel.Phase
 	StatusCode      int
@@ -291,9 +366,8 @@ type queryOutcome struct {
 }
 
 // queryUnknown asks the endpoint frozen in the Operation contract to observe
-// the external fact. The effect body is copied only after Execute has checked
-// that it still hashes to the frozen RequestHash. No caller-owned header other
-// than Content-Type crosses this separate trust boundary.
+// the external fact. The effect body comes from the request stored in History.
+// No caller-owned header other than Content-Type crosses this trust boundary.
 func (g *Gateway) queryUnknown(ctx context.Context, operation kernel.Operation, contentType string, effectBody []byte) (queryOutcome, error) {
 	if operation.QueryTarget == "" || operation.QueryMethod == "" || operation.QueryClassifier == "" {
 		return queryOutcome{}, errors.New("queryable operation has an incomplete query contract")
@@ -342,45 +416,69 @@ func (g *Gateway) queryUnknown(ctx context.Context, operation kernel.Operation, 
 	}, nil
 }
 
-func finalizedRequest(ctx context.Context, request Request) (*http.Request, []byte, error) {
+func requestFromOperation(operation kernel.Operation) (Request, error) {
+	if !operation.RequestStored {
+		return Request{}, fmt.Errorf("%w: operation %q", ErrStoredRequestUnavailable, operation.ID)
+	}
+	headers := make(map[string]string, len(operation.RequestHeaders))
+	for name, value := range operation.RequestHeaders {
+		headers[name] = value
+	}
+	if len(headers) == 0 {
+		headers = nil
+	}
+	return Request{
+		ID: operation.ID, Domain: operation.Domain, Kind: operation.Kind,
+		Method: operation.Method, URL: operation.Target, Headers: headers,
+		Body: append([]byte(nil), operation.RequestBody...),
+	}, nil
+}
+
+func finalizedRequest(ctx context.Context, request Request) (*http.Request, []byte, map[string]string, error) {
 	if request.ID == "" {
-		return nil, nil, errors.New("external operation identity is empty")
+		return nil, nil, nil, errors.New("external operation identity is empty")
 	}
 	if request.URL == "" {
-		return nil, nil, errors.New("external operation URL is empty")
+		return nil, nil, nil, errors.New("external operation URL is empty")
 	}
 	body := append([]byte(nil), request.Body...)
 	httpRequest, err := http.NewRequestWithContext(ctx, request.Method, request.URL, bytes.NewReader(body))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if httpRequest.URL.Scheme != "http" && httpRequest.URL.Scheme != "https" {
-		return nil, nil, errors.New("external operation URL must use http or https")
+		return nil, nil, nil, errors.New("external operation URL must use http or https")
 	}
 	if httpRequest.URL.Host == "" || httpRequest.URL.Fragment != "" || httpRequest.URL.User != nil {
-		return nil, nil, errors.New("external operation URL has unsupported authority or fragment")
+		return nil, nil, nil, errors.New("external operation URL has unsupported authority or fragment")
 	}
 	// Make transport defaults explicit so the durable digest covers them.
 	httpRequest.Header.Set("User-Agent", "safe-change-runtime/1")
 	httpRequest.Header.Set("Accept-Encoding", "identity")
 	seen := make(map[string]bool, len(request.Headers))
+	callerHeaders := make(map[string]string, len(request.Headers))
 	for name, value := range request.Headers {
 		lower := strings.ToLower(name)
 		if seen[lower] {
-			return nil, nil, fmt.Errorf("duplicate case-insensitive HTTP header %q", name)
+			return nil, nil, nil, fmt.Errorf("duplicate case-insensitive HTTP header %q", name)
 		}
 		seen[lower] = true
 		if reservedHeader(lower) {
-			return nil, nil, fmt.Errorf("HTTP header %q is owned by the gateway", name)
+			return nil, nil, nil, fmt.Errorf("HTTP header %q is owned by the gateway", name)
 		}
-		if !validHeaderName(name) || strings.ContainsAny(value, "\r\n") {
-			return nil, nil, fmt.Errorf("invalid HTTP header %q", name)
+		if !validHeaderName(name) || strings.ContainsAny(value, "\r\n\x00") {
+			return nil, nil, nil, fmt.Errorf("invalid HTTP header %q", name)
 		}
-		httpRequest.Header.Set(http.CanonicalHeaderKey(name), value)
+		canonicalName := http.CanonicalHeaderKey(name)
+		httpRequest.Header.Set(canonicalName, value)
+		callerHeaders[canonicalName] = value
 	}
 	httpRequest.Header.Set("Idempotency-Key", request.ID)
 	httpRequest.Header.Set("X-Operation-ID", request.ID)
-	return httpRequest, body, nil
+	if len(callerHeaders) == 0 {
+		callerHeaders = nil
+	}
+	return httpRequest, body, callerHeaders, nil
 }
 
 func reservedHeader(lower string) bool {

@@ -3,6 +3,7 @@ package kernel
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -89,6 +90,81 @@ func TestStableIdentityCannotBeRebound(t *testing.T) {
 	}
 }
 
+func TestStoredOperationRequestIsBoundedAndDeepCopied(t *testing.T) {
+	state := NewState()
+	activateInitial(t, state, invoiceRequirement("invoice-v1"))
+	headers := map[string]string{"Content-Type": "application/json", "X-Mode": "original"}
+	body := []byte(`{"amount":42}`)
+	operation, err := state.PrepareWithRequest(
+		"charge-1", "agent", "charge-invoice", "request-a", headers, body,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !operation.RequestStored || operation.RequestHeaders["X-Mode"] != "original" || string(operation.RequestBody) != string(body) {
+		t.Fatalf("stored request = %+v", operation)
+	}
+	headers["X-Mode"] = "mutated-input"
+	body[0] = 'x'
+	operation.RequestHeaders["X-Mode"] = "mutated-result"
+	operation.RequestBody[0] = 'y'
+	stored := state.Operations["charge-1"]
+	if stored.RequestHeaders["X-Mode"] != "original" || string(stored.RequestBody) != `{"amount":42}` {
+		t.Fatalf("caller mutation changed State: %+v", stored)
+	}
+	clone := state.Clone()
+	clone.Operations["charge-1"].RequestHeaders["X-Mode"] = "mutated-clone"
+	clone.Operations["charge-1"].RequestBody[0] = 'z'
+	if state.Operations["charge-1"].RequestHeaders["X-Mode"] != "original" || string(state.Operations["charge-1"].RequestBody) != `{"amount":42}` {
+		t.Fatal("State.Clone shared stored request memory")
+	}
+	if _, err := state.PrepareWithRequest(
+		"charge-1", "agent", "charge-invoice", "request-a",
+		map[string]string{"Content-Type": "application/json", "X-Mode": "different"},
+		[]byte(`{"amount":42}`),
+	); err == nil {
+		t.Fatal("stable identity accepted different stored request bytes")
+	}
+
+	legacy := NewState()
+	activateInitial(t, legacy, invoiceRequirement("legacy-v1"))
+	legacyOperation, err := legacy.Prepare("charge-legacy", "agent", "charge-invoice", "legacy-request")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if legacyOperation.RequestStored || legacyOperation.RequestHeaders != nil || legacyOperation.RequestBody != nil {
+		t.Fatalf("direct Prepare claimed to store a request: %+v", legacyOperation)
+	}
+
+	tests := []struct {
+		name    string
+		headers map[string]string
+		body    []byte
+	}{
+		{name: "body", body: make([]byte, MaxOperationRequestBodyBytes+1)},
+		{name: "header-count", headers: func() map[string]string {
+			values := make(map[string]string, MaxOperationRequestHeaders+1)
+			for index := 0; index <= MaxOperationRequestHeaders; index++ {
+				values[fmt.Sprintf("X-%d", index)] = "v"
+			}
+			return values
+		}()},
+		{name: "header-bytes", headers: map[string]string{"X-Large": strings.Repeat("x", MaxOperationRequestHeaderBytes)}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			bounded := NewState()
+			activateInitial(t, bounded, invoiceRequirement("bounded-"+test.name))
+			if _, err := bounded.PrepareWithRequest(
+				"charge-"+test.name, "agent", "charge-invoice", "request-"+test.name,
+				test.headers, test.body,
+			); !errors.Is(err, ErrResourceLimit) {
+				t.Fatalf("oversized stored request error = %v", err)
+			}
+		})
+	}
+}
+
 func queryableRequirement(id string, retrySafe bool) Requirement {
 	return Requirement{
 		ID: id, Results: map[string]uint32{"reserved": 1},
@@ -139,6 +215,82 @@ func TestQueryableContractIsFrozenAndRecoverable(t *testing.T) {
 	settled := state.Operations[op.ID]
 	if settled.Phase != Succeeded || settled.Settlement != SettlementQuery {
 		t.Fatalf("query settlement was not retained: %+v", settled)
+	}
+}
+
+func TestDisabledHistoricalKindCannotBeUsedAsFutureProducer(t *testing.T) {
+	results := map[string]uint32{"paid": 1, "finished": 1}
+	capacities := map[string]uint32{"money": 1, "finish-slot": 1}
+	v1 := Requirement{
+		ID: "checkout-v1", Results: cloneMap(results), Capacities: cloneMap(capacities),
+		Kinds: map[string]KindSpec{
+			"charge": {
+				Costs: map[string]uint32{"money": 1}, Produces: map[string]uint32{"paid": 1},
+				Queryable: true,
+				Target:    "http://effect-v1.example/charge", Method: "POST", ResponseClassifier: ResponseReceiptV1,
+				QueryTarget: "http://observer-v1.example/charge", QueryMethod: "POST", QueryClassifier: OperationObservationV1,
+			},
+			"finish": {
+				Costs: map[string]uint32{"finish-slot": 1}, Produces: map[string]uint32{"finished": 1},
+				RetrySafe: true,
+				Target:    "http://effect-v1.example/finish", Method: "POST", ResponseClassifier: ResponseReceiptV1,
+			},
+		},
+	}
+	v2 := Requirement{
+		ID: "checkout-v2", Results: cloneMap(results), Capacities: cloneMap(capacities),
+		Kinds: map[string]KindSpec{
+			// Retaining the old name makes History/catalog joins explicit, but
+			// this entry is not an executable future completion.
+			"charge": {
+				Costs: map[string]uint32{"money": 1}, Produces: map[string]uint32{"paid": 1},
+				RetrySafe: false, Queryable: false,
+			},
+			"finish": {
+				Costs: map[string]uint32{"finish-slot": 1}, Produces: map[string]uint32{"finished": 1},
+				RetrySafe: true,
+				Target:    "http://effect-v2.example/finish", Method: "POST", ResponseClassifier: ResponseReceiptV1,
+			},
+		},
+	}
+	if !reflect.DeepEqual(v1.Results, v2.Results) || !reflect.DeepEqual(v1.Capacities, v2.Capacities) {
+		t.Fatal("test changed the business Results or Capacities across versions")
+	}
+
+	state := NewState()
+	activateInitial(t, state, v1)
+	operation, err := state.Prepare("charge-1", "checkout", "charge", "request-charge-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := state.MoveOperation(operation.ID, OperationUpdate{
+		Phase: Dispatched, DispatchOwner: "boot-v1", DispatchGeneration: 1,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.MoveOperation(operation.ID, OperationUpdate{Phase: Unknown}); err != nil {
+		t.Fatal(err)
+	}
+	h0, err := Compile(state, v2, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if h0.Decision != Impossible || h0.Rule != nil {
+		t.Fatalf("unknown old charge used the disabled catalog entry as a future producer: %+v", h0)
+	}
+
+	if err := state.MoveOperation(operation.ID, OperationUpdate{
+		Phase: Succeeded, ResultHash: strings.Repeat("a", 64),
+		RemoteReference: "charge-1", Settlement: SettlementQuery,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	h1, err := Compile(state, v2, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if h1.Decision != Activate || h1.Rule == nil || !reflect.DeepEqual(h1.Rule.Allow, []string{"finish"}) {
+		t.Fatalf("settled old charge did not enable the real future completion: %+v", h1)
 	}
 }
 

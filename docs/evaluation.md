@@ -769,3 +769,43 @@ experiment. `OperationalSemantics.lean`, `ReachableEvidence.lean`, and
 `DurableRefinement.lean` remain required before the paper may call the
 six-edit closure, state lower bounds, or weak bisimulation mechanized. The
 ranked deletion-cause certificate is likewise deferred rather than weakened.
+
+## 15. RQ4 real program replacement after external operations
+
+Paper-value role: **decisive systems experiment**. The selected repository RQ
+remains “RQ4: Is there a deployable algorithmic boundary?” The experiment asks
+whether the runtime can replace a live official Restate `food-ordering` program
+after an unresolved payment attempt, without an old-version state branch or
+per-instance migration.
+
+The fixed comparison uses one target v2 that removes the old payment step and
+two executions at the same Restate-visible cut. In H1 the external payment is
+durably committed but its response has not returned from the `ctx.run`
+closure; in H0 no payment is committed. The Requirement still requires one
+payment in both cases and v2 contains no executable payment producer. A
+disabled historical kind remains only to interpret the old Operation. The expected runtime
+answer is therefore H1 `activate` and H0 `impossible`. The comparison is valid
+only if the retained Restate journals are equal at the cut. Native Restate and
+the matched Temporal Worker Deployment path are measured through their
+official version mechanisms rather than assigned expected outcomes from prose
+documentation.
+
+Independent value beyond the DeathStar run comes from the maintained
+long-running workflow, real durable journal, immutable deployments, official
+pause/resume lifecycle, and the opposite-answer H0/H1 pair. Merely recovering
+another lost HTTP response is dependency work. The no-query ablation must fail
+closed; a compatible edit must still work; an unsafe edit must never complete;
+the provider must be intentionally non-idempotent; and deliveries, durable
+commits, old-code retention, terminal workflow state,
+and independent Rule checking are all retained.
+
+Current status: **plan admitted; executability repairs in progress; no result**.
+History must first retain the exact request needed for recovery, the payment
+stub must become a real durable queried effect, immutable v1/v2 endpoints must
+build from the pinned official source, and source retirement plus target start
+must avoid any target-specific state conversion. These repairs are part of the
+admitted experiment and have no independent research value.
+
+- Plan: `docs/tmp/bootstrap/step-0016-20260815T153407Z/experiment-restate-food-ordering/plan.md`.
+- Plan audit: `docs/tmp/bootstrap/step-0016-20260815T153407Z/experiment-restate-food-ordering/plan-review.md`.
+- Planned raw evidence: `docs/tmp/bootstrap/step-0016-20260815T153407Z/experiment-restate-food-ordering/raw/`.

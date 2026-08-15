@@ -47,6 +47,18 @@ func testRequirement(id, target string) kernel.Requirement {
 	}
 }
 
+func testQueryableRequirement(id, target, queryTarget string) kernel.Requirement {
+	requirement := testRequirement(id, target)
+	spec := requirement.Kinds["finish"]
+	spec.RetrySafe = false
+	spec.Queryable = true
+	spec.QueryTarget = queryTarget
+	spec.QueryMethod = http.MethodPost
+	spec.QueryClassifier = gateway.OperationObservationV1
+	requirement.Kinds["finish"] = spec
+	return requirement
+}
+
 func testCredentials() Credentials {
 	return Credentials{
 		AdminToken: adminToken,
@@ -225,6 +237,108 @@ func TestAPIRecoversLostPaymentResponseAndReusesSettlement(t *testing.T) {
 	stats := service.Stats()
 	if reused.Phase != kernel.Succeeded || !reused.Reused || stats.Deliveries != 2 || stats.Commits != 1 {
 		t.Fatalf("reused=%+v stats=%+v", reused, stats)
+	}
+}
+
+func TestAdminRecoversOneUnknownOperationByID(t *testing.T) {
+	var deliveries atomic.Int32
+	effect := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		deliveries.Add(1)
+		connection, _, err := writer.(http.Hijacker).Hijack()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		_ = connection.Close()
+	}))
+	defer effect.Close()
+	var queries atomic.Int32
+	observer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		queries.Add(1)
+		writer.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(writer).Encode(map[string]any{
+			"schema": 1, "operation_id": request.Header.Get("X-Operation-ID"),
+			"request_hash": request.Header.Get("X-Operation-Request-Hash"),
+			"outcome":      "succeeded", "fact_hash": strings.Repeat("a", 64),
+			"remote_reference": "observer-result",
+		})
+	}))
+	defer observer.Close()
+
+	c, err := control.Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	certificate, err := c.Compile(testQueryableRequirement("query-v1", effect.URL, observer.URL))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Activate(certificate); err != nil {
+		t.Fatal(err)
+	}
+	serverAPI, err := New(c, nil, testCredentials())
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(serverAPI.Handler())
+	defer server.Close()
+
+	var unknown struct {
+		Outcome gateway.Outcome `json:"outcome"`
+		Error   string          `json:"error"`
+	}
+	request := executeRequest{
+		CallID: "order/A-17", Kind: "finish", Method: http.MethodPost, URL: effect.URL,
+		Headers: map[string]string{"Content-Type": "application/json"},
+		Body:    []byte(`{"order":"A-17"}`),
+	}
+	if status := postJSON(t, server.Client(), server.URL+"/v1/execute", operationToken, request, &unknown); status != http.StatusConflict {
+		t.Fatalf("execute status=%d outcome=%+v error=%q", status, unknown.Outcome, unknown.Error)
+	}
+	if unknown.Outcome.Phase != kernel.Unknown || unknown.Outcome.OperationID == "" || deliveries.Load() != 1 {
+		t.Fatalf("unknown outcome=%+v deliveries=%d", unknown.Outcome, deliveries.Load())
+	}
+
+	// Compile remains a read-only local calculation, even while a queryable
+	// Operation is unknown.
+	if _, err := c.Compile(testQueryableRequirement("query-v2", effect.URL, observer.URL)); err != nil {
+		t.Fatal(err)
+	}
+	if queries.Load() != 0 {
+		t.Fatal("Compile contacted the observer")
+	}
+
+	recoverURL := server.URL + "/v1/operations/" + unknown.Outcome.OperationID + "/recover"
+	callRecover := func(token string, target any) int {
+		t.Helper()
+		httpRequest, err := http.NewRequest(http.MethodPost, recoverURL, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		httpRequest.Header.Set("Authorization", "Bearer "+token)
+		response, err := server.Client().Do(httpRequest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer response.Body.Close()
+		if target != nil {
+			if err := json.NewDecoder(response.Body).Decode(target); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return response.StatusCode
+	}
+	var unauthorized errorBody
+	if status := callRecover(operationToken, &unauthorized); status != http.StatusUnauthorized {
+		t.Fatalf("adapter token recovery status=%d", status)
+	}
+	var recovered gateway.Outcome
+	if status := callRecover(adminToken, &recovered); status != http.StatusOK {
+		t.Fatalf("admin recovery status=%d outcome=%+v", status, recovered)
+	}
+	if recovered.Phase != kernel.Succeeded || !recovered.RecoveredByQuery || deliveries.Load() != 1 || queries.Load() != 1 {
+		t.Fatalf("recovered=%+v deliveries=%d queries=%d", recovered, deliveries.Load(), queries.Load())
 	}
 }
 
