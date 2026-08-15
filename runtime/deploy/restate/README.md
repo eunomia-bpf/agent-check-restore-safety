@@ -85,6 +85,22 @@ SKIP_BUILD=1 HARNESS_BUILD_ENV=/tmp/restate-build.env \
   runtime/deploy/restate/run-paired-preflight.sh
 ```
 
+The paired runner prints its evidence directory. Convert that directory into
+the strict, content-addressed bundle and check it independently:
+
+```sh
+runtime/deploy/restate/collect-paired-evidence.py \
+  /tmp/safe-change-restate-pair.EXAMPLE \
+  /tmp/restate-build.env \
+  /tmp/restate-checked-evidence
+runtime/deploy/restate/check.py /tmp/restate-checked-evidence
+```
+
+The collector does not read the runner summaries. It reconstructs the bundle
+from binary History, raw Restate queries, provider records, deployment and
+container inspection, exact source removal, and build hashes. It publishes
+the output atomically only after the independent checker accepts both cases.
+
 The upstream source is MIT licensed:
 <https://github.com/restatedev/examples/tree/2d429daae784d20982691fb31431702b4ad30a6b/typescript/end-to-end-applications/food-ordering>.
 The upstream WebUI retains its attribution to the MIT-licensed
