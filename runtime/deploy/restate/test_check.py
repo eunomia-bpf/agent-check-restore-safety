@@ -436,20 +436,47 @@ class Fixture:
                     "planned_target_program_sha256": self.program_hash,
                 })
             restate_final_artifact = self.write_json(prefix + "restate-final.json", restate_final)
-            container_items = [
-                {"role": "restate", "name": "restate", "image_id": "sha256:" + "c" * 64, "running": True, "networks": ["application"]},
-                {"role": "control", "name": "control", "image_id": "sha256:" + "d" * 64, "running": True, "networks": ["control", "effects"]},
+            project = f"checker-{name}"
+            container_specs = [
+                ("restate", "sha256:" + "c" * 64, ["application"]),
+                ("control", "sha256:" + "d" * 64, ["control", "effects"]),
             ]
             if name == "h1":
-                container_items.append({
-                    "role": "target-v2", "name": "order-v2", "image_id": self.v2_image,
-                    "running": True, "networks": ["application", "control"],
-                    "started_after_history_sequence": 6,
-                })
+                container_specs.append(("order-v2", self.v2_image, ["application", "control"]))
+            raw_container_items = [{
+                "Id": sha256(f"{project}:{service}".encode()).hexdigest(),
+                "Name": f"/{project}-{service}-1",
+                "Image": image_id,
+                "State": {"Running": True},
+                "Config": {"Labels": {
+                    "com.docker.compose.project": project,
+                    "com.docker.compose.service": service,
+                }},
+                "NetworkSettings": {"Networks": {
+                    f"{project}_{network}": {} for network in networks
+                }},
+            } for service, image_id, networks in container_specs]
+            container_items = []
+            for service, image_id, networks in container_specs:
+                role = "target-v2" if service == "order-v2" else service
+                item = {
+                    "role": role,
+                    "name": f"{project}-{service}-1",
+                    "image_id": image_id,
+                    "running": True,
+                    "networks": sorted(f"{project}_{network}" for network in networks),
+                }
+                if service == "order-v2":
+                    item["started_after_history_sequence"] = 6
+                container_items.append(item)
+            container_items.sort(key=lambda item: str(item["role"]))
             containers = {
                 "schema": 1,
                 "items": container_items,
             }
+            containers_raw_artifact = self.write_json(
+                prefix + "containers.raw.json", raw_container_items,
+            )
             containers_artifact = self.write_json(prefix + "containers.json", containers)
             removal_artifact = self.write_json(prefix + "v1-removal.json", {
                 "schema": 1, "compose_service": "order-v1", "container_id": "f" * 64,
@@ -466,7 +493,8 @@ class Fixture:
                 "restate_cut": cut_artifact, "restate_final": restate_final_artifact,
                 "restate_status_raw": status_artifact, "restate_journal_raw": journal_artifact,
                 "restate_workflow_state_raw": workflow_state_artifact,
-                "containers": containers_artifact, "v1_removal": removal_artifact,
+                "containers": containers_artifact, "containers_raw": containers_raw_artifact,
+                "v1_removal": removal_artifact,
             }
 
         manifest = {
@@ -657,6 +685,29 @@ class CheckerTests(unittest.TestCase):
         self.fixture.replace_json(relative, containers)
         self.fixture.refresh_manifest()
         with self.assertRaisesRegex(CHECK.EvidenceError, "did not start after target Rule activation"):
+            self.check()
+
+    def test_rejects_omitted_raw_target_after_hash_rebind(self) -> None:
+        relative = "h1/containers.raw.json"
+        containers = json.loads((self.root / relative).read_text())
+        containers = [
+            item
+            for item in containers
+            if item["Config"]["Labels"]["com.docker.compose.service"] != "order-v2"
+        ]
+        self.fixture.replace_json(relative, containers)
+        self.fixture.refresh_manifest()
+        with self.assertRaisesRegex(CHECK.EvidenceError, "omitted the unique running target v2"):
+            self.check()
+
+    def test_rejects_normalized_raw_container_mismatch_after_hash_rebind(self) -> None:
+        relative = "h0/containers.json"
+        containers = json.loads((self.root / relative).read_text())
+        control = next(item for item in containers["items"] if item["role"] == "control")
+        control["name"] += "-forged"
+        self.fixture.replace_json(relative, containers)
+        self.fixture.refresh_manifest()
+        with self.assertRaisesRegex(CHECK.EvidenceError, "normalized containers differ from raw"):
             self.check()
 
     def test_rejects_h0_registered_target_v2_after_raw_hash_rebind(self) -> None:

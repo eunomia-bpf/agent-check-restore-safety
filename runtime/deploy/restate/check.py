@@ -399,7 +399,8 @@ def _artifact_map(root: Path, case: Mapping[str, Any], label: str) -> dict[str, 
         "history", "head", "history_view", "requirement", "certificate_state",
         "certificate", "certificate_verdict", "final_state", "payment_records",
         "completion_records", "restate_cut", "restate_final", "restate_status_raw",
-        "restate_journal_raw", "restate_workflow_state_raw", "containers", "v1_removal",
+        "restate_journal_raw", "restate_workflow_state_raw", "containers",
+        "containers_raw", "v1_removal",
     }
     _require(set(case) == required, f"{label} artifact set changed")
     return {name: _artifact(root, case[name], f"{label} {name}") for name in sorted(required)}
@@ -817,6 +818,7 @@ def _check_deployment(root: Path, value: Any, target: Mapping[str, Any], label: 
 
 def _check_containers(
     path: Path,
+    raw_path: Path,
     target: Mapping[str, Any],
     label: str,
     activation_sequence: int,
@@ -852,6 +854,95 @@ def _check_containers(
         )
     else:
         _require("target-v2" not in by_role, "H0 started the refused target v2 container")
+
+    raw_items = [
+        _object(item, f"{label} raw container")
+        for item in _list(_json(raw_path, label + " raw containers"), f"{label} raw containers")
+    ]
+    _require(raw_items, f"{label} raw container evidence is empty")
+    projects: set[str] = set()
+    raw_services: list[str] = []
+    raw_ids: set[str] = set()
+    raw_names: set[str] = set()
+    running_projection: list[dict[str, Any]] = []
+    for raw_item in raw_items:
+        identifier = raw_item.get("Id")
+        name = raw_item.get("Name")
+        image_id = raw_item.get("Image")
+        state = _object(raw_item.get("State"), f"{label} raw container State")
+        config = _object(raw_item.get("Config"), f"{label} raw container Config")
+        labels = _object(config.get("Labels"), f"{label} raw container labels")
+        network_settings = _object(
+            raw_item.get("NetworkSettings"), f"{label} raw container network settings",
+        )
+        networks = _object(network_settings.get("Networks"), f"{label} raw container networks")
+        project = labels.get("com.docker.compose.project")
+        service = labels.get("com.docker.compose.service")
+        running = state.get("Running")
+        _require(
+            isinstance(identifier, str)
+            and CONTAINER_ID.fullmatch(identifier) is not None
+            and identifier not in raw_ids
+            and isinstance(name, str)
+            and name.startswith("/")
+            and len(name) > 1
+            and name not in raw_names
+            and IMAGE_ID.fullmatch(str(image_id)) is not None
+            and type(running) is bool
+            and isinstance(project, str)
+            and project
+            and isinstance(service, str)
+            and service
+            and all(isinstance(network, str) and network for network in networks)
+            and all(isinstance(network_data, dict) for network_data in networks.values()),
+            f"{label} raw Docker container fields differ",
+        )
+        if running:
+            _require(networks, f"{label} running raw container has no network")
+        raw_ids.add(identifier)
+        raw_names.add(name)
+        projects.add(project)
+        raw_services.append(service)
+        if running:
+            role = (
+                "source-v1" if service == "order-v1"
+                else "target-v2" if service == "order-v2"
+                else service
+            )
+            running_projection.append({
+                "role": role,
+                "name": name.removeprefix("/"),
+                "image_id": image_id,
+                "running": True,
+                "networks": sorted(networks),
+            })
+    _require(len(projects) == 1, f"{label} raw containers do not share one Compose project")
+    _require("order-v1" not in raw_services, f"{label} raw containers still retain the v1 worker")
+    target_items = [
+        item
+        for item, service in zip(raw_items, raw_services)
+        if service == "order-v2"
+    ]
+    if label == "h1":
+        _require(
+            len(target_items) == 1
+            and _object(target_items[0].get("State"), "H1 raw target State").get("Running") is True
+            and target_items[0].get("Image") == target["v2_image_id"],
+            "H1 raw containers omitted the unique running target v2",
+        )
+    else:
+        _require(not target_items, "H0 raw containers contain the refused target v2")
+
+    normalized_projection: list[dict[str, Any]] = []
+    for item in items:
+        projection = dict(item)
+        if item.get("role") == "target-v2":
+            projection.pop("started_after_history_sequence")
+        normalized_projection.append(projection)
+    _require(
+        normalized_projection == sorted(running_projection, key=lambda item: str(item["role"])),
+        f"{label} normalized containers differ from raw Docker inspect evidence",
+    )
 
 
 def _check_removal(path: Path, activation_sequence: int, label: str) -> None:
@@ -1216,7 +1307,9 @@ def _check_case(
         )
 
     _require(all(seq < activation_sequence for seq, _ in dispatches), f"{name} issued a v1 payment after target activation")
-    _check_containers(paths["containers"], target, name, activation_sequence)
+    _check_containers(
+        paths["containers"], paths["containers_raw"], target, name, activation_sequence,
+    )
     _check_removal(paths["v1_removal"], activation_sequence, name)
     final = _object(_json(paths["restate_final"], name + " Restate final"), name + " Restate final")
     if name == "h1":
