@@ -399,7 +399,7 @@ def _artifact_map(root: Path, case: Mapping[str, Any], label: str) -> dict[str, 
         "history", "head", "history_view", "requirement", "certificate_state",
         "certificate", "certificate_verdict", "final_state", "payment_records",
         "completion_records", "restate_cut", "restate_final", "restate_status_raw",
-        "restate_journal_raw", "containers", "v1_removal",
+        "restate_journal_raw", "restate_workflow_state_raw", "containers", "v1_removal",
     }
     _require(set(case) == required, f"{label} artifact set changed")
     return {name: _artifact(root, case[name], f"{label} {name}") for name in sorted(required)}
@@ -566,10 +566,57 @@ def _raw_restate_evidence(
     return raw_rows
 
 
+def _raw_restate_workflow_state(
+    raw_workflow_state: Path,
+    order: Mapping[str, Any],
+    label: str,
+) -> dict[str, str]:
+    document = _object(
+        _json(raw_workflow_state, label + " raw Restate workflow state"),
+        label + " raw Restate workflow state",
+    )
+    _require(set(document) == {"rows"}, f"{label} raw Restate workflow-state query fields changed")
+    rows = [
+        _object(item, f"{label} Restate workflow-state row")
+        for item in _list(document.get("rows"), f"{label} Restate workflow-state rows")
+    ]
+    _require(len(rows) == 1, f"{label} raw Restate workflow state did not select one value")
+    row = rows[0]
+    _require(
+        set(row)
+        == {"service_name", "service_key", "key", "value", "value_utf8", "value_length"}
+        and row.get("service_name") == "order-workflow"
+        and row.get("service_key") == order["order_id"]
+        and row.get("key") == "status"
+        and isinstance(row.get("value"), str)
+        and isinstance(row.get("value_utf8"), str)
+        and type(row.get("value_length")) is int,
+        f"{label} raw Restate workflow-state row differs",
+    )
+    try:
+        value_bytes = bytes.fromhex(row["value"])
+        value_utf8 = value_bytes.decode("utf-8")
+    except (ValueError, UnicodeDecodeError) as error:
+        raise EvidenceError(f"{label} raw Restate workflow-state value is not UTF-8 hex") from error
+    _require(
+        row["value"] == value_bytes.hex()
+        and row["value_length"] == len(value_bytes)
+        and row["value_utf8"] == value_utf8,
+        f"{label} raw Restate workflow-state bytes differ",
+    )
+    status = _loads(value_bytes, label + " raw Restate workflow status")
+    _require(
+        status == "CREATED" and value_bytes == b'"CREATED"',
+        f"{label} raw Restate workflow status is not CREATED exactly",
+    )
+    return {"status": status}
+
+
 def _check_cut(
     path: Path,
     raw_status: Path,
     raw_journal: Path,
+    raw_workflow_state: Path,
     order: Mapping[str, Any],
     label: str,
 ) -> dict[str, Any]:
@@ -580,6 +627,7 @@ def _check_cut(
             "schema", "invocation_id", "deployment_id", "endpoint", "status",
             "order_id", "input_sha256", "payment_token", "payment_run",
             "journal", "workflow_state", "raw_status_sha256", "raw_journal_sha256",
+            "raw_workflow_state_sha256",
         }
         and cut.get("schema") == 1,
         f"{label} Restate cut fields changed",
@@ -610,10 +658,16 @@ def _check_cut(
         _digest(entry.get("payload_sha256"), f"{label} journal payload hash")
     payment_entries = [entry for entry in journal if entry.get("kind") == "Command: Run" and entry.get("name") == "payment"]
     _require(len(payment_entries) == 1 and payment_entries[0].get("completed") is False, f"{label} journal does not contain one unresolved payment run")
-    _require(isinstance(cut.get("workflow_state"), dict), f"{label} workflow state is absent")
     _require(sha256(_read(raw_status, label + " raw Restate status")).hexdigest() == cut.get("raw_status_sha256"), f"{label} raw status hash differs")
     _require(sha256(_read(raw_journal, label + " raw Restate journal")).hexdigest() == cut.get("raw_journal_sha256"), f"{label} raw journal hash differs")
+    _require(
+        sha256(_read(raw_workflow_state, label + " raw Restate workflow state")).hexdigest()
+        == cut.get("raw_workflow_state_sha256"),
+        f"{label} raw workflow-state hash differs",
+    )
     _raw_restate_evidence(raw_status, raw_journal, cut, order, label)
+    workflow_state = _raw_restate_workflow_state(raw_workflow_state, order, label)
+    _require(cut.get("workflow_state") == workflow_state, f"{label} normalized workflow state differs from raw Restate data")
     return cut
 
 
@@ -628,6 +682,40 @@ def _cut_projection(cut: Mapping[str, Any]) -> dict[str, Any]:
         "journal": cut["journal"],
         "workflow_state": cut["workflow_state"],
     }
+
+
+def _history_semantic_projection(
+    events: Sequence[Mapping[str, Any]],
+    label: str,
+) -> list[dict[str, Any]]:
+    """Ignore only hash-chain fields and validated dispatcher identities."""
+    projected_events: list[dict[str, Any]] = []
+    for event in events:
+        _require(
+            set(event) == {"sequence", "operation", "data", "previous_hash", "hash"},
+            f"{label} History projection fields changed",
+        )
+        projected = {
+            key: value
+            for key, value in event.items()
+            if key not in {"previous_hash", "hash"}
+        }
+        if event.get("operation") == "operation.phase":
+            data = _object(event.get("data"), f"{label} Operation phase projection")
+            update = _object(data.get("update"), f"{label} Operation update projection")
+            if update.get("phase") == "dispatched":
+                owner = update.get("dispatch_owner")
+                _require(
+                    isinstance(owner, str) and BOOT_ID.fullmatch(owner) is not None,
+                    f"{label} dispatched Operation owner is not a BootID",
+                )
+                projected_update = dict(update)
+                projected_update["dispatch_owner"] = "<validated-boot-id>"
+                projected_data = dict(data)
+                projected_data["update"] = projected_update
+                projected["data"] = projected_data
+        projected_events.append(projected)
+    return projected_events
 
 
 def _check_deployment(root: Path, value: Any, target: Mapping[str, Any], label: str) -> dict[str, Any]:
@@ -1246,6 +1334,7 @@ def check_evidence(
             paths[name]["restate_cut"],
             paths[name]["restate_status_raw"],
             paths[name]["restate_journal_raw"],
+            paths[name]["restate_workflow_state_raw"],
             order,
             name,
         )
@@ -1275,8 +1364,11 @@ def check_evidence(
         )
         for name in ("h0", "h1")
     }
+    h0_events = checked["h0"]["events"]
+    h1_events = checked["h1"]["events"][: len(h0_events)]
     _require(
-        checked["h0"]["events"] == checked["h1"]["events"][: len(checked["h0"]["events"])],
+        _history_semantic_projection(h0_events, "H0")
+        == _history_semantic_projection(h1_events, "H1"),
         "H0/H1 runtime History differs before authoritative payment observation",
     )
     payment_core = {

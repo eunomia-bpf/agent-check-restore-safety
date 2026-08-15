@@ -28,7 +28,7 @@ class Fixture:
     def __init__(self, root: Path) -> None:
         self.root = root
         self.artifacts: dict[str, dict[str, str]] = {}
-        self.order_id = "order-checker-1"
+        self.order_id = "paired-order-preflight-002"
         self.amount = 42
         self.token = "01234567-89ab-4def-8123-456789abcdef"
         self.domain = "restate-order-workflow"
@@ -45,6 +45,7 @@ class Fixture:
         self.requirement_hash = "5" * 64
         self.deployment_v1 = "dp_v1_checker"
         self.deployment_v2 = "dp_v2_checker"
+        self.h1_source_certificate_digest = "7" * 64
 
     def write(self, relative: str, data: bytes) -> dict[str, str]:
         path = self.root / relative
@@ -144,15 +145,22 @@ class Fixture:
         for name in ("h0", "h1"):
             events: list[dict[str, object]] = []
             frames: list[bytes] = []
+            source_certificate = self.source_certificate()
+            if name == "h1":
+                source_certificate["digest"] = self.h1_source_certificate_digest
             self.add_event(events, frames, "rule.activated", {
-                "semantic_version": 1, "certificate": self.source_certificate(),
+                "semantic_version": 1, "certificate": source_certificate,
             })
             self.add_event(events, frames, "operation.prepared", {
                 "semantic_version": 1, "operation": self.payment_operation(),
             })
             self.add_event(events, frames, "operation.phase", {
                 "semantic_version": 1, "id": self.payment_id,
-                "update": {"phase": "dispatched", "dispatch_owner": "a" * 32, "dispatch_generation": 1},
+                "update": {
+                    "phase": "dispatched",
+                    "dispatch_owner": ("a" if name == "h0" else "c") * 32,
+                    "dispatch_generation": 1,
+                },
             })
             self.add_event(events, frames, "operation.phase", {
                 "semantic_version": 1, "id": self.payment_id, "update": {"phase": "unknown"},
@@ -348,26 +356,56 @@ class Fixture:
                     "id": invocation, "target": f"order-workflow/{self.order_id}/run",
                     "status": "paused", "pinned_deployment_id": self.deployment_v1,
                     "pinned_service_protocol_version": 6,
-                    "journal_size": 2,
+                    "journal_size": 3,
                     "created_at": "2026-08-15T00:02:00Z", "modified_at": "2026-08-15T00:03:00Z",
                 }],
             }
+            input_raw = bytes.fromhex(
+                "0a4d0a16782d726573746174652d696e67726573732d7061746812332f6f72646572"
+                "2d776f726b666c6f772f7061697265642d6f726465722d707265666c696768742d30"
+                "30322f72756e2f73656e640a180a0a757365722d6167656e74120a6375726c2f382e"
+                "352e300a0d0a0661636365707412032a2f2a0a200a0c636f6e74656e742d74797065"
+                "12106170706c69636174696f6e2f6a736f6e0a150a0e636f6e74656e742d6c656e67"
+                "7468120332333172ea010ae7017b0a2020226964223a20227061697265642d6f726465"
+                "722d707265666c696768742d303032222c0a20202272657374617572616e744964223a"
+                "202272657374617572616e742d3031222c0a20202270726f6475637473223a205b0a20"
+                "2020207b0a2020202020202270726f647563744964223a202270697a7a612d3031222c"
+                "0a202020202020226465736372697074696f6e223a202250697a7a61222c0a20202020"
+                "2020227175616e74697479223a20310a202020207d0a20205d2c0a202022746f74616c"
+                "436f7374223a2034322c0a20202264656c697665727944656c6179223a20300a7d0a"
+            )
+            set_state_raw = bytes.fromhex("0a067374617475731a0b0a09224352454154454422")
             payment_raw = bytes.fromhex("580162077061796d656e74")
             journal_rows = [
                 {
                     "index": 0, "version": 2, "entry_type": "Command: Input", "name": "",
-                    "completed": True, "raw": "00", "raw_length": 1,
+                    "completed": False, "raw": input_raw.hex(), "raw_length": len(input_raw),
                     "entry_lite_json": compact({"Command": {"Input": {}}}).decode(),
                 },
                 {
-                    "index": 1, "version": 2, "entry_type": "Command: Run", "name": "payment",
+                    "index": 1, "version": 2, "entry_type": "Command: SetState", "name": "",
+                    "completed": False, "raw": set_state_raw.hex(), "raw_length": len(set_state_raw),
+                    "entry_lite_json": compact({"Command": {"SetState": {"key": "status"}}}).decode(),
+                },
+                {
+                    "index": 2, "version": 2, "entry_type": "Command: Run", "name": "payment",
                     "completed": False, "raw": payment_raw.hex(), "raw_length": len(payment_raw),
                     "entry_lite_json": compact({"Command": {"Run": {"completion_id": 1, "name": "payment"}}}).decode(),
                 },
             ]
             journal_raw = {"rows": journal_rows}
+            workflow_state_raw = {
+                "rows": [{
+                    "service_name": "order-workflow", "service_key": self.order_id,
+                    "key": "status", "value": "224352454154454422",
+                    "value_utf8": "\"CREATED\"", "value_length": 9,
+                }],
+            }
             status_artifact = self.write_json(prefix + "restate-status.raw.json", status_raw)
             journal_artifact = self.write_json(prefix + "restate-journal.raw.json", journal_raw)
+            workflow_state_artifact = self.write_json(
+                prefix + "restate-workflow-state.raw.json", workflow_state_raw,
+            )
             projected_journal = [{
                 "index": row["index"], "kind": row["entry_type"], "name": row["name"],
                 "completed": row["completed"],
@@ -378,9 +416,10 @@ class Fixture:
                 "endpoint": "order-v1", "status": "paused", "order_id": self.order_id,
                 "input_sha256": order_artifact["sha256"], "payment_token": self.token,
                 "payment_run": {"name": "payment", "completed": False},
-                "journal": projected_journal, "workflow_state": {"status": "PAYMENT_PENDING"},
+                "journal": projected_journal, "workflow_state": {"status": "CREATED"},
                 "raw_status_sha256": status_artifact["sha256"],
                 "raw_journal_sha256": journal_artifact["sha256"],
+                "raw_workflow_state_sha256": workflow_state_artifact["sha256"],
             }
             cut_artifact = self.write_json(prefix + "restate-cut.json", cut)
             restate_final = {
@@ -426,6 +465,7 @@ class Fixture:
                 "payment_records": payment_artifact, "completion_records": completion_artifact,
                 "restate_cut": cut_artifact, "restate_final": restate_final_artifact,
                 "restate_status_raw": status_artifact, "restate_journal_raw": journal_artifact,
+                "restate_workflow_state_raw": workflow_state_artifact,
                 "containers": containers_artifact, "v1_removal": removal_artifact,
             }
 
@@ -490,6 +530,28 @@ class CheckerTests(unittest.TestCase):
         self.assertEqual(verdict["h1_decision"], "activate")
         self.assertEqual(verdict["h1_payment_commits"], 1)
 
+    def test_accepts_distinct_valid_dispatch_boot_ids(self) -> None:
+        owners: dict[str, str] = {}
+        for name in ("h0", "h1"):
+            events = json.loads((self.root / name / "history-view.json").read_text())
+            owners[name] = next(
+                event["data"]["update"]["dispatch_owner"]
+                for event in events
+                if event["operation"] == "operation.phase"
+                and event["data"]["update"]["phase"] == "dispatched"
+            )
+        self.assertNotEqual(owners["h0"], owners["h1"])
+        self.assertTrue(self.check()["valid"])
+
+    def test_rejects_non_owner_history_difference(self) -> None:
+        self.fixture.h1_source_certificate_digest = "e" * 64
+        self.manifest = self.fixture.build()
+        with self.assertRaisesRegex(
+            CHECK.EvidenceError,
+            "runtime History differs before authoritative payment observation",
+        ):
+            self.check()
+
     def test_restate_status_accepts_omitted_nullable_columns(self) -> None:
         status = json.loads((self.root / "h1/restate-status.raw.json").read_text())["rows"][0]
         self.assertNotIn("last_attempt_deployment_id", status)
@@ -531,15 +593,37 @@ class CheckerTests(unittest.TestCase):
     def test_rejects_journal_difference_after_all_local_hashes_are_rebound(self) -> None:
         journal_relative = "h1/restate-journal.raw.json"
         journal = json.loads((self.root / journal_relative).read_text())
-        journal["rows"][0]["raw"] = "01"
+        input_payload = bytearray.fromhex(journal["rows"][0]["raw"])
+        input_payload[-1] ^= 1
+        journal["rows"][0]["raw"] = input_payload.hex()
         self.fixture.replace_json(journal_relative, journal)
         cut_relative = "h1/restate-cut.json"
         cut = json.loads((self.root / cut_relative).read_text())
         cut["raw_journal_sha256"] = self.fixture.artifacts[journal_relative]["sha256"]
-        cut["journal"][0]["payload_sha256"] = sha256(b"\x01").hexdigest()
+        cut["journal"][0]["payload_sha256"] = sha256(input_payload).hexdigest()
         self.fixture.replace_json(cut_relative, cut)
         self.fixture.refresh_manifest()
         with self.assertRaisesRegex(CHECK.EvidenceError, "journal or visible workflow state differs"):
+            self.check()
+
+    def test_rejects_forged_raw_workflow_state_after_all_hashes_are_rebound(self) -> None:
+        state_relative = "h1/restate-workflow-state.raw.json"
+        state = json.loads((self.root / state_relative).read_text())
+        forged = compact("DELIVERED")
+        state["rows"][0].update({
+            "value": forged.hex(),
+            "value_utf8": forged.decode(),
+            "value_length": len(forged),
+        })
+        self.fixture.replace_json(state_relative, state)
+
+        cut_relative = "h1/restate-cut.json"
+        cut = json.loads((self.root / cut_relative).read_text())
+        cut["workflow_state"] = {"status": "DELIVERED"}
+        cut["raw_workflow_state_sha256"] = self.fixture.artifacts[state_relative]["sha256"]
+        self.fixture.replace_json(cut_relative, cut)
+        self.fixture.refresh_manifest()
+        with self.assertRaisesRegex(CHECK.EvidenceError, "raw Restate workflow status is not CREATED"):
             self.check()
 
     def test_rejects_h0_claimed_completion(self) -> None:
@@ -594,17 +678,17 @@ class CheckerTests(unittest.TestCase):
         journal = json.loads((self.root / journal_relative).read_text())
         payment = journal["rows"].pop()
         notification = {
-            "index": 1, "version": 2, "entry_type": "Notification: Run", "name": "",
+            "index": 2, "version": 2, "entry_type": "Notification: Run", "name": "",
             "completed": True, "raw": "02", "raw_length": 1,
             "entry_lite_json": compact({"Notification": {"Run": {"completion_id": 1}}}).decode(),
         }
-        payment["index"] = 2
+        payment["index"] = 3
         journal["rows"].extend([notification, payment])
         self.fixture.replace_json(journal_relative, journal)
 
         status_relative = "h0/restate-status.raw.json"
         status = json.loads((self.root / status_relative).read_text())
-        status["rows"][0]["journal_size"] = 3
+        status["rows"][0]["journal_size"] = 4
         self.fixture.replace_json(status_relative, status)
 
         cut_relative = "h0/restate-cut.json"
