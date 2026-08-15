@@ -62,6 +62,7 @@ type projectedOperation struct {
 	Costs     map[string]uint32 `json:"costs"`
 	Produces  map[string]uint32 `json:"produces"`
 	RetrySafe bool              `json:"retry_safe"`
+	Queryable bool              `json:"queryable,omitempty"`
 }
 
 type projectedState struct {
@@ -116,7 +117,7 @@ func projectedStateJSON(t *testing.T, state *kernel.State, target kernel.Require
 		case kernel.Succeeded:
 			addSettled(operation)
 		case kernel.Prepared:
-			if !operation.RetrySafe {
+			if !operation.RetrySafe && !operation.Queryable {
 				continue
 			}
 			fallthrough
@@ -124,6 +125,7 @@ func projectedStateJSON(t *testing.T, state *kernel.State, target kernel.Require
 			projection.OpenOperations[id] = projectedOperation{
 				ID: operation.ID, Costs: operation.Costs,
 				Produces: operation.Produces, RetrySafe: operation.RetrySafe,
+				Queryable: operation.Queryable,
 			}
 		case kernel.Failed, kernel.Cancelled:
 		default:
@@ -304,6 +306,48 @@ func TestCertificateBindsFrozenOperationMeaning(t *testing.T) {
 	mutated.Operations["open"] = operation
 	if _, err := certcheck.CheckJSON(projectedStateJSON(t, mutated, certificate.Requirement), mustJSON(t, certificate)); err == nil || !strings.Contains(err.Error(), "independent exact recomputation") {
 		t.Fatalf("Certificate survived changed frozen Operation meaning: %v", err)
+	}
+}
+
+func TestCheckerAcceptsQueryableRecoveryAndBindsProjection(t *testing.T) {
+	target := kernel.Requirement{
+		ID: "queryable-target", Results: map[string]uint32{"done": 1},
+		Capacities: map[string]uint32{"slot": 1},
+		Kinds: map[string]kernel.KindSpec{
+			"finish": {
+				Costs: map[string]uint32{"slot": 1}, Produces: map[string]uint32{"done": 1},
+				Queryable: true, Target: "http://effect.example", Method: "POST",
+				ResponseClassifier: kernel.ResponseReceiptV1,
+				QueryTarget:        "http://observer.example", QueryMethod: "POST",
+				QueryClassifier: kernel.OperationObservationV1,
+			},
+		},
+	}
+	state := kernel.NewState()
+	state.Operations["open"] = kernel.Operation{
+		ID: "open", Domain: "service", Kind: "finish", RequestHash: "request",
+		Costs: map[string]uint32{"slot": 1}, Produces: map[string]uint32{"done": 1},
+		Queryable: true, Phase: kernel.Unknown,
+	}
+	certificate, err := kernel.Compile(state, target, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if certificate.Decision != kernel.Activate {
+		t.Fatalf("queryable Operation was treated as unrecoverable: %+v", certificate)
+	}
+	check(t, state, certificate)
+
+	var projection map[string]any
+	if err := json.Unmarshal(projectedStateJSON(t, state, target), &projection); err != nil {
+		t.Fatal(err)
+	}
+	open := projection["open_operations"].(map[string]any)
+	item := open["open"].(map[string]any)
+	delete(item, "queryable")
+	forged := mustJSON(t, projection)
+	if _, err := certcheck.CheckJSON(forged, mustJSON(t, certificate)); err == nil || !strings.Contains(err.Error(), "independent exact recomputation") {
+		t.Fatalf("checker ignored removed queryability: %v", err)
 	}
 }
 

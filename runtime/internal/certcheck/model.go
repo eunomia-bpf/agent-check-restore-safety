@@ -33,7 +33,8 @@ const (
 	MaxSolverStates         = 100_000
 	MaxSolverDepth          = MaxRequiredUnits
 
-	responseReceiptV1 = "operation-receipt-v1"
+	responseReceiptV1      = "operation-receipt-v1"
+	operationObservationV1 = "operation-observation-v1"
 )
 
 var ErrResourceLimit = errors.New("independent Certificate checker resource limit")
@@ -74,6 +75,9 @@ type kindSpec struct {
 	Target             string            `json:"target,omitempty"`
 	Method             string            `json:"method,omitempty"`
 	ResponseClassifier string            `json:"response_classifier,omitempty"`
+	QueryTarget        string            `json:"query_target,omitempty"`
+	QueryMethod        string            `json:"query_method,omitempty"`
+	QueryClassifier    string            `json:"query_classifier,omitempty"`
 }
 
 type operation struct {
@@ -81,6 +85,7 @@ type operation struct {
 	Costs     map[string]uint32 `json:"costs"`
 	Produces  map[string]uint32 `json:"produces"`
 	RetrySafe bool              `json:"retry_safe"`
+	Queryable bool              `json:"queryable,omitempty"`
 }
 
 type rule struct {
@@ -251,6 +256,7 @@ func cloneRequirement(input requirement) requirement {
 			Costs: cloneMap(spec.Costs), Produces: cloneMap(spec.Produces),
 			RetrySafe: spec.RetrySafe, Queryable: spec.Queryable,
 			Target: spec.Target, Method: spec.Method, ResponseClassifier: spec.ResponseClassifier,
+			QueryTarget: spec.QueryTarget, QueryMethod: spec.QueryMethod, QueryClassifier: spec.QueryClassifier,
 		}
 	}
 	return output
@@ -327,6 +333,16 @@ func validateRequirement(value requirement) error {
 			return fmt.Errorf("Operation kind %q target requires a method and response classifier", name)
 		} else if spec.ResponseClassifier != responseReceiptV1 {
 			return fmt.Errorf("Operation kind %q uses unsupported response classifier %q", name, spec.ResponseClassifier)
+		}
+		if spec.Queryable {
+			if spec.QueryTarget == "" || spec.QueryMethod == "" || spec.QueryClassifier == "" {
+				return fmt.Errorf("queryable Operation kind %q requires a query target, method, and classifier", name)
+			}
+			if spec.QueryClassifier != operationObservationV1 {
+				return fmt.Errorf("Operation kind %q uses unsupported query classifier %q", name, spec.QueryClassifier)
+			}
+		} else if spec.QueryTarget != "" || spec.QueryMethod != "" || spec.QueryClassifier != "" {
+			return fmt.Errorf("non-queryable Operation kind %q has a query contract", name)
 		}
 		for resource, amount := range spec.Costs {
 			if resource == "" || amount == 0 {

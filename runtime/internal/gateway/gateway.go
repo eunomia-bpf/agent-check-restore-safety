@@ -37,12 +37,13 @@ type Request struct {
 }
 
 type Outcome struct {
-	OperationID string       `json:"operation_id"`
-	Phase       kernel.Phase `json:"phase"`
-	StatusCode  int          `json:"status_code,omitempty"`
-	Body        []byte       `json:"body,omitempty"`
-	ResultHash  string       `json:"result_hash"`
-	Reused      bool         `json:"reused"`
+	OperationID      string       `json:"operation_id"`
+	Phase            kernel.Phase `json:"phase"`
+	StatusCode       int          `json:"status_code,omitempty"`
+	Body             []byte       `json:"body,omitempty"`
+	ResultHash       string       `json:"result_hash"`
+	Reused           bool         `json:"reused"`
+	RecoveredByQuery bool         `json:"recovered_by_query"`
 }
 
 type Gateway struct {
@@ -151,12 +152,13 @@ func (g *Gateway) Execute(ctx context.Context, request Request) (Outcome, error)
 	switch operation.Phase {
 	case kernel.Succeeded, kernel.Failed:
 		return Outcome{
-			OperationID: operation.ID,
-			Phase:       operation.Phase,
-			StatusCode:  operation.StatusCode,
-			Body:        append([]byte(nil), operation.ResultBody...),
-			ResultHash:  operation.ResultHash,
-			Reused:      true,
+			OperationID:      operation.ID,
+			Phase:            operation.Phase,
+			StatusCode:       operation.StatusCode,
+			Body:             append([]byte(nil), operation.ResultBody...),
+			ResultHash:       operation.ResultHash,
+			Reused:           true,
+			RecoveredByQuery: operation.Settlement == kernel.SettlementQuery,
 		}, nil
 	case kernel.Dispatched:
 		if operation.DispatchOwner == g.control.BootID() {
@@ -173,11 +175,33 @@ func (g *Gateway) Execute(ctx context.Context, request Request) (Outcome, error)
 		operation.Phase = kernel.Unknown
 		fallthrough
 	case kernel.Unknown:
+		if operation.Queryable {
+			observed, observeErr := g.queryUnknown(ctx, operation, httpRequest.Header.Get("Content-Type"), body)
+			if observeErr != nil {
+				return Outcome{OperationID: operation.ID, Phase: kernel.Unknown},
+					fmt.Errorf("%w: query operation %q: %v", ErrOutcomeUnknown, operation.ID, observeErr)
+			}
+			if observed.Phase == kernel.Succeeded || observed.Phase == kernel.Failed {
+				if err := g.control.Move(operation.ID, kernel.OperationUpdate{
+					Phase: observed.Phase, ResultHash: observed.FactHash,
+					StatusCode: observed.StatusCode, ResultBody: observed.Body,
+					RemoteReference: observed.RemoteReference, Settlement: kernel.SettlementQuery,
+				}); err != nil {
+					return Outcome{}, err
+				}
+				return Outcome{
+					OperationID: operation.ID, Phase: observed.Phase,
+					StatusCode: observed.StatusCode, Body: observed.Body,
+					ResultHash: observed.FactHash, RecoveredByQuery: true,
+				}, nil
+			}
+		}
 		if !operation.RetrySafe {
-			return Outcome{}, fmt.Errorf("%w: operation %q has no safe retry", ErrOutcomeUnknown, operation.ID)
+			return Outcome{OperationID: operation.ID, Phase: kernel.Unknown},
+				fmt.Errorf("%w: operation %q has no safe retry", ErrOutcomeUnknown, operation.ID)
 		}
 	case kernel.Prepared:
-		if !operation.RetrySafe {
+		if !operation.RetrySafe && !operation.Queryable {
 			return Outcome{}, fmt.Errorf("operation %q has no implemented safe recovery", operation.ID)
 		}
 	default:
@@ -258,6 +282,66 @@ func (g *Gateway) Execute(ctx context.Context, request Request) (Outcome, error)
 	}, nil
 }
 
+type queryOutcome struct {
+	Phase           kernel.Phase
+	StatusCode      int
+	Body            []byte
+	FactHash        string
+	RemoteReference string
+}
+
+// queryUnknown asks the endpoint frozen in the Operation contract to observe
+// the external fact. The effect body is copied only after Execute has checked
+// that it still hashes to the frozen RequestHash. No caller-owned header other
+// than Content-Type crosses this separate trust boundary.
+func (g *Gateway) queryUnknown(ctx context.Context, operation kernel.Operation, contentType string, effectBody []byte) (queryOutcome, error) {
+	if operation.QueryTarget == "" || operation.QueryMethod == "" || operation.QueryClassifier == "" {
+		return queryOutcome{}, errors.New("queryable operation has an incomplete query contract")
+	}
+	if operation.QueryClassifier != kernel.OperationObservationV1 {
+		return queryOutcome{}, fmt.Errorf("unsupported query classifier %q", operation.QueryClassifier)
+	}
+	request, err := http.NewRequestWithContext(ctx, operation.QueryMethod, operation.QueryTarget, bytes.NewReader(effectBody))
+	if err != nil {
+		return queryOutcome{}, err
+	}
+	if request.URL.Scheme != "http" && request.URL.Scheme != "https" {
+		return queryOutcome{}, errors.New("external query URL must use http or https")
+	}
+	if request.URL.Host == "" || request.URL.Fragment != "" || request.URL.User != nil {
+		return queryOutcome{}, errors.New("external query URL has unsupported authority or fragment")
+	}
+	request.Header.Set("User-Agent", "safe-change-runtime/1")
+	request.Header.Set("Accept-Encoding", "identity")
+	request.Header.Set("X-Operation-ID", operation.ID)
+	request.Header.Set("X-Operation-Request-Hash", operation.RequestHash)
+	if contentType != "" {
+		request.Header.Set("Content-Type", contentType)
+	}
+	response, err := g.client.Do(request)
+	if err != nil {
+		return queryOutcome{}, err
+	}
+	defer response.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes+1))
+	if err != nil {
+		return queryOutcome{}, err
+	}
+	if len(body) > maxResponseBytes {
+		return queryOutcome{}, errors.New("external query response exceeds size limit")
+	}
+	phase, factHash, remoteReference, err := classifyObservation(
+		operation.QueryClassifier, operation.ID, operation.RequestHash, response, body,
+	)
+	if err != nil {
+		return queryOutcome{}, err
+	}
+	return queryOutcome{
+		Phase: phase, StatusCode: response.StatusCode, Body: body,
+		FactHash: factHash, RemoteReference: remoteReference,
+	}, nil
+}
+
 func finalizedRequest(ctx context.Context, request Request) (*http.Request, []byte, error) {
 	if request.ID == "" {
 		return nil, nil, errors.New("external operation identity is empty")
@@ -302,7 +386,7 @@ func finalizedRequest(ctx context.Context, request Request) (*http.Request, []by
 func reservedHeader(lower string) bool {
 	switch lower {
 	case "host", "content-length", "transfer-encoding", "connection", "trailer",
-		"idempotency-key", "x-operation-id":
+		"idempotency-key", "x-operation-id", "x-operation-request-hash":
 		return true
 	default:
 		return false

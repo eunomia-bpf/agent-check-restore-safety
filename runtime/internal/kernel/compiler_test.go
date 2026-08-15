@@ -86,6 +86,83 @@ func TestStableIdentityCannotBeRebound(t *testing.T) {
 	}
 }
 
+func queryableRequirement(id string, retrySafe bool) Requirement {
+	return Requirement{
+		ID: id, Results: map[string]uint32{"reserved": 1},
+		Capacities: map[string]uint32{"room": 1},
+		Kinds: map[string]KindSpec{
+			"reserve": {
+				Costs: map[string]uint32{"room": 1}, Produces: map[string]uint32{"reserved": 1},
+				RetrySafe: retrySafe, Queryable: true,
+				Target: "http://effect.example/reserve", Method: "POST", ResponseClassifier: ResponseReceiptV1,
+				QueryTarget: "http://observer.example/reservation", QueryMethod: "POST", QueryClassifier: OperationObservationV1,
+			},
+		},
+	}
+}
+
+func TestQueryableContractIsFrozenAndRecoverable(t *testing.T) {
+	state := NewState()
+	certificate := activateInitial(t, state, queryableRequirement("hotel-v1", false))
+	if certificate.Decision != Activate || len(certificate.Rule.Allow) != 1 || certificate.Rule.Allow[0] != "reserve" {
+		t.Fatalf("query-only recovery was not executable: %+v", certificate)
+	}
+	op, err := state.Prepare("stay-7", "hotel", "reserve", "request-hash")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !op.Queryable || op.QueryTarget != "http://observer.example/reservation" || op.QueryMethod != "POST" || op.QueryClassifier != OperationObservationV1 {
+		t.Fatalf("query contract was not frozen: %+v", op)
+	}
+	if err := state.MoveOperation(op.ID, OperationUpdate{
+		Phase: Dispatched, DispatchOwner: "boot-a", DispatchGeneration: 1,
+	}); err != nil {
+		t.Fatalf("first queryable dispatch was refused: %v", err)
+	}
+	if err := state.MoveOperation(op.ID, OperationUpdate{Phase: Unknown}); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.MoveOperation(op.ID, OperationUpdate{
+		Phase: Dispatched, DispatchOwner: "boot-b", DispatchGeneration: 2,
+	}); err == nil {
+		t.Fatal("query-only unknown Operation was redispatched")
+	}
+	if err := state.MoveOperation(op.ID, OperationUpdate{
+		Phase: Succeeded, ResultHash: strings.Repeat("a", 64),
+		RemoteReference: "reservation-7", Settlement: SettlementQuery,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	settled := state.Operations[op.ID]
+	if settled.Phase != Succeeded || settled.Settlement != SettlementQuery {
+		t.Fatalf("query settlement was not retained: %+v", settled)
+	}
+}
+
+func TestRequirementRejectsMalformedQueryContracts(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*KindSpec)
+	}{
+		{name: "missing target", mutate: func(spec *KindSpec) { spec.QueryTarget = "" }},
+		{name: "missing method", mutate: func(spec *KindSpec) { spec.QueryMethod = "" }},
+		{name: "missing classifier", mutate: func(spec *KindSpec) { spec.QueryClassifier = "" }},
+		{name: "unsupported classifier", mutate: func(spec *KindSpec) { spec.QueryClassifier = "guess-v1" }},
+		{name: "contract without queryable", mutate: func(spec *KindSpec) { spec.Queryable = false }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			requirement := queryableRequirement("invalid-query", false)
+			spec := requirement.Kinds["reserve"]
+			test.mutate(&spec)
+			requirement.Kinds["reserve"] = spec
+			if err := ValidateRequirement(requirement); err == nil {
+				t.Fatal("malformed query contract was accepted")
+			}
+		})
+	}
+}
+
 func TestUnknownOperationIsConsideredInEveryOutcome(t *testing.T) {
 	state := NewState()
 	activateInitial(t, state, invoiceRequirement("invoice-v1"))

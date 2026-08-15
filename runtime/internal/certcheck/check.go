@@ -344,7 +344,7 @@ func completionExists(target requirement, start facts, budget *analysisBudget) (
 		kind := kindNames[current.nextKind]
 		current.nextKind++
 		spec := target.Kinds[kind]
-		if !spec.RetrySafe || spec.Produces[resultNames[current.first]] == 0 {
+		if (!spec.RetrySafe && !spec.Queryable) || spec.Produces[resultNames[current.first]] == 0 {
 			continue
 		}
 		nextRemaining := append([]uint32(nil), current.remaining...)
@@ -410,20 +410,20 @@ func computeAllowed(value state, target requirement) ([]string, *witness, error)
 	}
 	for _, id := range sortedKeys(value.OpenOperations) {
 		item := value.OpenOperations[id]
-		if !item.RetrySafe {
+		if !item.RetrySafe && !item.Queryable {
 			return nil, &witness{
 				OpenSucceeded: []string{id},
 				Reason:        fmt.Sprintf("operation %q is open and has no implemented safe recovery", id),
 			}, nil
 		}
 	}
-	retryKinds := 0
+	recoverableKinds := 0
 	for _, spec := range target.Kinds {
-		if spec.RetrySafe {
-			retryKinds++
+		if spec.RetrySafe || spec.Queryable {
+			recoverableKinds++
 		}
 	}
-	plannedChecks := uint64(len(all)) * uint64(retryKinds+1)
+	plannedChecks := uint64(len(all)) * uint64(recoverableKinds+1)
 	if plannedChecks > MaxCompletionChecks {
 		return nil, nil, resourceLimit("completion checks", MaxCompletionChecks, plannedChecks)
 	}
@@ -440,7 +440,7 @@ func computeAllowed(value state, target requirement) ([]string, *witness, error)
 	allowed := make([]string, 0, len(target.Kinds))
 	for _, name := range sortedKeys(target.Kinds) {
 		spec := target.Kinds[name]
-		if !spec.RetrySafe {
+		if !spec.RetrySafe && !spec.Queryable {
 			continue
 		}
 		safe := true

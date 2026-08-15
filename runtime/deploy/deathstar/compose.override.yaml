@@ -1,0 +1,52 @@
+services:
+  consul:
+    ports: !reset []
+
+  frontend:
+    image: ${DEATHSTAR_V2_IMAGE}
+    build: !reset null
+    ports: !reset []
+
+  profile:
+    image: ${DEATHSTAR_V2_IMAGE}
+    build: !reset null
+
+  search:
+    image: ${DEATHSTAR_V2_IMAGE}
+    build: !reset null
+
+  geo:
+    image: ${DEATHSTAR_V2_IMAGE}
+    build: !reset null
+
+  rate:
+    image: ${DEATHSTAR_V2_IMAGE}
+    build: !reset null
+
+  review:
+    image: ${DEATHSTAR_V2_IMAGE}
+    build: !reset null
+    container_name: !reset null
+
+  attractions:
+    image: ${DEATHSTAR_V2_IMAGE}
+    build: !reset null
+    container_name: !reset null
+
+  recommendation:
+    image: ${DEATHSTAR_V2_IMAGE}
+    build: !reset null
+
+  user:
+    image: ${DEATHSTAR_V2_IMAGE}
+    build: !reset null
+
+  reservation:
+    image: ${DEATHSTAR_V2_IMAGE}
+    build: !reset null
+
+  jaeger:
+    ports: !reset []
+
+  memcached-review:
+    container_name: !reset null

@@ -18,6 +18,15 @@ const CertificateSchema = 1
 // possible completion.
 const ResponseReceiptV1 = "operation-receipt-v1"
 
+// OperationObservationV1 is the only query result contract implemented by
+// the HTTP gateway. A queryable Operation freezes this contract and its query
+// endpoint alongside the effect endpoint.
+const OperationObservationV1 = "operation-observation-v1"
+
+// SettlementQuery records that a trusted observation, rather than the
+// original effect response, definitively settled an Operation.
+const SettlementQuery = "query"
+
 const EmptyHistoryHash = "0000000000000000000000000000000000000000000000000000000000000000"
 
 type HistoryPoint struct {
@@ -44,6 +53,9 @@ type KindSpec struct {
 	Target             string            `json:"target,omitempty"`
 	Method             string            `json:"method,omitempty"`
 	ResponseClassifier string            `json:"response_classifier,omitempty"`
+	QueryTarget        string            `json:"query_target,omitempty"`
+	QueryMethod        string            `json:"query_method,omitempty"`
+	QueryClassifier    string            `json:"query_classifier,omitempty"`
 }
 
 type Phase string
@@ -73,6 +85,9 @@ type Operation struct {
 	Target             string            `json:"target,omitempty"`
 	Method             string            `json:"method,omitempty"`
 	ResponseClassifier string            `json:"response_classifier,omitempty"`
+	QueryTarget        string            `json:"query_target,omitempty"`
+	QueryMethod        string            `json:"query_method,omitempty"`
+	QueryClassifier    string            `json:"query_classifier,omitempty"`
 	Phase              Phase             `json:"phase"`
 	ResultHash         string            `json:"result_hash,omitempty"`
 	StatusCode         int               `json:"status_code,omitempty"`
@@ -80,6 +95,7 @@ type Operation struct {
 	RemoteReference    string            `json:"remote_reference,omitempty"`
 	DispatchOwner      string            `json:"dispatch_owner,omitempty"`
 	DispatchGeneration uint64            `json:"dispatch_generation,omitempty"`
+	Settlement         string            `json:"settlement,omitempty"`
 }
 
 type OperationUpdate struct {
@@ -90,6 +106,7 @@ type OperationUpdate struct {
 	RemoteReference    string `json:"remote_reference,omitempty"`
 	DispatchOwner      string `json:"dispatch_owner,omitempty"`
 	DispatchGeneration uint64 `json:"dispatch_generation,omitempty"`
+	Settlement         string `json:"settlement,omitempty"`
 }
 
 func (o Operation) Open() bool {
@@ -191,6 +208,9 @@ func cloneRequirement(in Requirement) Requirement {
 			Target:             spec.Target,
 			Method:             spec.Method,
 			ResponseClassifier: spec.ResponseClassifier,
+			QueryTarget:        spec.QueryTarget,
+			QueryMethod:        spec.QueryMethod,
+			QueryClassifier:    spec.QueryClassifier,
 		}
 	}
 	return out
@@ -267,6 +287,16 @@ func ValidateRequirement(r Requirement) error {
 			return fmt.Errorf("operation kind %q target requires a method and response classifier", kind)
 		} else if spec.ResponseClassifier != ResponseReceiptV1 {
 			return fmt.Errorf("operation kind %q uses unsupported response classifier %q", kind, spec.ResponseClassifier)
+		}
+		if spec.Queryable {
+			if spec.QueryTarget == "" || spec.QueryMethod == "" || spec.QueryClassifier == "" {
+				return fmt.Errorf("queryable operation kind %q requires a query target, method, and classifier", kind)
+			}
+			if spec.QueryClassifier != OperationObservationV1 {
+				return fmt.Errorf("operation kind %q uses unsupported query classifier %q", kind, spec.QueryClassifier)
+			}
+		} else if spec.QueryTarget != "" || spec.QueryMethod != "" || spec.QueryClassifier != "" {
+			return fmt.Errorf("non-queryable operation kind %q has a query contract", kind)
 		}
 		for resource, amount := range spec.Costs {
 			if resource == "" || amount == 0 {

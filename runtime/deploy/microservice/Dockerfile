@@ -6,8 +6,9 @@ COPY . ./
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/control ./cmd/control && \
     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/order ./cmd/order && \
     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/payment ./cmd/payment && \
-    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/ingress ./cmd/ingress
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/ingress ./cmd/ingress && \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/deathstar-adapter ./cmd/deathstar-adapter
 
 FROM alpine:3.19
 RUN apk add --no-cache ca-certificates
-COPY --from=build /out/control /out/order /out/payment /out/ingress /usr/local/bin/
+COPY --from=build /out/control /out/order /out/payment /out/ingress /out/deathstar-adapter /usr/local/bin/

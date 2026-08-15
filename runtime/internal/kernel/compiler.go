@@ -178,9 +178,9 @@ func baseAndOpen(state *State, target Requirement) (facts, []Operation, error) {
 			}
 		case Prepared:
 			// A prepared action has not crossed the external boundary. The
-			// current gateway can dispatch it only when stable retry is
-			// available; otherwise it remains safely cancellable.
-			if op.RetrySafe {
+			// gateway can dispatch it when either stable retry or observation
+			// is available; otherwise it remains safely cancellable.
+			if op.RetrySafe || op.Queryable {
 				open = append(open, op)
 			}
 		case Dispatched, Unknown:
@@ -280,10 +280,9 @@ func completionPlan(r Requirement, start facts, budget *analysisBudget) (bool, s
 		target := resultNames[first]
 		for _, kind := range kindNames {
 			spec := r.Kinds[kind]
-			// Milestone zero has a stable-retry HTTP adapter but no trusted
-			// query adapter. A kind without safe retry is therefore not an
-			// executable completion, even if its success branch would fit.
-			if !spec.RetrySafe {
+			// A completion kind is executable only when the runtime can recover
+			// an uncertain dispatch by stable retry or trusted observation.
+			if !spec.RetrySafe && !spec.Queryable {
 				continue
 			}
 			if spec.Produces[target] == 0 {
@@ -384,20 +383,20 @@ func allowedKinds(state *State, r Requirement) ([]string, *Witness, error) {
 	}
 	for _, id := range sortedKeys(state.Operations) {
 		op := state.Operations[id]
-		if (op.Phase == Dispatched || op.Phase == Unknown) && !op.RetrySafe {
+		if (op.Phase == Dispatched || op.Phase == Unknown) && !op.RetrySafe && !op.Queryable {
 			return nil, &Witness{
 				OpenSucceeded: []string{id},
 				Reason:        fmt.Sprintf("operation %q is open and has no implemented safe recovery", id),
 			}, nil
 		}
 	}
-	retryKinds := 0
+	recoverableKinds := 0
 	for _, spec := range r.Kinds {
-		if spec.RetrySafe {
-			retryKinds++
+		if spec.RetrySafe || spec.Queryable {
+			recoverableKinds++
 		}
 	}
-	plannedChecks := uint64(len(all)) * uint64(retryKinds+1)
+	plannedChecks := uint64(len(all)) * uint64(recoverableKinds+1)
 	if plannedChecks > MaxCompletionChecks {
 		return nil, nil, resourceLimit("completion checks", MaxCompletionChecks, plannedChecks)
 	}
@@ -414,7 +413,7 @@ func allowedKinds(state *State, r Requirement) ([]string, *Witness, error) {
 	allowed := make([]string, 0, len(r.Kinds))
 	for _, kind := range sortedKeys(r.Kinds) {
 		spec := r.Kinds[kind]
-		if !spec.RetrySafe {
+		if !spec.RetrySafe && !spec.Queryable {
 			continue
 		}
 		safe := true
@@ -619,6 +618,9 @@ func (s *State) Prepare(id, domain, kind, requestHash string) (Operation, error)
 		Target:             spec.Target,
 		Method:             spec.Method,
 		ResponseClassifier: spec.ResponseClassifier,
+		QueryTarget:        spec.QueryTarget,
+		QueryMethod:        spec.QueryMethod,
+		QueryClassifier:    spec.QueryClassifier,
 		Phase:              Prepared,
 	}
 	s.Operations[id] = op
@@ -637,8 +639,9 @@ func (s *State) MoveOperation(id string, update OperationUpdate) error {
 	valid := false
 	switch update.Phase {
 	case Dispatched:
-		valid = op.Phase == Prepared || op.Phase == Unknown
-		if !op.RetrySafe {
+		valid = (op.Phase == Prepared && (op.RetrySafe || op.Queryable)) ||
+			(op.Phase == Unknown && op.RetrySafe)
+		if !valid && op.Phase == Prepared && !op.RetrySafe && !op.Queryable {
 			return fmt.Errorf("operation %q has no implemented safe recovery", id)
 		}
 		if update.DispatchOwner == "" || update.DispatchGeneration != op.DispatchGeneration+1 {
@@ -657,6 +660,17 @@ func (s *State) MoveOperation(id string, update OperationUpdate) error {
 	if (update.Phase == Succeeded || update.Phase == Failed) && update.ResultHash == "" {
 		return errors.New("settled operation requires a result hash")
 	}
+	if update.Settlement != "" {
+		if update.Settlement != SettlementQuery {
+			return fmt.Errorf("unsupported operation settlement %q", update.Settlement)
+		}
+		if !op.Queryable || op.Phase != Unknown || (update.Phase != Succeeded && update.Phase != Failed) {
+			return errors.New("query settlement requires a queryable unknown operation and a settled outcome")
+		}
+	}
+	if update.Phase != Succeeded && update.Phase != Failed && update.Settlement != "" {
+		return errors.New("unsettled operation cannot carry a settlement source")
+	}
 	if update.Phase != Succeeded && update.Phase != Failed &&
 		(update.ResultHash != "" || update.StatusCode != 0 || len(update.ResultBody) != 0) {
 		return errors.New("unsettled operation cannot carry a result")
@@ -674,6 +688,7 @@ func (s *State) MoveOperation(id string, update OperationUpdate) error {
 	op.StatusCode = update.StatusCode
 	op.ResultBody = append([]byte(nil), update.ResultBody...)
 	op.RemoteReference = update.RemoteReference
+	op.Settlement = update.Settlement
 	if update.Phase == Dispatched {
 		op.DispatchOwner = update.DispatchOwner
 		op.DispatchGeneration = update.DispatchGeneration

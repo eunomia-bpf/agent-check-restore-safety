@@ -73,6 +73,7 @@ type certificateOperation struct {
 	Costs     map[string]uint32 `json:"costs"`
 	Produces  map[string]uint32 `json:"produces"`
 	RetrySafe bool              `json:"retry_safe"`
+	Queryable bool              `json:"queryable,omitempty"`
 }
 
 type Control struct {
@@ -417,7 +418,7 @@ func certificateStateJSON(state *kernel.State, target kernel.Requirement) ([]byt
 		case kernel.Succeeded:
 			addSettledProjection(target, &projection.Settled, operation.Costs, operation.Produces)
 		case kernel.Prepared:
-			if !operation.RetrySafe {
+			if !operation.RetrySafe && !operation.Queryable {
 				continue
 			}
 			fallthrough
@@ -425,6 +426,7 @@ func certificateStateJSON(state *kernel.State, target kernel.Requirement) ([]byt
 			projection.OpenOperations[id] = certificateOperation{
 				ID: id, Costs: cloneCountMap(operation.Costs),
 				Produces: cloneCountMap(operation.Produces), RetrySafe: operation.RetrySafe,
+				Queryable: operation.Queryable,
 			}
 		case kernel.Failed, kernel.Cancelled:
 		default:
@@ -509,6 +511,7 @@ func (c *Control) Move(id string, update kernel.OperationUpdate) error {
 		prior.ResultHash == update.ResultHash && prior.StatusCode == update.StatusCode &&
 		string(prior.ResultBody) == string(update.ResultBody) &&
 		prior.RemoteReference == update.RemoteReference &&
+		prior.Settlement == update.Settlement &&
 		(update.Phase != kernel.Dispatched ||
 			(prior.DispatchOwner == update.DispatchOwner && prior.DispatchGeneration == update.DispatchGeneration)) {
 		return nil

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -85,6 +87,102 @@ func openGateway(t *testing.T, path string, retrySafe bool, target string) (*con
 	return c, gateway
 }
 
+func queryablePaymentRequirement(retrySafe bool, target, queryTarget string) kernel.Requirement {
+	return kernel.Requirement{
+		ID: "queryable-payment-v1", Results: map[string]uint32{"paid": 1},
+		Capacities: map[string]uint32{"money": 1},
+		Kinds: map[string]kernel.KindSpec{
+			"charge": {
+				Costs: map[string]uint32{"money": 1}, Produces: map[string]uint32{"paid": 1},
+				RetrySafe: retrySafe, Queryable: true,
+				Target: target, Method: http.MethodPost, ResponseClassifier: ResponseReceiptV1,
+				QueryTarget: queryTarget, QueryMethod: http.MethodPost, QueryClassifier: OperationObservationV1,
+			},
+		},
+	}
+}
+
+func openQueryableGateway(t *testing.T, path string, retrySafe bool, target, queryTarget string) (*control.Control, *Gateway) {
+	t.Helper()
+	c, err := control.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Snapshot().Rule == nil {
+		certificate, err := c.Compile(queryablePaymentRequirement(retrySafe, target, queryTarget))
+		if err != nil {
+			c.Close()
+			t.Fatal(err)
+		}
+		if err := c.Activate(certificate); err != nil {
+			c.Close()
+			t.Fatal(err)
+		}
+	}
+	gateway, err := New(c, nil)
+	if err != nil {
+		c.Close()
+		t.Fatal(err)
+	}
+	return c, gateway
+}
+
+func writeTestObservation(t *testing.T, writer http.ResponseWriter, operationID, requestHash, outcome, factHash string) {
+	t.Helper()
+	writer.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(writer).Encode(operationObservationV1{
+		Schema: 1, OperationID: operationID, RequestHash: requestHash,
+		Outcome: outcome, FactHash: factHash, RemoteReference: "observed-" + operationID,
+	}); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestObservationClassifierRejectsAmbiguousOrMismatchedFacts(t *testing.T) {
+	operationID := "operation-7"
+	requestHash := strings.Repeat("b", 64)
+	factHash := strings.Repeat("a", 64)
+	valid := fmt.Sprintf(`{"schema":1,"operation_id":%q,"request_hash":%q,"outcome":"succeeded","fact_hash":%q,"remote_reference":"remote-7"}`,
+		operationID, requestHash, factHash)
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "identity mismatch", body: strings.Replace(valid, operationID, "operation-8", 1)},
+		{name: "request mismatch", body: strings.Replace(valid, requestHash, strings.Repeat("c", 64), 1)},
+		{name: "bad request hash", body: strings.Replace(valid, requestHash, "not-a-hash", 1)},
+		{name: "extra field", body: strings.Replace(valid, `}`, `,"guess":true}`, 1)},
+		{name: "missing field", body: strings.Replace(valid, `,"remote_reference":"remote-7"`, ``, 1)},
+		{name: "duplicate field", body: strings.Replace(valid, `"schema":1`, `"schema":1,"schema":1`, 1)},
+		{name: "bad fact hash", body: strings.Replace(valid, factHash, "not-a-hash", 1)},
+		{name: "uppercase fact hash", body: strings.Replace(valid, factHash, strings.Repeat("A", 64), 1)},
+		{name: "null remote reference", body: strings.Replace(valid, `"remote_reference":"remote-7"`, `"remote_reference":null`, 1)},
+		{name: "unknown outcome", body: strings.Replace(valid, `"outcome":"succeeded"`, `"outcome":"unknown"`, 1)},
+		{name: "inconclusive fact", body: strings.Replace(valid, `"outcome":"succeeded"`, `"outcome":"inconclusive"`, 1)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			response := &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"application/json"}}}
+			if _, _, _, err := classifyObservation(OperationObservationV1, operationID, requestHash, response, []byte(test.body)); err == nil {
+				t.Fatal("invalid observation was accepted")
+			}
+		})
+	}
+	response := &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"application/json"}}}
+	phase, gotHash, reference, err := classifyObservation(OperationObservationV1, operationID, requestHash, response, []byte(valid))
+	if err != nil || phase != kernel.Succeeded || gotHash != factHash || reference != "remote-7" {
+		t.Fatalf("valid observation rejected: phase=%s hash=%q reference=%q error=%v", phase, gotHash, reference, err)
+	}
+	failed := strings.Replace(valid, `"outcome":"succeeded"`, `"outcome":"failed"`, 1)
+	if phase, _, _, err := classifyObservation(OperationObservationV1, operationID, requestHash, response, []byte(failed)); err != nil || phase != kernel.Failed {
+		t.Fatalf("valid failed observation rejected: phase=%s error=%v", phase, err)
+	}
+	inconclusive := strings.Replace(valid, `"outcome":"succeeded","fact_hash":"`+factHash+`"`, `"outcome":"inconclusive","fact_hash":""`, 1)
+	if phase, gotHash, _, err := classifyObservation(OperationObservationV1, operationID, requestHash, response, []byte(inconclusive)); err != nil || phase != kernel.Unknown || gotHash != "" {
+		t.Fatalf("valid inconclusive observation rejected: phase=%s hash=%q error=%v", phase, gotHash, err)
+	}
+}
+
 func TestLostResponseRetryUsesOneRemoteOperation(t *testing.T) {
 	var mu sync.Mutex
 	deliveries := 0
@@ -155,6 +253,163 @@ func TestLostResponseRetryUsesOneRemoteOperation(t *testing.T) {
 	defer mu.Unlock()
 	if deliveries != 2 || len(commits) != 1 {
 		t.Fatalf("deliveries=%d commits=%d", deliveries, len(commits))
+	}
+}
+
+func TestLostResponseRecoveredByQueryWithoutRedispatch(t *testing.T) {
+	var deliveries atomic.Int32
+	effect := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		deliveries.Add(1)
+		connection, _, err := writer.(http.Hijacker).Hijack()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		_ = connection.Close()
+	}))
+	defer effect.Close()
+
+	var queries atomic.Int32
+	var observedBody []byte
+	var observedContentType, observedOperationID, observedRequestHash, leakedHeader string
+	observer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		queries.Add(1)
+		observedBody, _ = io.ReadAll(request.Body)
+		observedContentType = request.Header.Get("Content-Type")
+		observedOperationID = request.Header.Get("X-Operation-ID")
+		observedRequestHash = request.Header.Get("X-Operation-Request-Hash")
+		leakedHeader = request.Header.Get("X-Caller-Secret")
+		writeTestObservation(t, writer, observedOperationID, observedRequestHash, "succeeded", strings.Repeat("a", 64))
+	}))
+	defer observer.Close()
+
+	path := filepath.Join(t.TempDir(), "runtime.history")
+	firstControl, firstGateway := openQueryableGateway(t, path, false, effect.URL, observer.URL)
+	body := []byte(`{"hotel":"H1","rooms":1}`)
+	request := Request{
+		ID: "stay-42", Domain: "hotel", Kind: "charge", URL: effect.URL, Body: body,
+		Headers: map[string]string{"Content-Type": "application/json", "X-Caller-Secret": "do-not-copy"},
+	}
+	if outcome, err := firstGateway.Execute(context.Background(), request); !errors.Is(err, ErrOutcomeUnknown) || outcome.Phase != kernel.Unknown {
+		t.Fatalf("first outcome=%+v error=%v", outcome, err)
+	}
+	wantRequestHash := firstControl.Snapshot().Operations[request.ID].RequestHash
+	if err := firstControl.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	secondControl, secondGateway := openQueryableGateway(t, path, false, effect.URL, observer.URL)
+	outcome, err := secondGateway.Execute(context.Background(), request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if outcome.Phase != kernel.Succeeded || !outcome.RecoveredByQuery || outcome.ResultHash != strings.Repeat("a", 64) {
+		t.Fatalf("query recovery outcome=%+v", outcome)
+	}
+	if deliveries.Load() != 1 || queries.Load() != 1 {
+		t.Fatalf("deliveries=%d queries=%d", deliveries.Load(), queries.Load())
+	}
+	if string(observedBody) != string(body) || observedContentType != "application/json" ||
+		observedOperationID != request.ID || observedRequestHash != wantRequestHash || leakedHeader != "" {
+		t.Fatalf("query request body=%q content-type=%q id=%q hash=%q leaked=%q", observedBody, observedContentType, observedOperationID, observedRequestHash, leakedHeader)
+	}
+	if secondControl.Snapshot().Operations[request.ID].Settlement != kernel.SettlementQuery {
+		t.Fatal("query settlement was not recorded")
+	}
+	if err := secondControl.Close(); err != nil {
+		t.Fatal(err)
+	}
+	thirdControl, thirdGateway := openQueryableGateway(t, path, false, effect.URL, observer.URL)
+	defer thirdControl.Close()
+	reused, err := thirdGateway.Execute(context.Background(), request)
+	if err != nil || !reused.Reused || !reused.RecoveredByQuery {
+		t.Fatalf("durable query result was not reused: %+v error=%v", reused, err)
+	}
+	if queries.Load() != 1 || thirdControl.Snapshot().Operations[request.ID].Settlement != kernel.SettlementQuery {
+		t.Fatal("query settlement was not durably reused")
+	}
+}
+
+func TestInconclusiveQueryAllowsOnlyRetrySafeRedispatch(t *testing.T) {
+	for _, retrySafe := range []bool{false, true} {
+		t.Run(fmt.Sprintf("retry-safe-%t", retrySafe), func(t *testing.T) {
+			var deliveries atomic.Int32
+			effect := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+				if deliveries.Add(1) == 1 {
+					connection, _, err := writer.(http.Hijacker).Hijack()
+					if err != nil {
+						t.Error(err)
+						return
+					}
+					_ = connection.Close()
+					return
+				}
+				writeTestReceipt(t, writer, request.Header.Get("X-Operation-ID"), kernel.Succeeded)
+			}))
+			defer effect.Close()
+			var queries atomic.Int32
+			observer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+				queries.Add(1)
+				writeTestObservation(t, writer, request.Header.Get("X-Operation-ID"), request.Header.Get("X-Operation-Request-Hash"), "inconclusive", "")
+			}))
+			defer observer.Close()
+			c, gateway := openQueryableGateway(t, filepath.Join(t.TempDir(), "runtime.history"), retrySafe, effect.URL, observer.URL)
+			defer c.Close()
+			request := Request{ID: "charge-inconclusive", Domain: "payment", Kind: "charge", URL: effect.URL}
+			if _, err := gateway.Execute(context.Background(), request); !errors.Is(err, ErrOutcomeUnknown) {
+				t.Fatalf("first error=%v", err)
+			}
+			outcome, err := gateway.Execute(context.Background(), request)
+			if retrySafe {
+				if err != nil || outcome.Phase != kernel.Succeeded || outcome.RecoveredByQuery {
+					t.Fatalf("retry-safe outcome=%+v error=%v", outcome, err)
+				}
+				if deliveries.Load() != 2 {
+					t.Fatalf("retry-safe deliveries=%d", deliveries.Load())
+				}
+			} else {
+				if !errors.Is(err, ErrOutcomeUnknown) || outcome.Phase != kernel.Unknown {
+					t.Fatalf("query-only outcome=%+v error=%v", outcome, err)
+				}
+				if deliveries.Load() != 1 {
+					t.Fatalf("query-only operation was redispatched %d times", deliveries.Load())
+				}
+			}
+			if queries.Load() != 1 {
+				t.Fatalf("queries=%d", queries.Load())
+			}
+		})
+	}
+}
+
+func TestMalformedObservationNeverSettlesOrUnlocksRetry(t *testing.T) {
+	var deliveries atomic.Int32
+	effect := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		deliveries.Add(1)
+		connection, _, err := writer.(http.Hijacker).Hijack()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		_ = connection.Close()
+	}))
+	defer effect.Close()
+	observer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = writer.Write([]byte(`{"schema":1,"operation_id":"wrong","request_hash":"wrong","outcome":"inconclusive","fact_hash":"","remote_reference":""}`))
+	}))
+	defer observer.Close()
+	c, gateway := openQueryableGateway(t, filepath.Join(t.TempDir(), "runtime.history"), true, effect.URL, observer.URL)
+	defer c.Close()
+	request := Request{ID: "malformed-query", Domain: "payment", Kind: "charge", URL: effect.URL}
+	if _, err := gateway.Execute(context.Background(), request); !errors.Is(err, ErrOutcomeUnknown) {
+		t.Fatalf("first error=%v", err)
+	}
+	if outcome, err := gateway.Execute(context.Background(), request); !errors.Is(err, ErrOutcomeUnknown) || outcome.Phase != kernel.Unknown {
+		t.Fatalf("malformed query outcome=%+v error=%v", outcome, err)
+	}
+	if deliveries.Load() != 1 || c.Snapshot().Operations[request.ID].Phase != kernel.Unknown {
+		t.Fatal("malformed observation unlocked a retry or settled the Operation")
 	}
 }
 
