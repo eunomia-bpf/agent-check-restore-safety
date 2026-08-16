@@ -68,6 +68,9 @@ services:
     build:
       context: ../..
       dockerfile: deploy/microservice/Dockerfile
+      args:
+        SOURCE_REVISION: ${SOURCE_REVISION}
+        SOURCE_TREE_SHA256: ${SOURCE_TREE_SHA256}
     command:
       - /usr/local/bin/control
       - -listen=0.0.0.0:8787

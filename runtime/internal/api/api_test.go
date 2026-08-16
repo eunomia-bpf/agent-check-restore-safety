@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -79,6 +80,13 @@ func testRequirement(id, target string) kernel.Requirement {
 			},
 		},
 	}
+}
+
+func testTwoCompletionRequirement(id, target string) kernel.Requirement {
+	requirement := testRequirement(id, target)
+	requirement.Results["done"] = 2
+	requirement.Capacities["slot"] = 2
+	return requirement
 }
 
 func testQueryableRequirement(id, target, queryTarget string) kernel.Requirement {
@@ -450,6 +458,28 @@ func TestAdapterCredentialBindsDomainKindAndIdentity(t *testing.T) {
 	}
 }
 
+func TestSandboxOperationIdentityHasUnambiguousStableNamespace(t *testing.T) {
+	base := deriveSandboxOperationID("shared", "sandbox-a", "call-7")
+	values := []string{
+		deriveOperationID("shared", "call-7"),
+		deriveSandboxOperationID("shared", "sandbox-b", "call-7"),
+		deriveSandboxOperationID("shared", "sandbox-a", "call-8"),
+		deriveSandboxOperationID("shared-a", "sandbox", "call-7"),
+		deriveSandboxOperationID("shared", "a-sandbox", "call-7"),
+	}
+	for _, value := range values {
+		if value == base {
+			t.Fatalf("sandbox identity collision: %q", value)
+		}
+	}
+	first := deriveSandboxOperationID("ab", "c", "d")
+	second := deriveSandboxOperationID("a", "bc", "d")
+	third := deriveSandboxOperationID("a", "b", "cd")
+	if first == second || first == third || second == third {
+		t.Fatal("length redistribution collided across sandbox identity fields")
+	}
+}
+
 func TestDuplicateAdapterTokenIsRejected(t *testing.T) {
 	c, err := control.Open(filepath.Join(t.TempDir(), "runtime.history"))
 	if err != nil {
@@ -527,6 +557,14 @@ func TestHostBoundSandboxNeedsNoCredentialAndCannotReachAdmin(t *testing.T) {
 	}
 	if outcome.Phase != kernel.Succeeded || deliveries.Load() != 1 {
 		t.Fatalf("sandbox outcome=%+v deliveries=%d", outcome, deliveries.Load())
+	}
+	wantOperationID := deriveSandboxOperationID(first.Domain, first.SandboxID, request.CallID)
+	if outcome.OperationID != wantOperationID {
+		t.Fatalf("sandbox operation ID=%q, want %q", outcome.OperationID, wantOperationID)
+	}
+	owned := c.Snapshot().Operations[outcome.OperationID]
+	if owned.SandboxID != first.SandboxID {
+		t.Fatalf("sandbox operation owner=%q, want %q", owned.SandboxID, first.SandboxID)
 	}
 	var bypass OperationError
 	if status := postJSON(t, adminServer.Client(), adminServer.URL+"/v1/execute", operationToken, request, &bypass); status != http.StatusConflict {
@@ -612,8 +650,105 @@ func TestHostBoundSandboxNeedsNoCredentialAndCannotReachAdmin(t *testing.T) {
 	if status := postJSON(t, currentServer.Client(), currentServer.URL+"/v1/execute", "", request, &reused); status != http.StatusOK {
 		t.Fatalf("current sandbox reuse status=%d outcome=%+v", status, reused)
 	}
-	if !reused.Reused || reused.Phase != kernel.Succeeded || deliveries.Load() != 1 {
+	if !reused.Reused || reused.Phase != kernel.Succeeded ||
+		reused.OperationID != outcome.OperationID || deliveries.Load() != 1 {
 		t.Fatalf("current sandbox outcome=%+v deliveries=%d", reused, deliveries.Load())
+	}
+}
+
+func TestSameDomainSandboxesHaveIndependentOperationNamespaces(t *testing.T) {
+	var deliveries atomic.Int32
+	sink := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		deliveries.Add(1)
+		writer.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(writer).Encode(map[string]any{
+			"schema": 1, "operation_id": request.Header.Get("X-Operation-ID"),
+			"outcome": "succeeded", "result_hash": strings.Repeat("b", 64),
+			"remote_reference": request.Header.Get("X-Operation-ID"),
+		})
+	}))
+	defer sink.Close()
+
+	c, err := control.Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	serverAPI, err := New(c, sink.Client(), Credentials{AdminToken: adminToken})
+	if err != nil {
+		t.Fatal(err)
+	}
+	certificate, err := c.Compile(testTwoCompletionRequirement("shared-domain", sink.URL))
+	if err != nil {
+		t.Fatal(err)
+	}
+	first := control.SandboxBinding{
+		SandboxID: "sandbox-a", Generation: 1, HostInstanceID: "host-a-1",
+		Domain: "shared", AllowedKinds: []string{"finish"},
+	}
+	second := control.SandboxBinding{
+		SandboxID: "sandbox-b", Generation: 1, HostInstanceID: "host-b-1",
+		Domain: "shared", AllowedKinds: []string{"finish"},
+	}
+	if err := c.Cutover(certificate, []control.SandboxBinding{first, second}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.AttachSandboxHosts([]control.SandboxBinding{first, second}); err != nil {
+		t.Fatal(err)
+	}
+	firstHandler, err := serverAPI.HandlerForSandbox(first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondHandler, err := serverAPI.HandlerForSandbox(second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	firstServer := httptest.NewServer(firstHandler)
+	defer firstServer.Close()
+	secondServer := httptest.NewServer(secondHandler)
+	defer secondServer.Close()
+
+	request := sandboxExecuteRequest{CallID: "same-call", Kind: "finish"}
+	var firstOutcome, secondOutcome gateway.Outcome
+	if status := postJSON(t, firstServer.Client(), firstServer.URL+"/v1/execute", "", request, &firstOutcome); status != http.StatusOK {
+		t.Fatalf("first sandbox status=%d outcome=%+v", status, firstOutcome)
+	}
+	if status := postJSON(t, secondServer.Client(), secondServer.URL+"/v1/execute", "", request, &secondOutcome); status != http.StatusOK {
+		t.Fatalf("second sandbox status=%d outcome=%+v", status, secondOutcome)
+	}
+	if firstOutcome.OperationID == secondOutcome.OperationID {
+		t.Fatalf("same-domain sandboxes shared operation ID %q", firstOutcome.OperationID)
+	}
+	if firstOutcome.OperationID != deriveSandboxOperationID(first.Domain, first.SandboxID, request.CallID) ||
+		secondOutcome.OperationID != deriveSandboxOperationID(second.Domain, second.SandboxID, request.CallID) {
+		t.Fatalf("unexpected operation IDs: first=%q second=%q", firstOutcome.OperationID, secondOutcome.OperationID)
+	}
+	state := c.Snapshot()
+	if state.Operations[firstOutcome.OperationID].SandboxID != first.SandboxID ||
+		state.Operations[secondOutcome.OperationID].SandboxID != second.SandboxID {
+		t.Fatalf("operation owners were not persisted: %+v", state.Operations)
+	}
+	if deliveries.Load() != 2 {
+		t.Fatalf("provider deliveries=%d, want 2", deliveries.Load())
+	}
+
+	beforeHead := c.Snapshot().History
+	beforeEvents := len(c.Events())
+	g, err := gateway.New(c, sink.Client())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = g.ExecuteBound(context.Background(), second, gateway.Request{
+		ID: firstOutcome.OperationID, Domain: second.Domain, Kind: "finish",
+		Method: http.MethodPost, URL: sink.URL,
+	})
+	if err == nil || !strings.Contains(err.Error(), "belongs to sandbox") {
+		t.Fatalf("cross-sandbox gateway execution error=%v", err)
+	}
+	if deliveries.Load() != 2 || len(c.Events()) != beforeEvents || c.Snapshot().History != beforeHead {
+		t.Fatalf("rejected cross-sandbox execution changed effect or History: deliveries=%d events=%d head=%+v",
+			deliveries.Load(), len(c.Events()), c.Snapshot().History)
 	}
 }
 

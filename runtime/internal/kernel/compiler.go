@@ -581,7 +581,7 @@ func (s *State) RefreshRule() error {
 }
 
 func (s *State) Prepare(id, domain, kind, requestHash string) (Operation, error) {
-	return s.prepare(id, domain, kind, requestHash, false, nil, nil)
+	return s.prepare(id, domain, "", kind, requestHash, false, nil, nil)
 }
 
 // PrepareWithRequest creates an Operation whose caller-owned HTTP headers and
@@ -593,7 +593,21 @@ func (s *State) PrepareWithRequest(
 	headers map[string]string,
 	body []byte,
 ) (Operation, error) {
-	return s.prepare(id, domain, kind, requestHash, true, headers, body)
+	return s.prepare(id, domain, "", kind, requestHash, true, headers, body)
+}
+
+// PrepareWithRequestForSandbox persists the stable host-owned sandbox
+// namespace alongside an Operation. Generation and host instance are
+// deliberately excluded so a restored instance can recover the same work.
+func (s *State) PrepareWithRequestForSandbox(
+	id, domain, sandboxID, kind, requestHash string,
+	headers map[string]string,
+	body []byte,
+) (Operation, error) {
+	if sandboxID == "" {
+		return Operation{}, errors.New("sandbox operation requires a sandbox identity")
+	}
+	return s.prepare(id, domain, sandboxID, kind, requestHash, true, headers, body)
 }
 
 func validateStoredRequest(headers map[string]string, body []byte) error {
@@ -617,7 +631,7 @@ func validateStoredRequest(headers map[string]string, body []byte) error {
 }
 
 func (s *State) prepare(
-	id, domain, kind, requestHash string,
+	id, domain, sandboxID, kind, requestHash string,
 	requestStored bool,
 	headers map[string]string,
 	body []byte,
@@ -633,6 +647,9 @@ func (s *State) prepare(
 			return Operation{}, resourceLimit(field.label+" bytes", MaxNameBytes, uint64(len(field.value)))
 		}
 	}
+	if sandboxID != "" && len(sandboxID) > MaxNameBytes {
+		return Operation{}, resourceLimit("operation sandbox identity bytes", MaxNameBytes, uint64(len(sandboxID)))
+	}
 	if requestStored {
 		if err := validateStoredRequest(headers, body); err != nil {
 			return Operation{}, err
@@ -643,7 +660,7 @@ func (s *State) prepare(
 		return Operation{}, errors.New("unstored operation request carries headers or body")
 	}
 	if prior, ok := s.Operations[id]; ok {
-		if prior.Domain != domain || prior.Kind != kind || prior.RequestHash != requestHash {
+		if prior.Domain != domain || prior.SandboxID != sandboxID || prior.Kind != kind || prior.RequestHash != requestHash {
 			return Operation{}, errors.New("stable operation identity is already bound to different work")
 		}
 		if requestStored {
@@ -666,6 +683,7 @@ func (s *State) prepare(
 	op := Operation{
 		ID:                 id,
 		Domain:             domain,
+		SandboxID:          sandboxID,
 		Kind:               kind,
 		RequestHash:        requestHash,
 		RuleVersion:        s.Rule.Version,

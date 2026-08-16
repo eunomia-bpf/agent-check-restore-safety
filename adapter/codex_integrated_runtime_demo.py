@@ -14,13 +14,17 @@ from __future__ import annotations
 import argparse
 import base64
 from dataclasses import dataclass
+import errno
 from hashlib import sha256
 import json
 import os
 from pathlib import Path
+import re
 import selectors
 import secrets
 import shutil
+import socket
+import stat
 import subprocess
 import sys
 import tempfile
@@ -61,11 +65,156 @@ AMOUNT = 42
 CODEX_DOMAIN = "codex-app-server"
 ORDER_DOMAIN = "orders"
 VM_DOMAIN = "full-linux-vm"
+VM_SANDBOX_ID = "integrated-vm"
 CHARGE_KIND = "charge-invoice"
 RESERVE_V1_KIND = "reserve-v1"
 RESERVE_V2_KIND = "reserve-v2"
 AUDIT_KIND = "append-audit"
 LIVE_TIMEOUT_SECONDS = 20 * 60.0
+PROVENANCE_LABEL_NAMES = (
+    "com.docker.compose.version",
+    "io.safe-change.source-tree.sha256",
+    "org.opencontainers.image.revision",
+)
+
+
+def _record_source_provenance(output_dir: Path) -> dict[str, Any]:
+    root = Path(__file__).resolve().parents[1]
+    adapter_sources = {
+        "adapter/app_server.py",
+        "adapter/codex_integrated_runtime_demo.py",
+        "adapter/codex_isolated_runtime_demo.py",
+        "adapter/codex_runtime_demo.py",
+        "adapter/docker_codex.py",
+    }
+    listed = _run(
+        ["git", "ls-files", "-z", "--", "adapter", "runtime"],
+        cwd=root,
+    ).stdout.split("\0")
+    files = sorted(
+        path
+        for path in listed
+        if path
+        and (
+            path in adapter_sources
+            or (
+                path.startswith("runtime/")
+                and (
+                    path.endswith(".go")
+                    or path.endswith("/Dockerfile")
+                    or path.endswith("/compose.yaml")
+                    or path in {"runtime/go.mod", "runtime/go.sum"}
+                )
+            )
+        )
+    )
+    if not adapter_sources <= set(files):
+        raise DemoError("source provenance omitted an adapter implementation")
+    status = _run(
+        [
+            "git",
+            "status",
+            "--porcelain=v1",
+            "--untracked-files=all",
+            "--",
+            "adapter",
+            "runtime",
+        ],
+        cwd=root,
+    ).stdout.splitlines()
+    selected = set(files)
+    dirty_paths: list[str] = []
+    for line in status:
+        path = line[3:].split(" -> ")[-1]
+        if path in selected or (
+            path.startswith("runtime/")
+            and (
+                path.endswith(".go")
+                or path.endswith("/Dockerfile")
+                or path.endswith("/compose.yaml")
+                or path in {"runtime/go.mod", "runtime/go.sum"}
+            )
+        ):
+            dirty_paths.append(path)
+    if dirty_paths:
+        raise DemoError(
+            "integrated evidence requires committed producer source: "
+            + ", ".join(sorted(dirty_paths))
+        )
+    hashes = {path: _sha256_file(root / path) for path in files}
+    digest = sha256()
+    for path, value in hashes.items():
+        digest.update(path.encode() + b"\0" + value.encode() + b"\0")
+    revision = _run(["git", "rev-parse", "HEAD"], cwd=root).stdout.strip()
+    provenance = {
+        "schema": 1,
+        "revision": revision,
+        "selected_source_clean": True,
+        "source_tree_sha256": digest.hexdigest(),
+        "files": hashes,
+    }
+    _write_json(output_dir / "source-provenance.json", provenance)
+    return provenance
+
+
+def _runtime_image_bindings(
+    image: str,
+    containers: Sequence[str],
+    *,
+    project: str,
+    revision: str,
+    source_tree_sha256: str,
+) -> dict[str, Any]:
+    inspection = json.loads(_run(["docker", "image", "inspect", image]).stdout)
+    if not isinstance(inspection, list) or len(inspection) != 1:
+        raise DemoError("runtime image inspection is malformed")
+    image_document = inspection[0]
+    if not isinstance(image_document, Mapping):
+        raise DemoError("runtime image inspection is not an object")
+    image_id = image_document.get("Id")
+    if not isinstance(image_id, str) or not re.fullmatch(
+        r"sha256:[0-9a-f]{64}", image_id
+    ):
+        raise DemoError("runtime image has no immutable local image identity")
+    config = image_document.get("Config")
+    labels = config.get("Labels") if isinstance(config, Mapping) else None
+    fixed_labels = {
+        "com.docker.compose.project": project,
+        "com.docker.compose.service": "control",
+        "io.safe-change.source-tree.sha256": source_tree_sha256,
+        "org.opencontainers.image.revision": revision,
+    }
+    compose_version = (
+        labels.get("com.docker.compose.version")
+        if isinstance(labels, Mapping)
+        else None
+    )
+    expected_labels = {
+        **fixed_labels,
+        "com.docker.compose.version": compose_version,
+    }
+    if (
+        labels != expected_labels
+        or not isinstance(compose_version, str)
+        or re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?", compose_version)
+        is None
+    ):
+        raise DemoError("runtime image is not bound to the producer source")
+    bindings: dict[str, str] = {}
+    for container in containers:
+        observed = _run(
+            ["docker", "inspect", "-f", "{{.Image}}", container]
+        ).stdout.strip()
+        if observed != image_id:
+            raise DemoError(f"container {container} did not use the built runtime image")
+        bindings[container] = observed
+    return {
+        "schema": 1,
+        "tag": image,
+        "image_id": image_id,
+        "labels": expected_labels,
+        "container_images": bindings,
+    }
 
 
 def _project_name() -> str:
@@ -76,6 +225,17 @@ def _operation_id(domain: str, call_id: str) -> str:
     digest = sha256()
     digest.update(b"operation-id-v1\x00")
     digest.update(domain.encode("utf-8"))
+    digest.update(b"\x00")
+    digest.update(call_id.encode("utf-8"))
+    return "op-" + digest.hexdigest()
+
+
+def _sandbox_operation_id(domain: str, sandbox_id: str, call_id: str) -> str:
+    digest = sha256()
+    digest.update(b"sandbox-operation-id-v2\x00")
+    digest.update(domain.encode("utf-8"))
+    digest.update(b"\x00")
+    digest.update(sandbox_id.encode("utf-8"))
     digest.update(b"\x00")
     digest.update(call_id.encode("utf-8"))
     return "op-" + digest.hexdigest()
@@ -112,6 +272,8 @@ class IntegratedDeployment:
     output_dir: Path
     project: str
     image: str
+    source_revision: str
+    source_tree_sha256: str
     control_port: int
     order_port: int
 
@@ -124,6 +286,8 @@ class IntegratedDeployment:
                 "ORDER_PORT": str(self.order_port),
                 "DEMO_STATE_DIR": str(self.state_dir),
                 "RUNTIME_IMAGE": self.image,
+                "SOURCE_REVISION": self.source_revision,
+                "SOURCE_TREE_SHA256": self.source_tree_sha256,
                 "DEMO_UID": str(os.getuid()),
                 "DEMO_GID": str(os.getgid()),
             }
@@ -182,13 +346,55 @@ class IntegratedDeployment:
             raise DemoError(f"Compose service has no container: {service}")
         return identifier
 
-    def restart_control(self) -> tuple[int, int]:
+    def restart_control(self, sandbox_socket: Path) -> tuple[int, int, dict[str, Any]]:
         container = self.service_container("control")
         before = int(
             _run(["docker", "inspect", "-f", "{{.State.Pid}}", container])
             .stdout.strip()
         )
-        self.compose("restart", "control", timeout=60.0)
+        command = ["docker", "kill", "--signal", "KILL", container]
+        started = time.time_ns()
+        killed = _run(command, timeout=30.0, check=False)
+        finished = time.time_ns()
+        if killed.returncode != 0:
+            raise DemoError(f"control SIGKILL failed: {killed.stdout}")
+        inspected = json.loads(
+            _run(["docker", "inspect", container], timeout=30.0).stdout
+        )
+        if not isinstance(inspected, list) or len(inspected) != 1:
+            raise DemoError("control crash inspection is malformed")
+        state = inspected[0].get("State")
+        if (
+            not isinstance(state, Mapping)
+            or state.get("Running") is not False
+            or state.get("Pid") != 0
+            or state.get("ExitCode") != 137
+            or state.get("OOMKilled") is not False
+        ):
+            raise DemoError(f"control did not retain a SIGKILL state: {state}")
+        _write_json(
+            self.output_dir / "control-crash.json",
+            {
+                "command": command,
+                "container_id": container,
+                "pid_before": before,
+                "started_time_ns": started,
+                "finished_time_ns": finished,
+                "returncode": killed.returncode,
+                "state": {
+                    "ExitCode": state.get("ExitCode"),
+                    "FinishedAt": state.get("FinishedAt"),
+                    "OOMKilled": state.get("OOMKilled"),
+                    "Pid": state.get("Pid"),
+                    "Running": state.get("Running"),
+                },
+            },
+        )
+        stale_socket = _observe_stale_sandbox_socket(
+            sandbox_socket,
+            generation=2,
+        )
+        self.compose("start", "control", timeout=60.0)
         _wait_health(self.control_url + "/healthz")
         after = int(
             _run(["docker", "inspect", "-f", "{{.State.Pid}}", container])
@@ -196,7 +402,7 @@ class IntegratedDeployment:
         )
         if before <= 0 or after <= 0 or before == after:
             raise DemoError("control container did not replace its process")
-        return before, after
+        return before, after, stale_socket
 
     def replace_order(self) -> tuple[str, str]:
         before = self.service_container("order")
@@ -274,8 +480,7 @@ class VMProcess:
         *,
         binary: Path,
         accel: str,
-        control_port: int,
-        token_path: Path,
+        sandbox_socket: Path,
         request_path: Path,
         direct_probe: str,
         evidence_dir: Path,
@@ -287,10 +492,8 @@ class VMProcess:
             accel,
             "-timeout",
             "18m",
-            "-external-control-port",
-            str(control_port),
-            "-external-token-file",
-            str(token_path),
+            "-external-sandbox-socket",
+            str(sandbox_socket),
             "-external-request",
             str(request_path),
             "-external-direct-probe",
@@ -346,7 +549,7 @@ class VMProcess:
             return event
 
     def send(self, command: str) -> None:
-        if command not in {"start", "restore"}:
+        if command not in {"start", "pause", "restore", "resume"}:
             raise ValueError(f"unsupported VM command {command!r}")
         self.process.stdin.write(command + "\n")
         self.process.stdin.flush()
@@ -449,6 +652,7 @@ def _compile_and_activate(
     admin_token: str,
     requirement: Mapping[str, Any],
     label: str,
+    bindings: Sequence[Mapping[str, Any]] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     _write_json(output_dir / f"requirement-{label}.json", requirement)
     certificate = _http_json(
@@ -489,14 +693,152 @@ def _compile_and_activate(
     if not isinstance(verdict, dict) or verdict.get("valid") is not True:
         raise DemoError(f"{label} Certificate was independently rejected")
     _write_json(output_dir / f"checker-verdict-{label}.json", verdict)
-    active = _http_json(
-        deployment.control_url + "/v1/activate",
-        method="POST",
-        token=admin_token,
-        payload=certificate,
-    ).body
+    if bindings is None:
+        active = _http_json(
+            deployment.control_url + "/v1/activate",
+            method="POST",
+            token=admin_token,
+            payload=certificate,
+        ).body
+    else:
+        cutover = _http_json(
+            deployment.control_url + "/v1/cutover",
+            method="POST",
+            token=admin_token,
+            payload={"certificate": certificate, "bindings": list(bindings)},
+        ).body
+        active = cutover.get("state")
+        if not isinstance(active, dict) or cutover.get("bindings") != list(bindings):
+            raise DemoError(f"{label} did not publish its sandbox binding")
+        _write_json(output_dir / f"cutover-{label}.json", cutover)
     _write_json(output_dir / f"active-state-{label}.json", active)
     return certificate, active
+
+
+def _vm_binding(project: str, generation: int) -> dict[str, Any]:
+    return {
+        "sandbox_id": VM_SANDBOX_ID,
+        "generation": generation,
+        "host_instance_id": f"qemu-{project}-g{generation}",
+        "domain": VM_DOMAIN,
+        "allowed_kinds": [AUDIT_KIND],
+    }
+
+
+def _sandbox_socket_path(state_dir: Path) -> Path:
+    digest = sha256(VM_SANDBOX_ID.encode()).hexdigest()[:32]
+    return state_dir / "sandbox-endpoints" / f"sandbox-{digest}.sock"
+
+
+def _wait_sandbox_socket(
+    path: Path,
+    *,
+    generation: int,
+    timeout: float = 10.0,
+) -> dict[str, Any]:
+    deadline = time.monotonic() + timeout
+    last_error: OSError | None = None
+    while time.monotonic() < deadline:
+        try:
+            socket_info = path.lstat()
+            parent_info = path.parent.lstat()
+            mode = socket_info.st_mode
+            if not stat.S_ISSOCK(mode) or stat.S_IMODE(mode) != 0o600:
+                raise DemoError(f"sandbox endpoint has unsafe mode {oct(mode)}")
+            if (
+                not stat.S_ISDIR(parent_info.st_mode)
+                or stat.S_IMODE(parent_info.st_mode) != 0o700
+                or socket_info.st_uid != os.geteuid()
+                or parent_info.st_uid != os.geteuid()
+            ):
+                raise DemoError("sandbox endpoint has an unsafe owner or parent")
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
+                connection.settimeout(2.0)
+                connection.connect(str(path))
+                connection.sendall(
+                    b"GET /healthz HTTP/1.1\r\nHost: sandbox\r\nConnection: close\r\n\r\n"
+                )
+                response = connection.recv(4096)
+            if response.startswith(b"HTTP/1.1 200"):
+                return {
+                    "event": "published",
+                    "generation": generation,
+                    "observed_time_ns": time.time_ns(),
+                    "path_basename": path.name,
+                    "parent_mode": "0700",
+                    "socket_mode": "0600",
+                    "owner_uid": os.geteuid(),
+                    "inode": socket_info.st_ino,
+                    "health_status": 200,
+                }
+            raise DemoError(f"sandbox health response is {response[:80]!r}")
+        except OSError as error:
+            last_error = error
+            time.sleep(0.05)
+    raise DemoError(f"sandbox endpoint did not become healthy: {last_error}")
+
+
+def _observe_stale_sandbox_socket(
+    path: Path,
+    *,
+    generation: int,
+) -> dict[str, Any]:
+    socket_info = path.lstat()
+    if (
+        not stat.S_ISSOCK(socket_info.st_mode)
+        or stat.S_IMODE(socket_info.st_mode) != 0o600
+        or socket_info.st_uid != os.geteuid()
+    ):
+        raise DemoError("SIGKILL did not leave the expected private socket inode")
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
+        connection.settimeout(2.0)
+        try:
+            connection.connect(str(path))
+        except OSError as error:
+            connect_errno = error.errno
+        else:
+            raise DemoError("stale sandbox endpoint accepted a connection after SIGKILL")
+    if connect_errno != errno.ECONNREFUSED:
+        raise DemoError(
+            f"stale sandbox endpoint connect errno is {connect_errno}, want ECONNREFUSED"
+        )
+    return {
+        "event": "stale-after-control-sigkill",
+        "generation": generation,
+        "observed_time_ns": time.time_ns(),
+        "path_basename": path.name,
+        "socket_mode": "0600",
+        "owner_uid": os.geteuid(),
+        "inode": socket_info.st_ino,
+        "connect_errno": connect_errno,
+    }
+
+
+def _observe_sandbox_absence(path: Path, *, prior_generation: int) -> dict[str, Any]:
+    try:
+        path.lstat()
+    except FileNotFoundError as error:
+        lstat_errno = error.errno
+    else:
+        raise DemoError("reopened control retained the stale sandbox inode")
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
+        connection.settimeout(2.0)
+        try:
+            connection.connect(str(path))
+        except OSError as error:
+            connect_errno = error.errno
+        else:
+            raise DemoError("reopened control automatically attached a sandbox endpoint")
+    if lstat_errno != errno.ENOENT or connect_errno != errno.ENOENT:
+        raise DemoError("reopened sandbox path did not fail with ENOENT")
+    return {
+        "event": "absent-after-control-reopen",
+        "prior_generation": prior_generation,
+        "observed_time_ns": time.time_ns(),
+        "path_basename": path.name,
+        "lstat_errno": lstat_errno,
+        "connect_errno": connect_errno,
+    }
 
 
 def _expect_unknown(value: Mapping[str, Any], label: str) -> None:
@@ -596,7 +938,7 @@ def _validate_networks(
         "fixed_actor_paths": {
             "codex": "ingress->control",
             "order": "control",
-            "vm": "qemu-guestfwd->ingress->control",
+            "vm": "qemu-guestfwd->host-sandbox-socket",
         },
     }
     return topology, observations, effect_ips
@@ -607,8 +949,11 @@ def _copy_vm_evidence(source: Path, destination: Path, private_root: Path) -> No
     for name in (
         "result.json",
         "guest.serial.log",
+        "guest-request.json",
+        "guest-script.sh",
         "snapshots.txt",
         "qemu-command.json",
+        "qemu-process-command.json",
         "qmp-protocol.jsonl",
     ):
         shutil.copy2(source / name, destination / name)
@@ -635,7 +980,6 @@ def _configure_private_state(state_dir: Path) -> dict[str, str]:
         "admin": _new_token(state_dir / "credentials/admin-token"),
         "codex": _new_token(state_dir / "credentials/codex-token"),
         "order": _new_token(state_dir / "credentials/order-token"),
-        "vm": _new_token(state_dir / "credentials/vm-token"),
     }
     _write_json(
         state_dir / "control-config/adapters.json",
@@ -651,11 +995,6 @@ def _configure_private_state(state_dir: Path) -> dict[str, str]:
                     "domain": ORDER_DOMAIN,
                     "token_file": "/credentials/order-token",
                     "kinds": [RESERVE_V1_KIND, RESERVE_V2_KIND],
-                },
-                {
-                    "domain": VM_DOMAIN,
-                    "token_file": "/credentials/vm-token",
-                    "kinds": [AUDIT_KIND],
                 },
             ],
         },
@@ -690,11 +1029,12 @@ def run_demo(
     output_dir.mkdir(parents=True, exist_ok=False)
     output_dir.chmod(0o700)
     (output_dir / "logs").mkdir(mode=0o700)
+    source_provenance = _record_source_provenance(output_dir)
     raw_protocol = output_dir / "app-server.jsonl"
     result: dict[str, Any] | None = None
 
     with tempfile.TemporaryDirectory(
-        prefix="safe-change-integrated-private-"
+        prefix="scr-int-"
     ) as private:
         private_dir = Path(private)
         private_dir.chmod(0o700)
@@ -741,11 +1081,14 @@ def run_demo(
             output_dir=output_dir,
             project=project,
             image=image,
+            source_revision=source_provenance["revision"],
+            source_tree_sha256=source_provenance["source_tree_sha256"],
             control_port=control_port,
             order_port=order_port,
         )
 
         timeline: dict[str, int] = {"run_start_ns": time.time_ns()}
+        sandbox_lifecycle: list[dict[str, Any]] = []
         try:
             deployment.start()
             _compile_and_activate(
@@ -755,8 +1098,13 @@ def run_demo(
                 admin_token=tokens["admin"],
                 requirement=requirement_v1,
                 label="v1",
+                bindings=[_vm_binding(project, 1)],
             )
             timeline["rule_v1_activated_ns"] = time.time_ns()
+            sandbox_socket = _sandbox_socket_path(state_dir)
+            sandbox_lifecycle.append(
+                _wait_sandbox_socket(sandbox_socket, generation=1)
+            )
 
             vm_call_id = f"purchase/{purchase_id}/audit"
             vm_body = _canonical_json(
@@ -768,9 +1116,6 @@ def run_demo(
                 {
                     "call_id": vm_call_id,
                     "kind": AUDIT_KIND,
-                    "method": "POST",
-                    "url": "http://ledger:8081/v1/charge",
-                    "headers": {"Content-Type": "application/json"},
                     "body": base64.b64encode(vm_body).decode("ascii"),
                 },
             )
@@ -782,8 +1127,7 @@ def run_demo(
             with VMProcess(
                 binary=vm_binary,
                 accel=vm_accel,
-                control_port=deployment.control_port,
-                token_path=state_dir / "credentials/vm-token",
+                sandbox_socket=sandbox_socket,
                 request_path=vm_request_path,
                 direct_probe=f"http://{ledger_ip}:8081/v1/stats",
                 evidence_dir=vm_work,
@@ -796,7 +1140,11 @@ def run_demo(
                 codex_operation_id = _operation_id(CODEX_DOMAIN, codex_call_id)
                 order_call_id = f"order/{purchase_id}/payment"
                 order_operation_id = _operation_id(ORDER_DOMAIN, order_call_id)
-                vm_operation_id = _operation_id(VM_DOMAIN, vm_call_id)
+                vm_operation_id = _sandbox_operation_id(
+                    VM_DOMAIN,
+                    VM_SANDBOX_ID,
+                    vm_call_id,
+                )
                 payment_body = _canonical_json(
                     {
                         "amount": AMOUNT,
@@ -899,6 +1247,21 @@ def run_demo(
                         _capture_docker_inspect(
                             initial_containers,
                             output_dir / "docker-inspect.json",
+                            extra_label_names=PROVENANCE_LABEL_NAMES,
+                            include_image_identity=True,
+                        )
+                        image_provenance = _runtime_image_bindings(
+                            image,
+                            initial_containers,
+                            project=project,
+                            revision=source_provenance["revision"],
+                            source_tree_sha256=source_provenance[
+                                "source_tree_sha256"
+                            ],
+                        )
+                        _write_json(
+                            output_dir / "image-provenance.json",
+                            image_provenance,
                         )
                         _capture_docker_network_inspect(
                             [
@@ -956,6 +1319,9 @@ def run_demo(
                         timeline["vm_first_succeeded_ns"] = vm_first[
                             "observed_time_ns"
                         ]
+                        vm.send("pause")
+                        vm_paused = vm.wait_event("paused-after-first", 30.0)
+                        timeline["vm_paused_ns"] = vm_paused["observed_time_ns"]
 
                         _compile_and_activate(
                             deployment=deployment,
@@ -964,8 +1330,12 @@ def run_demo(
                             admin_token=tokens["admin"],
                             requirement=requirement_v2,
                             label="v2",
+                            bindings=[_vm_binding(project, 2)],
                         )
                         timeline["rule_v2_activated_ns"] = time.time_ns()
+                        sandbox_lifecycle.append(
+                            _wait_sandbox_socket(sandbox_socket, generation=2)
+                        )
                         _write_release(
                             state_dir / "order-config/order.json",
                             "v2",
@@ -975,26 +1345,77 @@ def run_demo(
                         old_order_container, new_order_container = (
                             deployment.replace_order()
                         )
+                        replacement_image = _runtime_image_bindings(
+                            image,
+                            [new_order_container],
+                            project=project,
+                            revision=source_provenance["revision"],
+                            source_tree_sha256=source_provenance[
+                                "source_tree_sha256"
+                            ],
+                        )
+                        if replacement_image["image_id"] != image_provenance["image_id"]:
+                            raise DemoError("replacement order used another runtime image")
+                        image_provenance["container_images"].update(
+                            replacement_image["container_images"]
+                        )
+                        _write_json(
+                            output_dir / "image-provenance.json",
+                            image_provenance,
+                        )
                         timeline["order_replaced_ns"] = time.time_ns()
                         health = _http_json(deployment.order_url + "/healthz").body
                         if health.get("version") != "v2" or health.get("kind") != RESERVE_V2_KIND:
                             raise DemoError(f"new order release is not v2: {health}")
 
                         control_container = deployment.service_container("control")
-                        control_pid_before, control_pid_after = (
-                            deployment.restart_control()
+                        control_pid_before, control_pid_after, stale_socket = (
+                            deployment.restart_control(sandbox_socket)
                         )
+                        sandbox_lifecycle.append(stale_socket)
                         timeline["control_restarted_ns"] = time.time_ns()
+                        sandbox_lifecycle.append(
+                            _observe_sandbox_absence(
+                                sandbox_socket,
+                                prior_generation=2,
+                            )
+                        )
                         _capture_docker_inspect(
                             [control_container],
                             output_dir / "control-after-restart-inspect.json",
+                            extra_label_names=PROVENANCE_LABEL_NAMES,
+                            include_image_identity=True,
                         )
                         _capture_docker_inspect(
                             [new_order_container],
                             output_dir / "order-after-replacement-inspect.json",
+                            extra_label_names=PROVENANCE_LABEL_NAMES,
+                            include_image_identity=True,
                         )
 
                         vm.send("restore")
+                        vm_loaded = vm.wait_event("restore-loaded-paused", 60.0)
+                        timeline["vm_restore_loaded_ns"] = vm_loaded[
+                            "observed_time_ns"
+                        ]
+                        _compile_and_activate(
+                            deployment=deployment,
+                            runtime_dir=runtime_dir,
+                            output_dir=output_dir,
+                            admin_token=tokens["admin"],
+                            requirement=requirement_v2,
+                            label="v2-reopen",
+                            bindings=[_vm_binding(project, 3)],
+                        )
+                        generation_3 = _wait_sandbox_socket(
+                            sandbox_socket,
+                            generation=3,
+                        )
+                        sandbox_lifecycle.append(generation_3)
+                        timeline["sandbox_generation_3_ns"] = generation_3[
+                            "observed_time_ns"
+                        ]
+                        vm.send("resume")
                         vm_completed = vm.wait_event("completed", 180.0)
                         vm.wait(timeout=30.0)
                         timeline["vm_restore_completed_ns"] = vm_completed[
@@ -1138,18 +1559,21 @@ def run_demo(
                                 CHARGE_KIND,
                                 "http://payment:8081/v1/charge",
                                 2,
+                                "",
                             ),
                             order_operation_id: (
                                 ORDER_DOMAIN,
                                 RESERVE_V1_KIND,
                                 "http://inventory:8081/v1/charge",
                                 2,
+                                "",
                             ),
                             vm_operation_id: (
                                 VM_DOMAIN,
                                 AUDIT_KIND,
                                 "http://ledger:8081/v1/charge",
                                 1,
+                                VM_SANDBOX_ID,
                             ),
                         }
                         for (
@@ -1164,6 +1588,7 @@ def run_demo(
                                 operation.get("kind"),
                                 operation.get("target"),
                                 operation.get("dispatch_generation"),
+                                operation.get("sandbox_id", ""),
                             )
                             if (
                                 operation.get("phase") != "succeeded"
@@ -1176,11 +1601,11 @@ def run_demo(
                         requirement = state.get("requirement")
                         if (
                             not isinstance(history_point, Mapping)
-                            or history_point.get("sequence") != 15
+                            or history_point.get("sequence") != 16
                             or not isinstance(requirement, Mapping)
                             or requirement.get("id") != requirement_v2["id"]
                             or not isinstance(history, list)
-                            or len(history) != 15
+                            or len(history) != 16
                         ):
                             raise DemoError(
                                 f"shared History did not end at the exact v2 state: {state}"
@@ -1244,9 +1669,10 @@ def run_demo(
                 _write_json(
                     output_dir / "credential-lifecycle.json",
                     {
-                        "actor_tokens_distinct": len(set(tokens.values())) == 4,
+                        "actor_tokens_distinct": len(set(tokens.values())) == 3,
                         "host_source_modified": False,
                         "temporary_auth_removed_before_effect": True,
+                        "vm_credential_free": True,
                     },
                 )
 
@@ -1266,6 +1692,10 @@ def run_demo(
 
                 timeline["run_facts_complete_ns"] = time.time_ns()
                 _write_json(output_dir / "timeline.json", timeline)
+                _write_json(
+                    output_dir / "sandbox-lifecycle.json",
+                    sandbox_lifecycle,
+                )
                 result = {
                     "run_id": project,
                     "purchase_id": purchase_id,
@@ -1278,7 +1708,7 @@ def run_demo(
                         "real_app_server": True,
                     },
                     "history": {
-                        "sequence": 15,
+                        "sequence": 16,
                         "hash": state["history"]["hash"],
                         "operations": operation_ids,
                         "active_requirement": requirement_v2["id"],
@@ -1290,6 +1720,7 @@ def run_demo(
                         "control_pid_before": control_pid_before,
                         "control_pid_after": control_pid_after,
                         "control_process_restarted": True,
+                        "control_restart_mode": "sigkill",
                         "whole_vm_restored": True,
                     },
                     "effects": stats,
@@ -1297,12 +1728,23 @@ def run_demo(
                     "effect_ips": effect_ips,
                     "vm": {
                         "runner_pid": vm.pid,
+                        "qemu_pid": vm_completed["qemu_pid"],
                         "accelerator": vm_accel,
                         "snapshot": "before_purchase",
                         "first_reused": False,
                         "restored_reused": True,
+                        "credential_free": True,
+                        "sandbox_generation": 3,
+                        "transport": "host-unix-socket",
                     },
                     "protocol": protocol,
+                    "provenance": {
+                        "revision": source_provenance["revision"],
+                        "source_tree_sha256": source_provenance[
+                            "source_tree_sha256"
+                        ],
+                        "runtime_image_id": image_provenance["image_id"],
+                    },
                     "evidence_directory": output_dir.name,
                 }
         finally:
@@ -1334,7 +1776,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     output = arguments.output_dir
     if output is None:
         output = Path("docs/tmp/bootstrap") / time.strftime(
-            "step-0014-%Y%m%dT%H%M%SZ", time.gmtime()
+            "step-0017-%Y%m%dT%H%M%SZ", time.gmtime()
         )
     result = run_demo(
         output_dir=output,

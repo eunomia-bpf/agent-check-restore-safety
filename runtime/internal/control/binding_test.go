@@ -392,6 +392,284 @@ func replacementRequirement(id, kind string) kernel.Requirement {
 	}
 }
 
+func twoChargeRequirement(id string) kernel.Requirement {
+	requirement := requirement(id)
+	requirement.Results["invoice-paid"] = 2
+	requirement.Capacities["spend"] = 2
+	return requirement
+}
+
+func TestSandboxOperationOwnerRejectsCrossSandboxAccess(t *testing.T) {
+	control, err := Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer control.Close()
+	certificate, err := control.Compile(requirement("sandbox-owner"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	first := testSandboxBinding("sandbox-a", 1, "host-a-1", "shared", "charge")
+	second := testSandboxBinding("sandbox-b", 1, "host-b-1", "shared", "charge")
+	if err := control.Cutover(certificate, []SandboxBinding{first, second}); err != nil {
+		t.Fatal(err)
+	}
+	if err := control.AttachSandboxHosts([]SandboxBinding{first, second}); err != nil {
+		t.Fatal(err)
+	}
+	headers := map[string]string{"Content-Type": "application/json"}
+	body := []byte(`{"amount":1}`)
+	if _, err := control.PrepareWithRequestForSandbox(
+		first, "owned-operation", "charge", "request-hash", headers, body,
+	); err != nil {
+		t.Fatal(err)
+	}
+	beforeHead := control.Snapshot().History
+	beforeEvents := len(control.Events())
+
+	if _, _, err := control.OperationForSandbox(second, "owned-operation"); err == nil ||
+		!strings.Contains(err.Error(), "belongs to sandbox") {
+		t.Fatalf("cross-sandbox lookup error=%v", err)
+	}
+	if _, err := control.PrepareWithRequestForSandbox(
+		second, "owned-operation", "charge", "request-hash", headers, body,
+	); err == nil || !strings.Contains(err.Error(), "different work") {
+		t.Fatalf("cross-sandbox prepare error=%v", err)
+	}
+	if err := control.MoveForSandbox(second, "owned-operation", kernel.OperationUpdate{
+		Phase: kernel.Dispatched, DispatchOwner: "other", DispatchGeneration: 1,
+	}); err == nil || !strings.Contains(err.Error(), "belongs to sandbox") {
+		t.Fatalf("cross-sandbox move error=%v", err)
+	}
+	operation := control.Snapshot().Operations["owned-operation"]
+	if operation.SandboxID != first.SandboxID || operation.Phase != kernel.Prepared ||
+		len(control.Events()) != beforeEvents || control.Snapshot().History != beforeHead {
+		t.Fatalf("rejected access changed operation or History: operation=%+v events=%d head=%+v",
+			operation, len(control.Events()), control.Snapshot().History)
+	}
+}
+
+func TestSandboxDomainIsStableAcrossGenerations(t *testing.T) {
+	control, err := Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer control.Close()
+	certificate, err := control.Compile(requirement("stable-domain-v1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	first := testSandboxBinding("vm", 1, "host-1", "payments", "charge")
+	if err := control.Cutover(certificate, []SandboxBinding{first}); err != nil {
+		t.Fatal(err)
+	}
+	certificate, err = control.Compile(requirement("stable-domain-v2"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	changed := testSandboxBinding("vm", 2, "host-2", "inventory", "charge")
+	beforeHead := control.Snapshot().History
+	beforeEvents := len(control.Events())
+	if err := control.Cutover(certificate, []SandboxBinding{changed}); err == nil ||
+		!strings.Contains(err.Error(), "changed stable domain") {
+		t.Fatalf("changed sandbox domain error=%v", err)
+	}
+	bindings := control.SandboxBindings()
+	if len(bindings) != 1 || !sandboxBindingEqual(bindings[0], first) ||
+		len(control.Events()) != beforeEvents || control.Snapshot().History != beforeHead {
+		t.Fatalf("rejected domain change changed state: bindings=%+v events=%d head=%+v",
+			bindings, len(control.Events()), control.Snapshot().History)
+	}
+}
+
+func TestAdapterAndSandboxOperationOwnersAreMutuallyExclusive(t *testing.T) {
+	control, err := Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer control.Close()
+	requirementV1 := twoChargeRequirement("owner-types-v1")
+	certificate, err := control.Compile(requirementV1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := control.Activate(certificate); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := control.PrepareWithRequest(
+		"adapter-operation", "payments", "charge", "adapter-request", nil, []byte(`{"amount":1}`),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	certificate, err = control.Compile(twoChargeRequirement("owner-types-v2"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	binding := testSandboxBinding("vm", 1, "host-1", "payments", "charge")
+	if err := control.Cutover(certificate, []SandboxBinding{binding}); err != nil {
+		t.Fatal(err)
+	}
+	if err := control.AttachSandboxHost(binding); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := control.OperationForSandbox(binding, "adapter-operation"); err == nil ||
+		!strings.Contains(err.Error(), "belongs to sandbox") {
+		t.Fatalf("sandbox lookup of adapter operation error=%v", err)
+	}
+	if _, err := control.PrepareWithRequestForSandbox(
+		binding, "sandbox-operation", "charge", "sandbox-request", nil, []byte(`{"amount":2}`),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	certificate, err = control.Compile(twoChargeRequirement("owner-types-v3"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := control.Cutover(certificate, nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, exists, err := control.OperationForAdapter("payments", "adapter-operation"); err != nil || !exists {
+		t.Fatalf("adapter could not recover its own operation: exists=%v err=%v", exists, err)
+	}
+	if _, _, err := control.OperationForAdapter("payments", "sandbox-operation"); err == nil ||
+		!strings.Contains(err.Error(), "not an adapter") {
+		t.Fatalf("adapter lookup of sandbox operation error=%v", err)
+	}
+}
+
+func TestSandboxOperationOwnerSurvivesRestartAndGenerationChange(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.history")
+	firstControl, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	certificate, err := firstControl.Compile(requirement("restart-owner-v1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	first := testSandboxBinding("sandbox-a", 1, "host-a-1", "shared", "charge")
+	if err := firstControl.Cutover(certificate, []SandboxBinding{first}); err != nil {
+		t.Fatal(err)
+	}
+	if err := firstControl.AttachSandboxHost(first); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := firstControl.PrepareWithRequestForSandbox(
+		first, "owned-operation", "charge", "request-hash", nil, []byte(`{"amount":1}`),
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := firstControl.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	reopened, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reopened.Close()
+	operation := reopened.Snapshot().Operations["owned-operation"]
+	if operation.SandboxID != first.SandboxID {
+		t.Fatalf("replayed operation owner=%q, want %q", operation.SandboxID, first.SandboxID)
+	}
+	certificate, err = reopened.Compile(requirement("restart-owner-v2"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	replacement := testSandboxBinding("sandbox-a", 2, "host-a-2", "shared", "charge")
+	other := testSandboxBinding("sandbox-b", 1, "host-b-1", "shared", "charge")
+	if err := reopened.Cutover(certificate, []SandboxBinding{replacement, other}); err != nil {
+		t.Fatal(err)
+	}
+	if err := reopened.AttachSandboxHosts([]SandboxBinding{replacement, other}); err != nil {
+		t.Fatal(err)
+	}
+	if recovered, exists, err := reopened.OperationForSandbox(replacement, "owned-operation"); err != nil || !exists || recovered.SandboxID != replacement.SandboxID {
+		t.Fatalf("replacement generation lookup=%+v exists=%v err=%v", recovered, exists, err)
+	}
+	if _, _, err := reopened.OperationForSandbox(other, "owned-operation"); err == nil ||
+		!strings.Contains(err.Error(), "belongs to sandbox") {
+		t.Fatalf("other sandbox lookup after restart error=%v", err)
+	}
+}
+
+func TestLegacySandboxOperationOwnerReplay(t *testing.T) {
+	t.Run("single owner is inferred", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "runtime.history")
+		first, err := Open(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		certificate, err := first.Compile(requirement("legacy-single"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		binding := testSandboxBinding("sandbox-a", 1, "host-a-1", "shared", "charge")
+		if err := first.Cutover(certificate, []SandboxBinding{binding}); err != nil {
+			t.Fatal(err)
+		}
+		legacy, err := first.PrepareWithRequest(
+			"legacy-operation", "shared", "charge", "legacy-request", nil, []byte(`{"amount":1}`),
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if legacy.SandboxID != "" {
+			t.Fatalf("legacy fixture unexpectedly had sandbox owner %q", legacy.SandboxID)
+		}
+		if err := first.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		reopened, err := Open(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer reopened.Close()
+		replayed := reopened.Snapshot().Operations[legacy.ID]
+		if replayed.SandboxID != binding.SandboxID {
+			t.Fatalf("inferred legacy owner=%q, want %q", replayed.SandboxID, binding.SandboxID)
+		}
+	})
+
+	t.Run("multiple owners fail closed", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "runtime.history")
+		first, err := Open(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		certificate, err := first.Compile(requirement("legacy-ambiguous"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		bindings := []SandboxBinding{
+			testSandboxBinding("sandbox-a", 1, "host-a-1", "shared", "charge"),
+			testSandboxBinding("sandbox-b", 1, "host-b-1", "shared", "charge"),
+		}
+		if err := first.Cutover(certificate, bindings); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := first.PrepareWithRequest(
+			"legacy-operation", "shared", "charge", "legacy-request", nil, []byte(`{"amount":1}`),
+		); err != nil {
+			t.Fatal(err)
+		}
+		if err := first.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		reopened, err := Open(path)
+		if reopened != nil {
+			_ = reopened.Close()
+		}
+		if err == nil || !strings.Contains(err.Error(), "multiple sandbox owners") {
+			t.Fatalf("ambiguous legacy replay error=%v", err)
+		}
+	})
+}
+
 func TestReplacementBindingCanRecoverFrozenOldKindButCannotCreateIt(t *testing.T) {
 	control, err := Open(filepath.Join(t.TempDir(), "runtime.history"))
 	if err != nil {

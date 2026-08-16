@@ -83,6 +83,7 @@ const (
 type Operation struct {
 	ID                 string            `json:"id"`
 	Domain             string            `json:"domain"`
+	SandboxID          string            `json:"sandbox_id,omitempty"`
 	Kind               string            `json:"kind"`
 	RequestHash        string            `json:"request_hash"`
 	RuleVersion        uint64            `json:"rule_version"`

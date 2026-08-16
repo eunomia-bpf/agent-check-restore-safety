@@ -189,8 +189,7 @@ func TestSyncedTraceSerializesConcurrentRecords(t *testing.T) {
 
 func TestValidateExternalOptionsRequiresCompleteBoundary(t *testing.T) {
 	valid := options{
-		externalControlPort:     18787,
-		externalTokenPath:       "/private/vm.token",
+		externalSandboxSocket:   "/private/vm.sock",
 		externalRequestPath:     "/private/request.json",
 		externalDirectProbe:     "http://172.30.0.4:8081/v1/stats",
 		externalEvidenceDirPath: "/private/evidence",
@@ -200,7 +199,7 @@ func TestValidateExternalOptionsRequiresCompleteBoundary(t *testing.T) {
 		t.Fatalf("valid external options: external=%v err=%v", external, err)
 	}
 	incomplete := valid
-	incomplete.externalTokenPath = ""
+	incomplete.externalSandboxSocket = ""
 	if _, err := validateExternalOptions(incomplete); err == nil {
 		t.Fatal("incomplete external boundary was accepted")
 	}
@@ -215,7 +214,6 @@ func TestReadExternalRequestIsStrictAndPreservesBytes(t *testing.T) {
 	directory := t.TempDir()
 	path := filepath.Join(directory, "request.json")
 	data := []byte(`{"call_id":"purchase/A-17/audit","kind":"append-audit",` +
-		`"method":"POST","url":"http://ledger:8081/v1/charge",` +
 		`"body":"eyJwdXJjaGFzZV9pZCI6IkEtMTcifQ=="}`)
 	if err := os.WriteFile(path, data, 0o600); err != nil {
 		t.Fatal(err)
@@ -233,17 +231,23 @@ func TestReadExternalRequestIsStrictAndPreservesBytes(t *testing.T) {
 	if _, _, err := readExternalRequest(path); err == nil {
 		t.Fatal("multiple request documents were accepted")
 	}
+	forged := []byte(`{"call_id":"purchase/A-17/audit","kind":"append-audit",` +
+		`"url":"http://ledger:8081/v1/charge","headers":{"Authorization":"forged"}}`)
+	if err := os.WriteFile(path, forged, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := readExternalRequest(path); err == nil {
+		t.Fatal("guest request accepted provider routing or headers")
+	}
 }
 
-func TestExternalGuestScriptDoesNotContainPlainCredential(t *testing.T) {
-	token := "PLAIN-CREDENTIAL-MUST-NOT-APPEAR"
+func TestExternalGuestScriptContainsNoCredentialPath(t *testing.T) {
 	script := makeExternalGuestScript(
-		base64.StdEncoding.EncodeToString([]byte(token)),
 		base64.StdEncoding.EncodeToString([]byte(`{"call_id":"vm"}`)),
 		base64.StdEncoding.EncodeToString([]byte("http://172.30.0.4:8081/v1/stats")),
 	)
-	if strings.Contains(script, token) {
-		t.Fatal("guest script contains the plaintext credential")
+	if strings.Contains(script, "Authorization") || strings.Contains(script, "Bearer") || strings.Contains(script, "token") {
+		t.Fatal("guest script contains a credential path")
 	}
 	for _, marker := range []string{
 		"SAFE_CHANGE_VM_FIRST_SUCCEEDED reused=false",
@@ -257,11 +261,17 @@ func TestExternalGuestScriptDoesNotContainPlainCredential(t *testing.T) {
 }
 
 func TestExpectExternalCommandIsExact(t *testing.T) {
-	scanner := bufio.NewScanner(strings.NewReader("start\nrestore\n"))
+	scanner := bufio.NewScanner(strings.NewReader("start\npause\nrestore\nresume\n"))
 	if err := expectExternalCommand(context.Background(), scanner, "start"); err != nil {
 		t.Fatal(err)
 	}
+	if err := expectExternalCommand(context.Background(), scanner, "pause"); err != nil {
+		t.Fatal(err)
+	}
 	if err := expectExternalCommand(context.Background(), scanner, "restore"); err != nil {
+		t.Fatal(err)
+	}
+	if err := expectExternalCommand(context.Background(), scanner, "resume"); err != nil {
 		t.Fatal(err)
 	}
 	wrong := bufio.NewScanner(strings.NewReader("continue\n"))

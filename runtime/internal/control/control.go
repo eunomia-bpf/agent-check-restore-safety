@@ -490,7 +490,7 @@ func (c *Control) CertificateState(certificate kernel.Certificate) (json.RawMess
 }
 
 func (c *Control) Prepare(id, domain, kind, requestHash string) (kernel.Operation, error) {
-	return c.prepare(id, domain, kind, requestHash, false, nil, nil)
+	return c.prepare(id, domain, "", kind, requestHash, false, nil, nil)
 }
 
 func (c *Control) PrepareWithRequest(
@@ -498,22 +498,22 @@ func (c *Control) PrepareWithRequest(
 	headers map[string]string,
 	body []byte,
 ) (kernel.Operation, error) {
-	return c.prepare(id, domain, kind, requestHash, true, headers, body)
+	return c.prepare(id, domain, "", kind, requestHash, true, headers, body)
 }
 
 func (c *Control) prepare(
-	id, domain, kind, requestHash string,
+	id, domain, sandboxID, kind, requestHash string,
 	requestStored bool,
 	headers map[string]string,
 	body []byte,
 ) (kernel.Operation, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.prepareLocked(id, domain, kind, requestHash, requestStored, headers, body)
+	return c.prepareLocked(id, domain, sandboxID, kind, requestHash, requestStored, headers, body)
 }
 
 func (c *Control) prepareLocked(
-	id, domain, kind, requestHash string,
+	id, domain, sandboxID, kind, requestHash string,
 	requestStored bool,
 	headers map[string]string,
 	body []byte,
@@ -532,8 +532,17 @@ func (c *Control) prepareLocked(
 	var operation kernel.Operation
 	var err error
 	if requestStored {
-		operation, err = next.PrepareWithRequest(id, domain, kind, requestHash, headers, body)
+		if sandboxID == "" {
+			operation, err = next.PrepareWithRequest(id, domain, kind, requestHash, headers, body)
+		} else {
+			operation, err = next.PrepareWithRequestForSandbox(
+				id, domain, sandboxID, kind, requestHash, headers, body,
+			)
+		}
 	} else {
+		if sandboxID != "" {
+			return kernel.Operation{}, errors.New("sandbox operation must store its request")
+		}
 		operation, err = next.Prepare(id, domain, kind, requestHash)
 	}
 	if err != nil {
@@ -640,14 +649,37 @@ func apply(state *kernel.State, bindings *sandboxRegistry, operation string, dat
 			return fmt.Errorf("unsupported prepare semantic version %d", event.SemanticVersion)
 		}
 		expected := event.Operation
+		sandboxID := expected.SandboxID
+		if sandboxID == "" && bindings != nil {
+			for _, binding := range bindings.desired {
+				if binding.Domain != expected.Domain {
+					continue
+				}
+				if sandboxID != "" {
+					return fmt.Errorf("legacy operation %q has multiple sandbox owners", expected.ID)
+				}
+				sandboxID = binding.SandboxID
+			}
+		}
 		var actual kernel.Operation
 		var err error
 		if expected.RequestStored {
-			actual, err = state.PrepareWithRequest(
-				expected.ID, expected.Domain, expected.Kind, expected.RequestHash,
-				expected.RequestHeaders, expected.RequestBody,
-			)
+			if sandboxID == "" {
+				actual, err = state.PrepareWithRequest(
+					expected.ID, expected.Domain, expected.Kind, expected.RequestHash,
+					expected.RequestHeaders, expected.RequestBody,
+				)
+			} else {
+				actual, err = state.PrepareWithRequestForSandbox(
+					expected.ID, expected.Domain, sandboxID, expected.Kind,
+					expected.RequestHash, expected.RequestHeaders, expected.RequestBody,
+				)
+				expected.SandboxID = sandboxID
+			}
 		} else {
+			if sandboxID != "" {
+				return fmt.Errorf("legacy sandbox operation %q has no stored request", expected.ID)
+			}
 			actual, err = state.Prepare(expected.ID, expected.Domain, expected.Kind, expected.RequestHash)
 		}
 		if err != nil {

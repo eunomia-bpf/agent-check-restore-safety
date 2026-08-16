@@ -327,7 +327,12 @@ def _redact_host_home(value: Any) -> Any:
     return value
 
 
-def _docker_inspect_projection(value: Any) -> list[dict[str, Any]]:
+def _docker_inspect_projection(
+    value: Any,
+    *,
+    extra_label_names: Sequence[str] = (),
+    include_image_identity: bool = False,
+) -> list[dict[str, Any]]:
     if not isinstance(value, list):
         raise DemoError("Docker inspection is not a list")
     projected: list[dict[str, Any]] = []
@@ -335,7 +340,7 @@ def _docker_inspect_projection(value: Any) -> list[dict[str, Any]]:
         "com.docker.compose.container-number",
         "com.docker.compose.project",
         "com.docker.compose.service",
-    }
+    } | set(extra_label_names)
     for raw in value:
         if not isinstance(raw, dict):
             raise DemoError("Docker inspection contains a non-object")
@@ -354,8 +359,7 @@ def _docker_inspect_projection(value: Any) -> list[dict[str, Any]]:
             raise DemoError("Docker inspection omitted labels or networks")
         if not isinstance(mounts, list):
             raise DemoError("Docker inspection omitted mounts")
-        projected.append(
-            {
+        document = {
                 "Id": raw.get("Id"),
                 "Name": raw.get("Name"),
                 "Config": {
@@ -404,11 +408,19 @@ def _docker_inspect_projection(value: Any) -> list[dict[str, Any]]:
                     }
                 },
             }
-        )
+        if include_image_identity:
+            document["Image"] = raw.get("Image")
+        projected.append(document)
     return projected
 
 
-def _capture_docker_inspect(containers: Sequence[str], path: Path) -> list[Any]:
+def _capture_docker_inspect(
+    containers: Sequence[str],
+    path: Path,
+    *,
+    extra_label_names: Sequence[str] = (),
+    include_image_identity: bool = False,
+) -> list[Any]:
     completed = _run(["docker", "inspect", *containers])
     try:
         value = json.loads(completed.stdout)
@@ -420,7 +432,11 @@ def _capture_docker_inspect(containers: Sequence[str], path: Path) -> list[Any]:
         or not all(isinstance(item, dict) for item in value)
     ):
         raise DemoError("raw Docker inspection does not match requested containers")
-    filtered = _docker_inspect_projection(_redact_host_home(value))
+    filtered = _docker_inspect_projection(
+        _redact_host_home(value),
+        extra_label_names=extra_label_names,
+        include_image_identity=include_image_identity,
+    )
     _write_json(path, filtered)
     return filtered
 

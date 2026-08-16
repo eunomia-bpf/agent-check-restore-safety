@@ -16,7 +16,7 @@ from adapter.check_codex_integrated_evidence import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
-EVIDENCE = ROOT / "docs/tmp/bootstrap/step-0014-20260815T133621Z"
+EVIDENCE = ROOT / "docs/tmp/bootstrap/step-0017-20260816T113812Z"
 
 
 @unittest.skipUnless(EVIDENCE.exists(), "integrated Codex/VM evidence is absent")
@@ -37,13 +37,60 @@ class IntegratedEvidenceTests(unittest.TestCase):
         verdict = check_evidence(EVIDENCE)
         self.assertTrue(verdict["valid"])
         self.assertTrue(verdict["history_chain_replayed"])
-        self.assertEqual(verdict["history_sequence"], 15)
+        self.assertEqual(verdict["history_sequence"], 16)
         self.assertEqual(verdict["external_effects"]["deliveries"], 5)
         self.assertEqual(verdict["external_effects"]["commits"], 3)
         self.assertEqual(len(verdict["operation_ids"]), 3)
         self.assertTrue(verdict["network_isolation"]["attested"])
         self.assertTrue(verdict["codex_protocol"]["real_app_server_process"])
         self.assertTrue(verdict["fault_correlations"]["whole_vm_restored"])
+        self.assertEqual(verdict["sandbox_boundary"]["generations"], [1, 2, 3])
+        self.assertTrue(verdict["sandbox_boundary"]["credential_free"])
+
+    def test_guest_routing_field_mutation_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = self.copy_evidence(temporary)
+            path = evidence / "vm/guest-request.json"
+            request = json.loads(path.read_text(encoding="utf-8"))
+            request["url"] = "http://ledger:8081/v1/charge"
+            self.write_json(path, request)
+            with self.assertRaisesRegex(EvidenceError, "guest request"):
+                check_evidence(evidence)
+
+    def test_guest_bearer_mutation_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = self.copy_evidence(temporary)
+            path = evidence / "vm/guest-script.sh"
+            path.write_text(
+                path.read_text(encoding="utf-8") + "# Authorization: Bearer forged\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(EvidenceError, "guest script"):
+                check_evidence(evidence)
+
+    def test_qemu_control_tcp_mutation_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = self.copy_evidence(temporary)
+            path = evidence / "vm/qemu-command.json"
+            command = json.loads(path.read_text(encoding="utf-8"))
+            index = command["arguments"].index("-netdev") + 1
+            command["arguments"][index] = command["arguments"][index].replace(
+                "-U <host-sandbox-socket>",
+                "127.0.0.1 18787",
+            )
+            self.write_json(path, command)
+            with self.assertRaisesRegex(EvidenceError, "forwarding boundary"):
+                check_evidence(evidence)
+
+    def test_sandbox_socket_mode_mutation_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = self.copy_evidence(temporary)
+            path = evidence / "sandbox-lifecycle.json"
+            lifecycle = json.loads(path.read_text(encoding="utf-8"))
+            lifecycle[0]["socket_mode"] = "0666"
+            self.write_json(path, lifecycle)
+            with self.assertRaisesRegex(EvidenceError, "private healthy socket"):
+                check_evidence(evidence)
 
     def test_binary_history_mutation_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -136,7 +183,7 @@ class IntegratedEvidenceTests(unittest.TestCase):
                 (evidence / "independent-verdict.json").read_text(encoding="utf-8")
             )
             self.assertTrue(verdict["valid"])
-            self.assertEqual(verdict["history_sequence"], 15)
+            self.assertEqual(verdict["history_sequence"], 16)
 
 
 if __name__ == "__main__":

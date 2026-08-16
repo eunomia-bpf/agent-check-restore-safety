@@ -1,7 +1,7 @@
 """Independently verify the Codex + service + restored-VM evidence bundle.
 
 The live runner is deliberately not imported.  This checker replays the exact
-binary History frames, validates both Certificates, derives three Operation
+binary History frames, validates all three Certificates, derives three Operation
 identities and requests, joins three independently durable effect records, and
 checks raw Docker, App Server, QEMU, and QMP evidence.
 """
@@ -42,12 +42,20 @@ TOOL_NAME = "complete_purchase"
 CODEX_DOMAIN = "codex-app-server"
 ORDER_DOMAIN = "orders"
 VM_DOMAIN = "full-linux-vm"
+VM_SANDBOX_ID = "integrated-vm"
 CHARGE_KIND = "charge-invoice"
 RESERVE_V1_KIND = "reserve-v1"
 RESERVE_V2_KIND = "reserve-v2"
 AUDIT_KIND = "append-audit"
 BASE_IMAGE_SHA = "d1940f7d69d343355e183dff1e08a59852d32e7309baa7a4bad8365b11b005ac"
 NATIVE_CODEX_SHA = "cb0a15567e9a60a5820d54b0f6ae86d504dc3805c1eab21a47f70e3eb7b73a40"
+SOURCE_ADAPTER_FILES = {
+    "adapter/app_server.py",
+    "adapter/codex_integrated_runtime_demo.py",
+    "adapter/codex_isolated_runtime_demo.py",
+    "adapter/codex_runtime_demo.py",
+    "adapter/docker_codex.py",
+}
 
 
 def _operation_id(domain: str, call_id: str) -> str:
@@ -57,6 +65,167 @@ def _operation_id(domain: str, call_id: str) -> str:
     digest.update(b"\x00")
     digest.update(call_id.encode())
     return "op-" + digest.hexdigest()
+
+
+def _sandbox_operation_id(domain: str, sandbox_id: str, call_id: str) -> str:
+    digest = sha256()
+    digest.update(b"sandbox-operation-id-v2\x00")
+    digest.update(domain.encode())
+    digest.update(b"\x00")
+    digest.update(sandbox_id.encode())
+    digest.update(b"\x00")
+    digest.update(call_id.encode())
+    return "op-" + digest.hexdigest()
+
+
+def _git_bytes(repository: Path, arguments: Sequence[str]) -> bytes:
+    completed = subprocess.run(
+        ["git", *arguments],
+        cwd=repository,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    _require(
+        completed.returncode == 0,
+        "source revision cannot be read from the local Git object database",
+    )
+    return completed.stdout
+
+
+def _check_provenance(
+    directory: Path,
+    run_id: str,
+    repository: Path,
+) -> dict[str, Any]:
+    source = _object(
+        _json_file(directory, "source-provenance.json"),
+        "source provenance",
+    )
+    _require(
+        set(source)
+        == {
+            "files",
+            "revision",
+            "schema",
+            "selected_source_clean",
+            "source_tree_sha256",
+        }
+        and source.get("schema") == 1
+        and source.get("selected_source_clean") is True,
+        "source provenance envelope differs",
+    )
+    revision = source.get("revision")
+    tree_hash = source.get("source_tree_sha256")
+    _require(
+        isinstance(revision, str)
+        and re.fullmatch(r"[0-9a-f]{40}(?:[0-9a-f]{24})?", revision) is not None
+        and isinstance(tree_hash, str)
+        and re.fullmatch(r"[0-9a-f]{64}", tree_hash) is not None,
+        "source provenance contains an invalid revision or tree digest",
+    )
+    _git_bytes(repository, ["cat-file", "-e", revision + "^{commit}"])
+    listed = _git_bytes(
+        repository,
+        ["ls-tree", "-r", "--name-only", "-z", revision, "--", "adapter", "runtime"],
+    ).decode("utf-8").split("\0")
+    expected_files = sorted(
+        path
+        for path in listed
+        if path
+        and (
+            path in SOURCE_ADAPTER_FILES
+            or (
+                path.startswith("runtime/")
+                and (
+                    path.endswith(".go")
+                    or path.endswith("/Dockerfile")
+                    or path.endswith("/compose.yaml")
+                    or path in {"runtime/go.mod", "runtime/go.sum"}
+                )
+            )
+        )
+    )
+    _require(
+        SOURCE_ADAPTER_FILES <= set(expected_files),
+        "source revision omits an integrated producer dependency",
+    )
+    recorded_files = _object(source.get("files"), "source file hashes")
+    _require(
+        list(sorted(recorded_files)) == expected_files,
+        "source provenance selects another implementation file set",
+    )
+    recomputed: dict[str, str] = {}
+    for path in expected_files:
+        value = recorded_files.get(path)
+        _require(
+            isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None,
+            f"source digest is malformed for {path}",
+        )
+        content = _git_bytes(repository, ["show", f"{revision}:{path}"])
+        recomputed[path] = sha256(content).hexdigest()
+    _require(
+        recorded_files == recomputed,
+        "recorded producer files differ from the committed source revision",
+    )
+    digest = sha256()
+    for path in expected_files:
+        digest.update(path.encode() + b"\x00" + recomputed[path].encode() + b"\x00")
+    _require(
+        digest.hexdigest() == tree_hash,
+        "producer source-tree digest does not match its committed files",
+    )
+
+    image = _object(
+        _json_file(directory, "image-provenance.json"),
+        "runtime image provenance",
+    )
+    source_labels = {
+        "io.safe-change.source-tree.sha256": tree_hash,
+        "org.opencontainers.image.revision": revision,
+    }
+    fixed_image_labels = {
+        "com.docker.compose.project": run_id,
+        "com.docker.compose.service": "control",
+        **source_labels,
+    }
+    image_labels = _object(image.get("labels"), "runtime image labels")
+    compose_version = image_labels.get("com.docker.compose.version")
+    expected_labels = {
+        **fixed_image_labels,
+        "com.docker.compose.version": compose_version,
+    }
+    image_id = image.get("image_id")
+    container_images = _object(
+        image.get("container_images"), "runtime container image bindings"
+    )
+    _require(
+        set(image)
+        == {"container_images", "image_id", "labels", "schema", "tag"}
+        and image.get("schema") == 1
+        and image.get("tag") == "safe-change-runtime:" + run_id
+        and isinstance(image_id, str)
+        and re.fullmatch(r"sha256:[0-9a-f]{64}", image_id) is not None
+        and image_labels == expected_labels
+        and isinstance(compose_version, str)
+        and re.fullmatch(
+            r"[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?",
+            compose_version,
+        )
+        is not None
+        and len(container_images) == 8
+        and all(value == image_id for value in container_images.values()),
+        "runtime image is not immutably bound to the producer source",
+    )
+    return {
+        "revision": revision,
+        "source_tree_sha256": tree_hash,
+        "image_id": image_id,
+        "image_labels": expected_labels,
+        "source_labels": source_labels,
+        "compose_version": compose_version,
+        "container_images": container_images,
+    }
 
 
 def _canonical(value: Any) -> bytes:
@@ -126,6 +295,16 @@ def _requirements(run_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
     return first, second
 
 
+def _vm_binding(run_id: str, generation: int) -> dict[str, Any]:
+    return {
+        "sandbox_id": VM_SANDBOX_ID,
+        "generation": generation,
+        "host_instance_id": f"qemu-{run_id}-g{generation}",
+        "domain": VM_DOMAIN,
+        "allowed_kinds": [AUDIT_KIND],
+    }
+
+
 def _gateway_request_hash(
     url: str, body: bytes, operation_id: str, *, content_type: bool = True
 ) -> str:
@@ -149,6 +328,46 @@ def _effect_request_hash(body: bytes) -> str:
     return sha256(b"POST\x00/v1/charge\x00" + body).hexdigest()
 
 
+def _expected_vm_guest_script(request_data: bytes, direct_probe: str) -> str:
+    encoded_request = base64.b64encode(request_data).decode()
+    encoded_probe = base64.b64encode(direct_probe.encode()).decode()
+    template = r'''#!/usr/bin/env bash
+set -uo pipefail
+log_marker() { printf '%s\n' "$1" > /dev/ttyS0; }
+log_marker "SAFE_CHANGE_VM_EXTERNAL_READY kernel=$(uname -r)"
+until curl -fsS --connect-timeout 2 --max-time 3 http://10.0.2.100:8000/go >/dev/null; do sleep 1; done
+direct_url=$(printf '%s' '<DIRECT_PROBE>' | base64 -d)
+if curl -fsS --connect-timeout 2 --max-time 3 "$direct_url" >/dev/null; then
+  log_marker SAFE_CHANGE_VM_DIRECT_EFFECT_REACHABLE
+  /sbin/poweroff -f
+  exit 1
+fi
+log_marker SAFE_CHANGE_VM_DIRECT_EFFECT_BLOCKED
+printf '%s' '<REQUEST_DATA>' | base64 -d > /run/safe-change-execute.json
+status=$(curl -sS --max-time 45 -o /run/safe-change-response.json -w '%{http_code}' \
+  -X POST -H 'Content-Type: application/json' \
+  --data-binary @/run/safe-change-execute.json http://10.0.2.100:8787/v1/execute) || status=transport-error
+read -r phase reused < <(python3 -c 'import json; d=json.load(open("/run/safe-change-response.json")); print(d.get("phase", ""), str(bool(d.get("reused", False))).lower())' 2>/dev/null || true)
+if [[ "$status" == 200 && "$phase" == succeeded && "$reused" == false ]]; then
+  log_marker "SAFE_CHANGE_VM_FIRST_SUCCEEDED reused=false"
+  sync
+  while true; do sleep 60; done
+fi
+if [[ "$status" == 200 && "$phase" == succeeded && "$reused" == true ]]; then
+  log_marker "SAFE_CHANGE_VM_RESTORED_SUCCEEDED reused=true"
+  sync
+  /sbin/poweroff -f
+  exit 0
+fi
+log_marker "SAFE_CHANGE_VM_EXTERNAL_UNEXPECTED status=$status phase=$phase reused=$reused"
+/sbin/poweroff -f
+exit 1
+'''
+    return template.replace("<DIRECT_PROBE>", encoded_probe).replace(
+        "<REQUEST_DATA>", encoded_request
+    )
+
+
 def _receipt(operation_id: str) -> tuple[bytes, str, str, str]:
     external_result = sha256(b"charged\x00" + operation_id.encode()).hexdigest()
     remote = "payment/" + operation_id
@@ -161,7 +380,7 @@ def _receipt(operation_id: str) -> tuple[bytes, str, str, str]:
             "remote_reference": remote,
         }
     ) + b"\n"
-    gateway_result = sha256(b"200\x00" + body).hexdigest()
+    gateway_result = external_result
     return body, external_result, gateway_result, remote
 
 
@@ -256,7 +475,8 @@ def _check_history_and_effects(
     requirement_v1, requirement_v2 = _requirements(run_id)
     _require(
         _json_file(directory, "requirement-v1.json") == requirement_v1
-        and _json_file(directory, "requirement-v2.json") == requirement_v2,
+        and _json_file(directory, "requirement-v2.json") == requirement_v2
+        and _json_file(directory, "requirement-v2-reopen.json") == requirement_v2,
         "retained Requirements differ from the run identity",
     )
     certificate_v1 = _object(
@@ -265,14 +485,19 @@ def _check_history_and_effects(
     certificate_v2 = _object(
         _json_file(directory, "certificate-v2.json"), "v2 Certificate"
     )
+    certificate_v2_reopen = _object(
+        _json_file(directory, "certificate-v2-reopen.json"),
+        "v2 reopen Certificate",
+    )
     certificate_verdicts = {
         "v1": _check_certificate(directory, "v1", runtime_dir),
         "v2": _check_certificate(directory, "v2", runtime_dir),
+        "v2-reopen": _check_certificate(directory, "v2-reopen", runtime_dir),
     }
 
     events = _replay_history(directory / "runtime.history")
-    _require(len(events) == 15, "shared History does not contain exactly 15 events")
-    _check_anchor(directory, 15, events[-1]["hash"])
+    _require(len(events) == 16, "shared History does not contain exactly 16 events")
+    _check_anchor(directory, 16, events[-1]["hash"])
     _require(
         _json_file(directory, "history.json") == events,
         "History API view differs from binary replay",
@@ -280,7 +505,7 @@ def _check_history_and_effects(
     _require(
         [event["operation"] for event in events]
         == [
-            "rule.activated",
+            "rule.bindings.cutover",
             "operation.prepared",
             "operation.phase",
             "operation.phase",
@@ -290,7 +515,8 @@ def _check_history_and_effects(
             "operation.prepared",
             "operation.phase",
             "operation.phase",
-            "rule.activated",
+            "rule.bindings.cutover",
+            "rule.bindings.cutover",
             "operation.phase",
             "operation.phase",
             "operation.phase",
@@ -298,14 +524,29 @@ def _check_history_and_effects(
         ],
         "shared History event shape changed",
     )
-    first_rule = _object(events[0]["data"], "v1 activation")
-    second_rule = _object(events[10]["data"], "v2 activation")
+    first_rule = _object(events[0]["data"], "v1 cutover")
+    second_rule = _object(events[10]["data"], "v2 cutover")
+    third_rule = _object(events[11]["data"], "v2 reopen cutover")
     _require(
         first_rule
-        == {"certificate": certificate_v1, "semantic_version": 1}
+        == {
+            "certificate": certificate_v1,
+            "bindings": [_vm_binding(run_id, 1)],
+            "semantic_version": 1,
+        }
         and second_rule
-        == {"certificate": certificate_v2, "semantic_version": 1},
-        "Rule activation events differ from retained Certificates",
+        == {
+            "certificate": certificate_v2,
+            "bindings": [_vm_binding(run_id, 2)],
+            "semantic_version": 1,
+        }
+        and third_rule
+        == {
+            "certificate": certificate_v2_reopen,
+            "bindings": [_vm_binding(run_id, 3)],
+            "semantic_version": 1,
+        },
+        "Rule-and-sandbox cutover events differ from retained evidence",
     )
     _require(
         certificate_v1.get("history")
@@ -336,11 +577,24 @@ def _check_history_and_effects(
         and certificate_v2.get("rule", {}).get("allow") == [],
         "v2 Certificate did not close new work while preserving old Operations",
     )
+    _require(
+        certificate_v2_reopen.get("history")
+        == {"sequence": 11, "hash": events[10]["hash"]}
+        and certificate_v2_reopen.get("from_rule") == 2
+        and certificate_v2_reopen.get("decision") == "activate"
+        and certificate_v2_reopen.get("schema") == 1
+        and certificate_v2_reopen.get("requirement") == requirement_v2
+        and certificate_v2_reopen.get("rule", {}).get("version") == 3
+        and certificate_v2_reopen.get("rule", {}).get("allow") == [],
+        "reopen Certificate is not bound to the post-cutover History head",
+    )
     _hash(certificate_v1.get("digest"), "v1 Certificate digest")
     _hash(certificate_v2.get("digest"), "v2 Certificate digest")
+    _hash(certificate_v2_reopen.get("digest"), "v2 reopen Certificate digest")
     for label, sequence, history_hash, rule_version in (
         ("v1", 0, "0" * 64, 1),
         ("v2", 10, events[9]["hash"], 2),
+        ("v2-reopen", 11, events[10]["hash"], 3),
     ):
         _require(
             certificate_verdicts[label]
@@ -360,7 +614,11 @@ def _check_history_and_effects(
         "vm": (VM_DOMAIN, f"purchase/{purchase_id}/audit"),
     }
     operation_ids = {
-        name: _operation_id(domain, call_id)
+        name: (
+            _sandbox_operation_id(domain, VM_SANDBOX_ID, call_id)
+            if name == "vm"
+            else _operation_id(domain, call_id)
+        )
         for name, (domain, call_id) in calls.items()
     }
     bodies = {
@@ -409,7 +667,7 @@ def _check_history_and_effects(
                 target,
                 bodies[name],
                 operation_id,
-                content_type=name != "order",
+                content_type=name == "codex",
             ),
             "rule_version": 1,
             "costs": costs,
@@ -419,8 +677,14 @@ def _check_history_and_effects(
             "target": target,
             "method": "POST",
             "response_classifier": "operation-receipt-v1",
+            "request_stored": True,
+            "request_body": base64.b64encode(bodies[name]).decode(),
             "phase": "prepared",
         }
+        if name == "codex":
+            expected["request_headers"] = {"Content-Type": "application/json"}
+        if name == "vm":
+            expected["sandbox_id"] = VM_SANDBOX_ID
         prepared[name] = _prepared(events[index], expected, name)
 
     first_owner = (
@@ -458,7 +722,7 @@ def _check_history_and_effects(
         "order": "inventory.history",
         "vm": "ledger.history",
     }
-    success_indices = {"codex": 12, "order": 14, "vm": 9}
+    success_indices = {"codex": 13, "order": 15, "vm": 9}
     for name, record_file in record_files.items():
         operation_id = operation_ids[name]
         record = _single_line_record(directory, record_file)
@@ -495,7 +759,7 @@ def _check_history_and_effects(
         }
 
     second_owner = (
-        _object(events[11]["data"], "second dispatch")
+        _object(events[12]["data"], "second dispatch")
         .get("update", {})
         .get("dispatch_owner")
     )
@@ -506,12 +770,12 @@ def _check_history_and_effects(
         "control replacement did not change dispatch ownership",
     )
     _phase(
-        events[11], operation_ids["codex"],
+        events[12], operation_ids["codex"],
         {"phase": "dispatched", "dispatch_owner": second_owner, "dispatch_generation": 2},
         "Codex dispatch generation 2",
     )
     _phase(
-        events[13], operation_ids["order"],
+        events[14], operation_ids["order"],
         {"phase": "dispatched", "dispatch_owner": second_owner, "dispatch_generation": 2},
         "order dispatch generation 2",
     )
@@ -526,14 +790,13 @@ def _check_history_and_effects(
 
     state = _object(_json_file(directory, "final-state.json"), "final state")
     final_rule = _object(state.get("rule"), "final Rule")
-    certificate_rule = _object(certificate_v2.get("rule"), "v2 Certificate Rule")
+    certificate_rule = _object(
+        certificate_v2_reopen.get("rule"), "reopen Certificate Rule"
+    )
     _require(
-        state.get("history") == {"sequence": 15, "hash": events[-1]["hash"]}
+        state.get("history") == {"sequence": 16, "hash": events[-1]["hash"]}
         and state.get("requirement") == requirement_v2
-        and final_rule.get("version") == certificate_rule.get("version")
-        and final_rule.get("requirement_hash")
-        == certificate_rule.get("requirement_hash")
-        and final_rule.get("allow") in (None, []),
+        and final_rule == certificate_rule,
         "final State does not match replayed v2 History",
     )
     operations = _object(state.get("operations"), "final Operations")
@@ -545,19 +808,16 @@ def _check_history_and_effects(
         operation = _object(operations.get(operation_id), f"final {name} Operation")
         generation = 1 if name == "vm" else 2
         owner = first_owner if name == "vm" else second_owner
+        expected_operation = dict(prepared[name])
+        expected_operation.update(
+            {
+                "dispatch_generation": generation,
+                "dispatch_owner": owner,
+                **settled_updates[name],
+            }
+        )
         _require(
-            all(
-                operation.get(key) == value
-                for key, value in prepared[name].items()
-                if key != "phase"
-            )
-            and operation.get("phase") == "succeeded"
-            and operation.get("dispatch_generation") == generation
-            and operation.get("dispatch_owner") == owner
-            and operation.get("result_hash") == external[name]["gateway_result_hash"]
-            and operation.get("result_body")
-            == base64.b64encode(external[name]["receipt_body"]).decode()
-            and operation.get("remote_reference") == external[name]["remote_reference"],
+            operation == expected_operation,
             f"final {name} Operation differs from History or external record",
         )
 
@@ -603,6 +863,24 @@ def _check_history_and_effects(
         },
         "v2 Certificate input was not the replayed two-open/one-settled state",
     )
+    certificate_state_v2_reopen = _object(
+        _json_file(directory, "certificate-state-v2-reopen.json"),
+        "v2 reopen Certificate state",
+    )
+    _require(
+        certificate_state_v2_reopen
+        == {
+            "from_rule": 2,
+            "history": {"hash": events[10]["hash"], "sequence": 11},
+            "open_operations": expected_open,
+            "schema": 1,
+            "settled": {
+                "results": {"audited": 1},
+                "used": {"audit-slot": 1},
+            },
+        },
+        "reopen Certificate input was not the durable post-cutover state",
+    )
 
     active_v1 = _object(_json_file(directory, "active-state-v1.json"), "v1 State")
     _require(
@@ -621,29 +899,52 @@ def _check_history_and_effects(
         active_v2.get("history")
         == {"hash": events[10]["hash"], "sequence": 11}
         and active_v2.get("requirement") == requirement_v2
-        and active_v2_rule.get("version") == 2
-        and active_v2_rule.get("requirement_hash")
-        == certificate_rule.get("requirement_hash")
-        and active_v2_rule.get("allow") in (None, []),
+        and active_v2_rule == certificate_v2["rule"],
         "v2 activation State differs from the eleventh History event",
     )
     active_operations = _object(active_v2.get("operations"), "active v2 Operations")
-    _require(
-        set(active_operations) == set(operation_ids.values()),
-        "v2 activation State has another Operation set",
-    )
     expected_active_phases = {"codex": "unknown", "order": "unknown", "vm": "succeeded"}
+    expected_active_operations: dict[str, dict[str, Any]] = {}
     for name, operation_id in operation_ids.items():
-        active_operation = _object(
-            active_operations.get(operation_id), f"active v2 {name} Operation"
+        operation = dict(prepared[name])
+        operation.update(
+            {
+                "phase": expected_active_phases[name],
+                "dispatch_generation": 1,
+                "dispatch_owner": first_owner,
+            }
         )
+        if name == "vm":
+            operation.update(settled_updates[name])
+        expected_active_operations[operation_id] = operation
+    _require(
+        active_operations == expected_active_operations,
+        "v2 activation Operations differ from exact replay through sequence 10",
+    )
+    active_v2_reopen = _object(
+        _json_file(directory, "active-state-v2-reopen.json"),
+        "active v2 reopen State",
+    )
+    active_v2_reopen_rule = _object(
+        active_v2_reopen.get("rule"), "active v2 reopen Rule"
+    )
+    _require(
+        active_v2_reopen.get("history")
+        == {"hash": events[11]["hash"], "sequence": 12}
+        and active_v2_reopen.get("requirement") == requirement_v2
+        and active_v2_reopen_rule == certificate_v2_reopen["rule"]
+        and active_v2_reopen.get("operations") == active_operations,
+        "reopen activation State differs from the twelfth History event",
+    )
+    for label, active, generation in (
+        ("v1", active_v1, 1),
+        ("v2", active_v2, 2),
+        ("v2-reopen", active_v2_reopen, 3),
+    ):
         _require(
-            active_operation.get("phase") == expected_active_phases[name]
-            and active_operation.get("dispatch_generation") == 1
-            and active_operation.get("dispatch_owner") == first_owner
-            and active_operation.get("kind") == contracts[name][0]
-            and active_operation.get("target") == contracts[name][2],
-            f"active v2 {name} Operation differs from the first control run",
+            _json_file(directory, f"cutover-{label}.json")
+            == {"state": active, "bindings": [_vm_binding(run_id, generation)]},
+            f"{label} cutover response differs from its committed State and binding",
         )
     return {
         "events": events,
@@ -656,7 +957,7 @@ def _check_history_and_effects(
         "state": state,
         "first_owner": first_owner,
         "second_owner": second_owner,
-        "certificates": (certificate_v1, certificate_v2),
+        "certificates": (certificate_v1, certificate_v2, certificate_v2_reopen),
     }
 
 
@@ -667,12 +968,28 @@ def _docker_service(item: Mapping[str, Any]) -> str | None:
         "com.docker.compose.container-number",
         "com.docker.compose.project",
         "com.docker.compose.service",
+        "com.docker.compose.version",
+        "io.safe-change.source-tree.sha256",
+        "org.opencontainers.image.revision",
     }
     _require(set(labels) <= allowed, "Docker projection retained another label")
     if "com.docker.compose.container-number" not in labels:
         return None
     service = labels.get("com.docker.compose.service")
     return service if isinstance(service, str) else None
+
+
+def _integrated_inspect_object(value: Any, label: str) -> dict[str, Any]:
+    item = _object(value, label)
+    base = dict(item)
+    image_id = base.pop("Image", None)
+    _inspect_object(base, label)
+    _require(
+        isinstance(image_id, str)
+        and re.fullmatch(r"sha256:[0-9a-f]{64}", image_id) is not None,
+        f"{label} omits its immutable Docker image identity",
+    )
+    return item
 
 
 def _mount_map(item: Mapping[str, Any], label: str) -> dict[str, tuple[bool, str]]:
@@ -710,11 +1027,15 @@ def _config(item: Mapping[str, Any], label: str) -> dict[str, Any]:
     return config
 
 
-def _check_docker(directory: Path, run_id: str) -> dict[str, Any]:
+def _check_docker(
+    directory: Path,
+    run_id: str,
+    provenance: Mapping[str, Any],
+) -> dict[str, Any]:
     raw = _list(_json_file(directory, "docker-inspect.json"), "Docker inspection")
     _require(len(raw) == 7, "Docker inspection must contain exactly seven actors")
     inspected = [
-        _inspect_object(value, f"Docker container {index}")
+        _integrated_inspect_object(value, f"Docker container {index}")
         for index, value in enumerate(raw, 1)
     ]
     _require(
@@ -729,7 +1050,9 @@ def _check_docker(directory: Path, run_id: str) -> dict[str, Any]:
     services = {"ingress", "order", "control", "payment", "inventory", "ledger"}
     _require(set(by_service) == services, "Docker inspection omitted a service")
     codex_values = [item for item in inspected if _docker_service(item) is None]
-    codex = _inspect_object(_one(codex_values, "Codex container"), "Codex container")
+    codex = _integrated_inspect_object(
+        _one(codex_values, "Codex container"), "Codex container"
+    )
     _require(
         re.fullmatch(r"/safe-change-codex-[0-9a-f]{16}", str(codex["Name"]))
         is not None,
@@ -742,6 +1065,21 @@ def _check_docker(directory: Path, run_id: str) -> dict[str, Any]:
         _check_container_hardening(item, label)
         config = _config(item, label)
         _require(config.get("Image") == expected_image, f"{label} used another image")
+        image_key = str(item["Name"])[1:] if label == "Codex" else str(item["Id"])
+        _require(
+            item.get("Image") == provenance["image_id"]
+            and provenance["container_images"].get(image_key)
+            == provenance["image_id"],
+            f"{label} container is not joined to the immutable runtime image",
+        )
+        labels = _object(config.get("Labels"), f"{label} labels")
+        _require(
+            all(
+                labels.get(key) == value
+                for key, value in provenance["source_labels"].items()
+            ),
+            f"{label} image labels do not bind the producer source",
+        )
         user = config.get("User")
         _require(
             isinstance(user, str)
@@ -760,6 +1098,8 @@ def _check_docker(directory: Path, run_id: str) -> dict[str, Any]:
         _require(
             labels
             == {
+                **provenance["source_labels"],
+                "com.docker.compose.version": provenance["compose_version"],
                 "com.docker.compose.container-number": "1",
                 "com.docker.compose.project": run_id,
                 "com.docker.compose.service": service,
@@ -768,8 +1108,7 @@ def _check_docker(directory: Path, run_id: str) -> dict[str, Any]:
         )
     codex_labels = _object(_config(codex, "Codex").get("Labels"), "Codex labels")
     _require(
-        codex_labels.get("com.docker.compose.project") == run_id
-        and "com.docker.compose.container-number" not in codex_labels,
+        codex_labels == provenance["image_labels"],
         "Codex image label does not bind the deployment",
     )
 
@@ -832,6 +1171,7 @@ def _check_docker(directory: Path, run_id: str) -> dict[str, Any]:
             "-head-anchor=/anchor/runtime.head",
             "-admin-token-file=/credentials/admin-token",
             "-adapter-config=/config/adapters.json",
+            "-sandbox-socket-dir=/sandbox-endpoints",
         ],
         "payment": [
             "/usr/local/bin/payment",
@@ -861,6 +1201,7 @@ def _check_docker(directory: Path, run_id: str) -> dict[str, Any]:
             "/anchor": (True, "bind"),
             "/credentials": (False, "bind"),
             "/config": (False, "bind"),
+            "/sandbox-endpoints": (True, "bind"),
             "/state": (True, "bind"),
         },
         "payment": {"/state": (True, "bind")},
@@ -986,7 +1327,7 @@ def _check_docker(directory: Path, run_id: str) -> dict[str, Any]:
             "fixed_actor_paths": {
                 "codex": "ingress->control",
                 "order": "control",
-                "vm": "qemu-guestfwd->ingress->control",
+                "vm": "qemu-guestfwd->host-sandbox-socket",
             },
         },
         "network summary differs from raw Docker inspection",
@@ -1079,13 +1420,14 @@ def _check_docker(directory: Path, run_id: str) -> dict[str, Any]:
         _json_file(directory, "control-after-restart-inspect.json"),
         "post-restart control inspection",
     )
-    control_post = _inspect_object(
+    control_post = _integrated_inspect_object(
         _one(control_values, "post-restart control"), "post-restart control"
     )
     control = actors["control"]
     _check_container_hardening(control_post, "post-restart control")
     _require(
         control_post.get("Id") == control.get("Id")
+        and control_post.get("Image") == provenance["image_id"]
         and _config(control_post, "post-restart control")
         == _config(control, "initial control")
         and _docker_networks(control_post, "post-restart control")
@@ -1103,16 +1445,52 @@ def _check_docker(directory: Path, run_id: str) -> dict[str, Any]:
         control_post_state.get("StartedAt"), "restarted control start"
     )
     _require(
-        control_initial_state.get("Pid") != control_post_state.get("Pid")
+        control_initial_state.get("Running") is True
+        and control_post_state.get("Running") is True
+        and type(control_initial_state.get("Pid")) is int
+        and type(control_post_state.get("Pid")) is int
+        and control_initial_state["Pid"] > 0
+        and control_post_state["Pid"] > 0
+        and control_initial_state.get("Pid") != control_post_state.get("Pid")
         and control_post_start > control_initial_start,
         "control restart did not replace its process",
+    )
+    crash = _object(_json_file(directory, "control-crash.json"), "control crash")
+    crash_state = _object(crash.get("state"), "control crash State")
+    crash_started = crash.get("started_time_ns")
+    crash_finished = crash.get("finished_time_ns")
+    docker_finished = _rfc3339_nanoseconds(
+        crash_state.get("FinishedAt"), "SIGKILL finish time"
+    )
+    _require(
+        crash
+        == {
+            "command": ["docker", "kill", "--signal", "KILL", str(control["Id"])],
+            "container_id": str(control["Id"]),
+            "pid_before": control_initial_state["Pid"],
+            "started_time_ns": crash_started,
+            "finished_time_ns": crash_finished,
+            "returncode": 0,
+            "state": {
+                "ExitCode": 137,
+                "FinishedAt": crash_state.get("FinishedAt"),
+                "OOMKilled": False,
+                "Pid": 0,
+                "Running": False,
+            },
+        }
+        and type(crash_started) is int
+        and type(crash_finished) is int
+        and control_initial_start < crash_started <= docker_finished <= crash_finished
+        and crash_finished < control_post_start,
+        "retained control fault is not an observed SIGKILL between two processes",
     )
 
     order_values = _list(
         _json_file(directory, "order-after-replacement-inspect.json"),
         "replacement order inspection",
     )
-    order_post = _inspect_object(
+    order_post = _integrated_inspect_object(
         _one(order_values, "replacement order"), "replacement order"
     )
     order = actors["order"]
@@ -1121,6 +1499,9 @@ def _check_docker(directory: Path, run_id: str) -> dict[str, Any]:
     replacement_order_config = _config(order_post, "replacement order")
     _require(
         order_post.get("Id") != order.get("Id")
+        and order_post.get("Image") == provenance["image_id"]
+        and provenance["container_images"].get(str(order_post["Id"]))
+        == provenance["image_id"]
         and order_post.get("Name") == order.get("Name")
         and {
             key: value
@@ -1147,6 +1528,15 @@ def _check_docker(directory: Path, run_id: str) -> dict[str, Any]:
         replacement_order_start > initial_order_start,
         "replacement order start time did not advance",
     )
+    image_actor_keys = {
+        str(codex["Name"])[1:],
+        *(str(item["Id"]) for item in by_service.values()),
+        str(order_post["Id"]),
+    }
+    _require(
+        set(provenance["container_images"]) == image_actor_keys,
+        "runtime image provenance does not cover the exact executed containers",
+    )
 
     return {
         "codex_id": str(codex["Id"]),
@@ -1154,6 +1544,8 @@ def _check_docker(directory: Path, run_id: str) -> dict[str, Any]:
         "control_pid_before": control_initial_state["Pid"],
         "control_pid_after": control_post_state["Pid"],
         "control_restart_start_ns": control_post_start,
+        "control_crash_started_ns": int(crash_started),
+        "control_crash_finished_ns": int(crash_finished),
         "order_id_before": str(order["Id"]),
         "order_id_after": str(order_post["Id"]),
         "order_replacement_start_ns": replacement_order_start,
@@ -1161,6 +1553,7 @@ def _check_docker(directory: Path, run_id: str) -> dict[str, Any]:
         "probe_finish_ns": probes[-1]["finished_time_ns"],
         "topology": topology,
         "effect_ips": effect_ips,
+        "runtime_uid": int(users[0].split(":", 1)[0]),
     }
 
 
@@ -1195,32 +1588,72 @@ def _jsonl(path: Path, label: str) -> list[dict[str, Any]]:
     return records
 
 
-def _check_vm(directory: Path, purchase_id: str) -> dict[str, Any]:
+def _check_vm(
+    directory: Path,
+    run_id: str,
+    purchase_id: str,
+    ledger_ip: str,
+) -> dict[str, Any]:
     vm_dir = directory / "vm"
     call_id = f"purchase/{purchase_id}/audit"
+    request_value = {
+        "call_id": call_id,
+        "kind": AUDIT_KIND,
+        "body": base64.b64encode(
+            _canonical({"purchase_id": purchase_id, "run_id": run_id})
+        ).decode(),
+    }
+    request_data = (
+        json.dumps(request_value, sort_keys=True, indent=2) + "\n"
+    ).encode()
+    _require(
+        _read(vm_dir / "guest-request.json") == request_data,
+        "VM guest request contains routing, credentials, or another field set",
+    )
+    guest_script = _read(vm_dir / "guest-script.sh").decode("utf-8", errors="strict")
+    _require(
+        guest_script
+        == _expected_vm_guest_script(
+            request_data,
+            f"http://{ledger_ip}:8081/v1/stats",
+        )
+        and "Authorization" not in guest_script
+        and "Bearer" not in guest_script
+        and "/v1/charge" not in guest_script,
+        "VM guest script differs from the credential-free host-bound boundary",
+    )
     result = _object(_json_file(vm_dir, "result.json"), "VM result")
     expected_result = {
-        "accelerator": "tcg",
+        "accelerator": result.get("accelerator"),
         "base_image_sha256": BASE_IMAGE_SHA,
         "cpus": 2,
         "direct_effect": "blocked_before_and_after_restore",
         "first_operation_reused": False,
         "full_linux_guest": True,
-        "guest_forwards": ["metadata-gate", "shared-control"],
+        "guest_forwards": ["metadata-gate", "host-bound-sandbox"],
+        "guest_credential_free": True,
         "guest_kernel": result.get("guest_kernel"),
+        "guest_request_fields": ["call_id", "kind", "body"],
         "implicit_nics_disabled": True,
         "machine": "q35",
         "memory_mib": 1024,
         "network_backend": "qemu-user-restrict-on",
         "operation_call_id": call_id,
         "operation_kind": AUDIT_KIND,
+        "qemu_pid": result.get("qemu_pid"),
         "restored_operation_reused": True,
+        "sandbox_transport": "host-unix-socket",
         "schema": 1,
         "snapshot": "before_purchase",
+        "cutover_while_paused": True,
+        "restore_loaded_before_resume": True,
         "whole_vm_restored": True,
     }
     _require(
-        isinstance(result.get("guest_kernel"), str)
+        result.get("accelerator") in {"tcg", "kvm"}
+        and isinstance(result.get("guest_kernel"), str)
+        and type(result.get("qemu_pid")) is int
+        and result["qemu_pid"] > 0
         and re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+-[0-9]+-generic", result["guest_kernel"])
         is not None
         and result == expected_result,
@@ -1244,16 +1677,15 @@ def _check_vm(directory: Path, purchase_id: str) -> dict[str, Any]:
     matched = re.fullmatch(
         r"user,id=opnet,restrict=on,"
         r"guestfwd=tcp:10\.0\.2\.100:8000-cmd:/usr/bin/nc 127\.0\.0\.1 ([0-9]+),"
-        r"guestfwd=tcp:10\.0\.2\.100:8787-cmd:/usr/bin/nc 127\.0\.0\.1 ([0-9]+)",
+        r"guestfwd=tcp:10\.0\.2\.100:8787-cmd:/usr/bin/nc -U <host-sandbox-socket>",
         netdev,
     )
     _require(matched is not None, "QEMU user network has another forwarding boundary")
     assert matched is not None
-    forwarded_ports = [int(matched.group(1)), int(matched.group(2))]
+    forwarded_port = int(matched.group(1))
     _require(
-        all(1024 <= port <= 65535 for port in forwarded_ports)
-        and len(set(forwarded_ports)) == 2,
-        "QEMU guest forwards do not use two distinct host ports",
+        1024 <= forwarded_port <= 65535,
+        "QEMU metadata forward does not use an unprivileged host port",
     )
     expected_arguments = [
         "-name",
@@ -1284,13 +1716,30 @@ def _check_vm(directory: Path, purchase_id: str) -> dict[str, Any]:
         "-smbios",
         "type=1,serial=ds=nocloud;s=http://10.0.2.100:8000/",
         "-accel",
-        "tcg,thread=multi",
+        "tcg,thread=multi" if result["accelerator"] == "tcg" else "kvm",
     ]
     _require(
         arguments == expected_arguments
         and "hostfwd=" not in netdev
+        and "Bearer" not in json.dumps(arguments)
+        and "token" not in json.dumps(arguments).lower()
         and arguments.count("-nic") == 1,
         "QEMU command enabled another device, mount, or host forward",
+    )
+    process_command = _object(
+        _json_file(vm_dir, "qemu-process-command.json"),
+        "live QEMU process command",
+    )
+    _require(
+        process_command
+        == {
+            "arguments": arguments,
+            "executable": "qemu-system-x86_64",
+            "pid": result["qemu_pid"],
+            "schema": 1,
+            "source": "linux-proc-cmdline",
+        },
+        "retained /proc QEMU command differs from the planned launch boundary",
     )
 
     qmp_records = _jsonl(vm_dir / "qmp-protocol.jsonl", "QMP protocol")
@@ -1314,25 +1763,29 @@ def _check_vm(directory: Path, purchase_id: str) -> dict[str, Any]:
     expected_commands = [
         {"execute": "qmp_capabilities", "id": "command-1"},
         {"execute": "stop", "id": "command-2"},
+        {"execute": "query-status", "id": "command-3"},
         {
             "arguments": {"command-line": "savevm before_purchase"},
             "execute": "human-monitor-command",
-            "id": "command-3",
+            "id": "command-4",
         },
-        {"execute": "cont", "id": "command-4"},
-        {"execute": "stop", "id": "command-5"},
+        {"execute": "cont", "id": "command-5"},
+        {"execute": "stop", "id": "command-6"},
+        {"execute": "query-status", "id": "command-7"},
         {
             "arguments": {"command-line": "loadvm before_purchase"},
             "execute": "human-monitor-command",
-            "id": "command-6",
+            "id": "command-8",
         },
-        {"execute": "cont", "id": "command-7"},
+        {"execute": "query-status", "id": "command-9"},
+        {"execute": "cont", "id": "command-10"},
     ]
     _require(
         [record.get("payload") for record in client_records] == expected_commands,
         "QMP did not perform the exact stop/save/continue/stop/load/continue sequence",
     )
     response_times: dict[str, int] = {}
+    response_returns: dict[str, Any] = {}
     for command in expected_commands:
         command_id = str(command["id"])
         values = [
@@ -1349,6 +1802,7 @@ def _check_vm(directory: Path, purchase_id: str) -> dict[str, Any]:
             f"QMP command {command_id} failed",
         )
         response_times[command_id] = int(response["time_ns"])
+        response_returns[command_id] = payload["return"]
     client_times = {
         str(record["payload"]["id"]): int(record["time_ns"])
         for record in client_records
@@ -1356,10 +1810,36 @@ def _check_vm(directory: Path, purchase_id: str) -> dict[str, Any]:
     _require(
         all(
             client_times[f"command-{index}"] < response_times[f"command-{index}"]
-            for index in range(1, 8)
+            for index in range(1, 11)
+        )
+        and all(
+            response_times[f"command-{index}"]
+            < client_times[f"command-{index + 1}"]
+            for index in range(1, 10)
         ),
         "QMP response clock precedes its command",
     )
+    _require(
+        response_returns["command-4"] == ""
+        and response_returns["command-8"] == "",
+        "QMP save or load command returned an unexpected warning",
+    )
+    for command_id in ("command-3", "command-7", "command-9"):
+        response_values = [
+            record["payload"]["return"]
+            for record in qmp_records
+            if record.get("direction") == "server_to_client"
+            and isinstance(record.get("payload"), dict)
+            and record["payload"].get("id") == command_id
+        ]
+        status = _object(
+            _one(response_values, f"QMP paused status {command_id}"),
+            f"QMP paused status {command_id}",
+        )
+        _require(
+            status.get("status") == "paused" and status.get("running") is False,
+            f"QEMU was not confirmed paused at {command_id}",
+        )
 
     snapshots = _read(vm_dir / "snapshots.txt").decode("utf-8", errors="strict")
     _require(
@@ -1396,14 +1876,22 @@ def _check_vm(directory: Path, purchase_id: str) -> dict[str, Any]:
 
     vm_events = _list(_json_file(directory, "vm-events.json"), "VM runner events")
     _require(
-        len(vm_events) == 3
+        len(vm_events) == 5
         and [value.get("event") if isinstance(value, dict) else None for value in vm_events]
-        == ["snapshot-ready", "first-succeeded", "completed"],
+        == [
+            "snapshot-ready",
+            "first-succeeded",
+            "paused-after-first",
+            "restore-loaded-paused",
+            "completed",
+        ],
         "VM runner events are incomplete or reordered",
     )
     snapshot_event = _object(vm_events[0], "snapshot-ready event")
     first_event = _object(vm_events[1], "first-succeeded event")
-    completed_event = _object(vm_events[2], "completed VM event")
+    paused_event = _object(vm_events[2], "paused VM event")
+    loaded_event = _object(vm_events[3], "loaded-paused VM event")
+    completed_event = _object(vm_events[4], "completed VM event")
     _require(
         snapshot_event
         == {
@@ -1417,6 +1905,18 @@ def _check_vm(directory: Path, purchase_id: str) -> dict[str, Any]:
             "observed_time_ns": first_event.get("observed_time_ns"),
             "operation_call_id": call_id,
         }
+        and paused_event
+        == {
+            "event": "paused-after-first",
+            "observed_time_ns": paused_event.get("observed_time_ns"),
+            "operation_call_id": call_id,
+        }
+        and loaded_event
+        == {
+            "event": "restore-loaded-paused",
+            "observed_time_ns": loaded_event.get("observed_time_ns"),
+            "operation_call_id": call_id,
+        }
         and {
             key: value
             for key, value in completed_event.items()
@@ -1428,25 +1928,39 @@ def _check_vm(directory: Path, purchase_id: str) -> dict[str, Any]:
     times = [
         snapshot_event.get("observed_time_ns"),
         first_event.get("observed_time_ns"),
+        paused_event.get("observed_time_ns"),
+        loaded_event.get("observed_time_ns"),
         completed_event.get("observed_time_ns"),
     ]
     _require(
         all(type(value) is int for value in times)
-        and response_times["command-3"] <= times[0] < times[1]
-        and response_times["command-6"] < times[2]
-        and times[1] < client_times["command-5"],
+        and response_times["command-4"] <= times[0]
+        and times[0] < client_times["command-5"]
+        and response_times["command-5"] < times[1]
+        and times[1] < client_times["command-6"]
+        and response_times["command-7"] <= times[2]
+        and times[2] < client_times["command-8"]
+        and response_times["command-9"] <= times[3]
+        and times[3] < client_times["command-10"]
+        and response_times["command-10"] < times[4],
         "VM events do not correlate with the raw QMP save/load clocks",
     )
     return {
         "result": result,
         "snapshot_time_ns": int(times[0]),
         "first_success_time_ns": int(times[1]),
-        "completion_time_ns": int(times[2]),
+        "paused_time_ns": int(times[2]),
+        "loaded_paused_time_ns": int(times[3]),
+        "completion_time_ns": int(times[4]),
         "qmp_greeting_time_ns": int(qmp_records[0]["time_ns"]),
-        "save_command_time_ns": client_times["command-3"],
-        "save_response_time_ns": response_times["command-3"],
-        "load_command_time_ns": client_times["command-6"],
-        "load_response_time_ns": response_times["command-6"],
+        "save_command_time_ns": client_times["command-4"],
+        "save_response_time_ns": response_times["command-4"],
+        "pause_command_time_ns": client_times["command-6"],
+        "pause_status_response_time_ns": response_times["command-7"],
+        "load_command_time_ns": client_times["command-8"],
+        "load_status_response_time_ns": response_times["command-9"],
+        "resume_command_time_ns": client_times["command-10"],
+        "resume_response_time_ns": response_times["command-10"],
         "qmp_records": len(qmp_records),
     }
 
@@ -1542,7 +2056,7 @@ def _check_protocol(
     ]
     thread_request = _object(_one(thread_requests, "thread/start request"), "thread/start")
     thread_params = _object(thread_request.get("params"), "thread/start params")
-    model = thread_params.get("model")
+    requested_model = thread_params.get("model")
     cwd = thread_params.get("cwd")
     dynamic_tool = {
         "description": (
@@ -1560,13 +2074,7 @@ def _check_protocol(
         "name": TOOL_NAME,
         "type": "function",
     }
-    _require(
-        isinstance(model, str)
-        and model
-        and isinstance(cwd, str)
-        and cwd
-        and thread_params
-        == {
+    expected_thread_params = {
             "approvalPolicy": "never",
             "cwd": cwd,
             "developerInstructions": (
@@ -1576,10 +2084,16 @@ def _check_protocol(
             "dynamicTools": [dynamic_tool],
             "environments": [],
             "ephemeral": True,
-            "model": model,
             "sandbox": "read-only",
             "serviceName": "safe_change_runtime",
-        },
+        }
+    if "model" in thread_params:
+        expected_thread_params["model"] = requested_model
+    _require(
+        (requested_model is None or isinstance(requested_model, str))
+        and isinstance(cwd, str)
+        and cwd
+        and thread_params == expected_thread_params,
         "thread/start did not expose exactly one purchase tool and read-only sandbox",
     )
     thread_responses = [
@@ -1599,11 +2113,14 @@ def _check_protocol(
     thread = _object(thread_result.get("thread"), "Codex thread")
     thread_id = thread.get("id")
     sandbox = _object(thread_result.get("sandbox"), "thread sandbox")
+    model = thread_result.get("model")
     _require(
         isinstance(thread_id, str)
         and thread_id
+        and isinstance(model, str)
+        and model
+        and (requested_model is None or requested_model == model)
         and thread_result.get("cwd") == cwd
-        and thread_result.get("model") == model
         and thread_result.get("modelProvider") == "openai"
         and thread_result.get("approvalPolicy") == "never"
         and sandbox == {"networkAccess": False, "type": "readOnly"},
@@ -1826,6 +2343,7 @@ def _expected_runtime_outcome(
         "body": base64.b64encode(external["receipt_body"]).decode(),
         "operation_id": operation_id,
         "phase": "succeeded",
+        "recovered_by_query": False,
         "result_hash": external["gateway_result_hash"],
         "reused": reused,
         "status_code": 200,
@@ -1843,6 +2361,7 @@ def _check_outcomes(
     _require(
         codex_unknown
         == {
+            "code": "outcome_unknown",
             "error": (
                 "external operation outcome is unknown: Post "
                 '"http://payment:8081/v1/charge": EOF'
@@ -1850,6 +2369,7 @@ def _check_outcomes(
             "outcome": {
                 "operation_id": operation_ids["codex"],
                 "phase": "unknown",
+                "recovered_by_query": False,
                 "result_hash": "",
                 "reused": False,
             },
@@ -1878,6 +2398,7 @@ def _check_outcomes(
             "requested_kind": RESERVE_V1_KIND,
             "requested_target": "http://inventory:8081/v1/charge",
             "runtime": {
+                "code": "outcome_unknown",
                 "error": (
                     "external operation outcome is unknown: Post "
                     '"http://inventory:8081/v1/charge": EOF'
@@ -1885,6 +2406,7 @@ def _check_outcomes(
                 "outcome": {
                     "operation_id": operation_ids["order"],
                     "phase": "unknown",
+                    "recovered_by_query": False,
                     "result_hash": "",
                     "reused": False,
                 },
@@ -1947,9 +2469,12 @@ def _check_timeline(
         "codex_payment_unknown_ns",
         "inventory_unknown_ns",
         "vm_first_succeeded_ns",
+        "vm_paused_ns",
         "rule_v2_activated_ns",
         "order_replaced_ns",
         "control_restarted_ns",
+        "vm_restore_loaded_ns",
+        "sandbox_generation_3_ns",
         "vm_restore_completed_ns",
         "codex_turn_completed_ns",
         "run_facts_complete_ns",
@@ -1968,9 +2493,12 @@ def _check_timeline(
         "codex_payment_unknown_ns",
         "inventory_unknown_ns",
         "vm_first_succeeded_ns",
+        "vm_paused_ns",
         "rule_v2_activated_ns",
         "order_replaced_ns",
         "control_restarted_ns",
+        "vm_restore_loaded_ns",
+        "sandbox_generation_3_ns",
         "vm_restore_completed_ns",
         "codex_turn_completed_ns",
         "run_facts_complete_ns",
@@ -1993,10 +2521,22 @@ def _check_timeline(
         and docker["probe_finish_ns"] <= timeline["network_checks_finished_ns"]
         <= docker["probe_finish_ns"] + one_second
         and timeline["vm_first_succeeded_ns"] == vm["first_success_time_ns"]
+        and timeline["vm_paused_ns"] == vm["paused_time_ns"]
+        and vm["pause_status_response_time_ns"] <= timeline["vm_paused_ns"]
+        and timeline["vm_paused_ns"] < timeline["rule_v2_activated_ns"]
         and docker["order_replacement_start_ns"] <= timeline["order_replaced_ns"]
-        and docker["control_restart_start_ns"] <= timeline["control_restarted_ns"]
+        and timeline["order_replaced_ns"] < docker["control_crash_started_ns"]
+        and docker["control_crash_finished_ns"]
+        < docker["control_restart_start_ns"]
+        <= timeline["control_restarted_ns"]
         and timeline["control_restarted_ns"] < vm["load_command_time_ns"]
-        and vm["load_response_time_ns"] < timeline["vm_restore_completed_ns"]
+        and vm["load_status_response_time_ns"]
+        <= timeline["vm_restore_loaded_ns"]
+        == vm["loaded_paused_time_ns"]
+        and timeline["vm_restore_loaded_ns"]
+        < timeline["sandbox_generation_3_ns"]
+        < vm["resume_command_time_ns"]
+        and vm["resume_response_time_ns"] < timeline["vm_restore_completed_ns"]
         == vm["completion_time_ns"]
         and timeline["vm_restore_completed_ns"] < protocol["callback_ns"]
         and protocol["turn_completed_ns"] <= timeline["codex_turn_completed_ns"]
@@ -2007,6 +2547,103 @@ def _check_timeline(
     return {name: int(timeline[name]) for name in names}
 
 
+def _check_sandbox_lifecycle(
+    directory: Path,
+    docker: Mapping[str, Any],
+    timeline: Mapping[str, int],
+) -> dict[str, Any]:
+    records = _list(
+        _json_file(directory, "sandbox-lifecycle.json"),
+        "sandbox endpoint lifecycle",
+    )
+    _require(len(records) == 5, "sandbox endpoint lifecycle is incomplete")
+    values = [
+        _object(record, f"sandbox lifecycle record {index}")
+        for index, record in enumerate(records, 1)
+    ]
+    basename = "sandbox-" + sha256(VM_SANDBOX_ID.encode()).hexdigest()[:32] + ".sock"
+    published: dict[int, int] = {}
+    published_inodes: dict[int, int] = {}
+    for value, generation in zip((values[0], values[1], values[4]), (1, 2, 3)):
+        observed = value.get("observed_time_ns")
+        inode = value.get("inode")
+        _require(
+            value
+            == {
+                "event": "published",
+                "generation": generation,
+                "observed_time_ns": observed,
+                "path_basename": basename,
+                "parent_mode": "0700",
+                "socket_mode": "0600",
+                "owner_uid": docker["runtime_uid"],
+                "inode": inode,
+                "health_status": 200,
+            }
+            and type(observed) is int
+            and type(inode) is int
+            and observed > 0
+            and inode > 0,
+            f"sandbox generation {generation} was not observed as a private healthy socket",
+        )
+        published[generation] = int(observed)
+        published_inodes[generation] = int(inode)
+    stale = values[2]
+    stale_time = stale.get("observed_time_ns")
+    _require(
+        stale
+        == {
+            "event": "stale-after-control-sigkill",
+            "generation": 2,
+            "observed_time_ns": stale_time,
+            "path_basename": basename,
+            "socket_mode": "0600",
+            "owner_uid": docker["runtime_uid"],
+            "inode": published_inodes[2],
+            "connect_errno": 111,
+        }
+        and type(stale_time) is int
+        and stale_time > 0,
+        "SIGKILL did not leave the exact non-accepting sandbox socket inode",
+    )
+    absent = values[3]
+    absent_time = absent.get("observed_time_ns")
+    _require(
+        absent
+        == {
+            "event": "absent-after-control-reopen",
+            "prior_generation": 2,
+            "observed_time_ns": absent_time,
+            "path_basename": basename,
+            "lstat_errno": 2,
+            "connect_errno": 2,
+        }
+        and type(absent_time) is int
+        and absent_time > 0,
+        "replayed sandbox endpoint was not observed absent after control restart",
+    )
+    _require(
+        timeline["rule_v1_activated_ns"] <= published[1]
+        < timeline["vm_snapshot_ready_ns"]
+        and timeline["rule_v2_activated_ns"] <= published[2]
+        < timeline["order_replaced_ns"]
+        and docker["control_crash_finished_ns"] <= int(stale_time)
+        < docker["control_restart_start_ns"]
+        and timeline["control_restarted_ns"] <= int(absent_time)
+        < timeline["vm_restore_loaded_ns"]
+        < published[3]
+        and published[3] == timeline["sandbox_generation_3_ns"],
+        "sandbox socket observations do not match the cutover and restart order",
+    )
+    return {
+        "credential_free": True,
+        "sigkill_stale_inode_observed": True,
+        "generations": [1, 2, 3],
+        "replay_auto_attach_blocked": True,
+        "transport": "host-unix-socket",
+    }
+
+
 def _check_runner_result(
     directory: Path,
     run_id: str,
@@ -2015,6 +2652,7 @@ def _check_runner_result(
     docker: Mapping[str, Any],
     vm: Mapping[str, Any],
     protocol: Mapping[str, Any],
+    provenance: Mapping[str, Any],
 ) -> None:
     result = _object(_json_file(directory, "result.json"), "runner result")
     _require(
@@ -2027,6 +2665,7 @@ def _check_runner_result(
             "faults",
             "history",
             "network",
+            "provenance",
             "protocol",
             "purchase_id",
             "run_id",
@@ -2050,7 +2689,7 @@ def _check_runner_result(
             "active_requirement": f"purchase-v2/{run_id}",
             "hash": history["history_hash"],
             "operations": operation_ids,
-            "sequence": 15,
+            "sequence": 16,
         },
         "runner History summary differs from binary replay",
     )
@@ -2068,11 +2707,21 @@ def _check_runner_result(
         "runner protocol summary differs from App Server records",
     )
     _require(
+        result.get("provenance")
+        == {
+            "revision": provenance["revision"],
+            "runtime_image_id": provenance["image_id"],
+            "source_tree_sha256": provenance["source_tree_sha256"],
+        },
+        "runner provenance summary differs from committed source and image evidence",
+    )
+    _require(
         result.get("faults")
         == {
             "control_pid_after": docker["control_pid_after"],
             "control_pid_before": docker["control_pid_before"],
             "control_process_restarted": True,
+            "control_restart_mode": "sigkill",
             "order_container_after": docker["order_id_after"],
             "order_container_before": docker["order_id_before"],
             "order_process_replaced": True,
@@ -2088,10 +2737,25 @@ def _check_runner_result(
         == vm["result"]["first_operation_reused"]
         and vm_summary.get("restored_reused")
         == vm["result"]["restored_operation_reused"]
+        and vm_summary.get("credential_free") is True
+        and vm_summary.get("sandbox_generation") == 3
+        and vm_summary.get("transport") == "host-unix-socket"
+        and vm_summary.get("qemu_pid") == vm["result"]["qemu_pid"]
         and type(vm_summary.get("runner_pid")) is int
         and vm_summary["runner_pid"] > 0
+        and vm_summary["runner_pid"] != vm_summary["qemu_pid"]
         and set(vm_summary)
-        == {"accelerator", "first_reused", "restored_reused", "runner_pid", "snapshot"},
+        == {
+            "accelerator",
+            "credential_free",
+            "first_reused",
+            "restored_reused",
+            "qemu_pid",
+            "runner_pid",
+            "sandbox_generation",
+            "snapshot",
+            "transport",
+        },
         "runner VM summary differs from QEMU guest evidence",
     )
     codex = _object(result.get("codex"), "runner Codex summary")
@@ -2140,11 +2804,22 @@ def check_evidence(
     elif runtime_dir is not None:
         runtime_dir = runtime_dir.resolve(strict=True)
 
+    repository = (
+        runtime_dir.parent
+        if runtime_dir is not None
+        else Path(__file__).resolve().parents[1]
+    )
+    provenance = _check_provenance(directory, run_id, repository)
     history = _check_history_and_effects(
         directory, run_id, purchase_id, runtime_dir
     )
-    docker = _check_docker(directory, run_id)
-    vm = _check_vm(directory, purchase_id)
+    docker = _check_docker(directory, run_id, provenance)
+    vm = _check_vm(
+        directory,
+        run_id,
+        purchase_id,
+        str(docker["effect_ips"]["ledger"]),
+    )
     remotes = {
         name: str(history["external"][name]["remote_reference"])
         for name in ("codex", "order", "vm")
@@ -2162,6 +2837,7 @@ def check_evidence(
         directory, history["operation_ids"], history["external"]
     )
     timeline = _check_timeline(directory, docker, vm, protocol_timing)
+    sandbox_boundary = _check_sandbox_lifecycle(directory, docker, timeline)
 
     credential = _object(
         _json_file(directory, "credential-lifecycle.json"), "credential lifecycle"
@@ -2172,8 +2848,9 @@ def check_evidence(
             "actor_tokens_distinct": True,
             "host_source_modified": False,
             "temporary_auth_removed_before_effect": True,
+            "vm_credential_free": True,
         },
-        "credential lifecycle does not isolate the four actors and host account",
+        "credential lifecycle does not isolate three credentials and the credential-free VM",
     )
     teardown = _object(_json_file(directory, "teardown.json"), "teardown")
     _require(
@@ -2188,6 +2865,7 @@ def check_evidence(
         docker,
         vm,
         protocol_summary,
+        provenance,
     )
 
     deliveries = sum(int(value["deliveries"]) for value in history["stats"].values())
@@ -2195,6 +2873,10 @@ def check_evidence(
     _require(deliveries == 5 and commits == 3, "derived external totals differ")
     _require(
         vm["load_command_time_ns"] > docker["control_restart_start_ns"]
+        and vm["load_status_response_time_ns"]
+        <= timeline["vm_restore_loaded_ns"]
+        < timeline["sandbox_generation_3_ns"]
+        < vm["resume_command_time_ns"]
         and protocol_timing["callback_ns"] > vm["completion_time_ns"],
         "restored VM or Codex callback did not cross the replaced control process",
     )
@@ -2202,16 +2884,17 @@ def check_evidence(
         "valid": True,
         "run_id": run_id,
         "purchase_id": purchase_id,
-        "certificates_valid": 2,
+        "certificates_valid": 3,
         "history_chain_replayed": True,
-        "history_sequence": 15,
+        "history_sequence": 16,
         "history_hash": history["history_hash"],
         "operation_ids": history["operation_ids"],
         "rule_transition": {
             "from_version": 1,
-            "to_version": 2,
+            "to_version": 3,
             "v2_new_work_allow_count": 0,
         },
+        "sandbox_boundary": sandbox_boundary,
         "external_effects": {
             "deliveries": deliveries,
             "commits": commits,
@@ -2219,10 +2902,12 @@ def check_evidence(
         },
         "fault_correlations": {
             "control_process_restarted": True,
+            "control_process_sigkilled": True,
             "dispatch_owner_changed": True,
             "order_process_replaced": True,
             "v2_process_recovered_v1_operation": True,
             "whole_vm_restored": True,
+            "vm_cutover_while_paused": True,
             "restored_vm_operation_reused": True,
             "raw_clock_order_valid": bool(timeline),
         },

@@ -404,6 +404,11 @@ func (s *Server) execute(
 		return
 	}
 	operationID := deriveOperationID(domain, body.CallID)
+	if binding != nil {
+		operationID = deriveSandboxOperationID(
+			binding.Domain, binding.SandboxID, body.CallID,
+		)
+	}
 	var prior kernel.Operation
 	var exists bool
 	var err error
@@ -411,6 +416,17 @@ func (s *Server) execute(
 		prior, exists, err = s.control.OperationForAdapter(domain, operationID)
 	} else {
 		prior, exists, err = s.control.OperationForSandbox(*binding, operationID)
+		if err == nil && !exists {
+			legacyID := deriveOperationID(domain, body.CallID)
+			legacy, legacyExists, legacyErr := s.control.OperationForSandbox(
+				*binding, legacyID,
+			)
+			if legacyErr != nil {
+				err = legacyErr
+			} else if legacyExists {
+				operationID, prior, exists = legacyID, legacy, true
+			}
+		}
 	}
 	if err != nil {
 		writeSandboxError(writer, err)
@@ -524,6 +540,17 @@ func deriveOperationID(domain, callID string) string {
 	hash := sha256.New()
 	_, _ = hash.Write([]byte("operation-id-v1\x00"))
 	_, _ = hash.Write([]byte(domain))
+	_, _ = hash.Write([]byte{0})
+	_, _ = hash.Write([]byte(callID))
+	return "op-" + hex.EncodeToString(hash.Sum(nil))
+}
+
+func deriveSandboxOperationID(domain, sandboxID, callID string) string {
+	hash := sha256.New()
+	_, _ = hash.Write([]byte("sandbox-operation-id-v2\x00"))
+	_, _ = hash.Write([]byte(domain))
+	_, _ = hash.Write([]byte{0})
+	_, _ = hash.Write([]byte(sandboxID))
 	_, _ = hash.Write([]byte{0})
 	_, _ = hash.Write([]byte(callID))
 	return "op-" + hex.EncodeToString(hash.Sum(nil))

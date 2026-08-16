@@ -25,11 +25,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	goruntime "runtime"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
+	"unicode"
 
 	controlapi "github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/api"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/control"
@@ -53,8 +56,7 @@ type options struct {
 	accel                   string
 	keep                    bool
 	timeout                 time.Duration
-	externalControlPort     int
-	externalTokenPath       string
+	externalSandboxSocket   string
 	externalRequestPath     string
 	externalDirectProbe     string
 	externalEvidenceDirPath string
@@ -68,8 +70,7 @@ func main() {
 	flag.StringVar(&configuration.accel, "accel", "tcg", "QEMU accelerator: tcg or kvm")
 	flag.BoolVar(&configuration.keep, "keep", false, "retain the VM evidence directory")
 	flag.DurationVar(&configuration.timeout, "timeout", 12*time.Minute, "whole-demo timeout")
-	flag.IntVar(&configuration.externalControlPort, "external-control-port", 0, "host loopback port for an existing shared control service")
-	flag.StringVar(&configuration.externalTokenPath, "external-token-file", "", "private VM adapter token for shared-control mode")
+	flag.StringVar(&configuration.externalSandboxSocket, "external-sandbox-socket", "", "host-owned Unix socket for credential-free shared-control mode")
 	flag.StringVar(&configuration.externalRequestPath, "external-request", "", "strict execute-request JSON for shared-control mode")
 	flag.StringVar(&configuration.externalDirectProbe, "external-direct-probe", "", "effect URL that the restored guest must not reach directly")
 	flag.StringVar(&configuration.externalEvidenceDirPath, "external-evidence-dir", "", "empty directory for sanitized shared-control VM evidence")
@@ -340,7 +341,6 @@ func run(configuration options) error {
 			<-qemuDone
 		}
 	}()
-
 	qmp, err := dialQMPWithTrace(ctx, qmpPath, qmpTracePath)
 	if err != nil {
 		return withQEMULog(err, qemuLogPath)
@@ -568,29 +568,22 @@ func run(configuration options) error {
 }
 
 type externalExecuteRequest struct {
-	CallID  string            `json:"call_id"`
-	Kind    string            `json:"kind"`
-	Method  string            `json:"method"`
-	URL     string            `json:"url"`
-	Headers map[string]string `json:"headers,omitempty"`
-	Body    []byte            `json:"body"`
+	CallID string `json:"call_id"`
+	Kind   string `json:"kind"`
+	Body   []byte `json:"body"`
 }
 
 func validateExternalOptions(configuration options) (bool, error) {
-	requested := configuration.externalControlPort != 0 ||
-		configuration.externalTokenPath != "" ||
+	requested := configuration.externalSandboxSocket != "" ||
 		configuration.externalRequestPath != "" ||
 		configuration.externalDirectProbe != "" ||
 		configuration.externalEvidenceDirPath != ""
 	if !requested {
 		return false, nil
 	}
-	if configuration.externalControlPort <= 0 || configuration.externalControlPort > 65535 {
-		return false, errors.New("shared-control mode requires -external-control-port between 1 and 65535")
-	}
-	if configuration.externalTokenPath == "" || configuration.externalRequestPath == "" ||
+	if configuration.externalSandboxSocket == "" || configuration.externalRequestPath == "" ||
 		configuration.externalDirectProbe == "" || configuration.externalEvidenceDirPath == "" {
-		return false, errors.New("shared-control mode requires token, request, direct probe, and evidence directory")
+		return false, errors.New("shared-control mode requires sandbox socket, request, direct probe, and evidence directory")
 	}
 	if configuration.keep {
 		return false, errors.New("-keep cannot be combined with shared-control mode")
@@ -599,12 +592,20 @@ func validateExternalOptions(configuration options) (bool, error) {
 	if err != nil || probe.Scheme != "http" || probe.Host == "" || probe.User != nil || probe.Fragment != "" {
 		return false, errors.New("external direct probe must be an absolute plain HTTP URL")
 	}
+	if !filepath.IsAbs(configuration.externalSandboxSocket) ||
+		filepath.Clean(configuration.externalSandboxSocket) != configuration.externalSandboxSocket {
+		return false, errors.New("external sandbox socket path must be absolute and canonical")
+	}
+	for _, character := range configuration.externalSandboxSocket {
+		if character == ',' || unicode.IsSpace(character) || unicode.IsControl(character) {
+			return false, errors.New("external sandbox socket path is unsafe for QEMU guestfwd")
+		}
+	}
 	return true, nil
 }
 
 func runExternal(ctx context.Context, configuration options, netcatPath string, input io.Reader, output io.Writer) error {
-	token, err := readExternalToken(configuration.externalTokenPath)
-	if err != nil {
+	if err := requireExternalSandboxSocket(configuration.externalSandboxSocket); err != nil {
 		return err
 	}
 	requestData, request, err := readExternalRequest(configuration.externalRequestPath)
@@ -641,10 +642,15 @@ func runExternal(ctx context.Context, configuration options, netcatPath string, 
 
 	var gate atomic.Bool
 	guestScript := makeExternalGuestScript(
-		base64.StdEncoding.EncodeToString([]byte(token)),
 		base64.StdEncoding.EncodeToString(requestData),
 		base64.StdEncoding.EncodeToString([]byte(configuration.externalDirectProbe)),
 	)
+	if err := writePrivateFile(filepath.Join(evidenceDirectory, "guest-request.json"), requestData); err != nil {
+		return fmt.Errorf("retain credential-free guest request: %w", err)
+	}
+	if err := writePrivateFile(filepath.Join(evidenceDirectory, "guest-script.sh"), []byte(guestScript)); err != nil {
+		return fmt.Errorf("retain guest execution boundary: %w", err)
+	}
 	userData := makeUserData(guestScript)
 	seedListener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -667,11 +673,11 @@ func runExternal(ctx context.Context, configuration options, netcatPath string, 
 		}
 	}()
 	netdev := fmt.Sprintf(
-		"user,id=opnet,restrict=on,guestfwd=tcp:10.0.2.100:8000-cmd:%s 127.0.0.1 %d,guestfwd=tcp:10.0.2.100:8787-cmd:%s 127.0.0.1 %d",
+		"user,id=opnet,restrict=on,guestfwd=tcp:10.0.2.100:8000-cmd:%s 127.0.0.1 %d,guestfwd=tcp:10.0.2.100:8787-cmd:%s -U %s",
 		netcatPath,
 		seedListener.Addr().(*net.TCPAddr).Port,
 		netcatPath,
-		configuration.externalControlPort,
+		configuration.externalSandboxSocket,
 	)
 	qemuArgs := []string{
 		"-name", "safe-change-shared-history-vm", "-machine", "q35", "-m", "1024", "-smp", "2",
@@ -691,6 +697,7 @@ func runExternal(ctx context.Context, configuration options, netcatPath string, 
 		qemuArgs,
 		evidenceDirectory,
 		configuration.imagePath,
+		configuration.externalSandboxSocket,
 	); err != nil {
 		return err
 	}
@@ -708,6 +715,16 @@ func runExternal(ctx context.Context, configuration options, netcatPath string, 
 			<-qemuDone
 		}
 	}()
+	if err := writeQEMUProcessCommand(
+		filepath.Join(evidenceDirectory, "qemu-process-command.json"),
+		qemu.Process.Pid,
+		qemuArgs,
+		evidenceDirectory,
+		configuration.imagePath,
+		configuration.externalSandboxSocket,
+	); err != nil {
+		return err
+	}
 
 	qmp, err := dialQMPWithTrace(
 		ctx,
@@ -726,6 +743,9 @@ func runExternal(ctx context.Context, configuration options, netcatPath string, 
 		return errors.New("shared-control guest kernel marker is missing")
 	}
 	if err := qmp.command("stop", nil); err != nil {
+		return err
+	}
+	if err := qmp.requireStatus("paused"); err != nil {
 		return err
 	}
 	if err := qmp.human("savevm before_purchase"); err != nil {
@@ -752,13 +772,35 @@ func runExternal(ctx context.Context, configuration options, netcatPath string, 
 	}); err != nil {
 		return err
 	}
-	if err := expectExternalCommand(ctx, commands, "restore"); err != nil {
+	if err := expectExternalCommand(ctx, commands, "pause"); err != nil {
 		return err
 	}
 	if err := qmp.command("stop", nil); err != nil {
 		return err
 	}
+	if err := qmp.requireStatus("paused"); err != nil {
+		return err
+	}
+	if err := writeExternalEvent(output, map[string]any{
+		"event": "paused-after-first", "operation_call_id": request.CallID,
+	}); err != nil {
+		return err
+	}
+	if err := expectExternalCommand(ctx, commands, "restore"); err != nil {
+		return err
+	}
 	if err := qmp.human("loadvm before_purchase"); err != nil {
+		return err
+	}
+	if err := qmp.requireStatus("paused"); err != nil {
+		return err
+	}
+	if err := writeExternalEvent(output, map[string]any{
+		"event": "restore-loaded-paused", "operation_call_id": request.CallID,
+	}); err != nil {
+		return err
+	}
+	if err := expectExternalCommand(ctx, commands, "resume"); err != nil {
 		return err
 	}
 	if err := qmp.command("cont", nil); err != nil {
@@ -803,24 +845,30 @@ func runExternal(ctx context.Context, configuration options, netcatPath string, 
 		return err
 	}
 	projection := map[string]any{
-		"schema":                    1,
-		"accelerator":               configuration.accel,
-		"base_image_sha256":         configuration.imageSHA,
-		"full_linux_guest":          true,
-		"guest_kernel":              guestKernel,
-		"machine":                   "q35",
-		"memory_mib":                1024,
-		"cpus":                      2,
-		"implicit_nics_disabled":    true,
-		"network_backend":           "qemu-user-restrict-on",
-		"guest_forwards":            []string{"metadata-gate", "shared-control"},
-		"direct_effect":             "blocked_before_and_after_restore",
-		"snapshot":                  "before_purchase",
-		"whole_vm_restored":         true,
-		"first_operation_reused":    false,
-		"restored_operation_reused": true,
-		"operation_call_id":         request.CallID,
-		"operation_kind":            request.Kind,
+		"schema":                       1,
+		"accelerator":                  configuration.accel,
+		"base_image_sha256":            configuration.imageSHA,
+		"full_linux_guest":             true,
+		"guest_kernel":                 guestKernel,
+		"machine":                      "q35",
+		"memory_mib":                   1024,
+		"cpus":                         2,
+		"implicit_nics_disabled":       true,
+		"network_backend":              "qemu-user-restrict-on",
+		"guest_forwards":               []string{"metadata-gate", "host-bound-sandbox"},
+		"guest_credential_free":        true,
+		"guest_request_fields":         []string{"call_id", "kind", "body"},
+		"sandbox_transport":            "host-unix-socket",
+		"direct_effect":                "blocked_before_and_after_restore",
+		"snapshot":                     "before_purchase",
+		"whole_vm_restored":            true,
+		"cutover_while_paused":         true,
+		"restore_loaded_before_resume": true,
+		"first_operation_reused":       false,
+		"restored_operation_reused":    true,
+		"operation_call_id":            request.CallID,
+		"operation_kind":               request.Kind,
+		"qemu_pid":                     qemu.Process.Pid,
 	}
 	encodedProjection, err := json.MarshalIndent(projection, "", "  ")
 	if err != nil {
@@ -838,25 +886,6 @@ func runExternal(ctx context.Context, configuration options, netcatPath string, 
 	}
 	completed["event"] = "completed"
 	return writeExternalEvent(output, completed)
-}
-
-func readExternalToken(path string) (string, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return "", err
-	}
-	if !info.Mode().IsRegular() || info.Mode().Perm()&0o077 != 0 {
-		return "", errors.New("external VM token must be a private regular file")
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	token := strings.TrimSpace(string(data))
-	if len(token) < 32 {
-		return "", errors.New("external VM token is too short")
-	}
-	return token, nil
 }
 
 func readExternalRequest(path string) ([]byte, externalExecuteRequest, error) {
@@ -877,12 +906,53 @@ func readExternalRequest(path string) ([]byte, externalExecuteRequest, error) {
 	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
 		return nil, externalExecuteRequest{}, errors.New("external VM request has trailing JSON")
 	}
-	target, parseErr := url.Parse(request.URL)
-	if request.CallID == "" || request.Kind == "" || request.Method != http.MethodPost ||
-		parseErr != nil || target.Scheme != "http" || target.Host == "" || target.User != nil || target.Fragment != "" {
-		return nil, externalExecuteRequest{}, errors.New("external VM request has an invalid identity or HTTP contract")
+	if request.CallID == "" || request.Kind == "" {
+		return nil, externalExecuteRequest{}, errors.New("external VM request has an invalid call identity or kind")
 	}
 	return data, request, nil
+}
+
+func requireExternalSandboxSocket(path string) error {
+	if len([]byte(path)) >= 108 {
+		return errors.New("external sandbox socket path exceeds the Unix socket limit")
+	}
+	parent, err := os.Lstat(filepath.Dir(path))
+	if err != nil || !parent.IsDir() || parent.Mode()&os.ModeSymlink != 0 || parent.Mode().Perm() != 0o700 {
+		return errors.New("external sandbox socket parent must be a private real directory")
+	}
+	resolved, err := filepath.EvalSymlinks(filepath.Dir(path))
+	if err != nil || resolved != filepath.Dir(path) {
+		return errors.New("external sandbox socket parent must not traverse symlinks")
+	}
+	info, err := os.Lstat(path)
+	if err != nil || info.Mode()&os.ModeSocket == 0 || info.Mode().Perm() != 0o600 {
+		return errors.New("external sandbox endpoint must be a private Unix socket")
+	}
+	for _, item := range []struct {
+		label string
+		info  os.FileInfo
+	}{{"parent", parent}, {"socket", info}} {
+		stat, ok := item.info.Sys().(*syscall.Stat_t)
+		if !ok || int(stat.Uid) != os.Geteuid() {
+			return fmt.Errorf("external sandbox %s must be owned by the current uid", item.label)
+		}
+	}
+	transport := &http.Transport{
+		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, "unix", path)
+		},
+	}
+	defer transport.CloseIdleConnections()
+	client := &http.Client{Transport: transport, Timeout: 3 * time.Second}
+	response, err := client.Get("http://sandbox/healthz")
+	if err != nil {
+		return fmt.Errorf("probe external sandbox endpoint: %w", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("external sandbox endpoint health status is %d", response.StatusCode)
+	}
+	return nil
 }
 
 func requireEmptyPrivateDirectory(path string) error {
@@ -903,7 +973,7 @@ func requireEmptyPrivateDirectory(path string) error {
 	return nil
 }
 
-func makeExternalGuestScript(encodedToken, encodedRequest, encodedDirectProbe string) string {
+func makeExternalGuestScript(encodedRequest, encodedDirectProbe string) string {
 	return fmt.Sprintf(`#!/usr/bin/env bash
 set -uo pipefail
 log_marker() { printf '%%s\n' "$1" > /dev/ttyS0; }
@@ -917,9 +987,8 @@ if curl -fsS --connect-timeout 2 --max-time 3 "$direct_url" >/dev/null; then
 fi
 log_marker SAFE_CHANGE_VM_DIRECT_EFFECT_BLOCKED
 printf '%%s' '%s' | base64 -d > /run/safe-change-execute.json
-token=$(printf '%%s' '%s' | base64 -d)
 status=$(curl -sS --max-time 45 -o /run/safe-change-response.json -w '%%{http_code}' \
-  -X POST -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+  -X POST -H 'Content-Type: application/json' \
   --data-binary @/run/safe-change-execute.json http://10.0.2.100:8787/v1/execute) || status=transport-error
 read -r phase reused < <(python3 -c 'import json; d=json.load(open("/run/safe-change-response.json")); print(d.get("phase", ""), str(bool(d.get("reused", False))).lower())' 2>/dev/null || true)
 if [[ "$status" == 200 && "$phase" == succeeded && "$reused" == false ]]; then
@@ -936,7 +1005,7 @@ fi
 log_marker "SAFE_CHANGE_VM_EXTERNAL_UNEXPECTED status=$status phase=$phase reused=$reused"
 /sbin/poweroff -f
 exit 1
-`, encodedDirectProbe, encodedRequest, encodedToken)
+`, encodedDirectProbe, encodedRequest)
 }
 
 func expectExternalCommand(ctx context.Context, scanner *bufio.Scanner, expected string) error {
@@ -968,17 +1037,69 @@ func writeExternalEvent(writer io.Writer, value map[string]any) error {
 	return json.NewEncoder(writer).Encode(value)
 }
 
-func writeQEMUCommand(path string, arguments []string, evidenceDirectory, imagePath string) error {
-	redacted := make([]string, len(arguments))
-	for index, argument := range arguments {
-		argument = strings.ReplaceAll(argument, evidenceDirectory, "<vm-evidence>")
-		argument = strings.ReplaceAll(argument, imagePath, "<verified-base-image>")
-		redacted[index] = argument
-	}
+func writeQEMUCommand(path string, arguments []string, evidenceDirectory, imagePath string, privatePaths ...string) error {
+	redacted := redactQEMUArguments(arguments, evidenceDirectory, imagePath, privatePaths...)
 	value := map[string]any{
 		"schema":     1,
 		"executable": "qemu-system-x86_64",
 		"arguments":  redacted,
+	}
+	var encoded bytes.Buffer
+	encoder := json.NewEncoder(&encoded)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(value); err != nil {
+		return err
+	}
+	return writePrivateFile(path, encoded.Bytes())
+}
+
+func redactQEMUArguments(arguments []string, evidenceDirectory, imagePath string, privatePaths ...string) []string {
+	redacted := make([]string, len(arguments))
+	for index, argument := range arguments {
+		argument = strings.ReplaceAll(argument, evidenceDirectory, "<vm-evidence>")
+		argument = strings.ReplaceAll(argument, imagePath, "<verified-base-image>")
+		for _, privatePath := range privatePaths {
+			argument = strings.ReplaceAll(argument, privatePath, "<host-sandbox-socket>")
+		}
+		redacted[index] = argument
+	}
+	return redacted
+}
+
+func writeQEMUProcessCommand(
+	path string,
+	pid int,
+	expectedArguments []string,
+	evidenceDirectory, imagePath string,
+	privatePaths ...string,
+) error {
+	data, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+	if err != nil {
+		return fmt.Errorf("read live QEMU process command: %w", err)
+	}
+	fields := bytes.Split(data, []byte{0})
+	if len(fields) > 0 && len(fields[len(fields)-1]) == 0 {
+		fields = fields[:len(fields)-1]
+	}
+	if len(fields) != len(expectedArguments)+1 || filepath.Base(string(fields[0])) != "qemu-system-x86_64" {
+		return errors.New("live QEMU process command has an unexpected shape")
+	}
+	arguments := make([]string, len(fields)-1)
+	for index, field := range fields[1:] {
+		arguments[index] = string(field)
+	}
+	if !slices.Equal(arguments, expectedArguments) {
+		return errors.New("live QEMU process command differs from the launched arguments")
+	}
+	value := map[string]any{
+		"schema":     1,
+		"source":     "linux-proc-cmdline",
+		"pid":        pid,
+		"executable": "qemu-system-x86_64",
+		"arguments": redactQEMUArguments(
+			arguments, evidenceDirectory, imagePath, privatePaths...,
+		),
 	}
 	var encoded bytes.Buffer
 	encoder := json.NewEncoder(&encoded)

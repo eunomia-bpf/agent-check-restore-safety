@@ -51,6 +51,7 @@ type ruleBindingsCutoverEvent struct {
 type sandboxRegistry struct {
 	desired            map[string]SandboxBinding
 	maxGeneration      map[string]uint64
+	stableDomain       map[string]string
 	seenHostInstanceID map[string]struct{}
 }
 
@@ -58,6 +59,7 @@ func newSandboxRegistry() sandboxRegistry {
 	return sandboxRegistry{
 		desired:            make(map[string]SandboxBinding),
 		maxGeneration:      make(map[string]uint64),
+		stableDomain:       make(map[string]string),
 		seenHostInstanceID: make(map[string]struct{}),
 	}
 }
@@ -69,6 +71,9 @@ func (r sandboxRegistry) clone() sandboxRegistry {
 	}
 	for id, generation := range r.maxGeneration {
 		out.maxGeneration[id] = generation
+	}
+	for id, domain := range r.stableDomain {
+		out.stableDomain[id] = domain
 	}
 	for id := range r.seenHostInstanceID {
 		out.seenHostInstanceID[id] = struct{}{}
@@ -88,12 +93,19 @@ func (r *sandboxRegistry) advance(complete []SandboxBinding) error {
 		if _, reused := r.seenHostInstanceID[binding.HostInstanceID]; reused {
 			return fmt.Errorf("sandbox host instance %q was already used", binding.HostInstanceID)
 		}
+		if domain, exists := r.stableDomain[binding.SandboxID]; exists && domain != binding.Domain {
+			return fmt.Errorf(
+				"sandbox %q changed stable domain from %q to %q",
+				binding.SandboxID, domain, binding.Domain,
+			)
+		}
 	}
 	next := make(map[string]SandboxBinding, len(complete))
 	for _, binding := range complete {
 		owned := cloneSandboxBinding(binding)
 		next[owned.SandboxID] = owned
 		r.maxGeneration[owned.SandboxID] = owned.Generation
+		r.stableDomain[owned.SandboxID] = owned.Domain
 		r.seenHostInstanceID[owned.HostInstanceID] = struct{}{}
 	}
 	r.desired = next
@@ -416,6 +428,12 @@ func validateSandboxOperation(binding SandboxBinding, operation kernel.Operation
 	if operation.Domain != binding.Domain {
 		return fmt.Errorf("operation %q belongs to domain %q, not sandbox domain %q", operation.ID, operation.Domain, binding.Domain)
 	}
+	if operation.SandboxID != binding.SandboxID {
+		return fmt.Errorf(
+			"operation %q belongs to sandbox %q, not sandbox %q",
+			operation.ID, operation.SandboxID, binding.SandboxID,
+		)
+	}
 	return nil
 }
 
@@ -636,6 +654,12 @@ func (c *Control) OperationForAdapter(domain, id string) (kernel.Operation, bool
 			operation.ID, operation.Domain, domain,
 		)
 	}
+	if operation.SandboxID != "" {
+		return kernel.Operation{}, false, fmt.Errorf(
+			"operation %q belongs to sandbox %q, not an adapter",
+			operation.ID, operation.SandboxID,
+		)
+	}
 	return cloneOperation(operation), true, nil
 }
 
@@ -676,7 +700,9 @@ func (c *Control) PrepareWithRequestForSandbox(
 	if !existed && !bindingAllowsKind(current, kind) {
 		return kernel.Operation{}, fmt.Errorf("operation kind %q is not allowed for sandbox %q", kind, current.SandboxID)
 	}
-	return c.prepareLocked(id, current.Domain, kind, requestHash, true, headers, body)
+	return c.prepareLocked(
+		id, current.Domain, current.SandboxID, kind, requestHash, true, headers, body,
+	)
 }
 
 // MoveForSandbox records only pre-network control transitions. Binding
