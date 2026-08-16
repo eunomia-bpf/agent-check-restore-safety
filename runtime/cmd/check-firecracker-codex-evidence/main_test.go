@@ -130,6 +130,20 @@ func TestVerifyRejectsMutations(t *testing.T) {
 		{"snapshot retained bytes changed", func(t *testing.T, f *fixture) {
 			mustWrite(t, filepath.Join(f.opts.evidence, "snapshot.memory"), []byte("tampered"), 0o600)
 		}},
+		{"checkpoint identity rebound but contradicts process evidence", func(t *testing.T, f *fixture) {
+			checkpointPath := filepath.Join(f.opts.evidence, "checkpoint.json")
+			var checkpoint map[string]any
+			mustJSON(t, mustRead(t, checkpointPath), &checkpoint)
+			checkpoint["source_instance_id"] = "other-source-instance"
+			mustWrite(t, checkpointPath, mustMarshal(t, checkpoint), 0o600)
+			refreshRetainedArtifact(t, f, "checkpoint", "checkpoint.json")
+			var result map[string]any
+			mustJSON(t, mustRead(t, filepath.Join(f.opts.evidence, "result.json")), &result)
+			artifact := result["artifacts"].(map[string]any)["checkpoint"]
+			mutateEvent(t, f, 14, func(x map[string]any) {
+				x["details"].(map[string]any)["checkpoint"] = artifact
+			})
+		}},
 		{"initramfs mode changed with hashes rebound", func(t *testing.T, f *fixture) {
 			archive := buildTestInitramfs(t, f.guestBinary, mustRead(t, filepath.Join(f.opts.evidence, "guest-config.json")), 0o100444)
 			mustWrite(t, filepath.Join(f.opts.evidence, "guest-initramfs.cpio"), archive, 0o600)
@@ -426,6 +440,15 @@ func newFixture(t *testing.T) *fixture {
 	g1 := testProcess(evidence, 1, "g1-instance", 101, 10, 350, 1050, artifacts["firecracker"].SHA256)
 	g3 := testProcess(evidence, 3, "g3-instance", 202, 20, 1350, 2150, artifacts["firecracker"].SHA256)
 	f.result = resultRecord{Schema: 1, Success: true, SessionID: session, CodexSHA256: codex.SHA256, RunnerSHA256: artifacts["runner"].SHA256, ArgumentsSHA256: hashBytes(mustMarshal(t, args)), ArgumentsEncoding: "compact-json-array", ArgumentsCount: len(args), WorkspaceMapping: workspaceMapping{Host: workspace, Guest: "/workspace"}, Artifacts: artifacts, SealedBootInputs: boot, SealedLoadInputs: load, Checkpoint: checkpointValue, Processes: []processRecord{g1, g3}, G1SIGKILLConfirmed: true, SnapshotLoadedPaused: true, RelayArmedBeforeResume: true, ToolReleasedAfterAttach: true, CompletedTimeNS: 2400}
+	checkpointBytes := mustMarshal(t, checkpointEvidence{
+		Schema: 1, SessionID: session, SourceInstanceID: g1.ID, RestoredInstanceID: g3.ID,
+		CodexSHA256: codex.SHA256, ArgumentsSHA256: f.result.ArgumentsSHA256,
+		RepositoryTreeRoot: repository.TreeRoot.String(), RepositoryBundle: artifacts["repository"],
+		SnapshotState: artifacts["snapshot_state"], SnapshotMemory: artifacts["snapshot_memory"],
+		StreamCheckpoint: checkpointValue,
+	})
+	mustWrite(t, filepath.Join(evidence, "checkpoint.json"), checkpointBytes, 0o600)
+	f.result.Artifacts["checkpoint"] = artifactFromBytes("checkpoint.json", checkpointBytes, 0o600)
 	writeFixtureEvents(t, f)
 	writeFixtureAPI(t, f)
 	writeFixtureTransport(t, f)
@@ -487,7 +510,7 @@ func writeFixtureEvents(t *testing.T, f *fixture) {
 		map[string]any{"disposition": "supervisor"},
 		map[string]any{"state": r.SealedLoadInputs[0], "memory": r.SealedLoadInputs[1], "payload": r.SealedLoadInputs[2], "repository": r.SealedLoadInputs[3]},
 		map[string]any{"generation": 3}, nil,
-		map[string]any{"state_sha256": r.Artifacts["snapshot_state"].SHA256, "memory_sha256": r.Artifacts["snapshot_memory"].SHA256},
+		map[string]any{"state_sha256": r.Artifacts["snapshot_state"].SHA256, "memory_sha256": r.Artifacts["snapshot_memory"].SHA256, "checkpoint": r.Artifacts["checkpoint"]},
 		map[string]any{"stream_port": 7000, "export_port": 7001, "model_port": 12345}, nil, nil, nil, nil, nil,
 		map[string]any{"base_root": config.RepositoryTreeRoot, "final_root": finalRepository.TreeRoot.String(), "operation_count": len(delta.Operations), "final_bundle": r.Artifacts["repository_final"], "delta": r.Artifacts["repository_delta"]},
 		map[string]any{"error": ""},

@@ -91,6 +91,114 @@ func TestCutoverPublishesCanonicalBindingsInOneEvent(t *testing.T) {
 	}
 }
 
+func TestRepositoryCutoverBindsOperationHeadRuleCheckpointAndDeltaInOneEvent(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.history")
+	control, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	baseRoot := strings.Repeat("a", 64)
+	finalRoot := strings.Repeat("b", 64)
+	first := testSandboxBinding("vm", 1, "vm-host-1", "vm", "charge")
+	first.RepositoryRoot = baseRoot
+	certificate, err := control.Compile(requirement("repository-v1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := control.Cutover(certificate, []SandboxBinding{first}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := control.Prepare("operation-before-edit", "worker", "charge", "request-before-edit"); err != nil {
+		t.Fatal(err)
+	}
+	before := control.Snapshot().History
+	certificate, err = control.Compile(requirement("repository-v2"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if certificate.History != before {
+		t.Fatalf("Certificate History = %+v, want %+v", certificate.History, before)
+	}
+	second := testSandboxBinding("vm", 2, "vm-host-2", "vm", "charge")
+	second.RepositoryRoot = finalRoot
+	change := RepositoryChange{
+		SandboxID: "vm", SourceGeneration: first.Generation, SourceHostID: first.HostInstanceID,
+		CheckpointSHA256: strings.Repeat("c", 64), BaseRoot: baseRoot, FinalRoot: finalRoot,
+		FinalBundleSHA256: strings.Repeat("d", 64), FinalBundleSize: 512,
+		DeltaSHA256: strings.Repeat("e", 64), DeltaSize: 160,
+	}
+	eventCount := len(control.Events())
+	if err := control.CutoverWithRepositoryChanges(certificate, []SandboxBinding{second}, []RepositoryChange{change}); err != nil {
+		t.Fatal(err)
+	}
+	events := control.Events()
+	if len(events) != eventCount+1 || events[len(events)-1].Operation != eventRuleBindingsCutover {
+		t.Fatalf("repository cutover events = %+v", events)
+	}
+	var durable ruleBindingsCutoverEvent
+	if err := decodeStrict(events[len(events)-1].Data, &durable); err != nil {
+		t.Fatal(err)
+	}
+	if durable.SemanticVersion != repositoryCutoverSemanticVersion || durable.Certificate.History != before ||
+		len(durable.Repositories) != 1 || durable.Repositories[0] != change ||
+		len(durable.Bindings) != 1 || durable.Bindings[0].RepositoryRoot != finalRoot {
+		t.Fatalf("durable repository cutover = %+v", durable)
+	}
+	if err := control.Close(); err != nil {
+		t.Fatal(err)
+	}
+	reopened, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reopened.Close()
+	bindings := reopened.SandboxBindings()
+	if len(bindings) != 1 || !sandboxBindingEqual(bindings[0], second) {
+		t.Fatalf("replayed repository binding = %+v", bindings)
+	}
+}
+
+func TestRepositoryRootCannotChangeWithoutMatchingHostEvidence(t *testing.T) {
+	control, err := Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer control.Close()
+	baseRoot := strings.Repeat("1", 64)
+	finalRoot := strings.Repeat("2", 64)
+	first := testSandboxBinding("vm", 1, "vm-host-1", "vm", "charge")
+	first.RepositoryRoot = baseRoot
+	certificate, err := control.Compile(requirement("repository-v1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := control.Cutover(certificate, []SandboxBinding{first}); err != nil {
+		t.Fatal(err)
+	}
+	certificate, err = control.Compile(requirement("repository-v2"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	second := testSandboxBinding("vm", 2, "vm-host-2", "vm", "charge")
+	second.RepositoryRoot = finalRoot
+	eventCount := len(control.Events())
+	if err := control.Cutover(certificate, []SandboxBinding{second}); err == nil || !strings.Contains(err.Error(), "without a repository change") {
+		t.Fatalf("unbound repository root change error = %v", err)
+	}
+	change := RepositoryChange{
+		SandboxID: "vm", SourceGeneration: 9, SourceHostID: first.HostInstanceID,
+		CheckpointSHA256: strings.Repeat("3", 64), BaseRoot: baseRoot, FinalRoot: finalRoot,
+		FinalBundleSHA256: strings.Repeat("4", 64), FinalBundleSize: 512,
+		DeltaSHA256: strings.Repeat("5", 64), DeltaSize: 160,
+	}
+	if err := control.CutoverWithRepositoryChanges(certificate, []SandboxBinding{second}, []RepositoryChange{change}); err == nil || !strings.Contains(err.Error(), "active source") {
+		t.Fatalf("forged repository source error = %v", err)
+	}
+	if len(control.Events()) != eventCount || !sandboxBindingEqual(control.SandboxBindings()[0], first) {
+		t.Fatal("rejected repository cutover changed durable state")
+	}
+}
+
 func TestReopenIsClosedUntilFreshGenerationCutoverAndAttach(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "runtime.history")
 	first, err := Open(path)
@@ -800,7 +908,7 @@ func TestCutoverReplayRejectsUnknownSemanticVersionWithoutAdvancingAnchor(t *tes
 		t.Fatal(err)
 	}
 	if _, err := record.Append(eventRuleBindingsCutover, map[string]any{
-		"semantic_version": cutoverSemanticVersion + 1,
+		"semantic_version": repositoryCutoverSemanticVersion + 1,
 		"certificate":      kernel.Certificate{},
 		"bindings":         []SandboxBinding{},
 	}); err != nil {

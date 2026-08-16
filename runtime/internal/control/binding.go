@@ -1,10 +1,12 @@
 package control
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"sync"
 	"unicode"
 	"unicode/utf8"
@@ -14,8 +16,10 @@ import (
 )
 
 const (
-	cutoverSemanticVersion = 1
-	maxSandboxBindings     = 1024
+	cutoverSemanticVersion           = 1
+	repositoryCutoverSemanticVersion = 2
+	maxSandboxBindings               = 1024
+	maxRepositoryArtifactBytes       = uint64(2 << 30)
 )
 
 const eventRuleBindingsCutover = "rule.bindings.cutover"
@@ -37,12 +41,31 @@ type SandboxBinding struct {
 	HostInstanceID string   `json:"host_instance_id"`
 	Domain         string   `json:"domain"`
 	AllowedKinds   []string `json:"allowed_kinds"`
+	RepositoryRoot string   `json:"repository_root,omitempty"`
+}
+
+// RepositoryChange binds a repository exported by the currently active
+// sandbox to the replacement binding published by the same durable Cutover.
+// The artifact bytes remain outside History; exact hashes, sizes, and both
+// tree roots are inside the History event.
+type RepositoryChange struct {
+	SandboxID         string `json:"sandbox_id"`
+	SourceGeneration  uint64 `json:"source_generation"`
+	SourceHostID      string `json:"source_host_instance_id"`
+	CheckpointSHA256  string `json:"checkpoint_sha256"`
+	BaseRoot          string `json:"base_root"`
+	FinalRoot         string `json:"final_root"`
+	FinalBundleSHA256 string `json:"final_bundle_sha256"`
+	FinalBundleSize   uint64 `json:"final_bundle_size"`
+	DeltaSHA256       string `json:"delta_sha256"`
+	DeltaSize         uint64 `json:"delta_size"`
 }
 
 type ruleBindingsCutoverEvent struct {
 	SemanticVersion int                `json:"semantic_version"`
 	Certificate     kernel.Certificate `json:"certificate"`
 	Bindings        []SandboxBinding   `json:"bindings"`
+	Repositories    []RepositoryChange `json:"repositories,omitempty"`
 }
 
 // sandboxRegistry is reconstructed from History but is not part of the five
@@ -164,6 +187,11 @@ func canonicalSandboxBinding(binding SandboxBinding) (SandboxBinding, error) {
 	if binding.Generation == 0 {
 		return SandboxBinding{}, errors.New("sandbox binding generation is zero")
 	}
+	if binding.RepositoryRoot != "" {
+		if err := validateSHA256("sandbox binding repository root", binding.RepositoryRoot); err != nil {
+			return SandboxBinding{}, err
+		}
+	}
 	if len(binding.AllowedKinds) == 0 {
 		return SandboxBinding{}, errors.New("sandbox binding has no allowed kind")
 	}
@@ -215,6 +243,7 @@ func canonicalSandboxBindings(bindings []SandboxBinding) ([]SandboxBinding, erro
 func sandboxBindingEqual(left, right SandboxBinding) bool {
 	if left.SandboxID != right.SandboxID || left.Generation != right.Generation ||
 		left.HostInstanceID != right.HostInstanceID || left.Domain != right.Domain ||
+		left.RepositoryRoot != right.RepositoryRoot ||
 		len(left.AllowedKinds) != len(right.AllowedKinds) {
 		return false
 	}
@@ -224,6 +253,116 @@ func sandboxBindingEqual(left, right SandboxBinding) bool {
 		}
 	}
 	return true
+}
+
+func validateSHA256(label, value string) error {
+	if len(value) != 64 || strings.ToLower(value) != value {
+		return fmt.Errorf("%s must be 64 lowercase hexadecimal characters", label)
+	}
+	if _, err := hex.DecodeString(value); err != nil {
+		return fmt.Errorf("%s is not hexadecimal", label)
+	}
+	return nil
+}
+
+func canonicalRepositoryChanges(changes []RepositoryChange) ([]RepositoryChange, error) {
+	if len(changes) > maxSandboxBindings {
+		return nil, fmt.Errorf("repository change count exceeds %d", maxSandboxBindings)
+	}
+	canonical := append([]RepositoryChange(nil), changes...)
+	for index, change := range canonical {
+		if err := validateBindingText("repository sandbox id", change.SandboxID); err != nil {
+			return nil, fmt.Errorf("repository change %d: %w", index, err)
+		}
+		if change.SourceGeneration == 0 {
+			return nil, fmt.Errorf("repository change %d has zero source generation", index)
+		}
+		if err := validateBindingText("repository source host instance id", change.SourceHostID); err != nil {
+			return nil, fmt.Errorf("repository change %d: %w", index, err)
+		}
+		for _, digest := range []struct {
+			label string
+			value string
+		}{
+			{"checkpoint SHA-256", change.CheckpointSHA256},
+			{"base repository root", change.BaseRoot},
+			{"final repository root", change.FinalRoot},
+			{"final repository bundle SHA-256", change.FinalBundleSHA256},
+			{"repository delta SHA-256", change.DeltaSHA256},
+		} {
+			if err := validateSHA256(digest.label, digest.value); err != nil {
+				return nil, fmt.Errorf("repository change %d: %w", index, err)
+			}
+		}
+		if change.FinalBundleSize == 0 || change.FinalBundleSize > maxRepositoryArtifactBytes || change.FinalBundleSize%512 != 0 {
+			return nil, fmt.Errorf("repository change %d has invalid final bundle size %d", index, change.FinalBundleSize)
+		}
+		if change.DeltaSize == 0 || change.DeltaSize > maxRepositoryArtifactBytes {
+			return nil, fmt.Errorf("repository change %d has invalid delta size %d", index, change.DeltaSize)
+		}
+	}
+	sort.Slice(canonical, func(left, right int) bool {
+		return canonical[left].SandboxID < canonical[right].SandboxID
+	})
+	for index := 1; index < len(canonical); index++ {
+		if canonical[index-1].SandboxID == canonical[index].SandboxID {
+			return nil, fmt.Errorf("duplicate repository sandbox id %q", canonical[index].SandboxID)
+		}
+	}
+	return canonical, nil
+}
+
+func repositoryChangesEqual(left, right []RepositoryChange) bool {
+	if (left == nil) != (right == nil) || len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index] != right[index] {
+			return false
+		}
+	}
+	return true
+}
+
+func validateRepositoryTransitions(current sandboxRegistry, target []SandboxBinding, changes []RepositoryChange) error {
+	targetByID := make(map[string]SandboxBinding, len(target))
+	for _, binding := range target {
+		targetByID[binding.SandboxID] = binding
+	}
+	changeByID := make(map[string]RepositoryChange, len(changes))
+	for _, change := range changes {
+		prior, exists := current.desired[change.SandboxID]
+		if !exists {
+			return fmt.Errorf("repository change for sandbox %q has no active source binding", change.SandboxID)
+		}
+		next, exists := targetByID[change.SandboxID]
+		if !exists {
+			return fmt.Errorf("repository change for sandbox %q has no replacement binding", change.SandboxID)
+		}
+		if prior.RepositoryRoot == "" {
+			return fmt.Errorf("repository change for sandbox %q has no recorded base root", change.SandboxID)
+		}
+		if change.SourceGeneration != prior.Generation || change.SourceHostID != prior.HostInstanceID || change.BaseRoot != prior.RepositoryRoot {
+			return fmt.Errorf("repository change for sandbox %q differs from its active source", change.SandboxID)
+		}
+		if change.FinalRoot != next.RepositoryRoot {
+			return fmt.Errorf("repository change for sandbox %q differs from its replacement root", change.SandboxID)
+		}
+		changeByID[change.SandboxID] = change
+	}
+	for id, prior := range current.desired {
+		next, retained := targetByID[id]
+		if !retained || prior.RepositoryRoot == next.RepositoryRoot {
+			continue
+		}
+		if prior.RepositoryRoot == "" || next.RepositoryRoot == "" {
+			return fmt.Errorf("sandbox %q cannot add or remove a repository root during replacement", id)
+		}
+		if _, exists := changeByID[id]; !exists {
+			return fmt.Errorf("sandbox %q changed repository root without a repository change", id)
+		}
+	}
+	return nil
 }
 
 func sandboxBindingsEqual(left, right []SandboxBinding) bool {
@@ -296,6 +435,14 @@ func (c *Control) rejectActiveAdaptersLocked(bindings []SandboxBinding) error {
 // generation strictly follows its last recorded generation. The event does
 // not attach a sandbox: the host must do that explicitly after the cutover.
 func (c *Control) Cutover(certificate kernel.Certificate, completeBindings []SandboxBinding) error {
+	return c.CutoverWithRepositoryChanges(certificate, completeBindings, nil)
+}
+
+// CutoverWithRepositoryChanges durably commits the Rule, replacement sandbox
+// set, and host-derived repository results in one History event. A repository
+// root may change only when the event also binds the active source instance,
+// the VM checkpoint, the complete final bundle, and the canonical delta.
+func (c *Control) CutoverWithRepositoryChanges(certificate kernel.Certificate, completeBindings []SandboxBinding, repositoryChanges []RepositoryChange) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if err := c.bindingReadyLocked(); err != nil {
@@ -312,6 +459,13 @@ func (c *Control) Cutover(certificate kernel.Certificate, completeBindings []San
 	if err != nil {
 		return err
 	}
+	canonicalRepositories, err := canonicalRepositoryChanges(repositoryChanges)
+	if err != nil {
+		return err
+	}
+	if err := validateRepositoryTransitions(c.bindings, canonical, canonicalRepositories); err != nil {
+		return err
+	}
 	if err := c.rejectActiveAdaptersLocked(canonical); err != nil {
 		return err
 	}
@@ -325,10 +479,15 @@ func (c *Control) Cutover(certificate kernel.Certificate, completeBindings []San
 	if err := nextBindings.advance(canonical); err != nil {
 		return err
 	}
+	eventVersion := cutoverSemanticVersion
+	if len(canonicalRepositories) != 0 {
+		eventVersion = repositoryCutoverSemanticVersion
+	}
 	event, err := c.history.Append(eventRuleBindingsCutover, ruleBindingsCutoverEvent{
-		SemanticVersion: cutoverSemanticVersion,
+		SemanticVersion: eventVersion,
 		Certificate:     certificate,
 		Bindings:        canonical,
+		Repositories:    canonicalRepositories,
 	})
 	if err != nil {
 		return c.appendError(err)
@@ -355,7 +514,7 @@ func applyRuleBindingsCutover(state *kernel.State, bindings *sandboxRegistry, da
 	if err := decodeStrict(data, &event); err != nil {
 		return err
 	}
-	if event.SemanticVersion != cutoverSemanticVersion {
+	if event.SemanticVersion != cutoverSemanticVersion && event.SemanticVersion != repositoryCutoverSemanticVersion {
 		return fmt.Errorf("unsupported rule-and-binding cutover semantic version %d", event.SemanticVersion)
 	}
 	canonical, err := canonicalSandboxBindings(event.Bindings)
@@ -364,6 +523,19 @@ func applyRuleBindingsCutover(state *kernel.State, bindings *sandboxRegistry, da
 	}
 	if !sandboxBindingsEqual(event.Bindings, canonical) {
 		return errors.New("sandbox bindings are not in canonical order")
+	}
+	canonicalRepositories, err := canonicalRepositoryChanges(event.Repositories)
+	if err != nil {
+		return err
+	}
+	if !repositoryChangesEqual(event.Repositories, canonicalRepositories) {
+		return errors.New("repository changes are not in canonical order")
+	}
+	if event.SemanticVersion == cutoverSemanticVersion && len(canonicalRepositories) != 0 {
+		return errors.New("legacy rule-and-binding cutover contains repository changes")
+	}
+	if event.SemanticVersion == repositoryCutoverSemanticVersion && len(canonicalRepositories) == 0 {
+		return errors.New("repository cutover contains no repository change")
 	}
 	if err := checkCertificate(state, event.Certificate); err != nil {
 		return err
@@ -376,6 +548,9 @@ func applyRuleBindingsCutover(state *kernel.State, bindings *sandboxRegistry, da
 		return err
 	}
 	if err := validateRecoverableBindingOperations(nextState, canonical); err != nil {
+		return err
+	}
+	if err := validateRepositoryTransitions(*bindings, canonical, canonicalRepositories); err != nil {
 		return err
 	}
 	nextBindings := bindings.clone()

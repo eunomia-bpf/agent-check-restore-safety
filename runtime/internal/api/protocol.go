@@ -15,8 +15,9 @@ const (
 // CutoverRequest is accepted only on the admin endpoint. Bindings are a
 // complete host-owned replacement set, not fields accepted from a sandbox.
 type CutoverRequest struct {
-	Certificate kernel.Certificate       `json:"certificate"`
-	Bindings    []control.SandboxBinding `json:"bindings"`
+	Certificate  kernel.Certificate         `json:"certificate"`
+	Bindings     []control.SandboxBinding   `json:"bindings"`
+	Repositories []control.RepositoryChange `json:"repositories,omitempty"`
 }
 
 type CutoverResponse struct {

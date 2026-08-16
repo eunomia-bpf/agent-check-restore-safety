@@ -232,6 +232,60 @@ func TestLocalAPICompilesActivatesAndExecutes(t *testing.T) {
 	}
 }
 
+func TestAdminCutoverAcceptsRepositoryEvidenceInTheSameHistoryEvent(t *testing.T) {
+	c, err := control.Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	serverAPI, err := New(c, nil, testCredentials())
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(serverAPI.Handler())
+	defer server.Close()
+	baseRoot := strings.Repeat("1", 64)
+	finalRoot := strings.Repeat("2", 64)
+	first := control.SandboxBinding{
+		SandboxID: "codex-vm", Generation: 1, HostInstanceID: "host-vm-1",
+		Domain: "test-adapter", AllowedKinds: []string{"finish"}, RepositoryRoot: baseRoot,
+	}
+	certificate, err := c.Compile(testRequirement("repository-v1", "http://127.0.0.1:1/effect"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status := postJSON(t, server.Client(), server.URL+"/v1/cutover", adminToken,
+		CutoverRequest{Certificate: certificate, Bindings: []control.SandboxBinding{first}}, &CutoverResponse{}); status != http.StatusOK {
+		t.Fatalf("initial repository cutover status = %d", status)
+	}
+	second := first
+	second.Generation = 2
+	second.HostInstanceID = "host-vm-2"
+	second.RepositoryRoot = finalRoot
+	certificate, err = c.Compile(testRequirement("repository-v2", "http://127.0.0.1:1/effect"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	change := control.RepositoryChange{
+		SandboxID: first.SandboxID, SourceGeneration: first.Generation, SourceHostID: first.HostInstanceID,
+		CheckpointSHA256: strings.Repeat("3", 64), BaseRoot: baseRoot, FinalRoot: finalRoot,
+		FinalBundleSHA256: strings.Repeat("4", 64), FinalBundleSize: 512,
+		DeltaSHA256: strings.Repeat("5", 64), DeltaSize: 160,
+	}
+	var response CutoverResponse
+	if status := postJSON(t, server.Client(), server.URL+"/v1/cutover", adminToken,
+		CutoverRequest{Certificate: certificate, Bindings: []control.SandboxBinding{second}, Repositories: []control.RepositoryChange{change}}, &response); status != http.StatusOK {
+		t.Fatalf("repository evidence cutover status = %d", status)
+	}
+	if response.State == nil || response.State.History.Sequence != 2 || len(response.Bindings) != 1 || response.Bindings[0].RepositoryRoot != finalRoot {
+		t.Fatalf("repository cutover response = %+v", response)
+	}
+	events := c.Events()
+	if len(events) != 2 || !bytes.Contains(events[1].Data, []byte(`"repositories":[{`)) {
+		t.Fatalf("repository evidence was not in the Cutover event: %+v", events)
+	}
+}
+
 func TestAPIRecoversLostPaymentResponseAndReusesSettlement(t *testing.T) {
 	service, err := payment.Open(filepath.Join(t.TempDir(), "payment.history"), true)
 	if err != nil {

@@ -125,6 +125,20 @@ type checkpoint struct {
 	GuestBarrier barrier `json:"GuestBarrier"`
 }
 
+type checkpointEvidence struct {
+	Schema             int        `json:"schema"`
+	SessionID          string     `json:"session_id"`
+	SourceInstanceID   string     `json:"source_instance_id"`
+	RestoredInstanceID string     `json:"restored_instance_id"`
+	CodexSHA256        string     `json:"codex_sha256"`
+	ArgumentsSHA256    string     `json:"arguments_sha256"`
+	RepositoryTreeRoot string     `json:"repository_tree_root"`
+	RepositoryBundle   artifact   `json:"repository_bundle"`
+	SnapshotState      artifact   `json:"snapshot_state"`
+	SnapshotMemory     artifact   `json:"snapshot_memory"`
+	StreamCheckpoint   checkpoint `json:"stream_checkpoint"`
+}
+
 type resultRecord struct {
 	Schema                  int                 `json:"schema"`
 	Success                 bool                `json:"success"`
@@ -313,6 +327,9 @@ func verify(opts options) error {
 	}
 	if err := v.verifyProcesses(); err != nil {
 		return fmt.Errorf("processes: %w", err)
+	}
+	if err := v.verifyCheckpointArtifact(); err != nil {
+		return fmt.Errorf("checkpoint: %w", err)
 	}
 	if err := v.verifyEvents(); err != nil {
 		return fmt.Errorf("events: %w", err)
@@ -874,7 +891,7 @@ func (v *verifier) verifyResultAndArtifacts() error {
 	}
 
 	wantKeys := []string{
-		"bridge_io", "events", "firecracker", "firecracker_api_g1", "firecracker_api_g3",
+		"bridge_io", "checkpoint", "events", "firecracker", "firecracker_api_g1", "firecracker_api_g3",
 		"firecracker_relay_g1", "firecracker_relay_g3", "guest", "guest_config", "initramfs",
 		"kernel", "model_proxy", "payload", "repository", "repository_delta", "repository_final", "runner", "snapshot_memory", "snapshot_state",
 	}
@@ -902,6 +919,7 @@ func (v *verifier) verifyResultAndArtifacts() error {
 
 	retained := map[string]string{
 		"bridge_io":            "bridge-io.jsonl",
+		"checkpoint":           "checkpoint.json",
 		"events":               "events.jsonl",
 		"firecracker_api_g1":   "firecracker-api-g1.jsonl",
 		"firecracker_api_g3":   "firecracker-api-g3.jsonl",
@@ -948,6 +966,54 @@ func (v *verifier) verifyResultAndArtifacts() error {
 	}
 	if err := v.verifySealedInputs(); err != nil {
 		return err
+	}
+	return nil
+}
+
+func (v *verifier) verifyCheckpointArtifact() error {
+	path := evidencePath(v, "checkpoint.json")
+	fields := []string{
+		"schema", "session_id", "source_instance_id", "restored_instance_id",
+		"codex_sha256", "arguments_sha256", "repository_tree_root", "repository_bundle",
+		"snapshot_state", "snapshot_memory", "stream_checkpoint",
+	}
+	var evidence checkpointEvidence
+	data, err := readStrictJSON(path, fields, &evidence)
+	if err != nil {
+		return err
+	}
+	var root map[string]json.RawMessage
+	if err := json.Unmarshal(data, &root); err != nil {
+		return err
+	}
+	for name, value := range map[string]*artifact{
+		"repository_bundle": &evidence.RepositoryBundle,
+		"snapshot_state":    &evidence.SnapshotState,
+		"snapshot_memory":   &evidence.SnapshotMemory,
+	} {
+		if err := decodeExact(root[name], []string{"name", "size", "mode", "sha256"}, value); err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+	}
+	if err := decodeCheckpoint(root["stream_checkpoint"], &evidence.StreamCheckpoint); err != nil {
+		return err
+	}
+	if evidence.Schema != 1 || evidence.SessionID != v.result.SessionID ||
+		evidence.SourceInstanceID != v.g1.ID || evidence.RestoredInstanceID != v.g3.ID ||
+		evidence.CodexSHA256 != v.result.CodexSHA256 || evidence.ArgumentsSHA256 != v.result.ArgumentsSHA256 ||
+		evidence.RepositoryTreeRoot != v.guest.RepositoryTreeRoot ||
+		evidence.RepositoryBundle != v.result.Artifacts["repository"] ||
+		evidence.SnapshotState != v.result.Artifacts["snapshot_state"] ||
+		evidence.SnapshotMemory != v.result.Artifacts["snapshot_memory"] ||
+		evidence.StreamCheckpoint != v.result.Checkpoint {
+		return errors.New("checkpoint artifact differs from retained runtime state")
+	}
+	canonical, err := json.Marshal(evidence)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(data, canonical) {
+		return errors.New("checkpoint artifact is not canonical compact JSON")
 	}
 	return nil
 }
@@ -1732,13 +1798,14 @@ func (v *verifier) verifyEventDetails(index int, event eventRecord) error {
 		}
 	case 14:
 		var d struct {
-			StateSHA256  string `json:"state_sha256"`
-			MemorySHA256 string `json:"memory_sha256"`
+			StateSHA256  string   `json:"state_sha256"`
+			MemorySHA256 string   `json:"memory_sha256"`
+			Checkpoint   artifact `json:"checkpoint"`
 		}
-		if err := decodeExact(event.Details, []string{"state_sha256", "memory_sha256"}, &d); err != nil {
+		if err := decodeExact(event.Details, []string{"state_sha256", "memory_sha256", "checkpoint"}, &d); err != nil {
 			return err
 		}
-		if d.StateSHA256 != v.result.Artifacts["snapshot_state"].SHA256 || d.MemorySHA256 != v.result.Artifacts["snapshot_memory"].SHA256 {
+		if d.StateSHA256 != v.result.Artifacts["snapshot_state"].SHA256 || d.MemorySHA256 != v.result.Artifacts["snapshot_memory"].SHA256 || d.Checkpoint != v.result.Artifacts["checkpoint"] {
 			return errors.New("loaded snapshot hashes differ")
 		}
 	case 21:

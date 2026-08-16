@@ -341,7 +341,7 @@ func (s *Server) cutover(writer http.ResponseWriter, request *http.Request) {
 		writeError(writer, http.StatusServiceUnavailable, errors.New("cutovers are quiesced"))
 		return
 	}
-	err := s.control.Cutover(body.Certificate, body.Bindings)
+	err := s.control.CutoverWithRepositoryChanges(body.Certificate, body.Bindings, body.Repositories)
 	if err != nil {
 		s.cutoverMu.Unlock()
 		status := http.StatusUnprocessableEntity

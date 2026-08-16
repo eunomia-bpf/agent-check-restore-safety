@@ -55,14 +55,15 @@ yet perform that final join.
 - `runtime/cmd/check-firecracker-codex-evidence` independently parses the
   retained result, VMM API calls, relay logs, bridge commitments, App Server
   records, payload manifest, repository bundle, snapshot hashes, process
-  identities, and event order. It does not import the live runner lifecycle.
+  identities, canonical checkpoint object, final repository and delta, and
+  event order. It does not import the live runner lifecycle.
 
 The client-facing boundary remains stdin/stdout JSONL. No Firecracker-specific
 branch is required in the App Server client.
 
 ## Current real execution
 
-A fresh local KVM execution of the current source completed in 12.8 seconds
+A fresh local KVM execution of the current source completed in 13.0 seconds
 with these fixed inputs:
 
 - Firecracker 1.16.1:
@@ -74,19 +75,21 @@ with these fixed inputs:
 - guest:
   `49cee411975645da7906a8c846f7f688f0b7e498a9f18de5c56cbd269fbefb72`;
 - shim:
-  `d9c8c55e30dfa1adbcf6b7ff054e6f21fa80d0582697444927a3c0bd02c1d5ea`;
+  `91418c295fa112147abbc7a81851e1192965a87cc2594ae45fae35569f90f96b`;
 - canonical Restate food-ordering repository:
   `8c815e42e1d5650feb40965c1a492caba24060297a7e285464fe487b6d335da2`
   (50,176 bytes, 37 entries, tree root
   `5023fab86509a198f38c6a81fec1b89f39404f4f65864dbd06855898098b1d8e`).
 
-The run retained 23 lifecycle events, 19 hashed artifacts, 82 canonical bridge
+The run retained 23 lifecycle events, 20 hashed artifacts, 82 canonical bridge
 commitments, and 358 App Server records. It created a 1 GiB memory snapshot;
 both VMM PIDs were reaped. The final 37-entry bundle exactly matched the input
 tree, as expected for this read-only model fixture. The host still produced and
-verified a 160-byte, zero-operation delta bound to both tree roots. The original
-shim, its runtime-retained copy, the result, and the first event all carry the
-same hash. The independent checker returned
+verified a 160-byte, zero-operation delta bound to both tree roots. It also
+retained a 1,541-byte canonical checkpoint object with SHA-256
+`99602085075feea2c618c3920abcee69c9d76d3fd583cdf74ac933a68bb38cf1`.
+The original shim, its runtime-retained copy, the result, and the first event
+all carry the same hash. The independent checker returned
 `{"schema":1,"valid":true}`. This is one observed functional execution, not a
 latency distribution or a production-security result.
 
@@ -136,7 +139,9 @@ The current slice is intentionally narrow:
 
 The next high-value increment is not another VM demo. It is to join the
 host-derived delta, the existing Operation gateway, and an atomic History/Rule
-change at the VM checkpoint. That makes the filesystem result and irreversible
-external progress one committed transition. Portable certificates, jailer
-confinement, repeated boundaries, Claude, and a maintained build environment
-follow that vertical join.
+change at the VM checkpoint. The control API can now record that join in one
+event, and the Firecracker run now emits the independently checked checkpoint
+hash it consumes. The remaining integration work is to route this demo's
+deterministic callback through the real Operation gateway before committing
+that event. Portable certificates, jailer confinement, repeated boundaries,
+Claude, and a maintained build environment follow that vertical join.

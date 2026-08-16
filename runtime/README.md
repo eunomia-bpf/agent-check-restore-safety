@@ -116,6 +116,15 @@ complete final tree. The host derives a canonical delta from the two complete
 trees and retains both objects for independent verification; it never accepts
 an Agent-authored patch as the repository result.
 
+The same run retains one canonical checkpoint object over the two VMM instance
+IDs, the exact Codex/argv contract, both stream barriers, the input repository,
+and the full snapshot hashes. A repository-aware `POST /v1/cutover` can bind
+that checkpoint hash, both tree roots, the final bundle, the delta, the
+replacement sandbox set, and a Certificate in one synced History event. The
+Certificate binds all Operation progress at that head; a later Operation event
+makes the whole cutover stale. Existing clients may omit repository evidence
+and keep the original cutover protocol.
+
 ## Add it to an HTTP service
 
 The business-service integration requires no workflow-engine plugin or SDK. It
@@ -684,6 +693,10 @@ general exactly-once claim nor proof that every unknown Operation can finish.
 - a Firecracker guest execution domain that freezes and removes all Codex
   descendants before exporting the complete final repository, plus a
   host-derived canonical delta checked against both tree roots;
+- a backward-compatible atomic Cutover that prevents a sandbox repository root
+  from changing unless the same History event binds the source instance,
+  canonical VM checkpoint, final bundle, delta, replacement binding, and
+  History-bound Certificate;
 - an unmodified DeathStarBench application path where a Mongo commit with a
   lost response is recovered after deleting v1, without redispatch, and a v2
   Operation then completes through the replacement frontend; and

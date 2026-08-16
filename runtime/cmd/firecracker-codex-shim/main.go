@@ -129,6 +129,23 @@ type workspaceMappingRecord struct {
 	Guest string `json:"guest"`
 }
 
+// checkpointEvidence is the canonical object whose artifact hash crosses into
+// the durable control-plane Cutover. It joins the exact transport boundary,
+// VM snapshot, repository input, executable contract, and both VMM instances.
+type checkpointEvidence struct {
+	Schema             int                `json:"schema"`
+	SessionID          string             `json:"session_id"`
+	SourceInstanceID   string             `json:"source_instance_id"`
+	RestoredInstanceID string             `json:"restored_instance_id"`
+	CodexSHA256        string             `json:"codex_sha256"`
+	ArgumentsSHA256    string             `json:"arguments_sha256"`
+	RepositoryTreeRoot string             `json:"repository_tree_root"`
+	RepositoryBundle   artifactRecord     `json:"repository_bundle"`
+	SnapshotState      artifactRecord     `json:"snapshot_state"`
+	SnapshotMemory     artifactRecord     `json:"snapshot_memory"`
+	StreamCheckpoint   codexvm.Checkpoint `json:"stream_checkpoint"`
+}
+
 type eventRecord struct {
 	Schema     int            `json:"schema"`
 	Sequence   uint64         `json:"sequence"`
@@ -548,10 +565,16 @@ func (r *runner) execute() error {
 	if err := r.requireState(r.g3, firecracker.StatePaused); err != nil {
 		return err
 	}
+	checkpointArtifact, err := r.persistCheckpointEvidence(checkpoint)
+	if err != nil {
+		return err
+	}
+	r.result.Artifacts["checkpoint"] = checkpointArtifact
 	r.result.SnapshotLoadedPaused = true
 	if err := r.events.Record("snapshot-loaded-paused", r.g3, map[string]any{
 		"state_sha256":  r.snapshotState.record.Artifact.SHA256,
 		"memory_sha256": r.snapshotMemory.record.Artifact.SHA256,
+		"checkpoint":    checkpointArtifact,
 	}); err != nil {
 		return err
 	}
@@ -600,6 +623,27 @@ func (r *runner) execute() error {
 		return fmt.Errorf("request stable guest repository export: %w", err)
 	}
 	return r.receiveFinalRepository()
+}
+
+func (r *runner) persistCheckpointEvidence(stream codexvm.Checkpoint) (artifactRecord, error) {
+	if r.g1 == nil || r.g3 == nil {
+		return artifactRecord{}, errors.New("checkpoint evidence requires both VM instances")
+	}
+	evidence := checkpointEvidence{
+		Schema: 1, SessionID: r.sessionID,
+		SourceInstanceID: r.g1.id, RestoredInstanceID: r.g3.id,
+		CodexSHA256: r.result.CodexSHA256, ArgumentsSHA256: r.result.ArgumentsSHA256,
+		RepositoryTreeRoot: r.repositoryTree.TreeRoot.String(),
+		RepositoryBundle:   r.result.Artifacts["repository"],
+		SnapshotState:      r.result.Artifacts["snapshot_state"],
+		SnapshotMemory:     r.result.Artifacts["snapshot_memory"],
+		StreamCheckpoint:   stream,
+	}
+	encoded, err := json.Marshal(evidence)
+	if err != nil {
+		return artifactRecord{}, fmt.Errorf("encode checkpoint evidence: %w", err)
+	}
+	return persistBytesArtifact("checkpoint.json", filepath.Join(r.config.EvidenceDir, "checkpoint.json"), encoded)
 }
 
 func (r *runner) startProxy() error {
