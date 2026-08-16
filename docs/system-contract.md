@@ -1,6 +1,6 @@
 # Scientific and system contract: safe change after external operations
 
-**Status:** active research contract, 2026-08-15. This supersedes the Agent-only
+**Status:** active research contract, 2026-08-16. This supersedes the Agent-only
 project scope while preserving the existing Agent theorem and artifacts as one
 special case.
 
@@ -217,11 +217,23 @@ fails closed under mutations to each recorded runtime boundary.
    control container restarts. A separate checker then joins raw App Server
    JSONL with a replayed binary History, external head, and payment record.
    Adding Claude and a provider-independent Agent protocol remain open.
-7. Replace bounded enumeration with a symbolic backend and cross-check it
+7. **Native Codex-in-Firecracker continuity path — implemented for one
+   credential-free callback.** An unchanged App Server client now reaches the
+   exact native Codex binary inside a no-NIC microVM through a transparent
+   executable. The runtime checkpoints a two-way stream, drains the model
+   path, pauses and snapshots G1, kills and reaps its exact VMM, loads the same
+   guest into an independently started paused G3, arms host endpoints before
+   resume, reconnects, and only then exposes the callback. A separate checker
+   joins 22 lifecycle events, 16 retained artifact hashes, bridge commitments,
+   App Server records, VMM API traces, process identities, and snapshot inputs.
+   This establishes a real continuity substrate, not yet the History/Rule join
+   or a production sandbox; the exact boundary is documented in
+   `docs/firecracker-codex-runtime.md`.
+8. Replace bounded enumeration with a symbolic backend and cross-check it
    against the existing exact Python oracle.
-8. Prove the generic finite theorem, the durable control refinement, and each
+9. Prove the generic finite theorem, the durable control refinement, and each
    adapter correspondence in Lean.
-9. Run scale, availability, fault, usability, and strongest-baseline studies;
+10. Run scale, availability, fault, usability, and strongest-baseline studies;
    only then rebuild the paper around the larger result.
 
 The current composition is not yet the intended final system or evaluation. It

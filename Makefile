@@ -1,4 +1,4 @@
-.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
+.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-demo runtime-firecracker-codex-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
 
 VM_ACCEL ?= tcg
 VM_BACKEND ?= qemu
@@ -10,6 +10,13 @@ FIRECRACKER_PREFLIGHT_ARGS ?=
 FIRECRACKER_PRODUCTION_PREFLIGHT_ARGS ?=
 FIRECRACKER_BUILD_DIR ?= $(shell python3 -c 'import os; print(os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "safe-change-runtime", "firecracker", "build"))')
 FIRECRACKER_FETCH_INPUTS := runtime/deploy/firecracker/assets.lock.json runtime/deploy/firecracker/fetch-assets.sh
+FIRECRACKER_CODEX_DEMO_ARGS ?=
+FIRECRACKER_CODEX_PAYLOAD_ARGS ?=
+FIRECRACKER_CODEX_EVIDENCE ?=
+FIRECRACKER_CODEX_ADAPTER_EVIDENCE ?=
+FIRECRACKER_CODEX_PAYLOAD ?=
+FIRECRACKER_CODEX_PAYLOAD_RESULT ?=
+FIRECRACKER_CODEX_RUNNER ?=
 RUNTIME_IMAGE ?= safe-change-runtime:local
 RUNTIME_VERSION ?= dev
 RUNTIME_REVISION ?= $(shell git rev-parse --short=12 HEAD)
@@ -122,6 +129,45 @@ runtime-firecracker-check:
 	cd runtime && go run ./cmd/check-firecracker-evidence \
 		-evidence "$(abspath $(FIRECRACKER_EVIDENCE))"
 
+# Explicit Firecracker + Codex slice. None of these targets downloads inputs,
+# and the real-KVM demo is intentionally excluded from runtime-verify.
+runtime-firecracker-codex-build:
+	@mkdir -p "$(FIRECRACKER_BUILD_DIR)"
+	@chmod 0700 "$(FIRECRACKER_BUILD_DIR)"
+	cd runtime && CGO_ENABLED=0 go build -buildvcs=false -trimpath \
+		-o "$(FIRECRACKER_BUILD_DIR)/firecracker-agent-guest" ./cmd/firecracker-agent-guest
+	cd runtime && CGO_ENABLED=0 go build -buildvcs=false -trimpath \
+		-o "$(FIRECRACKER_BUILD_DIR)/firecracker-codex-shim" ./cmd/firecracker-codex-shim
+	@chmod 0500 \
+		"$(FIRECRACKER_BUILD_DIR)/firecracker-agent-guest" \
+		"$(FIRECRACKER_BUILD_DIR)/firecracker-codex-shim"
+	@sha256sum \
+		"$(FIRECRACKER_BUILD_DIR)/firecracker-agent-guest" \
+		"$(FIRECRACKER_BUILD_DIR)/firecracker-codex-shim"
+
+runtime-firecracker-codex-payload:
+	cd runtime && go run ./cmd/firecracker-codex-payload \
+		$(FIRECRACKER_CODEX_PAYLOAD_ARGS)
+
+runtime-firecracker-codex-demo:
+	@test -c /dev/kvm || { echo "/dev/kvm is missing or is not a character device" >&2; exit 2; }
+	@test -r /dev/kvm && test -w /dev/kvm || { echo "Firecracker Codex demo requires read/write access to /dev/kvm" >&2; exit 2; }
+	python3 -m adapter.firecracker_codex_runtime_demo \
+		$(FIRECRACKER_CODEX_DEMO_ARGS)
+
+runtime-firecracker-codex-check:
+	@test -n "$(strip $(FIRECRACKER_CODEX_EVIDENCE))" || { echo "FIRECRACKER_CODEX_EVIDENCE must name the retained runtime evidence directory" >&2; exit 2; }
+	@test -n "$(strip $(FIRECRACKER_CODEX_ADAPTER_EVIDENCE))" || { echo "FIRECRACKER_CODEX_ADAPTER_EVIDENCE must name the retained adapter evidence directory" >&2; exit 2; }
+	@test -n "$(strip $(FIRECRACKER_CODEX_PAYLOAD))" || { echo "FIRECRACKER_CODEX_PAYLOAD must name the retained payload image" >&2; exit 2; }
+	@test -n "$(strip $(FIRECRACKER_CODEX_PAYLOAD_RESULT))" || { echo "FIRECRACKER_CODEX_PAYLOAD_RESULT must name the retained payload result" >&2; exit 2; }
+	@test -n "$(strip $(FIRECRACKER_CODEX_RUNNER))" || { echo "FIRECRACKER_CODEX_RUNNER must name the exact retained shim executable" >&2; exit 2; }
+	cd runtime && go run ./cmd/check-firecracker-codex-evidence \
+		-evidence "$(abspath $(FIRECRACKER_CODEX_EVIDENCE))" \
+		-adapter-jsonl "$(abspath $(FIRECRACKER_CODEX_ADAPTER_EVIDENCE))/app-server.jsonl" \
+		-payload "$(abspath $(FIRECRACKER_CODEX_PAYLOAD))" \
+		-payload-result "$(abspath $(FIRECRACKER_CODEX_PAYLOAD_RESULT))" \
+		-runner "$(abspath $(FIRECRACKER_CODEX_RUNNER))"
+
 # Explicit live-account target. It is intentionally not part of runtime-verify.
 runtime-codex-demo:
 	python3 -m adapter.codex_runtime_demo $(CODEX_DEMO_ARGS)
@@ -161,6 +207,8 @@ runtime-verify:
 	cd runtime && go vet ./...
 	python3 -m unittest \
 		adapter.test_docker_codex \
+		adapter.test_firecracker_codex \
+		adapter.test_firecracker_codex_runtime_demo \
 		adapter.test_codex_isolated_runtime_demo \
 		adapter.test_check_codex_isolated_evidence \
 		adapter.test_codex_integrated_runtime_demo \

@@ -3,6 +3,7 @@ package firecracker
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -301,6 +302,42 @@ func TestArmRelayRequiresProcessVerifier(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "identity verifier") {
 		t.Fatalf("Arm relay without process verifier = %v, want refusal", err)
+	}
+}
+
+func TestRelayCloseReportsForcedDrainAndWaitsForAuditSafety(t *testing.T) {
+	directory := privateDirectory(t)
+	sandboxPath, accepted := echoSocket(t, directory, "sandbox.sock")
+	relay, err := Arm(RelayConfig{
+		Generation: 1, BasePath: filepath.Join(directory, "fc"), Port: 82,
+		FirecrackerPID: os.Getpid(), VerifyProcess: testProcessVerifier,
+		SandboxSocket: sandboxPath, DrainTimeout: 20 * time.Millisecond,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, err := net.DialUnix("unix", nil, &net.UnixAddr{Name: relay.SocketPath(), Net: "unix"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	if _, err := client.Write([]byte("held relay stream")); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(time.Second)
+	for accepted.Load() == 0 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if accepted.Load() != 1 {
+		t.Fatal("relay did not establish the held sandbox stream")
+	}
+	if err := relay.Close(); err == nil || !strings.Contains(err.Error(), "drain timed out") {
+		t.Fatalf("Close error = %v, want forced-drain refusal", err)
+	}
+	waitContext, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := relay.Wait(waitContext); err != nil {
+		t.Fatalf("Wait after forced pair close = %v", err)
 	}
 }
 

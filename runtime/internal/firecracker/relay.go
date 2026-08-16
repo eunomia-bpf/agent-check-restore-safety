@@ -5,6 +5,7 @@
 package firecracker
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -73,8 +74,10 @@ type Relay struct {
 	mu       sync.Mutex
 	open     map[*relayConnection]struct{}
 	stop     bool
+	handlers sync.WaitGroup
 
 	serveDone chan struct{}
+	done      chan struct{}
 	closeOnce sync.Once
 	closeErr  error
 }
@@ -162,9 +165,10 @@ func Arm(config RelayConfig) (*Relay, error) {
 	r := &Relay{
 		config: config, socketPath: socketPath, listener: listener,
 		listenerInfo: createdInfo, sandboxInfo: sandboxInfo, parentInfo: parentInfo,
-		open: make(map[*relayConnection]struct{}), serveDone: make(chan struct{}),
+		open: make(map[*relayConnection]struct{}), serveDone: make(chan struct{}), done: make(chan struct{}),
 	}
 	go r.serve()
+	go r.awaitDone()
 	return r, nil
 }
 
@@ -187,8 +191,18 @@ func (r *Relay) serve() {
 			}
 			return
 		}
-		go r.handle(connection)
+		r.handlers.Add(1)
+		go func() {
+			defer r.handlers.Done()
+			r.handle(connection)
+		}()
 	}
+}
+
+func (r *Relay) awaitDone() {
+	<-r.serveDone
+	r.handlers.Wait()
+	close(r.done)
 }
 
 func (r *Relay) handle(guest *net.UnixConn) {
@@ -399,48 +413,58 @@ func (r *Relay) auditFailure() error {
 	return r.auditErr
 }
 
-// Close stops accepting immediately, gives established streams DrainTimeout to
-// complete, then closes anything still open. It only removes the relay socket
-// if the path still names the socket originally created by this relay.
+// Close stops accepting immediately and gives established streams DrainTimeout
+// to complete. A timeout force-closes every pair, reports an error, and waits
+// one further DrainTimeout for handlers. Callers must use Wait before closing
+// the caller-owned AuditLog. Close only removes the relay socket if the path
+// still names the socket originally created by this relay.
 func (r *Relay) Close() error {
 	r.closeOnce.Do(func() {
 		r.mu.Lock()
 		r.stop = true
 		r.mu.Unlock()
 		listenerErr := r.listener.Close()
-		<-r.serveDone
-
-		done := make(chan struct{})
-		go func() {
-			for {
-				r.mu.Lock()
-				n := len(r.open)
-				r.mu.Unlock()
-				if n == 0 {
-					close(done)
-					return
-				}
-				time.Sleep(time.Millisecond)
+		deadline := time.Now().Add(r.config.DrainTimeout)
+		if !waitLoopbackProxyUntil(r.done, deadline) {
+			r.closeConnections()
+			r.closeErr = errors.Join(r.closeErr, errors.New("Firecracker relay connection drain timed out"))
+			forcedDeadline := time.Now().Add(r.config.DrainTimeout)
+			if !waitLoopbackProxyUntil(r.done, forcedDeadline) {
+				r.closeErr = errors.Join(r.closeErr, errors.New("Firecracker relay forced shutdown timed out"))
 			}
-		}()
-		select {
-		case <-done:
-		case <-time.After(r.config.DrainTimeout):
-			r.mu.Lock()
-			connections := make([]*relayConnection, 0, len(r.open))
-			for connection := range r.open {
-				connections = append(connections, connection)
-			}
-			r.mu.Unlock()
-			for _, connection := range connections {
-				_ = connection.close()
-			}
-			<-done
 		}
 		removeErr := removeSameSocket(r.socketPath, r.listenerInfo)
-		r.closeErr = errors.Join(ignoreClosed(listenerErr), removeErr, r.auditFailure())
+		r.closeErr = errors.Join(r.closeErr, ignoreClosed(listenerErr), removeErr, r.auditFailure())
 	})
 	return r.closeErr
+}
+
+// Wait reports when no accept or connection handler can write AuditLog again.
+func (r *Relay) Wait(ctx context.Context) error {
+	if r == nil {
+		return nil
+	}
+	if ctx == nil {
+		return errors.New("Firecracker relay wait context is nil")
+	}
+	select {
+	case <-r.done:
+		return r.auditFailure()
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (r *Relay) closeConnections() {
+	r.mu.Lock()
+	connections := make([]*relayConnection, 0, len(r.open))
+	for connection := range r.open {
+		connections = append(connections, connection)
+	}
+	r.mu.Unlock()
+	for _, connection := range connections {
+		_ = connection.close()
+	}
 }
 
 func (c *relayConnection) close() error {

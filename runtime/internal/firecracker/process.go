@@ -82,6 +82,8 @@ type Process struct {
 	terminationTimeout time.Duration
 	waitDone           chan struct{}
 	waitErr            error
+	supervisorSIGTERM  bool
+	supervisorSIGKILL  bool
 }
 
 // StartProcess starts binary with the supplied API socket and instance ID,
@@ -472,8 +474,9 @@ func (p *Process) waitForSocket(ctx context.Context) error {
 	}
 }
 
-// Wait waits for this child to exit and returns its exec status.  It does not
-// send a signal; use Terminate for shutdown.
+// Wait waits for this child to exit and returns its exec status. It does not
+// send a signal; use Terminate for graceful shutdown or Kill for immediate
+// containment.
 func (p *Process) Wait() error {
 	if p == nil {
 		return errors.New("Firecracker process is nil")
@@ -488,6 +491,88 @@ func (p *Process) Wait() error {
 	return p.waitErr
 }
 
+// Done closes only after the exact child has exited and cmd.Wait has reaped
+// it. Callers can monitor unexpected VMM death without polling /proc.
+func (p *Process) Done() <-chan struct{} {
+	if p == nil || p.waitDone == nil {
+		closed := make(chan struct{})
+		close(closed)
+		return closed
+	}
+	return p.waitDone
+}
+
+// WaitContext observes the exact child's wait status without signaling it or
+// consuming lifecycle ownership such as the pidfd.
+func (p *Process) WaitContext(ctx context.Context) error {
+	if p == nil || p.waitDone == nil {
+		return errors.New("Firecracker process is nil or unstarted")
+	}
+	if ctx == nil {
+		return errors.New("Firecracker process wait context is nil")
+	}
+	select {
+	case <-p.waitDone:
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		return p.waitErr
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// Kill sends SIGKILL through the pidfd for the exact child owned by Process,
+// then waits without cancellation until cmd.Wait has reaped it. A context
+// canceled before signaling prevents the kill. If pidfd_send_signal reports
+// that the process has already exited, the context bounds only the diagnostic
+// wait for the wait goroutine to publish that exit.
+//
+// A successful SIGKILL is an expected lifecycle outcome, not an API error;
+// callers that need the underlying exec status can still call Wait.
+func (p *Process) Kill(ctx context.Context) (TerminationDisposition, error) {
+	if p == nil {
+		return "", errors.New("Firecracker process is nil")
+	}
+	if ctx == nil {
+		return "", errors.New("kill Firecracker requires a context")
+	}
+	select {
+	case <-ctx.Done():
+		return "", fmt.Errorf("kill Firecracker before signaling: %w", ctx.Err())
+	default:
+	}
+	select {
+	case <-p.waitDone:
+		_ = p.Wait()
+		return TerminationAlreadyExited, nil
+	default:
+	}
+	// Check again immediately before entering the pidfd signaling critical
+	// section. Cancellation racing the syscall cannot revoke a successful
+	// SIGKILL, after which reaping is deliberately unconditional.
+	select {
+	case <-ctx.Done():
+		return "", fmt.Errorf("kill Firecracker before signaling: %w", ctx.Err())
+	default:
+	}
+	signaled, err := p.signal(syscall.SIGKILL)
+	if err != nil {
+		return "", err
+	}
+	if signaled {
+		<-p.waitDone
+		_ = p.Wait()
+		return TerminationBySupervisor, nil
+	}
+	select {
+	case <-p.waitDone:
+		_ = p.Wait()
+		return TerminationAlreadyExited, nil
+	case <-ctx.Done():
+		return "", fmt.Errorf("wait for already-exited Firecracker reap: %w", ctx.Err())
+	}
+}
+
 // TerminateWithDisposition reliably stops the exact process started by this
 // package and reports whether shutdown was supervisor-initiated. It waits for
 // graceful SIGTERM until the supplied context expires, then sends SIGKILL and
@@ -499,7 +584,7 @@ func (p *Process) TerminateWithDisposition(ctx context.Context) (TerminationDisp
 	}
 	select {
 	case <-p.waitDone:
-		if err := p.Wait(); err != nil {
+		if err := p.Wait(); err != nil && !p.wasSupervisorSignalExit(err) {
 			return TerminationAlreadyExited, fmt.Errorf("Firecracker exited before supervisor termination: %w", err)
 		}
 		return TerminationAlreadyExited, nil
@@ -512,7 +597,7 @@ func (p *Process) TerminateWithDisposition(ctx context.Context) (TerminationDisp
 		return "", err
 	}
 	if !signaled {
-		if err := p.Wait(); err != nil {
+		if err := p.Wait(); err != nil && !p.wasSupervisorSignalExit(err) {
 			return TerminationAlreadyExited, fmt.Errorf("Firecracker exited before supervisor termination: %w", err)
 		}
 		return TerminationAlreadyExited, nil
@@ -548,6 +633,12 @@ func (p *Process) signal(signal syscall.Signal) (bool, error) {
 	defer p.mu.Unlock()
 	if p.pidfd >= 0 {
 		if err := unix.PidfdSendSignal(p.pidfd, unix.Signal(signal), nil, 0); err == nil {
+			switch signal {
+			case syscall.SIGTERM:
+				p.supervisorSIGTERM = true
+			case syscall.SIGKILL:
+				p.supervisorSIGKILL = true
+			}
 			return true, nil
 		} else if errors.Is(err, unix.ESRCH) {
 			return false, nil
@@ -555,7 +646,33 @@ func (p *Process) signal(signal syscall.Signal) (bool, error) {
 			return false, fmt.Errorf("signal Firecracker through pidfd: %w", err)
 		}
 	}
+	select {
+	case <-p.waitDone:
+		return false, nil
+	default:
+	}
 	return false, errors.New("Firecracker process has no pidfd")
+}
+
+func (p *Process) wasSupervisorSignalExit(err error) bool {
+	var exitError *exec.ExitError
+	if !errors.As(err, &exitError) {
+		return false
+	}
+	status, ok := exitError.Sys().(syscall.WaitStatus)
+	if !ok || !status.Signaled() {
+		return false
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	switch status.Signal() {
+	case syscall.SIGTERM:
+		return p.supervisorSIGTERM
+	case syscall.SIGKILL:
+		return p.supervisorSIGKILL
+	default:
+		return false
+	}
 }
 
 func (p *Process) exitError(prefix string) error {

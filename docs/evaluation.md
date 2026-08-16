@@ -831,3 +831,37 @@ result review rather than reconstructed.
 - Result review: `docs/tmp/bootstrap/step-0016-20260815T153407Z/experiment-restate-food-ordering/result-review.md`.
 - Raw evidence: `docs/tmp/bootstrap/step-0016-20260815T153407Z/experiment-restate-food-ordering/raw/`.
 - Portable raw archive: `docs/tmp/bootstrap/step-0016-20260815T153407Z/experiment-restate-food-ordering/artifacts/raw-evidence-20260816.tar.zst`.
+
+## 16. Native Codex whole-VM continuity smoke
+
+Paper-value role: **systems dependency evidence, not yet a paper result**. The
+question is whether an unmodified App Server client can retain one real Codex
+execution across destruction of the original VMM, rather than whether
+Firecracker snapshotting itself is novel.
+
+The current source passed one credential-free KVM execution with native Codex
+0.147.0, Firecracker 1.16.1, and Linux 6.1.155. The runtime held one protected
+tool callback, drained the model connection, paused and snapshotted G1, sent
+`SIGKILL` to the exact child and reaped it, started G3, loaded the full snapshot
+paused, installed both host endpoints before resume, reattached the retained
+stream, and only then delivered the callback. The matching successful callback
+response entered the retained stream and the same turn completion reached the
+client before the runtime accepted client EOF. Both recorded VMM PIDs were
+absent after cleanup.
+
+The retained run contains 22 ordered lifecycle events, 16 artifact hashes, 80
+canonical bridge commitments, and 352 App Server records. A standalone checker
+returned `{"schema":1,"valid":true}` after joining those records with VMM API
+calls, relay lifetimes, process identities, snapshot inputs, and the immutable
+Codex payload. Unit mutation tests reject reordered lifecycle events, rebound
+hashes, missing delivery records, premature completion, process mismatches, and
+cross-generation substitutions.
+
+This is a one-run functional smoke with a 1 GiB memory snapshot and a fixed
+local model endpoint. It is not performance evidence, a production sandbox, a
+portable attestation, product-wide mediation, or a refinement of the abstract
+safe-change theorem. The decisive next experiment must combine this substrate
+with a real repository and the durable Operation gateway, then change a Rule
+at the same VM boundary and compare useful continuation against the strongest
+update and isolation baselines. The exact implementation boundary is in
+`docs/firecracker-codex-runtime.md`.

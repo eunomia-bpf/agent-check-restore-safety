@@ -79,6 +79,14 @@ independent evidence checker are available with
 with `VM_BACKEND=firecracker VM_ACCEL=kvm`. This path is currently an unjailed
 functional prototype, not yet a production sandbox.
 
+A second, credential-free Firecracker path runs the exact native Codex App
+Server inside the microVM while preserving its ordinary stdin/stdout boundary.
+It holds one dynamic-tool callback, snapshots and kills the first VMM, loads
+the whole guest into a different paused VMM, reconnects the retained stream,
+and only then releases the callback. Build, real-KVM, checker, trust-boundary,
+and current limitation details are in
+[`docs/firecracker-codex-runtime.md`](docs/firecracker-codex-runtime.md).
+
 The Codex demo uses the locally logged-in account and the real Codex App Server,
 not a model fixture. A strict dynamic tool requests one application-chosen
 Operation. Payment commits and loses its first response; while the tool callback

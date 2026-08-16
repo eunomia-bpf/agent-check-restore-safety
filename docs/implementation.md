@@ -1,6 +1,6 @@
 # Implementation and Evidence Boundary
 
-**Status:** repository truth as of 2026-08-01. This document distinguishes implemented artifacts, positively reviewed finite-model evidence, conditional refinement assumptions, and proposed runtime work so the paper never reports an abstract theorem as deployed-product safety.
+**Status:** repository truth as of 2026-08-16. This document distinguishes implemented artifacts, positively reviewed finite-model evidence, conditional refinement assumptions, and proposed runtime work so the paper never reports an abstract theorem as deployed-product safety.
 
 ## 1. Branch and paper source of truth
 
@@ -92,6 +92,34 @@ non-queryable sinks, semantic binding, or power loss.  Consequently it
 validates one concrete correspondence witness under the paper's premises; it
 does not discharge product-wide complete mediation or the general conditional
 refinement theorem.
+
+### Native Codex-in-Firecracker continuity evidence
+
+The repository now also contains a separate real-KVM vertical slice. A
+transparent executable preserves the ordinary Codex App Server process
+boundary while placing the exact native Codex 0.147.0 binary inside a complete
+Firecracker guest. The guest has no NIC or account credential; a fixed host
+relay owns its only model path. At one dynamic-tool callback, the host bridge
+establishes a two-way stream checkpoint, drains the model path, snapshots a
+paused G1, kills and reaps its exact VMM, loads the snapshot into an independent
+paused G3, arms its endpoints, resumes it, reconnects the stream, and only then
+delivers the callback.
+
+The implementation fails closed on an early client EOF, VMM death, stale
+generation, replay divergence, output reordering, unbounded runner diagnostics,
+unsealed input, socket-peer mismatch, or missing successful completion of the
+same protected turn. A separately implemented checker joins the VMM API and
+relay records, process identities, snapshot hashes, canonical client/server
+commitments, App Server records, and exact lifecycle order. One fresh current-
+source KVM execution produced 22 lifecycle events, 16 retained artifact hashes,
+80 bridge commitments, and 352 App Server records; both VMMs were reaped and
+the checker returned `{"schema":1,"valid":true}`.
+
+This result validates one whole-process continuity mechanism. It does not yet
+import a real repository, export a patch, mediate all built-in tools, run under
+Firecracker jailer/cgroups, or bind the callback to the durable History/Rule
+activation protocol. Full details and reproduction entry points are in
+`docs/firecracker-codex-runtime.md`.
 
 ### Not implemented
 

@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -220,6 +221,16 @@ type VsockDevice struct {
 	UDSPath  string `json:"uds_path"`
 }
 
+// Drive is one Firecracker virtio-block device. The deliberately small type
+// excludes vhost-user sockets, rate limiters, cache selection, and mutable
+// post-boot drive updates from this API surface.
+type Drive struct {
+	DriveID      string `json:"drive_id"`
+	PathOnHost   string `json:"path_on_host"`
+	IsRootDevice bool   `json:"is_root_device"`
+	IsReadOnly   bool   `json:"is_read_only"`
+}
+
 // Configure applies machine configuration, boot source, then the one vsock
 // device.  Firecracker permits configuration only before InstanceStart, so a
 // failure leaves later configuration steps unattempted.
@@ -252,6 +263,17 @@ func (c *Client) ConfigureVsock(ctx context.Context, vsock VsockDevice) error {
 		return err
 	}
 	return c.callNoContent(ctx, http.MethodPut, "/vsock", vsock)
+}
+
+// ConfigureDrive creates or replaces one pre-boot virtio-block device. The
+// drive ID is restricted to one literal URL-path segment, and the host path
+// must already be absolute and canonical so neither value can redirect the
+// request through path traversal.
+func (c *Client) ConfigureDrive(ctx context.Context, drive Drive) error {
+	if err := validateDrive(drive); err != nil {
+		return err
+	}
+	return c.callNoContent(ctx, http.MethodPut, "/drives/"+drive.DriveID, drive)
 }
 
 // Start starts a configured microVM exactly once.
@@ -375,6 +397,39 @@ func validateVsock(v VsockDevice) error {
 		return errors.New("Firecracker vsock requires guest CID >= 3 and a UDS path")
 	}
 	return nil
+}
+
+func validateDrive(drive Drive) error {
+	if !isSafeDriveID(drive.DriveID) {
+		return errors.New("Firecracker drive ID must contain only ASCII letters, digits, '-' or '_'")
+	}
+	if drive.PathOnHost == "" {
+		return errors.New("Firecracker drive host path is empty")
+	}
+	if strings.IndexByte(drive.PathOnHost, 0) >= 0 {
+		return errors.New("Firecracker drive host path contains NUL")
+	}
+	if !filepath.IsAbs(drive.PathOnHost) || filepath.Clean(drive.PathOnHost) != drive.PathOnHost {
+		return errors.New("Firecracker drive host path must be absolute and canonical")
+	}
+	return nil
+}
+
+func isSafeDriveID(id string) bool {
+	if id == "" {
+		return false
+	}
+	for index := 0; index < len(id); index++ {
+		character := id[index]
+		if (character >= 'a' && character <= 'z') ||
+			(character >= 'A' && character <= 'Z') ||
+			(character >= '0' && character <= '9') ||
+			character == '-' || character == '_' {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 func isInstanceState(state VMState) bool {

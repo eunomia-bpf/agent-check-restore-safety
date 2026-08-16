@@ -104,6 +104,141 @@ func TestClientLifecycleAndPausedSnapshot(t *testing.T) {
 	}
 }
 
+func TestConfigureDriveUsesExactEndpointAndPayload(t *testing.T) {
+	listener, err := net.Listen("unix", filepath.Join(t.TempDir(), "firecracker.sock"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	if err := os.Chmod(listener.Addr().String(), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	type observedRequest struct {
+		method      string
+		path        string
+		contentType string
+		body        string
+	}
+	observed := make(chan observedRequest, 4)
+	server := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		observed <- observedRequest{
+			method:      r.Method,
+			path:        r.URL.Path,
+			contentType: r.Header.Get("Content-Type"),
+			body:        string(body),
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})}
+	go server.Serve(listener)
+	defer server.Shutdown(context.Background())
+	client, err := NewClient(ClientConfig{
+		SocketPath: listener.Addr().String(), ExpectedPeerPID: os.Getpid(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		drive   Drive
+		path    string
+		payload string
+	}{
+		{
+			drive:   Drive{DriveID: "rootfs_0", PathOnHost: "/proc/self/fd/6", IsRootDevice: true, IsReadOnly: false},
+			path:    "/drives/rootfs_0",
+			payload: `{"drive_id":"rootfs_0","path_on_host":"/proc/self/fd/6","is_root_device":true,"is_read_only":false}`,
+		},
+		{
+			drive:   Drive{DriveID: "root-ro", PathOnHost: "/images/root.ext4", IsRootDevice: true, IsReadOnly: true},
+			path:    "/drives/root-ro",
+			payload: `{"drive_id":"root-ro","path_on_host":"/images/root.ext4","is_root_device":true,"is_read_only":true}`,
+		},
+		{
+			drive:   Drive{DriveID: "data_ro", PathOnHost: "/images/data.img", IsRootDevice: false, IsReadOnly: true},
+			path:    "/drives/data_ro",
+			payload: `{"drive_id":"data_ro","path_on_host":"/images/data.img","is_root_device":false,"is_read_only":true}`,
+		},
+		{
+			drive:   Drive{DriveID: "scratch9", PathOnHost: "/images/scratch.img", IsRootDevice: false, IsReadOnly: false},
+			path:    "/drives/scratch9",
+			payload: `{"drive_id":"scratch9","path_on_host":"/images/scratch.img","is_root_device":false,"is_read_only":false}`,
+		},
+	}
+	for _, test := range tests {
+		if err := client.ConfigureDrive(context.Background(), test.drive); err != nil {
+			t.Fatalf("ConfigureDrive(%+v): %v", test.drive, err)
+		}
+		request := <-observed
+		if request.method != http.MethodPut || request.path != test.path || request.contentType != "application/json" || request.body != test.payload {
+			t.Fatalf("ConfigureDrive(%+v) request = %+v, want PUT %s application/json %s", test.drive, request, test.path, test.payload)
+		}
+	}
+}
+
+func TestConfigureDriveRejectsUnsafeIDAndHostPath(t *testing.T) {
+	listener, err := net.Listen("unix", filepath.Join(t.TempDir(), "firecracker.sock"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	if err := os.Chmod(listener.Addr().String(), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var mu sync.Mutex
+	requests := 0
+	server := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		mu.Lock()
+		requests++
+		mu.Unlock()
+		w.WriteHeader(http.StatusNoContent)
+	})}
+	go server.Serve(listener)
+	defer server.Shutdown(context.Background())
+	client, err := NewClient(ClientConfig{
+		SocketPath: listener.Addr().String(), ExpectedPeerPID: os.Getpid(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name  string
+		drive Drive
+	}{
+		{name: "empty ID", drive: Drive{PathOnHost: "/images/root.img"}},
+		{name: "dot ID", drive: Drive{DriveID: ".", PathOnHost: "/images/root.img"}},
+		{name: "dot-dot ID", drive: Drive{DriveID: "..", PathOnHost: "/images/root.img"}},
+		{name: "path traversal ID", drive: Drive{DriveID: "../root", PathOnHost: "/images/root.img"}},
+		{name: "slash ID", drive: Drive{DriveID: "root/drive", PathOnHost: "/images/root.img"}},
+		{name: "backslash ID", drive: Drive{DriveID: `root\drive`, PathOnHost: "/images/root.img"}},
+		{name: "encoded slash ID", drive: Drive{DriveID: "root%2fdrive", PathOnHost: "/images/root.img"}},
+		{name: "query ID", drive: Drive{DriveID: "root?x=1", PathOnHost: "/images/root.img"}},
+		{name: "fragment ID", drive: Drive{DriveID: "root#x", PathOnHost: "/images/root.img"}},
+		{name: "space ID", drive: Drive{DriveID: "root drive", PathOnHost: "/images/root.img"}},
+		{name: "control ID", drive: Drive{DriveID: "root\n", PathOnHost: "/images/root.img"}},
+		{name: "NUL ID", drive: Drive{DriveID: "root\x00drive", PathOnHost: "/images/root.img"}},
+		{name: "non-ASCII ID", drive: Drive{DriveID: "røøt", PathOnHost: "/images/root.img"}},
+		{name: "empty host path", drive: Drive{DriveID: "root"}},
+		{name: "relative host path", drive: Drive{DriveID: "root", PathOnHost: "images/root.img"}},
+		{name: "relative traversal host path", drive: Drive{DriveID: "root", PathOnHost: "../root.img"}},
+		{name: "absolute traversal host path", drive: Drive{DriveID: "root", PathOnHost: "/images/../root.img"}},
+		{name: "double-slash host path", drive: Drive{DriveID: "root", PathOnHost: "/images//root.img"}},
+		{name: "trailing-slash host path", drive: Drive{DriveID: "root", PathOnHost: "/images/root.img/"}},
+		{name: "NUL host path", drive: Drive{DriveID: "root", PathOnHost: "/images/root\x00.img"}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if err := client.ConfigureDrive(context.Background(), test.drive); err == nil {
+				t.Fatalf("ConfigureDrive(%+v) accepted unsafe input", test.drive)
+			}
+		})
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if requests != 0 {
+		t.Fatalf("invalid drive configurations made %d API requests", requests)
+	}
+}
+
 func TestClientRejectsOversizedAndWrongStatus(t *testing.T) {
 	listener, err := net.Listen("unix", filepath.Join(t.TempDir(), "api.sock"))
 	if err != nil {
