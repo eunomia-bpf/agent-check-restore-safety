@@ -784,6 +784,15 @@ func runExternal(ctx context.Context, configuration options, tools hostTools, in
 		verifiedImagePath,
 		configuration.externalSandboxSocket,
 	); err != nil {
+		select {
+		case waitErr := <-qemuDone:
+			finished = true
+			return withQEMULog(
+				fmt.Errorf("QEMU exited before process evidence (wait error %v): %w", waitErr, err),
+				qemuLogPath,
+			)
+		default:
+		}
 		return withQEMULog(err, qemuLogPath)
 	}
 
