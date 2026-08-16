@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import socket
 import subprocess
 import sys
 import tempfile
@@ -37,8 +38,20 @@ class DockerCodexTests(unittest.TestCase):
             encoding="utf-8",
         )
         self.fake_docker.chmod(0o755)
+        self.relay_bundle = self.root / "relay-bundle"
+        self.relay_bundle.mkdir(mode=0o700)
+        self.relay = self.relay_bundle / "mcp-operation-relay"
+        self.relay.write_text("relay fixture", encoding="utf-8")
+        self.relay.chmod(0o500)
+        self.socket_bundle = self.root / "socket-bundle"
+        self.socket_bundle.mkdir(mode=0o700)
+        self.host_socket_path = self.socket_bundle / "mcp.sock"
+        self.host_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.host_socket.bind(os.fspath(self.host_socket_path))
+        self.host_socket_path.chmod(0o600)
 
     def tearDown(self) -> None:
+        self.host_socket.close()
         self._temporary.cleanup()
 
     def create(self, **overrides: object):
@@ -137,6 +150,48 @@ class DockerCodexTests(unittest.TestCase):
             self.assertEqual(
                 wrapper.command(codex_arguments),
                 wrapper.docker_command + codex_arguments,
+            )
+
+    def test_mounts_only_private_mcp_relay_and_socket(self) -> None:
+        with self.create(
+            mcp_relay=self.relay,
+            mcp_host_socket=self.host_socket_path,
+        ) as wrapper:
+            mounts = [
+                wrapper.docker_command[index + 1]
+                for index, argument in enumerate(wrapper.docker_command)
+                if argument == "--mount"
+            ]
+            self.assertEqual(
+                mounts[-2:],
+                [
+                    f"type=bind,src={self.relay_bundle},dst={self.relay_bundle},readonly",
+                    f"type=bind,src={self.socket_bundle},dst={self.socket_bundle},readonly",
+                ],
+            )
+            joined = "\0".join(wrapper.docker_command)
+            self.assertIn(str(self.relay_bundle), joined)
+            self.assertIn(str(self.socket_bundle), joined)
+            self.assertNotIn("journal", joined)
+            self.assertNotIn("sandbox-socket", joined)
+            self.assertNotIn("execution-id", joined)
+
+    def test_rejects_broader_or_mismatched_mcp_mounts(self) -> None:
+        with self.assertRaisesRegex(ValueError, "supplied together"):
+            self.create(mcp_relay=self.relay)
+        with self.assertRaisesRegex(ValueError, "UID must match"):
+            self.create(
+                uid=os.geteuid() + 1,
+                gid=os.getegid(),
+                mcp_relay=self.relay,
+                mcp_host_socket=self.host_socket_path,
+            )
+        extra = self.relay_bundle / "must-not-be-mounted"
+        extra.write_text("secret", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "only entry"):
+            self.create(
+                mcp_relay=self.relay,
+                mcp_host_socket=self.host_socket_path,
             )
 
     def test_existing_app_server_accepts_wrapper_as_codex_binary(self) -> None:
@@ -255,6 +310,19 @@ class DockerCodexTests(unittest.TestCase):
         self.assertTrue(self.workspace.is_dir())
         self.assertTrue(self.codex_home.is_dir())
         self.assertTrue(self.vendor_codex.is_file())
+
+    def test_retain_wrapper_keeps_auditable_executable_after_close(self) -> None:
+        wrapper = self.create(container_name="safe-change-codex-retained")
+        retained = wrapper.retain_wrapper()
+        with patch("adapter.docker_codex.subprocess.run") as run:
+            run.return_value = subprocess.CompletedProcess(
+                wrapper.cleanup_command, 0, "", ""
+            )
+            wrapper.close()
+        self.assertEqual(retained, wrapper.executable)
+        self.assertTrue(retained.is_file())
+        retained.unlink()
+        retained.parent.rmdir()
 
     def test_close_allows_already_removed_container(self) -> None:
         wrapper = self.create(container_name="safe-change-codex-already-gone")

@@ -48,6 +48,7 @@ make runtime-vm-check VM_EVIDENCE=/tmp/safe-change-vm-123456789
 make runtime-firecracker-kvm-test
 make runtime-mcp-operation-check
 make runtime-codex-mcp-demo
+make runtime-codex-mcp-docker-demo
 make runtime-codex-demo
 make runtime-codex-isolated-demo
 make runtime-codex-isolated-check
@@ -96,15 +97,17 @@ is pending, the control process is replaced. The restarted control process
 finishes the same Operation, Codex replies `DONE`, and payment retains one
 durable commit. This explicit live-account target is not run by ordinary tests.
 
-The credential-free MCP target exercises a different production boundary with
-no account requirement. Two real Codex App Server processes each launch a tiny
+The credential-free MCP targets exercise a different production boundary with
+no account requirement. Two real Codex App Server instances each launch a tiny
 untrusted stdio relay, while one trusted host process retains call identity and
-the fsynced journal across both relay lifetimes. The first payment commits and
-loses its response; the host recovers it by query, returns the exact result
-after Codex restarts, and then admits a distinct payment. The offline checker
-proves from raw Codex commands that the Agent receives only the relay socket,
-not the journal, execution identity, sandbox binding, provider route, or
-credential. See
+the fsynced journal across both relay lifetimes. The stronger target replaces
+two hardened Docker containers on a private internal network. Their only
+continuity mounts are a read-only relay bundle and host-socket directory; raw
+Docker inspection and direct-provider probes are checked offline. The first
+payment commits and loses its response; the host recovers it by query, returns
+the exact result after Codex restarts, and then admits a distinct payment. The
+checker also proves from raw Codex commands that the Agent receives no journal,
+execution identity, sandbox binding, provider route, or credential. See
 [`docs/mcp-continuity-runtime.md`](docs/mcp-continuity-runtime.md).
 
 The stronger isolated target runs that same real App Server inside a hardened

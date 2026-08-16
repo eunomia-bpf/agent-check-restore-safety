@@ -77,6 +77,17 @@ class DockerCodex:
         if cleanup_error is not None:
             raise cleanup_error
 
+    def retain_wrapper(self) -> Path:
+        """Keep the exact generated wrapper as an auditable evidence artifact."""
+
+        temporary, self._temporary = self._temporary, None
+        if temporary is None:
+            if self.executable.is_file():
+                return self.executable
+            raise RuntimeError("Docker Codex wrapper is no longer available")
+        temporary._finalizer.detach()  # type: ignore[attr-defined]
+        return self.executable
+
     def __fspath__(self) -> str:
         return os.fspath(self.executable)
 
@@ -98,6 +109,8 @@ def create_docker_codex(
     container_name: str | None = None,
     uid: int | None = None,
     gid: int | None = None,
+    mcp_relay: str | os.PathLike[str] | None = None,
+    mcp_host_socket: str | os.PathLike[str] | None = None,
     temp_parent: str | os.PathLike[str] | None = None,
 ) -> DockerCodex:
     """Create a hardened Docker-backed Codex executable.
@@ -112,6 +125,12 @@ def create_docker_codex(
     ``/etc/passwd`` entry in the runtime image, and using the host IDs avoids
     leaving root-owned state in the caller-managed Codex home.  Callers whose
     image genuinely requires root may explicitly pass ``uid=0, gid=0``.
+
+    ``mcp_relay`` and ``mcp_host_socket`` are an optional pair. Each must be
+    the only entry in its private parent directory. Those two directories are
+    mounted read-only at identical paths, so the container receives the relay
+    executable and one host socket but no journal, configuration, or provider
+    state.
     """
 
     workspace_path = _absolute_directory(workspace, "workspace")
@@ -131,6 +150,29 @@ def create_docker_codex(
         "container_name",
     )
     run_uid, run_gid = _user_ids(uid, gid)
+    if (mcp_relay is None) != (mcp_host_socket is None):
+        raise ValueError("mcp_relay and mcp_host_socket must be supplied together")
+    relay_path: Path | None = None
+    relay_directory: Path | None = None
+    socket_path: Path | None = None
+    socket_directory: Path | None = None
+    if mcp_relay is not None and mcp_host_socket is not None:
+        if run_uid != os.geteuid():
+            raise ValueError("MCP relay container UID must match the trusted host UID")
+        relay_path, relay_directory = _private_singleton(
+            mcp_relay, "mcp_relay", expected="executable"
+        )
+        socket_path, socket_directory = _private_singleton(
+            mcp_host_socket, "mcp_host_socket", expected="socket"
+        )
+        _require_disjoint(relay_directory, socket_directory, "MCP relay", "MCP socket")
+        for protected, protected_label in (
+            (workspace_path, "workspace"),
+            (codex_home_path, "codex_home"),
+            (vendor_path, "vendor_bundle"),
+        ):
+            _require_disjoint(relay_directory, protected, "MCP relay", protected_label)
+            _require_disjoint(socket_directory, protected, "MCP socket", protected_label)
     if (run_uid, run_gid) == (os.getuid(), os.getgid()) and not os.access(
         codex_home_path, os.W_OK | os.X_OK
     ):
@@ -145,6 +187,14 @@ def create_docker_codex(
         codex_home_path, destination=_CONTAINER_CODEX_HOME, readonly=False
     )
     vendor_mount = _bind_mount(vendor_path, destination=vendor_path, readonly=True)
+    continuity_mounts: tuple[str, ...] = ()
+    if relay_directory is not None and socket_directory is not None:
+        continuity_mounts = (
+            "--mount",
+            _bind_mount(relay_directory, destination=relay_directory, readonly=True),
+            "--mount",
+            _bind_mount(socket_directory, destination=socket_directory, readonly=True),
+        )
     docker_command = (
         os.fspath(resolved_docker),
         "run",
@@ -175,6 +225,7 @@ def create_docker_codex(
         codex_home_mount,
         "--mount",
         vendor_mount,
+        *continuity_mounts,
         "--entrypoint",
         os.fspath(codex_executable),
         validated_image,
@@ -189,6 +240,9 @@ def create_docker_codex(
         _require_disjoint(temporary_path, workspace_path, "wrapper", "workspace")
         _require_disjoint(temporary_path, codex_home_path, "wrapper", "codex_home")
         _require_disjoint(temporary_path, vendor_path, "wrapper", "vendor_bundle")
+        if relay_directory is not None and socket_directory is not None:
+            _require_disjoint(temporary_path, relay_directory, "wrapper", "MCP relay")
+            _require_disjoint(temporary_path, socket_directory, "wrapper", "MCP socket")
         executable = temporary_path / "codex"
         executable.write_text(
             _wrapper_source(docker_command, workspace_path), encoding="utf-8"
@@ -237,6 +291,53 @@ def _require_disjoint(
 ) -> None:
     if first == second or first in second.parents or second in first.parents:
         raise ValueError(f"{first_label} and {second_label} paths must not overlap")
+
+
+def _private_singleton(
+    value: str | os.PathLike[str], label: str, *, expected: str
+) -> tuple[Path, Path]:
+    raw = os.fspath(value)
+    if not raw or not os.path.isabs(raw) or any(
+        character in _CONTROL_CHARACTERS for character in raw
+    ):
+        raise ValueError(f"{label} must be an absolute path")
+    path = Path(raw)
+    try:
+        resolved = path.resolve(strict=True)
+        info = path.lstat()
+        parent = path.parent.resolve(strict=True)
+        parent_info = path.parent.lstat()
+    except OSError as error:
+        raise ValueError(f"cannot inspect {label}") from error
+    if (
+        resolved != path
+        or parent != path.parent
+        or not stat.S_ISDIR(parent_info.st_mode)
+        or stat.S_ISLNK(parent_info.st_mode)
+        or parent_info.st_uid != os.geteuid()
+        or stat.S_IMODE(parent_info.st_mode) != 0o700
+        or list(parent.iterdir()) != [path]
+    ):
+        raise ValueError(f"{label} must be the only entry in a private direct directory")
+    if expected == "executable":
+        valid = (
+            stat.S_ISREG(info.st_mode)
+            and not stat.S_ISLNK(info.st_mode)
+            and info.st_uid == os.geteuid()
+            and stat.S_IMODE(info.st_mode) == 0o500
+            and os.access(path, os.X_OK)
+        )
+    elif expected == "socket":
+        valid = (
+            stat.S_ISSOCK(info.st_mode)
+            and info.st_uid == os.geteuid()
+            and stat.S_IMODE(info.st_mode) == 0o600
+        )
+    else:
+        raise AssertionError(f"unsupported singleton type: {expected}")
+    if not valid:
+        raise ValueError(f"{label} is not a private {expected}")
+    return path, parent
 
 
 def _vendor_executable(vendor_bundle: Path) -> Path:

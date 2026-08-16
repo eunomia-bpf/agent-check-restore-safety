@@ -1,4 +1,4 @@
-.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-repository runtime-firecracker-codex-demo runtime-firecracker-codex-check runtime-firecracker-codex-control-check runtime-mcp-operation-build runtime-mcp-operation-check runtime-mcp-operation-demo runtime-codex-mcp-build runtime-codex-mcp-demo runtime-codex-mcp-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
+.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-repository runtime-firecracker-codex-demo runtime-firecracker-codex-check runtime-firecracker-codex-control-check runtime-mcp-operation-build runtime-mcp-operation-check runtime-mcp-operation-demo runtime-codex-mcp-build runtime-codex-mcp-demo runtime-codex-mcp-docker-demo runtime-codex-mcp-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
 
 VM_ACCEL ?= tcg
 VM_BACKEND ?= qemu
@@ -23,7 +23,9 @@ FIRECRACKER_CODEX_HEAD_ANCHOR ?=
 FIRECRACKER_CODEX_PAYMENT_HISTORY ?=
 FIRECRACKER_CODEX_WORKLOAD_CONTRACT ?=
 MCP_OPERATION_BUILD_DIR ?= $(shell python3 -c 'import os; print(os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "safe-change-runtime", "mcp-operation"))')
+MCP_RELAY_BUNDLE_DIR ?= $(MCP_OPERATION_BUILD_DIR)/relay-bundle
 CODEX_MCP_DEMO_ARGS ?=
+CODEX_MCP_DOCKER_ARGS ?=
 CODEX_MCP_EVIDENCE ?=
 RUNTIME_IMAGE ?= safe-change-runtime:local
 RUNTIME_VERSION ?= dev
@@ -218,6 +220,11 @@ runtime-mcp-operation-demo:
 # Real Codex 0.147+ code-mode MCP, two App Server processes, durable MCP
 # restart, query recovery, and a deliberately non-idempotent provider.
 runtime-codex-mcp-build: runtime-mcp-operation-build
+	@mkdir -p "$(MCP_RELAY_BUNDLE_DIR)"
+	@chmod 0700 "$(MCP_RELAY_BUNDLE_DIR)"
+	@test -z "$$(find "$(MCP_RELAY_BUNDLE_DIR)" -mindepth 1 -maxdepth 1 \
+		! -name mcp-operation-relay -print -quit)" || { \
+		echo "MCP relay bundle contains an unexpected entry" >&2; exit 2; }
 	cd runtime && CGO_ENABLED=0 go build -buildvcs=false -trimpath \
 		-o "$(MCP_OPERATION_BUILD_DIR)/control" ./cmd/control
 	cd runtime && CGO_ENABLED=0 go build -buildvcs=false -trimpath \
@@ -225,19 +232,28 @@ runtime-codex-mcp-build: runtime-mcp-operation-build
 	cd runtime && CGO_ENABLED=0 go build -buildvcs=false -trimpath \
 		-o "$(MCP_OPERATION_BUILD_DIR)/mcp-operation-host" ./cmd/mcp-operation-host
 	cd runtime && CGO_ENABLED=0 go build -buildvcs=false -trimpath \
-		-o "$(MCP_OPERATION_BUILD_DIR)/mcp-operation-relay" ./cmd/mcp-operation-relay
+		-o "$(MCP_RELAY_BUNDLE_DIR)/mcp-operation-relay" ./cmd/mcp-operation-relay
 	@chmod 0500 "$(MCP_OPERATION_BUILD_DIR)/control" "$(MCP_OPERATION_BUILD_DIR)/payment" \
-		"$(MCP_OPERATION_BUILD_DIR)/mcp-operation-host" "$(MCP_OPERATION_BUILD_DIR)/mcp-operation-relay"
+		"$(MCP_OPERATION_BUILD_DIR)/mcp-operation-host" "$(MCP_RELAY_BUNDLE_DIR)/mcp-operation-relay"
 	@sha256sum "$(MCP_OPERATION_BUILD_DIR)/control" "$(MCP_OPERATION_BUILD_DIR)/payment" \
-		"$(MCP_OPERATION_BUILD_DIR)/mcp-operation-host" "$(MCP_OPERATION_BUILD_DIR)/mcp-operation-relay"
+		"$(MCP_OPERATION_BUILD_DIR)/mcp-operation-host" "$(MCP_RELAY_BUNDLE_DIR)/mcp-operation-relay"
 
 runtime-codex-mcp-demo: runtime-codex-mcp-build
 	python3 -m adapter.codex_mcp_runtime_demo \
 		--control-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/control" \
 		--payment-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/payment" \
 		--mcp-host-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/mcp-operation-host" \
-		--mcp-relay-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/mcp-operation-relay" \
+		--mcp-relay-binary "$(abspath $(MCP_RELAY_BUNDLE_DIR))/mcp-operation-relay" \
 		$(CODEX_MCP_DEMO_ARGS)
+
+runtime-codex-mcp-docker-demo: runtime-codex-mcp-build runtime-image
+	python3 -m adapter.codex_mcp_runtime_demo \
+		--control-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/control" \
+		--payment-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/payment" \
+		--mcp-host-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/mcp-operation-host" \
+		--mcp-relay-binary "$(abspath $(MCP_RELAY_BUNDLE_DIR))/mcp-operation-relay" \
+		--docker-image "$(RUNTIME_IMAGE)" \
+		$(CODEX_MCP_DOCKER_ARGS)
 
 runtime-codex-mcp-check:
 	@test -n "$(strip $(CODEX_MCP_EVIDENCE))" || { echo "CODEX_MCP_EVIDENCE must name the retained evidence directory" >&2; exit 2; }
@@ -281,6 +297,7 @@ runtime-verify:
 	cd runtime && go test -race ./...
 	cd runtime && go vet ./...
 	python3 -m unittest \
+		adapter.test_app_server.DeterministicResponsesServerTests \
 		adapter.test_app_server.CodexAppServerModeTests \
 		adapter.test_docker_codex \
 		adapter.test_firecracker_codex \

@@ -677,6 +677,16 @@ def run_preflight(
 
 
 class DeterministicResponsesServerTests(unittest.TestCase):
+    def test_private_bridge_binding_requires_explicit_opt_in(self) -> None:
+        with self.assertRaisesRegex(ValueError, "explicit private Docker bridge"):
+            DeterministicResponsesServer(host="172.20.0.1")
+        server = DeterministicResponsesServer(
+            host="172.20.0.1", allow_private_bridge=True
+        )
+        self.assertEqual(server.pending_fixture_count, 0)
+        with self.assertRaisesRegex(ValueError, "loopback or an IPv4 literal"):
+            DeterministicResponsesServer(host="model.internal", allow_private_bridge=True)
+
     def test_models_and_fifo_sse_fixtures(self) -> None:
         with DeterministicResponsesServer() as server:
             server.enqueue_assistant("hello", response_id="response-assistant")
@@ -735,6 +745,23 @@ class DeterministicResponsesServerTests(unittest.TestCase):
 
 
 class CodexAppServerModeTests(unittest.TestCase):
+    def test_private_model_endpoint_requires_explicit_docker_opt_in(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="codex-private-model-") as directory:
+            root = Path(directory)
+            with self.assertRaisesRegex(ValueError, "unauthenticated local HTTP"):
+                CodexAppServer(
+                    model_base_url="http://172.20.0.1:8080/v1",
+                    workspace=root,
+                    raw_jsonl_path=root / "rejected.jsonl",
+                )
+            client = CodexAppServer(
+                model_base_url="http://172.20.0.1:8080/v1",
+                allow_private_model_endpoint=True,
+                workspace=root,
+                raw_jsonl_path=root / "accepted.jsonl",
+            )
+            self.assertEqual(client.model_base_url, "http://172.20.0.1:8080/v1")
+
     def test_explicit_mcp_command_is_bounded_and_default_remains_empty(self) -> None:
         with tempfile.TemporaryDirectory(prefix="codex-mcp-config-test-") as directory:
             root = Path(directory)

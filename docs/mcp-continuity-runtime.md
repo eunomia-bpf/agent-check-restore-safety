@@ -1,11 +1,11 @@
 # MCP continuity runtime
 
-**Status:** real Codex 0.147 and a split provider-independent MCP boundary,
-2026-08-16. Two independent Codex App Server processes each start an untrusted
-stdio relay. Both relays connect to one long-lived trusted host that retains
-the journal and joins it to the real Control, binary History, generation-bound
-Unix socket, and external payment service. Running the relay inside Docker or
-a microVM, and the Claude integration, remain future work.
+**Status:** real Codex 0.147 across a hardened Docker boundary,
+2026-08-16. Two independent Codex containers each start an untrusted stdio
+relay. Both relays connect to one long-lived trusted host that retains the
+journal and joins it to the real Control, binary History, generation-bound
+Unix socket, and external payment service. The equivalent microVM transport
+and the Claude integration remain future work.
 
 ## Why this layer exists
 
@@ -96,11 +96,13 @@ The integration tests use the production packages rather than a fake gateway:
 - one trusted MCP host retained across two untrusted relay processes.
 
 The package-level test drives MCP bytes through two replacement relays. The
-stronger public demo launches two real Codex 0.147 App Server processes. Codex
-loads only the relay through ordinary `[mcp_servers.continuity]`
-configuration, reports it ready, and exposes `commit_effect` through its
-current code-mode MCP namespace. The trusted host is a separate, longer-lived
-process. No experimental client callback is used for the protected calls.
+host public demo launches two real Codex 0.147 App Server processes. The
+stronger Docker demo launches the same App Server twice in distinct container
+processes. Codex loads only the relay through ordinary
+`[mcp_servers.continuity]` configuration, reports it ready, and exposes
+`commit_effect` through its current code-mode MCP namespace. The trusted host
+is a separate, longer-lived process. No experimental client callback is used
+for the protected calls.
 
 The payment service is deliberately non-idempotent. It commits the first
 Operation and deliberately drops its response. The MCP executor repeats the
@@ -117,6 +119,17 @@ is three successful real Codex MCP items, eight History events, two distinct
 Operations, two payment deliveries, and exactly two durable commits. The first
 Operation records query settlement; the second records direct settlement.
 
+In Docker mode, the checker additionally replays raw inspection records for
+both container lifetimes. Each container has a read-only root filesystem, all
+capabilities dropped, `no-new-privileges`, a private internal network, and
+exactly five mounts: read-only workspace, staged Codex bundle, relay bundle,
+and host-socket directory, plus an empty writable Codex home. The staged Codex
+bundle is current-user read-only; the relay and socket are each the sole entry
+in a 0700 source directory. Direct probes from both running containers to the
+payment port through container loopback and the Docker gateway fail. The model
+fixture alone binds the private gateway, while payment remains on host
+loopback.
+
 Run the public checks and build with:
 
 ```sh
@@ -124,6 +137,7 @@ make runtime-mcp-operation-check
 make runtime-mcp-operation-demo
 make runtime-mcp-operation-build
 make runtime-codex-mcp-demo
+make runtime-codex-mcp-docker-demo
 
 # Check a retained run printed by the command above.
 make runtime-codex-mcp-check \
@@ -166,17 +180,14 @@ This is not yet complete mediation for an arbitrary agent. It currently:
 - supports a deliberately bounded flat argument schema;
 - depends on the supervisor to mint and correctly resume execution identity;
 - protects only tools routed through this server; and
-- has not yet been invoked by a real Claude client; and
-- runs both relay and host under the same host UID in the current demo, so the
-  split proves process lifetime and least-information configuration, not yet
-  filesystem or network isolation from a malicious Agent.
+- has not yet been invoked by a real Claude client.
 
-The next increment places the existing untrusted relay beside Codex in the
-hardened Docker sandbox and bind-mounts only its private socket directory. The
-same boundary will then cross Firecracker through the existing host bridge,
-followed by a Claude runtime driver. Docker, Firecracker, QEMU, and future
-sandbox backends should remain replaceable containment mechanisms; the stable
-contract is the host-retained Operation identity and History.
+The Docker result proves containment for the exercised Codex/MCP path; it does
+not prove that every possible Agent effect path is mediated. The next
+increment carries the same boundary across Firecracker through the existing
+host bridge, followed by a Claude runtime driver. Docker, Firecracker, QEMU,
+and future sandbox backends should remain replaceable containment mechanisms;
+the stable contract is the host-retained Operation identity and History.
 
 ## External protocol references
 

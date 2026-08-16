@@ -8,8 +8,10 @@ from hashlib import sha256
 import json
 import os
 from pathlib import Path
+import re
 import stat
 from typing import Any
+from urllib.parse import urlsplit
 
 
 class EvidenceError(RuntimeError):
@@ -267,6 +269,181 @@ def _check_host_events(
         raise EvidenceError("trusted MCP host peer credentials are inconsistent")
 
 
+def _check_docker_containment(
+    root: Path,
+    result: dict[str, Any],
+    artifacts: dict[str, Any],
+    *,
+    codex_wrapper: Path,
+    relay: Path,
+    codex_commands: tuple[list[str], list[str]],
+) -> None:
+    containment = result.get("containment")
+    if not isinstance(containment, dict) or containment.get("backend") != "docker":
+        raise EvidenceError("Docker result omits its containment boundary")
+    network = containment.get("network")
+    gateway = containment.get("model_gateway")
+    container_name = containment.get("container_name")
+    docker_command = containment.get("docker_command")
+    if (
+        not isinstance(network, str)
+        or not network.startswith("safe-change-mcp-")
+        or not isinstance(gateway, str)
+        or not isinstance(container_name, str)
+        or not isinstance(docker_command, list)
+        or not all(isinstance(value, str) and value for value in docker_command)
+    ):
+        raise EvidenceError("Docker containment identity is malformed")
+    vendor = _external_artifact(artifacts, "vendor_codex", executable=True)
+    if containment.get("vendor_codex") != os.fspath(vendor):
+        raise EvidenceError("Docker entrypoint differs from the retained Codex binary")
+    wrapper_source = codex_wrapper.read_text(encoding="utf-8")
+    if f"_COMMAND = {tuple(docker_command)!r}\n" not in wrapper_source:
+        raise EvidenceError("retained Docker wrapper differs from its recorded command")
+    required_flags = {
+        "--read-only",
+        "--cap-drop",
+        "--security-opt",
+        "--tmpfs",
+        "--user",
+        "--network",
+        "--entrypoint",
+    }
+    if (
+        not required_flags.issubset(docker_command)
+        or any(docker_command.count(flag) != 1 for flag in required_flags)
+        or docker_command[docker_command.index("--cap-drop") + 1] != "ALL"
+        or docker_command[docker_command.index("--security-opt") + 1]
+        != "no-new-privileges=true"
+        or docker_command[docker_command.index("--network") + 1] != network
+        or docker_command[docker_command.index("--user") + 1]
+        != f"{os.geteuid()}:{os.getegid()}"
+        or docker_command[docker_command.index("--entrypoint") + 1]
+        != os.fspath(vendor)
+    ):
+        raise EvidenceError("Docker command weakens the hardened Codex boundary")
+
+    model_origins: list[str] = []
+    for command in codex_commands:
+        overrides = [
+            command[index + 1]
+            for index, value in enumerate(command[:-1])
+            if value == "-c"
+        ]
+        providers = [
+            value
+            for value in overrides
+            if value.startswith("model_providers.authority_continuity_mock=")
+        ]
+        if len(providers) != 1:
+            raise EvidenceError("Docker Codex command omits its deterministic model route")
+        match = re.search(r'base_url="([^"\\]+)"', providers[0])
+        if match is None:
+            raise EvidenceError("Docker Codex model route is malformed")
+        model_origins.append(match.group(1))
+    parsed_model = urlsplit(model_origins[0])
+    if (
+        model_origins[0] != model_origins[1]
+        or parsed_model.scheme != "http"
+        or parsed_model.hostname != gateway
+        or parsed_model.port is None
+        or parsed_model.path != "/v1"
+    ):
+        raise EvidenceError("Docker Codex model path did not use only the private gateway")
+
+    network_records = _json_file(root, "docker-network-inspect.json", mode=0o600)
+    if not isinstance(network_records, list) or len(network_records) != 1:
+        raise EvidenceError("Docker network inspection is malformed")
+    try:
+        network_record = network_records[0]
+        observed_gateway = network_record["IPAM"]["Config"][0]["Gateway"]
+    except (IndexError, KeyError, TypeError) as error:
+        raise EvidenceError("Docker network inspection is malformed") from error
+    if (
+        not isinstance(network_record, dict)
+        or network_record.get("Name") != network
+        or network_record.get("Internal") is not True
+        or observed_gateway != gateway
+    ):
+        raise EvidenceError("Codex did not use the retained internal Docker network")
+
+    inspections = _json_file(root, "docker-inspect.json", mode=0o600)
+    if not isinstance(inspections, list) or len(inspections) != 2:
+        raise EvidenceError("Docker evidence does not contain two container lifetimes")
+    expected_mounts = {
+        os.fspath(root / "agent-workspace"): (
+            os.fspath(root / "agent-workspace"), False
+        ),
+        os.fspath(root / "codex-home"): (
+            "/var/lib/safe-change/codex-home", True
+        ),
+        os.fspath(vendor.parent.parent): (os.fspath(vendor.parent.parent), False),
+        os.fspath(relay.parent): (os.fspath(relay.parent), False),
+        os.fspath(root / "relay"): (os.fspath(root / "relay"), False),
+    }
+    pids: list[int] = []
+    for inspection in inspections:
+        if not isinstance(inspection, dict):
+            raise EvidenceError("Docker container inspection is not an object")
+        state = inspection.get("State")
+        host_config = inspection.get("HostConfig")
+        config = inspection.get("Config")
+        networks = inspection.get("NetworkSettings", {}).get("Networks")
+        pid = state.get("Pid") if isinstance(state, dict) else None
+        mounts = inspection.get("Mounts")
+        observed_mounts = {
+            mount.get("Source"): (mount.get("Destination"), mount.get("RW"))
+            for mount in mounts
+            if isinstance(mount, dict)
+        } if isinstance(mounts, list) else {}
+        if (
+            not isinstance(pid, int)
+            or pid <= 1
+            or state.get("Running") is not True
+            or not isinstance(host_config, dict)
+            or host_config.get("ReadonlyRootfs") is not True
+            or host_config.get("Privileged") is not False
+            or host_config.get("CapDrop") != ["ALL"]
+            or host_config.get("SecurityOpt") != ["no-new-privileges=true"]
+            or host_config.get("NetworkMode") != network
+            or not isinstance(config, dict)
+            or config.get("User") != f"{os.geteuid()}:{os.getegid()}"
+            or config.get("Entrypoint") != [os.fspath(vendor)]
+            or not isinstance(networks, dict)
+            or set(networks) != {network}
+            or observed_mounts != expected_mounts
+        ):
+            raise EvidenceError("Docker inspection contradicts the least-privilege boundary")
+        pids.append(pid)
+    if pids[0] == pids[1]:
+        raise EvidenceError("Docker did not replace the Codex container process")
+
+    probes = _json_file(root, "docker-network-probes.json", mode=0o600)
+    try:
+        payment_target = result["history"]["requirement"]["kinds"]["protected_commit"]["target"]
+        payment_port = urlsplit(payment_target).port
+    except (KeyError, TypeError, ValueError) as error:
+        raise EvidenceError("Docker result omits the protected payment target") from error
+    expected_targets = [
+        f"http://127.0.0.1:{payment_port}/v1/stats",
+        f"http://{gateway}:{payment_port}/v1/stats",
+    ] * 2
+    if (
+        not isinstance(probes, list)
+        or len(probes) != 4
+        or [probe.get("target") for probe in probes if isinstance(probe, dict)]
+        != expected_targets
+        or any(
+            not isinstance(probe, dict)
+            or not isinstance(probe.get("returncode"), int)
+            or probe.get("returncode") == 0
+            or probe.get("stdout") != ""
+            for probe in probes
+        )
+    ):
+        raise EvidenceError("Docker direct-provider probes did not all fail")
+
+
 def _outcome(item: dict[str, Any], effect: str) -> dict[str, Any]:
     result = item.get("result")
     structured = result.get("structuredContent") if isinstance(result, dict) else None
@@ -292,7 +469,11 @@ def check(path: Path) -> dict[str, Any]:
         not isinstance(result, dict)
         or result.get("schema") != 1
         or result.get("success") is not True
-        or result.get("system") != "real-codex-split-mcp-continuity"
+        or result.get("system")
+        not in {
+            "real-codex-split-mcp-continuity",
+            "real-codex-docker-mcp-continuity",
+        }
         or result.get("codex_processes") != 2
         or result.get("trusted_mcp_hosts") != 1
         or result.get("mcp_relay_connections") != 2
@@ -311,14 +492,16 @@ def check(path: Path) -> dict[str, Any]:
     first_records = _json_lines(root, "codex-first.jsonl")
     second_records = _json_lines(root, "codex-second.jsonl")
     relay_socket = root / "relay" / "mcp-host.sock"
+    first_command = _process_command(first_records, "first Codex")
+    second_command = _process_command(second_records, "second Codex")
     _check_codex_relay_command(
-        _process_command(first_records, "first Codex"),
+        first_command,
         codex=codex,
         relay=relay,
         socket_path=relay_socket,
     )
     _check_codex_relay_command(
-        _process_command(second_records, "second Codex"),
+        second_command,
         codex=codex,
         relay=relay,
         socket_path=relay_socket,
@@ -346,6 +529,15 @@ def check(path: Path) -> dict[str, Any]:
     _check_host_events(host_records, host_pid=host_pid)
     if result.get("relay_events") != host_records:
         raise EvidenceError("result relay summary differs from the trusted host log")
+    if result.get("system") == "real-codex-docker-mcp-continuity":
+        _check_docker_containment(
+            root,
+            result,
+            artifacts,
+            codex_wrapper=codex,
+            relay=relay,
+            codex_commands=(first_command, second_command),
+        )
     first_items, first_versions = _mcp_items(first_records)
     second_items, second_versions = _mcp_items(second_records)
     if len(first_items) != 1 or len(second_items) != 2:
@@ -443,6 +635,19 @@ def check(path: Path) -> dict[str, Any]:
         artifact = artifacts.get(key)
         if not isinstance(artifact, dict) or artifact.get("path") != os.fspath(root / name) or artifact.get("sha256") != _sha(root / name):
             raise EvidenceError(f"artifact fingerprint mismatch for {key}")
+    if result.get("system") == "real-codex-docker-mcp-continuity":
+        for key, name in (
+            ("docker_inspect", "docker-inspect.json"),
+            ("docker_network_inspect", "docker-network-inspect.json"),
+            ("docker_network_probes", "docker-network-probes.json"),
+        ):
+            artifact = artifacts.get(key)
+            if (
+                not isinstance(artifact, dict)
+                or artifact.get("path") != os.fspath(root / name)
+                or artifact.get("sha256") != _sha(root / name)
+            ):
+                raise EvidenceError(f"artifact fingerprint mismatch for {key}")
     return {
         "schema": 1,
         "valid": True,
@@ -450,6 +655,11 @@ def check(path: Path) -> dict[str, Any]:
         "codex_processes": 2,
         "trusted_mcp_hosts": 1,
         "mcp_relay_connections": 2,
+        "containment": (
+            "docker"
+            if result.get("system") == "real-codex-docker-mcp-continuity"
+            else "host-process"
+        ),
         "mcp_items": 3,
         "operations": 2,
         "provider_deliveries": 2,

@@ -10,6 +10,7 @@ available only through an explicit opt-in and never installs a custom provider.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -29,6 +30,10 @@ TURN_TIMEOUT_SECONDS = 30.0
 _PROCESS_STOP_TIMEOUT_SECONDS = 3.0
 _PROVIDER_ID = "authority_continuity_mock"
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+_PRIVATE_BRIDGE_NETWORKS = tuple(
+    ipaddress.ip_network(value)
+    for value in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")
+)
 _MCP_SERVER_NAME = re.compile(r"[A-Za-z][A-Za-z0-9_-]{0,63}\Z")
 _MAX_MCP_ARGUMENT_BYTES = 4096
 
@@ -189,6 +194,7 @@ class CodexAppServer:
         codex_binary: str = "codex",
         model: str | None = None,
         use_logged_in_account: bool = False,
+        allow_private_model_endpoint: bool = False,
         mcp_server: MCPStdioServer | None = None,
         rpc_timeout: float = RPC_TIMEOUT_SECONDS,
         turn_timeout: float = TURN_TIMEOUT_SECONDS,
@@ -200,14 +206,29 @@ class CodexAppServer:
             )
         if model_base_url is not None:
             parsed = urlsplit(model_base_url)
+            private_bridge = False
+            if parsed.hostname is not None:
+                try:
+                    address = ipaddress.ip_address(parsed.hostname)
+                except ValueError:
+                    address = None
+                private_bridge = bool(
+                    allow_private_model_endpoint
+                    and address is not None
+                    and address.version == 4
+                    and any(address in network for network in _PRIVATE_BRIDGE_NETWORKS)
+                )
             if (
                 parsed.scheme != "http"
-                or parsed.hostname not in _LOOPBACK_HOSTS
+                or (
+                    parsed.hostname not in _LOOPBACK_HOSTS
+                    and not private_bridge
+                )
                 or parsed.username is not None
                 or parsed.password is not None
             ):
                 raise ValueError(
-                    "the deterministic model endpoint must be unauthenticated loopback HTTP"
+                    "the deterministic model endpoint must be unauthenticated local HTTP"
                 )
         resolved_binary = shutil.which(codex_binary)
         if resolved_binary is None:

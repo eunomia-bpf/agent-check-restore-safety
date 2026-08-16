@@ -1,11 +1,12 @@
 """Run real Codex against the host-durable MCP continuity boundary.
 
-The model endpoint is deterministic and loopback-only; Codex App Server, the
-untrusted MCP stdio relay, the long-lived trusted MCP host, Control/History,
-the sandbox-bound Unix endpoint, and the external payment service are real
-processes.  The first provider response is dropped after commit.  Codex and
-its relay are then restarted, the same model tool call is replayed, and a
-second distinct call is issued through the original trusted host.
+The model endpoint is deterministic and local: loopback in host mode and the
+private bridge gateway in Docker mode. Codex App Server, the untrusted MCP
+stdio relay, the long-lived trusted MCP host, Control/History, the
+sandbox-bound Unix endpoint, and the external payment service are real
+processes. The first provider response is dropped after commit. Codex and its
+relay are then restarted, the same model tool call is replayed, and a second
+distinct call is issued through the original trusted host.
 """
 
 from __future__ import annotations
@@ -28,6 +29,8 @@ from urllib.error import HTTPError, URLError
 from urllib.request import ProxyHandler, Request, build_opener
 
 from .app_server import CodexAppServer, MCPStdioServer
+from .codex_isolated_runtime_demo import _find_vendor_bundle
+from .docker_codex import DockerCodex, create_docker_codex
 from .mock_responses import DeterministicResponsesServer, RecordedRequest
 
 
@@ -361,6 +364,100 @@ def _wait_relay_events(path: Path, process: _Process) -> list[dict[str, Any]]:
     raise DemoError("trusted MCP host did not retain two relay lifetimes" + detail)
 
 
+def _command_json(command: list[str], label: str) -> Any:
+    completed = subprocess.run(command, check=False, capture_output=True, text=True)
+    if completed.returncode != 0:
+        raise DemoError(f"{label} failed with exit {completed.returncode}: {completed.stderr}")
+    try:
+        return json.loads(completed.stdout)
+    except json.JSONDecodeError as error:
+        raise DemoError(f"{label} did not return JSON") from error
+
+
+def _docker_network(docker: Path, name: str) -> tuple[str, list[dict[str, Any]]]:
+    completed = subprocess.run(
+        [os.fspath(docker), "network", "create", "--internal", name],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        raise DemoError(f"create private Docker network failed: {completed.stderr}")
+    value = _command_json(
+        [os.fspath(docker), "network", "inspect", name],
+        "inspect private Docker network",
+    )
+    try:
+        gateway = value[0]["IPAM"]["Config"][0]["Gateway"]
+    except (IndexError, KeyError, TypeError) as error:
+        raise DemoError("private Docker network has no gateway") from error
+    if not isinstance(gateway, str):
+        raise DemoError("private Docker network gateway is malformed")
+    return gateway, value
+
+
+def _stage_vendor_bundle(source: Path, destination: Path) -> Path:
+    shutil.copytree(source, destination, copy_function=shutil.copy2)
+    for directory, names, files in os.walk(destination):
+        directory_path = Path(directory)
+        directory_path.chmod(0o500)
+        for name in names:
+            child = directory_path / name
+            if child.is_symlink():
+                raise DemoError("Codex vendor staging does not accept symbolic links")
+        for name in files:
+            child = directory_path / name
+            mode = child.stat().st_mode
+            child.chmod(0o500 if mode & 0o111 else 0o400)
+    return destination
+
+
+def _docker_observation(
+    docker: Path,
+    container_name: str,
+    *,
+    payment_port: int,
+    model_gateway: str,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    value = _command_json(
+        [os.fspath(docker), "inspect", container_name],
+        "inspect running Codex container",
+    )
+    if not isinstance(value, list) or len(value) != 1 or not isinstance(value[0], dict):
+        raise DemoError("Docker inspect did not identify one Codex container")
+    probes: list[dict[str, Any]] = []
+    for target in (
+        f"http://127.0.0.1:{payment_port}/v1/stats",
+        f"http://{model_gateway}:{payment_port}/v1/stats",
+    ):
+        completed = subprocess.run(
+            [
+                os.fspath(docker),
+                "exec",
+                container_name,
+                "wget",
+                "-qO-",
+                "-T",
+                "2",
+                target,
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        observation = {
+            "target": target,
+            "returncode": completed.returncode,
+            "stdout": completed.stdout,
+            "stderr": completed.stderr,
+        }
+        probes.append(observation)
+        if completed.returncode == 0:
+            raise DemoError(f"Codex container reached payment directly: {target}")
+    return value[0], probes
+
+
 def run(
     *,
     workspace: Path,
@@ -371,6 +468,9 @@ def run(
     mcp_host_binary: Path,
     mcp_relay_binary: Path,
     tools_config: Path,
+    docker_image: str | None = None,
+    docker_binary: Path | None = None,
+    vendor_bundle: Path | None = None,
 ) -> dict[str, Any]:
     workspace = workspace.resolve()
     if not workspace.is_dir():
@@ -391,8 +491,33 @@ def run(
     relay_socket_path = relay_directory / "mcp-host.sock"
     socket_path = _sandbox_socket(sockets)
 
+    docker_codex: DockerCodex | None = None
+    docker_network_name: str | None = None
+    docker_network_created = False
+    docker_gateway: str | None = None
+    docker_network_inspect: list[dict[str, Any]] | None = None
+    docker_inspects: list[dict[str, Any]] = []
+    docker_probes: list[dict[str, Any]] = []
+    active_workspace = workspace
+    active_codex_binary = codex_binary
+    active_vendor_bundle = vendor_bundle
+    if docker_image is not None:
+        if docker_binary is None or vendor_bundle is None:
+            raise DemoError("Docker mode requires Docker and a Codex vendor bundle")
+        docker_network_name = "safe-change-mcp-" + secrets.token_hex(8)
+
     processes: list[_Process] = []
     try:
+        if docker_network_name is not None and docker_binary is not None:
+            docker_gateway, docker_network_inspect = _docker_network(
+                docker_binary, docker_network_name
+            )
+            docker_network_created = True
+            if vendor_bundle is None:
+                raise AssertionError("Docker mode omitted the Codex vendor bundle")
+            active_vendor_bundle = _stage_vendor_bundle(
+                vendor_bundle, root / "codex-vendor"
+            )
         payment = _Process(
             "payment",
             [
@@ -484,6 +609,32 @@ def run(
         if not relay_socket_path.is_socket():
             raise DemoError("trusted MCP host did not publish its relay socket")
 
+        if docker_image is not None:
+            if (
+                docker_binary is None
+                or active_vendor_bundle is None
+                or docker_network_name is None
+                or docker_gateway is None
+            ):
+                raise AssertionError("incomplete Docker MCP configuration")
+            active_workspace = root / "agent-workspace"
+            codex_home = root / "codex-home"
+            wrapper_parent = root / "docker-wrapper"
+            for directory in (active_workspace, codex_home, wrapper_parent):
+                directory.mkdir(mode=0o700)
+            docker_codex = create_docker_codex(
+                vendor_bundle=active_vendor_bundle,
+                workspace=active_workspace,
+                codex_home=codex_home,
+                network=docker_network_name,
+                runtime_image=docker_image,
+                docker_binary=docker_binary,
+                mcp_relay=mcp_relay_binary,
+                mcp_host_socket=relay_socket_path,
+                temp_parent=wrapper_parent,
+            )
+            active_codex_binary = docker_codex.executable
+
         mcp = MCPStdioServer(
             name=_MCP_NAME,
             command=mcp_relay_binary,
@@ -497,18 +648,31 @@ def run(
         raw_second = root / "codex-second.jsonl"
         statuses: list[dict[str, Any]] = []
 
-        with DeterministicResponsesServer() as responses:
+        with DeterministicResponsesServer(
+            host=docker_gateway or "127.0.0.1",
+            allow_private_bridge=docker_gateway is not None,
+        ) as responses:
             responses.enqueue_assistant("MCP tool discovered.")
             first_client = CodexAppServer(
                 model_base_url=responses.base_url,
-                workspace=workspace,
+                workspace=active_workspace,
                 raw_jsonl_path=raw_first,
-                codex_binary=os.fspath(codex_binary),
+                codex_binary=os.fspath(active_codex_binary),
+                allow_private_model_endpoint=docker_gateway is not None,
                 mcp_server=mcp,
             )
             with first_client:
                 first_thread = first_client.create_mcp_thread()
                 statuses.append(_wait_mcp_ready(first_client, first_thread["id"]))
+                if docker_codex is not None and docker_binary is not None and docker_gateway is not None:
+                    inspect, probes = _docker_observation(
+                        docker_binary,
+                        docker_codex.container_name,
+                        payment_port=payment_port,
+                        model_gateway=docker_gateway,
+                    )
+                    docker_inspects.append(inspect)
+                    docker_probes.extend(probes)
                 first_client.start_turn_and_wait(
                     first_thread["id"], "Report the available protected operation."
                 )
@@ -539,14 +703,24 @@ def run(
 
             second_client = CodexAppServer(
                 model_base_url=responses.base_url,
-                workspace=workspace,
+                workspace=active_workspace,
                 raw_jsonl_path=raw_second,
-                codex_binary=os.fspath(codex_binary),
+                codex_binary=os.fspath(active_codex_binary),
+                allow_private_model_endpoint=docker_gateway is not None,
                 mcp_server=mcp,
             )
             with second_client:
                 second_thread = second_client.create_mcp_thread()
                 statuses.append(_wait_mcp_ready(second_client, second_thread["id"]))
+                if docker_codex is not None and docker_binary is not None and docker_gateway is not None:
+                    inspect, probes = _docker_observation(
+                        docker_binary,
+                        docker_codex.container_name,
+                        payment_port=payment_port,
+                        model_gateway=docker_gateway,
+                    )
+                    docker_inspects.append(inspect)
+                    docker_probes.extend(probes)
                 _enqueue_operation(
                     responses,
                     callable_name=callable_name,
@@ -618,11 +792,39 @@ def run(
             if item.get("server") != _MCP_NAME or item.get("tool") != _TOOL_NAME or item.get("status") != "completed":
                 raise DemoError(f"Codex emitted an unsuccessful MCP item: {item!r}")
         relay_events = _wait_relay_events(root / "mcp-host.stderr.log", mcp_host)
+        system = "real-codex-split-mcp-continuity"
+        containment: dict[str, Any] | None = None
+        if docker_codex is not None:
+            if (
+                docker_binary is None
+                or active_vendor_bundle is None
+                or docker_network_inspect is None
+                or docker_gateway is None
+                or docker_network_name is None
+                or len(docker_inspects) != 2
+                or len(docker_probes) != 4
+            ):
+                raise DemoError("Docker containment evidence is incomplete")
+            retained_wrapper = docker_codex.retain_wrapper()
+            if retained_wrapper != active_codex_binary:
+                raise DemoError("retained Docker wrapper identity changed")
+            _write_private_json(root / "docker-inspect.json", docker_inspects)
+            _write_private_json(root / "docker-network-inspect.json", docker_network_inspect)
+            _write_private_json(root / "docker-network-probes.json", docker_probes)
+            system = "real-codex-docker-mcp-continuity"
+            containment = {
+                "backend": "docker",
+                "network": docker_network_name,
+                "model_gateway": docker_gateway,
+                "container_name": docker_codex.container_name,
+                "docker_command": list(docker_codex.docker_command),
+                "vendor_codex": os.fspath(active_vendor_bundle / "bin" / "codex"),
+            }
 
         result = {
             "schema": 1,
             "success": True,
-            "system": "real-codex-split-mcp-continuity",
+            "system": system,
             "execution_id": _EXECUTION_ID,
             "tool_descriptor": descriptor,
             "mcp_startup_statuses": statuses,
@@ -633,7 +835,10 @@ def run(
             "history": state,
             "payment": stats,
             "artifacts": {
-                "codex": {"path": os.fspath(codex_binary), "sha256": _sha256_file(codex_binary)},
+                "codex": {
+                    "path": os.fspath(active_codex_binary),
+                    "sha256": _sha256_file(active_codex_binary),
+                },
                 "control": {"path": os.fspath(control_binary), "sha256": _sha256_file(control_binary)},
                 "payment": {"path": os.fspath(payment_binary), "sha256": _sha256_file(payment_binary)},
                 "mcp_host": {
@@ -666,15 +871,55 @@ def run(
             },
             "relay_events": relay_events,
         }
+        if containment is not None and active_vendor_bundle is not None:
+            result["containment"] = containment
+            result["artifacts"].update(
+                {
+                    "vendor_codex": {
+                        "path": os.fspath(active_vendor_bundle / "bin" / "codex"),
+                        "sha256": _sha256_file(active_vendor_bundle / "bin" / "codex"),
+                    },
+                    "docker_inspect": {
+                        "path": os.fspath(root / "docker-inspect.json"),
+                        "sha256": _sha256_file(root / "docker-inspect.json"),
+                    },
+                    "docker_network_inspect": {
+                        "path": os.fspath(root / "docker-network-inspect.json"),
+                        "sha256": _sha256_file(root / "docker-network-inspect.json"),
+                    },
+                    "docker_network_probes": {
+                        "path": os.fspath(root / "docker-network-probes.json"),
+                        "sha256": _sha256_file(root / "docker-network-probes.json"),
+                    },
+                }
+            )
         _write_private_json(root / "result.json", result)
         return {"evidence": os.fspath(root), **result}
     finally:
         errors: list[BaseException] = []
+        if docker_codex is not None:
+            try:
+                docker_codex.close()
+            except BaseException as error:
+                errors.append(error)
         for process in reversed(processes):
             try:
                 process.close()
             except BaseException as error:
                 errors.append(error)
+        if docker_network_created and docker_network_name is not None and docker_binary is not None:
+            completed = subprocess.run(
+                [os.fspath(docker_binary), "network", "rm", docker_network_name],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if completed.returncode != 0:
+                errors.append(
+                    DemoError(
+                        "remove private Docker network failed: " + completed.stderr
+                    )
+                )
         if errors:
             raise DemoError("service shutdown failed: " + "; ".join(map(str, errors)))
 
@@ -688,6 +933,9 @@ def main() -> int:
     parser.add_argument("--payment-binary", type=Path, required=True)
     parser.add_argument("--mcp-host-binary", type=Path, required=True)
     parser.add_argument("--mcp-relay-binary", type=Path, required=True)
+    parser.add_argument("--docker-image")
+    parser.add_argument("--docker-binary", default="docker")
+    parser.add_argument("--vendor-bundle", type=Path)
     parser.add_argument(
         "--tools-config",
         type=Path,
@@ -697,6 +945,14 @@ def main() -> int:
     codex = shutil.which(args.codex_binary)
     if codex is None:
         raise DemoError("Codex executable was not found")
+    docker_path: Path | None = None
+    vendor: Path | None = None
+    if args.docker_image is not None:
+        docker = shutil.which(args.docker_binary)
+        if docker is None:
+            raise DemoError("Docker executable was not found")
+        docker_path = Path(docker).resolve()
+        vendor = _find_vendor_bundle(args.vendor_bundle)
     result = run(
         workspace=args.workspace,
         evidence_dir=args.evidence_dir,
@@ -706,6 +962,9 @@ def main() -> int:
         mcp_host_binary=_owned_executable(args.mcp_host_binary.resolve(), "trusted MCP host"),
         mcp_relay_binary=_owned_executable(args.mcp_relay_binary.resolve(), "MCP relay"),
         tools_config=args.tools_config.resolve(),
+        docker_image=args.docker_image,
+        docker_binary=docker_path,
+        vendor_bundle=vendor,
     )
     print(json.dumps(result, sort_keys=True))
     return 0

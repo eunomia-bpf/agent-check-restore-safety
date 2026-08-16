@@ -1,4 +1,4 @@
-"""Deterministic loopback-only Responses API fixture for Codex App Server.
+"""Deterministic local Responses API fixture for Codex App Server.
 
 The real Codex App Server is the system under test.  This module replaces only
 the model endpoint, following the SSE shape used by Codex's official tests, so
@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import ipaddress
 import json
 import threading
 import time
@@ -19,6 +20,10 @@ from urllib.parse import urlsplit
 
 
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost"})
+_PRIVATE_BRIDGE_NETWORKS = tuple(
+    ipaddress.ip_network(value)
+    for value in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")
+)
 _MAX_REQUEST_BYTES = 16 * 1024 * 1024
 
 
@@ -130,7 +135,7 @@ def _render_fixture(fixture: ResponseFixture) -> bytes:
 
 
 class DeterministicResponsesServer:
-    """A queued, deterministic Responses API server bound to loopback.
+    """A queued, deterministic Responses API fixture.
 
     Fixtures are consumed in FIFO order only by ``POST`` requests whose path
     ends in ``/responses``.  Codex's background ``GET /models`` request is
@@ -138,9 +143,28 @@ class DeterministicResponsesServer:
     not consume a fixture.
     """
 
-    def __init__(self, host: str = "127.0.0.1", port: int = 0) -> None:
+    def __init__(
+        self,
+        host: str = "127.0.0.1",
+        port: int = 0,
+        *,
+        allow_private_bridge: bool = False,
+    ) -> None:
         if host not in _LOOPBACK_HOSTS:
-            raise ValueError("the deterministic model fixture must bind to loopback")
+            try:
+                address = ipaddress.ip_address(host)
+            except ValueError as error:
+                raise ValueError(
+                    "model fixture host must be loopback or an IPv4 literal"
+                ) from error
+            if (
+                not allow_private_bridge
+                or address.version != 4
+                or not any(address in network for network in _PRIVATE_BRIDGE_NETWORKS)
+            ):
+                raise ValueError(
+                    "non-loopback model fixture requires an explicit private Docker bridge"
+                )
         self._host = host
         self._port = port
         self._fixtures: deque[ResponseFixture] = deque()
