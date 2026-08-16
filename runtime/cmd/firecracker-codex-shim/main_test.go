@@ -14,6 +14,7 @@ import (
 
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/agentguest"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/codexvm"
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/repobundle"
 	"golang.org/x/sys/unix"
 )
 
@@ -73,12 +74,24 @@ func TestBuildGuestConfigCopiesArgumentsAndUsesFixedContract(t *testing.T) {
 		Arguments:      []string{"app-server", "--stdio", "-c", "model_provider=x"},
 		GuestModelPort: 8080,
 	}
-	guest, err := buildGuestConfig(host, strings.Repeat("1", 32))
+	repositoryFile, err := os.CreateTemp(t.TempDir(), "repository-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer repositoryFile.Close()
+	tree, err := repobundle.FromEntries(nil, repobundle.DefaultLimits())
+	if err != nil {
+		t.Fatal(err)
+	}
+	repository := &sealedArtifact{file: repositoryFile, record: sealedArtifactRecord{Artifact: artifactRecord{
+		Name: "repository", Size: 512, SHA256: strings.Repeat("b", 64),
+	}}}
+	guest, err := buildGuestConfig(host, strings.Repeat("1", 32), repository, tree)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if guest.Schema != agentguest.ConfigSchema || guest.StreamPort != agentguest.DefaultStreamPort ||
-		guest.ModelPort != 8080 || guest.PayloadDrive != "/dev/vda" || guest.CodexSHA256 != host.CodexSHA256 {
+		guest.ModelPort != 8080 || guest.PayloadDrive != "/dev/vda" || guest.RepositoryDrive != "/dev/vdb" || guest.RepositorySize != 512 || guest.RepositoryTreeRoot != tree.TreeRoot.String() || guest.CodexSHA256 != host.CodexSHA256 {
 		t.Fatalf("unexpected guest config: %+v", guest)
 	}
 	host.Arguments[0] = "changed"
@@ -86,7 +99,7 @@ func TestBuildGuestConfigCopiesArgumentsAndUsesFixedContract(t *testing.T) {
 		t.Fatal("guest arguments alias host arguments")
 	}
 	host.GuestModelPort = agentguest.DefaultStreamPort
-	if _, err := buildGuestConfig(host, strings.Repeat("1", 32)); err == nil {
+	if _, err := buildGuestConfig(host, strings.Repeat("1", 32), repository, tree); err == nil {
 		t.Fatal("colliding model and stream ports were accepted")
 	}
 }

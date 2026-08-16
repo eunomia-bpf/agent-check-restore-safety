@@ -31,6 +31,8 @@ const (
 	EnvGuestSHA256       = "SAFE_CHANGE_GUEST_SHA256"
 	EnvPayload           = "SAFE_CHANGE_PAYLOAD"
 	EnvPayloadSHA256     = "SAFE_CHANGE_PAYLOAD_SHA256"
+	EnvRepository        = "SAFE_CHANGE_REPOSITORY"
+	EnvRepositorySHA256  = "SAFE_CHANGE_REPOSITORY_SHA256"
 	EnvCodexSHA256       = "SAFE_CHANGE_CODEX_SHA256"
 	EnvEvidenceDir       = "SAFE_CHANGE_EVIDENCE_DIR"
 	EnvWorkspace         = "SAFE_CHANGE_WORKSPACE"
@@ -50,6 +52,8 @@ var requiredEnvironment = [...]string{
 	EnvGuestSHA256,
 	EnvPayload,
 	EnvPayloadSHA256,
+	EnvRepository,
+	EnvRepositorySHA256,
 	EnvCodexSHA256,
 	EnvEvidenceDir,
 	EnvWorkspace,
@@ -70,6 +74,8 @@ type Config struct {
 	GuestSHA256       string
 	Payload           string
 	PayloadSHA256     string
+	Repository        string
+	RepositorySHA256  string
 	CodexSHA256       string
 	EvidenceDir       string
 	Workspace         string
@@ -112,6 +118,9 @@ func LoadConfig(arguments []string, lookupEnv func(string) (string, bool)) (Conf
 	if config.Payload, err = validateArtifactPath(values[EnvPayload], EnvPayload, false); err != nil {
 		return Config{}, err
 	}
+	if config.Repository, err = validateArtifactPath(values[EnvRepository], EnvRepository, false); err != nil {
+		return Config{}, err
+	}
 	if config.FirecrackerSHA256, err = validateSHA256(values[EnvFirecrackerSHA256], EnvFirecrackerSHA256); err != nil {
 		return Config{}, err
 	}
@@ -122,6 +131,9 @@ func LoadConfig(arguments []string, lookupEnv func(string) (string, bool)) (Conf
 		return Config{}, err
 	}
 	if config.PayloadSHA256, err = validateSHA256(values[EnvPayloadSHA256], EnvPayloadSHA256); err != nil {
+		return Config{}, err
+	}
+	if config.RepositorySHA256, err = validateSHA256(values[EnvRepositorySHA256], EnvRepositorySHA256); err != nil {
 		return Config{}, err
 	}
 	if config.CodexSHA256, err = validateSHA256(values[EnvCodexSHA256], EnvCodexSHA256); err != nil {
@@ -135,6 +147,9 @@ func LoadConfig(arguments []string, lookupEnv func(string) (string, bool)) (Conf
 	}
 	if pathsOverlap(config.Workspace, config.EvidenceDir) {
 		return Config{}, errors.New("workspace and evidence directory must not overlap")
+	}
+	if pathsOverlap(config.Repository, config.Workspace) || pathsOverlap(config.Repository, config.EvidenceDir) {
+		return Config{}, errors.New("repository, workspace, and evidence paths must not overlap")
 	}
 
 	modelURL, err := validateArguments(arguments)

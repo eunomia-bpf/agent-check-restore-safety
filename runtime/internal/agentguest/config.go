@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	ConfigSchema       = 1
+	ConfigSchema       = 2
 	DefaultStreamPort  = uint32(7000)
 	MaxConfigBytes     = 1 << 20
 	MaxArguments       = 256
@@ -26,6 +26,8 @@ const (
 	PayloadMount       = "/opt/codex"
 	WorkspaceDirectory = "/workspace"
 	CodexHomeDirectory = "/home/codex/.codex"
+	RepositoryDrive    = "/dev/vdb"
+	MaxRepositoryBytes = uint64(2 << 30)
 )
 
 // Config is the complete immutable input embedded in the guest initramfs.
@@ -33,13 +35,17 @@ const (
 // a payload image and arguments, but cannot turn PID 1 into a general command
 // launcher.
 type Config struct {
-	Schema       int      `json:"schema"`
-	SessionID    string   `json:"session_id"`
-	CodexSHA256  string   `json:"codex_sha256"`
-	Arguments    []string `json:"arguments"`
-	StreamPort   uint32   `json:"stream_port"`
-	ModelPort    uint32   `json:"model_port"`
-	PayloadDrive string   `json:"payload_drive"`
+	Schema             int      `json:"schema"`
+	SessionID          string   `json:"session_id"`
+	CodexSHA256        string   `json:"codex_sha256"`
+	Arguments          []string `json:"arguments"`
+	StreamPort         uint32   `json:"stream_port"`
+	ModelPort          uint32   `json:"model_port"`
+	PayloadDrive       string   `json:"payload_drive"`
+	RepositoryDrive    string   `json:"repository_drive"`
+	RepositorySize     uint64   `json:"repository_size"`
+	RepositorySHA256   string   `json:"repository_sha256"`
+	RepositoryTreeRoot string   `json:"repository_tree_root"`
 }
 
 // DecodeConfig reads one strict, bounded object. Unknown and duplicate fields
@@ -65,7 +71,7 @@ func DecodeConfig(reader io.Reader) (Config, error) {
 	if delimiter, ok := first.(json.Delim); !ok || delimiter != '{' {
 		return Config{}, errors.New("agent guest config must be one JSON object")
 	}
-	seen := make(map[string]bool, 7)
+	seen := make(map[string]bool, 11)
 	var config Config
 	for decoder.More() {
 		token, err := decoder.Token()
@@ -95,6 +101,14 @@ func DecodeConfig(reader io.Reader) (Config, error) {
 			err = decoder.Decode(&config.ModelPort)
 		case "payload_drive":
 			err = decoder.Decode(&config.PayloadDrive)
+		case "repository_drive":
+			err = decoder.Decode(&config.RepositoryDrive)
+		case "repository_size":
+			err = decoder.Decode(&config.RepositorySize)
+		case "repository_sha256":
+			err = decoder.Decode(&config.RepositorySHA256)
+		case "repository_tree_root":
+			err = decoder.Decode(&config.RepositoryTreeRoot)
 		default:
 			return Config{}, fmt.Errorf("agent guest config contains forbidden field %q", name)
 		}
@@ -115,8 +129,8 @@ func DecodeConfig(reader io.Reader) (Config, error) {
 		}
 		return Config{}, fmt.Errorf("agent guest config has trailing data: %w", err)
 	}
-	if len(seen) != 7 {
-		return Config{}, errors.New("agent guest config must contain exactly schema, session_id, codex_sha256, arguments, stream_port, model_port, and payload_drive")
+	if len(seen) != 11 {
+		return Config{}, errors.New("agent guest config must contain exactly the fixed schema, session, Codex, ports, payload, and repository fields")
 	}
 	if err := config.Validate(); err != nil {
 		return Config{}, err
@@ -151,7 +165,29 @@ func (config Config) Validate() error {
 	if config.PayloadDrive != "/dev/vda" {
 		return errors.New("agent guest payload_drive must be exactly /dev/vda")
 	}
+	if config.RepositoryDrive != RepositoryDrive {
+		return errors.New("agent guest repository_drive must be exactly /dev/vdb")
+	}
+	if config.RepositorySize == 0 || config.RepositorySize > MaxRepositoryBytes || config.RepositorySize%512 != 0 {
+		return fmt.Errorf("agent guest repository_size must be a positive 512-byte multiple no larger than %d", MaxRepositoryBytes)
+	}
+	if err := validateLowerHexDigest(config.RepositorySHA256, "repository_sha256"); err != nil {
+		return err
+	}
+	if err := validateLowerHexDigest(config.RepositoryTreeRoot, "repository_tree_root"); err != nil {
+		return err
+	}
 	return ValidateCodexArguments(config.Arguments)
+}
+
+func validateLowerHexDigest(value, label string) error {
+	if len(value) != 64 || strings.ToLower(value) != value {
+		return fmt.Errorf("agent guest %s must be one lowercase SHA-256 digest", label)
+	}
+	if _, err := hex.DecodeString(value); err != nil {
+		return fmt.Errorf("agent guest %s must be one lowercase SHA-256 digest", label)
+	}
+	return nil
 }
 
 // ValidateCodexArguments constrains both PID 1 and its internal child mode to

@@ -30,6 +30,7 @@ import (
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/agentwire"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/codexvm"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/firecracker"
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/repobundle"
 	"golang.org/x/sys/unix"
 )
 
@@ -45,9 +46,11 @@ const (
 	resultSchema         = 1
 	evidenceEventSchema  = 1
 	guestPayloadDrive    = "/dev/vda"
+	guestRepositoryDrive = "/dev/vdb"
 	bootKernelDescriptor = "/proc/self/fd/4"
 	bootInitrdDescriptor = "/proc/self/fd/5"
 	payloadDescriptor    = "/proc/self/fd/6"
+	repositoryDescriptor = "/proc/self/fd/7"
 	bootArguments        = "console=ttyS0 reboot=k panic=1 pci=off rdinit=/init"
 )
 
@@ -209,6 +212,8 @@ type runner struct {
 	proxyAudit     *evidenceFile
 	kernel         *sealedArtifact
 	payload        *sealedArtifact
+	repository     *sealedArtifact
+	repositoryTree repobundle.Bundle
 	guest          *sealedArtifact
 	initramfs      *sealedArtifact
 	snapshotState  *sealedArtifact
@@ -328,6 +333,12 @@ func (r *runner) execute() error {
 	if r.payload, err = sealPath("payload", r.config.Payload, r.config.PayloadSHA256, 6, 0); err != nil {
 		return err
 	}
+	if r.repository, err = sealPath("repository", r.config.Repository, r.config.RepositorySHA256, 7, int64(agentguest.MaxRepositoryBytes)); err != nil {
+		return err
+	}
+	if r.repositoryTree, err = decodeSealedRepository(r.repository); err != nil {
+		return err
+	}
 	if r.guest, err = sealPath("guest", r.config.Guest, r.config.GuestSHA256, 0, maxGuestBinaryBytes); err != nil {
 		return err
 	}
@@ -335,7 +346,7 @@ func (r *runner) execute() error {
 	if err != nil {
 		return fmt.Errorf("read sealed guest: %w", err)
 	}
-	guestConfig, err := buildGuestConfig(r.config, r.sessionID)
+	guestConfig, err := buildGuestConfig(r.config, r.sessionID, r.repository, r.repositoryTree)
 	if err != nil {
 		return err
 	}
@@ -365,11 +376,20 @@ func (r *runner) execute() error {
 	}
 	r.result.Artifacts["kernel"] = r.kernel.record.Artifact
 	r.result.Artifacts["payload"] = r.payload.record.Artifact
+	repositoryArtifact, err := persistOpenArtifact(
+		"repository.bundle", filepath.Join(r.config.EvidenceDir, "repository.bundle"),
+		r.repository.file, r.repository.record.Artifact,
+	)
+	if err != nil {
+		return err
+	}
+	r.result.Artifacts["repository"] = repositoryArtifact
 	r.result.Artifacts["guest"] = r.guest.record.Artifact
 	r.result.Artifacts["initramfs"] = initramfsArtifact
-	r.result.SealedBootInputs = []sealedArtifactRecord{r.kernel.record, r.initramfs.record, r.payload.record}
+	r.result.SealedBootInputs = []sealedArtifactRecord{r.kernel.record, r.initramfs.record, r.payload.record, r.repository.record}
 	if err := r.events.Record("artifacts-sealed", nil, map[string]any{
 		"kernel": r.kernel.record, "payload": r.payload.record,
+		"repository": r.repository.record, "repository_tree_root": r.repositoryTree.TreeRoot.String(),
 		"guest": r.guest.record, "initramfs": r.initramfs.record,
 	}); err != nil {
 		return err
@@ -392,7 +412,7 @@ func (r *runner) execute() error {
 	r.bridge.StartInput(r.ctx)
 
 	r.g1 = newGeneration(r.config.EvidenceDir, firstGeneration, r.idG1)
-	if err := r.startGeneration(r.g1, []*os.File{r.kernel.file, r.initramfs.file, r.payload.file}); err != nil {
+	if err := r.startGeneration(r.g1, []*os.File{r.kernel.file, r.initramfs.file, r.payload.file, r.repository.file}); err != nil {
 		return err
 	}
 	firecrackerArtifact, err := artifactForProcess(r.g1.process)
@@ -491,9 +511,10 @@ func (r *runner) execute() error {
 	if r.snapshotMemory, err = sealPath("snapshot-memory", snapshotMemoryPath, memoryBefore.SHA256, 5, 0); err != nil {
 		return err
 	}
-	r.result.SealedLoadInputs = []sealedArtifactRecord{r.snapshotState.record, r.snapshotMemory.record, r.payload.record}
+	r.result.SealedLoadInputs = []sealedArtifactRecord{r.snapshotState.record, r.snapshotMemory.record, r.payload.record, r.repository.record}
 	if err := r.events.Record("snapshot-load-inputs-sealed", nil, map[string]any{
 		"state": r.snapshotState.record, "memory": r.snapshotMemory.record,
+		"payload": r.payload.record, "repository": r.repository.record,
 	}); err != nil {
 		return err
 	}
@@ -505,7 +526,7 @@ func (r *runner) execute() error {
 	}
 
 	r.g3 = newGeneration(r.config.EvidenceDir, restoredGeneration, r.idG3)
-	if err := r.startGeneration(r.g3, []*os.File{r.snapshotState.file, r.snapshotMemory.file, r.payload.file}); err != nil {
+	if err := r.startGeneration(r.g3, []*os.File{r.snapshotState.file, r.snapshotMemory.file, r.payload.file, r.repository.file}); err != nil {
 		return err
 	}
 	if err := r.events.Record("process-started", r.g3, nil); err != nil {
@@ -687,6 +708,11 @@ func (r *runner) configureFirstGeneration() error {
 		DriveID: "payload", PathOnHost: payloadDescriptor, IsRootDevice: false, IsReadOnly: true,
 	}); err != nil {
 		return fmt.Errorf("configure read-only payload drive: %w", err)
+	}
+	if err := r.g1.client.ConfigureDrive(r.ctx, firecracker.Drive{
+		DriveID: "repository", PathOnHost: repositoryDescriptor, IsRootDevice: false, IsReadOnly: true,
+	}); err != nil {
+		return fmt.Errorf("configure read-only repository drive: %w", err)
 	}
 	var captureErr error
 	r.g1.vsockBackend, captureErr = captureSocket(r.g1.basePath)
@@ -901,7 +927,7 @@ func (r *runner) cleanup() error {
 		}
 	}
 	for _, artifact := range []*sealedArtifact{
-		r.snapshotMemory, r.snapshotState, r.initramfs, r.guest, r.payload, r.kernel,
+		r.snapshotMemory, r.snapshotState, r.initramfs, r.guest, r.repository, r.payload, r.kernel,
 	} {
 		if artifact != nil && artifact.file != nil {
 			errs = append(errs, artifact.file.Close())
@@ -1044,11 +1070,16 @@ func (audit *bridgeIOLog) Record(phase, direction string, line []byte) error {
 	return nil
 }
 
-func buildGuestConfig(config codexvm.Config, sessionID string) (agentguest.Config, error) {
+func buildGuestConfig(config codexvm.Config, sessionID string, repository *sealedArtifact, tree repobundle.Bundle) (agentguest.Config, error) {
+	if repository == nil || repository.file == nil || tree.Schema != repobundle.Schema {
+		return agentguest.Config{}, errors.New("verified repository is unavailable for guest config")
+	}
 	guestConfig := agentguest.Config{
 		Schema: agentguest.ConfigSchema, SessionID: sessionID, CodexSHA256: config.CodexSHA256,
 		Arguments: append([]string(nil), config.Arguments...), StreamPort: agentguest.DefaultStreamPort,
 		ModelPort: config.GuestModelPort, PayloadDrive: guestPayloadDrive,
+		RepositoryDrive: guestRepositoryDrive, RepositorySize: uint64(repository.record.Artifact.Size),
+		RepositorySHA256: repository.record.Artifact.SHA256, RepositoryTreeRoot: tree.TreeRoot.String(),
 	}
 	if err := guestConfig.Validate(); err != nil {
 		return agentguest.Config{}, fmt.Errorf("validate strict guest config: %w", err)
@@ -1209,6 +1240,21 @@ func readSealedArtifact(artifact *sealedArtifact, maxBytes int64) ([]byte, error
 		return nil, err
 	}
 	return data, nil
+}
+
+func decodeSealedRepository(artifact *sealedArtifact) (repobundle.Bundle, error) {
+	if artifact == nil || artifact.file == nil || artifact.record.Artifact.Name != "repository" {
+		return repobundle.Bundle{}, errors.New("sealed repository artifact is unavailable")
+	}
+	size := artifact.record.Artifact.Size
+	if size <= 0 || uint64(size) > agentguest.MaxRepositoryBytes || size%512 != 0 {
+		return repobundle.Bundle{}, fmt.Errorf("sealed repository size %d is not a bounded block image", size)
+	}
+	bundle, err := repobundle.Decode(io.NewSectionReader(artifact.file, 0, size), repobundle.DefaultLimits())
+	if err != nil {
+		return repobundle.Bundle{}, fmt.Errorf("decode sealed repository: %w", err)
+	}
+	return bundle, nil
 }
 
 func artifactForOpenFile(name string, file *os.File) (artifactRecord, error) {

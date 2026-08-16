@@ -3,6 +3,7 @@
 package agentguest
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -18,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/repobundle"
 	"golang.org/x/sys/unix"
 )
 
@@ -29,6 +31,33 @@ func TestVerifyCodexExecutableIsPathAndHashBound(t *testing.T) {
 	// rootless test. Malformed expected hashes must still fail before trust.
 	if err := VerifyCodexExecutable(CodexExecutable, "bad"); err == nil {
 		t.Fatal("malformed Codex digest accepted")
+	}
+}
+
+func TestDecodeRepositoryBindsImageAndTree(t *testing.T) {
+	bundle, err := repobundle.FromEntries([]repobundle.Entry{{
+		Path: "README.md", Type: repobundle.EntryFile, Mode: 0o644, Data: []byte("hello\n"),
+	}}, repobundle.DefaultLimits())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var encoded bytes.Buffer
+	if err := repobundle.Encode(&encoded, bundle, repobundle.DefaultLimits()); err != nil {
+		t.Fatal(err)
+	}
+	digest := sha256.Sum256(encoded.Bytes())
+	got, err := DecodeRepository(bytes.NewReader(encoded.Bytes()), uint64(encoded.Len()), hex.EncodeToString(digest[:]), bundle.TreeRoot.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.TreeRoot != bundle.TreeRoot {
+		t.Fatalf("decoded tree root = %s, want %s", got.TreeRoot, bundle.TreeRoot)
+	}
+	if _, err := DecodeRepository(bytes.NewReader(encoded.Bytes()), uint64(encoded.Len()), strings.Repeat("0", 64), bundle.TreeRoot.String()); err == nil {
+		t.Fatal("wrong repository image digest accepted")
+	}
+	if _, err := DecodeRepository(bytes.NewReader(encoded.Bytes()), uint64(encoded.Len()), hex.EncodeToString(digest[:]), strings.Repeat("0", 64)); err == nil {
+		t.Fatal("wrong repository tree root accepted")
 	}
 }
 

@@ -232,6 +232,8 @@ func validGuestConfig() agentguest.Config {
 		Schema: agentguest.ConfigSchema, SessionID: strings.Repeat("1", 32), CodexSHA256: strings.Repeat("a", 64),
 		Arguments:  []string{"app-server", "--stdio", "-c", `model_provider="safe_change"`},
 		StreamPort: agentguest.DefaultStreamPort, ModelPort: 45678, PayloadDrive: "/dev/vda",
+		RepositoryDrive: agentguest.RepositoryDrive, RepositorySize: 512,
+		RepositorySHA256: strings.Repeat("b", 64), RepositoryTreeRoot: strings.Repeat("c", 64),
 	}
 }
 

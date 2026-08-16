@@ -105,10 +105,12 @@ make runtime-firecracker-codex-repository \
 
 The source must currently be a direct, quiescent directory without `.git`.
 The builder scans it twice and refuses a changed tree. The published bundle is
-decoded again before the identity record is written. This command establishes
-the host-owned repository format; attaching it as a read-only Firecracker
-drive, exporting the frozen final tree, and checking the resulting canonical
-delta are the next integration step and are not claimed by this target yet.
+decoded again before the identity record is written. Bundles are 512-byte
+aligned so the host shim can seal one as Firecracker's read-only `/dev/vdb`;
+the guest verifies its size, image hash, and tree root before materializing it
+for the unprivileged agent. Both the original and restored VMM inherit the same
+sealed descriptor. Freezing the complete process domain and exporting the
+final tree and canonical delta remain the next integration step.
 
 ## Add it to an HTTP service
 

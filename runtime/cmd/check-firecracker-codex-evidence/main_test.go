@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/repobundle"
 )
 
 type fixture struct {
@@ -344,10 +346,26 @@ func newFixture(t *testing.T) *fixture {
 	manifestJSON := mustMarshal(t, manifestValue)
 	payload := payloadRecord{Schema: 1, Payload: payloadBuild{ImagePath: f.opts.payload, ImageSHA256: hashBytes(payloadBytes), ImageSize: int64(len(payloadBytes)), Manifest: manifestValue, ManifestSHA256: hashBytes(manifestJSON)}, Codex: codex}
 	writeJSON(t, f.opts.payloadResult, payload)
+	repository, err := repobundle.FromEntries([]repobundle.Entry{{
+		Path: "README.md", Type: repobundle.EntryFile, Mode: 0o644, Data: []byte("repository fixture\n"),
+	}}, repobundle.DefaultLimits())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var repositoryBytes bytes.Buffer
+	if err := repobundle.Encode(&repositoryBytes, repository, repobundle.DefaultLimits()); err != nil {
+		t.Fatal(err)
+	}
+	mustWrite(t, filepath.Join(evidence, "repository.bundle"), repositoryBytes.Bytes(), 0o600)
 
 	session := strings.Repeat("1", 32)
 	args := pinnedArguments("http://127.0.0.1:12345/v1")
-	guest := guestConfig{Schema: 1, SessionID: session, CodexSHA256: codex.SHA256, Arguments: args, StreamPort: 7000, ModelPort: 12345, PayloadDrive: "/dev/vda"}
+	guest := guestConfig{
+		Schema: 2, SessionID: session, CodexSHA256: codex.SHA256, Arguments: args,
+		StreamPort: 7000, ModelPort: 12345, PayloadDrive: "/dev/vda",
+		RepositoryDrive: "/dev/vdb", RepositorySize: uint64(repositoryBytes.Len()),
+		RepositorySHA256: hashBytes(repositoryBytes.Bytes()), RepositoryTreeRoot: repository.TreeRoot.String(),
+	}
 	configBytes := mustMarshal(t, guest)
 	mustWrite(t, filepath.Join(evidence, "guest-config.json"), configBytes, 0o600)
 	initramfs := buildTestInitramfs(t, f.guestBinary, configBytes, 0o100400)
@@ -361,6 +379,7 @@ func newFixture(t *testing.T) *fixture {
 	artifacts := map[string]artifact{
 		"kernel":          {Name: "kernel", Size: 100, Mode: 0o400, SHA256: hashBytes([]byte("kernel"))},
 		"payload":         {Name: "payload", Size: int64(len(payloadBytes)), Mode: 0o400, SHA256: hashBytes(payloadBytes)},
+		"repository":      artifactFromBytes("repository.bundle", repositoryBytes.Bytes(), 0o600),
 		"guest":           {Name: "guest", Size: int64(len(f.guestBinary)), Mode: 0o400, SHA256: hashBytes(f.guestBinary)},
 		"guest_config":    artifactFromBytes("guest-config.json", configBytes, 0o600),
 		"initramfs":       artifactFromBytes("guest-initramfs.cpio", initramfs, 0o600),
@@ -373,11 +392,13 @@ func newFixture(t *testing.T) *fixture {
 		{Artifact: artifacts["kernel"], ChildFD: 4, LinuxSeals: 15},
 		{Artifact: artifact{Name: "runtime-initramfs", Size: artifacts["initramfs"].Size, Mode: 0o400, SHA256: artifacts["initramfs"].SHA256}, ChildFD: 5, LinuxSeals: 15},
 		{Artifact: artifacts["payload"], ChildFD: 6, LinuxSeals: 15},
+		{Artifact: artifact{Name: "repository", Size: artifacts["repository"].Size, Mode: 0o400, SHA256: artifacts["repository"].SHA256}, ChildFD: 7, LinuxSeals: 15},
 	}
 	load := []sealedArtifact{
 		{Artifact: artifact{Name: "snapshot-state", Size: artifacts["snapshot_state"].Size, Mode: 0o400, SHA256: artifacts["snapshot_state"].SHA256}, ChildFD: 4, LinuxSeals: 15},
 		{Artifact: artifact{Name: "snapshot-memory", Size: artifacts["snapshot_memory"].Size, Mode: 0o400, SHA256: artifacts["snapshot_memory"].SHA256}, ChildFD: 5, LinuxSeals: 15},
 		{Artifact: artifacts["payload"], ChildFD: 6, LinuxSeals: 15},
+		{Artifact: artifact{Name: "repository", Size: artifacts["repository"].Size, Mode: 0o400, SHA256: artifacts["repository"].SHA256}, ChildFD: 7, LinuxSeals: 15},
 	}
 	g1 := testProcess(evidence, 1, "g1-instance", 101, 10, 350, 1050, artifacts["firecracker"].SHA256)
 	g3 := testProcess(evidence, 3, "g3-instance", 202, 20, 1350, 2150, artifacts["firecracker"].SHA256)
@@ -408,16 +429,18 @@ func testProcess(evidence string, generation uint64, id string, pid int, startTi
 func writeFixtureEvents(t *testing.T, f *fixture) {
 	t.Helper()
 	r := f.result
+	var config guestConfig
+	mustJSON(t, mustRead(t, filepath.Join(f.opts.evidence, "guest-config.json")), &config)
 	guest := sealedArtifact{Artifact: r.Artifacts["guest"], ChildFD: 0, LinuxSeals: 15}
 	details := []any{
 		map[string]any{"session_id": r.SessionID, "g1_id": r.Processes[0].ID, "g3_id": r.Processes[1].ID, "codex_sha256": r.CodexSHA256, "runner_sha256": r.RunnerSHA256, "arguments_sha256": r.ArgumentsSHA256, "workspace_mapping": r.WorkspaceMapping},
-		map[string]any{"kernel": r.SealedBootInputs[0], "payload": r.SealedBootInputs[2], "guest": guest, "initramfs": r.SealedBootInputs[1]},
+		map[string]any{"kernel": r.SealedBootInputs[0], "payload": r.SealedBootInputs[2], "repository": r.SealedBootInputs[3], "repository_tree_root": config.RepositoryTreeRoot, "guest": guest, "initramfs": r.SealedBootInputs[1]},
 		map[string]any{"target": "127.0.0.1:12345", "socket": filepath.Join(f.opts.evidence, "model-proxy.sock")},
 		nil, map[string]any{"stream_port": 7000, "model_port": 12345}, nil,
 		map[string]any{"host_barrier": r.Checkpoint.HostBarrier, "guest_barrier": r.Checkpoint.GuestBarrier}, nil, nil,
 		map[string]any{"state": r.Artifacts["snapshot_state"], "memory": r.Artifacts["snapshot_memory"]},
 		map[string]any{"disposition": "supervisor"},
-		map[string]any{"state": r.SealedLoadInputs[0], "memory": r.SealedLoadInputs[1]},
+		map[string]any{"state": r.SealedLoadInputs[0], "memory": r.SealedLoadInputs[1], "payload": r.SealedLoadInputs[2], "repository": r.SealedLoadInputs[3]},
 		map[string]any{"generation": 3}, nil,
 		map[string]any{"state_sha256": r.Artifacts["snapshot_state"].SHA256, "memory_sha256": r.Artifacts["snapshot_memory"].SHA256},
 		map[string]any{"stream_port": 7000, "model_port": 12345}, nil, nil, nil, nil, nil, map[string]any{"error": ""},
@@ -454,11 +477,12 @@ func writeFixtureAPI(t *testing.T, f *fixture) {
 		apiRequest(3, 420, "PUT", "/boot-source", 204, map[string]any{"kernel_image_path": fdKernel, "boot_args": "console=ttyS0 reboot=k panic=1 pci=off rdinit=/init", "initrd_path": fdInitramfs}),
 		apiRequest(4, 430, "PUT", "/vsock", 204, map[string]any{"guest_cid": 3, "uds_path": g1.VsockBackend.Path}),
 		apiRequest(5, 440, "PUT", "/drives/payload", 204, map[string]any{"drive_id": "payload", "path_on_host": fdPayload, "is_root_device": false, "is_read_only": true}),
-		apiRequest(6, 510, "PUT", "/actions", 204, map[string]any{"action_type": "InstanceStart"}),
-		apiResponse(7, 550, "GET", "/", 200, state(g1, "Running")),
-		apiRequest(8, 810, "PATCH", "/vm", 204, map[string]any{"state": "Paused"}),
-		apiResponse(9, 850, "GET", "/", 200, state(g1, "Paused")),
-		apiRequest(10, 950, "PUT", "/snapshot/create", 204, map[string]any{"snapshot_type": "Full", "snapshot_path": filepath.Join(f.opts.evidence, "snapshot.state"), "mem_file_path": filepath.Join(f.opts.evidence, "snapshot.memory")}),
+		apiRequest(6, 445, "PUT", "/drives/repository", 204, map[string]any{"drive_id": "repository", "path_on_host": fdRepository, "is_root_device": false, "is_read_only": true}),
+		apiRequest(7, 510, "PUT", "/actions", 204, map[string]any{"action_type": "InstanceStart"}),
+		apiResponse(8, 550, "GET", "/", 200, state(g1, "Running")),
+		apiRequest(9, 810, "PATCH", "/vm", 204, map[string]any{"state": "Paused"}),
+		apiResponse(10, 850, "GET", "/", 200, state(g1, "Paused")),
+		apiRequest(11, 950, "PUT", "/snapshot/create", 204, map[string]any{"snapshot_type": "Full", "snapshot_path": filepath.Join(f.opts.evidence, "snapshot.state"), "mem_file_path": filepath.Join(f.opts.evidence, "snapshot.memory")}),
 	}
 	g3Calls := []map[string]any{
 		apiResponse(1, 1360, "GET", "/", 200, state(g3, "Not started")),

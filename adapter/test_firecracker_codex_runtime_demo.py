@@ -204,6 +204,7 @@ class FirecrackerCodexRuntimeDemoTests(unittest.TestCase):
             ("kernel", False),
             ("guest", True),
             ("payload", False),
+            ("repository", False),
         ):
             path = artifacts / label
             contents = (label + "-fixture").encode("ascii")
@@ -223,6 +224,8 @@ class FirecrackerCodexRuntimeDemoTests(unittest.TestCase):
             "guest_sha256": digests["guest"],
             "payload": paths["payload"],
             "payload_sha256": digests["payload"],
+            "repository": paths["repository"],
+            "repository_sha256": digests["repository"],
             "codex_sha256": digests["codex"],
             "runtime_evidence": runtime,
             "adapter_evidence": adapter,

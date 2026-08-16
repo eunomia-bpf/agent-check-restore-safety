@@ -1,6 +1,8 @@
 // Command check-firecracker-codex-evidence independently verifies the
 // retained evidence from one firecracker-codex-shim snapshot/restore run.
-// It intentionally imports no shim or runtime implementation package.
+// It intentionally imports no shim lifecycle implementation. The repository
+// wire-format package is shared so the producer and checker agree on the one
+// canonical byte representation while all hashes and bindings are recomputed.
 package main
 
 import (
@@ -22,6 +24,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/repobundle"
 )
 
 const (
@@ -35,9 +39,11 @@ const (
 	restoredGeneration = uint64(3)
 	guestWorkspace     = "/workspace"
 	payloadDrive       = "/dev/vda"
+	repositoryDrive    = "/dev/vdb"
 	fdKernel           = "/proc/self/fd/4"
 	fdInitramfs        = "/proc/self/fd/5"
 	fdPayload          = "/proc/self/fd/6"
+	fdRepository       = "/proc/self/fd/7"
 	maxJSONBytes       = int64(128 << 20)
 	maxJSONLLines      = 1 << 20
 	immutableSeals     = 15
@@ -141,13 +147,17 @@ type resultRecord struct {
 }
 
 type guestConfig struct {
-	Schema       int      `json:"schema"`
-	SessionID    string   `json:"session_id"`
-	CodexSHA256  string   `json:"codex_sha256"`
-	Arguments    []string `json:"arguments"`
-	StreamPort   uint32   `json:"stream_port"`
-	ModelPort    uint32   `json:"model_port"`
-	PayloadDrive string   `json:"payload_drive"`
+	Schema             int      `json:"schema"`
+	SessionID          string   `json:"session_id"`
+	CodexSHA256        string   `json:"codex_sha256"`
+	Arguments          []string `json:"arguments"`
+	StreamPort         uint32   `json:"stream_port"`
+	ModelPort          uint32   `json:"model_port"`
+	PayloadDrive       string   `json:"payload_drive"`
+	RepositoryDrive    string   `json:"repository_drive"`
+	RepositorySize     uint64   `json:"repository_size"`
+	RepositorySHA256   string   `json:"repository_sha256"`
+	RepositoryTreeRoot string   `json:"repository_tree_root"`
 }
 
 type manifestEntry struct {
@@ -863,7 +873,7 @@ func (v *verifier) verifyResultAndArtifacts() error {
 	wantKeys := []string{
 		"bridge_io", "events", "firecracker", "firecracker_api_g1", "firecracker_api_g3",
 		"firecracker_relay_g1", "firecracker_relay_g3", "guest", "guest_config", "initramfs",
-		"kernel", "model_proxy", "payload", "runner", "snapshot_memory", "snapshot_state",
+		"kernel", "model_proxy", "payload", "repository", "runner", "snapshot_memory", "snapshot_state",
 	}
 	gotKeys := make([]string, 0, len(v.result.Artifacts))
 	for key := range v.result.Artifacts {
@@ -897,6 +907,7 @@ func (v *verifier) verifyResultAndArtifacts() error {
 		"guest_config":         "guest-config.json",
 		"initramfs":            "guest-initramfs.cpio",
 		"model_proxy":          "model-proxy.jsonl",
+		"repository":           "repository.bundle",
 		"runner":               "runner",
 		"snapshot_memory":      "snapshot.memory",
 		"snapshot_state":       "snapshot.state",
@@ -979,14 +990,14 @@ func validateArtifact(item artifact) error {
 }
 
 func (v *verifier) verifySealedInputs() error {
-	if len(v.result.SealedBootInputs) != 3 || len(v.result.SealedLoadInputs) != 3 {
-		return errors.New("sealed input sets must each contain exactly three records")
+	if len(v.result.SealedBootInputs) != 4 || len(v.result.SealedLoadInputs) != 4 {
+		return errors.New("sealed input sets must each contain exactly four records")
 	}
 	wantBoot := []struct {
 		name        string
 		fd          int
 		artifactKey string
-	}{{"kernel", 4, "kernel"}, {"runtime-initramfs", 5, "initramfs"}, {"payload", 6, "payload"}}
+	}{{"kernel", 4, "kernel"}, {"runtime-initramfs", 5, "initramfs"}, {"payload", 6, "payload"}, {"repository", 7, "repository"}}
 	for index, want := range wantBoot {
 		got := v.result.SealedBootInputs[index]
 		if got.Artifact.Name != want.name || got.ChildFD != want.fd || got.LinuxSeals != immutableSeals {
@@ -1001,7 +1012,7 @@ func (v *verifier) verifySealedInputs() error {
 		name        string
 		fd          int
 		artifactKey string
-	}{{"snapshot-state", 4, "snapshot_state"}, {"snapshot-memory", 5, "snapshot_memory"}, {"payload", 6, "payload"}}
+	}{{"snapshot-state", 4, "snapshot_state"}, {"snapshot-memory", 5, "snapshot_memory"}, {"payload", 6, "payload"}, {"repository", 7, "repository"}}
 	for index, want := range wantLoad {
 		got := v.result.SealedLoadInputs[index]
 		if got.Artifact.Name != want.name || got.ChildFD != want.fd || got.LinuxSeals != immutableSeals {
@@ -1230,11 +1241,25 @@ func (v *verifier) verifyGuestAndInitramfs() error {
 	if err != nil {
 		return err
 	}
-	if err := decodeExact(configBytes, []string{"schema", "session_id", "codex_sha256", "arguments", "stream_port", "model_port", "payload_drive"}, &v.guest); err != nil {
+	if err := decodeExact(configBytes, []string{"schema", "session_id", "codex_sha256", "arguments", "stream_port", "model_port", "payload_drive", "repository_drive", "repository_size", "repository_sha256", "repository_tree_root"}, &v.guest); err != nil {
 		return err
 	}
-	if v.guest.Schema != 1 || v.guest.SessionID != v.result.SessionID || v.guest.CodexSHA256 != v.result.CodexSHA256 || v.guest.StreamPort != streamPort || v.guest.ModelPort == 0 || v.guest.ModelPort == streamPort || v.guest.PayloadDrive != payloadDrive {
+	if v.guest.Schema != 2 || v.guest.SessionID != v.result.SessionID || v.guest.CodexSHA256 != v.result.CodexSHA256 || v.guest.StreamPort != streamPort || v.guest.ModelPort == 0 || v.guest.ModelPort == streamPort || v.guest.PayloadDrive != payloadDrive || v.guest.RepositoryDrive != repositoryDrive {
 		return errors.New("guest config is not linked to the successful run")
+	}
+	repositoryPath := evidencePath(v, "repository.bundle")
+	repositoryFile, err := os.Open(repositoryPath)
+	if err != nil {
+		return err
+	}
+	repository, decodeErr := repobundle.Decode(repositoryFile, repobundle.DefaultLimits())
+	closeErr := repositoryFile.Close()
+	if err := errors.Join(decodeErr, closeErr); err != nil {
+		return fmt.Errorf("decode retained repository: %w", err)
+	}
+	repositoryArtifact := v.result.Artifacts["repository"]
+	if v.guest.RepositorySize != uint64(repositoryArtifact.Size) || v.guest.RepositorySHA256 != repositoryArtifact.SHA256 || v.guest.RepositoryTreeRoot != repository.TreeRoot.String() {
+		return errors.New("guest repository identity differs from the retained canonical bundle")
 	}
 	if len(v.guest.Arguments) != v.result.ArgumentsCount || len(v.guest.Arguments) < 2 || v.guest.Arguments[0] != "app-server" || v.guest.Arguments[1] != "--stdio" {
 		return errors.New("guest arguments are not the fixed App Server entrypoint")
@@ -1565,20 +1590,23 @@ func (v *verifier) verifyEventDetails(index int, event eventRecord) error {
 		}
 	case 1:
 		var d struct {
-			Kernel, Payload, Guest, Initramfs sealedArtifact `json:"-"`
+			Kernel, Payload, Repository, Guest, Initramfs sealedArtifact `json:"-"`
+			RepositoryTreeRoot                            string         `json:"-"`
 		}
 		type wire struct {
-			Kernel    sealedArtifact `json:"kernel"`
-			Payload   sealedArtifact `json:"payload"`
-			Guest     sealedArtifact `json:"guest"`
-			Initramfs sealedArtifact `json:"initramfs"`
+			Kernel             sealedArtifact `json:"kernel"`
+			Payload            sealedArtifact `json:"payload"`
+			Repository         sealedArtifact `json:"repository"`
+			RepositoryTreeRoot string         `json:"repository_tree_root"`
+			Guest              sealedArtifact `json:"guest"`
+			Initramfs          sealedArtifact `json:"initramfs"`
 		}
 		var w wire
-		if err := decodeExact(event.Details, []string{"kernel", "payload", "guest", "initramfs"}, &w); err != nil {
+		if err := decodeExact(event.Details, []string{"kernel", "payload", "repository", "repository_tree_root", "guest", "initramfs"}, &w); err != nil {
 			return err
 		}
-		d.Kernel, d.Payload, d.Guest, d.Initramfs = w.Kernel, w.Payload, w.Guest, w.Initramfs
-		if d.Kernel != v.result.SealedBootInputs[0] || d.Initramfs != v.result.SealedBootInputs[1] || d.Payload != v.result.SealedBootInputs[2] {
+		d.Kernel, d.Payload, d.Repository, d.RepositoryTreeRoot, d.Guest, d.Initramfs = w.Kernel, w.Payload, w.Repository, w.RepositoryTreeRoot, w.Guest, w.Initramfs
+		if d.Kernel != v.result.SealedBootInputs[0] || d.Initramfs != v.result.SealedBootInputs[1] || d.Payload != v.result.SealedBootInputs[2] || d.Repository != v.result.SealedBootInputs[3] || d.RepositoryTreeRoot != v.guest.RepositoryTreeRoot {
 			return errors.New("sealed boot event differs from result")
 		}
 		guest := v.result.Artifacts["guest"]
@@ -1651,13 +1679,15 @@ func (v *verifier) verifyEventDetails(index int, event eventRecord) error {
 		}
 	case 11:
 		var d struct {
-			State  sealedArtifact `json:"state"`
-			Memory sealedArtifact `json:"memory"`
+			State      sealedArtifact `json:"state"`
+			Memory     sealedArtifact `json:"memory"`
+			Payload    sealedArtifact `json:"payload"`
+			Repository sealedArtifact `json:"repository"`
 		}
-		if err := decodeExact(event.Details, []string{"state", "memory"}, &d); err != nil {
+		if err := decodeExact(event.Details, []string{"state", "memory", "payload", "repository"}, &d); err != nil {
 			return err
 		}
-		if d.State != v.result.SealedLoadInputs[0] || d.Memory != v.result.SealedLoadInputs[1] {
+		if d.State != v.result.SealedLoadInputs[0] || d.Memory != v.result.SealedLoadInputs[1] || d.Payload != v.result.SealedLoadInputs[2] || d.Repository != v.result.SealedLoadInputs[3] {
 			return errors.New("sealed snapshot inputs differ from result")
 		}
 	case 12:
@@ -1708,6 +1738,7 @@ var g1API = []apiExpectation{
 	{"PUT", "/boot-source", 204, true, ""},
 	{"PUT", "/vsock", 204, true, ""},
 	{"PUT", "/drives/payload", 204, true, ""},
+	{"PUT", "/drives/repository", 204, true, ""},
 	{"PUT", "/actions", 204, true, ""},
 	{"GET", "/", 200, false, "Running"},
 	{"PATCH", "/vm", 204, true, ""},
@@ -1735,9 +1766,9 @@ func (v *verifier) verifyAPITraces() error {
 	// Join API call times to the independently ordered lifecycle log.
 	if !(g1[0].TimeNS >= v.g1.StartedTimeNS && g1[0].TimeNS <= v.events[3].TimeNS &&
 		g1[1].TimeNS > v.events[3].TimeNS && g1[4].TimeNS < v.events[4].TimeNS &&
-		g1[5].TimeNS > v.events[4].TimeNS && g1[6].TimeNS < v.events[5].TimeNS &&
-		g1[7].TimeNS > v.events[7].TimeNS && g1[8].TimeNS < v.events[8].TimeNS &&
-		g1[9].TimeNS > v.events[8].TimeNS && g1[9].TimeNS < v.events[9].TimeNS && g1[9].TimeNS < v.g1.StoppedTimeNS) {
+		g1[5].TimeNS < v.events[4].TimeNS && g1[6].TimeNS > v.events[4].TimeNS && g1[7].TimeNS < v.events[5].TimeNS &&
+		g1[8].TimeNS > v.events[7].TimeNS && g1[9].TimeNS < v.events[8].TimeNS &&
+		g1[10].TimeNS > v.events[8].TimeNS && g1[10].TimeNS < v.events[9].TimeNS && g1[10].TimeNS < v.g1.StoppedTimeNS) {
 		return errors.New("g1 API times contradict checkpoint/pause/snapshot lifecycle")
 	}
 	if !(g3[0].TimeNS >= v.g3.StartedTimeNS && g3[0].TimeNS <= v.events[13].TimeNS &&
@@ -1873,6 +1904,19 @@ func (v *verifier) verifyAPIRequest(label string, index int, raw []byte) error {
 			}
 		case 5:
 			var x struct {
+				DriveID  string `json:"drive_id"`
+				Path     string `json:"path_on_host"`
+				Root     bool   `json:"is_root_device"`
+				ReadOnly bool   `json:"is_read_only"`
+			}
+			if err := decodeExact(raw, []string{"drive_id", "path_on_host", "is_root_device", "is_read_only"}, &x); err != nil {
+				return err
+			}
+			if x.DriveID != "repository" || x.Path != fdRepository || x.Root || !x.ReadOnly {
+				return errors.New("repository is not a read-only non-root fd7 drive")
+			}
+		case 6:
+			var x struct {
 				Action string `json:"action_type"`
 			}
 			if err := decodeExact(raw, []string{"action_type"}, &x); err != nil {
@@ -1881,9 +1925,9 @@ func (v *verifier) verifyAPIRequest(label string, index int, raw []byte) error {
 			if x.Action != "InstanceStart" {
 				return errors.New("g1 action is not InstanceStart")
 			}
-		case 7:
+		case 8:
 			return verifyVMStateRequest(raw, "Paused")
-		case 9:
+		case 10:
 			var x struct {
 				Type     string `json:"snapshot_type"`
 				Snapshot string `json:"snapshot_path"`

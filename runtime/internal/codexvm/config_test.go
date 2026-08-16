@@ -29,7 +29,7 @@ func TestLoadConfigAcceptsStrictContractAndCopiesArguments(t *testing.T) {
 	if config.RunnerSHA256 != fixture.environment[EnvRunnerSHA256] || config.Firecracker != fixture.environment[EnvFirecracker] || config.FirecrackerSHA256 != fixture.environment[EnvFirecrackerSHA256] ||
 		config.Kernel != fixture.environment[EnvKernel] || config.KernelSHA256 != fixture.environment[EnvKernelSHA256] ||
 		config.Guest != fixture.environment[EnvGuest] || config.GuestSHA256 != fixture.environment[EnvGuestSHA256] || config.Payload != fixture.environment[EnvPayload] ||
-		config.PayloadSHA256 != fixture.environment[EnvPayloadSHA256] || config.CodexSHA256 != fixture.environment[EnvCodexSHA256] || config.EvidenceDir != fixture.environment[EnvEvidenceDir] || config.Workspace != fixture.environment[EnvWorkspace] {
+		config.PayloadSHA256 != fixture.environment[EnvPayloadSHA256] || config.Repository != fixture.environment[EnvRepository] || config.RepositorySHA256 != fixture.environment[EnvRepositorySHA256] || config.CodexSHA256 != fixture.environment[EnvCodexSHA256] || config.EvidenceDir != fixture.environment[EnvEvidenceDir] || config.Workspace != fixture.environment[EnvWorkspace] {
 		t.Fatalf("loaded environment = %+v", config)
 	}
 	if config.HostModelTarget != "127.0.0.1:43210" || config.GuestModelPort != 43210 {
@@ -77,7 +77,7 @@ func TestLoadConfigRequiresAllFixedEnvironmentValues(t *testing.T) {
 }
 
 func TestLoadConfigRejectsMalformedDigests(t *testing.T) {
-	for _, name := range []string{EnvRunnerSHA256, EnvFirecrackerSHA256, EnvKernelSHA256, EnvGuestSHA256, EnvPayloadSHA256, EnvCodexSHA256} {
+	for _, name := range []string{EnvRunnerSHA256, EnvFirecrackerSHA256, EnvKernelSHA256, EnvGuestSHA256, EnvPayloadSHA256, EnvRepositorySHA256, EnvCodexSHA256} {
 		for label, value := range map[string]string{
 			"short":     "abc",
 			"uppercase": strings.Repeat("A", 64),
@@ -448,6 +448,8 @@ func newConfigFixture(t *testing.T) *configFixture {
 			EnvGuestSHA256:       strings.Repeat("5", 64),
 			EnvPayload:           writeConfigFile(t, filepath.Join(artifacts, "payload.squashfs"), 0o600),
 			EnvPayloadSHA256:     strings.Repeat("3", 64),
+			EnvRepository:        writeConfigFile(t, filepath.Join(artifacts, "repository.bundle"), 0o600),
+			EnvRepositorySHA256:  strings.Repeat("6", 64),
 			EnvCodexSHA256:       strings.Repeat("4", 64),
 			EnvEvidenceDir:       evidence,
 			EnvWorkspace:         workspace,

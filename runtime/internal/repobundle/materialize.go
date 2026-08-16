@@ -15,6 +15,22 @@ import (
 // directory. Symbolic links are created only after all directories and files,
 // so no earlier write can traverse bundle-controlled link state.
 func (bundle Bundle) Materialize(destination string) error {
+	return bundle.materialize(destination, nil)
+}
+
+// MaterializeOwned is Materialize with every created object, including the
+// destination directory and symbolic links, assigned to one numeric identity.
+// It is used by a privileged sandbox supervisor before dropping privileges to
+// the agent process.
+func (bundle Bundle) MaterializeOwned(destination string, uid, gid int) error {
+	if uid < 0 || gid < 0 {
+		return errors.New("repository materialization owner must be nonnegative")
+	}
+	owner := [2]int{uid, gid}
+	return bundle.materialize(destination, &owner)
+}
+
+func (bundle Bundle) materialize(destination string, owner *[2]int) error {
 	canonical, err := FromEntries(bundle.Entries, limitsForBundle(bundle))
 	if err != nil {
 		return fmt.Errorf("validate repository before materialization: %w", err)
@@ -58,6 +74,11 @@ func (bundle Bundle) Materialize(destination string) error {
 	if !errors.Is(readErr, io.EOF) {
 		return fmt.Errorf("read repository destination: %w", readErr)
 	}
+	if owner != nil {
+		if err := unix.Fchown(rootDescriptor, owner[0], owner[1]); err != nil {
+			return fmt.Errorf("assign repository destination owner: %w", err)
+		}
+	}
 
 	for _, entry := range bundle.Entries {
 		if entry.Type != EntryDirectory {
@@ -68,8 +89,12 @@ func (bundle Bundle) Materialize(destination string) error {
 			return fmt.Errorf("open parent of repository directory %q: %w", entry.Path, err)
 		}
 		createErr := unix.Mkdirat(parent, name, 0o700)
+		var ownerErr error
+		if createErr == nil && owner != nil {
+			ownerErr = unix.Fchownat(parent, name, owner[0], owner[1], unix.AT_SYMLINK_NOFOLLOW)
+		}
 		closeErr := unix.Close(parent)
-		if err := errors.Join(createErr, closeErr); err != nil {
+		if err := errors.Join(createErr, ownerErr, closeErr); err != nil {
 			return fmt.Errorf("create repository directory %q: %w", entry.Path, err)
 		}
 	}
@@ -92,10 +117,14 @@ func (bundle Bundle) Materialize(destination string) error {
 			return fmt.Errorf("wrap repository file %q descriptor", entry.Path)
 		}
 		writeErr := writeFull(file, entry.Data)
+		var ownerErr error
+		if owner != nil {
+			ownerErr = unix.Fchown(descriptor, owner[0], owner[1])
+		}
 		modeErr := unix.Fchmod(descriptor, entry.Mode)
 		syncErr := file.Sync()
 		closeErr := file.Close()
-		if err := errors.Join(writeErr, modeErr, syncErr, closeErr); err != nil {
+		if err := errors.Join(writeErr, ownerErr, modeErr, syncErr, closeErr); err != nil {
 			return fmt.Errorf("write repository file %q: %w", entry.Path, err)
 		}
 	}
@@ -108,8 +137,12 @@ func (bundle Bundle) Materialize(destination string) error {
 			return fmt.Errorf("open parent of repository symbolic link %q: %w", entry.Path, err)
 		}
 		linkErr := unix.Symlinkat(string(entry.Data), parent, name)
+		var ownerErr error
+		if linkErr == nil && owner != nil {
+			ownerErr = unix.Fchownat(parent, name, owner[0], owner[1], unix.AT_SYMLINK_NOFOLLOW)
+		}
 		closeErr := unix.Close(parent)
-		if err := errors.Join(linkErr, closeErr); err != nil {
+		if err := errors.Join(linkErr, ownerErr, closeErr); err != nil {
 			return fmt.Errorf("create repository symbolic link %q: %w", entry.Path, err)
 		}
 	}
@@ -193,7 +226,11 @@ func limitsForBundle(bundle Bundle) Limits {
 	}
 	bodySize, err := encodedBodySize(bundle.Entries)
 	if err == nil && bodySize <= ^uint64(0)-headerSize {
-		limits.MaxBundleBytes = uint64(headerSize) + bodySize
+		total := uint64(headerSize) + bodySize
+		padding := paddingForAlignment(total, blockDeviceAlignment)
+		if padding <= ^uint64(0)-total {
+			limits.MaxBundleBytes = total + padding
+		}
 	} else {
 		limits.MaxBundleBytes = ^uint64(0)
 	}

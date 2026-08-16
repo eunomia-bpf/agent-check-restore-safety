@@ -38,6 +38,9 @@ func TestBuildDecodeAndMaterializeCanonicalRepository(t *testing.T) {
 	if !bytes.Equal(first.Bytes(), second.Bytes()) {
 		t.Fatal("same repository did not produce byte-identical bundles")
 	}
+	if first.Len()%blockDeviceAlignment != 0 {
+		t.Fatalf("repository bundle size %d is not block aligned", first.Len())
+	}
 	decoded, err := Decode(bytes.NewReader(first.Bytes()), DefaultLimits())
 	if err != nil {
 		t.Fatal(err)
@@ -57,6 +60,23 @@ func TestBuildDecodeAndMaterializeCanonicalRepository(t *testing.T) {
 	}
 	if err := decoded.Materialize(destination); err != nil {
 		t.Fatal(err)
+	}
+	owned := filepath.Join(t.TempDir(), "owned")
+	if err := os.Mkdir(owned, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := decoded.MaterializeOwned(owned, os.Geteuid(), os.Getegid()); err != nil {
+		t.Fatal(err)
+	}
+	for _, relative := range []string{".", "README.md", "cmd", "cmd/readme", "cmd/run"} {
+		info, err := os.Lstat(filepath.Join(owned, relative))
+		if err != nil {
+			t.Fatal(err)
+		}
+		stat := info.Sys().(*syscall.Stat_t)
+		if stat.Uid != uint32(os.Geteuid()) || stat.Gid != uint32(os.Getegid()) {
+			t.Fatalf("owned entry %s has uid/gid %d/%d", relative, stat.Uid, stat.Gid)
+		}
 	}
 	assertFile(t, filepath.Join(destination, "README.md"), []byte("hello\n"), 0o644)
 	assertFile(t, filepath.Join(destination, "cmd", "run"), []byte{'#', '!', 0, '\n'}, 0o755)
@@ -142,6 +162,7 @@ func TestDecodeRejectsEveryBoundIntegrityAndCanonicalityViolation(t *testing.T) 
 		"declared total":  func(data []byte) []byte { binary.BigEndian.PutUint64(data[32:40], uint64(len(data)-1)); return data },
 		"body hash":       func(data []byte) []byte { data[72] ^= 1; return data },
 		"tree root":       func(data []byte) []byte { data[40] ^= 1; return data },
+		"block padding":   func(data []byte) []byte { data[len(data)-1] = 1; return data },
 		"entry reserved":  func(data []byte) []byte { data[headerSize+1] = 1; return data },
 		"record size":     func(data []byte) []byte { data[headerSize+63] ^= 1; return data },
 		"path padding": func(data []byte) []byte {
@@ -188,7 +209,7 @@ func TestDecodeRejectsImpossibleRecordBeforeContentAllocation(t *testing.T) {
 	binary.BigEndian.PutUint32(header[12:16], headerSize)
 	binary.BigEndian.PutUint64(header[16:24], 1)
 	binary.BigEndian.PutUint64(header[24:32], declaredData)
-	binary.BigEndian.PutUint64(header[32:40], headerSize+entryHeaderSize+encodedAlignment)
+	binary.BigEndian.PutUint64(header[32:40], blockDeviceAlignment)
 	entry := make([]byte, entryHeaderSize+encodedAlignment)
 	entry[0] = byte(EntryFile)
 	binary.BigEndian.PutUint32(entry[4:8], 0o644)
@@ -209,7 +230,9 @@ func TestDecodeRejectsImpossibleRecordBeforeContentAllocation(t *testing.T) {
 	binary.BigEndian.PutUint64(largeHeader[16:24], 1)
 	binary.BigEndian.PutUint64(largeHeader[24:32], largeDeclaredData)
 	largeRecordSize := uint64(entryHeaderSize+encodedAlignment) + largeDeclaredData
-	binary.BigEndian.PutUint64(largeHeader[32:40], uint64(headerSize)+largeRecordSize)
+	largeTotal := uint64(headerSize) + largeRecordSize
+	largeTotal += paddingForAlignment(largeTotal, blockDeviceAlignment)
+	binary.BigEndian.PutUint64(largeHeader[32:40], largeTotal)
 	largeEntry := make([]byte, entryHeaderSize+encodedAlignment)
 	largeEntry[0] = byte(EntryFile)
 	binary.BigEndian.PutUint32(largeEntry[4:8], 0o644)
@@ -229,8 +252,8 @@ func TestDecodeRejectsImpossibleRecordBeforeContentAllocation(t *testing.T) {
 	copy(tooMany[0:8], bundleMagic[:])
 	binary.BigEndian.PutUint32(tooMany[8:12], Schema)
 	binary.BigEndian.PutUint32(tooMany[12:16], headerSize)
-	binary.BigEndian.PutUint64(tooMany[16:24], 1)
-	binary.BigEndian.PutUint64(tooMany[32:40], headerSize)
+	binary.BigEndian.PutUint64(tooMany[16:24], 4)
+	binary.BigEndian.PutUint64(tooMany[32:40], blockDeviceAlignment)
 	if _, err := Decode(bytes.NewReader(tooMany), DefaultLimits()); err == nil || !strings.Contains(err.Error(), "too small") {
 		t.Fatalf("impossible entry count error = %v", err)
 	}

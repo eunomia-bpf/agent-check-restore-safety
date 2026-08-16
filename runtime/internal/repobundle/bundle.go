@@ -18,10 +18,11 @@ import (
 )
 
 const (
-	Schema           uint32 = 1
-	headerSize              = 128
-	entryHeaderSize         = 96
-	encodedAlignment        = 8
+	Schema               uint32 = 2
+	headerSize                  = 128
+	entryHeaderSize             = 96
+	encodedAlignment            = 8
+	blockDeviceAlignment        = 512
 
 	EntryDirectory EntryType = 1
 	EntryFile      EntryType = 2
@@ -29,7 +30,7 @@ const (
 )
 
 var (
-	bundleMagic = [8]byte{'S', 'C', 'R', 'B', 'N', 'D', 'L', '1'}
+	bundleMagic = [8]byte{'S', 'C', 'R', 'B', 'N', 'D', 'L', '2'}
 	treeDomain  = []byte("safe-change-repository-tree-v1\x00")
 )
 
@@ -181,10 +182,12 @@ func Encode(writer io.Writer, bundle Bundle, limits Limits) error {
 }
 
 func encodeCanonical(writer io.Writer, canonical Bundle, limits Limits) error {
-	bodySize, err := encodedBodySize(canonical.Entries)
+	entriesSize, err := encodedBodySize(canonical.Entries)
 	if err != nil {
 		return err
 	}
+	devicePadding := paddingForAlignment(uint64(headerSize)+entriesSize, blockDeviceAlignment)
+	bodySize := entriesSize + devicePadding
 	totalSize := uint64(headerSize) + bodySize
 	if totalSize > limits.MaxBundleBytes {
 		return fmt.Errorf("encoded repository bundle is %d bytes, limit is %d", totalSize, limits.MaxBundleBytes)
@@ -192,6 +195,9 @@ func encodeCanonical(writer io.Writer, canonical Bundle, limits Limits) error {
 	bodyDigest := sha256.New()
 	if err := encodeEntries(bodyDigest, canonical.Entries); err != nil {
 		return fmt.Errorf("hash repository bundle body: %w", err)
+	}
+	if err := writeZeros(bodyDigest, devicePadding); err != nil {
+		return fmt.Errorf("hash repository bundle block padding: %w", err)
 	}
 
 	header := make([]byte, headerSize)
@@ -208,6 +214,9 @@ func encodeCanonical(writer io.Writer, canonical Bundle, limits Limits) error {
 	}
 	if err := encodeEntries(writer, canonical.Entries); err != nil {
 		return fmt.Errorf("write repository bundle body: %w", err)
+	}
+	if err := writeZeros(writer, devicePadding); err != nil {
+		return fmt.Errorf("write repository bundle block padding: %w", err)
 	}
 	return nil
 }
@@ -242,6 +251,9 @@ func Decode(reader io.Reader, limits Limits) (Bundle, error) {
 	if totalSize < headerSize || totalSize > limits.MaxBundleBytes {
 		return Bundle{}, fmt.Errorf("repository bundle declares invalid total size %d", totalSize)
 	}
+	if totalSize%blockDeviceAlignment != 0 {
+		return Bundle{}, fmt.Errorf("repository bundle size %d is not aligned for a block device", totalSize)
+	}
 	bodySize := totalSize - headerSize
 	const minimumEntrySize = entryHeaderSize + encodedAlignment
 	if entryCount > bodySize/minimumEntrySize {
@@ -270,8 +282,11 @@ func Decode(reader io.Reader, limits Limits) (Bundle, error) {
 		}
 		entries = append(entries, entry)
 	}
-	if body.N != 0 {
+	if body.N >= blockDeviceAlignment {
 		return Bundle{}, fmt.Errorf("repository bundle body contains %d undeclared bytes", body.N)
+	}
+	if err := readZeroPadding(teed, uint64(body.N)); err != nil {
+		return Bundle{}, fmt.Errorf("read repository bundle block padding: %w", err)
 	}
 	var actualBody Digest
 	copy(actualBody[:], bodyHash.Sum(nil))
@@ -541,7 +556,11 @@ func validateLimits(limits Limits) error {
 }
 
 func paddingFor(length uint64) uint64 {
-	return (encodedAlignment - length%encodedAlignment) % encodedAlignment
+	return paddingForAlignment(length, encodedAlignment)
+}
+
+func paddingForAlignment(length, alignment uint64) uint64 {
+	return (alignment - length%alignment) % alignment
 }
 
 func writeFull(writer io.Writer, data []byte) error {

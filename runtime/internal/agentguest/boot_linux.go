@@ -17,6 +17,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/repobundle"
 	"golang.org/x/sys/unix"
 )
 
@@ -56,6 +57,9 @@ func PrepareLinuxPID1(config Config) error {
 		return err
 	}
 	if err := configureAgentDirectories(); err != nil {
+		return err
+	}
+	if err := MaterializeRepository(config); err != nil {
 		return err
 	}
 	if err := bringLoopbackUp(); err != nil {
@@ -178,6 +182,71 @@ func configureAgentDirectories() error {
 		}
 	}
 	return nil
+}
+
+// MaterializeRepository verifies the complete immutable repository block
+// image before creating any agent-visible path.
+func MaterializeRepository(config Config) error {
+	if config.RepositoryDrive != RepositoryDrive {
+		return errors.New("repository block device is not /dev/vdb")
+	}
+	descriptor, err := unix.Open(config.RepositoryDrive, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
+	if err != nil {
+		return fmt.Errorf("open read-only repository drive: %w", err)
+	}
+	file := os.NewFile(uintptr(descriptor), config.RepositoryDrive)
+	if file == nil {
+		_ = unix.Close(descriptor)
+		return errors.New("wrap repository drive descriptor")
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil {
+		return fmt.Errorf("inspect repository drive: %w", err)
+	}
+	if info.Mode()&os.ModeDevice == 0 || info.Mode()&os.ModeCharDevice != 0 {
+		return errors.New("repository drive is not a block device")
+	}
+	bundle, err := DecodeRepository(file, config.RepositorySize, config.RepositorySHA256, config.RepositoryTreeRoot)
+	if err != nil {
+		return err
+	}
+	if err := bundle.MaterializeOwned(WorkspaceDirectory, agentUID, agentGID); err != nil {
+		return fmt.Errorf("materialize verified repository: %w", err)
+	}
+	return nil
+}
+
+// DecodeRepository validates both the byte image and its semantic tree. The
+// size-bounded view makes a block device behave like the exact bundle file and
+// prevents trailing sectors from becoming an alternate representation.
+func DecodeRepository(reader io.Reader, size uint64, expectedSHA256, expectedTreeRoot string) (repobundle.Bundle, error) {
+	if reader == nil {
+		return repobundle.Bundle{}, errors.New("repository reader is nil")
+	}
+	if size == 0 || size > MaxRepositoryBytes || size%512 != 0 {
+		return repobundle.Bundle{}, errors.New("repository size is outside the guest limit or not block aligned")
+	}
+	if err := validateLowerHexDigest(expectedSHA256, "repository_sha256"); err != nil {
+		return repobundle.Bundle{}, err
+	}
+	if err := validateLowerHexDigest(expectedTreeRoot, "repository_tree_root"); err != nil {
+		return repobundle.Bundle{}, err
+	}
+	digest := sha256.New()
+	exact := io.LimitReader(reader, int64(size))
+	bundle, err := repobundle.Decode(io.TeeReader(exact, digest), repobundle.DefaultLimits())
+	if err != nil {
+		return repobundle.Bundle{}, fmt.Errorf("decode repository drive: %w", err)
+	}
+	actualSHA256 := hex.EncodeToString(digest.Sum(nil))
+	if actualSHA256 != expectedSHA256 {
+		return repobundle.Bundle{}, fmt.Errorf("repository drive SHA-256 is %s, require %s", actualSHA256, expectedSHA256)
+	}
+	if bundle.TreeRoot.String() != expectedTreeRoot {
+		return repobundle.Bundle{}, fmt.Errorf("repository tree root is %s, require %s", bundle.TreeRoot, expectedTreeRoot)
+	}
+	return bundle, nil
 }
 
 func bringLoopbackUp() error {

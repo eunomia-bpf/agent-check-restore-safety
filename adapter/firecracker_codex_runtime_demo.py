@@ -254,6 +254,8 @@ def run_demo(
     guest_sha256: str,
     payload: Path,
     payload_sha256: str,
+    repository: Path,
+    repository_sha256: str,
     codex_sha256: str,
     runtime_evidence: Path,
     adapter_evidence: Path,
@@ -269,6 +271,7 @@ def run_demo(
         ("kernel", kernel, kernel_sha256, False),
         ("guest", guest, guest_sha256, True),
         ("payload", payload, payload_sha256, False),
+        ("repository", repository, repository_sha256, False),
     ):
         artifact_path, record = _verified_artifact(
             path, digest, label, executable=executable
@@ -306,6 +309,8 @@ def run_demo(
         guest_sha256=verified["guest"]["sha256"],
         payload=artifact_paths["payload"],
         payload_sha256=verified["payload"]["sha256"],
+        repository=artifact_paths["repository"],
+        repository_sha256=verified["repository"]["sha256"],
         codex_sha256=codex_digest,
         evidence_dir=runtime_dir,
         workspace=workspace_dir,
@@ -370,6 +375,7 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
         ("kernel", "uncompressed guest kernel"),
         ("guest", "firecracker-agent-guest executable"),
         ("payload", "immutable native Codex SquashFS payload"),
+        ("repository", "canonical read-only repository bundle"),
     ):
         parser.add_argument(f"--{name}", required=True, type=Path, help=help_text)
         parser.add_argument(
@@ -415,6 +421,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             guest_sha256=args.guest_sha256,
             payload=args.payload,
             payload_sha256=args.payload_sha256,
+            repository=args.repository,
+            repository_sha256=args.repository_sha256,
             codex_sha256=args.codex_sha256,
             runtime_evidence=args.runtime_evidence,
             adapter_evidence=args.adapter_evidence,

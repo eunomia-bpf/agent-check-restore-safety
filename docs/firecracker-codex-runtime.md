@@ -8,8 +8,9 @@ production sandbox or an implementation of the complete History/Rule system.
 An ordinary Codex App Server client is given a temporary `codex` executable.
 The client does not know that this executable starts a Firecracker runtime.
 Inside the microVM, the exact native Codex binary runs against a read-only
-payload and a fresh workspace. The guest has no NIC and receives no account
-credential. A host-owned model relay is the only model path.
+payload and a workspace materialized from a canonical read-only repository
+drive. The guest has no NIC and receives no account credential. A host-owned
+model relay is the only model path.
 
 At one declared dynamic-tool boundary, the runtime:
 
@@ -39,8 +40,9 @@ yet perform that final join.
 - `runtime/cmd/firecracker-codex-shim` owns both VMM processes, snapshot files,
   relays, state transitions, and retained evidence.
 - `runtime/cmd/firecracker-agent-guest` is the guest PID 1. It mounts the
-  read-only payload, creates an isolated non-root child, installs a fail-closed
-  syscall filter, reaps orphans, and carries the Codex stream over vsock.
+  read-only payload, verifies and materializes the repository drive, creates an
+  isolated non-root child, installs a fail-closed syscall filter, reaps
+  orphans, and carries the Codex stream over vsock.
 - `runtime/internal/agentstream`, `agentwire`, and `codexvm` retain one ordered
   App Server stream across the VMM replacement. Reconnects are generation
   bound, replay is deduplicated, and client-visible output has one total order.
@@ -48,15 +50,15 @@ yet perform that final join.
   peer-bound Unix/vsock endpoints, the fixed model relay, and API traces.
 - `runtime/cmd/check-firecracker-codex-evidence` independently parses the
   retained result, VMM API calls, relay logs, bridge commitments, App Server
-  records, payload manifest, snapshot hashes, process identities, and event
-  order. It does not import the live runner.
+  records, payload manifest, repository bundle, snapshot hashes, process
+  identities, and event order. It does not import the live runner lifecycle.
 
 The client-facing boundary remains stdin/stdout JSONL. No Firecracker-specific
 branch is required in the App Server client.
 
 ## Current real execution
 
-A fresh local KVM execution of the current source completed in 13.2 seconds
+A fresh local KVM execution of the current source completed in 14.6 seconds
 with these fixed inputs:
 
 - Firecracker 1.16.1:
@@ -66,11 +68,15 @@ with these fixed inputs:
 - native Codex 0.147.0:
   `cb0a15567e9a60a5820d54b0f6ae86d504dc3805c1eab21a47f70e3eb7b73a40`;
 - guest:
-  `c50f84a10a3a7614df284c0caa5420fd0a75011132198a2fd64e2413a2e00a3c`;
+  `a93664356ac0fabb94de195b8a83451566641dbf7d0b1df4f172ea0cae27f281`;
 - shim:
-  `675ae039a534b36fe667391ef6b3b62600b2c1e9cd285f09a590ea03e77efa27`.
+  `2d8ce34ecd04902b7722f29e7bec84234bc4bc00d8d450544747ef5cb8c4b3aa`;
+- canonical Restate food-ordering repository:
+  `8c815e42e1d5650feb40965c1a492caba24060297a7e285464fe487b6d335da2`
+  (50,176 bytes, 37 entries, tree root
+  `5023fab86509a198f38c6a81fec1b89f39404f4f65864dbd06855898098b1d8e`).
 
-The run retained 22 lifecycle events, 16 hashed artifacts, 80 canonical bridge
+The run retained 22 lifecycle events, 17 hashed artifacts, 80 canonical bridge
 commitments, and 352 App Server records. It created a 1 GiB memory snapshot;
 both VMM PIDs were reaped. The original shim, its runtime-retained copy, the
 result, and the first event all carry the same hash. A second independent build
@@ -85,6 +91,8 @@ The real-KVM path is deliberately opt-in:
 ```sh
 make runtime-firecracker-codex-build FIRECRACKER_BUILD_DIR=/private/build
 go run ./runtime/cmd/firecracker-codex-payload --help
+make runtime-firecracker-codex-repository \
+  FIRECRACKER_CODEX_REPOSITORY_ARGS='-source /source -output /private/repository.bundle -result /private/repository.json'
 python3 -m adapter.firecracker_codex_runtime_demo --help
 ```
 
@@ -100,15 +108,16 @@ make runtime-firecracker-codex-check \
 ```
 
 The demo requires read/write access to `/dev/kvm`, checksum-pinned Firecracker
-and kernel files, a prebuilt guest and shim, the read-only Codex payload, three
-separate empty directories, and no live account.
+and kernel files, a prebuilt guest and shim, the read-only Codex payload, a
+canonical repository bundle, separate empty evidence/workspace directories,
+and no live account.
 
 ## Exact boundary and remaining work
 
 The current slice is intentionally narrow:
 
 - it protects exactly one dynamic-tool callback and one successful turn;
-- the host workspace must be empty, and no project or patch is imported or
+- a sealed project is imported, but the frozen final tree and patch are not yet
   exported;
 - the guest payload is not yet a normal build environment;
 - the model fixture is local, fixed, and credential-free;
@@ -121,9 +130,10 @@ The current slice is intentionally narrow:
 - the callback is not yet a History-owned external Operation, so this run does
   not prove safe payment replay, Rule activation, or the paper theorem.
 
-The next high-value increment is not another VM demo. It is to import a sealed
-real repository, mediate every tool and network effect through the existing
-Operation gateway, atomically bind a History/Rule change to the VM checkpoint,
-export the resulting patch, and issue a portable certificate without retaining
-raw guest memory. Jailer/cgroup confinement, repeated boundaries, Claude, and
-a maintained application follow that vertical join.
+The next high-value increment is not another VM demo. It is to put Codex and
+all descendants in one killable execution domain, freeze the completed
+workspace, export its complete canonical tree, and have the host independently
+derive the delta. That delta then joins the existing Operation gateway and an
+atomic History/Rule change at the VM checkpoint. Portable certificates,
+jailer confinement, repeated boundaries, Claude, and a maintained build
+environment follow that vertical join.

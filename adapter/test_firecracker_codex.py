@@ -25,6 +25,7 @@ _DIGESTS = {
     "kernel_sha256": "2" * 64,
     "guest_sha256": "5" * 64,
     "payload_sha256": "3" * 64,
+    "repository_sha256": "6" * 64,
     "codex_sha256": "4" * 64,
 }
 
@@ -77,6 +78,8 @@ class FirecrackerCodexTests(unittest.TestCase):
                     "SAFE_CHANGE_KERNEL_SHA256": _DIGESTS["kernel_sha256"],
                     "SAFE_CHANGE_PAYLOAD": os.fspath(inputs["payload"]),
                     "SAFE_CHANGE_PAYLOAD_SHA256": _DIGESTS["payload_sha256"],
+                    "SAFE_CHANGE_REPOSITORY": os.fspath(inputs["repository"]),
+                    "SAFE_CHANGE_REPOSITORY_SHA256": _DIGESTS["repository_sha256"],
                     "SAFE_CHANGE_WORKSPACE": os.fspath(inputs["workspace"]),
                 })
                 self.assertEqual(
@@ -306,6 +309,7 @@ class FirecrackerCodexTests(unittest.TestCase):
             "kernel": self._file(artifacts / "kernel"),
             "guest": self._file(artifacts / "guest", executable=True),
             "payload": self._file(artifacts / "payload"),
+            "repository": self._file(artifacts / "repository"),
             "workspace": workspace,
             "evidence_dir": evidence,
         }

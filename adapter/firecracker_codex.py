@@ -34,6 +34,8 @@ _CONFIG_ENVIRONMENT = {
     "SAFE_CHANGE_GUEST_SHA256": "guest_sha256",
     "SAFE_CHANGE_PAYLOAD": "payload",
     "SAFE_CHANGE_PAYLOAD_SHA256": "payload_sha256",
+    "SAFE_CHANGE_REPOSITORY": "repository",
+    "SAFE_CHANGE_REPOSITORY_SHA256": "repository_sha256",
     "SAFE_CHANGE_CODEX_SHA256": "codex_sha256",
     "SAFE_CHANGE_EVIDENCE_DIR": "evidence_dir",
     "SAFE_CHANGE_WORKSPACE": "workspace",
@@ -88,6 +90,8 @@ def create_firecracker_codex(
     guest_sha256: str,
     payload: str | os.PathLike[str],
     payload_sha256: str,
+    repository: str | os.PathLike[str],
+    repository_sha256: str,
     codex_sha256: str,
     evidence_dir: str | os.PathLike[str],
     workspace: str | os.PathLike[str],
@@ -95,10 +99,10 @@ def create_firecracker_codex(
 ) -> FirecrackerCodex:
     """Create a transparent executable with immutable microVM configuration.
 
-    The host workspace must be empty because this first backend intentionally
-    exposes a fresh in-guest workspace rather than silently presenting
-    different bytes.  Evidence is written only to an existing, empty, private
-    directory owned by the caller.
+    The host workspace is the client-visible path identity. The repository is
+    an immutable canonical bundle that the guest verifies and materializes at
+    that path's in-guest counterpart. Evidence is written only to an existing,
+    empty, private directory owned by the caller.
     """
 
     runner_path = _regular_file(runner, "runner", executable=True)
@@ -108,6 +112,7 @@ def create_firecracker_codex(
     kernel_path = _regular_file(kernel, "kernel")
     guest_path = _regular_file(guest, "guest", executable=True)
     payload_path = _regular_file(payload, "payload")
+    repository_path = _regular_file(repository, "repository")
     workspace_path = _directory(workspace, "workspace")
     evidence_path = _directory(evidence_dir, "evidence_dir")
     paths = {
@@ -116,6 +121,7 @@ def create_firecracker_codex(
         "kernel": kernel_path,
         "guest": guest_path,
         "payload": payload_path,
+        "repository": repository_path,
         "workspace": workspace_path,
         "evidence_dir": evidence_path,
     }
@@ -130,6 +136,9 @@ def create_firecracker_codex(
         "kernel_sha256": _sha256(kernel_sha256, "kernel_sha256"),
         "guest_sha256": _sha256(guest_sha256, "guest_sha256"),
         "payload_sha256": _sha256(payload_sha256, "payload_sha256"),
+        "repository_sha256": _sha256(
+            repository_sha256, "repository_sha256"
+        ),
         "codex_sha256": _sha256(codex_sha256, "codex_sha256"),
     }
     values = {

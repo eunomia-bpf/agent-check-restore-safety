@@ -1,5 +1,5 @@
 // Command firecracker-codex-repository builds canonical repository bytes for a
-// future Firecracker Codex guest drive.
+// Firecracker Codex guest drive.
 package main
 
 import (
