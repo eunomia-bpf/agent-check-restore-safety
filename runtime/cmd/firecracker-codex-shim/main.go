@@ -31,27 +31,29 @@ import (
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/codexvm"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/firecracker"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/repobundle"
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/repodelta"
 	"golang.org/x/sys/unix"
 )
 
 const (
-	runLimit             = 10 * time.Minute
-	endpointDrainLimit   = 5 * time.Second
-	guestCID             = uint32(3)
-	guestMemoryMiB       = 1024
-	firstGeneration      = uint64(1)
-	restoredGeneration   = uint64(3)
-	maxGuestBinaryBytes  = int64(64 << 20)
-	unixSocketPathLimit  = 108
-	resultSchema         = 1
-	evidenceEventSchema  = 1
-	guestPayloadDrive    = "/dev/vda"
-	guestRepositoryDrive = "/dev/vdb"
-	bootKernelDescriptor = "/proc/self/fd/4"
-	bootInitrdDescriptor = "/proc/self/fd/5"
-	payloadDescriptor    = "/proc/self/fd/6"
-	repositoryDescriptor = "/proc/self/fd/7"
-	bootArguments        = "console=ttyS0 reboot=k panic=1 pci=off rdinit=/init"
+	runLimit              = 10 * time.Minute
+	endpointDrainLimit    = 5 * time.Second
+	repositoryExportLimit = 30 * time.Second
+	guestCID              = uint32(3)
+	guestMemoryMiB        = 1024
+	firstGeneration       = uint64(1)
+	restoredGeneration    = uint64(3)
+	maxGuestBinaryBytes   = int64(64 << 20)
+	unixSocketPathLimit   = 108
+	resultSchema          = 1
+	evidenceEventSchema   = 1
+	guestPayloadDrive     = "/dev/vda"
+	guestRepositoryDrive  = "/dev/vdb"
+	bootKernelDescriptor  = "/proc/self/fd/4"
+	bootInitrdDescriptor  = "/proc/self/fd/5"
+	payloadDescriptor     = "/proc/self/fd/6"
+	repositoryDescriptor  = "/proc/self/fd/7"
+	bootArguments         = "console=ttyS0 reboot=k panic=1 pci=off rdinit=/init"
 )
 
 var immutableSeals = unix.F_SEAL_SEAL | unix.F_SEAL_SHRINK | unix.F_SEAL_GROW | unix.F_SEAL_WRITE
@@ -177,6 +179,7 @@ type generation struct {
 	process        *firecracker.Process
 	client         *firecracker.Client
 	listener       *firecracker.VsockListener
+	exportListener *firecracker.VsockListener
 	relay          *firecracker.Relay
 	apiTrace       *evidenceFile
 	relayAudit     *evidenceFile
@@ -430,7 +433,7 @@ func (r *runner) execute() error {
 		return err
 	}
 	if err := r.events.Record("endpoints-armed-before-start", r.g1, map[string]any{
-		"stream_port": agentguest.DefaultStreamPort, "model_port": r.config.GuestModelPort,
+		"stream_port": agentguest.DefaultStreamPort, "export_port": agentguest.DefaultExportPort, "model_port": r.config.GuestModelPort,
 	}); err != nil {
 		return err
 	}
@@ -557,7 +560,7 @@ func (r *runner) execute() error {
 	}
 	r.result.RelayArmedBeforeResume = true
 	if err := r.events.Record("endpoints-armed-while-paused", r.g3, map[string]any{
-		"stream_port": agentguest.DefaultStreamPort, "model_port": r.config.GuestModelPort,
+		"stream_port": agentguest.DefaultStreamPort, "export_port": agentguest.DefaultExportPort, "model_port": r.config.GuestModelPort,
 	}); err != nil {
 		return err
 	}
@@ -590,7 +593,13 @@ func (r *runner) execute() error {
 	if waitErr := r.bridge.Wait(r.ctx); waitErr != nil {
 		return fmt.Errorf("Codex bridge stopped: %w", waitErr)
 	}
-	return r.events.Record("codex-session-completed", r.g3, nil)
+	if err := r.events.Record("codex-session-completed", r.g3, nil); err != nil {
+		return err
+	}
+	if err := r.bridge.ShutdownGuest(); err != nil {
+		return fmt.Errorf("request stable guest repository export: %w", err)
+	}
+	return r.receiveFinalRepository()
 }
 
 func (r *runner) startProxy() error {
@@ -740,6 +749,13 @@ func (r *runner) armEndpoints(g *generation) error {
 	if err != nil {
 		return fmt.Errorf("arm g%d Codex stream listener: %w", g.number, err)
 	}
+	g.exportListener, err = firecracker.ArmVsockListener(firecracker.VsockListenerConfig{
+		BasePath: g.basePath, Port: agentguest.DefaultExportPort,
+		FirecrackerPID: g.process.PID(), VerifyProcess: g.process.VerifyIdentity,
+	})
+	if err != nil {
+		return fmt.Errorf("arm g%d repository export listener: %w", g.number, err)
+	}
 	acceptContext, cancel := context.WithCancel(r.ctx)
 	g.acceptCancel = cancel
 	g.acceptDone = make(chan struct{})
@@ -848,6 +864,10 @@ func (r *runner) closeEndpoints(g *generation) error {
 	if g.listener != nil {
 		errs = append(errs, g.listener.Close())
 		g.listener = nil
+	}
+	if g.exportListener != nil {
+		errs = append(errs, g.exportListener.Close())
+		g.exportListener = nil
 	}
 	if g.relay != nil {
 		errs = append(errs, r.closeModelRelay(g))
@@ -1257,6 +1277,110 @@ func decodeSealedRepository(artifact *sealedArtifact) (repobundle.Bundle, error)
 	return bundle, nil
 }
 
+func (r *runner) receiveFinalRepository() error {
+	if r.g3 == nil || r.g3.exportListener == nil {
+		return errors.New("restored repository export listener is unavailable")
+	}
+	exportContext, cancel := context.WithTimeout(r.ctx, repositoryExportLimit)
+	defer cancel()
+	connection, err := r.g3.exportListener.Accept(exportContext)
+	if err != nil {
+		return fmt.Errorf("accept final repository export: %w", err)
+	}
+	if deadline, ok := exportContext.Deadline(); ok {
+		_ = connection.SetDeadline(deadline)
+	}
+	finalPath := filepath.Join(r.config.EvidenceDir, "repository-final.bundle")
+	finalBundle, finalArtifact, receiveErr := receiveRepositoryBundle(connection, finalPath)
+	closeErr := connection.Close()
+	if err := errors.Join(receiveErr, closeErr); err != nil {
+		return err
+	}
+	delta, err := repodelta.Compute(r.repositoryTree, finalBundle, repodelta.DefaultLimits())
+	if err != nil {
+		return fmt.Errorf("derive repository delta: %w", err)
+	}
+	deltaArtifact, err := persistRepositoryDelta(
+		filepath.Join(r.config.EvidenceDir, "repository.delta"), r.repositoryTree, finalBundle, delta,
+	)
+	if err != nil {
+		return err
+	}
+	r.result.Artifacts["repository_final"] = finalArtifact
+	r.result.Artifacts["repository_delta"] = deltaArtifact
+	return r.events.Record("repository-exported", r.g3, map[string]any{
+		"base_root": r.repositoryTree.TreeRoot.String(), "final_root": finalBundle.TreeRoot.String(),
+		"operation_count": len(delta.Operations), "final_bundle": finalArtifact, "delta": deltaArtifact,
+	})
+}
+
+func receiveRepositoryBundle(reader io.Reader, path string) (repobundle.Bundle, artifactRecord, error) {
+	if reader == nil {
+		return repobundle.Bundle{}, artifactRecord{}, errors.New("final repository reader is nil")
+	}
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return repobundle.Bundle{}, artifactRecord{}, fmt.Errorf("create final repository evidence: %w", err)
+	}
+	fail := func(failure error) (repobundle.Bundle, artifactRecord, error) {
+		closeErr := file.Close()
+		removeErr := os.Remove(path)
+		return repobundle.Bundle{}, artifactRecord{}, errors.Join(failure, closeErr, removeErr)
+	}
+	bundle, decodeErr := repobundle.Decode(io.TeeReader(reader, file), repobundle.DefaultLimits())
+	if decodeErr != nil {
+		return fail(fmt.Errorf("decode final repository export: %w", decodeErr))
+	}
+	if err := file.Sync(); err != nil {
+		return fail(err)
+	}
+	if err := file.Close(); err != nil {
+		_ = os.Remove(path)
+		return repobundle.Bundle{}, artifactRecord{}, err
+	}
+	record, err := artifactForPath("repository-final.bundle", path, 0o600)
+	if err != nil {
+		return repobundle.Bundle{}, artifactRecord{}, err
+	}
+	return bundle, record, nil
+}
+
+func persistRepositoryDelta(path string, base, final repobundle.Bundle, delta repodelta.Delta) (artifactRecord, error) {
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return artifactRecord{}, fmt.Errorf("create repository delta evidence: %w", err)
+	}
+	fail := func(failure error) (artifactRecord, error) {
+		closeErr := file.Close()
+		removeErr := os.Remove(path)
+		return artifactRecord{}, errors.Join(failure, closeErr, removeErr)
+	}
+	if err := repodelta.Encode(file, delta, repodelta.DefaultLimits()); err != nil {
+		return fail(fmt.Errorf("encode repository delta: %w", err))
+	}
+	if err := file.Sync(); err != nil {
+		return fail(err)
+	}
+	if err := file.Close(); err != nil {
+		_ = os.Remove(path)
+		return artifactRecord{}, err
+	}
+	check, err := os.Open(path)
+	if err != nil {
+		return artifactRecord{}, err
+	}
+	decoded, decodeErr := repodelta.Decode(check, repodelta.DefaultLimits())
+	closeErr := check.Close()
+	if err := errors.Join(decodeErr, closeErr); err != nil {
+		return artifactRecord{}, err
+	}
+	applied, err := repodelta.Apply(base, decoded, repodelta.DefaultLimits())
+	if err != nil || applied.TreeRoot != final.TreeRoot {
+		return artifactRecord{}, errors.Join(errors.New("repository delta does not reconstruct the exported tree"), err)
+	}
+	return artifactForPath("repository.delta", path, 0o600)
+}
+
 func artifactForOpenFile(name string, file *os.File) (artifactRecord, error) {
 	if file == nil {
 		return artifactRecord{}, errors.New("artifact file is nil")
@@ -1529,8 +1653,10 @@ func validateRuntimePaths(directory string, modelPort uint32) error {
 		filepath.Join(directory, "model-proxy.sock"),
 		filepath.Join(directory, "api-g1.sock"), filepath.Join(directory, "api-g3.sock"),
 		filepath.Join(directory, "vsock-g1") + "_" + fmt.Sprint(agentguest.DefaultStreamPort),
+		filepath.Join(directory, "vsock-g1") + "_" + fmt.Sprint(agentguest.DefaultExportPort),
 		filepath.Join(directory, "vsock-g1") + "_" + fmt.Sprint(modelPort),
 		filepath.Join(directory, "vsock-g3") + "_" + fmt.Sprint(agentguest.DefaultStreamPort),
+		filepath.Join(directory, "vsock-g3") + "_" + fmt.Sprint(agentguest.DefaultExportPort),
 		filepath.Join(directory, "vsock-g3") + "_" + fmt.Sprint(modelPort),
 	}
 	for _, path := range paths {

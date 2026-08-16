@@ -109,8 +109,12 @@ decoded again before the identity record is written. Bundles are 512-byte
 aligned so the host shim can seal one as Firecracker's read-only `/dev/vdb`;
 the guest verifies its size, image hash, and tree root before materializing it
 for the unprivileged agent. Both the original and restored VMM inherit the same
-sealed descriptor. Freezing the complete process domain and exporting the
-final tree and canonical delta remain the next integration step.
+sealed descriptor. After a successful turn, the host sends an authenticated
+shutdown message. The guest freezes the complete Codex cgroup, kills every
+descendant, waits for the domain to become empty, and only then exports the
+complete final tree. The host derives a canonical delta from the two complete
+trees and retains both objects for independent verification; it never accepts
+an Agent-authored patch as the repository result.
 
 ## Add it to an HTTP service
 
@@ -677,6 +681,9 @@ general exactly-once claim nor proof that every unknown Operation can finish.
 - a canonical repository-drive builder that independently binds source bytes,
   normalized modes, safe links, and a complete tree root without trusting Git
   metadata or an Agent-produced diff;
+- a Firecracker guest execution domain that freezes and removes all Codex
+  descendants before exporting the complete final repository, plus a
+  host-derived canonical delta checked against both tree roots;
 - an unmodified DeathStarBench application path where a Mongo commit with a
   lost response is recovered after deleting v1, without redispatch, and a v2
   Operation then completes through the replacement frontend; and

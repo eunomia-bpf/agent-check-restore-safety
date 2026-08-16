@@ -133,6 +133,10 @@ func TestRunPID1CancelsEverythingOnSessionFailure(t *testing.T) {
 			}
 			return sessionFailure
 		},
+		exportRepository: func(func(uint32) (agentguest.Stream, error)) error {
+			t.Error("failed session attempted repository export")
+			return nil
+		},
 		dial: func(uint32) (agentguest.Stream, error) { return nil, errTestDial },
 	}
 
@@ -145,6 +149,35 @@ func TestRunPID1CancelsEverythingOnSessionFailure(t *testing.T) {
 	assertClosed(t, process.stdin.closed, "Codex stdin was not closed")
 	assertClosed(t, process.stdout.closed, "Codex stdout was not closed")
 	assertClosed(t, proxyStopped, "model proxy was not canceled")
+}
+
+func TestRunPID1ExportsOnlyAfterNormalSessionAndDomainShutdown(t *testing.T) {
+	process := newBlockingCodex()
+	deps := baseDependencies(process)
+	deps.runSession = func(context.Context, agentguest.Config, io.Writer, io.Reader, func(uint32) (agentguest.Stream, error), *log.Logger) error {
+		return nil
+	}
+	exported := false
+	deps.exportRepository = func(func(uint32) (agentguest.Stream, error)) error {
+		select {
+		case <-process.killed:
+		default:
+			t.Fatal("repository exported before the execution domain was killed")
+		}
+		select {
+		case <-process.waited:
+		default:
+			t.Fatal("repository exported before the execution domain was reaped")
+		}
+		exported = true
+		return nil
+	}
+	if err := runPID1(context.Background(), deps, log.New(io.Discard, "", 0)); err != nil {
+		t.Fatal(err)
+	}
+	if !exported {
+		t.Fatal("normal session did not export repository")
+	}
 }
 
 func TestRunPID1PropagatesProxyAndCodexFailures(t *testing.T) {
@@ -173,11 +206,7 @@ func TestRunPID1PropagatesProxyAndCodexFailures(t *testing.T) {
 		if !errors.Is(err, codexFailure) {
 			t.Fatalf("runPID1 error = %v, want Codex failure", err)
 		}
-		select {
-		case <-process.killed:
-			t.Fatal("already-exited Codex was killed again")
-		default:
-		}
+		assertClosed(t, process.killed, "Codex execution domain was not finalized")
 		assertClosed(t, process.waited, "Codex exit was not observed")
 	})
 }
@@ -255,7 +284,8 @@ func baseDependencies(process *fakeCodex) dependencies {
 			<-ctx.Done()
 			return ctx.Err()
 		},
-		dial: func(uint32) (agentguest.Stream, error) { return nil, errTestDial },
+		exportRepository: func(func(uint32) (agentguest.Stream, error)) error { return nil },
+		dial:             func(uint32) (agentguest.Stream, error) { return nil, errTestDial },
 	}
 }
 

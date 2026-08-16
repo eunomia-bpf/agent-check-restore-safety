@@ -164,7 +164,15 @@ func TestBridgeHoldsToolCallAcrossQuiescentGenerationAdvance(t *testing.T) {
 	if err := bridge.Wait(ctx); err != nil {
 		t.Fatalf("completed bridge wait = %v", err)
 	}
-
+	shutdownResult := make(chan error, 1)
+	go func() { shutdownResult <- bridge.ShutdownGuest() }()
+	shutdown := readWireWithDeadline(t, guestThree, readerThree)
+	if shutdown.Type != agentwire.TypeShutdown {
+		t.Fatalf("guest shutdown message = %+v", shutdown)
+	}
+	if err := <-shutdownResult; err != nil {
+		t.Fatal(err)
+	}
 	_ = guestThree.Close()
 	if err := <-servedThree; !errors.Is(err, ErrDisconnected) {
 		t.Fatalf("restored connection result = %v", err)

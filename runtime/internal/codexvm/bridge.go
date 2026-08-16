@@ -890,12 +890,25 @@ func (bridge *Bridge) completeIfReadyLocked() {
 		return
 	}
 	bridge.closed = true
-	if bridge.active != nil {
-		_ = bridge.active.closer.Close()
-		bridge.active = nil
-	}
 	bridge.condition.Broadcast()
 	bridge.completeOnce.Do(func() { close(bridge.completed) })
+}
+
+// ShutdownGuest ends the successfully completed stream with an authenticated
+// protocol message. The guest uses this boundary to stop its complete process
+// domain before exporting the final repository.
+func (bridge *Bridge) ShutdownGuest() error {
+	bridge.mu.Lock()
+	if !bridge.closed || bridge.failure != nil || bridge.active == nil {
+		bridge.mu.Unlock()
+		return errors.New("Codex VM guest shutdown requires one completed active stream")
+	}
+	active := bridge.active
+	bridge.active = nil
+	bridge.mu.Unlock()
+	writeErr := active.writer.Write(agentwire.Message{Type: agentwire.TypeShutdown})
+	closeErr := active.closer.Close()
+	return errors.Join(writeErr, closeErr)
 }
 
 func (bridge *Bridge) fail(err error) {

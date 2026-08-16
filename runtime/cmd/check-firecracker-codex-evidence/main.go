@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/repobundle"
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/repodelta"
 )
 
 const (
@@ -265,6 +266,8 @@ type verifier struct {
 	events                                        []eventRecord
 	g1, g3                                        processRecord
 	modelTarget, proxySocket, argumentModelTarget string
+	baseRepository, finalRepository               repobundle.Bundle
+	repositoryDelta                               repodelta.Delta
 }
 
 func main() {
@@ -873,7 +876,7 @@ func (v *verifier) verifyResultAndArtifacts() error {
 	wantKeys := []string{
 		"bridge_io", "events", "firecracker", "firecracker_api_g1", "firecracker_api_g3",
 		"firecracker_relay_g1", "firecracker_relay_g3", "guest", "guest_config", "initramfs",
-		"kernel", "model_proxy", "payload", "repository", "runner", "snapshot_memory", "snapshot_state",
+		"kernel", "model_proxy", "payload", "repository", "repository_delta", "repository_final", "runner", "snapshot_memory", "snapshot_state",
 	}
 	gotKeys := make([]string, 0, len(v.result.Artifacts))
 	for key := range v.result.Artifacts {
@@ -908,6 +911,8 @@ func (v *verifier) verifyResultAndArtifacts() error {
 		"initramfs":            "guest-initramfs.cpio",
 		"model_proxy":          "model-proxy.jsonl",
 		"repository":           "repository.bundle",
+		"repository_delta":     "repository.delta",
+		"repository_final":     "repository-final.bundle",
 		"runner":               "runner",
 		"snapshot_memory":      "snapshot.memory",
 		"snapshot_state":       "snapshot.state",
@@ -1261,6 +1266,29 @@ func (v *verifier) verifyGuestAndInitramfs() error {
 	if v.guest.RepositorySize != uint64(repositoryArtifact.Size) || v.guest.RepositorySHA256 != repositoryArtifact.SHA256 || v.guest.RepositoryTreeRoot != repository.TreeRoot.String() {
 		return errors.New("guest repository identity differs from the retained canonical bundle")
 	}
+	finalFile, err := os.Open(evidencePath(v, "repository-final.bundle"))
+	if err != nil {
+		return err
+	}
+	finalRepository, finalDecodeErr := repobundle.Decode(finalFile, repobundle.DefaultLimits())
+	finalCloseErr := finalFile.Close()
+	if err := errors.Join(finalDecodeErr, finalCloseErr); err != nil {
+		return fmt.Errorf("decode retained final repository: %w", err)
+	}
+	deltaFile, err := os.Open(evidencePath(v, "repository.delta"))
+	if err != nil {
+		return err
+	}
+	delta, deltaDecodeErr := repodelta.Decode(deltaFile, repodelta.DefaultLimits())
+	deltaCloseErr := deltaFile.Close()
+	if err := errors.Join(deltaDecodeErr, deltaCloseErr); err != nil {
+		return fmt.Errorf("decode retained repository delta: %w", err)
+	}
+	applied, err := repodelta.Apply(repository, delta, repodelta.DefaultLimits())
+	if err != nil || applied.TreeRoot != finalRepository.TreeRoot {
+		return errors.Join(errors.New("retained repository delta does not reconstruct the retained final tree"), err)
+	}
+	v.baseRepository, v.finalRepository, v.repositoryDelta = repository, finalRepository, delta
 	if len(v.guest.Arguments) != v.result.ArgumentsCount || len(v.guest.Arguments) < 2 || v.guest.Arguments[0] != "app-server" || v.guest.Arguments[1] != "--stdio" {
 		return errors.New("guest arguments are not the fixed App Server entrypoint")
 	}
@@ -1490,7 +1518,8 @@ var expectedEvents = []expectedEvent{
 	{"g1-sigkill-confirmed", 1, true}, {"snapshot-load-inputs-sealed", 0, true}, {"bridge-generation-advanced", 0, true},
 	{"process-started", 3, false}, {"snapshot-loaded-paused", 3, true}, {"endpoints-armed-while-paused", 3, true},
 	{"vm-resumed", 3, false}, {"bridge-attached", 3, false}, {"tool-call-release-authorized", 3, false},
-	{"tool-call-delivered-after-attach", 3, false}, {"codex-session-completed", 3, false}, {"run-completed", 0, true},
+	{"tool-call-delivered-after-attach", 3, false}, {"codex-session-completed", 3, false},
+	{"repository-exported", 3, true}, {"run-completed", 0, true},
 }
 
 func (v *verifier) verifyEvents() error {
@@ -1628,12 +1657,13 @@ func (v *verifier) verifyEventDetails(index int, event eventRecord) error {
 	case 4, 15:
 		var d struct {
 			StreamPort uint32 `json:"stream_port"`
+			ExportPort uint32 `json:"export_port"`
 			ModelPort  uint32 `json:"model_port"`
 		}
-		if err := decodeExact(event.Details, []string{"stream_port", "model_port"}, &d); err != nil {
+		if err := decodeExact(event.Details, []string{"stream_port", "export_port", "model_port"}, &d); err != nil {
 			return err
 		}
-		if d.StreamPort != streamPort || d.ModelPort != v.guest.ModelPort {
+		if d.StreamPort != streamPort || d.ExportPort != 7001 || d.ModelPort != v.guest.ModelPort {
 			return errors.New("endpoint ports differ from guest config")
 		}
 	case 6:
@@ -1712,6 +1742,20 @@ func (v *verifier) verifyEventDetails(index int, event eventRecord) error {
 			return errors.New("loaded snapshot hashes differ")
 		}
 	case 21:
+		var d struct {
+			BaseRoot       string   `json:"base_root"`
+			FinalRoot      string   `json:"final_root"`
+			OperationCount int      `json:"operation_count"`
+			FinalBundle    artifact `json:"final_bundle"`
+			Delta          artifact `json:"delta"`
+		}
+		if err := decodeExact(event.Details, []string{"base_root", "final_root", "operation_count", "final_bundle", "delta"}, &d); err != nil {
+			return err
+		}
+		if d.BaseRoot != v.baseRepository.TreeRoot.String() || d.FinalRoot != v.finalRepository.TreeRoot.String() || d.OperationCount != len(v.repositoryDelta.Operations) || d.FinalBundle != v.result.Artifacts["repository_final"] || d.Delta != v.result.Artifacts["repository_delta"] {
+			return errors.New("repository export event differs from retained artifacts")
+		}
+	case 22:
 		var d struct {
 			Error string `json:"error"`
 		}

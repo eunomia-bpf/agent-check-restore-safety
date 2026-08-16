@@ -119,6 +119,8 @@ type guestSession struct {
 	fatalErr  error
 }
 
+var errSessionComplete = errors.New("agent stream session complete")
+
 type sessionAdvance struct {
 	generation   uint64
 	guestBarrier agentstream.Barrier
@@ -181,6 +183,9 @@ func (session *guestSession) run() error {
 		session.releaseConnection(connection)
 		if termination := session.terminationError(); termination != nil {
 			return termination
+		}
+		if errors.Is(err, errSessionComplete) {
+			return nil
 		}
 		var reconnect reconnectError
 		if !errors.As(err, &reconnect) {
@@ -260,6 +265,8 @@ func (session *guestSession) runConnection(connection *sessionConnection) error 
 			if err := session.receiveBarrier(connection, writer, *message.Barrier); err != nil {
 				return err
 			}
+		case agentwire.TypeShutdown:
+			return errSessionComplete
 		default:
 			return fmt.Errorf("agent stream protocol: unexpected established message %q", message.Type)
 		}

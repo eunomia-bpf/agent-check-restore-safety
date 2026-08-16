@@ -95,6 +95,7 @@ func mountKernelFilesystems() error {
 		{source: "devtmpfs", target: "/dev", kind: "devtmpfs", flags: unix.MS_NOSUID, data: "mode=0755"},
 		{source: "proc", target: "/proc", kind: "proc", flags: unix.MS_NOSUID | unix.MS_NODEV | unix.MS_NOEXEC},
 		{source: "sysfs", target: "/sys", kind: "sysfs", flags: unix.MS_NOSUID | unix.MS_NODEV | unix.MS_NOEXEC},
+		{source: "none", target: "/sys/fs/cgroup", kind: "cgroup2", flags: unix.MS_NOSUID | unix.MS_NODEV | unix.MS_NOEXEC},
 	}
 	for _, mount := range mounts {
 		if err := os.MkdirAll(mount.target, 0o755); err != nil {
@@ -313,8 +314,8 @@ func VerifyCodexExecutable(path, expectedSHA256 string) error {
 // StartCodex launches the fixed /init child mode under an unprivileged numeric
 // identity. That child installs the Codex-only seccomp boundary before it
 // replaces itself with the fixed payload executable.
-func StartCodex(config Config, stderr io.Writer) (*exec.Cmd, io.WriteCloser, io.ReadCloser, error) {
-	command, err := codexCommand(config, stderr)
+func StartCodex(config Config, stderr io.Writer, cgroupFD int) (*exec.Cmd, io.WriteCloser, io.ReadCloser, error) {
+	command, err := codexCommand(config, stderr, cgroupFD)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -335,12 +336,15 @@ func StartCodex(config Config, stderr io.Writer) (*exec.Cmd, io.WriteCloser, io.
 	return command, stdin, stdout, nil
 }
 
-func codexCommand(config Config, stderr io.Writer) (*exec.Cmd, error) {
+func codexCommand(config Config, stderr io.Writer, cgroupFD int) (*exec.Cmd, error) {
 	if err := config.Validate(); err != nil {
 		return nil, err
 	}
 	if stderr == nil {
 		return nil, errors.New("Codex stderr writer is nil")
+	}
+	if cgroupFD < 0 {
+		return nil, errors.New("Codex execution cgroup descriptor is invalid")
 	}
 	arguments := make([]string, 0, len(config.Arguments)+1)
 	arguments = append(arguments, CodexChildMode)
@@ -350,8 +354,10 @@ func codexCommand(config Config, stderr io.Writer) (*exec.Cmd, error) {
 	command.Env = fixedCodexEnvironment()
 	command.Stderr = stderr
 	command.SysProcAttr = &syscall.SysProcAttr{
-		Credential: &syscall.Credential{Uid: agentUID, Gid: agentGID, Groups: []uint32{}},
-		Pdeathsig:  syscall.SIGKILL,
+		Credential:  &syscall.Credential{Uid: agentUID, Gid: agentGID, Groups: []uint32{}},
+		Pdeathsig:   syscall.SIGKILL,
+		UseCgroupFD: true,
+		CgroupFD:    cgroupFD,
 	}
 	return command, nil
 }

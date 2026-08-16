@@ -24,7 +24,10 @@ At one declared dynamic-tool boundary, the runtime:
 5. exposes the callback only after the restored guest is attached. Success is
    reported only after the matching callback result has entered the retained
    stream, the same Codex turn has completed successfully, that completion has
-   reached the client, and client input has closed.
+   reached the client, and client input has closed; and
+6. sends an authenticated shutdown to the guest, freezes and empties the
+   complete Codex cgroup, exports the resulting full repository tree, and
+   derives the canonical delta on the host.
 
 Firecracker supplies isolation and whole-machine snapshot/restore. It is a
 replaceable mechanism, not the research claim. The runtime contribution is the
@@ -41,8 +44,9 @@ yet perform that final join.
   relays, state transitions, and retained evidence.
 - `runtime/cmd/firecracker-agent-guest` is the guest PID 1. It mounts the
   read-only payload, verifies and materializes the repository drive, creates an
-  isolated non-root child, installs a fail-closed syscall filter, reaps
-  orphans, and carries the Codex stream over vsock.
+  isolated non-root child directly in a cgroup-v2 execution domain, installs a
+  fail-closed syscall filter, reaps orphans, freezes and kills every descendant
+  at completion, and carries the Codex stream and final tree over vsock.
 - `runtime/internal/agentstream`, `agentwire`, and `codexvm` retain one ordered
   App Server stream across the VMM replacement. Reconnects are generation
   bound, replay is deduplicated, and client-visible output has one total order.
@@ -58,7 +62,7 @@ branch is required in the App Server client.
 
 ## Current real execution
 
-A fresh local KVM execution of the current source completed in 14.6 seconds
+A fresh local KVM execution of the current source completed in 12.8 seconds
 with these fixed inputs:
 
 - Firecracker 1.16.1:
@@ -68,19 +72,21 @@ with these fixed inputs:
 - native Codex 0.147.0:
   `cb0a15567e9a60a5820d54b0f6ae86d504dc3805c1eab21a47f70e3eb7b73a40`;
 - guest:
-  `a93664356ac0fabb94de195b8a83451566641dbf7d0b1df4f172ea0cae27f281`;
+  `49cee411975645da7906a8c846f7f688f0b7e498a9f18de5c56cbd269fbefb72`;
 - shim:
-  `2d8ce34ecd04902b7722f29e7bec84234bc4bc00d8d450544747ef5cb8c4b3aa`;
+  `d9c8c55e30dfa1adbcf6b7ff054e6f21fa80d0582697444927a3c0bd02c1d5ea`;
 - canonical Restate food-ordering repository:
   `8c815e42e1d5650feb40965c1a492caba24060297a7e285464fe487b6d335da2`
   (50,176 bytes, 37 entries, tree root
   `5023fab86509a198f38c6a81fec1b89f39404f4f65864dbd06855898098b1d8e`).
 
-The run retained 22 lifecycle events, 17 hashed artifacts, 80 canonical bridge
-commitments, and 352 App Server records. It created a 1 GiB memory snapshot;
-both VMM PIDs were reaped. The original shim, its runtime-retained copy, the
-result, and the first event all carry the same hash. A second independent build
-was byte-identical and was accepted as the checker input. The checker returned
+The run retained 23 lifecycle events, 19 hashed artifacts, 82 canonical bridge
+commitments, and 358 App Server records. It created a 1 GiB memory snapshot;
+both VMM PIDs were reaped. The final 37-entry bundle exactly matched the input
+tree, as expected for this read-only model fixture. The host still produced and
+verified a 160-byte, zero-operation delta bound to both tree roots. The original
+shim, its runtime-retained copy, the result, and the first event all carry the
+same hash. The independent checker returned
 `{"schema":1,"valid":true}`. This is one observed functional execution, not a
 latency distribution or a production-security result.
 
@@ -117,11 +123,9 @@ and no live account.
 The current slice is intentionally narrow:
 
 - it protects exactly one dynamic-tool callback and one successful turn;
-- a sealed project is imported, but the frozen final tree and patch are not yet
-  exported;
 - the guest payload is not yet a normal build environment;
 - the model fixture is local, fixed, and credential-free;
-- Firecracker does not yet run through jailer, a dedicated UID, cgroups, or a
+- Firecracker does not yet run through jailer, a dedicated host UID, or a
   chroot;
 - the full snapshot is large, private, and may contain prompts or future
   credentials, so it must not be published as ordinary evidence;
@@ -130,10 +134,9 @@ The current slice is intentionally narrow:
 - the callback is not yet a History-owned external Operation, so this run does
   not prove safe payment replay, Rule activation, or the paper theorem.
 
-The next high-value increment is not another VM demo. It is to put Codex and
-all descendants in one killable execution domain, freeze the completed
-workspace, export its complete canonical tree, and have the host independently
-derive the delta. That delta then joins the existing Operation gateway and an
-atomic History/Rule change at the VM checkpoint. Portable certificates,
-jailer confinement, repeated boundaries, Claude, and a maintained build
-environment follow that vertical join.
+The next high-value increment is not another VM demo. It is to join the
+host-derived delta, the existing Operation gateway, and an atomic History/Rule
+change at the VM checkpoint. That makes the filesystem result and irreversible
+external progress one committed transition. Portable certificates, jailer
+confinement, repeated boundaries, Claude, and a maintained build environment
+follow that vertical join.

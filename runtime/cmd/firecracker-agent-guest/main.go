@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"sync"
 	"time"
 
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/agentguest"
@@ -31,12 +32,13 @@ type runningCodex struct {
 }
 
 type dependencies struct {
-	loadConfig func(string) (agentguest.Config, error)
-	prepare    func(agentguest.Config) error
-	startCodex func(agentguest.Config, io.Writer) (runningCodex, error)
-	startProxy func(<-chan struct{}, uint32, func(uint32) (agentguest.Stream, error), *log.Logger) (<-chan error, error)
-	runSession func(context.Context, agentguest.Config, io.Writer, io.Reader, func(uint32) (agentguest.Stream, error), *log.Logger) error
-	dial       func(uint32) (agentguest.Stream, error)
+	loadConfig       func(string) (agentguest.Config, error)
+	prepare          func(agentguest.Config) error
+	startCodex       func(agentguest.Config, io.Writer) (runningCodex, error)
+	startProxy       func(<-chan struct{}, uint32, func(uint32) (agentguest.Stream, error), *log.Logger) (<-chan error, error)
+	runSession       func(context.Context, agentguest.Config, io.Writer, io.Reader, func(uint32) (agentguest.Stream, error), *log.Logger) error
+	exportRepository func(func(uint32) (agentguest.Stream, error)) error
+	dial             func(uint32) (agentguest.Stream, error)
 }
 
 type componentResult struct {
@@ -58,7 +60,7 @@ func main() {
 		powerOff(logger)
 		return
 	}
-	if err := runPID1(context.Background(), productionDependencies(), logger); err != nil {
+	if err := runPID1(context.Background(), productionDependencies(logger), logger); err != nil {
 		logger.Printf("fatal: %v", err)
 	}
 	powerOff(logger)
@@ -94,31 +96,61 @@ func codexChildInvocation(arguments []string) ([]string, bool, error) {
 	return childArguments, true, nil
 }
 
-func productionDependencies() dependencies {
+func productionDependencies(logger *log.Logger) dependencies {
 	return dependencies{
 		loadConfig: readImmutableConfig,
 		prepare:    agentguest.PrepareLinuxPID1,
 		startCodex: func(config agentguest.Config, stderr io.Writer) (runningCodex, error) {
-			command, stdin, stdout, err := agentguest.StartCodex(config, stderr)
+			domain, err := agentguest.NewExecutionDomain()
 			if err != nil {
 				return runningCodex{}, err
 			}
+			cgroupFD, err := domain.FD()
+			if err != nil {
+				return runningCodex{}, errors.Join(err, domain.Close())
+			}
+			command, stdin, stdout, err := agentguest.StartCodex(config, stderr, cgroupFD)
+			if err != nil {
+				return runningCodex{}, errors.Join(err, domain.Close())
+			}
 			reaper, err := startOrphanReaper(command.Process.Pid)
 			if err != nil {
-				killErr := killCommand(command)
+				domainErr := domain.FreezeAndKill(shutdownTimeout)
+				killErr := error(nil)
+				if domainErr != nil {
+					killErr = killCommand(command)
+				}
 				waitErr := command.Wait()
 				closeErr := errors.Join(stdin.Close(), stdout.Close())
-				return runningCodex{}, errors.Join(err, killErr, waitErr, closeErr)
+				return runningCodex{}, errors.Join(err, domainErr, killErr, waitErr, closeErr, domain.Close())
 			}
+			var killOnce sync.Once
+			var domainKillErr error
 			return runningCodex{
 				stdin: stdin, stdout: stdout,
 				wait: func() error { return waitCommandWithOrphanReaper(command, reaper) },
-				kill: func() error { return killCommand(command) },
+				kill: func() error {
+					killOnce.Do(func() {
+						domainKillErr = domain.FreezeAndKill(shutdownTimeout)
+						if domainKillErr != nil {
+							domainKillErr = errors.Join(domainKillErr, killCommand(command))
+						}
+						domainKillErr = errors.Join(domainKillErr, domain.Close())
+					})
+					return domainKillErr
+				},
 			}, nil
 		},
 		startProxy: agentguest.StartModelProxy,
 		runSession: agentguest.RunSession,
-		dial:       agentguest.DialHostVsock,
+		exportRepository: func(dial func(uint32) (agentguest.Stream, error)) error {
+			bundle, err := agentguest.ExportRepository(dial)
+			if err == nil {
+				logger.Printf("exported final repository tree %s with %d entries", bundle.TreeRoot, len(bundle.Entries))
+			}
+			return err
+		},
+		dial: agentguest.DialHostVsock,
 	}
 }
 
@@ -232,16 +264,18 @@ func runPID1(ctx context.Context, deps dependencies, logger *log.Logger) error {
 	var first componentResult
 	select {
 	case first = <-results:
-		err = componentFailure(first)
+		if first.component == "agent stream session" && first.err == nil {
+			err = nil
+		} else {
+			err = componentFailure(first)
+		}
 	case <-ctx.Done():
 		err = ctx.Err()
 	}
 	cancel()
 	_ = codex.stdin.Close()
-	if first.component != "Codex process" {
-		if killErr := codex.kill(); killErr != nil && !errors.Is(killErr, os.ErrProcessDone) {
-			err = errors.Join(err, fmt.Errorf("kill payload Codex: %w", killErr))
-		}
+	if killErr := codex.kill(); killErr != nil && !errors.Is(killErr, os.ErrProcessDone) {
+		err = errors.Join(err, fmt.Errorf("freeze and kill payload Codex domain: %w", killErr))
 	}
 	_ = codex.stdout.Close()
 
@@ -252,11 +286,16 @@ func runPID1(ctx context.Context, deps dependencies, logger *log.Logger) error {
 	if !waitForShutdown(results, remaining) {
 		err = errors.Join(err, errors.New("agent guest components did not stop after cancellation"))
 	}
+	if err == nil {
+		if exportErr := deps.exportRepository(deps.dial); exportErr != nil {
+			err = fmt.Errorf("export stable final repository: %w", exportErr)
+		}
+	}
 	return err
 }
 
 func (deps dependencies) validate() error {
-	if deps.loadConfig == nil || deps.prepare == nil || deps.startCodex == nil || deps.startProxy == nil || deps.runSession == nil || deps.dial == nil {
+	if deps.loadConfig == nil || deps.prepare == nil || deps.startCodex == nil || deps.startProxy == nil || deps.runSession == nil || deps.exportRepository == nil || deps.dial == nil {
 		return errors.New("agent guest supervisor dependencies are incomplete")
 	}
 	return nil

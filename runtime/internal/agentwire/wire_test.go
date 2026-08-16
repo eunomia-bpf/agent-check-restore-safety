@@ -37,6 +37,22 @@ func TestMessageRoundTripAndCanonicalDigestText(t *testing.T) {
 	}
 }
 
+func TestShutdownRoundTripCarriesNoAuthority(t *testing.T) {
+	var buffer bytes.Buffer
+	writer, _ := NewWriter(&buffer)
+	if err := writer.Write(Message{Type: TypeShutdown}); err != nil {
+		t.Fatal(err)
+	}
+	reader, _ := NewReader(&buffer)
+	message, err := reader.Read()
+	if err != nil || message.Type != TypeShutdown {
+		t.Fatalf("shutdown round trip = %+v, %v", message, err)
+	}
+	if err := (Message{Type: TypeShutdown, Generation: 1}).Validate(); err == nil {
+		t.Fatal("shutdown with extra generation accepted")
+	}
+}
+
 func TestReaderRejectsUnknownDuplicateTrailingAndOversize(t *testing.T) {
 	tests := []string{
 		`{"type":"role","generation":1,"unknown":true}` + "\n",

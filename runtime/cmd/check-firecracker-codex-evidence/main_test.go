@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/repobundle"
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/repodelta"
 )
 
 type fixture struct {
@@ -357,6 +358,26 @@ func newFixture(t *testing.T) *fixture {
 		t.Fatal(err)
 	}
 	mustWrite(t, filepath.Join(evidence, "repository.bundle"), repositoryBytes.Bytes(), 0o600)
+	finalRepository, err := repobundle.FromEntries([]repobundle.Entry{{
+		Path: "README.md", Type: repobundle.EntryFile, Mode: 0o644, Data: []byte("final repository fixture\n"),
+	}}, repobundle.DefaultLimits())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var finalRepositoryBytes bytes.Buffer
+	if err := repobundle.Encode(&finalRepositoryBytes, finalRepository, repobundle.DefaultLimits()); err != nil {
+		t.Fatal(err)
+	}
+	mustWrite(t, filepath.Join(evidence, "repository-final.bundle"), finalRepositoryBytes.Bytes(), 0o600)
+	repositoryDelta, err := repodelta.Compute(repository, finalRepository, repodelta.DefaultLimits())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var repositoryDeltaBytes bytes.Buffer
+	if err := repodelta.Encode(&repositoryDeltaBytes, repositoryDelta, repodelta.DefaultLimits()); err != nil {
+		t.Fatal(err)
+	}
+	mustWrite(t, filepath.Join(evidence, "repository.delta"), repositoryDeltaBytes.Bytes(), 0o600)
 
 	session := strings.Repeat("1", 32)
 	args := pinnedArguments("http://127.0.0.1:12345/v1")
@@ -377,16 +398,18 @@ func newFixture(t *testing.T) *fixture {
 	barrierValue := barrier{SessionID: session, Generation: 1, State: state}
 	checkpointValue := checkpoint{HostBarrier: barrierValue, GuestBarrier: barrierValue}
 	artifacts := map[string]artifact{
-		"kernel":          {Name: "kernel", Size: 100, Mode: 0o400, SHA256: hashBytes([]byte("kernel"))},
-		"payload":         {Name: "payload", Size: int64(len(payloadBytes)), Mode: 0o400, SHA256: hashBytes(payloadBytes)},
-		"repository":      artifactFromBytes("repository.bundle", repositoryBytes.Bytes(), 0o600),
-		"guest":           {Name: "guest", Size: int64(len(f.guestBinary)), Mode: 0o400, SHA256: hashBytes(f.guestBinary)},
-		"guest_config":    artifactFromBytes("guest-config.json", configBytes, 0o600),
-		"initramfs":       artifactFromBytes("guest-initramfs.cpio", initramfs, 0o600),
-		"firecracker":     {Name: "firecracker", Size: 1000, Mode: 0o755, SHA256: hashBytes([]byte("firecracker"))},
-		"runner":          artifactFromBytes("runner", runnerBytes, 0o600),
-		"snapshot_state":  artifactFromBytes("snapshot.state", []byte("snapshot-state"), 0o600),
-		"snapshot_memory": artifactFromBytes("snapshot.memory", []byte("snapshot-memory"), 0o600),
+		"kernel":           {Name: "kernel", Size: 100, Mode: 0o400, SHA256: hashBytes([]byte("kernel"))},
+		"payload":          {Name: "payload", Size: int64(len(payloadBytes)), Mode: 0o400, SHA256: hashBytes(payloadBytes)},
+		"repository":       artifactFromBytes("repository.bundle", repositoryBytes.Bytes(), 0o600),
+		"repository_final": artifactFromBytes("repository-final.bundle", finalRepositoryBytes.Bytes(), 0o600),
+		"repository_delta": artifactFromBytes("repository.delta", repositoryDeltaBytes.Bytes(), 0o600),
+		"guest":            {Name: "guest", Size: int64(len(f.guestBinary)), Mode: 0o400, SHA256: hashBytes(f.guestBinary)},
+		"guest_config":     artifactFromBytes("guest-config.json", configBytes, 0o600),
+		"initramfs":        artifactFromBytes("guest-initramfs.cpio", initramfs, 0o600),
+		"firecracker":      {Name: "firecracker", Size: 1000, Mode: 0o755, SHA256: hashBytes([]byte("firecracker"))},
+		"runner":           artifactFromBytes("runner", runnerBytes, 0o600),
+		"snapshot_state":   artifactFromBytes("snapshot.state", []byte("snapshot-state"), 0o600),
+		"snapshot_memory":  artifactFromBytes("snapshot.memory", []byte("snapshot-memory"), 0o600),
 	}
 	boot := []sealedArtifact{
 		{Artifact: artifacts["kernel"], ChildFD: 4, LinuxSeals: 15},
@@ -402,7 +425,7 @@ func newFixture(t *testing.T) *fixture {
 	}
 	g1 := testProcess(evidence, 1, "g1-instance", 101, 10, 350, 1050, artifacts["firecracker"].SHA256)
 	g3 := testProcess(evidence, 3, "g3-instance", 202, 20, 1350, 2150, artifacts["firecracker"].SHA256)
-	f.result = resultRecord{Schema: 1, Success: true, SessionID: session, CodexSHA256: codex.SHA256, RunnerSHA256: artifacts["runner"].SHA256, ArgumentsSHA256: hashBytes(mustMarshal(t, args)), ArgumentsEncoding: "compact-json-array", ArgumentsCount: len(args), WorkspaceMapping: workspaceMapping{Host: workspace, Guest: "/workspace"}, Artifacts: artifacts, SealedBootInputs: boot, SealedLoadInputs: load, Checkpoint: checkpointValue, Processes: []processRecord{g1, g3}, G1SIGKILLConfirmed: true, SnapshotLoadedPaused: true, RelayArmedBeforeResume: true, ToolReleasedAfterAttach: true, CompletedTimeNS: 2250}
+	f.result = resultRecord{Schema: 1, Success: true, SessionID: session, CodexSHA256: codex.SHA256, RunnerSHA256: artifacts["runner"].SHA256, ArgumentsSHA256: hashBytes(mustMarshal(t, args)), ArgumentsEncoding: "compact-json-array", ArgumentsCount: len(args), WorkspaceMapping: workspaceMapping{Host: workspace, Guest: "/workspace"}, Artifacts: artifacts, SealedBootInputs: boot, SealedLoadInputs: load, Checkpoint: checkpointValue, Processes: []processRecord{g1, g3}, G1SIGKILLConfirmed: true, SnapshotLoadedPaused: true, RelayArmedBeforeResume: true, ToolReleasedAfterAttach: true, CompletedTimeNS: 2400}
 	writeFixtureEvents(t, f)
 	writeFixtureAPI(t, f)
 	writeFixtureTransport(t, f)
@@ -431,19 +454,43 @@ func writeFixtureEvents(t *testing.T, f *fixture) {
 	r := f.result
 	var config guestConfig
 	mustJSON(t, mustRead(t, filepath.Join(f.opts.evidence, "guest-config.json")), &config)
+	finalFile, err := os.Open(filepath.Join(f.opts.evidence, "repository-final.bundle"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	finalRepository, err := repobundle.Decode(finalFile, repobundle.DefaultLimits())
+	if closeErr := finalFile.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	deltaFile, err := os.Open(filepath.Join(f.opts.evidence, "repository.delta"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	delta, err := repodelta.Decode(deltaFile, repodelta.DefaultLimits())
+	if closeErr := deltaFile.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
 	guest := sealedArtifact{Artifact: r.Artifacts["guest"], ChildFD: 0, LinuxSeals: 15}
 	details := []any{
 		map[string]any{"session_id": r.SessionID, "g1_id": r.Processes[0].ID, "g3_id": r.Processes[1].ID, "codex_sha256": r.CodexSHA256, "runner_sha256": r.RunnerSHA256, "arguments_sha256": r.ArgumentsSHA256, "workspace_mapping": r.WorkspaceMapping},
 		map[string]any{"kernel": r.SealedBootInputs[0], "payload": r.SealedBootInputs[2], "repository": r.SealedBootInputs[3], "repository_tree_root": config.RepositoryTreeRoot, "guest": guest, "initramfs": r.SealedBootInputs[1]},
 		map[string]any{"target": "127.0.0.1:12345", "socket": filepath.Join(f.opts.evidence, "model-proxy.sock")},
-		nil, map[string]any{"stream_port": 7000, "model_port": 12345}, nil,
+		nil, map[string]any{"stream_port": 7000, "export_port": 7001, "model_port": 12345}, nil,
 		map[string]any{"host_barrier": r.Checkpoint.HostBarrier, "guest_barrier": r.Checkpoint.GuestBarrier}, nil, nil,
 		map[string]any{"state": r.Artifacts["snapshot_state"], "memory": r.Artifacts["snapshot_memory"]},
 		map[string]any{"disposition": "supervisor"},
 		map[string]any{"state": r.SealedLoadInputs[0], "memory": r.SealedLoadInputs[1], "payload": r.SealedLoadInputs[2], "repository": r.SealedLoadInputs[3]},
 		map[string]any{"generation": 3}, nil,
 		map[string]any{"state_sha256": r.Artifacts["snapshot_state"].SHA256, "memory_sha256": r.Artifacts["snapshot_memory"].SHA256},
-		map[string]any{"stream_port": 7000, "model_port": 12345}, nil, nil, nil, nil, nil, map[string]any{"error": ""},
+		map[string]any{"stream_port": 7000, "export_port": 7001, "model_port": 12345}, nil, nil, nil, nil, nil,
+		map[string]any{"base_root": config.RepositoryTreeRoot, "final_root": finalRepository.TreeRoot.String(), "operation_count": len(delta.Operations), "final_bundle": r.Artifacts["repository_final"], "delta": r.Artifacts["repository_delta"]},
+		map[string]any{"error": ""},
 	}
 	var lines [][]byte
 	for index, want := range expectedEvents {

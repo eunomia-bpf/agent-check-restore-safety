@@ -15,6 +15,7 @@ import (
 const (
 	ConfigSchema       = 2
 	DefaultStreamPort  = uint32(7000)
+	DefaultExportPort  = uint32(7001)
 	MaxConfigBytes     = 1 << 20
 	MaxArguments       = 256
 	MaxArgumentBytes   = 64 << 10
@@ -159,8 +160,8 @@ func (config Config) Validate() error {
 	if config.StreamPort == 0 || config.StreamPort > 65535 {
 		return errors.New("agent guest stream_port must be in 1..65535")
 	}
-	if config.ModelPort == 0 || config.ModelPort > 65535 || config.ModelPort == config.StreamPort {
-		return errors.New("agent guest model_port must be a distinct port in 1..65535")
+	if config.ModelPort == 0 || config.ModelPort > 65535 || config.ModelPort == config.StreamPort || config.ModelPort == DefaultExportPort {
+		return errors.New("agent guest model_port must be a distinct non-reserved port in 1..65535")
 	}
 	if config.PayloadDrive != "/dev/vda" {
 		return errors.New("agent guest payload_drive must be exactly /dev/vda")

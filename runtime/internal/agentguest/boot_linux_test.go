@@ -63,7 +63,7 @@ func TestDecodeRepositoryBindsImageAndTree(t *testing.T) {
 
 func TestCodexCommandUsesFixedInitChildAndDropsAllGroups(t *testing.T) {
 	config := validConfig()
-	command, err := codexCommand(config, io.Discard)
+	command, err := codexCommand(config, io.Discard, 9)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,8 +85,14 @@ func TestCodexCommandUsesFixedInitChildAndDropsAllGroups(t *testing.T) {
 	if attributes.Pdeathsig != syscall.SIGKILL {
 		t.Fatalf("Codex parent-death signal = %v, want SIGKILL", attributes.Pdeathsig)
 	}
-	if _, err := codexCommand(config, nil); err == nil {
+	if !attributes.UseCgroupFD || attributes.CgroupFD != 9 {
+		t.Fatalf("Codex cgroup attributes = %+v", attributes)
+	}
+	if _, err := codexCommand(config, nil, 9); err == nil {
 		t.Fatal("nil Codex stderr accepted")
+	}
+	if _, err := codexCommand(config, io.Discard, -1); err == nil {
+		t.Fatal("invalid Codex cgroup descriptor accepted")
 	}
 }
 

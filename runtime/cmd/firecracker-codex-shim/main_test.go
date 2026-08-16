@@ -15,6 +15,7 @@ import (
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/agentguest"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/codexvm"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/repobundle"
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/repodelta"
 	"golang.org/x/sys/unix"
 )
 
@@ -219,6 +220,71 @@ func TestPersistReaderRejectsShortSource(t *testing.T) {
 	expected := bytesArtifact("short", []byte("longer"), 0o600)
 	if _, err := persistReaderArtifact("short", filepath.Join(directory, "short"), bytes.NewReader([]byte("x")), expected); err == nil {
 		t.Fatal("short retained source was accepted")
+	}
+}
+
+func TestReceiveRepositoryBundlePersistsExactlyWhatGuestExported(t *testing.T) {
+	bundle, err := repobundle.FromEntries([]repobundle.Entry{{
+		Path: "result.txt", Type: repobundle.EntryFile, Mode: 0o644, Data: []byte("complete\n"),
+	}}, repobundle.DefaultLimits())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var encoded bytes.Buffer
+	if err := repobundle.Encode(&encoded, bundle, repobundle.DefaultLimits()); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "repository-final.bundle")
+	decoded, artifact, err := receiveRepositoryBundle(bytes.NewReader(encoded.Bytes()), path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest := sha256.Sum256(encoded.Bytes())
+	if decoded.TreeRoot != bundle.TreeRoot || artifact.Name != "repository-final.bundle" || artifact.Size != int64(encoded.Len()) || artifact.SHA256 != hex.EncodeToString(digest[:]) {
+		t.Fatalf("received repository/artifact = %+v / %+v", decoded, artifact)
+	}
+	if _, _, err := receiveRepositoryBundle(bytes.NewReader(encoded.Bytes()), path); err == nil {
+		t.Fatal("existing final repository evidence was overwritten")
+	}
+}
+
+func TestPersistRepositoryDeltaReconstructsExportedTree(t *testing.T) {
+	base, err := repobundle.FromEntries([]repobundle.Entry{{
+		Path: "old.txt", Type: repobundle.EntryFile, Mode: 0o644, Data: []byte("old\n"),
+	}}, repobundle.DefaultLimits())
+	if err != nil {
+		t.Fatal(err)
+	}
+	final, err := repobundle.FromEntries([]repobundle.Entry{{
+		Path: "new.txt", Type: repobundle.EntryFile, Mode: 0o644, Data: []byte("new\n"),
+	}}, repobundle.DefaultLimits())
+	if err != nil {
+		t.Fatal(err)
+	}
+	delta, err := repodelta.Compute(base, final, repodelta.DefaultLimits())
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "repository.delta")
+	artifact, err := persistRepositoryDelta(path, base, final, delta)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if artifact.Name != "repository.delta" || artifact.Size <= 0 {
+		t.Fatalf("persisted delta artifact = %+v", artifact)
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, decodeErr := repodelta.Decode(file, repodelta.DefaultLimits())
+	closeErr := file.Close()
+	if err := errors.Join(decodeErr, closeErr); err != nil {
+		t.Fatal(err)
+	}
+	applied, err := repodelta.Apply(base, decoded, repodelta.DefaultLimits())
+	if err != nil || applied.TreeRoot != final.TreeRoot {
+		t.Fatalf("persisted delta reconstruction = %s, %v", applied.TreeRoot, err)
 	}
 }
 

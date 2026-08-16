@@ -24,6 +24,7 @@ const (
 	TypeFrame      = "frame"
 	TypeBarrier    = "barrier"
 	TypeBarrierAck = "barrier_ack"
+	TypeShutdown   = "shutdown"
 )
 
 // Message is a tagged union. Validate requires exactly the fields belonging
@@ -70,6 +71,10 @@ func (message Message) Validate() error {
 	case TypeBarrier, TypeBarrierAck:
 		if message.Generation != 0 || message.Barrier == nil || pointers != 1 {
 			return fmt.Errorf("agentwire %s requires only barrier", message.Type)
+		}
+	case TypeShutdown:
+		if message.Generation != 0 || pointers != 0 {
+			return errors.New("agentwire shutdown requires no additional fields")
 		}
 	default:
 		return fmt.Errorf("agentwire message has unknown type %q", message.Type)
