@@ -1144,8 +1144,17 @@ func writeQEMUProcessCommand(
 	if len(fields) > 0 && len(fields[len(fields)-1]) == 0 {
 		fields = fields[:len(fields)-1]
 	}
-	if len(fields) != len(expectedArguments)+1 || string(fields[0]) != expectedExecutable.path {
-		return errors.New("live QEMU process command has an unexpected shape")
+	if len(fields) != len(expectedArguments)+1 {
+		return fmt.Errorf(
+			"live QEMU process command has %d fields, want %d",
+			len(fields), len(expectedArguments)+1,
+		)
+	}
+	if string(fields[0]) != expectedExecutable.path {
+		return fmt.Errorf(
+			"live QEMU argv[0] is %q, want %q",
+			fields[0], expectedExecutable.path,
+		)
 	}
 	arguments := make([]string, len(fields)-1)
 	for index, field := range fields[1:] {

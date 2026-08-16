@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -96,6 +97,43 @@ func TestOpenExecutableIdentitySurvivesPathReplacement(t *testing.T) {
 	}
 	if stillOpen != original {
 		t.Fatal("open executable descriptor did not pin the original inode and bytes")
+	}
+}
+
+func TestQEMUProcessEvidenceBindsLiveCommandAndExecutable(t *testing.T) {
+	tool, err := resolveHostTool("qemu-system-x86_64")
+	if err != nil {
+		t.Fatal(err)
+	}
+	arguments := []string{
+		"-S", "-display", "none", "-nodefaults", "-machine", "none",
+		"-monitor", "none", "-serial", "none",
+	}
+	command := exec.Command(tool.path, arguments...)
+	if err := command.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = command.Process.Kill()
+		_ = command.Wait()
+	}()
+	path := filepath.Join(t.TempDir(), "qemu-process-command.json")
+	if err := writeQEMUProcessCommand(
+		path, command.Process.Pid, arguments, tool, t.TempDir(), "/base.img",
+	); err != nil {
+		t.Fatal(err)
+	}
+	var evidence map[string]any
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(data, &evidence); err != nil {
+		t.Fatal(err)
+	}
+	if evidence["executable_sha256"] != tool.identity.sha256 ||
+		evidence["source"] != "linux-proc-cmdline-and-exe-fd" {
+		t.Fatalf("process evidence=%+v", evidence)
 	}
 }
 
