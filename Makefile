@@ -1,4 +1,4 @@
-.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-demo runtime-firecracker-codex-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
+.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-repository runtime-firecracker-codex-demo runtime-firecracker-codex-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
 
 VM_ACCEL ?= tcg
 VM_BACKEND ?= qemu
@@ -12,6 +12,7 @@ FIRECRACKER_BUILD_DIR ?= $(shell python3 -c 'import os; print(os.path.join(os.en
 FIRECRACKER_FETCH_INPUTS := runtime/deploy/firecracker/assets.lock.json runtime/deploy/firecracker/fetch-assets.sh
 FIRECRACKER_CODEX_DEMO_ARGS ?=
 FIRECRACKER_CODEX_PAYLOAD_ARGS ?=
+FIRECRACKER_CODEX_REPOSITORY_ARGS ?=
 FIRECRACKER_CODEX_EVIDENCE ?=
 FIRECRACKER_CODEX_ADAPTER_EVIDENCE ?=
 FIRECRACKER_CODEX_PAYLOAD ?=
@@ -129,8 +130,8 @@ runtime-firecracker-check:
 	cd runtime && go run ./cmd/check-firecracker-evidence \
 		-evidence "$(abspath $(FIRECRACKER_EVIDENCE))"
 
-# Explicit Firecracker + Codex slice. None of these targets downloads inputs,
-# and the real-KVM demo is intentionally excluded from runtime-verify.
+# Explicit Firecracker + Codex slice. These targets do not fetch Firecracker
+# or kernel assets, and the real-KVM demo is excluded from runtime-verify.
 runtime-firecracker-codex-build:
 	@mkdir -p "$(FIRECRACKER_BUILD_DIR)"
 	@chmod 0700 "$(FIRECRACKER_BUILD_DIR)"
@@ -148,6 +149,10 @@ runtime-firecracker-codex-build:
 runtime-firecracker-codex-payload:
 	cd runtime && go run ./cmd/firecracker-codex-payload \
 		$(FIRECRACKER_CODEX_PAYLOAD_ARGS)
+
+runtime-firecracker-codex-repository:
+	cd runtime && go run ./cmd/firecracker-codex-repository \
+		$(FIRECRACKER_CODEX_REPOSITORY_ARGS)
 
 runtime-firecracker-codex-demo:
 	@test -c /dev/kvm || { echo "/dev/kvm is missing or is not a character device" >&2; exit 2; }

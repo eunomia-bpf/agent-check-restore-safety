@@ -81,6 +81,35 @@ and `guest-initramfs.cpio` as private read-only payloads. The offline checker
 streams their hashes and verifies the deterministic initramfs layout; it does
 not accept a compact JSON-only provenance bundle.
 
+### Build canonical repository bytes before sandbox execution
+
+The repository-drive builder creates one deterministic, self-checking
+bundle from a source snapshot. It does not trust Git metadata or a diff supplied
+by the Agent. Its canonical tree includes every directory, file byte, executable
+bit, deletion-relevant path, and safe relative symbolic link; it rejects
+`.git`, special files, special permission bits, escaping links, source changes,
+and all paths traversing a symbolic link. Input traversal and materialization
+are anchored to opened directory descriptors, not re-resolved path strings.
+
+Both the bundle and its JSON identity are created exclusively under an existing
+current-user directory with mode 0700:
+
+```sh
+mkdir -m 700 /tmp/codex-repository
+make runtime-firecracker-codex-repository \
+  FIRECRACKER_CODEX_REPOSITORY_ARGS='\
+    -source /absolute/path/to/source-snapshot \
+    -output /tmp/codex-repository/source.bundle \
+    -result /tmp/codex-repository/source.json'
+```
+
+The source must currently be a direct, quiescent directory without `.git`.
+The builder scans it twice and refuses a changed tree. The published bundle is
+decoded again before the identity record is written. This command establishes
+the host-owned repository format; attaching it as a read-only Firecracker
+drive, exporting the frozen final tree, and checking the resulting canonical
+delta are the next integration step and are not claimed by this target yet.
+
 ## Add it to an HTTP service
 
 The business-service integration requires no workflow-engine plugin or SDK. It
@@ -643,6 +672,9 @@ general exactly-once claim nor proof that every unknown Operation can finish.
   any of three effect services by network name or IP, and one integrated run in
   which the pending callback spans an order-container replacement, a control
   restart, a Rule change, and a complete QEMU VM restore;
+- a canonical repository-drive builder that independently binds source bytes,
+  normalized modes, safe links, and a complete tree root without trusting Git
+  metadata or an Agent-produced diff;
 - an unmodified DeathStarBench application path where a Mongo commit with a
   lost response is recovered after deleting v1, without redispatch, and a v2
   Operation then completes through the replacement frontend; and
