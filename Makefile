@@ -7,7 +7,7 @@ RUNTIME_IMAGE ?= safe-change-runtime:local
 RUNTIME_VERSION ?= dev
 RUNTIME_REVISION ?= $(shell git rev-parse --short=12 HEAD)
 CODEX_ISOLATED_EVIDENCE ?= docs/tmp/bootstrap/step-0013-20260815T124944Z
-INTEGRATED_EVIDENCE ?= docs/tmp/bootstrap/step-0014-20260815T133621Z
+INTEGRATED_EVIDENCE ?= docs/tmp/bootstrap/step-0017-20260816T113812Z
 DEATHSTAR_EVIDENCE ?= docs/tmp/bootstrap/step-0015-20260815T141250Z
 
 runtime-build:
@@ -61,7 +61,7 @@ runtime-codex-isolated-check:
 
 # Explicit live-account + full-VM target. All actors share one History.
 runtime-integrated-demo:
-	python3 -m adapter.codex_integrated_runtime_demo \
+	python3 -I -c 'import runpy,sys; sys.path.insert(0,"$(CURDIR)"); runpy.run_module("adapter.codex_integrated_runtime_demo",run_name="__main__")' \
 		--vm-accel "$(VM_ACCEL)" $(INTEGRATED_DEMO_ARGS)
 
 runtime-integrated-check:

@@ -62,6 +62,25 @@ type options struct {
 	externalEvidenceDirPath string
 }
 
+type executableIdentity struct {
+	device uint64
+	inode  uint64
+	sha256 string
+}
+
+type hostTool struct {
+	name     string
+	path     string
+	version  string
+	identity executableIdentity
+}
+
+type hostTools struct {
+	qemuSystem hostTool
+	qemuImage  hostTool
+	netcat     hostTool
+}
+
 func main() {
 	var configuration options
 	flag.StringVar(&configuration.imagePath, "image", "", "verified Ubuntu cloud image path or default cache path")
@@ -85,20 +104,37 @@ func run(configuration options) error {
 	if configuration.accel != "tcg" && configuration.accel != "kvm" {
 		return errors.New("-accel must be tcg or kvm")
 	}
+	if configuration.accel == "kvm" {
+		kvm, err := os.OpenFile("/dev/kvm", os.O_RDWR, 0)
+		if err != nil {
+			return fmt.Errorf("KVM acceleration requires read/write access to /dev/kvm: %w", err)
+		}
+		info, statErr := kvm.Stat()
+		closeErr := kvm.Close()
+		if statErr != nil || closeErr != nil {
+			return errors.Join(statErr, closeErr)
+		}
+		if info.Mode()&os.ModeCharDevice == 0 {
+			return errors.New("/dev/kvm is not a character device")
+		}
+	}
 	decodedSHA, shaErr := hex.DecodeString(configuration.imageSHA)
 	if shaErr != nil || len(decodedSHA) != sha256.Size || hex.EncodeToString(decodedSHA) != configuration.imageSHA {
 		return errors.New("-image-sha256 must be 64 lowercase hexadecimal characters")
 	}
-	var netcatPath string
-	for _, command := range []string{"qemu-system-x86_64", "qemu-img", "nc"} {
-		path, err := exec.LookPath(command)
-		if err != nil {
-			return fmt.Errorf("required host command %q: %w", command, err)
-		}
-		if command == "nc" {
-			netcatPath = path
-		}
+	qemuSystem, err := resolveHostTool("qemu-system-x86_64")
+	if err != nil {
+		return err
 	}
+	qemuImage, err := resolveHostTool("qemu-img")
+	if err != nil {
+		return err
+	}
+	netcat, err := resolveHostTool("nc")
+	if err != nil {
+		return err
+	}
+	tools := hostTools{qemuSystem: qemuSystem, qemuImage: qemuImage, netcat: netcat}
 	if configuration.imagePath == "" {
 		cache, err := os.UserCacheDir()
 		if err != nil {
@@ -117,7 +153,7 @@ func run(configuration options) error {
 		return err
 	}
 	if external {
-		return runExternal(ctx, configuration, netcatPath, os.Stdin, os.Stdout)
+		return runExternal(ctx, configuration, tools, os.Stdin, os.Stdout)
 	}
 
 	work, err := os.MkdirTemp("", "safe-change-vm-")
@@ -294,7 +330,7 @@ func run(configuration options) error {
 	go serve(seedServer, seedListener)
 	defer shutdown(seedServer)
 
-	if output, err := exec.CommandContext(ctx, "qemu-img", "create", "-q", "-f", "qcow2", "-F", "qcow2", "-b", configuration.imagePath, overlayPath, "8G").CombinedOutput(); err != nil {
+	if output, err := exec.CommandContext(ctx, tools.qemuImage.path, "create", "-q", "-f", "qcow2", "-F", "qcow2", "-b", configuration.imagePath, overlayPath, "8G").CombinedOutput(); err != nil {
 		return fmt.Errorf("create guest overlay: %w: %s", err, output)
 	}
 	qemuLog, err := os.OpenFile(qemuLogPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
@@ -304,9 +340,9 @@ func run(configuration options) error {
 	defer qemuLog.Close()
 	netdev := fmt.Sprintf(
 		"user,id=opnet,restrict=on,guestfwd=tcp:10.0.2.100:8000-cmd:%s 127.0.0.1 %d,guestfwd=tcp:10.0.2.100:8787-cmd:%s 127.0.0.1 %d",
-		netcatPath,
+		tools.netcat.path,
 		seedListener.Addr().(*net.TCPAddr).Port,
-		netcatPath,
+		tools.netcat.path,
 		sandboxPort,
 	)
 	qemuArgs := []string{
@@ -327,7 +363,7 @@ func run(configuration options) error {
 	); err != nil {
 		return err
 	}
-	qemu := exec.CommandContext(ctx, "qemu-system-x86_64", qemuArgs...)
+	qemu := exec.CommandContext(ctx, tools.qemuSystem.path, qemuArgs...)
 	qemu.Stdout, qemu.Stderr = qemuLog, qemuLog
 	if err := qemu.Start(); err != nil {
 		return err
@@ -504,7 +540,7 @@ func run(configuration options) error {
 			return fmt.Errorf("unexpected final Operation: %+v", operation)
 		}
 	}
-	snapshotOutput, err := exec.CommandContext(ctx, "qemu-img", "snapshot", "-l", overlayPath).CombinedOutput()
+	snapshotOutput, err := exec.CommandContext(ctx, tools.qemuImage.path, "snapshot", "-l", overlayPath).CombinedOutput()
 	if err != nil || !strings.Contains(string(snapshotOutput), "before_operation") {
 		return fmt.Errorf("guest snapshot not present: %w: %s", err, snapshotOutput)
 	}
@@ -604,7 +640,7 @@ func validateExternalOptions(configuration options) (bool, error) {
 	return true, nil
 }
 
-func runExternal(ctx context.Context, configuration options, netcatPath string, input io.Reader, output io.Writer) error {
+func runExternal(ctx context.Context, configuration options, tools hostTools, input io.Reader, output io.Writer) error {
 	if err := requireExternalSandboxSocket(configuration.externalSandboxSocket); err != nil {
 		return err
 	}
@@ -619,13 +655,37 @@ func runExternal(ctx context.Context, configuration options, netcatPath string, 
 	if err := requireEmptyPrivateDirectory(evidenceDirectory); err != nil {
 		return err
 	}
+	if err := writeExternalHostTools(
+		filepath.Join(evidenceDirectory, "host-tools.json"), tools,
+	); err != nil {
+		return err
+	}
+	verifiedImagePath := filepath.Join(evidenceDirectory, "verified-base.img")
+	imageEvidence, err := copyVerifiedImage(
+		configuration.imagePath,
+		verifiedImagePath,
+		configuration.imageSHA,
+	)
+	if err != nil {
+		return err
+	}
+	encodedImageEvidence, err := json.MarshalIndent(imageEvidence, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := writePrivateFile(
+		filepath.Join(evidenceDirectory, "base-image-provenance.json"),
+		append(encodedImageEvidence, '\n'),
+	); err != nil {
+		return err
+	}
 	overlayPath := filepath.Join(evidenceDirectory, "guest.qcow2")
 	serialPath := filepath.Join(evidenceDirectory, "guest.serial.log")
 	qemuLogPath := filepath.Join(evidenceDirectory, "qemu.log")
 	qmpPath := filepath.Join(evidenceDirectory, "qmp.sock")
 	if commandOutput, err := exec.CommandContext(
 		ctx,
-		"qemu-img",
+		tools.qemuImage.path,
 		"create",
 		"-q",
 		"-f",
@@ -633,7 +693,7 @@ func runExternal(ctx context.Context, configuration options, netcatPath string, 
 		"-F",
 		"qcow2",
 		"-b",
-		configuration.imagePath,
+		verifiedImagePath,
 		overlayPath,
 		"8G",
 	).CombinedOutput(); err != nil {
@@ -674,9 +734,9 @@ func runExternal(ctx context.Context, configuration options, netcatPath string, 
 	}()
 	netdev := fmt.Sprintf(
 		"user,id=opnet,restrict=on,guestfwd=tcp:10.0.2.100:8000-cmd:%s 127.0.0.1 %d,guestfwd=tcp:10.0.2.100:8787-cmd:%s -U %s",
-		netcatPath,
+		tools.netcat.path,
 		seedListener.Addr().(*net.TCPAddr).Port,
-		netcatPath,
+		tools.netcat.path,
 		configuration.externalSandboxSocket,
 	)
 	qemuArgs := []string{
@@ -696,12 +756,12 @@ func runExternal(ctx context.Context, configuration options, netcatPath string, 
 		filepath.Join(evidenceDirectory, "qemu-command.json"),
 		qemuArgs,
 		evidenceDirectory,
-		configuration.imagePath,
+		verifiedImagePath,
 		configuration.externalSandboxSocket,
 	); err != nil {
 		return err
 	}
-	qemu := exec.CommandContext(ctx, "qemu-system-x86_64", qemuArgs...)
+	qemu := exec.CommandContext(ctx, tools.qemuSystem.path, qemuArgs...)
 	qemu.Stdout, qemu.Stderr = qemuLog, qemuLog
 	if err := qemu.Start(); err != nil {
 		return err
@@ -719,8 +779,9 @@ func runExternal(ctx context.Context, configuration options, netcatPath string, 
 		filepath.Join(evidenceDirectory, "qemu-process-command.json"),
 		qemu.Process.Pid,
 		qemuArgs,
+		tools.qemuSystem,
 		evidenceDirectory,
-		configuration.imagePath,
+		verifiedImagePath,
 		configuration.externalSandboxSocket,
 	); err != nil {
 		return err
@@ -837,7 +898,7 @@ func runExternal(ctx context.Context, configuration options, netcatPath string, 
 		strings.Count(serialText, "SAFE_CHANGE_VM_DIRECT_EFFECT_BLOCKED") != 2 {
 		return errors.New("shared-control guest direct-effect isolation check failed")
 	}
-	snapshotOutput, err := exec.CommandContext(ctx, "qemu-img", "snapshot", "-l", overlayPath).CombinedOutput()
+	snapshotOutput, err := exec.CommandContext(ctx, tools.qemuImage.path, "snapshot", "-l", overlayPath).CombinedOutput()
 	if err != nil || !strings.Contains(string(snapshotOutput), "before_purchase") {
 		return fmt.Errorf("shared-control guest snapshot is absent: %w: %s", err, snapshotOutput)
 	}
@@ -877,7 +938,7 @@ func runExternal(ctx context.Context, configuration options, netcatPath string, 
 	if err := os.WriteFile(filepath.Join(evidenceDirectory, "result.json"), append(encodedProjection, '\n'), 0o600); err != nil {
 		return err
 	}
-	if err := removeExternalPrivateFiles(overlayPath, qmpPath); err != nil {
+	if err := removeExternalPrivateFiles(overlayPath, qmpPath, verifiedImagePath); err != nil {
 		return err
 	}
 	completed := make(map[string]any, len(projection)+1)
@@ -1071,6 +1132,7 @@ func writeQEMUProcessCommand(
 	path string,
 	pid int,
 	expectedArguments []string,
+	expectedExecutable hostTool,
 	evidenceDirectory, imagePath string,
 	privatePaths ...string,
 ) error {
@@ -1082,7 +1144,7 @@ func writeQEMUProcessCommand(
 	if len(fields) > 0 && len(fields[len(fields)-1]) == 0 {
 		fields = fields[:len(fields)-1]
 	}
-	if len(fields) != len(expectedArguments)+1 || filepath.Base(string(fields[0])) != "qemu-system-x86_64" {
+	if len(fields) != len(expectedArguments)+1 || string(fields[0]) != expectedExecutable.path {
 		return errors.New("live QEMU process command has an unexpected shape")
 	}
 	arguments := make([]string, len(fields)-1)
@@ -1092,11 +1154,25 @@ func writeQEMUProcessCommand(
 	if !slices.Equal(arguments, expectedArguments) {
 		return errors.New("live QEMU process command differs from the launched arguments")
 	}
+	processExecutable, err := os.Open(fmt.Sprintf("/proc/%d/exe", pid))
+	if err != nil {
+		return fmt.Errorf("read live QEMU executable: %w", err)
+	}
+	defer processExecutable.Close()
+	processIdentity, err := identityForOpenExecutable(processExecutable)
+	if err != nil {
+		return err
+	}
+	if processIdentity != expectedExecutable.identity {
+		return errors.New("live QEMU executable inode or bytes differ from the resolved host tool")
+	}
 	value := map[string]any{
-		"schema":     1,
-		"source":     "linux-proc-cmdline",
-		"pid":        pid,
-		"executable": "qemu-system-x86_64",
+		"schema":            1,
+		"source":            "linux-proc-cmdline-and-exe-fd",
+		"pid":               pid,
+		"executable":        "qemu-system-x86_64",
+		"executable_path":   expectedExecutable.path,
+		"executable_sha256": processIdentity.sha256,
 		"arguments": redactQEMUArguments(
 			arguments, evidenceDirectory, imagePath, privatePaths...,
 		),
@@ -1126,6 +1202,161 @@ func removeExternalPrivateFiles(paths ...string) error {
 		}
 	}
 	return nil
+}
+
+func resolveHostTool(name string) (hostTool, error) {
+	path, err := exec.LookPath(name)
+	if err != nil {
+		return hostTool{}, fmt.Errorf("required host command %q: %w", name, err)
+	}
+	path, err = filepath.Abs(path)
+	if err != nil {
+		return hostTool{}, err
+	}
+	path, err = filepath.EvalSymlinks(path)
+	if err != nil {
+		return hostTool{}, fmt.Errorf("resolve host command %q: %w", name, err)
+	}
+	info, err := os.Lstat(path)
+	if err != nil {
+		return hostTool{}, err
+	}
+	if !info.Mode().IsRegular() || info.Mode().Perm()&0o111 == 0 {
+		return hostTool{}, fmt.Errorf("host command %q is not a regular executable", name)
+	}
+	executable, err := os.Open(path)
+	if err != nil {
+		return hostTool{}, err
+	}
+	identity, identityErr := identityForOpenExecutable(executable)
+	closeErr := executable.Close()
+	if identityErr != nil || closeErr != nil {
+		return hostTool{}, errors.Join(identityErr, closeErr)
+	}
+	version, err := hostToolVersion(path, name)
+	if err != nil {
+		return hostTool{}, err
+	}
+	return hostTool{name: name, path: path, version: version, identity: identity}, nil
+}
+
+func hostToolVersion(path, name string) (string, error) {
+	arguments := []string{"--version"}
+	if name == "nc" {
+		arguments = []string{"-h"}
+	}
+	output, commandErr := exec.Command(path, arguments...).CombinedOutput()
+	line := strings.TrimSpace(string(output))
+	if index := strings.IndexByte(line, '\n'); index >= 0 {
+		line = line[:index]
+	}
+	if line == "" {
+		return "", fmt.Errorf("host command %q returned no version: %w", name, commandErr)
+	}
+	if commandErr != nil && name != "nc" {
+		return "", fmt.Errorf("host command %q version: %w: %s", name, commandErr, line)
+	}
+	return line, nil
+}
+
+func writeExternalHostTools(path string, tools hostTools) error {
+	values := map[string]hostTool{
+		"qemu-system-x86_64": tools.qemuSystem,
+		"qemu-img":           tools.qemuImage,
+		"nc":                 tools.netcat,
+	}
+	records := make(map[string]map[string]string, len(values))
+	for name, tool := range values {
+		records[name] = map[string]string{
+			"path": tool.path, "sha256": tool.identity.sha256, "version": tool.version,
+		}
+	}
+	encoded, err := json.MarshalIndent(map[string]any{
+		"schema": 1,
+		"tools":  records,
+	}, "", "  ")
+	if err != nil {
+		return err
+	}
+	return writePrivateFile(path, append(encoded, '\n'))
+}
+
+func copyVerifiedImage(sourcePath, destinationPath, expectedSHA string) (map[string]any, error) {
+	source, err := os.Open(sourcePath)
+	if err != nil {
+		return nil, err
+	}
+	defer source.Close()
+	before, err := source.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if !before.Mode().IsRegular() {
+		return nil, errors.New("verified base-image source is not a regular file")
+	}
+	destination, err := os.OpenFile(
+		destinationPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600,
+	)
+	if err != nil {
+		return nil, err
+	}
+	complete := false
+	defer func() {
+		_ = destination.Close()
+		if !complete {
+			_ = os.Remove(destinationPath)
+		}
+	}()
+	hash := sha256.New()
+	written, err := io.Copy(
+		io.MultiWriter(destination, hash),
+		io.LimitReader(source, maxImageBytes+1),
+	)
+	if err != nil {
+		return nil, err
+	}
+	if written > maxImageBytes {
+		return nil, fmt.Errorf("verified base-image copy exceeds %d bytes", maxImageBytes)
+	}
+	actualSHA := hex.EncodeToString(hash.Sum(nil))
+	if actualSHA != expectedSHA {
+		return nil, fmt.Errorf("private base-image copy has SHA-256 %s, want %s", actualSHA, expectedSHA)
+	}
+	if expectedSHA == defaultImageSHA && written != defaultImageSize {
+		return nil, fmt.Errorf("private base-image copy has %d bytes, want %d", written, defaultImageSize)
+	}
+	after, err := source.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if !os.SameFile(before, after) || before.Size() != after.Size() || !before.ModTime().Equal(after.ModTime()) {
+		return nil, errors.New("base-image source changed while it was copied")
+	}
+	if err := destination.Sync(); err != nil {
+		return nil, err
+	}
+	if err := destination.Close(); err != nil {
+		return nil, err
+	}
+	privateSHA, err := fileSHA(destinationPath)
+	if err != nil {
+		return nil, err
+	}
+	info, err := os.Lstat(destinationPath)
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 || privateSHA != expectedSHA {
+		return nil, errors.New("private base-image copy failed its post-copy verification")
+	}
+	complete = true
+	return map[string]any{
+		"schema":               1,
+		"bytes":                written,
+		"sha256":               privateSHA,
+		"private_backing_copy": true,
+		"file_mode":            "0600",
+	}, nil
 }
 
 func serve(server *http.Server, listener net.Listener) {
@@ -1490,6 +1721,29 @@ func fileSHA(path string) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+func identityForOpenExecutable(file *os.File) (executableIdentity, error) {
+	info, err := file.Stat()
+	if err != nil {
+		return executableIdentity{}, err
+	}
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok || !info.Mode().IsRegular() {
+		return executableIdentity{}, errors.New("executable does not have a regular Linux inode")
+	}
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return executableIdentity{}, err
+	}
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return executableIdentity{}, err
+	}
+	return executableIdentity{
+		device: uint64(stat.Dev),
+		inode:  stat.Ino,
+		sha256: hex.EncodeToString(hash.Sum(nil)),
+	}, nil
 }
 
 func dataSHA256(data []byte) string {

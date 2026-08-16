@@ -111,7 +111,10 @@ class IntegratedEvidenceTests(unittest.TestCase):
                 record
                 for record in records
                 if record["direction"] == "client_to_server"
-                and record["payload"].get("id") == "command-6"
+                and record["payload"].get("execute")
+                == "human-monitor-command"
+                and record["payload"].get("arguments", {}).get("command-line")
+                == "loadvm before_purchase"
             )
             load["payload"]["arguments"]["command-line"] = "savevm before_purchase"
             path.write_text(

@@ -27,6 +27,7 @@ import socket
 import stat
 import subprocess
 import sys
+import tarfile
 import tempfile
 import time
 from typing import Any, Mapping, Sequence, TextIO
@@ -78,55 +79,13 @@ PROVENANCE_LABEL_NAMES = (
 )
 
 
-def _record_source_provenance(output_dir: Path) -> dict[str, Any]:
-    root = Path(__file__).resolve().parents[1]
-    adapter_sources = {
-        "adapter/app_server.py",
-        "adapter/codex_integrated_runtime_demo.py",
-        "adapter/codex_isolated_runtime_demo.py",
-        "adapter/codex_runtime_demo.py",
-        "adapter/docker_codex.py",
-    }
-    listed = _run(
-        ["git", "ls-files", "-z", "--", "adapter", "runtime"],
-        cwd=root,
-    ).stdout.split("\0")
-    files = sorted(
-        path
-        for path in listed
-        if path
-        and (
-            path in adapter_sources
-            or (
-                path.startswith("runtime/")
-                and (
-                    path.endswith(".go")
-                    or path.endswith("/Dockerfile")
-                    or path.endswith("/compose.yaml")
-                    or path in {"runtime/go.mod", "runtime/go.sum"}
-                )
-            )
+def _selected_source_path(path: str) -> bool:
+    return (
+        (
+            path.endswith(".py")
+            and ("/" not in path or path.startswith("adapter/"))
         )
-    )
-    if not adapter_sources <= set(files):
-        raise DemoError("source provenance omitted an adapter implementation")
-    status = _run(
-        [
-            "git",
-            "status",
-            "--porcelain=v1",
-            "--untracked-files=all",
-            "--",
-            "adapter",
-            "runtime",
-        ],
-        cwd=root,
-    ).stdout.splitlines()
-    selected = set(files)
-    dirty_paths: list[str] = []
-    for line in status:
-        path = line[3:].split(" -> ")[-1]
-        if path in selected or (
+        or (
             path.startswith("runtime/")
             and (
                 path.endswith(".go")
@@ -134,6 +93,61 @@ def _record_source_provenance(output_dir: Path) -> dict[str, Any]:
                 or path.endswith("/compose.yaml")
                 or path in {"runtime/go.mod", "runtime/go.sum"}
             )
+        )
+    )
+
+
+def _untracked_python_import_path(path: str) -> bool:
+    return path.endswith(".py") and (
+        "/" not in path or path.startswith("adapter/")
+    )
+
+
+def _sha256_fd(descriptor: int) -> str:
+    digest = sha256()
+    offset = 0
+    while True:
+        chunk = os.pread(descriptor, 1 << 20, offset)
+        if not chunk:
+            return digest.hexdigest()
+        digest.update(chunk)
+        offset += len(chunk)
+
+
+def _source_provenance_snapshot() -> dict[str, Any]:
+    root = Path(__file__).resolve().parents[1]
+    listed = _run(
+        ["git", "ls-files", "-z"],
+        cwd=root,
+    ).stdout.split("\0")
+    files = sorted(path for path in listed if path and _selected_source_path(path))
+    selected_files = set(files)
+    required = {
+        "adapter/__init__.py",
+        "adapter/app_server.py",
+        "adapter/codex_integrated_runtime_demo.py",
+        "adapter/codex_isolated_runtime_demo.py",
+        "adapter/codex_runtime_demo.py",
+        "adapter/docker_codex.py",
+        "adapter/mock_responses.py",
+    }
+    if not required <= set(files):
+        raise DemoError("source provenance omitted an imported adapter implementation")
+    status = _run(
+        [
+            "git",
+            "status",
+            "--porcelain=v1",
+            "--untracked-files=all",
+            "--no-renames",
+        ],
+        cwd=root,
+    ).stdout.splitlines()
+    dirty_paths: list[str] = []
+    for line in status:
+        path = line[3:].split(" -> ")[-1]
+        if path in selected_files or (
+            line.startswith("?? ") and _untracked_python_import_path(path)
         ):
             dirty_paths.append(path)
     if dirty_paths:
@@ -150,11 +164,72 @@ def _record_source_provenance(output_dir: Path) -> dict[str, Any]:
         "schema": 1,
         "revision": revision,
         "selected_source_clean": True,
+        "python_isolated": bool(sys.flags.isolated),
+        "python_no_user_site": bool(sys.flags.no_user_site),
         "source_tree_sha256": digest.hexdigest(),
         "files": hashes,
     }
+    return provenance
+
+
+def _record_source_provenance(output_dir: Path) -> dict[str, Any]:
+    provenance = _source_provenance_snapshot()
     _write_json(output_dir / "source-provenance.json", provenance)
     return provenance
+
+
+def _verify_source_provenance(expected: Mapping[str, Any]) -> None:
+    if _source_provenance_snapshot() != expected:
+        raise DemoError("producer source changed after provenance capture")
+
+
+def _materialize_runtime_source(
+    private_dir: Path,
+    provenance: Mapping[str, Any],
+) -> Path:
+    repository = Path(__file__).resolve().parents[1]
+    archive = private_dir / "runtime-source.tar"
+    checkout = private_dir / "source-checkout"
+    checkout.mkdir(mode=0o700)
+    completed = subprocess.run(
+        [
+            "git",
+            "archive",
+            "--format=tar",
+            f"--output={archive}",
+            str(provenance["revision"]),
+            "runtime",
+        ],
+        cwd=repository,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise DemoError(f"cannot materialize committed runtime source: {completed.stdout}")
+    with tarfile.open(archive, mode="r:") as bundle:
+        for member in bundle.getmembers():
+            parts = Path(member.name).parts
+            if (
+                not parts
+                or parts[0] != "runtime"
+                or ".." in parts
+                or member.issym()
+                or member.islnk()
+                or not (member.isdir() or member.isfile())
+            ):
+                raise DemoError("committed runtime archive contains an unsafe member")
+        bundle.extractall(checkout, filter="data")
+    archive.unlink()
+    runtime_dir = checkout / "runtime"
+    for path, expected_hash in provenance["files"].items():
+        if not str(path).startswith("runtime/"):
+            continue
+        materialized = checkout / str(path)
+        if not materialized.is_file() or _sha256_file(materialized) != expected_hash:
+            raise DemoError(f"committed runtime snapshot differs at {path}")
+    return runtime_dir
 
 
 def _runtime_image_bindings(
@@ -485,6 +560,8 @@ class VMProcess:
         direct_probe: str,
         evidence_dir: Path,
         stderr_path: Path,
+        expected_binary_sha256: str,
+        process_evidence_path: Path,
     ) -> None:
         command = [
             str(binary),
@@ -502,14 +579,59 @@ class VMProcess:
             str(evidence_dir),
         ]
         self._stderr = stderr_path.open("w", encoding="utf-8")
-        self.process = subprocess.Popen(
-            command,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=self._stderr,
-            text=True,
-            bufsize=1,
-        )
+        expected_descriptor = os.open(binary, os.O_RDONLY | os.O_CLOEXEC)
+        try:
+            expected_stat = os.fstat(expected_descriptor)
+            if _sha256_fd(expected_descriptor) != expected_binary_sha256:
+                raise DemoError("built VM runner changed before launch")
+            self.process = subprocess.Popen(
+                command,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=self._stderr,
+                text=True,
+                bufsize=1,
+            )
+            try:
+                process_descriptor = os.open(
+                    f"/proc/{self.process.pid}/exe",
+                    os.O_RDONLY | os.O_CLOEXEC,
+                )
+                try:
+                    process_stat = os.fstat(process_descriptor)
+                    if (
+                        process_stat.st_dev != expected_stat.st_dev
+                        or process_stat.st_ino != expected_stat.st_ino
+                    ):
+                        raise DemoError(
+                            "running VM runner inode differs from the built binary"
+                        )
+                    process_sha256 = _sha256_fd(process_descriptor)
+                finally:
+                    os.close(process_descriptor)
+                if process_sha256 != expected_binary_sha256:
+                    raise DemoError(
+                        "running VM runner bytes differ from its build digest"
+                    )
+                _write_json(
+                    process_evidence_path,
+                    {
+                        "schema": 1,
+                        "source": "linux-proc-exe-fd",
+                        "pid": self.process.pid,
+                        "executable": "vm-demo",
+                        "executable_sha256": process_sha256,
+                    },
+                )
+            except Exception:
+                self.process.kill()
+                self.process.wait(timeout=5.0)
+                raise
+        except Exception:
+            self._stderr.close()
+            raise
+        finally:
+            os.close(expected_descriptor)
         if self.process.stdin is None or self.process.stdout is None:
             raise DemoError("VM runner pipes were not created")
         self._selector = selectors.DefaultSelector()
@@ -948,9 +1070,11 @@ def _copy_vm_evidence(source: Path, destination: Path, private_root: Path) -> No
     destination.mkdir(mode=0o700)
     for name in (
         "result.json",
+        "base-image-provenance.json",
         "guest.serial.log",
         "guest-request.json",
         "guest-script.sh",
+        "host-tools.json",
         "snapshots.txt",
         "qemu-command.json",
         "qemu-process-command.json",
@@ -1011,11 +1135,26 @@ def run_demo(
     model: str | None,
     vm_accel: str,
 ) -> dict[str, Any]:
+    if not sys.flags.isolated or not sys.flags.no_user_site:
+        raise DemoError("integrated evidence must run under isolated Python")
     if vm_accel not in {"tcg", "kvm"}:
         raise DemoError("VM accelerator must be tcg or kvm")
+    if vm_accel == "kvm":
+        try:
+            kvm_descriptor = os.open(
+                "/dev/kvm", os.O_RDWR | os.O_CLOEXEC
+            )
+        except OSError as error:
+            raise DemoError(
+                "KVM acceleration requires read/write access to /dev/kvm; "
+                "run this target in the kvm group"
+            ) from error
+        try:
+            if not stat.S_ISCHR(os.fstat(kvm_descriptor).st_mode):
+                raise DemoError("/dev/kvm is not a character device")
+        finally:
+            os.close(kvm_descriptor)
     repository = Path(__file__).resolve().parents[1]
-    runtime_dir = repository / "runtime"
-    compose_file = runtime_dir / "deploy/integrated/compose.yaml"
     output_dir = output_dir.resolve()
     for command in ("docker", "qemu-system-x86_64", "qemu-img", "nc"):
         if shutil.which(command) is None:
@@ -1038,6 +1177,11 @@ def run_demo(
     ) as private:
         private_dir = Path(private)
         private_dir.chmod(0o700)
+        runtime_dir = _materialize_runtime_source(
+            private_dir,
+            source_provenance,
+        )
+        compose_file = runtime_dir / "deploy/integrated/compose.yaml"
         state_dir = private_dir / "state"
         workspace = private_dir / "agent-workspace"
         account_home = private_dir / "codex-home"
@@ -1071,6 +1215,18 @@ def run_demo(
             cwd=runtime_dir,
             timeout=120.0,
         )
+        _verify_source_provenance(source_provenance)
+        vm_binary_sha256 = _sha256_file(vm_binary)
+        _write_json(
+            output_dir / "runtime-build-provenance.json",
+            {
+                "schema": 1,
+                "build_input": "git-archive",
+                "revision": source_provenance["revision"],
+                "source_tree_sha256": source_provenance["source_tree_sha256"],
+                "vm_demo_sha256": vm_binary_sha256,
+            },
+        )
         control_port = _free_port()
         order_port = _free_port()
         while order_port == control_port:
@@ -1091,6 +1247,7 @@ def run_demo(
         sandbox_lifecycle: list[dict[str, Any]] = []
         try:
             deployment.start()
+            _verify_source_provenance(source_provenance)
             _compile_and_activate(
                 deployment=deployment,
                 runtime_dir=runtime_dir,
@@ -1132,6 +1289,8 @@ def run_demo(
                 direct_probe=f"http://{ledger_ip}:8081/v1/stats",
                 evidence_dir=vm_work,
                 stderr_path=vm_stderr,
+                expected_binary_sha256=vm_binary_sha256,
+                process_evidence_path=output_dir / "vm-runner-process.json",
             ) as vm:
                 snapshot_event = vm.wait_event("snapshot-ready", 7 * 60.0)
                 timeline["vm_snapshot_ready_ns"] = snapshot_event["observed_time_ns"]
@@ -1744,6 +1903,7 @@ def run_demo(
                             "source_tree_sha256"
                         ],
                         "runtime_image_id": image_provenance["image_id"],
+                        "vm_demo_sha256": vm_binary_sha256,
                     },
                     "evidence_directory": output_dir.name,
                 }
@@ -1776,7 +1936,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     output = arguments.output_dir
     if output is None:
         output = Path("docs/tmp/bootstrap") / time.strftime(
-            "step-0017-%Y%m%dT%H%M%SZ", time.gmtime()
+            "step-0018-%Y%m%dT%H%M%SZ", time.gmtime()
         )
     result = run_demo(
         output_dir=output,

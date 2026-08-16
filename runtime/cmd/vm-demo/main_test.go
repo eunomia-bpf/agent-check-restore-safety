@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
@@ -52,6 +53,49 @@ func TestEnsureImageRejectsWrongDigest(t *testing.T) {
 	}
 	if _, statErr := os.Stat(path); !os.IsNotExist(statErr) {
 		t.Fatalf("failed download remained at final path: %v", statErr)
+	}
+}
+
+func TestOpenExecutableIdentitySurvivesPathReplacement(t *testing.T) {
+	directory := t.TempDir()
+	path := filepath.Join(directory, "tool")
+	replacement := filepath.Join(directory, "replacement")
+	if err := os.WriteFile(path, []byte("original executable"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	original, err := identityForOpenExecutable(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(replacement, []byte("replacement executable"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(replacement, path); err != nil {
+		t.Fatal(err)
+	}
+	currentFile, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer currentFile.Close()
+	current, err := identityForOpenExecutable(currentFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if original == current {
+		t.Fatal("path replacement retained the original executable identity")
+	}
+	stillOpen, err := identityForOpenExecutable(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stillOpen != original {
+		t.Fatal("open executable descriptor did not pin the original inode and bytes")
 	}
 }
 
@@ -277,6 +321,41 @@ func TestExpectExternalCommandIsExact(t *testing.T) {
 	wrong := bufio.NewScanner(strings.NewReader("continue\n"))
 	if err := expectExternalCommand(context.Background(), wrong, "start"); err == nil {
 		t.Fatal("unexpected VM control command was accepted")
+	}
+}
+
+func TestCopyVerifiedImagePinsPrivateBackingBytes(t *testing.T) {
+	directory := t.TempDir()
+	source := filepath.Join(directory, "source.img")
+	destination := filepath.Join(directory, "private.img")
+	contents := []byte("verified backing bytes")
+	if err := os.WriteFile(source, contents, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := copyVerifiedImage(source, destination, dataSHA256(contents))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence["private_backing_copy"] != true || evidence["file_mode"] != "0600" ||
+		evidence["bytes"] != int64(len(contents)) || evidence["sha256"] != dataSHA256(contents) {
+		t.Fatalf("copy evidence=%+v", evidence)
+	}
+	data, err := os.ReadFile(destination)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(data, contents) {
+		t.Fatalf("private copy=%q, want %q", data, contents)
+	}
+	info, err := os.Stat(destination)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mode := info.Mode().Perm(); mode != 0o600 {
+		t.Fatalf("private copy mode=%#o", mode)
+	}
+	if _, err := copyVerifiedImage(source, filepath.Join(directory, "wrong.img"), strings.Repeat("0", 64)); err == nil {
+		t.Fatal("base image with another digest was accepted")
 	}
 }
 

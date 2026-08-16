@@ -49,13 +49,27 @@ RESERVE_V2_KIND = "reserve-v2"
 AUDIT_KIND = "append-audit"
 BASE_IMAGE_SHA = "d1940f7d69d343355e183dff1e08a59852d32e7309baa7a4bad8365b11b005ac"
 NATIVE_CODEX_SHA = "cb0a15567e9a60a5820d54b0f6ae86d504dc3805c1eab21a47f70e3eb7b73a40"
-SOURCE_ADAPTER_FILES = {
-    "adapter/app_server.py",
-    "adapter/codex_integrated_runtime_demo.py",
-    "adapter/codex_isolated_runtime_demo.py",
-    "adapter/codex_runtime_demo.py",
-    "adapter/docker_codex.py",
-}
+QEMU_SYSTEM_SHA = "8a35ccba41582fc6c38b9df85fc9e35fa1d42f414d2d7d8090ee9b2f5e7c0854"
+QEMU_IMAGE_SHA = "634320b91165669917123e8e79cce1c4d00cee0a4aa4d662d7c0a8186479b3fb"
+NETCAT_SHA = "2a6fac3d98e090468962ef18003cb8b89fbffa7219917ca12567d5e42b156948"
+
+
+def _selected_source_path(path: str) -> bool:
+    return (
+        (
+            path.endswith(".py")
+            and ("/" not in path or path.startswith("adapter/"))
+        )
+        or (
+            path.startswith("runtime/")
+            and (
+                path.endswith(".go")
+                or path.endswith("/Dockerfile")
+                or path.endswith("/compose.yaml")
+                or path in {"runtime/go.mod", "runtime/go.sum"}
+            )
+        )
+    )
 
 
 def _operation_id(domain: str, call_id: str) -> str:
@@ -106,13 +120,17 @@ def _check_provenance(
         set(source)
         == {
             "files",
+            "python_isolated",
+            "python_no_user_site",
             "revision",
             "schema",
             "selected_source_clean",
             "source_tree_sha256",
         }
         and source.get("schema") == 1
-        and source.get("selected_source_clean") is True,
+        and source.get("selected_source_clean") is True
+        and source.get("python_isolated") is True
+        and source.get("python_no_user_site") is True,
         "source provenance envelope differs",
     )
     revision = source.get("revision")
@@ -127,27 +145,22 @@ def _check_provenance(
     _git_bytes(repository, ["cat-file", "-e", revision + "^{commit}"])
     listed = _git_bytes(
         repository,
-        ["ls-tree", "-r", "--name-only", "-z", revision, "--", "adapter", "runtime"],
+        ["ls-tree", "-r", "--name-only", "-z", revision],
     ).decode("utf-8").split("\0")
     expected_files = sorted(
-        path
-        for path in listed
-        if path
-        and (
-            path in SOURCE_ADAPTER_FILES
-            or (
-                path.startswith("runtime/")
-                and (
-                    path.endswith(".go")
-                    or path.endswith("/Dockerfile")
-                    or path.endswith("/compose.yaml")
-                    or path in {"runtime/go.mod", "runtime/go.sum"}
-                )
-            )
-        )
+        path for path in listed if path and _selected_source_path(path)
     )
+    required = {
+        "adapter/__init__.py",
+        "adapter/app_server.py",
+        "adapter/codex_integrated_runtime_demo.py",
+        "adapter/codex_isolated_runtime_demo.py",
+        "adapter/codex_runtime_demo.py",
+        "adapter/docker_codex.py",
+        "adapter/mock_responses.py",
+    }
     _require(
-        SOURCE_ADAPTER_FILES <= set(expected_files),
+        required <= set(expected_files),
         "source revision omits an integrated producer dependency",
     )
     recorded_files = _object(source.get("files"), "source file hashes")
@@ -174,6 +187,25 @@ def _check_provenance(
     _require(
         digest.hexdigest() == tree_hash,
         "producer source-tree digest does not match its committed files",
+    )
+
+    build = _object(
+        _json_file(directory, "runtime-build-provenance.json"),
+        "runtime build provenance",
+    )
+    vm_demo_sha256 = build.get("vm_demo_sha256")
+    _require(
+        build
+        == {
+            "schema": 1,
+            "build_input": "git-archive",
+            "revision": revision,
+            "source_tree_sha256": tree_hash,
+            "vm_demo_sha256": vm_demo_sha256,
+        }
+        and isinstance(vm_demo_sha256, str)
+        and re.fullmatch(r"[0-9a-f]{64}", vm_demo_sha256) is not None,
+        "runtime build is not tied to the committed Git archive",
     )
 
     image = _object(
@@ -225,6 +257,7 @@ def _check_provenance(
         "source_labels": source_labels,
         "compose_version": compose_version,
         "container_images": container_images,
+        "vm_demo_sha256": vm_demo_sha256,
     }
 
 
@@ -1595,6 +1628,42 @@ def _check_vm(
     ledger_ip: str,
 ) -> dict[str, Any]:
     vm_dir = directory / "vm"
+    host_tools = _object(_json_file(vm_dir, "host-tools.json"), "VM host tools")
+    _require(
+        host_tools
+        == {
+            "schema": 1,
+            "tools": {
+                "qemu-system-x86_64": {
+                    "path": "/usr/bin/qemu-system-x86_64",
+                    "sha256": QEMU_SYSTEM_SHA,
+                    "version": "QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)",
+                },
+                "qemu-img": {
+                    "path": "/usr/bin/qemu-img",
+                    "sha256": QEMU_IMAGE_SHA,
+                    "version": "qemu-img version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)",
+                },
+                "nc": {
+                    "path": "/usr/bin/nc.openbsd",
+                    "sha256": NETCAT_SHA,
+                    "version": "OpenBSD netcat (Debian patchlevel 1.226-1ubuntu2)",
+                },
+            },
+        },
+        "VM host tools differ from the pinned executable set",
+    )
+    _require(
+        _json_file(vm_dir, "base-image-provenance.json")
+        == {
+            "schema": 1,
+            "bytes": 624105472,
+            "sha256": BASE_IMAGE_SHA,
+            "private_backing_copy": True,
+            "file_mode": "0600",
+        },
+        "QEMU did not use a run-private post-copy-verified base image",
+    )
     call_id = f"purchase/{purchase_id}/audit"
     request_value = {
         "call_id": call_id,
@@ -1676,8 +1745,8 @@ def _check_vm(
     _require(isinstance(netdev, str), "QEMU netdev is not text")
     matched = re.fullmatch(
         r"user,id=opnet,restrict=on,"
-        r"guestfwd=tcp:10\.0\.2\.100:8000-cmd:/usr/bin/nc 127\.0\.0\.1 ([0-9]+),"
-        r"guestfwd=tcp:10\.0\.2\.100:8787-cmd:/usr/bin/nc -U <host-sandbox-socket>",
+        r"guestfwd=tcp:10\.0\.2\.100:8000-cmd:/usr/bin/nc\.openbsd 127\.0\.0\.1 ([0-9]+),"
+        r"guestfwd=tcp:10\.0\.2\.100:8787-cmd:/usr/bin/nc\.openbsd -U <host-sandbox-socket>",
         netdev,
     )
     _require(matched is not None, "QEMU user network has another forwarding boundary")
@@ -1735,9 +1804,11 @@ def _check_vm(
         == {
             "arguments": arguments,
             "executable": "qemu-system-x86_64",
+            "executable_path": "/usr/bin/qemu-system-x86_64",
+            "executable_sha256": QEMU_SYSTEM_SHA,
             "pid": result["qemu_pid"],
             "schema": 1,
-            "source": "linux-proc-cmdline",
+            "source": "linux-proc-cmdline-and-exe-fd",
         },
         "retained /proc QEMU command differs from the planned launch boundary",
     )
@@ -1754,6 +1825,10 @@ def _check_vm(
         qmp_records[0].get("direction") == "server_to_client"
         and all(type(qmp_version.get(part)) is int for part in ("major", "minor", "micro")),
         "QMP greeting is absent or malformed",
+    )
+    _require(
+        qmp_version == {"major": 8, "minor": 2, "micro": 2},
+        "QMP server version differs from the pinned QEMU executable",
     )
     client_records = [
         record
@@ -2712,6 +2787,7 @@ def _check_runner_result(
             "revision": provenance["revision"],
             "runtime_image_id": provenance["image_id"],
             "source_tree_sha256": provenance["source_tree_sha256"],
+            "vm_demo_sha256": provenance["vm_demo_sha256"],
         },
         "runner provenance summary differs from committed source and image evidence",
     )
@@ -2757,6 +2833,21 @@ def _check_runner_result(
             "transport",
         },
         "runner VM summary differs from QEMU guest evidence",
+    )
+    runner_process = _object(
+        _json_file(directory, "vm-runner-process.json"),
+        "live VM runner process",
+    )
+    _require(
+        runner_process
+        == {
+            "schema": 1,
+            "source": "linux-proc-exe-fd",
+            "pid": vm_summary["runner_pid"],
+            "executable": "vm-demo",
+            "executable_sha256": provenance["vm_demo_sha256"],
+        },
+        "running VM runner is not the binary tied to committed source",
     )
     codex = _object(result.get("codex"), "runner Codex summary")
     _require(

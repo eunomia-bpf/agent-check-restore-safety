@@ -6,6 +6,7 @@ from pathlib import Path
 import socket
 import tempfile
 import unittest
+from hashlib import sha256
 
 from adapter.codex_integrated_runtime_demo import (
     AUDIT_KIND,
@@ -24,11 +25,38 @@ from adapter.codex_integrated_runtime_demo import (
     _observe_stale_sandbox_socket,
     _requirements,
     _sandbox_operation_id,
+    _selected_source_path,
+    _sha256_fd,
+    _untracked_python_import_path,
     _write_release,
 )
 
 
 class IntegratedRuntimeDemoTests(unittest.TestCase):
+    def test_source_manifest_ignores_unrelated_retained_scripts(self) -> None:
+        retained = "docs/tmp/bootstrap/raw/checker-snapshot/check.py"
+        self.assertFalse(_selected_source_path(retained))
+        self.assertFalse(_untracked_python_import_path(retained))
+        self.assertTrue(_selected_source_path("adapter/app_server.py"))
+        self.assertTrue(_untracked_python_import_path("json.py"))
+
+    def test_open_executable_fd_pins_bytes_across_path_replacement(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "runner"
+            replacement = Path(temporary) / "replacement"
+            original = b"original executable bytes"
+            path.write_bytes(original)
+            descriptor = os.open(path, os.O_RDONLY | os.O_CLOEXEC)
+            try:
+                replacement.write_bytes(b"different bytes")
+                replacement.replace(path)
+                self.assertEqual(
+                    _sha256_fd(descriptor),
+                    sha256(original).hexdigest(),
+                )
+            finally:
+                os.close(descriptor)
+
     def test_operation_identity_separates_three_actor_domains(self) -> None:
         call = "purchase/A-17/audit"
         identities = {
@@ -162,10 +190,12 @@ class IntegratedRuntimeDemoTests(unittest.TestCase):
             destination = root / "destination"
             source.mkdir(mode=0o700)
             for name, value in (
+                ("base-image-provenance.json", "{}\n"),
                 ("result.json", "{}\n"),
                 ("guest.serial.log", "guest\n"),
                 ("guest-request.json", "{}\n"),
                 ("guest-script.sh", "#!/bin/sh\n"),
+                ("host-tools.json", "{}\n"),
                 ("snapshots.txt", "before_purchase\n"),
                 ("qemu-command.json", "{}\n"),
                 ("qemu-process-command.json", "{}\n"),
