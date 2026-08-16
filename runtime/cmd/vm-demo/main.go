@@ -1145,9 +1145,9 @@ func writeQEMUProcessCommand(
 	evidenceDirectory, imagePath string,
 	privatePaths ...string,
 ) error {
-	data, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+	data, err := readNonemptyProcessCommand(pid, time.Second)
 	if err != nil {
-		return fmt.Errorf("read live QEMU process command: %w", err)
+		return err
 	}
 	fields := bytes.Split(data, []byte{0})
 	if len(fields) > 0 && len(fields[len(fields)-1]) == 0 {
@@ -1203,6 +1203,24 @@ func writeQEMUProcessCommand(
 		return err
 	}
 	return writePrivateFile(path, encoded.Bytes())
+}
+
+func readNonemptyProcessCommand(pid int, timeout time.Duration) ([]byte, error) {
+	path := fmt.Sprintf("/proc/%d/cmdline", pid)
+	deadline := time.Now().Add(timeout)
+	for {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("read live QEMU process command: %w", err)
+		}
+		if len(data) != 0 {
+			return data, nil
+		}
+		if time.Now().After(deadline) {
+			return nil, errors.New("live QEMU process command remained empty during startup")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 }
 
 func markerFieldFromLast(path, marker string) string {

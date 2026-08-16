@@ -137,6 +137,16 @@ func TestQEMUProcessEvidenceBindsLiveCommandAndExecutable(t *testing.T) {
 	}
 }
 
+func TestReadNonemptyProcessCommandObservesLiveProcess(t *testing.T) {
+	data, err := readNonemptyProcessCommand(os.Getpid(), time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(bytes.Split(data, []byte{0})) < 2 {
+		t.Fatalf("live process command=%q", data)
+	}
+}
+
 func TestWaitForText(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "serial.log")
 	go func() {
