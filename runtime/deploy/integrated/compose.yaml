@@ -76,7 +76,9 @@ services:
       - -head-anchor=/anchor/runtime.head
       - -admin-token-file=/credentials/admin-token
       - -adapter-config=/config/adapters.json
+      - -sandbox-socket-dir=/sandbox-endpoints
     init: true
+    stop_grace_period: 75s
     read_only: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
@@ -96,6 +98,9 @@ services:
         source: ${DEMO_STATE_DIR}/control-config
         target: /config
         read_only: true
+      - type: bind
+        source: ${DEMO_STATE_DIR}/sandbox-endpoints
+        target: /sandbox-endpoints
     networks: [application, effects]
     depends_on:
       payment: {condition: service_healthy}

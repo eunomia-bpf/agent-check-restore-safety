@@ -22,6 +22,7 @@ import (
 
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/api"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/control"
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/sandboxhost"
 )
 
 func main() {
@@ -33,6 +34,7 @@ func main() {
 	var operationDomain string
 	var operationKinds string
 	var adapterConfigPath string
+	var sandboxSocketDirectory string
 	var allowNonLoopback bool
 	flag.StringVar(&historyPath, "history", "runtime.history", "path for the durable History")
 	flag.StringVar(&anchorPath, "head-anchor", "", "host path outside the History restore domain")
@@ -42,6 +44,7 @@ func main() {
 	flag.StringVar(&operationDomain, "operation-domain", "local-adapter", "domain bound to the Operation API token")
 	flag.StringVar(&operationKinds, "operation-kinds", "", "comma-separated operation kinds allowed for the token")
 	flag.StringVar(&adapterConfigPath, "adapter-config", "", "strict JSON file containing independently scoped adapter credentials")
+	flag.StringVar(&sandboxSocketDirectory, "sandbox-socket-dir", "", "private directory for host-owned sandbox Unix sockets")
 	flag.BoolVar(&allowNonLoopback, "allow-nonloopback", false, "allow an explicitly isolated non-loopback listener")
 	flag.Parse()
 	if anchorPath == "" {
@@ -54,12 +57,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	adapters, err := loadAdapters(
+	adapters, err := loadRuntimeAdapters(
 		adapterConfigPath,
 		operationTokenPath,
 		operationDomain,
 		operationKinds,
 		historyPath,
+		sandboxSocketDirectory,
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -89,14 +93,34 @@ func main() {
 		listener.Close()
 		log.Fatal(err)
 	}
-	defer c.Close()
 	apiServer, err := api.New(c, nil, api.Credentials{
 		AdminToken: adminToken,
 		Adapters:   adapters,
 	})
 	if err != nil {
 		listener.Close()
+		c.Close()
 		log.Fatal(err)
+	}
+	var sandboxManager *sandboxhost.Manager
+	if sandboxSocketDirectory != "" {
+		if err := ensurePrivateDirectory(sandboxSocketDirectory); err != nil {
+			listener.Close()
+			c.Close()
+			log.Fatal(err)
+		}
+		sandboxManager, err = sandboxhost.NewManager(c, apiServer, sandboxSocketDirectory)
+		if err != nil {
+			listener.Close()
+			c.Close()
+			log.Fatal(err)
+		}
+		if err := apiServer.SetSandboxEndpointPublisher(sandboxManager); err != nil {
+			listener.Close()
+			sandboxManager.Close()
+			c.Close()
+			log.Fatal(err)
+		}
 	}
 	server := &http.Server{
 		Handler:           apiServer.Handler(),
@@ -106,20 +130,70 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	shutdownDone := make(chan error, 1)
 	go func() {
 		<-ctx.Done()
-		shutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		_ = server.Shutdown(shutdown)
+		shutdownDone <- shutdownRuntime(apiServer, server, sandboxManager, c)
 	}()
 	fmt.Printf("control API listening on http://%s\n", listener.Addr())
 	fmt.Printf("admin token: %s\nadapter credentials: %d\n", adminTokenPath, len(adapters))
-	if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatal(err)
+	if sandboxManager != nil {
+		fmt.Printf("sandbox endpoints: %s\n", sandboxSocketDirectory)
+	}
+	serveErr := server.Serve(listener)
+	if ctx.Err() == nil {
+		stop()
+	}
+	shutdownErr := <-shutdownDone
+	if serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
+		log.Fatal(errors.Join(serveErr, shutdownErr))
+	}
+	if shutdownErr != nil {
+		log.Fatal(shutdownErr)
 	}
 }
 
+func shutdownRuntime(
+	apiServer *api.Server,
+	server *http.Server,
+	sandboxManager *sandboxhost.Manager,
+	controller *control.Control,
+) error {
+	apiServer.QuiesceCutovers()
+	shutdownContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	serverShutdownErr := server.Shutdown(shutdownContext)
+	cancel()
+	if serverShutdownErr != nil {
+		serverShutdownErr = errors.Join(serverShutdownErr, server.Close())
+	}
+	var sandboxErr error
+	if sandboxManager != nil {
+		sandboxErr = sandboxManager.Close()
+	}
+	controlErr := controller.Close()
+	return errors.Join(serverShutdownErr, sandboxErr, controlErr)
+}
+
+func ensurePrivateDirectory(path string) error {
+	if path == "" || !filepath.IsAbs(path) || filepath.Clean(path) != path {
+		return errors.New("sandbox socket directory must be absolute and canonical")
+	}
+	if err := os.Mkdir(path, 0o700); err != nil && !errors.Is(err, os.ErrExist) {
+		return fmt.Errorf("create sandbox socket directory: %w", err)
+	}
+	return nil
+}
+
 const maxAdapterConfigBytes = 1 << 20
+
+func loadRuntimeAdapters(
+	configPath, legacyTokenPath, legacyDomain, legacyKinds, historyPath, sandboxSocketDirectory string,
+) ([]api.AdapterCredential, error) {
+	if sandboxSocketDirectory != "" && configPath == "" && legacyTokenPath == "" && legacyKinds == "" {
+		return nil, nil
+	}
+	return loadAdapters(configPath, legacyTokenPath, legacyDomain, legacyKinds, historyPath)
+}
 
 type adapterConfig struct {
 	Schema   int                  `json:"schema"`

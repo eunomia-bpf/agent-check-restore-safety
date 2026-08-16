@@ -583,6 +583,10 @@ general exactly-once claim nor proof that every unknown Operation can finish.
   only under an explicit flag for an isolated container network, exposing
   state, History, compilation, Rule activation, and gateway execution over a
   strict JSON API;
+- an optional in-process sandbox endpoint manager that turns one private
+  directory into credential-free Unix sockets, publishes the complete new
+  sandbox set all-or-none with each Cutover, and leaves replayed bindings
+  unattached after a daemon restart;
 - adapter credentials bound to one domain and an allowed kind set, with the
   Operation identity derived server-side from that domain and call identity;
 - History-based recovery of a previously registered Operation's frozen kind,
@@ -605,17 +609,27 @@ Run the daemon directly:
 ```sh
 cd runtime
 mkdir -p /tmp/running-change-host
+mkdir -m 700 /tmp/running-change-sandboxes
 go run ./cmd/control \
   -history /tmp/running-change.history \
   -head-anchor /tmp/running-change-host/running-change.head \
-  -operation-domain example-service \
-  -operation-kinds charge-invoice
+  -sandbox-socket-dir /tmp/running-change-sandboxes
 ```
 
 The anchor directory must already exist. For VM restore protection, the anchor
 must be on the host or a remote monotonic store, not inside the guest image.
 The adjacent default anchor catches isolated History replacement but not a
 snapshot that rolls back both files.
+
+With `-sandbox-socket-dir`, `POST /v1/cutover` also replaces the host-owned
+sandbox endpoints. Each socket has mode 0600 under a current-user 0700
+directory; its filename is derived from the sandbox identity, while the
+sandbox receives only `call_id`, `kind`, and `body`. A daemon restart removes
+dead sockets but does not attach bindings reconstructed from History. The host
+must submit a fresh generation Cutover before resuming a restored VM. If the
+durable Cutover commits but endpoint publication fails, the API returns
+`endpoint_attach_failed_after_commit` with `committed: true`; the old endpoint
+is not restored.
 
 The API listens on `127.0.0.1:8787` and refuses non-loopback addresses by
 default. The multi-service deployment uses the explicit non-loopback flag only

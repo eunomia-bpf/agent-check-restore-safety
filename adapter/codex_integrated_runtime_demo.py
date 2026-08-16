@@ -628,6 +628,7 @@ def _configure_private_state(state_dir: Path) -> dict[str, str]:
         "credentials",
         "control-config",
         "order-config",
+        "sandbox-endpoints",
     ):
         (state_dir / name).mkdir(mode=0o700)
     tokens = {

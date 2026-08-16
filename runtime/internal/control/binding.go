@@ -462,6 +462,41 @@ func (c *Control) AttachSandboxHost(binding SandboxBinding) error {
 	return nil
 }
 
+// AttachSandboxHosts atomically attaches the complete desired sandbox set.
+// It is used by a host supervisor after every endpoint has been created but
+// before any endpoint starts serving. Either every binding from the latest
+// Cutover becomes live in this Control boot or none does.
+func (c *Control) AttachSandboxHosts(completeBindings []SandboxBinding) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err := c.bindingReadyLocked(); err != nil {
+		return err
+	}
+	canonical, err := canonicalSandboxBindings(completeBindings)
+	if err != nil {
+		return err
+	}
+	if len(canonical) != len(c.bindings.desired) {
+		return errors.New("sandbox attachment must contain the complete desired set")
+	}
+	if len(c.attachedBindings) != 0 {
+		return ErrSandboxAlreadyAttached
+	}
+	for _, binding := range canonical {
+		desired, desiredExists := c.bindings.desired[binding.SandboxID]
+		eligible, eligibleExists := c.attachEligible[binding.SandboxID]
+		if !desiredExists || !eligibleExists || !sandboxBindingEqual(desired, binding) ||
+			!sandboxBindingEqual(eligible, binding) {
+			return ErrStaleSandboxBinding
+		}
+	}
+	for _, binding := range canonical {
+		delete(c.attachEligible, binding.SandboxID)
+		c.attachedBindings[binding.SandboxID] = cloneSandboxBinding(binding)
+	}
+	return nil
+}
+
 // DetachSandboxHost closes a matching host attachment without changing the
 // durable desired set. A stale host cannot detach a newer instance.
 func (c *Control) DetachSandboxHost(binding SandboxBinding) error {

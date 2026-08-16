@@ -155,6 +155,49 @@ func TestReopenIsClosedUntilFreshGenerationCutoverAndAttach(t *testing.T) {
 	}
 }
 
+func TestAttachSandboxHostsIsCompleteAndAtomic(t *testing.T) {
+	control, err := Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer control.Close()
+	certificate, err := control.Compile(requirement("atomic-host-attach"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	first := testSandboxBinding("vm-a", 1, "vm-host-a", "vm-a", "charge")
+	second := testSandboxBinding("vm-b", 1, "vm-host-b", "vm-b", "charge")
+	if err := control.Cutover(certificate, []SandboxBinding{first, second}); err != nil {
+		t.Fatal(err)
+	}
+	if err := control.AttachSandboxHosts([]SandboxBinding{first}); err == nil {
+		t.Fatal("partial sandbox set was attached")
+	}
+	if err := control.ValidateSandbox(first); !errors.Is(err, ErrSandboxNotAttached) {
+		t.Fatalf("partial failure attached first sandbox: %v", err)
+	}
+	forged := second
+	forged.HostInstanceID = "forged-host"
+	if err := control.AttachSandboxHosts([]SandboxBinding{first, forged}); !errors.Is(err, ErrStaleSandboxBinding) {
+		t.Fatalf("forged sandbox error=%v", err)
+	}
+	if err := control.ValidateSandbox(first); !errors.Is(err, ErrSandboxNotAttached) {
+		t.Fatalf("forged failure attached first sandbox: %v", err)
+	}
+	if err := control.ValidateSandbox(second); !errors.Is(err, ErrSandboxNotAttached) {
+		t.Fatalf("forged failure attached second sandbox: %v", err)
+	}
+	if err := control.AttachSandboxHosts([]SandboxBinding{second, first}); err != nil {
+		t.Fatal(err)
+	}
+	if err := control.ValidateSandbox(first); err != nil {
+		t.Fatal(err)
+	}
+	if err := control.ValidateSandbox(second); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestActivateFailsClosedWhileDurableSandboxBindingsAreActive(t *testing.T) {
 	control, err := Open(filepath.Join(t.TempDir(), "runtime.history"))
 	if err != nil {

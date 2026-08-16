@@ -2,10 +2,19 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
+
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/api"
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/control"
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/gateway"
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/kernel"
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/sandboxhost"
 )
 
 func TestListenerPolicy(t *testing.T) {
@@ -60,6 +69,105 @@ func TestLoadOrCreateTokenRejectsSharedFile(t *testing.T) {
 	}
 }
 
+func TestEnsurePrivateSandboxDirectory(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "sandbox-endpoints")
+	if err := ensurePrivateDirectory(path); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Lstat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !info.IsDir() || info.Mode().Perm() != 0o700 {
+		t.Fatalf("sandbox endpoint directory mode=%v", info.Mode())
+	}
+	if err := ensurePrivateDirectory(path); err != nil {
+		t.Fatalf("existing private directory was rejected: %v", err)
+	}
+	if err := ensurePrivateDirectory("relative/endpoints"); err == nil {
+		t.Fatal("relative sandbox endpoint directory was accepted")
+	}
+}
+
+func TestShutdownRuntimeDrainsSandboxBeforeControl(t *testing.T) {
+	stateDirectory := t.TempDir()
+	endpointDirectory, err := os.MkdirTemp("/tmp", "scr-shutdown-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(endpointDirectory) })
+	if err := os.Chmod(endpointDirectory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	controller, err := control.Open(filepath.Join(stateDirectory, "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	serverAPI, err := api.New(controller, nil, api.Credentials{
+		AdminToken: "shutdown-admin-token-00000000000000000000",
+	})
+	if err != nil {
+		controller.Close()
+		t.Fatal(err)
+	}
+	manager, err := sandboxhost.NewManager(controller, serverAPI, endpointDirectory)
+	if err != nil {
+		controller.Close()
+		t.Fatal(err)
+	}
+	if err := serverAPI.SetSandboxEndpointPublisher(manager); err != nil {
+		manager.Close()
+		controller.Close()
+		t.Fatal(err)
+	}
+	requirement := kernel.Requirement{
+		ID: "shutdown-v1", Results: map[string]uint32{"done": 1},
+		Capacities: map[string]uint32{"slot": 1},
+		Kinds: map[string]kernel.KindSpec{"finish": {
+			Costs: map[string]uint32{"slot": 1}, Produces: map[string]uint32{"done": 1},
+			RetrySafe: true, Target: "http://127.0.0.1:1/effect", Method: http.MethodPost,
+			ResponseClassifier: gateway.ResponseReceiptV1,
+		}},
+	}
+	certificate, err := controller.Compile(requirement)
+	if err != nil {
+		t.Fatal(err)
+	}
+	binding := control.SandboxBinding{
+		SandboxID: "vm", Generation: 1, HostInstanceID: "shutdown-host-v1",
+		Domain: "agent", AllowedKinds: []string{"finish"},
+	}
+	if err := controller.Cutover(certificate, []control.SandboxBinding{binding}); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.ReplaceCommitted(controller.SandboxBindings()); err != nil {
+		t.Fatal(err)
+	}
+	socketPath := manager.PathForSandbox(binding.SandboxID)
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := &http.Server{Handler: serverAPI.Handler(), ReadHeaderTimeout: time.Second}
+	serveDone := make(chan error, 1)
+	go func() { serveDone <- server.Serve(listener) }()
+	if err := shutdownRuntime(serverAPI, server, manager, controller); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-serveDone; !errors.Is(err, http.ErrServerClosed) {
+		t.Fatalf("admin server shutdown error=%v", err)
+	}
+	if _, err := os.Lstat(socketPath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("sandbox socket survived shutdown: %v", err)
+	}
+	if err := manager.Close(); err != nil {
+		t.Fatalf("cached manager close error=%v", err)
+	}
+	if err := controller.Close(); err != nil {
+		t.Fatalf("idempotent control close error=%v", err)
+	}
+}
+
 func TestLoadAdaptersUsesIndependentDomainsAndPrivateTokens(t *testing.T) {
 	directory := t.TempDir()
 	configuration := adapterConfig{Schema: 1, Adapters: []adapterConfigEntry{
@@ -92,6 +200,20 @@ func TestLoadAdaptersUsesIndependentDomainsAndPrivateTokens(t *testing.T) {
 		if info.Mode().Perm() != 0o600 {
 			t.Fatalf("token %s mode = %o", entry.TokenFile, info.Mode().Perm())
 		}
+	}
+}
+
+func TestSandboxOnlyRuntimeNeedsNoAdapterCredential(t *testing.T) {
+	historyPath := filepath.Join(t.TempDir(), "runtime.history")
+	credentials, err := loadRuntimeAdapters("", "", "local-adapter", "", historyPath, "/run/sandboxes")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(credentials) != 0 {
+		t.Fatalf("sandbox-only credentials=%+v", credentials)
+	}
+	if _, err := os.Lstat(historyPath + ".operation-token"); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("sandbox-only runtime created an adapter token: %v", err)
 	}
 }
 

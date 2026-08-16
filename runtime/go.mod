@@ -7,6 +7,7 @@ toolchain go1.25.13
 require (
 	github.com/jackc/pgx/v5 v5.9.2
 	go.mongodb.org/mongo-driver/v2 v2.8.0
+	golang.org/x/sys v0.30.0
 )
 
 require (

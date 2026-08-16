@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -514,6 +515,9 @@ func TestHostBoundSandboxNeedsNoCredentialAndCannotReachAdmin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := c.AttachSandboxHost(first); err != nil {
+		t.Fatal(err)
+	}
 	sandboxServer := httptest.NewServer(sandboxHandler)
 	defer sandboxServer.Close()
 	request := sandboxExecuteRequest{CallID: "order/A-17/payment", Kind: "finish"}
@@ -559,8 +563,21 @@ func TestHostBoundSandboxNeedsNoCredentialAndCannotReachAdmin(t *testing.T) {
 	if status := postJSON(t, sandboxServer.Client(), sandboxServer.URL+"/v1/execute", "", withTarget, &errorBody{}); status != http.StatusBadRequest {
 		t.Fatalf("guest-supplied provider target status=%d", status)
 	}
+	withHeaders := map[string]any{
+		"call_id": "order/A-18/payment", "kind": "finish",
+		"headers": map[string]string{"Authorization": "Bearer guest-controlled"},
+	}
+	if status := postJSON(t, sandboxServer.Client(), sandboxServer.URL+"/v1/execute", "", withHeaders, &errorBody{}); status != http.StatusBadRequest {
+		t.Fatalf("guest-supplied provider headers status=%d", status)
+	}
 	if status := postJSON(t, sandboxServer.Client(), sandboxServer.URL+"/v1/execute", operationToken, request, &errorBody{}); status != http.StatusBadRequest {
 		t.Fatalf("sandbox endpoint accepted a guest bearer token: status=%d", status)
+	}
+	if status := postJSON(t, sandboxServer.Client(), sandboxServer.URL+"/v1/execute", adminToken, request, &errorBody{}); status != http.StatusBadRequest {
+		t.Fatalf("sandbox endpoint accepted an admin bearer token: status=%d", status)
+	}
+	if deliveries.Load() != 1 {
+		t.Fatalf("credential probes reached provider: deliveries=%d", deliveries.Load())
 	}
 
 	second := first
@@ -584,6 +601,9 @@ func TestHostBoundSandboxNeedsNoCredentialAndCannotReachAdmin(t *testing.T) {
 
 	currentHandler, err := serverAPI.HandlerForSandbox(second)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.AttachSandboxHost(second); err != nil {
 		t.Fatal(err)
 	}
 	currentServer := httptest.NewServer(currentHandler)
@@ -652,6 +672,9 @@ func TestSandboxResponseWriteCompletesBeforeCutover(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := c.AttachSandboxHost(first); err != nil {
+		t.Fatal(err)
+	}
 	body, err := json.Marshal(sandboxExecuteRequest{CallID: "call-1", Kind: "finish"})
 	if err != nil {
 		t.Fatal(err)
@@ -711,4 +734,228 @@ func TestSandboxResponseWriteCompletesBeforeCutover(t *testing.T) {
 	if deliveries.Load() != 1 {
 		t.Fatalf("settled response was redispatched: deliveries=%d", deliveries.Load())
 	}
+}
+
+type testEndpointPublisher struct {
+	control     *control.Control
+	calls       atomic.Int32
+	mu          sync.Mutex
+	sequences   []uint64
+	fail        error
+	blockFirst  bool
+	firstEnter  chan struct{}
+	firstResume chan struct{}
+	secondEnter chan struct{}
+}
+
+func (publisher *testEndpointPublisher) ReplaceCommitted(bindings []control.SandboxBinding) error {
+	call := publisher.calls.Add(1)
+	state, desired := publisher.control.SnapshotWithSandboxBindings()
+	publisher.mu.Lock()
+	publisher.sequences = append(publisher.sequences, state.History.Sequence)
+	publisher.mu.Unlock()
+	if !bindingSetsEqualForTest(bindings, desired) {
+		return errors.New("publisher observed a non-committed binding set")
+	}
+	if call == 1 && publisher.blockFirst {
+		close(publisher.firstEnter)
+		<-publisher.firstResume
+	}
+	if call == 2 && publisher.secondEnter != nil {
+		close(publisher.secondEnter)
+	}
+	return publisher.fail
+}
+
+func TestCutoverPublisherRunsOnlyAfterDurableCommit(t *testing.T) {
+	c, err := control.Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	serverAPI, err := New(c, nil, Credentials{AdminToken: adminToken})
+	if err != nil {
+		t.Fatal(err)
+	}
+	publisher := &testEndpointPublisher{control: c}
+	if err := serverAPI.SetSandboxEndpointPublisher(publisher); err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(serverAPI.Handler())
+	defer server.Close()
+	binding := control.SandboxBinding{
+		SandboxID: "vm", Generation: 1, HostInstanceID: "host-v1",
+		Domain: "agent", AllowedKinds: []string{"finish"},
+	}
+	if status := postJSON(t, server.Client(), server.URL+"/v1/cutover", adminToken,
+		CutoverRequest{Bindings: []control.SandboxBinding{binding}}, &ErrorResponse{}); status != http.StatusUnprocessableEntity {
+		t.Fatalf("invalid cutover status=%d", status)
+	}
+	if publisher.calls.Load() != 0 || len(c.Events()) != 0 {
+		t.Fatalf("publisher ran before a commit: calls=%d events=%d", publisher.calls.Load(), len(c.Events()))
+	}
+	certificate, err := c.Compile(testRequirement("publisher-v1", "http://127.0.0.1:1/effect"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var response CutoverResponse
+	if status := postJSON(t, server.Client(), server.URL+"/v1/cutover", adminToken,
+		CutoverRequest{Certificate: certificate, Bindings: []control.SandboxBinding{binding}}, &response); status != http.StatusOK {
+		t.Fatalf("valid cutover status=%d response=%+v", status, response)
+	}
+	if publisher.calls.Load() != 1 || len(c.Events()) != 1 || response.State.History.Sequence != 1 {
+		t.Fatalf("committed publication calls=%d events=%d response=%+v", publisher.calls.Load(), len(c.Events()), response)
+	}
+	publisher.mu.Lock()
+	defer publisher.mu.Unlock()
+	if len(publisher.sequences) != 1 || publisher.sequences[0] != 1 {
+		t.Fatalf("publisher sequences=%v", publisher.sequences)
+	}
+}
+
+func TestCutoverPublisherFailureReportsCommittedState(t *testing.T) {
+	c, err := control.Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	serverAPI, err := New(c, nil, Credentials{AdminToken: adminToken})
+	if err != nil {
+		t.Fatal(err)
+	}
+	publisher := &testEndpointPublisher{control: c, fail: errors.New("socket publication failed")}
+	if err := serverAPI.SetSandboxEndpointPublisher(publisher); err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(serverAPI.Handler())
+	defer server.Close()
+	certificate, err := c.Compile(testRequirement("publisher-failure", "http://127.0.0.1:1/effect"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	binding := control.SandboxBinding{
+		SandboxID: "vm", Generation: 1, HostInstanceID: "host-v1",
+		Domain: "agent", AllowedKinds: []string{"finish"},
+	}
+	var response CutoverFailureResponse
+	if status := postJSON(t, server.Client(), server.URL+"/v1/cutover", adminToken,
+		CutoverRequest{Certificate: certificate, Bindings: []control.SandboxBinding{binding}}, &response); status != http.StatusInternalServerError {
+		t.Fatalf("publication failure status=%d response=%+v", status, response)
+	}
+	if !response.Committed || response.Code != "endpoint_attach_failed_after_commit" ||
+		response.State == nil || response.State.History.Sequence != 1 || len(response.Bindings) != 1 {
+		t.Fatalf("publication failure response=%+v", response)
+	}
+	state, bindings := c.SnapshotWithSandboxBindings()
+	if state.History.Sequence != 1 || len(c.Events()) != 1 || len(bindings) != 1 ||
+		bindings[0].HostInstanceID != binding.HostInstanceID {
+		t.Fatalf("committed state was rolled back: state=%+v bindings=%+v", state, bindings)
+	}
+}
+
+func TestConcurrentCutoversCannotPassCommittedPublication(t *testing.T) {
+	c, err := control.Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	serverAPI, err := New(c, nil, Credentials{AdminToken: adminToken})
+	if err != nil {
+		t.Fatal(err)
+	}
+	publisher := &testEndpointPublisher{
+		control: c, blockFirst: true, firstEnter: make(chan struct{}),
+		firstResume: make(chan struct{}), secondEnter: make(chan struct{}),
+	}
+	if err := serverAPI.SetSandboxEndpointPublisher(publisher); err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(serverAPI.Handler())
+	defer server.Close()
+	firstBinding := control.SandboxBinding{
+		SandboxID: "vm", Generation: 1, HostInstanceID: "host-v1",
+		Domain: "agent", AllowedKinds: []string{"finish"},
+	}
+	firstCertificate, err := c.Compile(testRequirement("serialized-v1", "http://127.0.0.1:1/effect"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	firstDone := make(chan int, 1)
+	go func() {
+		firstDone <- postJSON(t, server.Client(), server.URL+"/v1/cutover", adminToken,
+			CutoverRequest{Certificate: firstCertificate, Bindings: []control.SandboxBinding{firstBinding}}, &CutoverResponse{})
+	}()
+	select {
+	case <-publisher.firstEnter:
+	case <-time.After(5 * time.Second):
+		t.Fatal("first endpoint publication did not start")
+	}
+	secondCertificate, err := c.Compile(testRequirement("serialized-v2", "http://127.0.0.1:1/effect"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondBinding := firstBinding
+	secondBinding.Generation = 2
+	secondBinding.HostInstanceID = "host-v2"
+	secondDone := make(chan int, 1)
+	go func() {
+		secondDone <- postJSON(t, server.Client(), server.URL+"/v1/cutover", adminToken,
+			CutoverRequest{Certificate: secondCertificate, Bindings: []control.SandboxBinding{secondBinding}}, &CutoverResponse{})
+	}()
+	select {
+	case <-publisher.secondEnter:
+		close(publisher.firstResume)
+		t.Fatal("second commit passed the first endpoint publication")
+	case <-time.After(100 * time.Millisecond):
+	}
+	if len(c.Events()) != 1 {
+		close(publisher.firstResume)
+		t.Fatalf("second History event committed early: events=%d", len(c.Events()))
+	}
+	close(publisher.firstResume)
+	if status := <-firstDone; status != http.StatusOK {
+		t.Fatalf("first cutover status=%d", status)
+	}
+	if status := <-secondDone; status != http.StatusOK {
+		t.Fatalf("second cutover status=%d", status)
+	}
+	if publisher.calls.Load() != 2 || len(c.Events()) != 2 {
+		t.Fatalf("serialized cutovers calls=%d events=%d", publisher.calls.Load(), len(c.Events()))
+	}
+}
+
+func TestQuiesceRejectsCutoverBeforeHistoryAppend(t *testing.T) {
+	c, err := control.Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	serverAPI, err := New(c, nil, Credentials{AdminToken: adminToken})
+	if err != nil {
+		t.Fatal(err)
+	}
+	serverAPI.QuiesceCutovers()
+	server := httptest.NewServer(serverAPI.Handler())
+	defer server.Close()
+	certificate, err := c.Compile(testRequirement("quiesced", "http://127.0.0.1:1/effect"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	binding := control.SandboxBinding{
+		SandboxID: "vm", Generation: 1, HostInstanceID: "host-v1",
+		Domain: "agent", AllowedKinds: []string{"finish"},
+	}
+	if status := postJSON(t, server.Client(), server.URL+"/v1/cutover", adminToken,
+		CutoverRequest{Certificate: certificate, Bindings: []control.SandboxBinding{binding}}, &ErrorResponse{}); status != http.StatusServiceUnavailable {
+		t.Fatalf("quiesced cutover status=%d", status)
+	}
+	if len(c.Events()) != 0 {
+		t.Fatalf("quiesced cutover appended History: events=%d", len(c.Events()))
+	}
+}
+
+func bindingSetsEqualForTest(left, right []control.SandboxBinding) bool {
+	leftJSON, _ := json.Marshal(left)
+	rightJSON, _ := json.Marshal(right)
+	return bytes.Equal(leftJSON, rightJSON)
 }

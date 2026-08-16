@@ -11,6 +11,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
+	"sync/atomic"
 
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/control"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/gateway"
@@ -25,6 +27,17 @@ type Server struct {
 	adminToken string
 	adapters   []adapterCredential
 	mux        *http.ServeMux
+
+	cutoverMu       sync.Mutex
+	cutoversClosing atomic.Bool
+	publisher       SandboxEndpointPublisher
+}
+
+// SandboxEndpointPublisher publishes the complete host endpoint set after a
+// durable Rule-and-sandbox Cutover. ReplaceCommitted must fail closed: an
+// error cannot restore the old sandbox authority.
+type SandboxEndpointPublisher interface {
+	ReplaceCommitted([]control.SandboxBinding) error
 }
 
 type Credentials struct {
@@ -138,17 +151,41 @@ func (s *Server) Handler() http.Handler {
 	})
 }
 
-// HandlerForSandbox returns a restricted endpoint whose identity and authority
-// are captured by a host-owned listener. It attaches the binding to this
-// Control boot; the host supervisor must call DetachSandboxHost when it closes
-// the endpoint. Sandbox request bytes cannot select an identity, domain,
-// generation, HTTP method, or provider target, and this handler exposes no
+// SetSandboxEndpointPublisher installs the sole in-process owner of sandbox
+// endpoint lifecycles. It must be called before serving requests.
+func (s *Server) SetSandboxEndpointPublisher(publisher SandboxEndpointPublisher) error {
+	if publisher == nil {
+		return errors.New("nil sandbox endpoint publisher")
+	}
+	s.cutoverMu.Lock()
+	defer s.cutoverMu.Unlock()
+	if s.cutoversClosing.Load() {
+		return errors.New("cutovers are quiesced")
+	}
+	if s.publisher != nil {
+		return errors.New("sandbox endpoint publisher is already installed")
+	}
+	s.publisher = publisher
+	return nil
+}
+
+// QuiesceCutovers prevents new Cutovers and waits for any transaction that
+// already entered Control or the endpoint publisher. It is idempotent.
+func (s *Server) QuiesceCutovers() {
+	s.cutoversClosing.Store(true)
+	s.cutoverMu.Lock()
+	s.cutoverMu.Unlock()
+}
+
+// HandlerForSandbox returns a restricted handler whose identity and authority
+// are captured by a host-owned listener. Constructing the handler has no
+// lifecycle side effect: the host supervisor must attach the binding only
+// after its transport is ready, and detach it when that transport closes.
+// Sandbox request bytes cannot select an identity, domain, generation, HTTP
+// method, provider headers, or provider target, and this handler exposes no
 // control-plane route.
 func (s *Server) HandlerForSandbox(binding control.SandboxBinding) (http.Handler, error) {
 	binding.AllowedKinds = append([]string(nil), binding.AllowedKinds...)
-	if err := s.control.AttachSandboxHost(binding); err != nil {
-		return nil, err
-	}
 	kinds := make(map[string]bool, len(binding.AllowedKinds))
 	for _, kind := range binding.AllowedKinds {
 		kinds[kind] = true
@@ -294,7 +331,19 @@ func (s *Server) cutover(writer http.ResponseWriter, request *http.Request) {
 		writeError(writer, http.StatusBadRequest, err)
 		return
 	}
-	if err := s.control.Cutover(body.Certificate, body.Bindings); err != nil {
+	if s.cutoversClosing.Load() {
+		writeError(writer, http.StatusServiceUnavailable, errors.New("cutovers are quiesced"))
+		return
+	}
+	s.cutoverMu.Lock()
+	if s.cutoversClosing.Load() {
+		s.cutoverMu.Unlock()
+		writeError(writer, http.StatusServiceUnavailable, errors.New("cutovers are quiesced"))
+		return
+	}
+	err := s.control.Cutover(body.Certificate, body.Bindings)
+	if err != nil {
+		s.cutoverMu.Unlock()
 		status := http.StatusUnprocessableEntity
 		if strings.Contains(err.Error(), "stale") || strings.Contains(err.Error(), "different active rule") ||
 			errors.Is(err, control.ErrActiveAdapterDispatch) {
@@ -304,6 +353,18 @@ func (s *Server) cutover(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	state, bindings := s.control.SnapshotWithSandboxBindings()
+	if s.publisher != nil {
+		err = s.publisher.ReplaceCommitted(bindings)
+		state, bindings = s.control.SnapshotWithSandboxBindings()
+	}
+	s.cutoverMu.Unlock()
+	if err != nil {
+		writeJSON(writer, http.StatusInternalServerError, CutoverFailureResponse{
+			Error: err.Error(), Code: "endpoint_attach_failed_after_commit", Committed: true,
+			State: state, Bindings: bindings,
+		})
+		return
+	}
 	writeJSON(writer, http.StatusOK, CutoverResponse{State: state, Bindings: bindings})
 }
 
@@ -331,7 +392,7 @@ func (s *Server) execute(
 			return
 		}
 		body = ExecuteRequest{
-			CallID: guest.CallID, Kind: guest.Kind, Headers: guest.Headers, Body: guest.Body,
+			CallID: guest.CallID, Kind: guest.Kind, Body: guest.Body,
 		}
 	}
 	if body.CallID == "" {

@@ -24,6 +24,18 @@ type CutoverResponse struct {
 	Bindings []control.SandboxBinding `json:"bindings"`
 }
 
+// CutoverFailureResponse distinguishes a rejected Cutover from a host
+// endpoint publication failure after the durable Cutover already committed.
+// A committed failure is fail-closed and must never be retried as though the
+// old sandbox generation were still active.
+type CutoverFailureResponse struct {
+	Error     string                   `json:"error"`
+	Code      string                   `json:"code"`
+	Committed bool                     `json:"committed"`
+	State     *kernel.State            `json:"state,omitempty"`
+	Bindings  []control.SandboxBinding `json:"bindings,omitempty"`
+}
+
 // ErrorResponse is the error envelope returned by control-plane endpoints.
 type ErrorResponse struct {
 	Error string `json:"error"`
@@ -46,10 +58,9 @@ type ExecuteRequest struct {
 // fields. The host resolves those from the active Requirement or an existing
 // Operation after authenticating the concrete sandbox endpoint.
 type sandboxExecuteRequest struct {
-	CallID  string            `json:"call_id"`
-	Kind    string            `json:"kind"`
-	Headers map[string]string `json:"headers,omitempty"`
-	Body    []byte            `json:"body,omitempty"`
+	CallID string `json:"call_id"`
+	Kind   string `json:"kind"`
+	Body   []byte `json:"body,omitempty"`
 }
 
 // OperationError is the error envelope returned after an Execute or Recover
