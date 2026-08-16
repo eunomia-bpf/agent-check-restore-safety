@@ -671,7 +671,7 @@ class FirecrackerDelegationTests(unittest.TestCase):
                             "172.30.0.9",
                         )
 
-    def test_firecracker_sandbox_peer_pid_binds_control_generation(self) -> None:
+    def test_firecracker_sandbox_peer_identity_binds_control_generation(self) -> None:
         basename = (
             "sandbox-"
             + hashlib.sha256(integrated_checker.VM_SANDBOX_ID.encode()).hexdigest()[
@@ -690,6 +690,12 @@ class FirecrackerDelegationTests(unittest.TestCase):
                 "owner_uid": 1000,
                 "device": 7,
                 "inode": 101,
+                "peer_pid": 112,
+                "peer_tgid": 112,
+                "peer_ppid": 111,
+                "peer_comm": "control",
+                "peer_uid": 1000,
+                "peer_gid": 1001,
                 "health_status": 200,
             },
             {
@@ -702,6 +708,12 @@ class FirecrackerDelegationTests(unittest.TestCase):
                 "owner_uid": 1000,
                 "device": 7,
                 "inode": 102,
+                "peer_pid": 112,
+                "peer_tgid": 112,
+                "peer_ppid": 111,
+                "peer_comm": "control",
+                "peer_uid": 1000,
+                "peer_gid": 1001,
                 "health_status": 200,
             },
             {
@@ -732,11 +744,18 @@ class FirecrackerDelegationTests(unittest.TestCase):
                 "owner_uid": 1000,
                 "device": 7,
                 "inode": 103,
+                "peer_pid": 223,
+                "peer_tgid": 223,
+                "peer_ppid": 222,
+                "peer_comm": "control",
+                "peer_uid": 1000,
+                "peer_gid": 1001,
                 "health_status": 200,
             },
         ]
         docker = {
             "runtime_uid": 1000,
+            "runtime_gid": 1001,
             "control_pid_before": 111,
             "control_pid_after": 222,
             "control_crash_finished_ns": 70,
@@ -753,8 +772,8 @@ class FirecrackerDelegationTests(unittest.TestCase):
         }
         vm = {
             "sandbox_identities": {
-                1: {"device": 7, "inode": 101, "sandbox_peer_pid": 111},
-                3: {"device": 7, "inode": 103, "sandbox_peer_pid": 222},
+                1: {"device": 7, "inode": 101, "sandbox_peer_pid": 112},
+                3: {"device": 7, "inode": 103, "sandbox_peer_pid": 223},
             }
         }
         with tempfile.TemporaryDirectory() as temporary:
@@ -770,7 +789,7 @@ class FirecrackerDelegationTests(unittest.TestCase):
                 vm=vm,
             )
             self.assertTrue(boundary["credential_free"])
-            vm["sandbox_identities"][3]["sandbox_peer_pid"] = 111
+            vm["sandbox_identities"][3]["sandbox_peer_pid"] = 222
             with self.assertRaisesRegex(EvidenceError, "published control sockets"):
                 integrated_checker._check_sandbox_lifecycle(
                     directory,
@@ -779,6 +798,31 @@ class FirecrackerDelegationTests(unittest.TestCase):
                     vm_backend="firecracker",
                     vm=vm,
                 )
+            vm["sandbox_identities"][3]["sandbox_peer_pid"] = 223
+
+            identity_mutations = (
+                (0, "peer_tgid", 113, "single control process"),
+                (4, "peer_ppid", 111, "Docker control containers"),
+                (0, "peer_uid", 999, "observed peer identity"),
+                (0, "peer_gid", 999, "observed peer identity"),
+                (0, "peer_comm", "tini", "observed peer identity"),
+            )
+            for index, field, replacement, message in identity_mutations:
+                with self.subTest(field=field):
+                    original = lifecycle[index][field]
+                    lifecycle[index][field] = replacement
+                    (directory / "sandbox-lifecycle.json").write_text(
+                        json.dumps(lifecycle), encoding="utf-8"
+                    )
+                    with self.assertRaisesRegex(EvidenceError, message):
+                        integrated_checker._check_sandbox_lifecycle(
+                            directory,
+                            docker,
+                            timeline,
+                            vm_backend="firecracker",
+                            vm=vm,
+                        )
+                    lifecycle[index][field] = original
 
     def test_firecracker_already_exited_termination_fails_closed(self) -> None:
         completed = subprocess.CompletedProcess([], 0, "", "")

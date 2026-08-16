@@ -4,6 +4,8 @@ import json
 import os
 from pathlib import Path
 import socket
+import subprocess
+import sys
 import tempfile
 import unittest
 from hashlib import sha256
@@ -30,6 +32,7 @@ from adapter.codex_integrated_runtime_demo import (
     _selected_source_path,
     _sha256_fd,
     _untracked_python_import_path,
+    _wait_sandbox_socket,
     _write_release,
     _vm_binding,
     _vm_result_summary,
@@ -38,6 +41,78 @@ from adapter.codex_integrated_runtime_demo import (
 
 
 class IntegratedRuntimeDemoTests(unittest.TestCase):
+    def test_firecracker_socket_publication_records_control_process(self) -> None:
+        server_source = """
+import ctypes
+from pathlib import Path
+import socket
+import sys
+
+libc = ctypes.CDLL(None, use_errno=True)
+if libc.prctl(15, ctypes.c_char_p(b"control"), 0, 0, 0) != 0:
+    raise OSError(ctypes.get_errno(), "prctl(PR_SET_NAME) failed")
+path = Path(sys.argv[1])
+with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as listener:
+    listener.bind(str(path))
+    path.chmod(0o600)
+    listener.listen(1)
+    connection, _ = listener.accept()
+    with connection:
+        connection.recv(4096)
+        connection.sendall(
+            b"HTTP/1.1 200 OK\\r\\nContent-Length: 0\\r\\n"
+            b"Connection: close\\r\\n\\r\\n"
+        )
+"""
+
+        def observe(root: Path, name: str, *, firecracker: bool) -> tuple[dict, int]:
+            path = root / name
+            server = subprocess.Popen(
+                [sys.executable, "-c", server_source, str(path)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            try:
+                evidence = _wait_sandbox_socket(
+                    path,
+                    generation=1,
+                    record_device=firecracker,
+                    timeout=2.0,
+                )
+            finally:
+                try:
+                    _, stderr = server.communicate(timeout=2.0)
+                except subprocess.TimeoutExpired:
+                    server.terminate()
+                    _, stderr = server.communicate(timeout=2.0)
+            self.assertEqual(server.returncode, 0, stderr)
+            return evidence, server.pid
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            root.chmod(0o700)
+            firecracker, peer_pid = observe(root, "firecracker.sock", firecracker=True)
+            self.assertEqual(firecracker["peer_pid"], peer_pid)
+            self.assertEqual(firecracker["peer_tgid"], peer_pid)
+            self.assertEqual(firecracker["peer_ppid"], os.getpid())
+            self.assertEqual(firecracker["peer_comm"], "control")
+            self.assertEqual(firecracker["peer_uid"], os.geteuid())
+            self.assertEqual(firecracker["peer_gid"], os.getegid())
+            qemu, _ = observe(root, "qemu.sock", firecracker=False)
+            self.assertFalse(
+                {
+                    "device",
+                    "peer_pid",
+                    "peer_tgid",
+                    "peer_ppid",
+                    "peer_comm",
+                    "peer_uid",
+                    "peer_gid",
+                }
+                & set(qemu)
+            )
+
     def test_source_manifest_ignores_unrelated_retained_scripts(self) -> None:
         retained = "docs/tmp/bootstrap/raw/checker-snapshot/check.py"
         self.assertFalse(_selected_source_path(retained))

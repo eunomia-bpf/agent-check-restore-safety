@@ -25,6 +25,7 @@ import secrets
 import shutil
 import socket
 import stat
+import struct
 import subprocess
 import sys
 import tarfile
@@ -973,6 +974,55 @@ def _sandbox_socket_path(state_dir: Path) -> Path:
     return state_dir / "sandbox-endpoints" / f"sandbox-{digest}.sock"
 
 
+_LINUX_UCRED = struct.Struct("3i")
+
+
+def _peer_process_identity(
+    peer_pid: int, peer_uid: int, peer_gid: int
+) -> dict[str, int | str]:
+    if peer_pid <= 0 or peer_uid < 0 or peer_gid < 0:
+        raise DemoError("sandbox SO_PEERCRED identity is invalid")
+    process_path = Path("/proc") / str(peer_pid)
+    try:
+        status = (process_path / "status").read_text(
+            encoding="utf-8", errors="strict"
+        )
+        comm_record = (process_path / "comm").read_text(
+            encoding="utf-8", errors="strict"
+        )
+    except (OSError, UnicodeError) as error:
+        raise DemoError("sandbox peer process identity is unavailable") from error
+    fields: dict[str, list[int]] = {}
+    for line in status.splitlines():
+        name, separator, value = line.partition(":")
+        if not separator or name not in {"Pid", "Tgid", "PPid", "Uid", "Gid"}:
+            continue
+        if name in fields:
+            raise DemoError(f"sandbox peer status repeats {name}")
+        try:
+            fields[name] = [int(part) for part in value.split()]
+        except ValueError as error:
+            raise DemoError(f"sandbox peer status has invalid {name}") from error
+    if (
+        set(fields) != {"Pid", "Tgid", "PPid", "Uid", "Gid"}
+        or fields["Pid"] != [peer_pid]
+        or fields["Tgid"] != [peer_pid]
+        or len(fields["PPid"]) != 1
+        or fields["PPid"][0] <= 0
+        or len(fields["Uid"]) != 4
+        or any(value != peer_uid for value in fields["Uid"])
+        or len(fields["Gid"]) != 4
+        or any(value != peer_gid for value in fields["Gid"])
+        or comm_record != "control\n"
+    ):
+        raise DemoError("sandbox SO_PEERCRED identity differs from /proc status")
+    return {
+        "peer_tgid": fields["Tgid"][0],
+        "peer_ppid": fields["PPid"][0],
+        "peer_comm": comm_record.removesuffix("\n"),
+    }
+
+
 def _wait_sandbox_socket(
     path: Path,
     *,
@@ -999,6 +1049,22 @@ def _wait_sandbox_socket(
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
                 connection.settimeout(2.0)
                 connection.connect(str(path))
+                if record_device:
+                    if not hasattr(socket, "SO_PEERCRED"):
+                        raise DemoError("Linux SO_PEERCRED is unavailable")
+                    raw_credentials = connection.getsockopt(
+                        socket.SOL_SOCKET,
+                        socket.SO_PEERCRED,
+                        _LINUX_UCRED.size,
+                    )
+                    if len(raw_credentials) != _LINUX_UCRED.size:
+                        raise DemoError("sandbox SO_PEERCRED has the wrong size")
+                    peer_pid, peer_uid, peer_gid = _LINUX_UCRED.unpack(
+                        raw_credentials
+                    )
+                    peer_process = _peer_process_identity(
+                        peer_pid, peer_uid, peer_gid
+                    )
                 connection.sendall(
                     b"GET /healthz HTTP/1.1\r\nHost: sandbox\r\nConnection: close\r\n\r\n"
                 )
@@ -1017,6 +1083,10 @@ def _wait_sandbox_socket(
                 }
                 if record_device:
                     evidence["device"] = socket_info.st_dev
+                    evidence["peer_pid"] = peer_pid
+                    evidence.update(peer_process)
+                    evidence["peer_uid"] = peer_uid
+                    evidence["peer_gid"] = peer_gid
                 return evidence
             raise DemoError(f"sandbox health response is {response[:80]!r}")
         except OSError as error:

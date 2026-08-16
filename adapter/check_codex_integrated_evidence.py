@@ -1705,6 +1705,7 @@ def _check_docker(
         "topology": topology,
         "effect_ips": effect_ips,
         "runtime_uid": int(users[0].split(":", 1)[0]),
+        "runtime_gid": int(users[0].split(":", 1)[1]),
     }
 
 
@@ -3432,10 +3433,19 @@ def _check_sandbox_lifecycle(
     published: dict[int, int] = {}
     published_inodes: dict[int, int] = {}
     published_devices: dict[int, int] = {}
+    published_peer_pids: dict[int, int] = {}
+    published_peer_tgids: dict[int, int] = {}
+    published_peer_ppids: dict[int, int] = {}
     for value, generation in zip((values[0], values[1], values[4]), (1, 2, 3)):
         observed = value.get("observed_time_ns")
         inode = value.get("inode")
         device = value.get("device")
+        peer_pid = value.get("peer_pid")
+        peer_tgid = value.get("peer_tgid")
+        peer_ppid = value.get("peer_ppid")
+        peer_comm = value.get("peer_comm")
+        peer_uid = value.get("peer_uid")
+        peer_gid = value.get("peer_gid")
         expected_publication = {
             "event": "published",
             "generation": generation,
@@ -3449,6 +3459,16 @@ def _check_sandbox_lifecycle(
         }
         if vm_backend == "firecracker":
             expected_publication["device"] = device
+            expected_publication.update(
+                {
+                    "peer_pid": peer_pid,
+                    "peer_tgid": peer_tgid,
+                    "peer_ppid": peer_ppid,
+                    "peer_comm": peer_comm,
+                    "peer_uid": peer_uid,
+                    "peer_gid": peer_gid,
+                }
+            )
         _require(
             value == expected_publication
             and type(observed) is int
@@ -3461,10 +3481,25 @@ def _check_sandbox_lifecycle(
         published_inodes[generation] = int(inode)
         if vm_backend == "firecracker":
             _require(
-                type(device) is int and device > 0,
-                f"sandbox generation {generation} lacks a device identity",
+                type(device) is int
+                and device > 0
+                and type(peer_pid) is int
+                and peer_pid > 0
+                and type(peer_tgid) is int
+                and peer_tgid > 0
+                and type(peer_ppid) is int
+                and peer_ppid > 0
+                and peer_comm == "control"
+                and type(peer_uid) is int
+                and peer_uid == docker["runtime_uid"]
+                and type(peer_gid) is int
+                and peer_gid == docker["runtime_gid"],
+                f"sandbox generation {generation} lacks an observed peer identity",
             )
             published_devices[generation] = int(device)
+            published_peer_pids[generation] = int(peer_pid)
+            published_peer_tgids[generation] = int(peer_tgid)
+            published_peer_ppids[generation] = int(peer_ppid)
     stale = values[2]
     stale_time = stale.get("observed_time_ns")
     _require(
@@ -3514,6 +3549,19 @@ def _check_sandbox_lifecycle(
     )
     if vm_backend == "firecracker":
         _require(vm is not None, "Firecracker sandbox identity evidence is absent")
+        _require(
+            published_peer_pids == published_peer_tgids,
+            "published sandbox peer identity is not a single control process",
+        )
+        _require(
+            published_peer_ppids
+            == {
+                1: docker["control_pid_before"],
+                2: docker["control_pid_before"],
+                3: docker["control_pid_after"],
+            },
+            "published sandbox peers do not belong to the Docker control containers",
+        )
         relay_identities = _object(
             vm.get("sandbox_identities"), "Firecracker relay sandbox identities"
         )
@@ -3523,11 +3571,7 @@ def _check_sandbox_lifecycle(
                 generation: {
                     "device": published_devices[generation],
                     "inode": published_inodes[generation],
-                    "sandbox_peer_pid": (
-                        docker["control_pid_before"]
-                        if generation == 1
-                        else docker["control_pid_after"]
-                    ),
+                    "sandbox_peer_pid": published_peer_pids[generation],
                 }
                 for generation in (1, 3)
             },
