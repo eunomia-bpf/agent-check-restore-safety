@@ -1,4 +1,4 @@
-//go:build !worker_v1 && !worker_v2
+//go:build !worker_v1 && !worker_v2 && !worker_compatible_v2
 
 package workerapp
 

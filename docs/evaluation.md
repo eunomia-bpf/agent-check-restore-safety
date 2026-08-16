@@ -799,13 +799,35 @@ the provider must be intentionally non-idempotent; and deliveries, durable
 commits, old-code retention, terminal workflow state,
 and independent Rule checking are all retained.
 
-Current status: **plan admitted; executability repairs in progress; no result**.
-History must first retain the exact request needed for recovery, the payment
-stub must become a real durable queried effect, immutable v1/v2 endpoints must
-build from the pinned official source, and source retirement plus target start
-must avoid any target-specific state conversion. These repairs are part of the
-admitted experiment and have no independent research value.
+Current status: **core experiment PASS and frozen after independent result
+review**. In five matched Restate pairs, H0 and H1 have the same retained
+journal and workflow state but different durable payment facts. The proposed
+runtime rejects H0 before target start and activates H1 after querying the
+existing payment; H1 then reaches `DELIVERED` with one payment and one
+completion commit, without v1. Native Restate replacement backs off on code
+mismatch. Retaining v1 preserves availability, but the real old-version control
+duplicates H1 payment in all five repetitions and therefore is not a safe
+substitute.
+
+The matched Temporal application now preserves the full food-ordering business
+chain rather than the earlier simplified path. Its final package contains 55
+real lanes: 30 H0/H1 lanes across manual branch, AutoUpgrade, and Pinned; five
+compatible lanes; ten old-version lanes; and ten proposed/native unsafe lanes.
+All lanes completed their expected checker outcome. The package exited zero,
+all 5,680 recursive checksums match, and all 28 post-command resource checks
+are clean. AutoUpgrade exposes nondeterministic replay failures, Pinned and
+old-version execution retain v1, manual branching requires explicit developer
+logic, and the native unsafe path completes after consuming approval 2 against
+capacity 1 while the proposed path refuses before target start.
+
+The result is scoped to registered, queryable HTTP Operations and this
+food-ordering workload. It does not establish generic exactly-once behavior or
+production VM cutover. Two early failed-attempt records have incomplete exact
+provenance; they are not used in the accepted matrix and are documented in the
+result review rather than reconstructed.
 
 - Plan: `docs/tmp/bootstrap/step-0016-20260815T153407Z/experiment-restate-food-ordering/plan.md`.
 - Plan audit: `docs/tmp/bootstrap/step-0016-20260815T153407Z/experiment-restate-food-ordering/plan-review.md`.
-- Planned raw evidence: `docs/tmp/bootstrap/step-0016-20260815T153407Z/experiment-restate-food-ordering/raw/`.
+- Result review: `docs/tmp/bootstrap/step-0016-20260815T153407Z/experiment-restate-food-ordering/result-review.md`.
+- Raw evidence: `docs/tmp/bootstrap/step-0016-20260815T153407Z/experiment-restate-food-ordering/raw/`.
+- Portable raw archive: `docs/tmp/bootstrap/step-0016-20260815T153407Z/experiment-restate-food-ordering/artifacts/raw-evidence-20260816.tar.zst`.

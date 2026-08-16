@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "routes": [
+    {
+      "path": "/v1/charge",
+      "closure_version": {"mode": "absent"},
+      "kind": "charge-v1",
+      "target": "http://payment:8081/v1/charge",
+      "call_id_mode": "order_id"
+    },
+    {
+      "path": "/v1/complete",
+      "closure_version": {"mode": "absent"},
+      "kind": "finish-v1",
+      "target": "http://completion:8081/v1/complete",
+      "call_id_mode": "complete_order_id"
+    }
+  ]
+}

@@ -10,6 +10,7 @@ from hashlib import sha256
 import json
 from pathlib import Path
 import re
+import subprocess
 from typing import Any
 
 
@@ -21,6 +22,13 @@ IMAGE_ID = re.compile(r"sha256:[0-9a-f]{64}\Z")
 
 WORKFLOW_ID = "temporal-matched-order-1"
 ORDER_ID = "order-1"
+RESTAURANT_ID = "restaurant-1"
+PRODUCT_ID = "pizza-1"
+PRODUCT_DESCRIPTION = "Margherita Pizza"
+PRODUCT_QUANTITY = 2
+DELIVERY_DELAY_MILLIS = 25
+DELIVERY_ID = "delivery-order-1"
+DRIVER_ID = "driver-1"
 PAYMENT_TOKEN = "payment-token-1"
 AMOUNT_CENTS = 4200
 TASK_QUEUE = "safe-change-food-orders"
@@ -30,6 +38,14 @@ V2_BUILD = "food-order-v2"
 V1_IDENTITY = "safe-change-food-order-v1-worker"
 V2_IDENTITY = "safe-change-food-order-v2-worker"
 SIGNAL_IDENTITY = "safe-change-harness"
+BUSINESS_SIGNALS = (
+    "preparation_finished", "driver_selected", "driver_at_restaurant", "delivery_finished",
+)
+FROZEN_FULL_SOURCE_SHA256 = "877a7a5b71b24e3dc309af5cd23bebe77c40dab6b8aec659ef929f1dc771aade"
+FROZEN_RUNTIME_SOURCE_SHA256 = "e95760a49a36fa0dbf8136589545b5499a99e353baabae44c6c11e37ed581059"
+FROZEN_GIT_REVISION = "65988afbfc2fad82fdcc485fbc8f67dbc3b628cc"
+FROZEN_VERSIONS_SHA256 = "c0fbc207ce2a462f364d56173004eaad2b2a3d8dd2fe040b0123352505a0edd3"
+FROZEN_FULL_BUILD_SHA256 = "495e37bda60465e4be169605449a6d586f705faac95cbeb57f0ea49ab97a7fa5"
 NONDETERMINISM = "WORKFLOW_TASK_FAILED_CAUSE_NON_DETERMINISTIC_ERROR"
 NONDETERMINISM_MESSAGE = (
     "[TMPRL1100] lookup failed for scheduledEventID to activityID: "
@@ -95,7 +111,10 @@ REQUIRED_FILES = {
     "pre-v2-history.json",
     "set-current-v1.json",
     "set-current-v2.json",
-    "signal-complete.json",
+    "signal-delivery-finished.json",
+    "signal-driver-at-restaurant.json",
+    "signal-driver-selected.json",
+    "signal-preparation-finished.json",
     "start.json",
     "v1-activity-pollers.json",
     "v1-running-inspect.json",
@@ -110,7 +129,7 @@ REQUIRED_FILES = {
     "versions.env",
 }
 
-BUILD_KEYS = {
+LEGACY_BUILD_KEYS = {
     "GIT_REVISION",
     "SOURCE_SHA256",
     "WORKER_V1_IMAGE",
@@ -126,6 +145,24 @@ BUILD_KEYS = {
     "EFFECTS_IMAGE",
     "EFFECTS_ID",
     "EFFECTS_BINARY_SHA256",
+}
+COMPATIBLE_BUILD_KEYS = {
+    "WORKER_V1_VARIANT_SHA256",
+    "WORKER_COMPATIBLE_V2_IMAGE",
+    "WORKER_COMPATIBLE_V2_ID",
+    "WORKER_COMPATIBLE_V2_BINARY_SHA256",
+    "WORKER_COMPATIBLE_V2_VARIANT_SHA256",
+}
+BUILD_KEYS = LEGACY_BUILD_KEYS | COMPATIBLE_BUILD_KEYS
+
+FROZEN_BUILD_PROFILES = {
+    FROZEN_FULL_BUILD_SHA256: {
+        "name": "step-0016-full-food-order",
+        "keys": BUILD_KEYS,
+        "git_revision": FROZEN_GIT_REVISION,
+        "source_sha256": FROZEN_FULL_SOURCE_SHA256,
+        "runtime_source_sha256": FROZEN_RUNTIME_SOURCE_SHA256,
+    },
 }
 
 
@@ -210,21 +247,32 @@ def _parse_env(data: bytes, label: str) -> dict[str, str]:
     return parsed
 
 
-def _source_digest(files: list[Path], base: Path) -> str:
-    stream = bytearray()
-    for path in sorted(files):
-        _require(path.is_file() and not path.is_symlink(), "source tree contains an unsafe entry")
-        stream.extend(path.relative_to(base).as_posix().encode())
-        stream.append(0)
-        stream.extend(sha256(path.read_bytes()).hexdigest().encode())
-        stream.extend(b"\n")
-    return sha256(stream).hexdigest()
+def _frozen_build_profile(build_data: bytes, build: dict[str, str]) -> dict[str, Any]:
+    digest = sha256(build_data).hexdigest()
+    profile = FROZEN_BUILD_PROFILES.get(digest)
+    _require(profile is not None, "unsupported frozen Temporal build profile")
+    assert profile is not None
+    _require(set(build) == profile["keys"], "build.env fields differ")
+    _require(
+        build.get("GIT_REVISION") == profile["git_revision"] and
+        build.get("SOURCE_SHA256") == profile["source_sha256"] and
+        build.get("RUNTIME_SOURCE_SHA256") == profile["runtime_source_sha256"],
+        "frozen Temporal build identity differs",
+    )
+    return profile
+
+
+def _require_commit_object(repo_root: Path, revision: str) -> None:
+    result = subprocess.run(
+        ["git", "-C", str(repo_root), "cat-file", "-e", f"{revision}^{{commit}}"],
+        check=False, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+    )
+    _require(result.returncode == 0, "recorded build revision commit object is absent")
 
 
 def _check_build(results: Path) -> tuple[bytes, bytes, dict[str, str]]:
     versions_data = _read(results / "versions.env")
-    local_versions = Path(__file__).with_name("versions.env").read_bytes()
-    _require(versions_data == local_versions, "versions.env differs from the checked harness")
+    _require(sha256(versions_data).hexdigest() == FROZEN_VERSIONS_SHA256, "unsupported frozen versions profile")
     versions = _parse_env(versions_data, "versions.env")
     _require(versions.get("TEMPORAL_CLI_VERSION") == "1.8.2", "Temporal CLI version differs")
     _require(versions.get("TEMPORAL_SERVER_VERSION") == "1.31.2", "Temporal Server version differs")
@@ -237,24 +285,22 @@ def _check_build(results: Path) -> tuple[bytes, bytes, dict[str, str]]:
 
     build_data = _read(results / "build.env")
     build = _parse_env(build_data, "build.env")
-    _require(set(build) == BUILD_KEYS, "build.env fields differ")
+    profile = _frozen_build_profile(build_data, build)
     _require(HEX40.fullmatch(build["GIT_REVISION"]) is not None, "build revision is invalid")
-    for key in BUILD_KEYS:
+    for key in build:
         if key.endswith("_SHA256"):
             _require(HEX64.fullmatch(build[key]) is not None, f"{key} is not SHA-256")
         if key.endswith("_ID"):
             _require(IMAGE_ID.fullmatch(build[key]) is not None, f"{key} is not an image ID")
-    _require(build["WORKER_V1_ID"] != build["WORKER_V2_ID"], "worker images are not distinct")
-    _require("latest" not in build["WORKER_V1_IMAGE"] and "latest" not in build["WORKER_V2_IMAGE"], "latest image is forbidden")
-
-    temporal_dir = Path(__file__).resolve().parent
-    runtime_dir = temporal_dir.parents[1]
-    app_files = [path for path in (temporal_dir / "app").rglob("*") if path.is_file()]
-    _require(_source_digest(app_files, runtime_dir.parent) == build["SOURCE_SHA256"], "Temporal source hash differs")
-    runtime_inputs = [runtime_dir / "go.mod", runtime_dir / "go.sum"]
-    for directory in (runtime_dir / "cmd/payment", runtime_dir / "internal/kernel", runtime_dir / "internal/payment"):
-        runtime_inputs.extend(path for path in directory.rglob("*") if path.is_file())
-    _require(_source_digest(runtime_inputs, runtime_dir.parent) == build["RUNTIME_SOURCE_SHA256"], "effects source hash differs")
+    image_ids = {build["WORKER_V1_ID"], build["WORKER_V2_ID"]}
+    image_names = [build["WORKER_V1_IMAGE"], build["WORKER_V2_IMAGE"]]
+    if COMPATIBLE_BUILD_KEYS <= set(build):
+        image_ids.add(build["WORKER_COMPATIBLE_V2_ID"])
+        image_names.append(build["WORKER_COMPATIBLE_V2_IMAGE"])
+    _require(len(image_ids) == len(image_names), "worker images are not distinct")
+    _require(all("latest" not in image for image in image_names), "latest image is forbidden")
+    repo_root = Path(__file__).resolve().parents[3]
+    _require_commit_object(repo_root, profile["git_revision"])
     return versions_data, build_data, build
 
 
@@ -281,6 +327,22 @@ def _operation_id() -> str:
 def _completion_operation_id() -> str:
     value = b"operation-id-v1\0temporal-order-workflow\0complete:" + ORDER_ID.encode()
     return "op-" + sha256(value).hexdigest()
+
+
+def _order_bytes() -> bytes:
+    return (
+        b'{"order_id":"order-1","restaurant_id":"restaurant-1","products":['
+        b'{"product_id":"pizza-1","description":"Margherita Pizza","quantity":2}],'
+        b'"amount_cents":4200,"delivery_delay_millis":25,"payment_token":"payment-token-1"}'
+    )
+
+
+def _json_payload_object(value: Any, label: str) -> dict[str, Any]:
+    try:
+        decoded = json.loads(_payload_bytes(value, label))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise EvidenceError(f"{label} is not JSON") from error
+    return _object(decoded, label)
 
 
 def _normalize_history(history: dict[str, Any], run_id: str) -> dict[str, Any]:
@@ -328,8 +390,7 @@ def _check_cut_history(
     )
     _require(started["workflowType"] == {"name": _workflow_name(mode)}, "Workflow type differs")
     _require(started["taskQueue"] == {"name": TASK_QUEUE, "kind": "TASK_QUEUE_KIND_NORMAL"}, "Workflow task queue differs")
-    expected_order = b'{"order_id":"order-1","amount_cents":4200,"payment_token":"payment-token-1"}'
-    _require(_payload_bytes(started["input"], "Workflow input") == expected_order, "Workflow input bytes differ")
+    _require(_payload_bytes(started["input"], "Workflow input") == _order_bytes(), "Workflow input bytes differ")
     _require(
         started["workflowExecutionTimeout"] == "0s" and started["workflowRunTimeout"] == "0s" and
         started["workflowTaskTimeout"] == "10s" and started["firstWorkflowTaskBackoff"] == "0s",
@@ -548,7 +609,11 @@ def _check_deployments(results: Path) -> None:
     _check_poller(results, "v2-activity-pollers.json", V2_BUILD, V2_IDENTITY)
     _require(_read(results / "set-current-v1.json") == b"", "set-current v1 output differs")
     _require(_read(results / "set-current-v2.json") == b"", "set-current v2 output differs")
-    _require(_read(results / "signal-complete.json") == b"", "signal CLI output differs")
+    for name in (
+        "signal-preparation-finished.json", "signal-driver-selected.json",
+        "signal-driver-at-restaurant.json", "signal-delivery-finished.json",
+    ):
+        _require(_read(results / name) == b"", f"{name} CLI output differs")
     v1 = _json(results / "deployment-v1-current.json")
     v2 = _json(results / "deployment-v2-current.json")
     _require(
@@ -738,7 +803,100 @@ def _check_manual_query_result(
 
 
 def _manual_order_result() -> dict[str, Any]:
-    return {"schema": 1, "order_id": ORDER_ID, "worker_build": V2_BUILD, "phase": "DELIVERED"}
+    return {
+        "schema": 1,
+        "order_id": ORDER_ID,
+        "restaurant_id": RESTAURANT_ID,
+        "product_count": PRODUCT_QUANTITY,
+        "worker_build": V2_BUILD,
+        "phase": "DELIVERED",
+        "delivery_id": DELIVERY_ID,
+        "driver_id": DRIVER_ID,
+        "stages": [
+            "RESTAURANT_SELECTED", "CREATED", "PAYMENT_PENDING", "PAYMENT_QUERY_PENDING",
+            "PAYMENT_COMMITTED", "SCHEDULED", "IN_PREPARATION", "SCHEDULING_DELIVERY",
+            "WAITING_FOR_DRIVER", "IN_DELIVERY", "DELIVERED",
+        ],
+    }
+
+
+def _check_business_signals(events: list[Any]) -> list[dict[str, Any]]:
+    signals = [
+        _object(event, "business signal event")
+        for event in events
+        if isinstance(event, dict) and event.get("eventType") == "EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED"
+    ]
+    _require(len(signals) == len(BUSINESS_SIGNALS), "business signal count differs")
+    attributes = [
+        _object(event.get("workflowExecutionSignaledEventAttributes"), "business signal")
+        for event in signals
+    ]
+    _require(
+        [item.get("signalName") for item in attributes] == list(BUSINESS_SIGNALS),
+        "business signal order differs",
+    )
+    for item in attributes:
+        _require(set(item) == {"signalName", "input", "identity"}, "business signal fields differ")
+        _require(item["identity"] == SIGNAL_IDENTITY, "business signal identity differs")
+        if item["signalName"] == "driver_selected":
+            _require(
+                _payload_bytes(item["input"], "driver_selected input") ==
+                b'{"delivery_id":"delivery-order-1","driver_id":"driver-1"}',
+                "driver assignment signal differs",
+            )
+        else:
+            _require(item["input"] == {}, f"{item['signalName']} input differs")
+    return signals
+
+
+def _expected_activity_input(activity_name: str, operation_id: str) -> bytes:
+    inputs = {
+        "QueryPayment": _effect_request_bytes(operation_id),
+        "PrepareFood": (
+            b'{"order_id":"order-1","restaurant_id":"restaurant-1","products":['
+            b'{"product_id":"pizza-1","description":"Margherita Pizza","quantity":2}]}'
+        ),
+        "ScheduleDelivery": (
+            b'{"order_id":"order-1","delivery_id":"delivery-order-1",'
+            b'"restaurant_id":"restaurant-1","region":"San Jose (CA)"}'
+        ),
+        "CompleteOrder": _effect_request_bytes(_completion_operation_id()),
+    }
+    _require(activity_name in inputs, f"unexpected post-cut Activity {activity_name}")
+    return inputs[activity_name]
+
+
+def _check_post_cut_activity_schedule(event: dict[str, Any], operation_id: str) -> str:
+    attributes = _object(event.get("activityTaskScheduledEventAttributes"), "post-cut Activity schedule")
+    _require(
+        set(attributes) == {
+            "activityId", "activityType", "taskQueue", "header", "input", "scheduleToCloseTimeout",
+            "scheduleToStartTimeout", "startToCloseTimeout", "heartbeatTimeout",
+            "workflowTaskCompletedEventId", "retryPolicy", "useWorkflowBuildId",
+        },
+        "post-cut Activity schedule fields differ",
+    )
+    activity_type = _object(attributes.get("activityType"), "post-cut Activity type").get("name")
+    _require(isinstance(activity_type, str), "post-cut Activity type is absent")
+    timeout = "30s" if activity_type in {"PrepareFood", "ScheduleDelivery"} else "60s"
+    _require(
+        attributes["activityId"] == event.get("eventId") and
+        attributes["taskQueue"] == {"name": TASK_QUEUE, "kind": "TASK_QUEUE_KIND_NORMAL"} and
+        attributes["header"] == {} and
+        _payload_bytes(attributes["input"], f"{activity_type} input") ==
+        _expected_activity_input(activity_type, operation_id) and
+        attributes["scheduleToCloseTimeout"] == "0s" and
+        attributes["scheduleToStartTimeout"] == "0s" and
+        attributes["startToCloseTimeout"] == timeout and
+        attributes["heartbeatTimeout"] == "0s" and
+        isinstance(attributes["workflowTaskCompletedEventId"], str) and
+        attributes["retryPolicy"] == {
+            "initialInterval": "1s", "backoffCoefficient": 2,
+            "maximumInterval": "100s", "maximumAttempts": 1,
+        } and attributes["useWorkflowBuildId"] is True,
+        f"{activity_type} schedule semantics differ",
+    )
+    return activity_type
 
 
 def _check_manual_terminal_event(event: Any, case_name: str) -> None:
@@ -916,35 +1074,13 @@ def _check_final_manual(
     _require(set(history) == {"events"}, "manual final History fields differ")
     events = _array(history["events"], "manual final History events")
     _require(history["events"][:8] == _json(results / "pre-v2-history.json")["events"], "final History does not extend pre-v2 History")
-    expected_length = 18 if case_name == "h0" else 24
-    _require(len(events) == expected_length, "manual final History length differs")
     for index, event in enumerate(events, 1):
         event = _object(event, "manual final History event")
         _require(event.get("eventId") == str(index), "manual final History event IDs differ")
         _require(isinstance(event.get("eventTime"), str) and event["eventTime"], "manual final event time is absent")
         _require(isinstance(event.get("taskId"), str) and event["taskId"].isdigit(), "manual final task ID differs")
 
-    for index in (15,) if case_name == "h0" else (15, 21):
-        queue = events[index - 1].get("workflowTaskScheduledEventAttributes", {}).get("taskQueue", {})
-        _require(isinstance(queue.get("name"), str) and queue["name"], "manual sticky queue name is absent")
-    for index in (10, 16) if case_name == "h0" else (10, 16, 22):
-        attributes = events[index - 1].get("workflowTaskStartedEventAttributes", {})
-        _require(isinstance(attributes.get("requestId"), str) and attributes["requestId"], "manual Workflow task request ID is absent")
-        _require(isinstance(attributes.get("historySizeBytes"), str) and attributes["historySizeBytes"].isdigit(), "manual Workflow task history size differs")
-    for index in (13,) if case_name == "h0" else (13, 19):
-        attributes = events[index - 1].get("activityTaskStartedEventAttributes", {})
-        _require(isinstance(attributes.get("requestId"), str) and attributes["requestId"], "manual Activity request ID is absent")
-
-    query_attributes = _object(events[13].get("activityTaskCompletedEventAttributes"), "QueryPayment completion")
-    query_observation = _check_manual_query_result(
-        query_attributes.get("result"), case_name, operation_id, provider_facts.get("payment"),
-    )
-    _check_manual_terminal_event(events[-1], case_name)
-    expected_tail = _expected_manual_tail(
-        case_name, operation_id, query_observation, provider_facts.get("completion"),
-    )
-    normalized = _normalize_history(history, run_id)
-    _require(normalized["events"][8:] == expected_tail, "manual final History tail differs")
+    _check_business_signals(events)
     _require(
         not any(
             event.get("eventType") == "EVENT_TYPE_WORKFLOW_TASK_FAILED"
@@ -952,6 +1088,141 @@ def _check_final_manual(
         ),
         "manual execution produced a Workflow task failure",
     )
+
+    schedules = [
+        _object(event, "Activity schedule event") for event in events
+        if isinstance(event, dict) and event.get("eventType") == "EVENT_TYPE_ACTIVITY_TASK_SCHEDULED"
+    ]
+    schedule_types = [
+        event.get("activityTaskScheduledEventAttributes", {}).get("activityType", {}).get("name")
+        for event in schedules
+    ]
+    expected_types = ["ChargePayment", "QueryPayment"]
+    if case_name == "h1":
+        expected_types.extend(["PrepareFood", "ScheduleDelivery", "CompleteOrder"])
+    _require(schedule_types == expected_types, "manual Activity sequence differs")
+    for event in schedules[1:]:
+        _check_post_cut_activity_schedule(event, operation_id)
+
+    starts_by_schedule: dict[str, dict[str, Any]] = {}
+    completions_by_schedule: dict[str, dict[str, Any]] = {}
+    for event in events[8:]:
+        if not isinstance(event, dict):
+            continue
+        if event.get("eventType") == "EVENT_TYPE_ACTIVITY_TASK_STARTED":
+            attributes = _object(event.get("activityTaskStartedEventAttributes"), "post-cut Activity start")
+            scheduled_id = attributes.get("scheduledEventId")
+            _require(isinstance(scheduled_id, str) and scheduled_id not in starts_by_schedule, "post-cut Activity start identity differs")
+            _require(
+                attributes.get("identity") == V2_IDENTITY and attributes.get("attempt") == 1 and
+                attributes.get("workerVersion") == {"buildId": V2_BUILD, "useVersioning": True} and
+                isinstance(attributes.get("requestId"), str) and attributes["requestId"],
+                "post-cut Activity ran on the wrong worker",
+            )
+            starts_by_schedule[scheduled_id] = attributes
+        elif event.get("eventType") == "EVENT_TYPE_ACTIVITY_TASK_COMPLETED":
+            attributes = _object(event.get("activityTaskCompletedEventAttributes"), "post-cut Activity completion")
+            scheduled_id = attributes.get("scheduledEventId")
+            _require(isinstance(scheduled_id, str) and scheduled_id not in completions_by_schedule, "post-cut Activity completion identity differs")
+            _require(attributes.get("identity") == V2_IDENTITY, "post-cut Activity completion worker differs")
+            completions_by_schedule[scheduled_id] = attributes
+
+    post_schedules = {event["eventId"]: event for event in schedules[1:]}
+    _require(set(starts_by_schedule) == set(post_schedules), "post-cut Activity start set differs")
+    _require(set(completions_by_schedule) == set(post_schedules), "post-cut Activity completion set differs")
+    query_event = schedules[1]
+    query_completion = completions_by_schedule[query_event["eventId"]]
+    _check_manual_query_result(
+        query_completion.get("result"), case_name, operation_id, provider_facts.get("payment"),
+    )
+
+    if case_name == "h1":
+        activity_results = {
+            event.get("activityTaskScheduledEventAttributes", {}).get("activityType", {}).get("name"):
+            completions_by_schedule[event["eventId"]]
+            for event in schedules[2:]
+        }
+        _require(
+            _json_payload_object(activity_results["PrepareFood"].get("result"), "PrepareFood result") == {
+                "schema": 1, "order_id": ORDER_ID, "restaurant_id": RESTAURANT_ID,
+                "product_count": PRODUCT_QUANTITY, "outcome": "accepted",
+            },
+            "PrepareFood result differs",
+        )
+        _require(
+            _json_payload_object(activity_results["ScheduleDelivery"].get("result"), "ScheduleDelivery result") == {
+                "schema": 1, "order_id": ORDER_ID, "delivery_id": DELIVERY_ID,
+                "restaurant_id": RESTAURANT_ID, "region": "San Jose (CA)", "outcome": "scheduled",
+            },
+            "ScheduleDelivery result differs",
+        )
+        completion_fact = provider_facts.get("completion")
+        _require(isinstance(completion_fact, dict), "H1 completion provider fact is absent")
+        _require(
+            _json_payload_object(activity_results["CompleteOrder"].get("result"), "CompleteOrder result") == {
+                "schema": 1, "operation_id": _completion_operation_id(), "outcome": "succeeded",
+                "result_hash": completion_fact["result_hash"],
+                "remote_reference": completion_fact["remote_reference"],
+            },
+            "CompleteOrder result differs from the provider fact",
+        )
+        timer_starts = [
+            _object(event, "preparation timer start") for event in events
+            if isinstance(event, dict) and event.get("eventType") == "EVENT_TYPE_TIMER_STARTED"
+        ]
+        timer_fires = [
+            _object(event, "preparation timer fire") for event in events
+            if isinstance(event, dict) and event.get("eventType") == "EVENT_TYPE_TIMER_FIRED"
+        ]
+        _require(len(timer_starts) == 1 and len(timer_fires) == 1, "preparation timer event set differs")
+        timer_start = _object(timer_starts[0].get("timerStartedEventAttributes"), "preparation timer start")
+        timer_fire = _object(timer_fires[0].get("timerFiredEventAttributes"), "preparation timer fire")
+        _require(
+            timer_start.get("timerId") == timer_starts[0].get("eventId") and
+            timer_start.get("startToFireTimeout") == "0.025s" and
+            timer_fire.get("timerId") == timer_start.get("timerId") and
+            timer_fire.get("startedEventId") == timer_starts[0].get("eventId"),
+            "preparation timer semantics differ",
+        )
+    else:
+        _require(
+            not any(
+                event.get("eventType") in {"EVENT_TYPE_TIMER_STARTED", "EVENT_TYPE_TIMER_FIRED"}
+                for event in events if isinstance(event, dict)
+            ),
+            "H0 progressed into preparation",
+        )
+
+    terminal = _object(events[-1], "manual terminal event")
+    if case_name == "h0":
+        _require(terminal.get("eventType") == "EVENT_TYPE_WORKFLOW_EXECUTION_FAILED", "H0 terminal event differs")
+        terminal_attributes = _object(
+            terminal.get("workflowExecutionFailedEventAttributes"), "H0 terminal failure",
+        )
+        completed_id = terminal_attributes.get("workflowTaskCompletedEventId")
+        _require(isinstance(completed_id, str) and completed_id.isdigit(), "H0 terminal Workflow task differs")
+        _require(
+            {key: value for key, value in terminal_attributes.items() if key != "workflowTaskCompletedEventId"} == {
+                "failure": {
+                    "message": "manual payment reconciliation was inconclusive", "source": "GoSDK",
+                    "applicationFailureInfo": {
+                        "type": "ManualPaymentReconciliationFailed", "nonRetryable": True,
+                    },
+                },
+                "retryState": "RETRY_STATE_RETRY_POLICY_NOT_SET",
+            },
+            "H0 terminal failure is not the exact nonretryable reconciliation failure",
+        )
+    else:
+        _require(terminal.get("eventType") == "EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED", "H1 terminal event differs")
+        terminal_attributes = _object(
+            terminal.get("workflowExecutionCompletedEventAttributes"), "H1 terminal completion",
+        )
+        _require(set(terminal_attributes) == {"result", "workflowTaskCompletedEventId"}, "H1 terminal fields differ")
+        _require(
+            _json_payload_object(terminal_attributes["result"], "H1 Workflow result") == _manual_order_result(),
+            "H1 terminal result differs",
+        )
 
     final = _json(results / "final-describe.json")
     expected_keys = {"closeEvent", "executionConfig", "workflowExecutionInfo", "workflowExtendedInfo"}
@@ -967,7 +1238,7 @@ def _check_final_manual(
     _require(info.get("firstRunId") == run_id, "manual final first run differs")
     _require(info.get("rootExecution") == {"workflowId": WORKFLOW_ID, "runId": run_id}, "manual final root execution differs")
     _require(info.get("status") == expected_status, "manual final Workflow status differs")
-    _require(info.get("historyLength") == str(expected_length), "manual final History length metadata differs")
+    _require(info.get("historyLength") == str(len(events)), "manual final History length metadata differs")
     _require(info.get("type") == {"name": "FoodOrderManualBranch"}, "manual final Workflow type differs")
     _require(
         info.get("taskQueue") == TASK_QUEUE and info.get("workerDeploymentName") == DEPLOYMENT and
@@ -993,7 +1264,7 @@ def _check_final_manual(
         set(close) == {"eventId", "eventTime", "eventType", "taskId", close_attribute},
         "manual close event fields differ",
     )
-    _require(close.get("eventId") == str(expected_length), "manual close event ID differs")
+    _require(close.get("eventId") == str(len(events)), "manual close event ID differs")
     _require(close.get("eventType") == events[-1].get("eventType"), "manual close event type differs")
     _require(close.get("eventTime") == events[-1].get("eventTime"), "manual close event time differs")
     _require(close.get("taskId") == events[-1].get("taskId"), "manual close task ID differs")
@@ -1009,7 +1280,8 @@ def _check_final_manual(
         _require(final.get("result") == result, "H1 final result differs")
         _require(
             close.get("workflowExecutionCompletedEventAttributes") == {
-                "result": [result], "workflowTaskCompletedEventId": "23",
+                "result": [result],
+                "workflowTaskCompletedEventId": terminal_attributes["workflowTaskCompletedEventId"],
             },
             "H1 close result differs from History",
         )
@@ -1030,16 +1302,7 @@ def _check_final(
     history = _json(results / "final-history.json")
     events = _array(history.get("events"), "final History")
     _require(history["events"][:8] == _json(results / "pre-v2-history.json")["events"], "final History does not extend pre-v2 History")
-    signals = [
-        event for event in events
-        if isinstance(event, dict) and event.get("eventType") == "EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED"
-    ]
-    _require(len(signals) == 1, "final History must contain one completion signal")
-    signal = _object(signals[0].get("workflowExecutionSignaledEventAttributes"), "completion signal")
-    _require(
-        signal == {"signalName": "complete", "input": {}, "identity": SIGNAL_IDENTITY},
-        "completion signal differs",
-    )
+    _check_business_signals(events)
     failures = [
         event for event in events
         if isinstance(event, dict) and event.get("eventType") == "EVENT_TYPE_WORKFLOW_TASK_FAILED"
@@ -1066,14 +1329,17 @@ def _check_final(
     else:
         _require(not failures, "Pinned execution produced a Workflow task failure")
         _require(not later_starts, "Pinned execution ran after its v1 worker stopped")
-        tail = events[8:]
+        tail = [
+            event for event in events[8:]
+            if isinstance(event, dict) and
+            event.get("eventType") != "EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED"
+        ]
         expected_tail = sorted([
-            "EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED",
             "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
             "EVENT_TYPE_WORKFLOW_TASK_TIMED_OUT",
         ])
         _require(
-            len(tail) == 3 and all(isinstance(event, dict) for event in tail) and
+            len(tail) == 2 and
             sorted(event.get("eventType") for event in tail) == expected_tail,
             "Pinned final History tail differs",
         )

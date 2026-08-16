@@ -50,6 +50,40 @@ if [[ ! "$source_sha256" =~ ^[0-9a-f]{64}$ ]]; then
   exit 1
 fi
 
+v1_variant="$script_dir/app/internal/workerapp/variant_v1.go"
+compatible_variant="$script_dir/app/internal/workerapp/variant_compatible_v2.go"
+for expected_line in \
+  '//go:build worker_v1' \
+  'const buildID = "food-order-v1"' \
+  'if err := finishFoodOrder(ctx, order, status, ""); err != nil {'; do
+  if [[ "$(grep -Fc -- "$expected_line" "$v1_variant")" != 1 ]]; then
+    echo "v1 compatibility source anchor differs: $expected_line" >&2
+    exit 64
+  fi
+done
+if ! cmp -s \
+  <(sed \
+    -e 's#^//go:build worker_v1$#//go:build worker_compatible_v2#' \
+    -e 's#^const buildID = "food-order-v1"$#const buildID = "food-order-compatible-v2"#' \
+    -e 's#if err := finishFoodOrder(ctx, order, status, ""); err != nil {#if err := finishFoodOrder(ctx, order, status, "compatible-v2"); err != nil {#' \
+    "$v1_variant") \
+  "$compatible_variant"; then
+  echo "compatible v2 must differ from v1 only in build tag, build ID, and future completion closure" >&2
+  exit 64
+fi
+if ! cmp -s \
+  <(cd "$script_dir/app" && go list -tags worker_v1 \
+    -f '{{range .GoFiles}}{{println .}}{{end}}' ./internal/workerapp | \
+    sed 's/^variant_v1\.go$/variant_selected.go/' | sort) \
+  <(cd "$script_dir/app" && go list -tags worker_compatible_v2 \
+    -f '{{range .GoFiles}}{{println .}}{{end}}' ./internal/workerapp | \
+    sed 's/^variant_compatible_v2\.go$/variant_selected.go/' | sort); then
+  echo "v1 and compatible v2 select different non-variant Go sources" >&2
+  exit 64
+fi
+worker_v1_variant_sha256="$(sha256sum "$v1_variant" | awk '{print $1}')"
+worker_compatible_v2_variant_sha256="$(sha256sum "$compatible_variant" | awk '{print $1}')"
+
 runtime_source_inputs=(
   "$repo_root/runtime/go.mod"
   "$repo_root/runtime/go.sum"
@@ -82,6 +116,7 @@ fi
 
 worker_v1_image="${image_repository}-worker-v1:${image_version}"
 worker_v2_image="${image_repository}-worker-v2:${image_version}"
+worker_compatible_v2_image="${image_repository}-worker-compatible-v2:${image_version}"
 starter_image="${image_repository}-starter:${image_version}"
 effects_image_version="${TEMPORAL_EFFECTS_IMAGE_VERSION:-g${git_revision:0:12}-r${runtime_source_sha256:0:12}}"
 if [[ "$effects_image_version" == "latest" || ! "$effects_image_version" =~ ^[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,127}$ ]]; then
@@ -110,6 +145,11 @@ docker build --file "$script_dir/Dockerfile.worker" \
   --build-arg WORKER_TAG=worker_v2 \
   --build-arg WORKER_BUILD_ID=food-order-v2 \
   --tag "$worker_v2_image" "$repo_root"
+docker build --file "$script_dir/Dockerfile.worker" \
+  "${common_args[@]}" \
+  --build-arg WORKER_TAG=worker_compatible_v2 \
+  --build-arg WORKER_BUILD_ID=food-order-compatible-v2 \
+  --tag "$worker_compatible_v2_image" "$repo_root"
 docker build --file "$script_dir/Dockerfile.starter" \
   "${common_args[@]}" \
   --tag "$starter_image" "$repo_root"
@@ -130,7 +170,7 @@ verify_label() {
   fi
 }
 
-for image in "$worker_v1_image" "$worker_v2_image" "$starter_image"; do
+for image in "$worker_v1_image" "$worker_v2_image" "$worker_compatible_v2_image" "$starter_image"; do
   verify_label "$image" org.opencontainers.image.revision "$git_revision"
   verify_label "$image" org.opencontainers.image.base.name "$TEMPORAL_RUNTIME_IMAGE"
   verify_label "$image" io.safe-change.source.sha256 "$source_sha256"
@@ -142,6 +182,8 @@ verify_label "$worker_v1_image" io.safe-change.build.target worker_v1
 verify_label "$worker_v1_image" io.safe-change.worker.build-id food-order-v1
 verify_label "$worker_v2_image" io.safe-change.build.target worker_v2
 verify_label "$worker_v2_image" io.safe-change.worker.build-id food-order-v2
+verify_label "$worker_compatible_v2_image" io.safe-change.build.target worker_compatible_v2
+verify_label "$worker_compatible_v2_image" io.safe-change.worker.build-id food-order-compatible-v2
 verify_label "$starter_image" io.safe-change.build.target starter
 verify_label "$effects_image" org.opencontainers.image.revision "$git_revision"
 verify_label "$effects_image" org.opencontainers.image.base.name "$TEMPORAL_RUNTIME_IMAGE"
@@ -171,14 +213,16 @@ extract_binary() {
 
 extract_binary "$worker_v1_image" /usr/local/bin/worker "$verify_dir/worker-v1"
 extract_binary "$worker_v2_image" /usr/local/bin/worker "$verify_dir/worker-v2"
+extract_binary "$worker_compatible_v2_image" /usr/local/bin/worker "$verify_dir/worker-compatible-v2"
 extract_binary "$starter_image" /usr/local/bin/starter "$verify_dir/starter"
 extract_binary "$effects_image" /usr/local/bin/payment "$verify_dir/payment"
 
 worker_v1_binary_sha256="$(sha256sum "$verify_dir/worker-v1" | awk '{print $1}')"
 worker_v2_binary_sha256="$(sha256sum "$verify_dir/worker-v2" | awk '{print $1}')"
+worker_compatible_v2_binary_sha256="$(sha256sum "$verify_dir/worker-compatible-v2" | awk '{print $1}')"
 starter_binary_sha256="$(sha256sum "$verify_dir/starter" | awk '{print $1}')"
 effects_binary_sha256="$(sha256sum "$verify_dir/payment" | awk '{print $1}')"
-for binary_sha256 in "$worker_v1_binary_sha256" "$worker_v2_binary_sha256" "$starter_binary_sha256" "$effects_binary_sha256"; do
+for binary_sha256 in "$worker_v1_binary_sha256" "$worker_v2_binary_sha256" "$worker_compatible_v2_binary_sha256" "$starter_binary_sha256" "$effects_binary_sha256"; do
   if [[ ! "$binary_sha256" =~ ^[0-9a-f]{64}$ ]]; then
     echo "could not hash a built binary" >&2
     exit 1
@@ -196,6 +240,7 @@ fi
 
 (cd "$script_dir/app" && go tool nm "$verify_dir/worker-v1") >"$verify_dir/worker-v1.nm"
 (cd "$script_dir/app" && go tool nm "$verify_dir/worker-v2") >"$verify_dir/worker-v2.nm"
+(cd "$script_dir/app" && go tool nm "$verify_dir/worker-compatible-v2") >"$verify_dir/worker-compatible-v2.nm"
 if ! grep -Fq '(*Activities).ChargePayment' "$verify_dir/worker-v1.nm"; then
   echo "v1 worker binary does not contain ChargePayment" >&2
   exit 1
@@ -208,24 +253,73 @@ if ! grep -Fq '(*Activities).QueryPayment' "$verify_dir/worker-v2.nm"; then
   echo "v2 worker binary does not contain QueryPayment" >&2
   exit 1
 fi
+if ! grep -Fq '(*Activities).ChargePayment' "$verify_dir/worker-compatible-v2.nm"; then
+  echo "compatible v2 worker binary does not contain ChargePayment" >&2
+  exit 1
+fi
+if grep -Fq '(*Activities).QueryPayment' "$verify_dir/worker-compatible-v2.nm"; then
+  echo "compatible v2 worker binary unexpectedly contains QueryPayment" >&2
+  exit 1
+fi
+for worker_name in worker-v1 worker-v2 worker-compatible-v2; do
+  for activity_symbol in PrepareFood ScheduleDelivery CompleteOrder; do
+    if ! grep -Fq "(*Activities).${activity_symbol}" "$verify_dir/${worker_name}.nm"; then
+      echo "${worker_name} binary does not contain ${activity_symbol}" >&2
+      exit 1
+    fi
+  done
+done
 
 worker_v1_id="$(docker image inspect --format '{{.Id}}' "$worker_v1_image")"
 worker_v2_id="$(docker image inspect --format '{{.Id}}' "$worker_v2_image")"
+worker_compatible_v2_id="$(docker image inspect --format '{{.Id}}' "$worker_compatible_v2_image")"
 starter_id="$(docker image inspect --format '{{.Id}}' "$starter_image")"
 effects_id="$(docker image inspect --format '{{.Id}}' "$effects_image")"
-for image_id in "$worker_v1_id" "$worker_v2_id" "$starter_id" "$effects_id"; do
+for image_id in "$worker_v1_id" "$worker_v2_id" "$worker_compatible_v2_id" "$starter_id" "$effects_id"; do
   if [[ ! "$image_id" =~ ^sha256:[0-9a-f]{64}$ ]]; then
     echo "Docker returned an invalid image ID: $image_id" >&2
     exit 1
   fi
 done
+if [[ "$worker_compatible_v2_id" == "$worker_v1_id" || "$worker_compatible_v2_id" == "$worker_v2_id" ]]; then
+  echo "compatible v2 worker image is not distinct" >&2
+  exit 1
+fi
+
+# Fail closed if the live build context changed while the independently built
+# images and extracted binaries were being produced.
+source_sha256_after="$({
+  while IFS= read -r -d '' input; do
+    relative="${input#"$repo_root/"}"
+    printf '%s\0' "$relative"
+    sha256sum -- "$input" | awk '{print $1}'
+  done < <(find "$script_dir/app" -type f -print0 | sort -z)
+} | sha256sum | awk '{print $1}')"
+runtime_source_sha256_after="$({
+  while IFS= read -r -d '' input; do
+    relative="${input#"$repo_root/"}"
+    printf '%s\0' "$relative"
+    sha256sum -- "$input" | awk '{print $1}'
+  done < <(find "${runtime_source_inputs[@]}" -type f -print0 | sort -z)
+} | sha256sum | awk '{print $1}')"
+if [[ "$source_sha256_after" != "$source_sha256" || \
+      "$runtime_source_sha256_after" != "$runtime_source_sha256" || \
+      "$(sha256sum "$v1_variant" | awk '{print $1}')" != "$worker_v1_variant_sha256" || \
+      "$(sha256sum "$compatible_variant" | awk '{print $1}')" != "$worker_compatible_v2_variant_sha256" ]]; then
+  echo "Temporal application source changed during the image build" >&2
+  exit 1
+fi
 
 printf 'GIT_REVISION=%s\n' "$git_revision"
 printf 'SOURCE_SHA256=%s\n' "$source_sha256"
 printf 'WORKER_V1_IMAGE=%s\nWORKER_V1_ID=%s\n' "$worker_v1_image" "$worker_v1_id"
 printf 'WORKER_V1_BINARY_SHA256=%s\n' "$worker_v1_binary_sha256"
+printf 'WORKER_V1_VARIANT_SHA256=%s\n' "$worker_v1_variant_sha256"
 printf 'WORKER_V2_IMAGE=%s\nWORKER_V2_ID=%s\n' "$worker_v2_image" "$worker_v2_id"
 printf 'WORKER_V2_BINARY_SHA256=%s\n' "$worker_v2_binary_sha256"
+printf 'WORKER_COMPATIBLE_V2_IMAGE=%s\nWORKER_COMPATIBLE_V2_ID=%s\n' "$worker_compatible_v2_image" "$worker_compatible_v2_id"
+printf 'WORKER_COMPATIBLE_V2_BINARY_SHA256=%s\n' "$worker_compatible_v2_binary_sha256"
+printf 'WORKER_COMPATIBLE_V2_VARIANT_SHA256=%s\n' "$worker_compatible_v2_variant_sha256"
 printf 'STARTER_IMAGE=%s\nSTARTER_ID=%s\n' "$starter_image" "$starter_id"
 printf 'STARTER_BINARY_SHA256=%s\n' "$starter_binary_sha256"
 printf 'RUNTIME_SOURCE_SHA256=%s\n' "$runtime_source_sha256"

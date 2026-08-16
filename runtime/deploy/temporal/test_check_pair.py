@@ -9,8 +9,10 @@ from hashlib import sha256
 import importlib.util
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
 
 CHECK_PATH = Path(__file__).with_name("check-pair.py")
@@ -31,7 +33,7 @@ def payload(data: bytes) -> dict[str, object]:
 
 def cut_history(run_id: str = "run-1") -> dict[str, object]:
     operation_id = CHECK._operation_id()
-    order = b'{"order_id":"order-1","amount_cents":4200,"payment_token":"payment-token-1"}'
+    order = CHECK._order_bytes()
     payment = b'{"order_id":"order-1","amount_cents":4200,"operation_id":"' + operation_id.encode() + b'"}'
     return {"events": [
         {
@@ -132,6 +134,42 @@ def cut_describe(run_id: str = "run-1") -> dict[str, object]:
 class PairCheckerTests(unittest.TestCase):
     def write_json(self, directory: Path, name: str, value: object) -> None:
         (directory / name).write_text(json.dumps(value, sort_keys=True))
+
+    def test_supported_frozen_build_profiles_are_exact(self) -> None:
+        self.assertEqual(
+            CHECK.FROZEN_BUILD_PROFILES,
+            {
+                CHECK.FROZEN_FULL_BUILD_SHA256: {
+                    "name": "step-0016-full-food-order",
+                    "keys": CHECK.BUILD_KEYS,
+                    "git_revision": CHECK.FROZEN_GIT_REVISION,
+                    "source_sha256": CHECK.FROZEN_FULL_SOURCE_SHA256,
+                    "runtime_source_sha256": CHECK.FROZEN_RUNTIME_SOURCE_SHA256,
+                },
+            },
+        )
+
+    def test_rejects_unsupported_frozen_build_profile(self) -> None:
+        with self.assertRaisesRegex(CHECK.EvidenceError, "unsupported frozen Temporal build profile"):
+            CHECK._frozen_build_profile(b"unsupported\n", {})
+
+    def test_commit_validation_uses_recorded_object_not_head(self) -> None:
+        completed = subprocess.CompletedProcess(args=[], returncode=0)
+        with mock.patch.object(CHECK.subprocess, "run", return_value=completed) as run:
+            CHECK._require_commit_object(Path("/repo"), CHECK.FROZEN_GIT_REVISION)
+        run.assert_called_once_with(
+            [
+                "git", "-C", "/repo", "cat-file", "-e",
+                f"{CHECK.FROZEN_GIT_REVISION}^{{commit}}",
+            ],
+            check=False, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+
+    def test_rejects_missing_recorded_commit_object(self) -> None:
+        completed = subprocess.CompletedProcess(args=[], returncode=1)
+        with mock.patch.object(CHECK.subprocess, "run", return_value=completed):
+            with self.assertRaisesRegex(CHECK.EvidenceError, "commit object is absent"):
+                CHECK._require_commit_object(Path("/repo"), CHECK.FROZEN_GIT_REVISION)
 
     def test_cut_history_accepts_exact_payload(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -279,21 +317,25 @@ class PairCheckerTests(unittest.TestCase):
         pre_events = [{"eventId": str(index), "eventType": event_type} for index, event_type in enumerate(CHECK.EXPECTED_PRE_V2_TYPES, 1)]
         pre_events[4]["activityTaskScheduledEventAttributes"] = {"activityType": {"name": "ChargePayment"}}
         self.write_json(root, "pre-v2-history.json", {"events": pre_events})
-        final_events = copy.deepcopy(pre_events) + [
-            {
-                "eventId": "9", "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED",
+        final_events = copy.deepcopy(pre_events)
+        for event_id, signal_name in enumerate(CHECK.BUSINESS_SIGNALS, 9):
+            signal_input = (
+                payload(b'{"delivery_id":"delivery-order-1","driver_id":"driver-1"}')
+                if signal_name == "driver_selected" else {}
+            )
+            final_events.append({
+                "eventId": str(event_id), "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED",
                 "workflowExecutionSignaledEventAttributes": {
-                    "signalName": "complete", "input": {}, "identity": CHECK.SIGNAL_IDENTITY,
+                    "signalName": signal_name, "input": signal_input, "identity": CHECK.SIGNAL_IDENTITY,
                 },
-            },
-        ]
+            })
         if mode == "auto_upgrade":
             final_events.extend([{
-                "eventId": "10", "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+                "eventId": "13", "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
                 "workflowTaskStartedEventAttributes": {"identity": CHECK.V2_IDENTITY},
             },
             {
-                "eventId": "11", "eventType": "EVENT_TYPE_WORKFLOW_TASK_FAILED",
+                "eventId": "14", "eventType": "EVENT_TYPE_WORKFLOW_TASK_FAILED",
                 "workflowTaskFailedEventAttributes": {
                     "cause": cause, "identity": CHECK.V2_IDENTITY,
                     "failure": {"message": CHECK.NONDETERMINISM_MESSAGE, "source": "GoSDK"},
@@ -301,12 +343,12 @@ class PairCheckerTests(unittest.TestCase):
             }])
         else:
             final_events.extend([{
-                "eventId": "10", "eventType": "EVENT_TYPE_WORKFLOW_TASK_TIMED_OUT",
+                "eventId": "13", "eventType": "EVENT_TYPE_WORKFLOW_TASK_TIMED_OUT",
                 "workflowTaskTimedOutEventAttributes": {
                     "scheduledEventId": "8", "timeoutType": "TIMEOUT_TYPE_SCHEDULE_TO_START",
                 },
             }, {
-                "eventId": "11", "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+                "eventId": "14", "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
                 "workflowTaskScheduledEventAttributes": {
                     "taskQueue": {"name": CHECK.TASK_QUEUE, "kind": "TASK_QUEUE_KIND_NORMAL"},
                     "startToCloseTimeout": "10s", "attempt": 1,
@@ -370,7 +412,7 @@ class PairCheckerTests(unittest.TestCase):
             self.make_final(root, mode="pinned")
             value = json.loads((root / "final-history.json").read_bytes())
             value["events"].append({
-                "eventId": "12", "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+                "eventId": "15", "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
                 "workflowTaskStartedEventAttributes": {"identity": CHECK.V2_IDENTITY},
             })
             self.write_json(root, "final-history.json", value)
@@ -382,7 +424,7 @@ class PairCheckerTests(unittest.TestCase):
             root = Path(temporary)
             self.make_final(root, mode="pinned")
             value = json.loads((root / "final-history.json").read_bytes())
-            value["events"][9]["workflowTaskTimedOutEventAttributes"]["scheduledEventId"] = "99"
+            value["events"][12]["workflowTaskTimedOutEventAttributes"]["scheduledEventId"] = "99"
             self.write_json(root, "final-history.json", value)
             with self.assertRaisesRegex(CHECK.EvidenceError, "timeout differs"):
                 CHECK._check_final(root, "run-1", {}, "pinned")

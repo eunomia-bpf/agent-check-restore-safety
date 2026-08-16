@@ -1,0 +1,34 @@
+diff --git a/typescript/end-to-end-applications/food-ordering/app/src/order-app/clients/completion_client.ts b/typescript/end-to-end-applications/food-ordering/app/src/order-app/clients/completion_client.ts
+--- a/typescript/end-to-end-applications/food-ordering/app/src/order-app/clients/completion_client.ts
++++ b/typescript/end-to-end-applications/food-ordering/app/src/order-app/clients/completion_client.ts
+@@ -43,10 +43,14 @@ if (OPERATION_TOKEN.length < 32) {
+ }
+ 
+ class CompletionClient {
+-  async complete(id: string): Promise<boolean> {
++  async complete(id: string, closureVersion: "compatible-v2"): Promise<boolean> {
+     console.info(`[${id}] Recording terminal delivery`);
+     const completionBody = Buffer.from(
+-      JSON.stringify({ order_id: id, status: "DELIVERED" }),
++      JSON.stringify({
++        order_id: id,
++        status: "DELIVERED",
++        closure_version: closureVersion,
++      }),
+       "utf8",
+     );
+     const response = await axios.post<RuntimeOutcome>(
+diff --git a/typescript/end-to-end-applications/food-ordering/app/src/order-app/order_workflow/impl.ts b/typescript/end-to-end-applications/food-ordering/app/src/order-app/order_workflow/impl.ts
+--- a/typescript/end-to-end-applications/food-ordering/app/src/order-app/order_workflow/impl.ts
++++ b/typescript/end-to-end-applications/food-ordering/app/src/order-app/order_workflow/impl.ts
+@@ -66,7 +66,9 @@ export default restate.workflow({
+       await ctx.promise("driver_at_restaurant");
+       ctx.set("status", Status.IN_DELIVERY);
+       await ctx.promise("delivery_finished");
+-      await ctx.run("completion", () => completionClient.complete(id));
++      await ctx.run("completion", () =>
++        completionClient.complete(id, "compatible-v2"),
++      );
+       ctx.set("status", Status.DELIVERED);
+     },
+ 

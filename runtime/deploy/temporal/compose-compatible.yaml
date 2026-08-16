@@ -1,0 +1,18 @@
+services:
+  worker-compatible-v2:
+    image: ${WORKER_COMPATIBLE_V2_ID}
+    environment:
+      HOME: /tmp
+      TEMPORAL_ADDRESS: temporal:7233
+      PAYMENT_URL: http://payment:8081
+      COMPLETION_URL: http://completion:8081
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    networks: [control, effects]
+    depends_on:
+      temporal: {condition: service_healthy}
+      payment: {condition: service_healthy}
+      completion: {condition: service_healthy}

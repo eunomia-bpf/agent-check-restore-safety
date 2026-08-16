@@ -1,0 +1,158 @@
+# The adapter derives the payment Operation identity from order_id. The runner
+# must therefore reject any input whose payment_token differs from order_id.
+services:
+  # The matched base file defines its own v2 baseline. It is not this
+  # experiment's target, so remove every provider edge and make activation
+  # require an explicit profile that the runner never enables.
+  worker-v2:
+    profiles: !override [excluded-base-worker-v2]
+    environment: !override
+      HOME: /tmp
+      TEMPORAL_ADDRESS: temporal:7233
+      PAYMENT_URL: http://unreachable.invalid
+      COMPLETION_URL: http://unreachable.invalid
+    networks: !override [control]
+    depends_on: !override
+      temporal: {condition: service_healthy}
+
+  worker-v1:
+    environment: !override
+      HOME: /tmp
+      TEMPORAL_ADDRESS: temporal:7233
+      PAYMENT_URL: http://source-adapter:8790
+      COMPLETION_URL: http://source-adapter:8790
+    networks: !override [control, source-workload]
+    depends_on: !override
+      temporal: {condition: service_healthy}
+      source-adapter: {condition: service_healthy}
+
+  worker-unsafe-v2:
+    image: ${TEMPORAL_UNSAFE_WORKER_ID}
+    environment:
+      HOME: /tmp
+      TEMPORAL_ADDRESS: temporal:7233
+      PAYMENT_URL: http://target-adapter:8790
+      COMPLETION_URL: http://target-adapter:8790
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    networks: [control, target-workload]
+    depends_on:
+      temporal: {condition: service_healthy}
+      target-adapter: {condition: service_healthy}
+
+  source-adapter:
+    image: ${TEMPORAL_UNSAFE_ADAPTER_ID}
+    command:
+      - -config=/config/adapter.json
+      - -control-url=http://unsafe-control:8787
+      - -adapter-token-file=/operation-token/token
+      - -listen=0.0.0.0:8790
+      - -allow-nonloopback=true
+      - -execute-timeout=30s
+    user: ${DEMO_UID}:${DEMO_GID}
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - type: bind
+        source: ../temporal-unsafe/configs/source-adapter.json
+        target: /config/adapter.json
+        read_only: true
+      - type: bind
+        source: ${UNSAFE_OPERATION_TOKEN_DIR}
+        target: /operation-token
+        read_only: true
+    networks: [source-workload, source-runtime]
+    depends_on:
+      unsafe-control: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:8790/healthz]
+      interval: 1s
+      timeout: 1s
+      retries: 120
+
+  target-adapter:
+    image: ${TEMPORAL_UNSAFE_ADAPTER_ID}
+    command:
+      - -config=/config/adapter.json
+      - -control-url=http://unsafe-control:8787
+      - -adapter-token-file=/operation-token/token
+      - -listen=0.0.0.0:8790
+      - -allow-nonloopback=true
+      - -execute-timeout=30s
+    user: ${DEMO_UID}:${DEMO_GID}
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - type: bind
+        source: ../temporal-unsafe/configs/target-adapter.json
+        target: /config/adapter.json
+        read_only: true
+      - type: bind
+        source: ${UNSAFE_OPERATION_TOKEN_DIR}
+        target: /operation-token
+        read_only: true
+    networks: [target-workload, target-runtime]
+    depends_on:
+      unsafe-control: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:8790/healthz]
+      interval: 1s
+      timeout: 1s
+      retries: 120
+
+  unsafe-control:
+    image: ${SAFE_CHANGE_CONTROL_IMAGE}
+    command:
+      - /usr/local/bin/control
+      - -listen=0.0.0.0:8787
+      - -allow-nonloopback=true
+      - -history=/state/runtime.history
+      - -head-anchor=/anchor/runtime.head
+      - -admin-token-file=/state/admin-token
+      - -operation-token-file=/operation-token/token
+      - -operation-domain=temporal-order-workflow
+      - -operation-kinds=charge-v1,finish-v1,charge-v2,finish-v2
+    user: ${DEMO_UID}:${DEMO_GID}
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - type: bind
+        source: ${UNSAFE_CONTROL_STATE_DIR}
+        target: /state
+      - type: bind
+        source: ${UNSAFE_CONTROL_ANCHOR_DIR}
+        target: /anchor
+      - type: bind
+        source: ${UNSAFE_OPERATION_TOKEN_DIR}
+        target: /operation-token
+    networks: [source-runtime, target-runtime, effects]
+    depends_on:
+      payment: {condition: service_healthy}
+      completion: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:8787/healthz]
+      interval: 1s
+      timeout: 1s
+      retries: 120
+
+networks:
+  source-workload:
+    internal: true
+  target-workload:
+    internal: true
+  source-runtime:
+    internal: true
+  target-runtime:
+    internal: true

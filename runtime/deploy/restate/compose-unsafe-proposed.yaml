@@ -1,0 +1,28 @@
+services:
+  control:
+    command: !override
+      - /usr/local/bin/control
+      - -listen=0.0.0.0:8787
+      - -allow-nonloopback=true
+      - -history=/state/runtime.history
+      - -head-anchor=/anchor/runtime.head
+      - -admin-token-file=/state/admin-token
+      - -operation-token-file=/operation-token/token
+      - -operation-domain=restate-order-workflow
+      - -operation-kinds=charge-v1,finish-v1,charge-v2,finish-v2
+
+  order-v1:
+    image: ${UNSAFE_SOURCE_IMAGE}
+    environment:
+      SAFE_CHANGE_PAYMENT_KIND: ${UNSAFE_SOURCE_PAYMENT_KIND}
+      SAFE_CHANGE_PAYMENT_TARGET: ${UNSAFE_SOURCE_PAYMENT_TARGET}
+      SAFE_CHANGE_FINISH_KIND: ${UNSAFE_SOURCE_FINISH_KIND}
+      SAFE_CHANGE_FINISH_TARGET: ${UNSAFE_SOURCE_FINISH_TARGET}
+
+  order-v2:
+    image: ${UNSAFE_TARGET_IMAGE}
+    environment:
+      SAFE_CHANGE_PAYMENT_KIND: charge-v2
+      SAFE_CHANGE_PAYMENT_TARGET: http://payment:8081/v2/charge
+      SAFE_CHANGE_FINISH_KIND: finish-v2
+      SAFE_CHANGE_FINISH_TARGET: http://completion:8081/v1/complete

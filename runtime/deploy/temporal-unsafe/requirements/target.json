@@ -1,0 +1,57 @@
+{
+  "id": "temporal-unsafe-target-v2",
+  "results": {
+    "paid": 1,
+    "delivered": 1
+  },
+  "capacities": {
+    "approval": 1
+  },
+  "kinds": {
+    "charge-v1": {
+      "costs": {
+        "approval": 1
+      },
+      "produces": {
+        "paid": 1
+      },
+      "retry_safe": false,
+      "queryable": false
+    },
+    "finish-v1": {
+      "costs": {},
+      "produces": {
+        "delivered": 1
+      },
+      "retry_safe": false,
+      "queryable": false
+    },
+    "charge-v2": {
+      "costs": {},
+      "produces": {
+        "paid": 1
+      },
+      "retry_safe": false,
+      "queryable": true,
+      "target": "http://payment:8081/v2/charge",
+      "method": "POST",
+      "response_classifier": "operation-receipt-v1",
+      "query_target": "http://payment:8081/v1/query",
+      "query_method": "POST",
+      "query_classifier": "operation-observation-v1"
+    },
+    "finish-v2": {
+      "costs": {
+        "approval": 1
+      },
+      "produces": {
+        "delivered": 1
+      },
+      "retry_safe": true,
+      "queryable": false,
+      "target": "http://completion:8081/v1/complete",
+      "method": "POST",
+      "response_classifier": "operation-receipt-v1"
+    }
+  }
+}

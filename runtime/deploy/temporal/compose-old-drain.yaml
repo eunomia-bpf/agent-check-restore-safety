@@ -1,0 +1,25 @@
+services:
+  payment:
+    command:
+      - -listen=0.0.0.0:8081
+      - -state=/state/payment.history
+      - -hold-before-commit=false
+      - -hold-after-commit=false
+      - -non-idempotent=true
+      - -reference-prefix=temporal-payment
+
+  payment-proxy:
+    image: ${TOXIPROXY_IMAGE}
+    command: [-host=0.0.0.0]
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    networks: [effects]
+
+  worker-v1:
+    environment:
+      PAYMENT_URL: http://payment-proxy:${TOXIPROXY_LISTEN_PORT}
+    depends_on:
+      payment-proxy: {condition: service_started}

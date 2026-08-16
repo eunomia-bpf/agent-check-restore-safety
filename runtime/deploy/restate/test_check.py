@@ -209,11 +209,10 @@ class Fixture:
                     "result_hash": self.completion_result,
                     "remote_reference": f"completion/{self.completion_id}",
                 }) + b"\n"
-                gateway_result = sha256(b"200\x00" + receipt).hexdigest()
                 self.add_event(events, frames, "operation.phase", {
                     "semantic_version": 1, "id": self.completion_id,
                     "update": {
-                        "phase": "succeeded", "result_hash": gateway_result,
+                        "phase": "succeeded", "result_hash": self.completion_result,
                         "status_code": 200, "result_body": base64.b64encode(receipt).decode(),
                         "remote_reference": f"completion/{self.completion_id}",
                     },
@@ -803,10 +802,12 @@ class CheckerTests(unittest.TestCase):
         with self.assertRaisesRegex(CHECK.EvidenceError, "H1 did not finish under fenced-v1/v2"):
             self.check()
 
-    def test_rejects_receipt_fact_hash_as_gateway_result_hash(self) -> None:
+    def test_rejects_gateway_response_hash_as_durable_fact_hash(self) -> None:
         relative = "h1/final-state.json"
         state = json.loads((self.root / relative).read_text())
-        state["operations"][self.fixture.completion_id]["result_hash"] = self.fixture.completion_result
+        operation = state["operations"][self.fixture.completion_id]
+        receipt = base64.b64decode(operation["result_body"])
+        operation["result_hash"] = sha256(b"200\x00" + receipt).hexdigest()
         self.fixture.replace_json(relative, state)
         self.fixture.refresh_manifest()
         with self.assertRaisesRegex(CHECK.EvidenceError, "final Operation differs from History replay"):

@@ -24,6 +24,8 @@ const (
 
 func registerVariantActivities(w worker.Worker, activities *Activities) {
 	w.RegisterActivityWithOptions(activities.QueryPayment, activityOptions(harness.PaymentQueryActivityName))
+	w.RegisterActivityWithOptions(activities.PrepareFood, activityOptions(harness.PreparationActivityName))
+	w.RegisterActivityWithOptions(activities.ScheduleDelivery, activityOptions(harness.DeliveryActivityName))
 	w.RegisterActivityWithOptions(activities.CompleteOrder, activityOptions(harness.CompletionActivityName))
 }
 
@@ -33,11 +35,9 @@ func runOrderWorkflow(ctx workflow.Context, order harness.Order) (harness.OrderR
 		return harness.OrderResult{}, err
 	}
 	// Target v2 intentionally has no payment call and no payment activity.
-	waitForCompletion(ctx, status)
-	if err := completeOrder(ctx, order); err != nil {
+	if err := finishFoodOrder(ctx, order, status, ""); err != nil {
 		return harness.OrderResult{}, err
 	}
-	status.Phase = "DELIVERED"
 	return resultFor(status), nil
 }
 
@@ -48,7 +48,7 @@ func runManualBranchOrderWorkflow(ctx workflow.Context, order harness.Order) (ha
 	}
 	version := workflow.GetVersion(ctx, manualPaymentChangeID, workflow.DefaultVersion, manualPaymentVersion)
 	if version == workflow.DefaultVersion {
-		status.Phase = "PAYMENT_PENDING"
+		setPhase(status, "PAYMENT_PENDING")
 		payment := harness.EffectRequest{
 			OrderID: order.OrderID, AmountCents: order.AmountCents,
 			OperationID: harness.OperationID(order.PaymentToken),
@@ -64,7 +64,7 @@ func runManualBranchOrderWorkflow(ctx workflow.Context, order harness.Order) (ha
 			if !temporal.IsTimeoutError(err) {
 				return harness.OrderResult{}, err
 			}
-			status.Phase = "PAYMENT_QUERY_PENDING"
+			setPhase(status, "PAYMENT_QUERY_PENDING")
 			queryOptions := workflow.ActivityOptions{
 				StartToCloseTimeout: time.Minute,
 				RetryPolicy:         &temporal.RetryPolicy{MaximumAttempts: 1},
@@ -83,15 +83,13 @@ func runManualBranchOrderWorkflow(ctx workflow.Context, order harness.Order) (ha
 				return harness.OrderResult{}, manualReconciliationError(manualUnexpectedOutcomeMessage)
 			}
 		}
-		status.Phase = "PAYMENT_COMMITTED"
+		setPhase(status, "PAYMENT_COMMITTED")
 	} else if version != manualPaymentVersion {
 		return harness.OrderResult{}, manualReconciliationError(manualUnexpectedOutcomeMessage)
 	}
-	waitForCompletion(ctx, status)
-	if err := completeOrder(ctx, order); err != nil {
+	if err := finishFoodOrder(ctx, order, status, ""); err != nil {
 		return harness.OrderResult{}, err
 	}
-	status.Phase = "DELIVERED"
 	return resultFor(status), nil
 }
 

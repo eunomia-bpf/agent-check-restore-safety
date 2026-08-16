@@ -447,3 +447,31 @@ evolve
 ### Message 71
 
 我觉得得要真实的系统和真实的应用程序, 包括 claude / codex, 完整的虚拟机, 微服务等等. 是去往 best paper + test of time, 对领域有 20 年影响的方向做, 做一个完整的 OS / runtime 是不是可以? 去做, 一步步完善, 可以不一定遵守 skills, skills 只是给你参考, 总之要做到真实的系统, 并且实现理论 + 系统两方面的突破
+
+### Message 72
+
+不一定需要过于学术, 但要明显对于社区有用
+
+### Message 73
+
+你告诉我一下你在干嘛. 你做的是啥
+
+### Message 74
+
+你做的系统是啥? 你做了什么系统?
+
+### Message 75
+
+我觉得社区采用门槛很重要, 门槛尽可能少, 最好完全透明
+
+### Message 76
+
+是不是做到 OS 层的运行时/虚拟机/samdbox 更好还是啥的
+
+### Message 77
+
+或者和 agent runtime 结合起来? 你想想?
+
+### Message 78
+
+比如说 sandbox, 比如说 firecracker 啥的?

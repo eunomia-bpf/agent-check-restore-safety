@@ -51,6 +51,44 @@ func (a *Activities) CompleteOrder(ctx context.Context, request harness.EffectRe
 	return a.invoke(ctx, a.completionURL, "/v1/complete", request)
 }
 
+// PrepareFood is the matched Temporal boundary for the official application's
+// restaurant point-of-sale request. The Restate fixture performs an HTTP call
+// and then waits for a separate preparation-finished callback; the Temporal
+// port keeps those as a distinct Activity and Signal rather than collapsing
+// fulfillment into the terminal completion effect.
+func (a *Activities) PrepareFood(ctx context.Context, request harness.PreparationRequest) (harness.PreparationReceipt, error) {
+	if err := ctx.Err(); err != nil {
+		return harness.PreparationReceipt{}, err
+	}
+	quantity, err := productQuantity(request.Products)
+	if err != nil {
+		return harness.PreparationReceipt{}, err
+	}
+	if request.OrderID == "" || request.RestaurantID == "" {
+		return harness.PreparationReceipt{}, errors.New("order_id and restaurant_id are required for preparation")
+	}
+	return harness.PreparationReceipt{
+		Schema: 1, OrderID: request.OrderID, RestaurantID: request.RestaurantID,
+		ProductCount: quantity, Outcome: "accepted",
+	}, nil
+}
+
+// ScheduleDelivery models the official delivery-manager request. Driver
+// selection itself arrives later through the driver-selected Signal, matching
+// the fixture's awakeable/promise boundary.
+func (a *Activities) ScheduleDelivery(ctx context.Context, request harness.DeliveryRequest) (harness.DeliveryDispatch, error) {
+	if err := ctx.Err(); err != nil {
+		return harness.DeliveryDispatch{}, err
+	}
+	if request.OrderID == "" || request.DeliveryID == "" || request.RestaurantID == "" || request.Region == "" {
+		return harness.DeliveryDispatch{}, errors.New("complete delivery request is required")
+	}
+	return harness.DeliveryDispatch{
+		Schema: 1, OrderID: request.OrderID, DeliveryID: request.DeliveryID,
+		RestaurantID: request.RestaurantID, Region: request.Region, Outcome: "scheduled",
+	}, nil
+}
+
 func (a *Activities) QueryPayment(ctx context.Context, input harness.EffectRequest) (harness.PaymentObservation, error) {
 	body, err := effectBody(input)
 	if err != nil {
@@ -164,9 +202,27 @@ func effectBody(input harness.EffectRequest) ([]byte, error) {
 		return nil, errors.New("order_id and operation_id are required")
 	}
 	return json.Marshal(struct {
-		OrderID     string `json:"order_id"`
-		AmountCents int64  `json:"amount_cents"`
-	}{OrderID: input.OrderID, AmountCents: input.AmountCents})
+		OrderID        string `json:"order_id"`
+		AmountCents    int64  `json:"amount_cents"`
+		ClosureVersion string `json:"closure_version,omitempty"`
+	}{
+		OrderID: input.OrderID, AmountCents: input.AmountCents,
+		ClosureVersion: input.ClosureVersion,
+	})
+}
+
+func productQuantity(products []harness.Product) (int, error) {
+	if len(products) == 0 {
+		return 0, errors.New("at least one product is required")
+	}
+	total := 0
+	for _, product := range products {
+		if product.ProductID == "" || product.Description == "" || product.Quantity <= 0 {
+			return 0, errors.New("every product requires an id, description, and positive quantity")
+		}
+		total += product.Quantity
+	}
+	return total, nil
 }
 
 func effectRequestHash(method, path string, body []byte) string {
@@ -256,6 +312,10 @@ func activityOptions(name string) activity.RegisterOptions {
 }
 
 func completeOrder(ctx workflow.Context, order harness.Order) error {
+	return completeOrderWithClosureVersion(ctx, order, "")
+}
+
+func completeOrderWithClosureVersion(ctx workflow.Context, order harness.Order, closureVersion string) error {
 	options := workflow.ActivityOptions{
 		StartToCloseTimeout: time.Minute,
 		RetryPolicy:         &temporal.RetryPolicy{MaximumAttempts: 1},
@@ -263,7 +323,7 @@ func completeOrder(ctx workflow.Context, order harness.Order) error {
 	activityCtx := workflow.WithActivityOptions(ctx, options)
 	request := harness.EffectRequest{
 		OrderID: order.OrderID, AmountCents: order.AmountCents,
-		OperationID: harness.OperationID("complete:" + order.OrderID),
+		OperationID: harness.OperationID("complete:" + order.OrderID), ClosureVersion: closureVersion,
 	}
 	return workflow.ExecuteActivity(activityCtx, harness.CompletionActivityName, request).Get(activityCtx, nil)
 }

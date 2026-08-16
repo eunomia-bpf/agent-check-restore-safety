@@ -21,19 +21,27 @@ func main() {
 }
 
 func run() error {
-	var address, behavior, workflowID, orderID, paymentToken string
-	var amountCents int64
+	var address, behavior, workflowID, orderID, restaurantID, productID, productDescription, paymentToken string
+	var amountCents, deliveryDelayMillis int64
+	var productQuantity int
 	var wait bool
 	flag.StringVar(&address, "address", envOr("TEMPORAL_ADDRESS", client.DefaultHostPort), "Temporal frontend address")
 	flag.StringVar(&behavior, "behavior", "pinned", "workflow behavior: pinned, autoupgrade, or manual")
 	flag.StringVar(&workflowID, "workflow-id", "", "required Temporal Workflow ID")
 	flag.StringVar(&orderID, "order-id", "", "required logical order ID")
+	flag.StringVar(&restaurantID, "restaurant-id", "", "required selected restaurant ID")
+	flag.StringVar(&productID, "product-id", "", "required ordered product ID")
+	flag.StringVar(&productDescription, "product-description", "", "required ordered product description")
+	flag.IntVar(&productQuantity, "product-quantity", 0, "positive ordered product quantity")
+	flag.Int64Var(&deliveryDelayMillis, "delivery-delay-millis", 0, "positive durable preparation delay")
 	flag.StringVar(&paymentToken, "payment-token", "", "required stable external payment identity")
 	flag.Int64Var(&amountCents, "amount-cents", 0, "positive payment amount")
 	flag.BoolVar(&wait, "wait", false, "wait for the terminal workflow result")
 	flag.Parse()
-	if workflowID == "" || orderID == "" || paymentToken == "" || amountCents <= 0 {
-		return errors.New("workflow-id, order-id, payment-token, and positive amount-cents are required")
+	if workflowID == "" || orderID == "" || restaurantID == "" || productID == "" ||
+		productDescription == "" || productQuantity <= 0 || deliveryDelayMillis <= 0 ||
+		paymentToken == "" || amountCents <= 0 {
+		return errors.New("workflow-id, complete restaurant/product selection, positive delivery delay, payment-token, and positive amount-cents are required")
 	}
 	workflowName := harness.PinnedWorkflowName
 	if behavior == "autoupgrade" {
@@ -56,7 +64,12 @@ func run() error {
 	run, err := temporalClient.ExecuteWorkflow(ctx, client.StartWorkflowOptions{
 		ID: workflowID, TaskQueue: harness.TaskQueue,
 	}, workflowName, harness.Order{
-		OrderID: orderID, AmountCents: amountCents, PaymentToken: paymentToken,
+		OrderID: orderID, RestaurantID: restaurantID,
+		Products: []harness.Product{{
+			ProductID: productID, Description: productDescription, Quantity: productQuantity,
+		}},
+		AmountCents: amountCents, DeliveryDelayMillis: deliveryDelayMillis,
+		PaymentToken: paymentToken,
 	})
 	if err != nil {
 		return err

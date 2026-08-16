@@ -1,0 +1,59 @@
+services:
+  control:
+    profiles: [proposed-only]
+
+  naive-payment:
+    profiles: [proposed-only]
+
+  order-v1:
+    image: ${NATIVE_ORDER_V1_IMAGE}
+    environment: !override
+      RESTATE_DEBUG_LOGGING: JOURNAL
+      RESTAURANT_ENDPOINT: http://restaurant-pos:5050
+      KAFKA_BOOTSTRAP_SERVERS: broker:29092
+      PAYMENT_ENDPOINT: http://payment:8081/v1/charge
+      COMPLETION_ENDPOINT: http://completion:8081/v1/complete
+      OPERATION_DOMAIN: restate-order-workflow
+    volumes: !override []
+    networks: !override [application, effects]
+    depends_on: !override
+      broker:
+        condition: service_healthy
+      payment:
+        condition: service_healthy
+      completion:
+        condition: service_healthy
+      restaurant-pos:
+        condition: service_healthy
+
+  order-v2:
+    image: ${NATIVE_ORDER_V2_IMAGE}
+    environment: !override
+      RESTATE_DEBUG_LOGGING: JOURNAL
+      RESTAURANT_ENDPOINT: http://restaurant-pos:5050
+      KAFKA_BOOTSTRAP_SERVERS: broker:29092
+      PAYMENT_ENDPOINT: http://payment:8081/v1/charge
+      COMPLETION_ENDPOINT: http://completion:8081/v1/complete
+      OPERATION_DOMAIN: restate-order-workflow
+    volumes: !override []
+    networks: !override [application, effects]
+    depends_on: !override
+      broker:
+        condition: service_healthy
+      payment:
+        condition: service_healthy
+      completion:
+        condition: service_healthy
+      restaurant-pos:
+        condition: service_healthy
+
+  restate:
+    depends_on: !override
+      init-kafka:
+        condition: service_completed_successfully
+      order-v1:
+        condition: service_healthy
+      restaurant-pos:
+        condition: service_healthy
+      jaeger:
+        condition: service_started

@@ -1,0 +1,36 @@
+diff --git a/internal/harness/types.go b/internal/harness/types.go
+index 1ad11cb..3495ab6 100644
+--- a/internal/harness/types.go
++++ b/internal/harness/types.go
+@@ -17,5 +17,6 @@ const (
+ 	DeliveryFinishedSignalName    = "delivery_finished"
+ 	PaymentActivityName           = "ChargePayment"
++	PaymentV2ActivityName         = "ChargePaymentV2"
+ 	PaymentQueryActivityName      = "QueryPayment"
+ 	PreparationActivityName       = "PrepareFood"
+ 	DeliveryActivityName          = "ScheduleDelivery"
+diff --git a/internal/workerapp/activities.go b/internal/workerapp/activities.go
+index bd8ae11..09b459c 100644
+--- a/internal/workerapp/activities.go
++++ b/internal/workerapp/activities.go
+@@ -24,6 +24,7 @@ const maxEffectResponseBytes = 1 << 20
+ 
+ const (
+-	paymentEffectPath = "/v1/charge"
+-	paymentQueryPath  = "/v1/query"
++	paymentEffectPath   = "/v1/charge"
++	paymentV2EffectPath = "/v2/charge"
++	paymentQueryPath    = "/v1/query"
+ )
+ 
+@@ -49,6 +50,10 @@ func (a *Activities) ChargePayment(ctx context.Context, request harness.EffectReq
+ 	return a.invoke(ctx, a.paymentURL, paymentEffectPath, request)
+ }
+ 
++func (a *Activities) ChargePaymentV2(ctx context.Context, request harness.EffectRequest) (harness.EffectReceipt, error) {
++	return a.invoke(ctx, a.paymentURL, paymentV2EffectPath, request)
++}
++
+ func (a *Activities) CompleteOrder(ctx context.Context, request harness.EffectRequest) (harness.EffectReceipt, error) {
+ 	return a.invoke(ctx, a.completionURL, "/v1/complete", request)
+ }

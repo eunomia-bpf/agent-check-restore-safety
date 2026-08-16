@@ -121,6 +121,31 @@ wait_poller() {
   return 1
 }
 
+wait_deployment_version_task_queues() {
+  local deployment=$1 build_id=$2 task_queue=$3 output=$4
+  local attempts="${DEPLOYMENT_VERSION_WAIT_ATTEMPTS:-90}"
+  local interval_seconds="${DEPLOYMENT_VERSION_WAIT_INTERVAL_SECONDS:-1}"
+  for _ in $(seq 1 "$attempts"); do
+    if temporal_json "$output" worker deployment describe-version \
+      --deployment-name "$deployment" --build-id "$build_id" 2>/dev/null &&
+      jq -e --arg deployment "$deployment" \
+        --arg build "$build_id" --arg queue "$task_queue" '
+        .deploymentName == $deployment and
+        .BuildID == $build and
+        (.taskQueuesInfos | type) == "array" and
+        (.taskQueuesInfos | sort_by(.type)) == [
+          {"name": $queue, "type": "activity"},
+          {"name": $queue, "type": "workflow"}
+        ]
+      ' "$output" >/dev/null; then
+      return 0
+    fi
+    sleep "$interval_seconds"
+  done
+  echo "timed out waiting for deployment version $build_id task queues" >&2
+  return 1
+}
+
 provider_stats() {
   local service=$1 output=$2
   "${compose[@]}" exec -T "$service" wget -qO- http://127.0.0.1:8081/v1/stats >"$output"
@@ -136,8 +161,30 @@ workflow_describe() {
   temporal_json "$output" workflow describe --workflow-id "$workflow_id" --run-id "$run_id" --raw
 }
 
+signal_business_stages() {
+  local identity=$1
+  temporal_json "$results_dir/signal-preparation-finished.json" workflow signal \
+    --workflow-id "$workflow_id" --run-id "$run_id" \
+    --name preparation_finished --identity "$identity"
+  temporal_json "$results_dir/signal-driver-selected.json" workflow signal \
+    --workflow-id "$workflow_id" --run-id "$run_id" \
+    --name driver_selected --identity "$identity" \
+    --input '{"delivery_id":"delivery-order-1","driver_id":"driver-1"}'
+  temporal_json "$results_dir/signal-driver-at-restaurant.json" workflow signal \
+    --workflow-id "$workflow_id" --run-id "$run_id" \
+    --name driver_at_restaurant --identity "$identity"
+  temporal_json "$results_dir/signal-delivery-finished.json" workflow signal \
+    --workflow-id "$workflow_id" --run-id "$run_id" \
+    --name delivery_finished --identity "$identity"
+}
+
 workflow_id="temporal-matched-order-1"
 order_id="order-1"
+restaurant_id="restaurant-1"
+product_id="pizza-1"
+product_description="Margherita Pizza"
+product_quantity=2
+delivery_delay_millis=25
 payment_token="payment-token-1"
 amount_cents=4200
 starter_behavior=pinned
@@ -154,8 +201,9 @@ wait_poller activity food-order-v1 "$results_dir/v1-activity-pollers.json"
 
 temporal_json "$results_dir/deployment-before-current.json" worker deployment describe \
   --name safe-change-food-order-worker
-temporal_json "$results_dir/version-v1.json" worker deployment describe-version \
-  --deployment-name safe-change-food-order-worker --build-id food-order-v1
+wait_deployment_version_task_queues \
+  safe-change-food-order-worker food-order-v1 safe-change-food-orders \
+  "$results_dir/version-v1.json"
 temporal_json "$results_dir/set-current-v1.json" worker deployment set-current-version \
   --deployment-name safe-change-food-order-worker --build-id food-order-v1 --yes
 temporal_json "$results_dir/deployment-v1-current.json" worker deployment describe \
@@ -169,6 +217,11 @@ jq -e '
   -behavior="$starter_behavior" \
   -workflow-id="$workflow_id" \
   -order-id="$order_id" \
+  -restaurant-id="$restaurant_id" \
+  -product-id="$product_id" \
+  -product-description="$product_description" \
+  -product-quantity="$product_quantity" \
+  -delivery-delay-millis="$delivery_delay_millis" \
   -payment-token="$payment_token" \
   -amount-cents="$amount_cents" >"$results_dir/start.json"
 run_id="$(jq -er '
@@ -248,15 +301,15 @@ jq -e --arg case "$case_name" '
 ' "$results_dir/payment-before-v2-stats.json" >/dev/null
 
 if [[ "$mode" == manual_branch ]]; then
-  temporal_json "$results_dir/signal-complete.json" workflow signal \
-    --workflow-id "$workflow_id" --run-id "$run_id" --name complete --identity safe-change-harness
+  signal_business_stages safe-change-harness
 fi
 
 "${compose[@]}" up --detach worker-v2
 wait_poller workflow food-order-v2 "$results_dir/v2-workflow-pollers.json"
 wait_poller activity food-order-v2 "$results_dir/v2-activity-pollers.json"
-temporal_json "$results_dir/version-v2-before-current.json" worker deployment describe-version \
-  --deployment-name safe-change-food-order-worker --build-id food-order-v2
+wait_deployment_version_task_queues \
+  safe-change-food-order-worker food-order-v2 safe-change-food-orders \
+  "$results_dir/version-v2-before-current.json"
 temporal_json "$results_dir/set-current-v2.json" worker deployment set-current-version \
   --deployment-name safe-change-food-order-worker --build-id food-order-v2 --yes
 temporal_json "$results_dir/deployment-v2-current.json" worker deployment describe \
@@ -269,8 +322,7 @@ jq -e '
 ' "$results_dir/deployment-v2-current.json" >/dev/null
 
 if [[ "$mode" != manual_branch ]]; then
-  temporal_json "$results_dir/signal-complete.json" workflow signal \
-    --workflow-id "$workflow_id" --run-id "$run_id" --name complete --identity safe-change-harness
+  signal_business_stages safe-change-harness
 fi
 
 final_wait_seconds="${FINAL_WAIT_SECONDS:-12}"
@@ -280,9 +332,9 @@ for _ in $(seq 1 "$final_wait_seconds"); do
   if jq -e '
     ([.events[] | select(
       .eventType == "EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED" and
-      .workflowExecutionSignaledEventAttributes.signalName == "complete" and
       .workflowExecutionSignaledEventAttributes.identity == "safe-change-harness"
-    )] | length) == 1 and (
+    ) | .workflowExecutionSignaledEventAttributes.signalName] ==
+      ["preparation_finished","driver_selected","driver_at_restaurant","delivery_finished"]) and (
       ([.events[] | select(.eventType == "EVENT_TYPE_WORKFLOW_TASK_FAILED")] | length) > 0 or
       ([.events[] | select(.eventType | test("EVENT_TYPE_WORKFLOW_EXECUTION_(COMPLETED|FAILED|CANCELED|TERMINATED|TIMED_OUT)$"))] | length) > 0
     )
@@ -296,9 +348,9 @@ workflow_describe "$results_dir/final-describe.json"
 jq -e '
   ([.events[] | select(
     .eventType == "EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED" and
-    .workflowExecutionSignaledEventAttributes.signalName == "complete" and
     .workflowExecutionSignaledEventAttributes.identity == "safe-change-harness"
-  )] | length) == 1
+  ) | .workflowExecutionSignaledEventAttributes.signalName] ==
+    ["preparation_finished","driver_selected","driver_at_restaurant","delivery_finished"])
 ' "$results_dir/final-history.json" >/dev/null
 provider_stats payment "$results_dir/payment-final-stats.json"
 provider_stats completion "$results_dir/completion-final-stats.json"

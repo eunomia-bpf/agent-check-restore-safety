@@ -1,0 +1,47 @@
+# syntax=docker/dockerfile:1.7
+
+ARG GO_IMAGE
+ARG RUNTIME_IMAGE
+FROM ${GO_IMAGE} AS build
+
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . ./
+RUN CGO_ENABLED=0 go build -trimpath -tags worker_unsafe_v2 -o /out/worker ./cmd/worker
+
+FROM ${RUNTIME_IMAGE}
+
+ARG GIT_REVISION
+ARG GO_IMAGE
+ARG RUNTIME_IMAGE
+ARG TEMPORAL_SAMPLES_COMMIT
+ARG TEMPORAL_GO_SDK_VERSION
+ARG FROZEN_BASE_SOURCE_SHA256
+ARG GENERATED_SOURCE_SHA256
+ARG GENERATED_TREE_MANIFEST_SHA256
+ARG PATCH_SET_SHA256
+ARG PATCH_0001_SHA256
+ARG PATCH_0002_SHA256
+ARG PATCH_0003_SHA256
+ARG DOCKERFILE_SHA256
+LABEL org.opencontainers.image.title="safe-change Temporal food-order-unsafe-v2 worker" \
+      org.opencontainers.image.source="https://github.com/eunomia-bpf/agent-check-restore-safety" \
+      org.opencontainers.image.revision="${GIT_REVISION}" \
+      org.opencontainers.image.base.name="${RUNTIME_IMAGE}" \
+      io.safe-change.source.sha256="${GENERATED_SOURCE_SHA256}" \
+      io.safe-change.build.target="worker_unsafe_v2" \
+      io.safe-change.worker.build-id="food-order-unsafe-v2" \
+      io.safe-change.builder.base="${GO_IMAGE}" \
+      io.safe-change.temporal.samples.revision="${TEMPORAL_SAMPLES_COMMIT}" \
+      io.safe-change.temporal.go-sdk.version="${TEMPORAL_GO_SDK_VERSION}" \
+      io.safe-change.temporal.frozen-base-source.sha256="${FROZEN_BASE_SOURCE_SHA256}" \
+      io.safe-change.temporal.generated-tree-manifest.sha256="${GENERATED_TREE_MANIFEST_SHA256}" \
+      io.safe-change.temporal.patch-set.sha256="${PATCH_SET_SHA256}" \
+      io.safe-change.temporal.patch-0001.sha256="${PATCH_0001_SHA256}" \
+      io.safe-change.temporal.patch-0002.sha256="${PATCH_0002_SHA256}" \
+      io.safe-change.temporal.patch-0003.sha256="${PATCH_0003_SHA256}" \
+      io.safe-change.temporal.dockerfile.sha256="${DOCKERFILE_SHA256}"
+COPY --from=build --chmod=0555 /out/worker /usr/local/bin/worker
+USER 65532:65532
+ENTRYPOINT ["/usr/local/bin/worker"]

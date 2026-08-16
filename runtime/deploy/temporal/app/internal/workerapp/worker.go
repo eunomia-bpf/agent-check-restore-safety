@@ -12,7 +12,7 @@ import (
 
 func Run(address, paymentURL, completionURL string) error {
 	if buildID == "" {
-		return errors.New("build the worker with exactly one of -tags worker_v1 or -tags worker_v2")
+		return errors.New("build the worker with exactly one of -tags worker_v1, worker_v2, or worker_compatible_v2")
 	}
 	if address == "" {
 		address = client.DefaultHostPort

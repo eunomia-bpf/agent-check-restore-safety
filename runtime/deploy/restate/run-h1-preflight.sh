@@ -313,7 +313,12 @@ curl -fsS --request POST --header 'Content-Type: application/json' \
   "$restate_admin_url/subscriptions" >"$results_dir/subscription.json"
 
 payment_target='http://payment:8081/v1/charge'
-payment_query='http://payment:8081/v1/query'
+payment_query_path="${PAYMENT_QUERY_PATH:-/v1/query}"
+if [[ ! "$payment_query_path" =~ ^/[A-Za-z0-9._/-]+$ ]]; then
+  echo "PAYMENT_QUERY_PATH must be an absolute provider-local HTTP path" >&2
+  exit 1
+fi
+payment_query="http://payment:8081$payment_query_path"
 finish_target='http://completion:8081/v1/complete'
 jq -n --arg payment "$payment_target" --arg query "$payment_query" --arg finish "$finish_target" '{
   id:"food-ordering-v1",
@@ -574,7 +579,8 @@ if [[ "$preflight_case" == h0 ]]; then
   printf '%s\n' "$recovery_http_status" \
     >"$results_dir/payment-recovery.http-status.txt"
   jq -e --arg operation "$payment_operation_id" '
-    keys == ["error","outcome"] and
+    keys == ["code","error","outcome"] and
+    .code == "outcome_unknown" and
     .outcome == {
       operation_id:$operation,
       phase:"unknown",

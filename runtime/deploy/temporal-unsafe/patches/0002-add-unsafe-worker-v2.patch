@@ -1,0 +1,83 @@
+diff --git a/internal/workerapp/variant_missing.go b/internal/workerapp/variant_missing.go
+index 4ace85b..67f9953 100644
+--- a/internal/workerapp/variant_missing.go
++++ b/internal/workerapp/variant_missing.go
+@@ -1,4 +1,4 @@
+-//go:build !worker_v1 && !worker_v2 && !worker_compatible_v2
++//go:build !worker_v1 && !worker_v2 && !worker_compatible_v2 && !worker_unsafe_v2
+ 
+ package workerapp
+ 
+diff --git a/internal/workerapp/variant_unsafe_v2.go b/internal/workerapp/variant_unsafe_v2.go
+new file mode 100644
+index 0000000..a2b2af0
+--- /dev/null
++++ b/internal/workerapp/variant_unsafe_v2.go
+@@ -0,0 +1,67 @@
++//go:build worker_unsafe_v2
++
++package workerapp
++
++import (
++	"time"
++
++	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/deploy/temporal/app/internal/harness"
++	"go.temporal.io/sdk/temporal"
++	"go.temporal.io/sdk/worker"
++	"go.temporal.io/sdk/workflow"
++)
++
++const buildID = "food-order-unsafe-v2"
++
++const (
++	unsafePaymentCapacityChangeID = "unsafe-payment-capacity-v1"
++	unsafePaymentCapacityVersion  = workflow.Version(1)
++)
++
++func registerVariantActivities(w worker.Worker, activities *Activities) {
++	w.RegisterActivityWithOptions(activities.ChargePayment, activityOptions(harness.PaymentActivityName))
++	w.RegisterActivityWithOptions(activities.ChargePaymentV2, activityOptions(harness.PaymentV2ActivityName))
++	w.RegisterActivityWithOptions(activities.PrepareFood, activityOptions(harness.PreparationActivityName))
++	w.RegisterActivityWithOptions(activities.ScheduleDelivery, activityOptions(harness.DeliveryActivityName))
++	w.RegisterActivityWithOptions(activities.CompleteOrder, activityOptions(harness.CompletionActivityName))
++}
++
++func runOrderWorkflow(ctx workflow.Context, order harness.Order) (harness.OrderResult, error) {
++	status, err := newStatus(ctx, order)
++	if err != nil {
++		return harness.OrderResult{}, err
++	}
++	version := workflow.GetVersion(
++		ctx,
++		unsafePaymentCapacityChangeID,
++		workflow.DefaultVersion,
++		unsafePaymentCapacityVersion,
++	)
++	paymentActivity := harness.PaymentActivityName
++	if version == unsafePaymentCapacityVersion {
++		paymentActivity = harness.PaymentV2ActivityName
++	}
++	options := workflow.ActivityOptions{
++		StartToCloseTimeout: 30 * time.Second,
++		RetryPolicy:         &temporal.RetryPolicy{MaximumAttempts: 1},
++	}
++	activityCtx := workflow.WithActivityOptions(ctx, options)
++	setPhase(status, "PAYMENT_PENDING")
++	payment := harness.EffectRequest{
++		OrderID: order.OrderID, AmountCents: order.AmountCents,
++		OperationID: harness.OperationID(order.PaymentToken),
++	}
++	var receipt harness.EffectReceipt
++	if err := workflow.ExecuteActivity(activityCtx, paymentActivity, payment).Get(activityCtx, &receipt); err != nil {
++		return harness.OrderResult{}, err
++	}
++	setPhase(status, "PAYMENT_COMMITTED")
++	if err := finishFoodOrder(ctx, order, status, "unsafe-v2"); err != nil {
++		return harness.OrderResult{}, err
++	}
++	return resultFor(status), nil
++}
++
++func runManualBranchOrderWorkflow(ctx workflow.Context, order harness.Order) (harness.OrderResult, error) {
++	return runOrderWorkflow(ctx, order)
++}

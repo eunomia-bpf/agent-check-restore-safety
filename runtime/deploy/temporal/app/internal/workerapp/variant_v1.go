@@ -15,6 +15,8 @@ const buildID = "food-order-v1"
 
 func registerVariantActivities(w worker.Worker, activities *Activities) {
 	w.RegisterActivityWithOptions(activities.ChargePayment, activityOptions(harness.PaymentActivityName))
+	w.RegisterActivityWithOptions(activities.PrepareFood, activityOptions(harness.PreparationActivityName))
+	w.RegisterActivityWithOptions(activities.ScheduleDelivery, activityOptions(harness.DeliveryActivityName))
 	w.RegisterActivityWithOptions(activities.CompleteOrder, activityOptions(harness.CompletionActivityName))
 }
 
@@ -28,7 +30,7 @@ func runOrderWorkflow(ctx workflow.Context, order harness.Order) (harness.OrderR
 		RetryPolicy:         &temporal.RetryPolicy{MaximumAttempts: 1},
 	}
 	activityCtx := workflow.WithActivityOptions(ctx, options)
-	status.Phase = "PAYMENT_PENDING"
+	setPhase(status, "PAYMENT_PENDING")
 	payment := harness.EffectRequest{
 		OrderID: order.OrderID, AmountCents: order.AmountCents,
 		OperationID: harness.OperationID(order.PaymentToken),
@@ -37,12 +39,10 @@ func runOrderWorkflow(ctx workflow.Context, order harness.Order) (harness.OrderR
 	if err := workflow.ExecuteActivity(activityCtx, harness.PaymentActivityName, payment).Get(activityCtx, &receipt); err != nil {
 		return harness.OrderResult{}, err
 	}
-	status.Phase = "PAYMENT_COMMITTED"
-	waitForCompletion(ctx, status)
-	if err := completeOrder(ctx, order); err != nil {
+	setPhase(status, "PAYMENT_COMMITTED")
+	if err := finishFoodOrder(ctx, order, status, ""); err != nil {
 		return harness.OrderResult{}, err
 	}
-	status.Phase = "DELIVERED"
 	return resultFor(status), nil
 }
 

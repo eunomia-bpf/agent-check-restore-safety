@@ -1,0 +1,34 @@
+# The native lane runs the same target image without the external control or
+# provider adapters. The runner still enforces payment_token == order_id so
+# the two lanes receive identical workflow input and Operation identities.
+services:
+  # Exclude the unrelated base v2 worker from this matched lane as well. The
+  # only target that the runner may activate is worker-unsafe-v2 below.
+  worker-v2:
+    profiles: !override [excluded-base-worker-v2]
+    environment: !override
+      HOME: /tmp
+      TEMPORAL_ADDRESS: temporal:7233
+      PAYMENT_URL: http://unreachable.invalid
+      COMPLETION_URL: http://unreachable.invalid
+    networks: !override [control]
+    depends_on: !override
+      temporal: {condition: service_healthy}
+
+  worker-unsafe-v2:
+    image: ${TEMPORAL_UNSAFE_WORKER_ID}
+    environment:
+      HOME: /tmp
+      TEMPORAL_ADDRESS: temporal:7233
+      PAYMENT_URL: http://payment:8081
+      COMPLETION_URL: http://completion:8081
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    networks: [control, effects]
+    depends_on:
+      temporal: {condition: service_healthy}
+      payment: {condition: service_healthy}
+      completion: {condition: service_healthy}

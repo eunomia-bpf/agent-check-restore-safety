@@ -1,0 +1,126 @@
+diff --git a/internal/workerapp/variant_unsafe_v2_test.go b/internal/workerapp/variant_unsafe_v2_test.go
+new file mode 100644
+index 0000000..a5a2605
+--- /dev/null
++++ b/internal/workerapp/variant_unsafe_v2_test.go
+@@ -0,0 +1,120 @@
++//go:build worker_unsafe_v2
++
++package workerapp
++
++import (
++	"context"
++	"encoding/json"
++	"net/http"
++	"net/http/httptest"
++	"testing"
++	"time"
++
++	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/deploy/temporal/app/internal/harness"
++	"github.com/stretchr/testify/require"
++	"go.temporal.io/sdk/activity"
++	"go.temporal.io/sdk/testsuite"
++)
++
++func TestUnsafeV2TargetConstants(t *testing.T) {
++	if buildID != "food-order-unsafe-v2" {
++		t.Fatalf("build ID = %q", buildID)
++	}
++	if unsafePaymentCapacityChangeID != "unsafe-payment-capacity-v1" ||
++		unsafePaymentCapacityVersion != 1 {
++		t.Fatalf("unexpected change contract: %q version %d", unsafePaymentCapacityChangeID, unsafePaymentCapacityVersion)
++	}
++	if harness.PaymentActivityName != "ChargePayment" ||
++		harness.PaymentV2ActivityName != "ChargePaymentV2" ||
++		harness.PreparationActivityName != "PrepareFood" ||
++		harness.DeliveryActivityName != "ScheduleDelivery" ||
++		harness.CompletionActivityName != "CompleteOrder" {
++		t.Fatal("unsafe target Activity names changed")
++	}
++}
++
++func TestChargePaymentV2UsesV2Endpoint(t *testing.T) {
++	const operationID = "unsafe-v2-payment-operation"
++	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
++		if request.Method != http.MethodPost || request.URL.Path != "/v2/charge" {
++			t.Errorf("payment target = %s %s", request.Method, request.URL.Path)
++		}
++		if request.Header.Get("X-Operation-ID") != operationID ||
++			request.Header.Get("Idempotency-Key") != operationID {
++			t.Error("payment identity headers changed")
++		}
++		_ = json.NewEncoder(writer).Encode(harness.EffectReceipt{
++			Schema: 1, OperationID: operationID, Outcome: "succeeded",
++			ResultHash: "result-hash", RemoteReference: "provider/" + operationID,
++		})
++	}))
++	defer server.Close()
++
++	_, err := NewActivities(server.URL, server.URL).ChargePaymentV2(context.Background(), harness.EffectRequest{
++		OrderID: "order-unsafe-v2", AmountCents: 4200, OperationID: operationID,
++	})
++	if err != nil {
++		t.Fatal(err)
++	}
++}
++
++func TestUnsafeV2NewHistoryUsesV2AndPreservesFullFoodOrder(t *testing.T) {
++	testSuite := &testsuite.WorkflowTestSuite{}
++	env := testSuite.NewTestWorkflowEnvironment()
++	paymentRequests := make(chan harness.EffectRequest, 1)
++	preparationRequests := make(chan harness.PreparationRequest, 1)
++	deliveryRequests := make(chan harness.DeliveryRequest, 1)
++	completionRequests := make(chan harness.EffectRequest, 1)
++	env.RegisterActivityWithOptions(
++		func(_ context.Context, request harness.EffectRequest) (harness.EffectReceipt, error) {
++			paymentRequests <- request
++			return harness.EffectReceipt{
++				Schema: 1, OperationID: request.OperationID, Outcome: "succeeded",
++				ResultHash: "result-hash", RemoteReference: "payment/" + request.OperationID,
++			}, nil
++		},
++		activity.RegisterOptions{Name: harness.PaymentV2ActivityName},
++	)
++	registerFulfillmentTestActivities(t, env, preparationRequests, deliveryRequests, completionRequests)
++
++	env.RegisterDelayedCallback(func() {
++		env.SignalWorkflow(harness.PreparationFinishedSignalName, nil)
++	}, 30*time.Millisecond)
++	env.RegisterDelayedCallback(func() {
++		env.SignalWorkflow(harness.DriverSelectedSignalName, harness.DriverAssignment{
++			DeliveryID: "delivery-order-1", DriverID: "driver-1",
++		})
++	}, 40*time.Millisecond)
++	env.RegisterDelayedCallback(func() {
++		env.SignalWorkflow(harness.DriverAtRestaurantSignalName, nil)
++	}, 50*time.Millisecond)
++	env.RegisterDelayedCallback(func() {
++		env.SignalWorkflow(harness.DeliveryFinishedSignalName, nil)
++	}, 60*time.Millisecond)
++
++	env.ExecuteWorkflow(runOrderWorkflow, fullTestOrder())
++	require.True(t, env.IsWorkflowCompleted())
++	require.NoError(t, env.GetWorkflowError())
++
++	var result harness.OrderResult
++	require.NoError(t, env.GetWorkflowResult(&result))
++	require.Equal(t, "DELIVERED", result.Phase)
++	require.Equal(t, "food-order-unsafe-v2", result.WorkerBuild)
++	require.Equal(t, "delivery-order-1", result.DeliveryID)
++	require.Equal(t, "driver-1", result.DriverID)
++	require.Equal(t, []string{
++		"RESTAURANT_SELECTED", "CREATED", "PAYMENT_PENDING", "PAYMENT_COMMITTED",
++		"SCHEDULED", "IN_PREPARATION", "SCHEDULING_DELIVERY",
++		"WAITING_FOR_DRIVER", "IN_DELIVERY", "DELIVERED",
++	}, result.Stages)
++	require.Equal(t, harness.EffectRequest{
++		OrderID: "order-1", AmountCents: 4200,
++		OperationID: harness.OperationID("payment-token-1"),
++	}, <-paymentRequests)
++	require.Equal(t, "order-1", (<-preparationRequests).OrderID)
++	require.Equal(t, "delivery-order-1", (<-deliveryRequests).DeliveryID)
++	require.Equal(t, harness.EffectRequest{
++		OrderID: "order-1", AmountCents: 4200,
++		OperationID: harness.OperationID("complete:order-1"), ClosureVersion: "unsafe-v2",
++	}, <-completionRequests)
++}

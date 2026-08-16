@@ -502,11 +502,22 @@ def collect(pair_dir: Path, build_env: Path, output_dir: Path) -> dict[str, Any]
         item for item in _list(raw_container_values["h1"], "H1 raw containers")
         if isinstance(item, dict) and item.get("Id") == target_id
     ]
+    target_item = target_specific[0]
+    target_start_object = _object(target_start, "H1 target start order")
+    target_state = _object(target_item.get("State"), "H1 target container state")
+    target_config = _object(target_item.get("Config"), "H1 target container config")
+    raw_target = target_raw_matches[0] if len(target_raw_matches) == 1 else {}
+    raw_target_state = _object(raw_target.get("State"), "H1 raw target container state")
+    raw_target_config = _object(raw_target.get("Config"), "H1 raw target container config")
     require(
         len(target_raw_matches) == 1
-        and target_specific[0] == target_raw_matches[0]
-        and target_specific[0].get("Image") == build_values["ORDER_V2_IMAGE"]
-        and _object(target_start, "H1 target start order").get("container") == target_id,
+        and all(target_item.get(field) == raw_target.get(field) for field in ("Id", "Image", "Name", "Created"))
+        and target_item.get("Image") == build_values["ORDER_V2_IMAGE"]
+        and target_config.get("Image") == build_values["ORDER_V2_IMAGE"]
+        and raw_target_config.get("Image") == build_values["ORDER_V2_IMAGE"]
+        and target_state.get("StartedAt") == raw_target_state.get("StartedAt")
+        and target_start_object.get("container") == target_id
+        and target_start_object.get("started_at") == target_state.get("StartedAt"),
         "H1 target-specific inspect/start is not the build-env v2 in raw containers",
     )
     normalized_containers = {

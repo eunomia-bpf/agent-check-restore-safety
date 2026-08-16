@@ -9,7 +9,7 @@ WORKDIR /src
 COPY runtime/deploy/temporal/app/go.mod runtime/deploy/temporal/app/go.sum ./
 RUN go mod download
 COPY runtime/deploy/temporal/app/ ./
-RUN case "${WORKER_TAG}" in worker_v1|worker_v2) ;; *) exit 64 ;; esac \
+RUN case "${WORKER_TAG}" in worker_v1|worker_v2|worker_compatible_v2) ;; *) exit 64 ;; esac \
     && CGO_ENABLED=0 go build -trimpath -tags "${WORKER_TAG}" -o /out/worker ./cmd/worker
 
 FROM ${RUNTIME_IMAGE}

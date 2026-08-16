@@ -1247,10 +1247,9 @@ def _check_case(
         )
         completion_success = completion_updates[1][1]
         receipt_body = _base64_bytes(completion_success.get("result_body"), "H1 completion receipt")
-        expected_gateway_result = sha256(b"200\x00" + receipt_body).hexdigest()
         _require(
             set(completion_success) == {"phase", "result_hash", "status_code", "result_body", "remote_reference"}
-            and completion_success.get("result_hash") == expected_gateway_result
+            and completion_success.get("result_hash") == expected_completion_fact
             and completion_success.get("status_code") == 200
             and completion_success.get("remote_reference") == completion_record["remote_reference"],
             "H1 completion success marker differs",

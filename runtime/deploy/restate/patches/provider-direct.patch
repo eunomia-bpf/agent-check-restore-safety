@@ -1,0 +1,160 @@
+diff --git a/typescript/end-to-end-applications/food-ordering/app/src/order-app/clients/payment_client.ts b/typescript/end-to-end-applications/food-ordering/app/src/order-app/clients/payment_client.ts
+index 1bf0121..b0f2ed1 100644
+--- a/typescript/end-to-end-applications/food-ordering/app/src/order-app/clients/payment_client.ts
++++ b/typescript/end-to-end-applications/food-ordering/app/src/order-app/clients/payment_client.ts
+@@ -9,6 +9,37 @@
+  * https://github.com/restatedev/examples/blob/main/LICENSE
+  */
+ 
++import axios from "axios";
++import { createHash } from "node:crypto";
++
++type OperationReceipt = {
++  schema: number;
++  operation_id: string;
++  outcome: string;
++  result_hash: string;
++  remote_reference: string;
++};
++
++function requiredEnvironment(name: string): string {
++  const value = process.env[name];
++  if (value === undefined || value.length === 0) {
++    throw new Error(`Missing required environment variable ${name}`);
++  }
++  return value;
++}
++
++const PAYMENT_ENDPOINT = requiredEnvironment("PAYMENT_ENDPOINT");
++const OPERATION_DOMAIN = requiredEnvironment("OPERATION_DOMAIN");
++
++function operationId(callId: string): string {
++  const digest = createHash("sha256");
++  digest.update("operation-id-v1\0", "utf8");
++  digest.update(OPERATION_DOMAIN, "utf8");
++  digest.update("\0", "utf8");
++  digest.update(callId, "utf8");
++  return `op-${digest.digest("hex")}`;
++}
++
+ class PaymentClient {
+   async reserve(id: string, token: string, amount: number): Promise<boolean> {
+     console.info(`[${id}] Reserving payment with token ${token} for $${amount}`);
+@@ -26,7 +57,25 @@ class PaymentClient {
+ 
+   async charge(id: string, token: string, amount: number): Promise<boolean> {
+     console.info(`[${id}] Executing payment with token ${token} for $${amount}`);
+-    // do the call
++    const identity = operationId(token);
++    const body = Buffer.from(JSON.stringify({ order_id: id, amount }), "utf8");
++    const response = await axios.post<OperationReceipt>(PAYMENT_ENDPOINT, body, {
++      headers: {
++        "Content-Type": "application/json",
++        "Idempotency-Key": identity,
++        "X-Operation-ID": identity,
++      },
++      timeout: 0,
++    });
++    if (
++      response.data.schema !== 1 ||
++      response.data.operation_id !== identity ||
++      response.data.outcome !== "succeeded" ||
++      typeof response.data.result_hash !== "string" ||
++      typeof response.data.remote_reference !== "string"
++    ) {
++      throw new Error("Payment provider returned an invalid receipt");
++    }
+     return true;
+   }
+ }
+diff --git a/typescript/end-to-end-applications/food-ordering/app/src/order-app/clients/completion_client.ts b/typescript/end-to-end-applications/food-ordering/app/src/order-app/clients/completion_client.ts
+new file mode 100644
+--- /dev/null
++++ b/typescript/end-to-end-applications/food-ordering/app/src/order-app/clients/completion_client.ts
+@@ -0,0 +1,71 @@
++/*
++ * Copyright (c) 2024 - Restate Software, Inc., Restate GmbH
++ *
++ * This file is part of the Restate examples,
++ * which is released under the MIT license.
++ *
++ * You can find a copy of the license in the file LICENSE
++ * in the root directory of this repository or package or at
++ * https://github.com/restatedev/examples/
++ */
++
++import axios from "axios";
++import { createHash } from "node:crypto";
++
++type OperationReceipt = {
++  schema: number;
++  operation_id: string;
++  outcome: string;
++  result_hash: string;
++  remote_reference: string;
++};
++
++function requiredEnvironment(name: string): string {
++  const value = process.env[name];
++  if (value === undefined || value.length === 0) {
++    throw new Error(`Missing required environment variable ${name}`);
++  }
++  return value;
++}
++
++const COMPLETION_ENDPOINT = requiredEnvironment("COMPLETION_ENDPOINT");
++const OPERATION_DOMAIN = requiredEnvironment("OPERATION_DOMAIN");
++
++function operationId(callId: string): string {
++  const digest = createHash("sha256");
++  digest.update("operation-id-v1\0", "utf8");
++  digest.update(OPERATION_DOMAIN, "utf8");
++  digest.update("\0", "utf8");
++  digest.update(callId, "utf8");
++  return `op-${digest.digest("hex")}`;
++}
++
++class CompletionClient {
++  async complete(id: string): Promise<boolean> {
++    console.info(`[${id}] Recording terminal delivery`);
++    const identity = operationId(`order/${id}/completion`);
++    const body = Buffer.from(JSON.stringify({ order_id: id, status: "DELIVERED" }), "utf8");
++    const response = await axios.post<OperationReceipt>(COMPLETION_ENDPOINT, body, {
++      headers: {
++        "Content-Type": "application/json",
++        "Idempotency-Key": identity,
++        "X-Operation-ID": identity,
++      },
++      timeout: 0,
++    });
++    if (
++      response.data.schema !== 1 ||
++      response.data.operation_id !== identity ||
++      response.data.outcome !== "succeeded" ||
++      typeof response.data.result_hash !== "string" ||
++      typeof response.data.remote_reference !== "string"
++    ) {
++      throw new Error("Completion provider returned an invalid receipt");
++    }
++    return true;
++  }
++}
++
++export function getCompletionClient() {
++  return new CompletionClient();
++}
+diff --git a/typescript/end-to-end-applications/food-ordering/app/src/order-app/order_workflow/impl.ts b/typescript/end-to-end-applications/food-ordering/app/src/order-app/order_workflow/impl.ts
+--- a/typescript/end-to-end-applications/food-ordering/app/src/order-app/order_workflow/impl.ts
++++ b/typescript/end-to-end-applications/food-ordering/app/src/order-app/order_workflow/impl.ts
+@@ -16,2 +16,3 @@ import type { DeliveryManager } from "../delivery_manager/api";
+ import { getPaymentClient } from "../clients/payment_client";
++import { getCompletionClient } from "../clients/completion_client";
+ import { getRestaurantClient } from "../clients/restaurant_client";
+@@ -26,2 +27,3 @@ const restaurant = getRestaurantClient();
+ const paymentClient = getPaymentClient();
++const completionClient = getCompletionClient();
+ const DeliveryManagerObject: DeliveryManager = { name: "delivery-manager" };
+@@ -66,2 +68,3 @@ export default restate.workflow({
+       await ctx.promise("delivery_finished");
++      await ctx.run("completion", () => completionClient.complete(id));
+       ctx.set("status", Status.DELIVERED);

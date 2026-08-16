@@ -51,6 +51,27 @@ func TestActivitiesKeepPaymentAndCompletionEndpointsSeparate(t *testing.T) {
 	}
 }
 
+func TestEffectBodyAddsOnlyExplicitClosureVersion(t *testing.T) {
+	legacy := harness.EffectRequest{
+		OrderID: "order-1", AmountCents: 4200, OperationID: "operation-1",
+	}
+	body, err := effectBody(legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `{"order_id":"order-1","amount_cents":4200}`; string(body) != want {
+		t.Fatalf("legacy body = %q, want %q", body, want)
+	}
+	legacy.ClosureVersion = "compatible-v2"
+	body, err = effectBody(legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `{"order_id":"order-1","amount_cents":4200,"closure_version":"compatible-v2"}`; string(body) != want {
+		t.Fatalf("compatible completion body = %q, want %q", body, want)
+	}
+}
+
 func TestQueryPaymentBindsOriginalChargeContract(t *testing.T) {
 	input := harness.EffectRequest{
 		OrderID: "order-1", AmountCents: 4200, OperationID: "payment-op",
@@ -154,6 +175,78 @@ func TestQueryPaymentRejectsUnboundOrMalformedObservation(t *testing.T) {
 				t.Fatal("malformed observation was accepted")
 			}
 		})
+	}
+}
+
+func TestPrepareFoodPreservesRestaurantAndProductSelection(t *testing.T) {
+	request := harness.PreparationRequest{
+		OrderID:      "order-1",
+		RestaurantID: "restaurant-1",
+		Products: []harness.Product{
+			{ProductID: "pizza-1", Description: "Margherita Pizza", Quantity: 2},
+			{ProductID: "drink-1", Description: "Sparkling Water", Quantity: 1},
+		},
+	}
+	receipt, err := NewActivities("", "").PrepareFood(context.Background(), request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if receipt != (harness.PreparationReceipt{
+		Schema: 1, OrderID: "order-1", RestaurantID: "restaurant-1",
+		ProductCount: 3, Outcome: "accepted",
+	}) {
+		t.Fatalf("unexpected preparation receipt: %+v", receipt)
+	}
+}
+
+func TestPrepareFoodRejectsIncompleteOrderSelection(t *testing.T) {
+	tests := []harness.PreparationRequest{
+		{RestaurantID: "restaurant-1", Products: []harness.Product{{ProductID: "pizza-1", Description: "Pizza", Quantity: 1}}},
+		{OrderID: "order-1", Products: []harness.Product{{ProductID: "pizza-1", Description: "Pizza", Quantity: 1}}},
+		{OrderID: "order-1", RestaurantID: "restaurant-1"},
+		{OrderID: "order-1", RestaurantID: "restaurant-1", Products: []harness.Product{{ProductID: "", Description: "Pizza", Quantity: 1}}},
+		{OrderID: "order-1", RestaurantID: "restaurant-1", Products: []harness.Product{{ProductID: "pizza-1", Description: "", Quantity: 1}}},
+		{OrderID: "order-1", RestaurantID: "restaurant-1", Products: []harness.Product{{ProductID: "pizza-1", Description: "Pizza", Quantity: 0}}},
+	}
+	for index, request := range tests {
+		if _, err := NewActivities("", "").PrepareFood(context.Background(), request); err == nil {
+			t.Fatalf("case %d: malformed preparation request was accepted", index)
+		}
+	}
+}
+
+func TestScheduleDeliveryPreservesDispatchIdentity(t *testing.T) {
+	request := harness.DeliveryRequest{
+		OrderID: "order-1", DeliveryID: "delivery-order-1",
+		RestaurantID: "restaurant-1", Region: harness.DeliveryRegion,
+	}
+	dispatch, err := NewActivities("", "").ScheduleDelivery(context.Background(), request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dispatch != (harness.DeliveryDispatch{
+		Schema: 1, OrderID: "order-1", DeliveryID: "delivery-order-1",
+		RestaurantID: "restaurant-1", Region: harness.DeliveryRegion, Outcome: "scheduled",
+	}) {
+		t.Fatalf("unexpected delivery dispatch: %+v", dispatch)
+	}
+}
+
+func TestScheduleDeliveryRejectsIncompleteDispatch(t *testing.T) {
+	valid := harness.DeliveryRequest{
+		OrderID: "order-1", DeliveryID: "delivery-order-1",
+		RestaurantID: "restaurant-1", Region: harness.DeliveryRegion,
+	}
+	tests := []harness.DeliveryRequest{
+		{DeliveryID: valid.DeliveryID, RestaurantID: valid.RestaurantID, Region: valid.Region},
+		{OrderID: valid.OrderID, RestaurantID: valid.RestaurantID, Region: valid.Region},
+		{OrderID: valid.OrderID, DeliveryID: valid.DeliveryID, Region: valid.Region},
+		{OrderID: valid.OrderID, DeliveryID: valid.DeliveryID, RestaurantID: valid.RestaurantID},
+	}
+	for index, request := range tests {
+		if _, err := NewActivities("", "").ScheduleDelivery(context.Background(), request); err == nil {
+			t.Fatalf("case %d: malformed delivery request was accepted", index)
+		}
 	}
 }
 
