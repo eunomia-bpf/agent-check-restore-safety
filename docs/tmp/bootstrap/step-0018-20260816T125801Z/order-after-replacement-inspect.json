@@ -1,0 +1,67 @@
+[
+  {
+    "Config": {
+      "Cmd": [
+        "/usr/local/bin/order",
+        "-listen=0.0.0.0:8080",
+        "-release=/config/order.json",
+        "-control=http://control:8787",
+        "-operation-token-file=/credentials/order-token"
+      ],
+      "Entrypoint": null,
+      "Hostname": "0b3e44520c57",
+      "Image": "safe-change-runtime:safe-change-integrated-1732127-3aff342b",
+      "Labels": {
+        "com.docker.compose.container-number": "1",
+        "com.docker.compose.project": "safe-change-integrated-1732127-3aff342b",
+        "com.docker.compose.service": "order",
+        "com.docker.compose.version": "5.3.1",
+        "io.safe-change.source-tree.sha256": "3f7fcad4194bca2d22dae5fe22f20c9e1858bcf920df3fc803300b123773171e",
+        "org.opencontainers.image.revision": "9bc184a81b2b34be96fe83e154f97262969a389f"
+      },
+      "User": "1001:993",
+      "WorkingDir": "/"
+    },
+    "HostConfig": {
+      "CapDrop": [
+        "ALL"
+      ],
+      "NetworkMode": "safe-change-integrated-1732127-3aff342b_application",
+      "Privileged": false,
+      "ReadonlyRootfs": true,
+      "SecurityOpt": [
+        "no-new-privileges:true"
+      ],
+      "Tmpfs": {
+        "/tmp": ""
+      }
+    },
+    "Id": "0b3e44520c57e90dfd5f5672ee7c24d145a60d19b653a2b2a3c17264d5a87801",
+    "Image": "sha256:f6da3c6881261f477cea8b948f6571c5ef030dd5d3525806e3612c565b1f52f3",
+    "Mounts": [
+      {
+        "Destination": "/config",
+        "RW": false,
+        "Type": "bind"
+      },
+      {
+        "Destination": "/credentials/order-token",
+        "RW": false,
+        "Type": "bind"
+      }
+    ],
+    "Name": "/safe-change-integrated-1732127-3aff342b-order-1",
+    "NetworkSettings": {
+      "Networks": {
+        "safe-change-integrated-1732127-3aff342b_application": {
+          "IPAddress": "172.20.0.3"
+        }
+      }
+    },
+    "State": {
+      "Pid": 1749936,
+      "Running": true,
+      "StartedAt": "2026-08-16T13:00:38.170078529Z"
+    }
+  }
+]

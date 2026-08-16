@@ -16,7 +16,7 @@ from adapter.check_codex_integrated_evidence import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
-EVIDENCE = ROOT / "docs/tmp/bootstrap/step-0017-20260816T113812Z"
+EVIDENCE = ROOT / "docs/tmp/bootstrap/step-0018-20260816T125801Z"
 
 
 @unittest.skipUnless(EVIDENCE.exists(), "integrated Codex/VM evidence is absent")
@@ -125,6 +125,46 @@ class IntegratedEvidenceTests(unittest.TestCase):
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(EvidenceError, "QMP"):
+                check_evidence(evidence)
+
+    def test_qemu_executable_mutation_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = self.copy_evidence(temporary)
+            path = evidence / "vm/qemu-process-command.json"
+            process = json.loads(path.read_text(encoding="utf-8"))
+            process["executable_sha256"] = "0" * 64
+            self.write_json(path, process)
+            with self.assertRaisesRegex(EvidenceError, "retained /proc QEMU"):
+                check_evidence(evidence)
+
+    def test_vm_runner_executable_mutation_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = self.copy_evidence(temporary)
+            path = evidence / "vm-runner-process.json"
+            process = json.loads(path.read_text(encoding="utf-8"))
+            process["executable_sha256"] = "0" * 64
+            self.write_json(path, process)
+            with self.assertRaisesRegex(EvidenceError, "running VM runner"):
+                check_evidence(evidence)
+
+    def test_private_base_image_mutation_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = self.copy_evidence(temporary)
+            path = evidence / "vm/base-image-provenance.json"
+            provenance = json.loads(path.read_text(encoding="utf-8"))
+            provenance["private_backing_copy"] = False
+            self.write_json(path, provenance)
+            with self.assertRaisesRegex(EvidenceError, "run-private"):
+                check_evidence(evidence)
+
+    def test_sigkill_exit_status_mutation_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = self.copy_evidence(temporary)
+            path = evidence / "control-crash.json"
+            crash = json.loads(path.read_text(encoding="utf-8"))
+            crash["state"]["ExitCode"] = 143
+            self.write_json(path, crash)
+            with self.assertRaisesRegex(EvidenceError, "observed SIGKILL"):
                 check_evidence(evidence)
 
     def test_docker_network_internal_flag_mutation_fails_closed(self) -> None:

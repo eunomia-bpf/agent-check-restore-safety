@@ -1,0 +1,16 @@
+{
+  "release_version": "v1",
+  "requested_kind": "reserve-v1",
+  "requested_target": "http://inventory:8081/v1/charge",
+  "runtime": {
+    "code": "outcome_unknown",
+    "error": "external operation outcome is unknown: Post \"http://inventory:8081/v1/charge\": EOF",
+    "outcome": {
+      "operation_id": "op-078f39e70e6a66eb35b59578253e58949978baef22e79ae220f62222705bed41",
+      "phase": "unknown",
+      "recovered_by_query": false,
+      "result_hash": "",
+      "reused": false
+    }
+  }
+}

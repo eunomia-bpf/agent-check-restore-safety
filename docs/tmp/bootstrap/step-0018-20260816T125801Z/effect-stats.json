@@ -1,0 +1,23 @@
+{
+  "inventory": {
+    "commits": 1,
+    "deliveries": 2,
+    "paths": {
+      "/v1/charge": 2
+    }
+  },
+  "ledger": {
+    "commits": 1,
+    "deliveries": 1,
+    "paths": {
+      "/v1/charge": 1
+    }
+  },
+  "payment": {
+    "commits": 1,
+    "deliveries": 2,
+    "paths": {
+      "/v1/charge": 2
+    }
+  }
+}

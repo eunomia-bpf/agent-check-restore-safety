@@ -1,0 +1,4 @@
+2026/08/16 12:58:48 using verified VM image <redacted-home>/.cache/safe-change-runtime/images/ubuntu-24.04-20260725-amd64.img
+2026/08/16 12:59:48 guest marker: SAFE_CHANGE_VM_EXTERNAL_READY
+2026/08/16 13:00:37 guest marker: SAFE_CHANGE_VM_FIRST_SUCCEEDED reused=false
+2026/08/16 13:00:45 guest marker: SAFE_CHANGE_VM_RESTORED_SUCCEEDED reused=true

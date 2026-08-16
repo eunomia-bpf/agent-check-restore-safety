@@ -1,0 +1,19 @@
+{
+  "codex_payment_unknown_ns": 1786885235866656241,
+  "codex_tool_call_ns": 1786885196991172624,
+  "codex_turn_completed_ns": 1786885250030568040,
+  "control_restarted_ns": 1786885239939292670,
+  "inventory_unknown_ns": 1786885235935843926,
+  "network_checks_finished_ns": 1786885235803623875,
+  "order_replaced_ns": 1786885238533051318,
+  "rule_v1_activated_ns": 1786885128097249786,
+  "rule_v2_activated_ns": 1786885237485209380,
+  "run_facts_complete_ns": 1786885250328685746,
+  "run_start_ns": 1786885097313086888,
+  "sandbox_generation_3_ns": 1786885243567225427,
+  "vm_first_succeeded_ns": 1786885237149321564,
+  "vm_paused_ns": 1786885237291515736,
+  "vm_restore_completed_ns": 1786885246112281003,
+  "vm_restore_loaded_ns": 1786885243372936831,
+  "vm_snapshot_ready_ns": 1786885191510000064
+}

@@ -1,0 +1,90 @@
+{
+  "certificates_valid": 3,
+  "codex_protocol": {
+    "callback_responses": 1,
+    "completed_turns": 1,
+    "dynamic_tool_calls": 1,
+    "final_agent_message": "DONE",
+    "model": "gpt-5.6-sol",
+    "model_provider": "openai",
+    "real_app_server_process": true,
+    "records": 51
+  },
+  "external_effects": {
+    "by_service": {
+      "inventory": {
+        "commits": 1,
+        "deliveries": 2,
+        "paths": {
+          "/v1/charge": 2
+        }
+      },
+      "ledger": {
+        "commits": 1,
+        "deliveries": 1,
+        "paths": {
+          "/v1/charge": 1
+        }
+      },
+      "payment": {
+        "commits": 1,
+        "deliveries": 2,
+        "paths": {
+          "/v1/charge": 2
+        }
+      }
+    },
+    "commits": 3,
+    "deliveries": 5
+  },
+  "fault_correlations": {
+    "control_process_restarted": true,
+    "control_process_sigkilled": true,
+    "dispatch_owner_changed": true,
+    "order_process_replaced": true,
+    "raw_clock_order_valid": true,
+    "restored_vm_operation_reused": true,
+    "v2_process_recovered_v1_operation": true,
+    "vm_cutover_while_paused": true,
+    "whole_vm_restored": true
+  },
+  "history_chain_replayed": true,
+  "history_hash": "8f4ccd049ae23e7bb703187a28e2b18777afbfc0ab82b7c4d19fe175d52c8e3d",
+  "history_sequence": 16,
+  "network_isolation": {
+    "attested": true,
+    "direct_agent_effect_paths": 0,
+    "direct_order_effect_paths": 0,
+    "negative_probes": 12
+  },
+  "operation_ids": {
+    "codex": "op-fe92cebc9cbae71284cdba0230d1c608c33d76d598ac363b884b02b604680603",
+    "order": "op-078f39e70e6a66eb35b59578253e58949978baef22e79ae220f62222705bed41",
+    "vm": "op-3923b1bc6ded404b9f434166df772483374151a681b6dfe246a084eba5dd7dc1"
+  },
+  "purchase_id": "A-17-3aff342b",
+  "rule_transition": {
+    "from_version": 1,
+    "to_version": 3,
+    "v2_new_work_allow_count": 0
+  },
+  "run_id": "safe-change-integrated-1732127-3aff342b",
+  "sandbox_boundary": {
+    "credential_free": true,
+    "generations": [
+      1,
+      2,
+      3
+    ],
+    "replay_auto_attach_blocked": true,
+    "sigkill_stale_inode_observed": true,
+    "transport": "host-unix-socket"
+  },
+  "valid": true,
+  "vm": {
+    "accelerator": "kvm",
+    "base_image_sha256": "d1940f7d69d343355e183dff1e08a59852d32e7309baa7a4bad8365b11b005ac",
+    "qmp_records": 26,
+    "snapshot": "before_purchase"
+  }
+}

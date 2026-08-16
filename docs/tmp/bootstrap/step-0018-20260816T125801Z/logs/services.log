@@ -1,0 +1,13 @@
+ledger-1  | 2026/08/16 12:58:40 payment service listening on http://0.0.0.0:8081
+payment-1  | 2026/08/16 12:58:40 payment service listening on http://0.0.0.0:8081
+control-1  | control API listening on http://[::]:8787
+control-1  | admin token: /credentials/admin-token
+control-1  | adapter credentials: 2
+control-1  | sandbox endpoints: /sandbox-endpoints
+control-1  | control API listening on http://[::]:8787
+control-1  | admin token: /credentials/admin-token
+control-1  | adapter credentials: 2
+control-1  | sandbox endpoints: /sandbox-endpoints
+order-1    | 2026/08/16 13:00:38 order release v2 listening on http://0.0.0.0:8080
+ingress-1  | 2026/08/16 12:58:46 fixed ingress listening on control=0.0.0.0:8787 order=0.0.0.0:8080
+inventory-1  | 2026/08/16 12:58:40 payment service listening on http://0.0.0.0:8081

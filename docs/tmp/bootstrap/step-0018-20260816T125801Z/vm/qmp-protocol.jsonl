@@ -1,0 +1,26 @@
+{"direction":"server_to_client","payload":{"QMP":{"version":{"qemu":{"micro":2,"minor":2,"major":8},"package":"Debian 1:8.2.2+ds-0ubuntu1.18"},"capabilities":["oob"]}},"sequence":1,"time_ns":1786885131454717878}
+{"direction":"client_to_server","payload":{"execute":"qmp_capabilities","id":"command-1"},"sequence":2,"time_ns":1786885131457914646}
+{"direction":"server_to_client","payload":{"id":"command-1","return":{}},"sequence":3,"time_ns":1786885131472310571}
+{"direction":"client_to_server","payload":{"execute":"stop","id":"command-2"},"sequence":4,"time_ns":1786885188275961877}
+{"direction":"server_to_client","payload":{"data":{"path":"/machine/peripheral-anon/device[0]/virtio-backend"},"event":"NIC_RX_FILTER_CHANGED","timestamp":{"seconds":1786885147,"microseconds":803716}},"sequence":5,"time_ns":1786885188281164417}
+{"direction":"server_to_client","payload":{"event":"STOP","timestamp":{"seconds":1786885188,"microseconds":285797}},"sequence":6,"time_ns":1786885188286100532}
+{"direction":"server_to_client","payload":{"id":"command-2","return":{}},"sequence":7,"time_ns":1786885188290389013}
+{"direction":"client_to_server","payload":{"execute":"query-status","id":"command-3"},"sequence":8,"time_ns":1786885188294099931}
+{"direction":"server_to_client","payload":{"id":"command-3","return":{"status":"paused","singlestep":false,"running":false}},"sequence":9,"time_ns":1786885188298476864}
+{"direction":"client_to_server","payload":{"arguments":{"command-line":"savevm before_purchase"},"execute":"human-monitor-command","id":"command-4"},"sequence":10,"time_ns":1786885188302405697}
+{"direction":"server_to_client","payload":{"id":"command-4","return":""},"sequence":11,"time_ns":1786885191506254534}
+{"direction":"client_to_server","payload":{"execute":"cont","id":"command-5"},"sequence":12,"time_ns":1786885235935992950}
+{"direction":"server_to_client","payload":{"event":"RESUME","timestamp":{"seconds":1786885235,"microseconds":939590}},"sequence":13,"time_ns":1786885235939686868}
+{"direction":"server_to_client","payload":{"id":"command-5","return":{}},"sequence":14,"time_ns":1786885235945534732}
+{"direction":"client_to_server","payload":{"execute":"stop","id":"command-6"},"sequence":15,"time_ns":1786885237149375065}
+{"direction":"server_to_client","payload":{"event":"STOP","timestamp":{"seconds":1786885237,"microseconds":275613}},"sequence":16,"time_ns":1786885237275697131}
+{"direction":"server_to_client","payload":{"id":"command-6","return":{}},"sequence":17,"time_ns":1786885237280914252}
+{"direction":"client_to_server","payload":{"execute":"query-status","id":"command-7"},"sequence":18,"time_ns":1786885237284354505}
+{"direction":"server_to_client","payload":{"id":"command-7","return":{"status":"paused","singlestep":false,"running":false}},"sequence":19,"time_ns":1786885237287973391}
+{"direction":"client_to_server","payload":{"arguments":{"command-line":"loadvm before_purchase"},"execute":"human-monitor-command","id":"command-8"},"sequence":20,"time_ns":1786885239994244474}
+{"direction":"server_to_client","payload":{"id":"command-8","return":""},"sequence":21,"time_ns":1786885243360626400}
+{"direction":"client_to_server","payload":{"execute":"query-status","id":"command-9"},"sequence":22,"time_ns":1786885243366776330}
+{"direction":"server_to_client","payload":{"id":"command-9","return":{"status":"paused","singlestep":false,"running":false}},"sequence":23,"time_ns":1786885243370018819}
+{"direction":"client_to_server","payload":{"execute":"cont","id":"command-10"},"sequence":24,"time_ns":1786885243567347659}
+{"direction":"server_to_client","payload":{"event":"RESUME","timestamp":{"seconds":1786885243,"microseconds":571316}},"sequence":25,"time_ns":1786885243571476867}
+{"direction":"server_to_client","payload":{"id":"command-10","return":{}},"sequence":26,"time_ns":1786885243575044592}

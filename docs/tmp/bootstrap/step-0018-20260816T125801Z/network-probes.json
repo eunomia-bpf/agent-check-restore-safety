@@ -1,0 +1,240 @@
+[
+  {
+    "command": [
+      "docker",
+      "exec",
+      "safe-change-codex-ece4c0502edcfea7",
+      "wget",
+      "-T",
+      "2",
+      "-qO-",
+      "http://ingress:8080/healthz"
+    ],
+    "finished_time_ns": 1786885198777817596,
+    "label": "codex-ingress",
+    "output": "{\"kind\":\"reserve-v1\",\"status\":\"ok\",\"version\":\"v1\"}\n",
+    "returncode": 0,
+    "started_time_ns": 1786885198703200675
+  },
+  {
+    "command": [
+      "docker",
+      "exec",
+      "3a294c8c707ee52e5b47b9ad46ef4d2a930f7e1c66180193c94248205a0ce4b6",
+      "wget",
+      "-T",
+      "2",
+      "-qO-",
+      "http://control:8787/healthz"
+    ],
+    "finished_time_ns": 1786885198850363003,
+    "label": "order-control",
+    "output": "{\"status\":\"ok\"}\n",
+    "returncode": 0,
+    "started_time_ns": 1786885198777830396
+  },
+  {
+    "command": [
+      "docker",
+      "exec",
+      "safe-change-codex-ece4c0502edcfea7",
+      "wget",
+      "-T",
+      "2",
+      "-qO-",
+      "http://payment:8081/v1/stats"
+    ],
+    "finished_time_ns": 1786885203929038450,
+    "label": "codex-payment-name",
+    "output": "wget: bad address 'payment:8081'\n",
+    "returncode": 1,
+    "started_time_ns": 1786885198850375273
+  },
+  {
+    "command": [
+      "docker",
+      "exec",
+      "safe-change-codex-ece4c0502edcfea7",
+      "wget",
+      "-T",
+      "2",
+      "-qO-",
+      "http://172.19.0.4:8081/v1/stats"
+    ],
+    "finished_time_ns": 1786885205996378430,
+    "label": "codex-payment-ip",
+    "output": "wget: download timed out\n",
+    "returncode": 1,
+    "started_time_ns": 1786885203929048961
+  },
+  {
+    "command": [
+      "docker",
+      "exec",
+      "safe-change-codex-ece4c0502edcfea7",
+      "wget",
+      "-T",
+      "2",
+      "-qO-",
+      "http://inventory:8081/v1/stats"
+    ],
+    "finished_time_ns": 1786885211079543033,
+    "label": "codex-inventory-name",
+    "output": "wget: bad address 'inventory:8081'\n",
+    "returncode": 1,
+    "started_time_ns": 1786885205996390320
+  },
+  {
+    "command": [
+      "docker",
+      "exec",
+      "safe-change-codex-ece4c0502edcfea7",
+      "wget",
+      "-T",
+      "2",
+      "-qO-",
+      "http://172.19.0.3:8081/v1/stats"
+    ],
+    "finished_time_ns": 1786885213159898796,
+    "label": "codex-inventory-ip",
+    "output": "wget: download timed out\n",
+    "returncode": 1,
+    "started_time_ns": 1786885211079552123
+  },
+  {
+    "command": [
+      "docker",
+      "exec",
+      "safe-change-codex-ece4c0502edcfea7",
+      "wget",
+      "-T",
+      "2",
+      "-qO-",
+      "http://ledger:8081/v1/stats"
+    ],
+    "finished_time_ns": 1786885218234640718,
+    "label": "codex-ledger-name",
+    "output": "wget: bad address 'ledger:8081'\n",
+    "returncode": 1,
+    "started_time_ns": 1786885213159909616
+  },
+  {
+    "command": [
+      "docker",
+      "exec",
+      "safe-change-codex-ece4c0502edcfea7",
+      "wget",
+      "-T",
+      "2",
+      "-qO-",
+      "http://172.19.0.2:8081/v1/stats"
+    ],
+    "finished_time_ns": 1786885220315640838,
+    "label": "codex-ledger-ip",
+    "output": "wget: download timed out\n",
+    "returncode": 1,
+    "started_time_ns": 1786885218234649379
+  },
+  {
+    "command": [
+      "docker",
+      "exec",
+      "3a294c8c707ee52e5b47b9ad46ef4d2a930f7e1c66180193c94248205a0ce4b6",
+      "wget",
+      "-T",
+      "2",
+      "-qO-",
+      "http://payment:8081/v1/stats"
+    ],
+    "finished_time_ns": 1786885225393113907,
+    "label": "order-payment-name",
+    "output": "wget: bad address 'payment:8081'\n",
+    "returncode": 1,
+    "started_time_ns": 1786885220315658508
+  },
+  {
+    "command": [
+      "docker",
+      "exec",
+      "3a294c8c707ee52e5b47b9ad46ef4d2a930f7e1c66180193c94248205a0ce4b6",
+      "wget",
+      "-T",
+      "2",
+      "-qO-",
+      "http://172.19.0.4:8081/v1/stats"
+    ],
+    "finished_time_ns": 1786885225467719747,
+    "label": "order-payment-ip",
+    "output": "wget: can't connect to remote host (172.19.0.4): Network unreachable\n",
+    "returncode": 1,
+    "started_time_ns": 1786885225393123047
+  },
+  {
+    "command": [
+      "docker",
+      "exec",
+      "3a294c8c707ee52e5b47b9ad46ef4d2a930f7e1c66180193c94248205a0ce4b6",
+      "wget",
+      "-T",
+      "2",
+      "-qO-",
+      "http://inventory:8081/v1/stats"
+    ],
+    "finished_time_ns": 1786885230547597795,
+    "label": "order-inventory-name",
+    "output": "wget: bad address 'inventory:8081'\n",
+    "returncode": 1,
+    "started_time_ns": 1786885225467730507
+  },
+  {
+    "command": [
+      "docker",
+      "exec",
+      "3a294c8c707ee52e5b47b9ad46ef4d2a930f7e1c66180193c94248205a0ce4b6",
+      "wget",
+      "-T",
+      "2",
+      "-qO-",
+      "http://172.19.0.3:8081/v1/stats"
+    ],
+    "finished_time_ns": 1786885230629342478,
+    "label": "order-inventory-ip",
+    "output": "wget: can't connect to remote host (172.19.0.3): Network unreachable\n",
+    "returncode": 1,
+    "started_time_ns": 1786885230547608726
+  },
+  {
+    "command": [
+      "docker",
+      "exec",
+      "3a294c8c707ee52e5b47b9ad46ef4d2a930f7e1c66180193c94248205a0ce4b6",
+      "wget",
+      "-T",
+      "2",
+      "-qO-",
+      "http://ledger:8081/v1/stats"
+    ],
+    "finished_time_ns": 1786885235711417059,
+    "label": "order-ledger-name",
+    "output": "wget: bad address 'ledger:8081'\n",
+    "returncode": 1,
+    "started_time_ns": 1786885230629359268
+  },
+  {
+    "command": [
+      "docker",
+      "exec",
+      "3a294c8c707ee52e5b47b9ad46ef4d2a930f7e1c66180193c94248205a0ce4b6",
+      "wget",
+      "-T",
+      "2",
+      "-qO-",
+      "http://172.19.0.2:8081/v1/stats"
+    ],
+    "finished_time_ns": 1786885235785716665,
+    "label": "order-ledger-ip",
+    "output": "wget: can't connect to remote host (172.19.0.2): Network unreachable\n",
+    "returncode": 1,
+    "started_time_ns": 1786885235711426789
+  }
+]

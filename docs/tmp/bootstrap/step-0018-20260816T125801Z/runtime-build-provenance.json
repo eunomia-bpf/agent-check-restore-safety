@@ -1,0 +1,7 @@
+{
+  "build_input": "git-archive",
+  "revision": "9bc184a81b2b34be96fe83e154f97262969a389f",
+  "schema": 1,
+  "source_tree_sha256": "3f7fcad4194bca2d22dae5fe22f20c9e1858bcf920df3fc803300b123773171e",
+  "vm_demo_sha256": "7a73f102228a472c6e7e4a05a31d7740b4b83bfca5399f1457e0a462a5b4bfe2"
+}

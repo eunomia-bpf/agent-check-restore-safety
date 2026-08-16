@@ -1,0 +1,83 @@
+{
+  "bindings": [
+    {
+      "allowed_kinds": [
+        "append-audit"
+      ],
+      "domain": "full-linux-vm",
+      "generation": 1,
+      "host_instance_id": "qemu-safe-change-integrated-1732127-3aff342b-g1",
+      "sandbox_id": "integrated-vm"
+    }
+  ],
+  "state": {
+    "history": {
+      "hash": "0337f77b535d21a3a500d6401b9c0183d8b71a41dbd6553ecd03e25bb8270cb4",
+      "sequence": 1
+    },
+    "operations": {},
+    "requirement": {
+      "capacities": {
+        "audit-slot": 1,
+        "inventory-slot": 1,
+        "payment-slot": 1
+      },
+      "id": "purchase-v1/safe-change-integrated-1732127-3aff342b",
+      "kinds": {
+        "append-audit": {
+          "costs": {
+            "audit-slot": 1
+          },
+          "method": "POST",
+          "produces": {
+            "audited": 1
+          },
+          "queryable": false,
+          "response_classifier": "operation-receipt-v1",
+          "retry_safe": true,
+          "target": "http://ledger:8081/v1/charge"
+        },
+        "charge-invoice": {
+          "costs": {
+            "payment-slot": 1
+          },
+          "method": "POST",
+          "produces": {
+            "paid": 1
+          },
+          "queryable": false,
+          "response_classifier": "operation-receipt-v1",
+          "retry_safe": true,
+          "target": "http://payment:8081/v1/charge"
+        },
+        "reserve-v1": {
+          "costs": {
+            "inventory-slot": 1
+          },
+          "method": "POST",
+          "produces": {
+            "reserved": 1
+          },
+          "queryable": false,
+          "response_classifier": "operation-receipt-v1",
+          "retry_safe": true,
+          "target": "http://inventory:8081/v1/charge"
+        }
+      },
+      "results": {
+        "audited": 1,
+        "paid": 1,
+        "reserved": 1
+      }
+    },
+    "rule": {
+      "allow": [
+        "append-audit",
+        "charge-invoice",
+        "reserve-v1"
+      ],
+      "requirement_hash": "7de29e2ebabf93837e991a0703c6905c284368f6a2e496769f8561ad94f4816a",
+      "version": 1
+    }
+  }
+}

@@ -1,0 +1,144 @@
+{
+  "history": {
+    "hash": "82054a851adea5a87d54ba1454f09286cff1bd8b21182154e8f28a14b8385bc7",
+    "sequence": 12
+  },
+  "operations": {
+    "op-078f39e70e6a66eb35b59578253e58949978baef22e79ae220f62222705bed41": {
+      "costs": {
+        "inventory-slot": 1
+      },
+      "dispatch_generation": 1,
+      "dispatch_owner": "feed6ea5869faebbffca55ae47c95834",
+      "domain": "orders",
+      "id": "op-078f39e70e6a66eb35b59578253e58949978baef22e79ae220f62222705bed41",
+      "kind": "reserve-v1",
+      "method": "POST",
+      "phase": "unknown",
+      "produces": {
+        "reserved": 1
+      },
+      "queryable": false,
+      "request_body": "eyJvcmRlcl9pZCI6IkEtMTctM2FmZjM0MmIiLCJhbW91bnQiOjQyfQ==",
+      "request_hash": "1cb4cb01b1157d8de24f2f99e3a488fee053af152120d45454f058aa0a71cdd8",
+      "request_stored": true,
+      "response_classifier": "operation-receipt-v1",
+      "retry_safe": true,
+      "rule_version": 1,
+      "target": "http://inventory:8081/v1/charge"
+    },
+    "op-3923b1bc6ded404b9f434166df772483374151a681b6dfe246a084eba5dd7dc1": {
+      "costs": {
+        "audit-slot": 1
+      },
+      "dispatch_generation": 1,
+      "dispatch_owner": "feed6ea5869faebbffca55ae47c95834",
+      "domain": "full-linux-vm",
+      "id": "op-3923b1bc6ded404b9f434166df772483374151a681b6dfe246a084eba5dd7dc1",
+      "kind": "append-audit",
+      "method": "POST",
+      "phase": "succeeded",
+      "produces": {
+        "audited": 1
+      },
+      "queryable": false,
+      "remote_reference": "payment/op-3923b1bc6ded404b9f434166df772483374151a681b6dfe246a084eba5dd7dc1",
+      "request_body": "eyJwdXJjaGFzZV9pZCI6IkEtMTctM2FmZjM0MmIiLCJydW5faWQiOiJzYWZlLWNoYW5nZS1pbnRlZ3JhdGVkLTE3MzIxMjctM2FmZjM0MmIifQ==",
+      "request_hash": "f1a4e73d17d19e20cf6a7f30144b96c31dd69ece39380bf14ae91dc8585867b7",
+      "request_stored": true,
+      "response_classifier": "operation-receipt-v1",
+      "result_body": "eyJvcGVyYXRpb25faWQiOiJvcC0zOTIzYjFiYzZkZWQ0MDRiOWY0MzQxNjZkZjc3MjQ4MzM3NDE1MWE2ODFiNmRmZTI0NmEwODRlYmE1ZGQ3ZGMxIiwib3V0Y29tZSI6InN1Y2NlZWRlZCIsInJlbW90ZV9yZWZlcmVuY2UiOiJwYXltZW50L29wLTM5MjNiMWJjNmRlZDQwNGI5ZjQzNDE2NmRmNzcyNDgzMzc0MTUxYTY4MWI2ZGZlMjQ2YTA4NGViYTVkZDdkYzEiLCJyZXN1bHRfaGFzaCI6Ijk4Y2UzYmUzMTU4MjAyNDU2YzI5MDg5NTcxOGQ1OTJhNDdiOTQ5OTc1MGRlYzc1ZjNkNGZkZjZlMWE0OGMwZGYiLCJzY2hlbWEiOjF9Cg==",
+      "result_hash": "98ce3be3158202456c290895718d592a47b9499750dec75f3d4fdf6e1a48c0df",
+      "retry_safe": true,
+      "rule_version": 1,
+      "sandbox_id": "integrated-vm",
+      "status_code": 200,
+      "target": "http://ledger:8081/v1/charge"
+    },
+    "op-fe92cebc9cbae71284cdba0230d1c608c33d76d598ac363b884b02b604680603": {
+      "costs": {
+        "payment-slot": 1
+      },
+      "dispatch_generation": 1,
+      "dispatch_owner": "feed6ea5869faebbffca55ae47c95834",
+      "domain": "codex-app-server",
+      "id": "op-fe92cebc9cbae71284cdba0230d1c608c33d76d598ac363b884b02b604680603",
+      "kind": "charge-invoice",
+      "method": "POST",
+      "phase": "unknown",
+      "produces": {
+        "paid": 1
+      },
+      "queryable": false,
+      "request_body": "eyJhbW91bnQiOjQyLCJwdXJjaGFzZV9pZCI6IkEtMTctM2FmZjM0MmIiLCJydW5faWQiOiJzYWZlLWNoYW5nZS1pbnRlZ3JhdGVkLTE3MzIxMjctM2FmZjM0MmIifQ==",
+      "request_hash": "5506d7997d1ed3d5f6b2099d8ff6f9d6eefca73fdca0bc965a5cf54580d20062",
+      "request_headers": {
+        "Content-Type": "application/json"
+      },
+      "request_stored": true,
+      "response_classifier": "operation-receipt-v1",
+      "retry_safe": true,
+      "rule_version": 1,
+      "target": "http://payment:8081/v1/charge"
+    }
+  },
+  "requirement": {
+    "capacities": {
+      "audit-slot": 1,
+      "inventory-slot": 1,
+      "payment-slot": 1
+    },
+    "id": "purchase-v2/safe-change-integrated-1732127-3aff342b",
+    "kinds": {
+      "append-audit": {
+        "costs": {
+          "audit-slot": 1
+        },
+        "method": "POST",
+        "produces": {
+          "audited": 1
+        },
+        "queryable": false,
+        "response_classifier": "operation-receipt-v1",
+        "retry_safe": true,
+        "target": "http://ledger:8081/v1/charge"
+      },
+      "charge-invoice": {
+        "costs": {
+          "payment-slot": 1
+        },
+        "method": "POST",
+        "produces": {
+          "paid": 1
+        },
+        "queryable": false,
+        "response_classifier": "operation-receipt-v1",
+        "retry_safe": true,
+        "target": "http://payment:8081/v1/charge"
+      },
+      "reserve-v2": {
+        "costs": {
+          "inventory-slot": 1
+        },
+        "method": "POST",
+        "produces": {
+          "reserved": 1
+        },
+        "queryable": false,
+        "response_classifier": "operation-receipt-v1",
+        "retry_safe": true,
+        "target": "http://inventory:8081/v2/charge"
+      }
+    },
+    "results": {
+      "audited": 1,
+      "paid": 1,
+      "reserved": 1
+    }
+  },
+  "rule": {
+    "allow": [],
+    "requirement_hash": "a271cda5687c101bb59d8d056ade1fb21af7f1986949d2cf7e2aa5072a14f8d9",
+    "version": 3
+  }
+}

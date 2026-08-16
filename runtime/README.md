@@ -59,12 +59,11 @@ Operation lookup or provider request, while a result already committed by the
 host can be reused by the new VM. Restarting control leaves every old endpoint
 closed until the host publishes and attaches a fresh VM instance.
 
-This is not yet a Firecracker integration. The standalone `runtime-vm-demo`
-uses this host-bound endpoint with a complete QEMU guest: it loads the snapshot
-while QEMU is paused, publishes the new Rule and VM generation, replaces the
-endpoint, and only then resumes the guest. The shared-control mode used by the
-older integrated Codex demo still uses its bearer-token protocol; migrating
-that path and adding a Firecracker backend remain separate executable steps.
+This is not yet a Firecracker integration. Both QEMU runners use this
+host-bound endpoint with a complete guest: they load the snapshot while QEMU is
+paused, publish the new Rule and VM generation, replace the endpoint, and only
+then resume the guest. Adding a Firecracker backend remains a separate
+executable step.
 
 ## Add it to an HTTP service
 
@@ -453,10 +452,14 @@ an existing `codex login` and combines, in one purchase and one History:
 Codex calls `complete_purchase` once and waits for one callback that covers all
 three Operations. Its payment Operation and the order service's inventory
 Operation each commit remotely and lose their first response. The VM's ledger
-Operation succeeds before the Rule change. Against History head sequence 10,
-the runner compiles Rule v2, whose order kind is `reserve-v2`, and records its
-activation at sequence 11. It then replaces the order container and restarts
-the control process. The new order process requests the v2 kind and
+Operation succeeds before the Rule change. The VM carries no adapter token and
+sends only `call_id`, `kind`, and `body`; a control-owned Unix endpoint supplies
+its domain and routes the provider request. Against History head sequence 10,
+the runner compiles Rule v2 and atomically records it with sandbox generation 2
+at sequence 11. It then replaces the order container and restarts control. The
+new process removes the stale socket but does not attach the binding replayed
+from History. A fresh Certificate records generation 3 at sequence 12 before
+the VM can resume. The new order process requests the v2 kind and
 `/v2/charge`, but its stable call identity recovers the earlier Operation, so
 control preserves the frozen `reserve-v1` kind and `/v1/charge` target. No
 request reaches the inventory v2 path.
@@ -466,7 +469,7 @@ audit call, receives the result already recorded in History, and reports
 `reused=true`; ledger receives no second delivery. The replacement control
 recovers the unknown payment and inventory Operations, settled retries reuse
 both results, and Codex receives the three results and replies exactly `DONE`.
-History ends at sequence 15 with all three Operations succeeded. The observed
+History ends at sequence 16 with all three Operations succeeded. The observed
 external totals are:
 
 | Service | Deliveries | Durable commits | Observed path |
@@ -481,21 +484,26 @@ ledger join only the internal effects network. Fixed ingress and control form
 the only cross-network path. Saved probes show that Codex and order can reach
 their intended next hop but cannot reach any effect service by either name or
 address. QEMU has no implicit NIC and uses one `restrict=on` user network with
-only metadata and shared-control guest forwards; the guest's direct effect
-probe fails both before and after restore.
+only a metadata TCP forward and a guest-to-host Unix-socket forward. The guest's
+direct effect probe fails both before and after restore. Retained guest input
+and script evidence show that it contains no bearer credential or provider
+route. Socket lifecycle evidence records a 0700 parent, 0600 endpoint, the
+runtime UID, successful health probes for generations 1--3, and absence after
+control restart.
 
-The retained run used TCG. It is evidence that the composition and whole-VM
-save/load path execute, not a latency, throughput, or KVM claim. The order and
-effect services are purpose-built test services, not a maintained application.
+The retained run used KVM. It is evidence that the composition and whole-VM
+save/load path execute on this host, not a latency or throughput claim. The
+order and effect services are purpose-built test services, not a maintained
+application.
 Run a fresh live experiment with, for example:
 
 ```sh
-make runtime-integrated-demo VM_ACCEL=tcg \
+make runtime-integrated-demo VM_ACCEL=kvm \
   INTEGRATED_DEMO_ARGS='--output-dir /tmp/integrated-runtime-evidence'
 ```
 
 The retained evidence and its current verification status are documented in
-[`step-report.md`](../docs/tmp/bootstrap/step-0014-20260815T133621Z/step-report.md).
+[`step-report.md`](../docs/tmp/bootstrap/step-0018-20260816T125801Z/step-report.md).
 The live target is excluded from `runtime-verify` so ordinary tests cannot use
 account quota. The retained run is checked without account access:
 
@@ -504,9 +512,11 @@ make runtime-integrated-check
 ```
 
 That checker does not import the live runner. It replays the binary History,
-reruns both Certificate checks, and joins the effect, Docker, App Server, and
-QEMU records. Mutation tests require it to reject changed History bytes, QMP
-restore commands, network membership, Codex tool identity, and inventory paths.
+reruns all three Certificate checks, and joins the effect, Docker, App Server,
+QEMU, guest request, and socket lifecycle records. Mutation tests require it to
+reject changed History bytes, QMP restore commands, network membership, Codex
+tool identity, guest routing or bearer fields, unsafe socket modes, TCP control
+forwarding, and inventory paths.
 
 ## Delete an old real-service version after its effect commits
 
@@ -647,9 +657,9 @@ process with the same host account outside the Docker deployment.
 
 This is an early system slice, not the complete system. It does not yet provide:
 
-- a production multi-VM QEMU/Firecracker process manager; the standalone QEMU
-  runner uses the host-owned endpoint, but the older integrated Codex/VM path
-  still carries a legacy adapter token and no Firecracker backend exists yet;
+- a production multi-VM QEMU/Firecracker process manager; the standalone and
+  integrated QEMU paths use the host-owned endpoint, but no Firecracker backend
+  exists yet;
 - a maintained production application workload; DeathStarBench is a real,
   unmodified benchmark but not the eventual maintained order/payment target;
 - general host-level prevention of direct network or device access beyond the

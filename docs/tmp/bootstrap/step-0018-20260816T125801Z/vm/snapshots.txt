@@ -1,0 +1,3 @@
+Snapshot list:
+ID        TAG               VM SIZE                DATE     VM CLOCK     ICOUNT
+1         before_purchase   471 MiB 2026-08-16 12:59:48 00:00:56.809           

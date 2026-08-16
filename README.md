@@ -90,16 +90,19 @@ The integrated target is the first single execution across all three runtime
 frontends. A real logged-in Codex App Server, a replaceable order service, and
 a complete Ubuntu QEMU guest issue three Operations into one shared History
 and three separately durable effect services: payment, inventory, and ledger.
-The run activates Rule v2, replaces the order container, restarts the control
-process, and restores the whole VM from a live snapshot. Codex and order have
-no direct network path to any effect service. The retained TCG run observed five
-deliveries but only three commits: two deliveries each to payment and inventory
-and one to ledger. The v2 order process requested `reserve-v2`, but History
-recovered the old Operation's frozen `reserve-v1` target; the restored VM reused
-its recorded audit result without another ledger delivery. This is a functional
-cross-domain smoke test, not a performance result or a maintained-application
-evaluation. Its evidence and remaining limits are recorded in
-[`step-report.md`](docs/tmp/bootstrap/step-0014-20260815T133621Z/step-report.md).
+The VM has no adapter token and cannot select its domain, provider target, HTTP
+method, or provider headers. QEMU forwards its three-field request to a private
+Unix socket owned by control. The run advances that host binding through three
+generations, replaces the order container, restarts control, proves that replay
+does not reattach the old endpoint, and only then restores the whole VM from a
+live snapshot. Codex and order have no direct network path to any effect
+service. The retained KVM run observed five deliveries but only three commits:
+two deliveries each to payment and inventory and one to ledger. The v2 order
+process recovered the old Operation's frozen `reserve-v1` target; the restored
+VM reused its recorded audit result without another ledger delivery. This is a
+functional cross-domain result, not a performance result or a
+maintained-application evaluation. Its evidence and remaining limits are in
+[`step-report.md`](docs/tmp/bootstrap/step-0018-20260816T125801Z/step-report.md).
 The account-free `make runtime-integrated-check` command independently replays
 the retained History and joins it with the effect, Docker, App Server, and QEMU
 records.

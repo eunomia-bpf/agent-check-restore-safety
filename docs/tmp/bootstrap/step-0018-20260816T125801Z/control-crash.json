@@ -1,0 +1,21 @@
+{
+  "command": [
+    "docker",
+    "kill",
+    "--signal",
+    "KILL",
+    "c8d6f4f38ed4d9a29275f8a2833a26eb6b794120295f432a83e53f765f64e491"
+  ],
+  "container_id": "c8d6f4f38ed4d9a29275f8a2833a26eb6b794120295f432a83e53f765f64e491",
+  "finished_time_ns": 1786885239023620831,
+  "pid_before": 1735826,
+  "returncode": 0,
+  "started_time_ns": 1786885238781332868,
+  "state": {
+    "ExitCode": 137,
+    "FinishedAt": "2026-08-16T13:00:38.828583539Z",
+    "OOMKilled": false,
+    "Pid": 0,
+    "Running": false
+  }
+}

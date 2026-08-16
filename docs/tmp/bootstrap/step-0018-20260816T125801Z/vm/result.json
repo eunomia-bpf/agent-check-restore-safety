@@ -1,0 +1,33 @@
+{
+  "accelerator": "kvm",
+  "base_image_sha256": "d1940f7d69d343355e183dff1e08a59852d32e7309baa7a4bad8365b11b005ac",
+  "cpus": 2,
+  "cutover_while_paused": true,
+  "direct_effect": "blocked_before_and_after_restore",
+  "first_operation_reused": false,
+  "full_linux_guest": true,
+  "guest_credential_free": true,
+  "guest_forwards": [
+    "metadata-gate",
+    "host-bound-sandbox"
+  ],
+  "guest_kernel": "6.8.0-136-generic",
+  "guest_request_fields": [
+    "call_id",
+    "kind",
+    "body"
+  ],
+  "implicit_nics_disabled": true,
+  "machine": "q35",
+  "memory_mib": 1024,
+  "network_backend": "qemu-user-restrict-on",
+  "operation_call_id": "purchase/A-17-3aff342b/audit",
+  "operation_kind": "append-audit",
+  "qemu_pid": 1737018,
+  "restore_loaded_before_resume": true,
+  "restored_operation_reused": true,
+  "sandbox_transport": "host-unix-socket",
+  "schema": 1,
+  "snapshot": "before_purchase",
+  "whole_vm_restored": true
+}

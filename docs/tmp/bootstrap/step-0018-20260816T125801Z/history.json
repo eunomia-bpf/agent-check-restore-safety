@@ -1,0 +1,519 @@
+[
+  {
+    "data": {
+      "bindings": [
+        {
+          "allowed_kinds": [
+            "append-audit"
+          ],
+          "domain": "full-linux-vm",
+          "generation": 1,
+          "host_instance_id": "qemu-safe-change-integrated-1732127-3aff342b-g1",
+          "sandbox_id": "integrated-vm"
+        }
+      ],
+      "certificate": {
+        "decision": "activate",
+        "digest": "12522e3bdbea3671fafee552e597a2764ff08de63fe0d72188c7150f5c86a547",
+        "from_rule": 0,
+        "history": {
+          "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 0
+        },
+        "requirement": {
+          "capacities": {
+            "audit-slot": 1,
+            "inventory-slot": 1,
+            "payment-slot": 1
+          },
+          "id": "purchase-v1/safe-change-integrated-1732127-3aff342b",
+          "kinds": {
+            "append-audit": {
+              "costs": {
+                "audit-slot": 1
+              },
+              "method": "POST",
+              "produces": {
+                "audited": 1
+              },
+              "queryable": false,
+              "response_classifier": "operation-receipt-v1",
+              "retry_safe": true,
+              "target": "http://ledger:8081/v1/charge"
+            },
+            "charge-invoice": {
+              "costs": {
+                "payment-slot": 1
+              },
+              "method": "POST",
+              "produces": {
+                "paid": 1
+              },
+              "queryable": false,
+              "response_classifier": "operation-receipt-v1",
+              "retry_safe": true,
+              "target": "http://payment:8081/v1/charge"
+            },
+            "reserve-v1": {
+              "costs": {
+                "inventory-slot": 1
+              },
+              "method": "POST",
+              "produces": {
+                "reserved": 1
+              },
+              "queryable": false,
+              "response_classifier": "operation-receipt-v1",
+              "retry_safe": true,
+              "target": "http://inventory:8081/v1/charge"
+            }
+          },
+          "results": {
+            "audited": 1,
+            "paid": 1,
+            "reserved": 1
+          }
+        },
+        "rule": {
+          "allow": [
+            "append-audit",
+            "charge-invoice",
+            "reserve-v1"
+          ],
+          "requirement_hash": "7de29e2ebabf93837e991a0703c6905c284368f6a2e496769f8561ad94f4816a",
+          "version": 1
+        },
+        "schema": 1
+      },
+      "semantic_version": 1
+    },
+    "hash": "0337f77b535d21a3a500d6401b9c0183d8b71a41dbd6553ecd03e25bb8270cb4",
+    "operation": "rule.bindings.cutover",
+    "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "sequence": 1
+  },
+  {
+    "data": {
+      "operation": {
+        "costs": {
+          "payment-slot": 1
+        },
+        "domain": "codex-app-server",
+        "id": "op-fe92cebc9cbae71284cdba0230d1c608c33d76d598ac363b884b02b604680603",
+        "kind": "charge-invoice",
+        "method": "POST",
+        "phase": "prepared",
+        "produces": {
+          "paid": 1
+        },
+        "queryable": false,
+        "request_body": "eyJhbW91bnQiOjQyLCJwdXJjaGFzZV9pZCI6IkEtMTctM2FmZjM0MmIiLCJydW5faWQiOiJzYWZlLWNoYW5nZS1pbnRlZ3JhdGVkLTE3MzIxMjctM2FmZjM0MmIifQ==",
+        "request_hash": "5506d7997d1ed3d5f6b2099d8ff6f9d6eefca73fdca0bc965a5cf54580d20062",
+        "request_headers": {
+          "Content-Type": "application/json"
+        },
+        "request_stored": true,
+        "response_classifier": "operation-receipt-v1",
+        "retry_safe": true,
+        "rule_version": 1,
+        "target": "http://payment:8081/v1/charge"
+      },
+      "semantic_version": 1
+    },
+    "hash": "c124240f19dc03c268179c8cb4c5449616826f936005400f0eaf59a0888cce6a",
+    "operation": "operation.prepared",
+    "previous_hash": "0337f77b535d21a3a500d6401b9c0183d8b71a41dbd6553ecd03e25bb8270cb4",
+    "sequence": 2
+  },
+  {
+    "data": {
+      "id": "op-fe92cebc9cbae71284cdba0230d1c608c33d76d598ac363b884b02b604680603",
+      "semantic_version": 1,
+      "update": {
+        "dispatch_generation": 1,
+        "dispatch_owner": "feed6ea5869faebbffca55ae47c95834",
+        "phase": "dispatched"
+      }
+    },
+    "hash": "573983b2e451fe81c8ec309605f959e3c9db72bec674cf73fbe1ceeeded434cc",
+    "operation": "operation.phase",
+    "previous_hash": "c124240f19dc03c268179c8cb4c5449616826f936005400f0eaf59a0888cce6a",
+    "sequence": 3
+  },
+  {
+    "data": {
+      "id": "op-fe92cebc9cbae71284cdba0230d1c608c33d76d598ac363b884b02b604680603",
+      "semantic_version": 1,
+      "update": {
+        "phase": "unknown"
+      }
+    },
+    "hash": "7da903a5c46cd998e8146a029959ae7fa288bbf01a08818490e6abaacfa90757",
+    "operation": "operation.phase",
+    "previous_hash": "573983b2e451fe81c8ec309605f959e3c9db72bec674cf73fbe1ceeeded434cc",
+    "sequence": 4
+  },
+  {
+    "data": {
+      "operation": {
+        "costs": {
+          "inventory-slot": 1
+        },
+        "domain": "orders",
+        "id": "op-078f39e70e6a66eb35b59578253e58949978baef22e79ae220f62222705bed41",
+        "kind": "reserve-v1",
+        "method": "POST",
+        "phase": "prepared",
+        "produces": {
+          "reserved": 1
+        },
+        "queryable": false,
+        "request_body": "eyJvcmRlcl9pZCI6IkEtMTctM2FmZjM0MmIiLCJhbW91bnQiOjQyfQ==",
+        "request_hash": "1cb4cb01b1157d8de24f2f99e3a488fee053af152120d45454f058aa0a71cdd8",
+        "request_stored": true,
+        "response_classifier": "operation-receipt-v1",
+        "retry_safe": true,
+        "rule_version": 1,
+        "target": "http://inventory:8081/v1/charge"
+      },
+      "semantic_version": 1
+    },
+    "hash": "7a9111abd5f097911172478de3bf5caf6851bad031abf9e2332e60ca1eb21323",
+    "operation": "operation.prepared",
+    "previous_hash": "7da903a5c46cd998e8146a029959ae7fa288bbf01a08818490e6abaacfa90757",
+    "sequence": 5
+  },
+  {
+    "data": {
+      "id": "op-078f39e70e6a66eb35b59578253e58949978baef22e79ae220f62222705bed41",
+      "semantic_version": 1,
+      "update": {
+        "dispatch_generation": 1,
+        "dispatch_owner": "feed6ea5869faebbffca55ae47c95834",
+        "phase": "dispatched"
+      }
+    },
+    "hash": "353043366d690b3deabf366dda1471a4429be53c52b2aaabcaf852840f5d6510",
+    "operation": "operation.phase",
+    "previous_hash": "7a9111abd5f097911172478de3bf5caf6851bad031abf9e2332e60ca1eb21323",
+    "sequence": 6
+  },
+  {
+    "data": {
+      "id": "op-078f39e70e6a66eb35b59578253e58949978baef22e79ae220f62222705bed41",
+      "semantic_version": 1,
+      "update": {
+        "phase": "unknown"
+      }
+    },
+    "hash": "0480b38ee7f4c19e8841a3dc3bc6c30175646cade244e0581fdb01afcefea4ce",
+    "operation": "operation.phase",
+    "previous_hash": "353043366d690b3deabf366dda1471a4429be53c52b2aaabcaf852840f5d6510",
+    "sequence": 7
+  },
+  {
+    "data": {
+      "operation": {
+        "costs": {
+          "audit-slot": 1
+        },
+        "domain": "full-linux-vm",
+        "id": "op-3923b1bc6ded404b9f434166df772483374151a681b6dfe246a084eba5dd7dc1",
+        "kind": "append-audit",
+        "method": "POST",
+        "phase": "prepared",
+        "produces": {
+          "audited": 1
+        },
+        "queryable": false,
+        "request_body": "eyJwdXJjaGFzZV9pZCI6IkEtMTctM2FmZjM0MmIiLCJydW5faWQiOiJzYWZlLWNoYW5nZS1pbnRlZ3JhdGVkLTE3MzIxMjctM2FmZjM0MmIifQ==",
+        "request_hash": "f1a4e73d17d19e20cf6a7f30144b96c31dd69ece39380bf14ae91dc8585867b7",
+        "request_stored": true,
+        "response_classifier": "operation-receipt-v1",
+        "retry_safe": true,
+        "rule_version": 1,
+        "sandbox_id": "integrated-vm",
+        "target": "http://ledger:8081/v1/charge"
+      },
+      "semantic_version": 1
+    },
+    "hash": "acf0e5dbd992cfb472155fed597eb0f643cc39844449962cc244f0c2c88d3c69",
+    "operation": "operation.prepared",
+    "previous_hash": "0480b38ee7f4c19e8841a3dc3bc6c30175646cade244e0581fdb01afcefea4ce",
+    "sequence": 8
+  },
+  {
+    "data": {
+      "id": "op-3923b1bc6ded404b9f434166df772483374151a681b6dfe246a084eba5dd7dc1",
+      "semantic_version": 1,
+      "update": {
+        "dispatch_generation": 1,
+        "dispatch_owner": "feed6ea5869faebbffca55ae47c95834",
+        "phase": "dispatched"
+      }
+    },
+    "hash": "cc1872df4fa6fc8a9cc8a01cad7f8dafec9ed96230bfc8a916837810437a38bf",
+    "operation": "operation.phase",
+    "previous_hash": "acf0e5dbd992cfb472155fed597eb0f643cc39844449962cc244f0c2c88d3c69",
+    "sequence": 9
+  },
+  {
+    "data": {
+      "id": "op-3923b1bc6ded404b9f434166df772483374151a681b6dfe246a084eba5dd7dc1",
+      "semantic_version": 1,
+      "update": {
+        "phase": "succeeded",
+        "remote_reference": "payment/op-3923b1bc6ded404b9f434166df772483374151a681b6dfe246a084eba5dd7dc1",
+        "result_body": "eyJvcGVyYXRpb25faWQiOiJvcC0zOTIzYjFiYzZkZWQ0MDRiOWY0MzQxNjZkZjc3MjQ4MzM3NDE1MWE2ODFiNmRmZTI0NmEwODRlYmE1ZGQ3ZGMxIiwib3V0Y29tZSI6InN1Y2NlZWRlZCIsInJlbW90ZV9yZWZlcmVuY2UiOiJwYXltZW50L29wLTM5MjNiMWJjNmRlZDQwNGI5ZjQzNDE2NmRmNzcyNDgzMzc0MTUxYTY4MWI2ZGZlMjQ2YTA4NGViYTVkZDdkYzEiLCJyZXN1bHRfaGFzaCI6Ijk4Y2UzYmUzMTU4MjAyNDU2YzI5MDg5NTcxOGQ1OTJhNDdiOTQ5OTc1MGRlYzc1ZjNkNGZkZjZlMWE0OGMwZGYiLCJzY2hlbWEiOjF9Cg==",
+        "result_hash": "98ce3be3158202456c290895718d592a47b9499750dec75f3d4fdf6e1a48c0df",
+        "status_code": 200
+      }
+    },
+    "hash": "77b8c46dee38ece837f4ef82934716f96b3e91b39707e75ddd2fa4d20a48cf59",
+    "operation": "operation.phase",
+    "previous_hash": "cc1872df4fa6fc8a9cc8a01cad7f8dafec9ed96230bfc8a916837810437a38bf",
+    "sequence": 10
+  },
+  {
+    "data": {
+      "bindings": [
+        {
+          "allowed_kinds": [
+            "append-audit"
+          ],
+          "domain": "full-linux-vm",
+          "generation": 2,
+          "host_instance_id": "qemu-safe-change-integrated-1732127-3aff342b-g2",
+          "sandbox_id": "integrated-vm"
+        }
+      ],
+      "certificate": {
+        "decision": "activate",
+        "digest": "4fbdbca13f12494d8531390883191ca15d301693183be38de4bbe035cc3a6450",
+        "from_rule": 1,
+        "history": {
+          "hash": "77b8c46dee38ece837f4ef82934716f96b3e91b39707e75ddd2fa4d20a48cf59",
+          "sequence": 10
+        },
+        "requirement": {
+          "capacities": {
+            "audit-slot": 1,
+            "inventory-slot": 1,
+            "payment-slot": 1
+          },
+          "id": "purchase-v2/safe-change-integrated-1732127-3aff342b",
+          "kinds": {
+            "append-audit": {
+              "costs": {
+                "audit-slot": 1
+              },
+              "method": "POST",
+              "produces": {
+                "audited": 1
+              },
+              "queryable": false,
+              "response_classifier": "operation-receipt-v1",
+              "retry_safe": true,
+              "target": "http://ledger:8081/v1/charge"
+            },
+            "charge-invoice": {
+              "costs": {
+                "payment-slot": 1
+              },
+              "method": "POST",
+              "produces": {
+                "paid": 1
+              },
+              "queryable": false,
+              "response_classifier": "operation-receipt-v1",
+              "retry_safe": true,
+              "target": "http://payment:8081/v1/charge"
+            },
+            "reserve-v2": {
+              "costs": {
+                "inventory-slot": 1
+              },
+              "method": "POST",
+              "produces": {
+                "reserved": 1
+              },
+              "queryable": false,
+              "response_classifier": "operation-receipt-v1",
+              "retry_safe": true,
+              "target": "http://inventory:8081/v2/charge"
+            }
+          },
+          "results": {
+            "audited": 1,
+            "paid": 1,
+            "reserved": 1
+          }
+        },
+        "rule": {
+          "allow": [],
+          "requirement_hash": "a271cda5687c101bb59d8d056ade1fb21af7f1986949d2cf7e2aa5072a14f8d9",
+          "version": 2
+        },
+        "schema": 1
+      },
+      "semantic_version": 1
+    },
+    "hash": "be6fe6b16d63577cb3ad6575ed061d3e1f88539356187bd631a7b7c5441c9082",
+    "operation": "rule.bindings.cutover",
+    "previous_hash": "77b8c46dee38ece837f4ef82934716f96b3e91b39707e75ddd2fa4d20a48cf59",
+    "sequence": 11
+  },
+  {
+    "data": {
+      "bindings": [
+        {
+          "allowed_kinds": [
+            "append-audit"
+          ],
+          "domain": "full-linux-vm",
+          "generation": 3,
+          "host_instance_id": "qemu-safe-change-integrated-1732127-3aff342b-g3",
+          "sandbox_id": "integrated-vm"
+        }
+      ],
+      "certificate": {
+        "decision": "activate",
+        "digest": "cf53f88a05dd3f79c4b4973fe8d0f1352673778ea5598ee7d9ee5f82e829473b",
+        "from_rule": 2,
+        "history": {
+          "hash": "be6fe6b16d63577cb3ad6575ed061d3e1f88539356187bd631a7b7c5441c9082",
+          "sequence": 11
+        },
+        "requirement": {
+          "capacities": {
+            "audit-slot": 1,
+            "inventory-slot": 1,
+            "payment-slot": 1
+          },
+          "id": "purchase-v2/safe-change-integrated-1732127-3aff342b",
+          "kinds": {
+            "append-audit": {
+              "costs": {
+                "audit-slot": 1
+              },
+              "method": "POST",
+              "produces": {
+                "audited": 1
+              },
+              "queryable": false,
+              "response_classifier": "operation-receipt-v1",
+              "retry_safe": true,
+              "target": "http://ledger:8081/v1/charge"
+            },
+            "charge-invoice": {
+              "costs": {
+                "payment-slot": 1
+              },
+              "method": "POST",
+              "produces": {
+                "paid": 1
+              },
+              "queryable": false,
+              "response_classifier": "operation-receipt-v1",
+              "retry_safe": true,
+              "target": "http://payment:8081/v1/charge"
+            },
+            "reserve-v2": {
+              "costs": {
+                "inventory-slot": 1
+              },
+              "method": "POST",
+              "produces": {
+                "reserved": 1
+              },
+              "queryable": false,
+              "response_classifier": "operation-receipt-v1",
+              "retry_safe": true,
+              "target": "http://inventory:8081/v2/charge"
+            }
+          },
+          "results": {
+            "audited": 1,
+            "paid": 1,
+            "reserved": 1
+          }
+        },
+        "rule": {
+          "allow": [],
+          "requirement_hash": "a271cda5687c101bb59d8d056ade1fb21af7f1986949d2cf7e2aa5072a14f8d9",
+          "version": 3
+        },
+        "schema": 1
+      },
+      "semantic_version": 1
+    },
+    "hash": "82054a851adea5a87d54ba1454f09286cff1bd8b21182154e8f28a14b8385bc7",
+    "operation": "rule.bindings.cutover",
+    "previous_hash": "be6fe6b16d63577cb3ad6575ed061d3e1f88539356187bd631a7b7c5441c9082",
+    "sequence": 12
+  },
+  {
+    "data": {
+      "id": "op-fe92cebc9cbae71284cdba0230d1c608c33d76d598ac363b884b02b604680603",
+      "semantic_version": 1,
+      "update": {
+        "dispatch_generation": 2,
+        "dispatch_owner": "31c3dcdebbdfa224fe1e3d5a88ac7d3e",
+        "phase": "dispatched"
+      }
+    },
+    "hash": "13f7fb38a26ac15bf26d4a09af9c133c1749807a5091fa5cbec8217c18db034c",
+    "operation": "operation.phase",
+    "previous_hash": "82054a851adea5a87d54ba1454f09286cff1bd8b21182154e8f28a14b8385bc7",
+    "sequence": 13
+  },
+  {
+    "data": {
+      "id": "op-fe92cebc9cbae71284cdba0230d1c608c33d76d598ac363b884b02b604680603",
+      "semantic_version": 1,
+      "update": {
+        "phase": "succeeded",
+        "remote_reference": "payment/op-fe92cebc9cbae71284cdba0230d1c608c33d76d598ac363b884b02b604680603",
+        "result_body": "eyJvcGVyYXRpb25faWQiOiJvcC1mZTkyY2ViYzljYmFlNzEyODRjZGJhMDIzMGQxYzYwOGMzM2Q3NmQ1OThhYzM2M2I4ODRiMDJiNjA0NjgwNjAzIiwib3V0Y29tZSI6InN1Y2NlZWRlZCIsInJlbW90ZV9yZWZlcmVuY2UiOiJwYXltZW50L29wLWZlOTJjZWJjOWNiYWU3MTI4NGNkYmEwMjMwZDFjNjA4YzMzZDc2ZDU5OGFjMzYzYjg4NGIwMmI2MDQ2ODA2MDMiLCJyZXN1bHRfaGFzaCI6IjQ2ZDFjOTY3OWE1ZjRkZmRlYzBjNTM4MGMwMzMzNDk2MmM2ZmQ0MDliZGYxMDU4ZGM5ZjVkNmJhMjY4OTg0YmYiLCJzY2hlbWEiOjF9Cg==",
+        "result_hash": "46d1c9679a5f4dfdec0c5380c03334962c6fd409bdf1058dc9f5d6ba268984bf",
+        "status_code": 200
+      }
+    },
+    "hash": "5df871749b2ee36ccb68bb9afb986f7e2c6c38a2502f3dacc17c0d4c96bd5d57",
+    "operation": "operation.phase",
+    "previous_hash": "13f7fb38a26ac15bf26d4a09af9c133c1749807a5091fa5cbec8217c18db034c",
+    "sequence": 14
+  },
+  {
+    "data": {
+      "id": "op-078f39e70e6a66eb35b59578253e58949978baef22e79ae220f62222705bed41",
+      "semantic_version": 1,
+      "update": {
+        "dispatch_generation": 2,
+        "dispatch_owner": "31c3dcdebbdfa224fe1e3d5a88ac7d3e",
+        "phase": "dispatched"
+      }
+    },
+    "hash": "5434d099732dd722f46925944f24ebcd04c7cabe242974e8cef5a00e416ac936",
+    "operation": "operation.phase",
+    "previous_hash": "5df871749b2ee36ccb68bb9afb986f7e2c6c38a2502f3dacc17c0d4c96bd5d57",
+    "sequence": 15
+  },
+  {
+    "data": {
+      "id": "op-078f39e70e6a66eb35b59578253e58949978baef22e79ae220f62222705bed41",
+      "semantic_version": 1,
+      "update": {
+        "phase": "succeeded",
+        "remote_reference": "payment/op-078f39e70e6a66eb35b59578253e58949978baef22e79ae220f62222705bed41",
+        "result_body": "eyJvcGVyYXRpb25faWQiOiJvcC0wNzhmMzllNzBlNmE2NmViMzViNTk1NzgyNTNlNTg5NDk5NzhiYWVmMjJlNzlhZTIyMGY2MjIyMjcwNWJlZDQxIiwib3V0Y29tZSI6InN1Y2NlZWRlZCIsInJlbW90ZV9yZWZlcmVuY2UiOiJwYXltZW50L29wLTA3OGYzOWU3MGU2YTY2ZWIzNWI1OTU3ODI1M2U1ODk0OTk3OGJhZWYyMmU3OWFlMjIwZjYyMjIyNzA1YmVkNDEiLCJyZXN1bHRfaGFzaCI6ImRmNjg2MjY1NjViODc0YjRmNjg4NjQxMWRlYWQyMTFhNmE4MWQzZDdiM2E1ZTg0MWVlNTkxZDViYjRhMDc5OGMiLCJzY2hlbWEiOjF9Cg==",
+        "result_hash": "df68626565b874b4f6886411dead211a6a81d3d7b3a5e841ee591d5bb4a0798c",
+        "status_code": 200
+      }
+    },
+    "hash": "8f4ccd049ae23e7bb703187a28e2b18777afbfc0ab82b7c4d19fe175d52c8e3d",
+    "operation": "operation.phase",
+    "previous_hash": "5434d099732dd722f46925944f24ebcd04c7cabe242974e8cef5a00e416ac936",
+    "sequence": 16
+  }
+]

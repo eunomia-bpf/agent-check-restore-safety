@@ -1,0 +1,69 @@
+{
+  "decision": "activate",
+  "digest": "4fbdbca13f12494d8531390883191ca15d301693183be38de4bbe035cc3a6450",
+  "from_rule": 1,
+  "history": {
+    "hash": "77b8c46dee38ece837f4ef82934716f96b3e91b39707e75ddd2fa4d20a48cf59",
+    "sequence": 10
+  },
+  "requirement": {
+    "capacities": {
+      "audit-slot": 1,
+      "inventory-slot": 1,
+      "payment-slot": 1
+    },
+    "id": "purchase-v2/safe-change-integrated-1732127-3aff342b",
+    "kinds": {
+      "append-audit": {
+        "costs": {
+          "audit-slot": 1
+        },
+        "method": "POST",
+        "produces": {
+          "audited": 1
+        },
+        "queryable": false,
+        "response_classifier": "operation-receipt-v1",
+        "retry_safe": true,
+        "target": "http://ledger:8081/v1/charge"
+      },
+      "charge-invoice": {
+        "costs": {
+          "payment-slot": 1
+        },
+        "method": "POST",
+        "produces": {
+          "paid": 1
+        },
+        "queryable": false,
+        "response_classifier": "operation-receipt-v1",
+        "retry_safe": true,
+        "target": "http://payment:8081/v1/charge"
+      },
+      "reserve-v2": {
+        "costs": {
+          "inventory-slot": 1
+        },
+        "method": "POST",
+        "produces": {
+          "reserved": 1
+        },
+        "queryable": false,
+        "response_classifier": "operation-receipt-v1",
+        "retry_safe": true,
+        "target": "http://inventory:8081/v2/charge"
+      }
+    },
+    "results": {
+      "audited": 1,
+      "paid": 1,
+      "reserved": 1
+    }
+  },
+  "rule": {
+    "allow": [],
+    "requirement_hash": "a271cda5687c101bb59d8d056ade1fb21af7f1986949d2cf7e2aa5072a14f8d9",
+    "version": 2
+  },
+  "schema": 1
+}

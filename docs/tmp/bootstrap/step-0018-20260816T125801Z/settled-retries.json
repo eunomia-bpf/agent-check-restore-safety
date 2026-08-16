@@ -1,0 +1,25 @@
+{
+  "codex": {
+    "body": "eyJvcGVyYXRpb25faWQiOiJvcC1mZTkyY2ViYzljYmFlNzEyODRjZGJhMDIzMGQxYzYwOGMzM2Q3NmQ1OThhYzM2M2I4ODRiMDJiNjA0NjgwNjAzIiwib3V0Y29tZSI6InN1Y2NlZWRlZCIsInJlbW90ZV9yZWZlcmVuY2UiOiJwYXltZW50L29wLWZlOTJjZWJjOWNiYWU3MTI4NGNkYmEwMjMwZDFjNjA4YzMzZDc2ZDU5OGFjMzYzYjg4NGIwMmI2MDQ2ODA2MDMiLCJyZXN1bHRfaGFzaCI6IjQ2ZDFjOTY3OWE1ZjRkZmRlYzBjNTM4MGMwMzMzNDk2MmM2ZmQ0MDliZGYxMDU4ZGM5ZjVkNmJhMjY4OTg0YmYiLCJzY2hlbWEiOjF9Cg==",
+    "operation_id": "op-fe92cebc9cbae71284cdba0230d1c608c33d76d598ac363b884b02b604680603",
+    "phase": "succeeded",
+    "recovered_by_query": false,
+    "result_hash": "46d1c9679a5f4dfdec0c5380c03334962c6fd409bdf1058dc9f5d6ba268984bf",
+    "reused": true,
+    "status_code": 200
+  },
+  "order": {
+    "release_version": "v2",
+    "requested_kind": "reserve-v2",
+    "requested_target": "http://inventory:8081/v2/charge",
+    "runtime": {
+      "body": "eyJvcGVyYXRpb25faWQiOiJvcC0wNzhmMzllNzBlNmE2NmViMzViNTk1NzgyNTNlNTg5NDk5NzhiYWVmMjJlNzlhZTIyMGY2MjIyMjcwNWJlZDQxIiwib3V0Y29tZSI6InN1Y2NlZWRlZCIsInJlbW90ZV9yZWZlcmVuY2UiOiJwYXltZW50L29wLTA3OGYzOWU3MGU2YTY2ZWIzNWI1OTU3ODI1M2U1ODk0OTk3OGJhZWYyMmU3OWFlMjIwZjYyMjIyNzA1YmVkNDEiLCJyZXN1bHRfaGFzaCI6ImRmNjg2MjY1NjViODc0YjRmNjg4NjQxMWRlYWQyMTFhNmE4MWQzZDdiM2E1ZTg0MWVlNTkxZDViYjRhMDc5OGMiLCJzY2hlbWEiOjF9Cg==",
+      "operation_id": "op-078f39e70e6a66eb35b59578253e58949978baef22e79ae220f62222705bed41",
+      "phase": "succeeded",
+      "recovered_by_query": false,
+      "result_hash": "df68626565b874b4f6886411dead211a6a81d3d7b3a5e841ee591d5bb4a0798c",
+      "reused": true,
+      "status_code": 200
+    }
+  }
+}

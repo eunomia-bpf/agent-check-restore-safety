@@ -1,0 +1,53 @@
+[
+  {
+    "event": "published",
+    "generation": 1,
+    "health_status": 200,
+    "inode": 10031562,
+    "observed_time_ns": 1786885128097757567,
+    "owner_uid": 1001,
+    "parent_mode": "0700",
+    "path_basename": "sandbox-2626bfb89ced24ac91026a85b71b2602.sock",
+    "socket_mode": "0600"
+  },
+  {
+    "event": "published",
+    "generation": 2,
+    "health_status": 200,
+    "inode": 10031554,
+    "observed_time_ns": 1786885237485498526,
+    "owner_uid": 1001,
+    "parent_mode": "0700",
+    "path_basename": "sandbox-2626bfb89ced24ac91026a85b71b2602.sock",
+    "socket_mode": "0600"
+  },
+  {
+    "connect_errno": 111,
+    "event": "stale-after-control-sigkill",
+    "generation": 2,
+    "inode": 10031554,
+    "observed_time_ns": 1786885239055919766,
+    "owner_uid": 1001,
+    "path_basename": "sandbox-2626bfb89ced24ac91026a85b71b2602.sock",
+    "socket_mode": "0600"
+  },
+  {
+    "connect_errno": 2,
+    "event": "absent-after-control-reopen",
+    "lstat_errno": 2,
+    "observed_time_ns": 1786885239939418833,
+    "path_basename": "sandbox-2626bfb89ced24ac91026a85b71b2602.sock",
+    "prior_generation": 2
+  },
+  {
+    "event": "published",
+    "generation": 3,
+    "health_status": 200,
+    "inode": 10031555,
+    "observed_time_ns": 1786885243567225427,
+    "owner_uid": 1001,
+    "parent_mode": "0700",
+    "path_basename": "sandbox-2626bfb89ced24ac91026a85b71b2602.sock",
+    "socket_mode": "0600"
+  }
+]

@@ -7,7 +7,7 @@ RUNTIME_IMAGE ?= safe-change-runtime:local
 RUNTIME_VERSION ?= dev
 RUNTIME_REVISION ?= $(shell git rev-parse --short=12 HEAD)
 CODEX_ISOLATED_EVIDENCE ?= docs/tmp/bootstrap/step-0013-20260815T124944Z
-INTEGRATED_EVIDENCE ?= docs/tmp/bootstrap/step-0017-20260816T113812Z
+INTEGRATED_EVIDENCE ?= docs/tmp/bootstrap/step-0018-20260816T125801Z
 DEATHSTAR_EVIDENCE ?= docs/tmp/bootstrap/step-0015-20260815T141250Z
 
 runtime-build:

@@ -1,0 +1,129 @@
+{
+  "codex": {
+    "login_status": "Logged in using ChatGPT",
+    "model": "gpt-5.6-sol",
+    "model_provider": "openai",
+    "native_binary_sha256": "cb0a15567e9a60a5820d54b0f6ae86d504dc3805c1eab21a47f70e3eb7b73a40",
+    "real_app_server": true,
+    "version": "codex-cli 0.147.0"
+  },
+  "effect_ips": {
+    "inventory": "172.19.0.3",
+    "ledger": "172.19.0.2",
+    "payment": "172.19.0.4"
+  },
+  "effects": {
+    "inventory": {
+      "commits": 1,
+      "deliveries": 2,
+      "paths": {
+        "/v1/charge": 2
+      }
+    },
+    "ledger": {
+      "commits": 1,
+      "deliveries": 1,
+      "paths": {
+        "/v1/charge": 1
+      }
+    },
+    "payment": {
+      "commits": 1,
+      "deliveries": 2,
+      "paths": {
+        "/v1/charge": 2
+      }
+    }
+  },
+  "evidence_directory": "step-0018-20260816T125801Z",
+  "faults": {
+    "control_pid_after": 1750392,
+    "control_pid_before": 1735826,
+    "control_process_restarted": true,
+    "control_restart_mode": "sigkill",
+    "order_container_after": "0b3e44520c57e90dfd5f5672ee7c24d145a60d19b653a2b2a3c17264d5a87801",
+    "order_container_before": "3a294c8c707ee52e5b47b9ad46ef4d2a930f7e1c66180193c94248205a0ce4b6",
+    "order_process_replaced": true,
+    "whole_vm_restored": true
+  },
+  "history": {
+    "active_requirement": "purchase-v2/safe-change-integrated-1732127-3aff342b",
+    "hash": "8f4ccd049ae23e7bb703187a28e2b18777afbfc0ab82b7c4d19fe175d52c8e3d",
+    "operations": {
+      "codex": "op-fe92cebc9cbae71284cdba0230d1c608c33d76d598ac363b884b02b604680603",
+      "order": "op-078f39e70e6a66eb35b59578253e58949978baef22e79ae220f62222705bed41",
+      "vm": "op-3923b1bc6ded404b9f434166df772483374151a681b6dfe246a084eba5dd7dc1"
+    },
+    "sequence": 16
+  },
+  "network": {
+    "agent_to_effect_shared_networks": [],
+    "fixed_actor_paths": {
+      "codex": "ingress->control",
+      "order": "control",
+      "vm": "qemu-guestfwd->host-sandbox-socket"
+    },
+    "networks": {
+      "codex": [
+        "safe-change-integrated-1732127-3aff342b_agent"
+      ],
+      "control": [
+        "safe-change-integrated-1732127-3aff342b_application",
+        "safe-change-integrated-1732127-3aff342b_effects"
+      ],
+      "ingress": [
+        "safe-change-integrated-1732127-3aff342b_agent",
+        "safe-change-integrated-1732127-3aff342b_application"
+      ],
+      "inventory": [
+        "safe-change-integrated-1732127-3aff342b_effects"
+      ],
+      "ledger": [
+        "safe-change-integrated-1732127-3aff342b_effects"
+      ],
+      "order": [
+        "safe-change-integrated-1732127-3aff342b_application"
+      ],
+      "payment": [
+        "safe-change-integrated-1732127-3aff342b_effects"
+      ]
+    },
+    "order_to_effect_shared_networks": []
+  },
+  "protocol": {
+    "approval_policy": "never",
+    "callback_responses": 1,
+    "completed_turns": 1,
+    "custom_model_provider_installed": false,
+    "dynamic_tool_calls": 1,
+    "final_agent_message": "DONE",
+    "model": "gpt-5.6-sol",
+    "model_provider": "openai",
+    "provider_call_id": "exec-2506f429-f03a-4492-8e96-3de5d01bd478",
+    "raw_records": 51,
+    "real_app_server_process": true,
+    "sandbox_network_access": false,
+    "sandbox_type": "readOnly",
+    "thread_id": "01a00aa8-3fa3-76d2-a2d1-4cd1f8eb027e",
+    "turn_id": "01a00aa8-3fc0-71b1-96ff-554901684e80"
+  },
+  "provenance": {
+    "revision": "9bc184a81b2b34be96fe83e154f97262969a389f",
+    "runtime_image_id": "sha256:f6da3c6881261f477cea8b948f6571c5ef030dd5d3525806e3612c565b1f52f3",
+    "source_tree_sha256": "3f7fcad4194bca2d22dae5fe22f20c9e1858bcf920df3fc803300b123773171e",
+    "vm_demo_sha256": "7a73f102228a472c6e7e4a05a31d7740b4b83bfca5399f1457e0a462a5b4bfe2"
+  },
+  "purchase_id": "A-17-3aff342b",
+  "run_id": "safe-change-integrated-1732127-3aff342b",
+  "vm": {
+    "accelerator": "kvm",
+    "credential_free": true,
+    "first_reused": false,
+    "qemu_pid": 1737018,
+    "restored_reused": true,
+    "runner_pid": 1736676,
+    "sandbox_generation": 3,
+    "snapshot": "before_purchase",
+    "transport": "host-unix-socket"
+  }
+}
