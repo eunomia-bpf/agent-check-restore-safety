@@ -172,6 +172,20 @@ mcp-operation-relay -socket /run/safe-change/relay/mcp.sock
 Only the relay executable and relay socket directory belong in the Agent
 sandbox or microVM.
 
+For a microVM, the same relay also accepts a fixed numeric guest loopback port:
+
+```text
+mcp-operation-relay -loopback-port 7002
+```
+
+The intended Firecracker composition is deliberately indirect. The
+seccomp-confined Codex domain retains no `AF_VSOCK` authority. It connects to a
+guest-PID-1 loopback proxy; PID 1 opens the generation-bound host-vsock stream;
+the existing peer-checked Firecracker relay fixes that stream to the same
+host-owned MCP socket used by Docker. Port 7002 is now reserved in the guest
+ABI and the loopback relay path is tested, but the PID 1 proxy and KVM evidence
+join are not yet wired into the full Firecracker run.
+
 ## Exact boundary and next work
 
 This is not yet complete mediation for an arbitrary agent. It currently:

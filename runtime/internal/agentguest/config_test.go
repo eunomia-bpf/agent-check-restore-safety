@@ -66,6 +66,7 @@ func TestConfigValidationRejectsAuthorityExpansion(t *testing.T) {
 		{name: "zero stream", mutate: func(c *Config) { c.StreamPort = 0 }},
 		{name: "same ports", mutate: func(c *Config) { c.ModelPort = c.StreamPort }},
 		{name: "export port", mutate: func(c *Config) { c.ModelPort = DefaultExportPort }},
+		{name: "MCP port", mutate: func(c *Config) { c.ModelPort = DefaultMCPPort }},
 		{name: "other drive", mutate: func(c *Config) { c.PayloadDrive = "/dev/vdb" }},
 		{name: "repository drive", mutate: func(c *Config) { c.RepositoryDrive = "/dev/vdc" }},
 		{name: "repository size", mutate: func(c *Config) { c.RepositorySize = 511 }},

@@ -191,11 +191,39 @@ func RelayUnix(ctx context.Context, path string, input io.Reader, output io.Writ
 	if err != nil {
 		return fmt.Errorf("connect trusted MCP host: %w", err)
 	}
+	return relayStream(ctx, connection, input, output)
+}
+
+// RelayLoopbackTCP is the guest-side form of RelayUnix. A PID 1 proxy may
+// carry this loopback stream over a generation-bound Firecracker vsock port;
+// the Agent process itself never receives AF_VSOCK authority.
+func RelayLoopbackTCP(ctx context.Context, port uint32, input io.Reader, output io.Writer) error {
+	if port == 0 || port > 65535 {
+		return errors.New("MCP relay loopback port must be in 1..65535")
+	}
+	if ctx == nil || input == nil || output == nil {
+		return errors.New("MCP relay requires context and both stdio streams")
+	}
+	address := fmt.Sprintf("127.0.0.1:%d", port)
+	connection, err := (&net.Dialer{}).DialContext(ctx, "tcp4", address)
+	if err != nil {
+		return fmt.Errorf("connect guest MCP loopback proxy: %w", err)
+	}
+	return relayStream(ctx, connection, input, output)
+}
+
+func relayStream(ctx context.Context, connection net.Conn, input io.Reader, output io.Writer) error {
+	if ctx == nil || connection == nil || input == nil || output == nil {
+		return errors.New("MCP relay requires context, connection, and both stdio streams")
+	}
 	defer connection.Close()
 	inputDone := make(chan error, 1)
 	go func() {
 		_, copyErr := io.Copy(connection, input)
-		closeErr := connection.CloseWrite()
+		closeErr := error(nil)
+		if writer, ok := connection.(interface{ CloseWrite() error }); ok {
+			closeErr = writer.CloseWrite()
+		}
 		inputDone <- errors.Join(copyErr, closeErr)
 	}()
 	outputDone := make(chan error, 1)

@@ -5,6 +5,7 @@ package mcpoperation
 import (
 	"bytes"
 	"context"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -100,5 +101,51 @@ func TestUnixHostRejectsUnsafePaths(t *testing.T) {
 	}
 	if _, err := ListenUnixHost(path); err == nil {
 		t.Fatal("occupied trusted MCP socket path was replaced")
+	}
+}
+
+func TestLoopbackRelayCarriesMCPWithoutVsockAuthority(t *testing.T) {
+	listener, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	journal, err := OpenJournal(filepath.Join(t.TempDir(), "loopback.jsonl"), "guest-loopback")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer journal.Close()
+	server, err := NewServer(&fakeExecutor{}, testServerConfig(t), ServerOptions{
+		ExecutionID: "guest-loopback", Journal: journal,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	serverDone := make(chan error, 1)
+	go func() {
+		connection, acceptErr := listener.Accept()
+		if acceptErr != nil {
+			serverDone <- acceptErr
+			return
+		}
+		defer connection.Close()
+		serverDone <- server.Serve(context.Background(), connection, connection, &bytes.Buffer{})
+	}()
+	request := `{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"charge_payment","arguments":{"effect_id":"guest-A"}}}` + "\n"
+	var output bytes.Buffer
+	port := uint32(listener.Addr().(*net.TCPAddr).Port)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := RelayLoopbackTCP(ctx, port, strings.NewReader(request), &output); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(output.String(), `"phase":"succeeded"`) {
+		t.Fatalf("loopback MCP response = %s", output.String())
+	}
+	if err := <-serverDone; err != nil {
+		t.Fatal(err)
+	}
+	if err := RelayLoopbackTCP(ctx, 0, strings.NewReader(request), &output); err == nil {
+		t.Fatal("zero guest MCP loopback port was accepted")
 	}
 }

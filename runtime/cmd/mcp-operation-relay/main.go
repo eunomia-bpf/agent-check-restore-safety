@@ -15,14 +15,22 @@ import (
 
 func main() {
 	var socketPath string
+	var loopbackPort uint
 	flag.StringVar(&socketPath, "socket", "", "private Unix socket of the trusted MCP host")
+	flag.UintVar(&loopbackPort, "loopback-port", 0, "guest PID 1 loopback proxy port for the trusted host")
 	flag.Parse()
-	if socketPath == "" {
-		log.Fatal("-socket is required")
+	if (socketPath == "") == (loopbackPort == 0) || loopbackPort > 65535 {
+		log.Fatal("exactly one of -socket or -loopback-port is required")
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	if err := mcpoperation.RelayUnix(ctx, socketPath, os.Stdin, os.Stdout); err != nil {
+	var err error
+	if socketPath != "" {
+		err = mcpoperation.RelayUnix(ctx, socketPath, os.Stdin, os.Stdout)
+	} else {
+		err = mcpoperation.RelayLoopbackTCP(ctx, uint32(loopbackPort), os.Stdin, os.Stdout)
+	}
+	if err != nil {
 		log.Fatal(err)
 	}
 }
