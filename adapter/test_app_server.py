@@ -15,8 +15,10 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import asdict, dataclass
+from hashlib import sha256
 import json
 from pathlib import Path
+import posixpath
 import shutil
 import tempfile
 from typing import Any, Callable, Mapping, Sequence, cast
@@ -35,6 +37,10 @@ from adapter.mock_responses import DeterministicResponsesServer
 
 _PREFLIGHT_EFFECT_ID = "preflight-effect-1"
 _PREFLIGHT_CALL_ID = "preflight-call-1"
+_PREFLIGHT_EDIT_CALL_ID = "preflight-edit-1"
+_PREFLIGHT_VALIDATION_CALL_ID = "preflight-validation-1"
+_MAX_WORKSPACE_PATCH_BYTES = 1 << 20
+_MAX_WORKSPACE_VALIDATION_COMMAND_BYTES = 64 << 10
 
 
 @dataclass(frozen=True)
@@ -55,6 +61,10 @@ class PreflightResult:
     models_request_count: int
     raw_record_count: int
     raw_jsonl_path: str
+    workspace_edit_call_id: str | None = None
+    workspace_patch_sha256: str | None = None
+    workspace_validation_call_id: str | None = None
+    workspace_validation_command_sha256: str | None = None
 
 
 ToolHandler = Callable[[PendingToolCall], None]
@@ -110,6 +120,9 @@ def _validate_raw_protocol(
     fork_thread_id: str,
     protected_turn_id: str,
     callback_request_id: int | str,
+    sandbox: str,
+    workspace_edit_call_id: str | None,
+    workspace_validation_call_id: str | None,
 ) -> None:
     checks = {
         "experimental initialize": _has_message(
@@ -126,6 +139,7 @@ def _validate_raw_protocol(
             "client_to_server",
             lambda payload: payload.get("method") == "thread/start"
             and payload.get("params", {}).get("ephemeral") is False
+            and payload.get("params", {}).get("sandbox") == sandbox
             and any(
                 tool.get("name") == "protected_commit"
                 for tool in payload.get("params", {}).get("dynamicTools", [])
@@ -156,10 +170,162 @@ def _validate_raw_protocol(
             and isinstance(payload.get("result"), dict),
         ),
     }
+    if workspace_edit_call_id is not None:
+        checks.update(
+            {
+                "external sandbox boundary": _has_message(
+                    records,
+                    "client_to_server",
+                    lambda payload: payload.get("method") == "turn/start"
+                    and payload.get("params", {}).get("threadId") == fork_thread_id
+                    and payload.get("params", {}).get("approvalPolicy") == "never"
+                    and payload.get("params", {}).get("sandboxPolicy")
+                    == {
+                        "type": "externalSandbox",
+                        "networkAccess": "restricted",
+                    },
+                ),
+                "completed native workspace edit": _has_message(
+                    records,
+                    "server_to_client",
+                    lambda payload: payload.get("method") == "item/completed"
+                    and payload.get("params", {}).get("threadId") == fork_thread_id
+                    and payload.get("params", {}).get("turnId")
+                    == protected_turn_id
+                    and payload.get("params", {}).get("item", {}).get("id")
+                    == workspace_edit_call_id
+                    and payload.get("params", {}).get("item", {}).get("type")
+                    == "fileChange"
+                    and payload.get("params", {}).get("item", {}).get("status")
+                    == "completed",
+                ),
+            }
+        )
+    if workspace_validation_call_id is not None:
+        checks["completed workspace validation"] = _has_message(
+            records,
+            "server_to_client",
+            lambda payload: payload.get("method") == "item/completed"
+            and payload.get("params", {}).get("threadId") == fork_thread_id
+            and payload.get("params", {}).get("turnId") == protected_turn_id
+            and payload.get("params", {}).get("item", {}).get("id")
+            == workspace_validation_call_id
+            and payload.get("params", {}).get("item", {}).get("type")
+            == "commandExecution"
+            and payload.get("params", {}).get("item", {}).get("status")
+            == "completed"
+            and payload.get("params", {}).get("item", {}).get("exitCode") == 0,
+        )
     missing = [name for name, present in checks.items() if not present]
     if missing:
         raise AssertionError(
             "raw JSONL capture omitted protocol evidence: " + ", ".join(missing)
+        )
+
+
+def _validate_workspace_gate(
+    records: Sequence[Mapping[str, Any]],
+    *,
+    fork_thread_id: str,
+    protected_turn_id: str,
+    callback_request_id: int | str,
+    workspace_edit_call_id: str,
+    workspace_validation_call_id: str | None,
+    workspace_validation_command: str | None,
+    workspace_validation_shell: str | None,
+) -> None:
+    edit_sequence: int | None = None
+    validation_sequence: int | None = None
+    callback_sequence: int | None = None
+    edit_occurrences = 0
+    validation_occurrences = 0
+    callback_occurrences = 0
+    for record in records:
+        sequence = record.get("sequence")
+        payload = record.get("payload")
+        if not isinstance(sequence, int) or not isinstance(payload, dict):
+            continue
+        params = payload.get("params")
+        if not isinstance(params, dict):
+            continue
+        if (
+            record.get("direction") == "server_to_client"
+            and payload.get("method") == "item/tool/call"
+            and payload.get("id") == callback_request_id
+            and params.get("threadId") == fork_thread_id
+            and params.get("turnId") == protected_turn_id
+        ):
+            callback_occurrences += 1
+            callback_sequence = sequence
+        if (
+            record.get("direction") != "server_to_client"
+            or payload.get("method") != "item/completed"
+            or params.get("threadId") != fork_thread_id
+            or params.get("turnId") != protected_turn_id
+        ):
+            continue
+        item = params.get("item")
+        if not isinstance(item, dict):
+            continue
+        if item.get("id") == workspace_edit_call_id:
+            edit_occurrences += 1
+            changes = item.get("changes")
+            if (
+                item.get("type") == "fileChange"
+                and item.get("status") == "completed"
+                and isinstance(changes, list)
+                and changes
+            ):
+                edit_sequence = sequence
+        if (
+            workspace_validation_call_id is not None
+            and item.get("id") == workspace_validation_call_id
+        ):
+            validation_occurrences += 1
+            actions = item.get("commandActions")
+            action_command: str | None = None
+            if isinstance(actions, list) and len(actions) == 1:
+                action = actions[0]
+                if isinstance(action, dict) and isinstance(action.get("command"), str):
+                    action_command = action["command"]
+            command = item.get("command")
+            shell_prefix = (
+                workspace_validation_shell + " -c "
+                if workspace_validation_shell is not None
+                else None
+            )
+            if (
+                item.get("type") == "commandExecution"
+                and item.get("status") == "completed"
+                and item.get("exitCode") == 0
+                and action_command == workspace_validation_command
+                and isinstance(command, str)
+                and shell_prefix is not None
+                and command.startswith(shell_prefix)
+            ):
+                validation_sequence = sequence
+    if callback_sequence is None or callback_occurrences != 1:
+        raise AssertionError(
+            "workspace gate did not observe exactly one protected callback"
+        )
+    if (
+        edit_sequence is None
+        or edit_occurrences != 1
+        or edit_sequence >= callback_sequence
+    ):
+        raise AssertionError(
+            "workspace gate did not observe a completed native edit before the "
+            "protected callback"
+        )
+    if workspace_validation_call_id is not None and (
+        validation_sequence is None
+        or validation_occurrences != 1
+        or edit_sequence >= validation_sequence
+        or validation_sequence >= callback_sequence
+    ):
+        raise AssertionError(
+            "workspace gate did not observe a successful declared validation "
+            "between the native edit and protected callback"
         )
 
 
@@ -170,6 +336,9 @@ def run_preflight(
     raw_jsonl_path: str | Path | None = None,
     tool_handler: ToolHandler | None = None,
     archive_seed: bool = True,
+    workspace_patch: str | None = None,
+    workspace_validation_command: str | None = None,
+    workspace_validation_shell: str | None = None,
 ) -> PreflightResult:
     """Run one deterministic end-to-end App Server boundary preflight.
 
@@ -180,6 +349,51 @@ def run_preflight(
     """
 
     workspace_path = Path.cwd() if workspace is None else Path(workspace)
+    if workspace_patch is not None:
+        encoded_patch = workspace_patch.encode("utf-8")
+        if not encoded_patch or len(encoded_patch) > _MAX_WORKSPACE_PATCH_BYTES:
+            raise ValueError(
+                "workspace patch must contain 1 to "
+                f"{_MAX_WORKSPACE_PATCH_BYTES} UTF-8 bytes"
+            )
+        workspace_patch_digest = sha256(encoded_patch).hexdigest()
+        sandbox = "workspace-write"
+    else:
+        workspace_patch_digest = None
+        sandbox = "read-only"
+    if (workspace_validation_command is None) != (
+        workspace_validation_shell is None
+    ):
+        raise ValueError(
+            "workspace validation command and shell must be supplied together"
+        )
+    if workspace_validation_command is not None:
+        if workspace_patch is None:
+            raise ValueError("workspace validation requires a workspace patch")
+        encoded_command = workspace_validation_command.encode("utf-8")
+        if (
+            not encoded_command
+            or len(encoded_command) > _MAX_WORKSPACE_VALIDATION_COMMAND_BYTES
+            or b"\x00" in encoded_command
+        ):
+            raise ValueError(
+                "workspace validation command must contain 1 to "
+                f"{_MAX_WORKSPACE_VALIDATION_COMMAND_BYTES} NUL-free UTF-8 bytes"
+            )
+        assert workspace_validation_shell is not None
+        shell_path = Path(workspace_validation_shell)
+        if (
+            not shell_path.is_absolute()
+            or posixpath.normpath(workspace_validation_shell)
+            != workspace_validation_shell
+            or "\x00" in workspace_validation_shell
+        ):
+            raise ValueError(
+                "workspace validation shell must be an absolute canonical path"
+            )
+        validation_command_digest = sha256(encoded_command).hexdigest()
+    else:
+        validation_command_digest = None
     if raw_jsonl_path is None:
         capture_dir = Path(tempfile.mkdtemp(prefix="codex-boundary-preflight-"))
         raw_path = capture_dir / "app-server.jsonl"
@@ -200,6 +414,28 @@ def run_preflight(
         responses.enqueue_assistant(
             "seed acknowledged", response_id="fixture-seed-response"
         )
+        if workspace_patch is not None:
+            responses.enqueue_custom_tool_call(
+                "apply_patch",
+                workspace_patch,
+                call_id=_PREFLIGHT_EDIT_CALL_ID,
+                response_id="fixture-edit-response",
+            )
+        if workspace_validation_command is not None:
+            assert workspace_validation_shell is not None
+            responses.enqueue_tool_call(
+                "exec_command",
+                {
+                    "cmd": workspace_validation_command,
+                    "workdir": ".",
+                    "shell": workspace_validation_shell,
+                    "login": False,
+                    "yield_time_ms": 10_000,
+                    "max_output_tokens": 1_000,
+                },
+                call_id=_PREFLIGHT_VALIDATION_CALL_ID,
+                response_id="fixture-validation-response",
+            )
         responses.enqueue_tool_call(
             "protected_commit",
             {"effect_id": _PREFLIGHT_EFFECT_ID},
@@ -221,7 +457,7 @@ def run_preflight(
         with client:
             initialize_result = dict(client.initialize_result or {})
             try:
-                seed = client.create_seed_thread()
+                seed = client.create_seed_thread(sandbox=sandbox)
                 seed_thread_id = seed["id"]
                 seed_turn_id, _ = client.start_turn_and_wait(
                     seed_thread_id,
@@ -237,11 +473,37 @@ def run_preflight(
                     "Call protected_commit once for preflight-effect-1, then finish.",
                     expected_tool="protected_commit",
                     expected_arguments={"effect_id": _PREFLIGHT_EFFECT_ID},
+                    approval_policy=("never" if workspace_patch is not None else None),
+                    sandbox_policy=(
+                        {
+                            "type": "externalSandbox",
+                            "networkAccess": "restricted",
+                        }
+                        if workspace_patch is not None
+                        else None
+                    ),
                     timeout=TURN_TIMEOUT_SECONDS,
                 )
                 protected_turn_id = pending.turn_id
                 callback_request_id = pending.request_id
                 call_id = pending.call_id
+
+                if workspace_patch is not None:
+                    gate_records = _read_raw_jsonl(raw_path.resolve())
+                    _validate_workspace_gate(
+                        gate_records,
+                        fork_thread_id=fork_thread_id,
+                        protected_turn_id=protected_turn_id,
+                        callback_request_id=callback_request_id,
+                        workspace_edit_call_id=_PREFLIGHT_EDIT_CALL_ID,
+                        workspace_validation_call_id=(
+                            _PREFLIGHT_VALIDATION_CALL_ID
+                            if workspace_validation_command is not None
+                            else None
+                        ),
+                        workspace_validation_command=workspace_validation_command,
+                        workspace_validation_shell=workspace_validation_shell,
+                    )
 
                 # This is the experiment seam: the real App Server and its
                 # pending callback remain alive while caller-owned logic runs.
@@ -256,9 +518,15 @@ def run_preflight(
         responses.assert_consumed()
         response_count = responses.responses_request_count
         models_count = responses.models_request_count
-        if response_count != 3:
+        expected_response_count = (
+            3
+            + int(workspace_patch is not None)
+            + int(workspace_validation_command is not None)
+        )
+        if response_count != expected_response_count:
             raise AssertionError(
-                "preflight expected exactly three local Responses requests; "
+                "preflight expected exactly "
+                f"{expected_response_count} local Responses requests; "
                 f"observed {response_count}"
             )
 
@@ -302,6 +570,15 @@ def run_preflight(
         fork_thread_id=fork_thread_id,
         protected_turn_id=protected_turn_id,
         callback_request_id=callback_request_id,
+        sandbox=sandbox,
+        workspace_edit_call_id=(
+            _PREFLIGHT_EDIT_CALL_ID if workspace_patch is not None else None
+        ),
+        workspace_validation_call_id=(
+            _PREFLIGHT_VALIDATION_CALL_ID
+            if workspace_validation_command is not None
+            else None
+        ),
     )
     return PreflightResult(
         ok=True,
@@ -318,6 +595,16 @@ def run_preflight(
         models_request_count=models_count,
         raw_record_count=len(records),
         raw_jsonl_path=str(raw_path.resolve()),
+        workspace_edit_call_id=(
+            _PREFLIGHT_EDIT_CALL_ID if workspace_patch is not None else None
+        ),
+        workspace_patch_sha256=workspace_patch_digest,
+        workspace_validation_call_id=(
+            _PREFLIGHT_VALIDATION_CALL_ID
+            if workspace_validation_command is not None
+            else None
+        ),
+        workspace_validation_command_sha256=validation_command_digest,
     )
 
 
@@ -354,6 +641,29 @@ class DeterministicResponsesServerTests(unittest.TestCase):
             self.assertIn("response-tool", bodies[1])
             self.assertIn('"call_id":"call-test"', bodies[1])
             self.assertIn('"name":"protected_commit"', bodies[1])
+
+    def test_custom_tool_fixture_uses_official_responses_shape(self) -> None:
+        patch = "*** Begin Patch\n*** Add File: proof.txt\n+proof\n*** End Patch\n"
+        with DeterministicResponsesServer() as server:
+            server.enqueue_custom_tool_call(
+                "apply_patch",
+                patch,
+                call_id="patch-call",
+                response_id="response-patch",
+            )
+            request = Request(
+                server.base_url + "/responses",
+                data=b'{"stream":true}',
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urlopen(request, timeout=2.0) as response:
+                body = response.read().decode("utf-8")
+            server.assert_consumed()
+        self.assertIn('"type":"custom_tool_call"', body)
+        self.assertIn('"name":"apply_patch"', body)
+        self.assertIn('"call_id":"patch-call"', body)
+        self.assertIn(json.dumps(patch, separators=(",", ":")), body)
 
 
 class CodexAppServerModeTests(unittest.TestCase):
@@ -419,6 +729,82 @@ class RealCodexAppServerTests(unittest.TestCase):
             self.assertGreater(result.raw_record_count, 0)
             self.assertTrue(raw_path.is_file())
             self.assertNotEqual(result.seed_thread_id, result.fork_thread_id)
+
+    def test_preflight_applies_native_workspace_patch(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="codex-writable-boundary-test-") as temp_dir:
+            temp_path = Path(temp_dir)
+            raw_path = temp_path / "app-server.jsonl"
+            shell = shutil.which("sh")
+            if shell is None:
+                self.skipTest("system sh executable required")
+            validation_shell = temp_path / "sh"
+            validation_shell.symlink_to(Path(shell).resolve())
+            patch = (
+                "*** Begin Patch\n"
+                "*** Add File: native-edit.txt\n"
+                "+edited by native Codex\n"
+                "*** End Patch\n"
+            )
+            result = run_preflight(
+                workspace=temp_path,
+                raw_jsonl_path=raw_path,
+                workspace_patch=patch,
+                workspace_validation_command="test -f native-edit.txt",
+                workspace_validation_shell=str(validation_shell),
+            )
+
+            self.assertEqual(
+                (temp_path / "native-edit.txt").read_text(encoding="utf-8"),
+                "edited by native Codex\n",
+            )
+            self.assertEqual(result.workspace_edit_call_id, _PREFLIGHT_EDIT_CALL_ID)
+            self.assertEqual(
+                result.workspace_patch_sha256,
+                sha256(patch.encode("utf-8")).hexdigest(),
+            )
+            self.assertEqual(
+                result.workspace_validation_call_id,
+                _PREFLIGHT_VALIDATION_CALL_ID,
+            )
+            self.assertEqual(
+                result.workspace_validation_command_sha256,
+                sha256(b"test -f native-edit.txt").hexdigest(),
+            )
+            self.assertEqual(result.responses_request_count, 5)
+
+    def test_failed_workspace_validation_never_reaches_protected_handler(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="codex-failed-validation-test-") as temp_dir:
+            temp_path = Path(temp_dir)
+            shell = shutil.which("sh")
+            if shell is None:
+                self.skipTest("system sh executable required")
+            validation_shell = temp_path / "sh"
+            validation_shell.symlink_to(Path(shell).resolve())
+            handler_called = False
+
+            def protected_handler(unused: PendingToolCall) -> None:
+                nonlocal handler_called
+                handler_called = True
+                raise AssertionError("protected handler must remain unreachable")
+
+            with self.assertRaisesRegex(
+                AssertionError,
+                "successful declared validation",
+            ):
+                run_preflight(
+                    workspace=temp_path,
+                    raw_jsonl_path=temp_path / "app-server.jsonl",
+                    workspace_patch=(
+                        "*** Begin Patch\n"
+                        "*** Add File: native-edit.txt\n"
+                        "+edited by native Codex\n"
+                        "*** End Patch\n"
+                    ),
+                    workspace_validation_command="false",
+                    workspace_validation_shell=str(validation_shell),
+                    tool_handler=protected_handler,
+                )
+            self.assertFalse(handler_called)
 
 
 def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:

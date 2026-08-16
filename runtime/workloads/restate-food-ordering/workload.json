@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "name": "restate-food-ordering/no-secret-payment-logs",
+  "patch_sha256": "d7bd3e573c91731b25e0cf3803b9438b310ba80c5d033937d0eec6416a054a36",
+  "file_path": "src/order-app/clients/payment_client.ts",
+  "required_substrings": [
+    "Reserving payment for $${amount}",
+    "Unreserving payment for $${amount}",
+    "Executing payment for $${amount}"
+  ],
+  "forbidden_substrings": [
+    "with token ${token}"
+  ],
+  "delta_operation_count": 1,
+  "validation_command": "/opt/codex/bin/esbuild src/order-app/clients/payment_client.ts --bundle --platform=node --packages=external --outfile=/tmp/payment-client.js",
+  "validation_command_sha256": "0a3eb7cbb19ca99ac481e793f04729e9b0bd9e9ed1437cff951fa7022d868677",
+  "esbuild_sha256": "93433b456cac3a454ee27403d3de9adce88d83e5439ba37e1471af54730c9ca7",
+  "shell_sha256": "dbac288c29ba568459550a2da9e7ae0ded6b1fc728ee9fad3044c44e62d6ac14"
+}

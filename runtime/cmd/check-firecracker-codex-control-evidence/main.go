@@ -43,11 +43,26 @@ const (
 var historyMagic = [4]byte{'H', 'S', 'T', '1'}
 
 type options struct {
-	runtimeEvidence string
-	adapterResult   string
-	history         string
-	headAnchor      string
-	paymentHistory  string
+	runtimeEvidence  string
+	adapterResult    string
+	history          string
+	headAnchor       string
+	paymentHistory   string
+	workloadContract string
+}
+
+type workloadContract struct {
+	Schema                  int      `json:"schema"`
+	Name                    string   `json:"name"`
+	PatchSHA256             string   `json:"patch_sha256"`
+	FilePath                string   `json:"file_path"`
+	RequiredSubstrings      []string `json:"required_substrings"`
+	ForbiddenSubstrings     []string `json:"forbidden_substrings"`
+	DeltaOperationCount     int      `json:"delta_operation_count"`
+	ValidationCommand       string   `json:"validation_command"`
+	ValidationCommandSHA256 string   `json:"validation_command_sha256"`
+	EsbuildSHA256           string   `json:"esbuild_sha256"`
+	ShellSHA256             string   `json:"shell_sha256"`
 }
 
 type verdict struct {
@@ -166,30 +181,46 @@ type adapterRuntime struct {
 }
 
 type preflightSummary struct {
-	OK                    bool   `json:"ok"`
-	SeedThreadID          string `json:"seed_thread_id"`
-	SeedTurnID            string `json:"seed_turn_id"`
-	ForkThreadID          string `json:"fork_thread_id"`
-	ProtectedTurnID       string `json:"protected_turn_id"`
-	CallID                string `json:"call_id"`
-	EffectID              string `json:"effect_id"`
-	SeedArchived          bool   `json:"seed_archived"`
-	ResponsesRequestCount int    `json:"responses_request_count"`
-	ModelsRequestCount    int    `json:"models_request_count"`
-	RawRecordCount        int    `json:"raw_record_count"`
+	OK                             bool   `json:"ok"`
+	SeedThreadID                   string `json:"seed_thread_id"`
+	SeedTurnID                     string `json:"seed_turn_id"`
+	ForkThreadID                   string `json:"fork_thread_id"`
+	ProtectedTurnID                string `json:"protected_turn_id"`
+	CallID                         string `json:"call_id"`
+	EffectID                       string `json:"effect_id"`
+	SeedArchived                   bool   `json:"seed_archived"`
+	ResponsesRequestCount          int    `json:"responses_request_count"`
+	ModelsRequestCount             int    `json:"models_request_count"`
+	RawRecordCount                 int    `json:"raw_record_count"`
+	WorkspaceEditCallID            string `json:"workspace_edit_call_id,omitempty"`
+	WorkspacePatchSHA256           string `json:"workspace_patch_sha256,omitempty"`
+	WorkspaceValidationCallID      string `json:"workspace_validation_call_id,omitempty"`
+	WorkspaceValidationCommandHash string `json:"workspace_validation_command_sha256,omitempty"`
+}
+
+type adapterEvidenceSummary struct {
+	EvidenceDirectory string      `json:"evidence_directory"`
+	AppServerJSONL    fileSummary `json:"app_server_jsonl"`
+}
+
+type appServerRecord struct {
+	Direction string          `json:"direction"`
+	Payload   json.RawMessage `json:"payload"`
+	Sequence  uint64          `json:"sequence"`
+	TimeNS    int64           `json:"time_ns"`
 }
 
 type adapterResult struct {
-	Schema                   int              `json:"schema"`
-	OK                       bool             `json:"ok"`
-	ResultPath               string           `json:"result_path"`
-	Artifacts                json.RawMessage  `json:"artifacts"`
-	Workspace                json.RawMessage  `json:"workspace"`
-	Runtime                  adapterRuntime   `json:"runtime"`
-	Adapter                  json.RawMessage  `json:"adapter"`
-	Preflight                preflightSummary `json:"preflight"`
-	IndependentEvidenceCheck string           `json:"independent_evidence_check"`
-	Control                  controlSummary   `json:"control"`
+	Schema                   int                    `json:"schema"`
+	OK                       bool                   `json:"ok"`
+	ResultPath               string                 `json:"result_path"`
+	Artifacts                json.RawMessage        `json:"artifacts"`
+	Workspace                json.RawMessage        `json:"workspace"`
+	Runtime                  adapterRuntime         `json:"runtime"`
+	Adapter                  adapterEvidenceSummary `json:"adapter"`
+	Preflight                preflightSummary       `json:"preflight"`
+	IndependentEvidenceCheck string                 `json:"independent_evidence_check"`
+	Control                  controlSummary         `json:"control"`
 }
 
 type kindSpec struct {
@@ -332,6 +363,7 @@ func main() {
 	flag.StringVar(&arguments.history, "history", "", "retained durable control History")
 	flag.StringVar(&arguments.headAnchor, "head-anchor", "", "retained external History head anchor")
 	flag.StringVar(&arguments.paymentHistory, "payment-history", "", "retained external commit history")
+	flag.StringVar(&arguments.workloadContract, "workload-contract", "", "optional canonical absolute workload contract JSON")
 	flag.Parse()
 	result, err := verify(arguments)
 	if err != nil {
@@ -362,6 +394,10 @@ func verify(arguments options) (verdict, error) {
 	if err != nil {
 		return verdict{}, err
 	}
+	contract, err := readWorkloadContract(arguments.workloadContract)
+	if err != nil {
+		return verdict{}, err
+	}
 	paths := []string{runtimeDirectory, adapterPath, historyPath, anchorPath, paymentPath}
 	for left := range paths {
 		for right := left + 1; right < len(paths); right++ {
@@ -382,9 +418,58 @@ func verify(arguments options) (verdict, error) {
 	if adapter.Schema != 1 || !adapter.OK || adapter.ResultPath != adapterPath ||
 		adapter.IndependentEvidenceCheck != "required" || adapter.Runtime.EvidenceDirectory != runtimeDirectory ||
 		adapter.Preflight.OK != true || !adapter.Preflight.SeedArchived || adapter.Preflight.CallID == "" ||
-		adapter.Preflight.EffectID == "" || adapter.Preflight.RawRecordCount <= 0 ||
+		adapter.Preflight.EffectID == "" || adapter.Preflight.SeedThreadID == "" ||
+		adapter.Preflight.SeedTurnID == "" || adapter.Preflight.ForkThreadID == "" ||
+		adapter.Preflight.ProtectedTurnID == "" || adapter.Preflight.RawRecordCount <= 0 ||
 		adapter.Preflight.ResponsesRequestCount <= 0 {
 		return verdict{}, errors.New("adapter result does not describe one successful protected preflight")
+	}
+	hasEditCall := adapter.Preflight.WorkspaceEditCallID != ""
+	hasPatchDigest := adapter.Preflight.WorkspacePatchSHA256 != ""
+	if hasEditCall != hasPatchDigest || (hasPatchDigest && !validDigest(adapter.Preflight.WorkspacePatchSHA256)) {
+		return verdict{}, errors.New("adapter workspace edit identity is incomplete or invalid")
+	}
+	if contract != nil && (!hasEditCall || adapter.Preflight.WorkspacePatchSHA256 != contract.PatchSHA256) {
+		return verdict{}, errors.New("adapter patch identity differs from the workload contract")
+	}
+	hasValidationCall := adapter.Preflight.WorkspaceValidationCallID != ""
+	hasValidationDigest := adapter.Preflight.WorkspaceValidationCommandHash != ""
+	if hasValidationCall != hasValidationDigest || hasValidationCall && !hasEditCall ||
+		(hasValidationDigest && !validDigest(adapter.Preflight.WorkspaceValidationCommandHash)) {
+		return verdict{}, errors.New("adapter workspace validation identity is incomplete or invalid")
+	}
+	if contract != nil && (!hasValidationCall ||
+		adapter.Preflight.WorkspaceValidationCommandHash != contract.ValidationCommandSHA256) {
+		return verdict{}, errors.New("adapter validation identity differs from the workload contract")
+	}
+	if hasValidationCall && adapter.Preflight.ResponsesRequestCount != 5 {
+		return verdict{}, errors.New("validated workspace edit did not make the exact five model requests")
+	}
+	if hasEditCall && !hasValidationCall && adapter.Preflight.ResponsesRequestCount != 4 {
+		return verdict{}, errors.New("workspace edit preflight did not make the exact four model requests")
+	}
+	if !hasEditCall && adapter.Preflight.ResponsesRequestCount != 3 {
+		return verdict{}, errors.New("read-only preflight did not make the exact three model requests")
+	}
+	adapterDirectory, err := validatePrivateDirectory(adapter.Adapter.EvidenceDirectory, "adapter evidence")
+	if err != nil {
+		return verdict{}, err
+	}
+	if adapterDirectory != filepath.Dir(adapterPath) ||
+		adapter.Adapter.AppServerJSONL.Path != filepath.Join(adapterDirectory, "app-server.jsonl") {
+		return verdict{}, errors.New("adapter result points outside its retained App Server evidence")
+	}
+	appServerBytes, appServerInfo, err := readPrivateFile(
+		adapter.Adapter.AppServerJSONL.Path, maxEvidenceFile, "App Server JSONL",
+	)
+	if err != nil {
+		return verdict{}, err
+	}
+	if err := matchFileSummary(adapter.Adapter.AppServerJSONL, appServerInfo, appServerBytes); err != nil {
+		return verdict{}, fmt.Errorf("App Server JSONL fingerprint: %w", err)
+	}
+	if err := checkAppServerRecords(appServerBytes, adapter.Preflight); err != nil {
+		return verdict{}, err
 	}
 
 	runtimePath := filepath.Join(runtimeDirectory, "result.json")
@@ -409,6 +494,13 @@ func verify(arguments options) (verdict, error) {
 		!runtime.G1SIGKILLConfirmed || !runtime.SnapshotLoadedPaused ||
 		!runtime.RelayArmedBeforeResume || !runtime.ToolReleasedAfterAttach || runtime.CompletedTimeNS <= 0 {
 		return verdict{}, errors.New("runtime result does not describe a completed Firecracker restore")
+	}
+	if hasEditCall && (runtime.RepositoryChange.BaseRoot == runtime.RepositoryChange.FinalRoot ||
+		runtime.RepositoryChange.OperationCount < 1) {
+		return verdict{}, errors.New("completed native Codex edit has no nonempty repository delta")
+	}
+	if contract != nil && runtime.RepositoryChange.OperationCount != contract.DeltaOperationCount {
+		return verdict{}, errors.New("runtime delta operation count differs from the workload contract")
 	}
 	for key, name := range map[string]string{
 		"checkpoint": "checkpoint.json", "repository": "repository.bundle",
@@ -517,6 +609,153 @@ func verify(arguments options) (verdict, error) {
 		OperationID: expectedID, ExternalCommits: 1,
 		RepositoryEdit: runtime.RepositoryChange.BaseRoot != runtime.RepositoryChange.FinalRoot,
 	}, nil
+}
+
+func readWorkloadContract(path string) (*workloadContract, error) {
+	if path == "" {
+		return nil, nil
+	}
+	contents, _, err := readOwnedFile(path, 1<<20, "workload contract")
+	if err != nil {
+		return nil, err
+	}
+	var value workloadContract
+	if err := decodeStrict(contents, &value); err != nil {
+		return nil, fmt.Errorf("workload contract: %w", err)
+	}
+	if value.Schema != 1 || value.Name == "" || !validDigest(value.PatchSHA256) ||
+		value.FilePath == "" || len(value.RequiredSubstrings) == 0 ||
+		len(value.ForbiddenSubstrings) == 0 || value.DeltaOperationCount < 1 ||
+		value.ValidationCommand == "" || strings.IndexByte(value.ValidationCommand, 0) >= 0 ||
+		hashBytes([]byte(value.ValidationCommand)) != value.ValidationCommandSHA256 ||
+		!validDigest(value.ValidationCommandSHA256) || !validDigest(value.EsbuildSHA256) ||
+		!validDigest(value.ShellSHA256) {
+		return nil, errors.New("workload contract is malformed")
+	}
+	return &value, nil
+}
+
+func checkAppServerRecords(contents []byte, preflight preflightSummary) error {
+	lines := bytes.Split(contents, []byte{'\n'})
+	if len(lines) == 0 || len(lines[len(lines)-1]) != 0 {
+		return errors.New("App Server JSONL must end with one newline")
+	}
+	lines = lines[:len(lines)-1]
+	if len(lines) != preflight.RawRecordCount {
+		return errors.New("App Server JSONL record count differs from the preflight summary")
+	}
+	var editSequence, validationSequence, callbackSequence uint64
+	var editOccurrences, validationOccurrences, callbackOccurrences int
+	seenExternalBoundary := false
+	for index, line := range lines {
+		if len(line) == 0 {
+			return errors.New("App Server JSONL contains an empty record")
+		}
+		var record appServerRecord
+		if err := decodeStrict(line, &record); err != nil {
+			return fmt.Errorf("App Server JSONL record %d: %w", index+1, err)
+		}
+		if record.Sequence != uint64(index+1) || record.Direction == "" || record.TimeNS <= 0 {
+			return fmt.Errorf("App Server JSONL record %d has invalid metadata", index+1)
+		}
+		payload, err := decodeJSONObject(record.Payload)
+		if err != nil {
+			return fmt.Errorf("App Server JSONL payload %d: %w", index+1, err)
+		}
+		method, _ := payload["method"].(string)
+		params, _ := payload["params"].(map[string]any)
+		if record.Direction == "client_to_server" && method == "turn/start" && params != nil &&
+			stringValue(params, "threadId") == preflight.ForkThreadID &&
+			stringValue(params, "approvalPolicy") == "never" {
+			policy, _ := params["sandboxPolicy"].(map[string]any)
+			seenExternalBoundary = policy != nil && stringValue(policy, "type") == "externalSandbox" &&
+				stringValue(policy, "networkAccess") == "restricted"
+		}
+		if record.Direction == "server_to_client" && method == "item/completed" && params != nil &&
+			stringValue(params, "threadId") == preflight.ForkThreadID &&
+			stringValue(params, "turnId") == preflight.ProtectedTurnID {
+			item, _ := params["item"].(map[string]any)
+			changes, _ := item["changes"].([]any)
+			if item != nil && preflight.WorkspaceEditCallID != "" &&
+				stringValue(item, "id") == preflight.WorkspaceEditCallID {
+				editOccurrences++
+				if stringValue(item, "type") == "fileChange" &&
+					stringValue(item, "status") == "completed" && len(changes) > 0 {
+					editSequence = record.Sequence
+				}
+			}
+			if item != nil && preflight.WorkspaceValidationCallID != "" &&
+				stringValue(item, "id") == preflight.WorkspaceValidationCallID {
+				validationOccurrences++
+				actions, _ := item["commandActions"].([]any)
+				var validationCommand string
+				if len(actions) == 1 {
+					action, _ := actions[0].(map[string]any)
+					validationCommand = stringValue(action, "command")
+				}
+				if stringValue(item, "type") == "commandExecution" &&
+					stringValue(item, "status") == "completed" && jsonNumberIsZero(item["exitCode"]) &&
+					strings.HasPrefix(stringValue(item, "command"), "/opt/codex/bin/sh -c ") &&
+					hashBytes([]byte(validationCommand)) == preflight.WorkspaceValidationCommandHash {
+					validationSequence = record.Sequence
+				}
+			}
+		}
+		if record.Direction == "server_to_client" && method == "item/tool/call" && params != nil &&
+			stringValue(params, "threadId") == preflight.ForkThreadID &&
+			stringValue(params, "turnId") == preflight.ProtectedTurnID &&
+			stringValue(params, "tool") == operationKind &&
+			stringValue(params, "callId") == preflight.CallID {
+			callbackOccurrences++
+			callbackSequence = record.Sequence
+		}
+	}
+	if callbackSequence == 0 || callbackOccurrences != 1 {
+		return errors.New("App Server JSONL does not contain exactly one protected callback")
+	}
+	if preflight.WorkspaceEditCallID != "" &&
+		(!seenExternalBoundary || editSequence == 0 || editOccurrences != 1 || editSequence >= callbackSequence) {
+		return errors.New("App Server JSONL does not place a completed native edit before the protected callback")
+	}
+	if preflight.WorkspaceValidationCallID != "" &&
+		(validationSequence == 0 || validationOccurrences != 1 || editSequence == 0 || editSequence >= validationSequence ||
+			validationSequence >= callbackSequence) {
+		return errors.New("App Server JSONL does not place a successful workspace validation between edit and protected callback")
+	}
+	return nil
+}
+
+func jsonNumberIsZero(value any) bool {
+	number, ok := value.(json.Number)
+	return ok && number.String() == "0"
+}
+
+func decodeJSONObject(contents []byte) (map[string]any, error) {
+	if err := rejectDuplicateKeys(contents); err != nil {
+		return nil, err
+	}
+	decoder := json.NewDecoder(bytes.NewReader(contents))
+	decoder.UseNumber()
+	var value map[string]any
+	if err := decoder.Decode(&value); err != nil {
+		return nil, err
+	}
+	var extra any
+	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
+		if err == nil {
+			return nil, errors.New("multiple JSON values")
+		}
+		return nil, err
+	}
+	if value == nil {
+		return nil, errors.New("JSON value is not an object")
+	}
+	return value, nil
+}
+
+func stringValue(value map[string]any, key string) string {
+	result, _ := value[key].(string)
+	return result
 }
 
 func checkCheckpoint(contents []byte, runtime runtimeResult) error {
@@ -975,6 +1214,46 @@ func readPrivateFile(path string, limit int64, label string) ([]byte, os.FileInf
 		return nil, nil, fmt.Errorf("read stable %s", label)
 	}
 	return contents, info, nil
+}
+
+func readOwnedFile(path string, limit int64, label string) ([]byte, os.FileInfo, error) {
+	canonical, err := canonicalPath(path, label)
+	if err != nil {
+		return nil, nil, err
+	}
+	descriptor, err := syscall.Open(canonical, syscall.O_RDONLY|syscall.O_CLOEXEC|syscall.O_NOFOLLOW, 0)
+	if err != nil {
+		return nil, nil, fmt.Errorf("open %s: %w", label, err)
+	}
+	file := os.NewFile(uintptr(descriptor), canonical)
+	if file == nil {
+		_ = syscall.Close(descriptor)
+		return nil, nil, fmt.Errorf("open %s: create file handle", label)
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	mode := infoMode(info)
+	if err != nil || info == nil || !mode.IsRegular() ||
+		(mode.Perm() != 0o600 && mode.Perm() != 0o644) || ownerUID(info) != os.Geteuid() ||
+		info.Size() <= 0 || info.Size() > limit {
+		return nil, nil, fmt.Errorf("%s must be a nonempty current-user file with mode 0600 or 0644 within %d bytes", label, limit)
+	}
+	pathInfo, err := os.Lstat(canonical)
+	if err != nil || !os.SameFile(info, pathInfo) {
+		return nil, nil, fmt.Errorf("%s path changed while opening", label)
+	}
+	contents, err := io.ReadAll(io.LimitReader(file, limit+1))
+	if err != nil || int64(len(contents)) != info.Size() {
+		return nil, nil, fmt.Errorf("read stable %s", label)
+	}
+	return contents, info, nil
+}
+
+func infoMode(info os.FileInfo) os.FileMode {
+	if info == nil {
+		return 0
+	}
+	return info.Mode()
 }
 
 func ownerUID(info os.FileInfo) int {

@@ -126,15 +126,20 @@ makes the whole cutover stale. Existing clients may omit repository evidence
 and keep the original cutover protocol.
 
 The real Codex path now exercises this join rather than only emitting its
-inputs. Before the VM starts, control publishes a generation-bound private Unix
-socket. The protected Codex callback crosses that socket with only its stable
-call ID, kind, and payload; the host supplies the frozen provider route and
-derives an Operation identity owned by the sandbox. After snapshot restore and
-turn completion, one repository-aware Cutover records the replacement binding
-and artifacts. A separate offline checker joins the Firecracker result, all
-five History events, the external head anchor, and the provider's single
-durable commit. Repeating the same callback through the replacement generation
-returns the stored result without another provider delivery or History event.
+inputs. Native Codex can edit the materialized workspace under an
+`externalSandbox` policy: Firecracker, not a nested bubblewrap process, is the
+isolation boundary. Before the VM starts, control publishes a generation-bound
+private Unix socket. The protected Codex callback crosses that socket with only
+its stable call ID, kind, and payload; the host supplies the frozen provider
+route and derives an Operation identity owned by the sandbox. After snapshot
+restore and turn completion, one repository-aware Cutover records the
+replacement binding and artifacts. The two offline checkers can additionally
+bind a workload patch identity to the native file-change event, require the
+edit before the callback, require a declared guest build to exit successfully,
+bind the compiler and shell to the immutable payload manifest, reconstruct a
+nonempty delta, and check declared final-tree content. Repeating the same
+callback through the replacement generation returns the stored result without
+another provider delivery or History event.
 
 ## Add it to an HTTP service
 

@@ -1,0 +1,12 @@
+*** Begin Patch
+*** Update File: src/order-app/clients/payment_client.ts
+@@
+-    console.info(`[${id}] Reserving payment with token ${token} for $${amount}`);
++    console.info(`[${id}] Reserving payment for $${amount}`);
+@@
+-    console.info(`[${id}] Unreserving payment with token ${token} for $${amount}`);
++    console.info(`[${id}] Unreserving payment for $${amount}`);
+@@
+-    console.info(`[${id}] Executing payment with token ${token} for $${amount}`);
++    console.info(`[${id}] Executing payment for $${amount}`);
+*** End Patch

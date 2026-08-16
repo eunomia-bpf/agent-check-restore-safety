@@ -28,6 +28,28 @@ func TestVerifyAcceptsCompleteIndependentEvidence(t *testing.T) {
 	}
 }
 
+func TestVerifyChecksDeclaredWritableWorkload(t *testing.T) {
+	f := newFixture(t)
+	contractPath := filepath.Join(filepath.Dir(f.opts.runner), "workload.json")
+	contract := workloadContract{
+		Schema: 1, Name: "test/workload", PatchSHA256: hashBytes([]byte("patch")),
+		FilePath: "README.md", RequiredSubstrings: []string{"final repository"},
+		ForbiddenSubstrings: []string{"secret token"}, DeltaOperationCount: 1,
+		ValidationCommand: "compile", ValidationCommandSHA256: hashBytes([]byte("compile")),
+		EsbuildSHA256: hashBytes([]byte("esbuild")), ShellSHA256: hashBytes([]byte("shell")),
+	}
+	writeJSON(t, contractPath, contract)
+	f.opts.workloadContract = contractPath
+	if err := verify(f.opts); err != nil {
+		t.Fatalf("valid workload contract rejected: %v", err)
+	}
+	contract.RequiredSubstrings = []string{"missing result"}
+	writeJSON(t, contractPath, contract)
+	if err := verify(f.opts); err == nil {
+		t.Fatal("workload contract accepted a missing final-tree result")
+	}
+}
+
 func TestVerifyAcceptsCrossDirectionBridgeAuditOverlap(t *testing.T) {
 	f := newFixture(t)
 	adapterPath := f.opts.adapterJSONL
@@ -357,7 +379,9 @@ func newFixture(t *testing.T) *fixture {
 	mustWrite(t, f.opts.payload, payloadBytes, 0o600)
 	codexBytes := []byte("native-codex-binary")
 	codex := manifestEntry{Path: "bin/codex", Type: "file", Mode: 0o755, Size: int64(len(codexBytes)), SHA256: hashBytes(codexBytes)}
-	manifestValue := manifest{Schema: 1, Entries: []manifestEntry{{Path: ".", Type: "directory", Mode: 0o755}, {Path: "bin", Type: "directory", Mode: 0o755}, codex}}
+	esbuild := manifestEntry{Path: "bin/esbuild", Type: "file", Mode: 0o755, Size: 7, SHA256: hashBytes([]byte("esbuild"))}
+	shell := manifestEntry{Path: "bin/sh", Type: "file", Mode: 0o755, Size: 5, SHA256: hashBytes([]byte("shell"))}
+	manifestValue := manifest{Schema: 1, Entries: []manifestEntry{{Path: ".", Type: "directory", Mode: 0o755}, {Path: "bin", Type: "directory", Mode: 0o755}, codex, esbuild, shell}}
 	manifestJSON := mustMarshal(t, manifestValue)
 	payload := payloadRecord{Schema: 1, Payload: payloadBuild{ImagePath: f.opts.payload, ImageSHA256: hashBytes(payloadBytes), ImageSize: int64(len(payloadBytes)), Manifest: manifestValue, ManifestSHA256: hashBytes(manifestJSON)}, Codex: codex}
 	writeJSON(t, f.opts.payloadResult, payload)

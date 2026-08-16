@@ -21,6 +21,7 @@ FIRECRACKER_CODEX_RUNNER ?=
 FIRECRACKER_CODEX_CONTROL_HISTORY ?=
 FIRECRACKER_CODEX_HEAD_ANCHOR ?=
 FIRECRACKER_CODEX_PAYMENT_HISTORY ?=
+FIRECRACKER_CODEX_WORKLOAD_CONTRACT ?=
 RUNTIME_IMAGE ?= safe-change-runtime:local
 RUNTIME_VERSION ?= dev
 RUNTIME_REVISION ?= $(shell git rev-parse --short=12 HEAD)
@@ -174,7 +175,8 @@ runtime-firecracker-codex-check:
 		-adapter-jsonl "$(abspath $(FIRECRACKER_CODEX_ADAPTER_EVIDENCE))/app-server.jsonl" \
 		-payload "$(abspath $(FIRECRACKER_CODEX_PAYLOAD))" \
 		-payload-result "$(abspath $(FIRECRACKER_CODEX_PAYLOAD_RESULT))" \
-		-runner "$(abspath $(FIRECRACKER_CODEX_RUNNER))"
+		-runner "$(abspath $(FIRECRACKER_CODEX_RUNNER))" \
+		$(if $(strip $(FIRECRACKER_CODEX_WORKLOAD_CONTRACT)),-workload-contract "$(abspath $(FIRECRACKER_CODEX_WORKLOAD_CONTRACT))",)
 
 runtime-firecracker-codex-control-check:
 	@test -n "$(strip $(FIRECRACKER_CODEX_EVIDENCE))" || { echo "FIRECRACKER_CODEX_EVIDENCE must name the retained runtime evidence directory" >&2; exit 2; }
@@ -187,7 +189,8 @@ runtime-firecracker-codex-control-check:
 		-adapter-result "$(abspath $(FIRECRACKER_CODEX_ADAPTER_EVIDENCE))/result.json" \
 		-history "$(abspath $(FIRECRACKER_CODEX_CONTROL_HISTORY))" \
 		-head-anchor "$(abspath $(FIRECRACKER_CODEX_HEAD_ANCHOR))" \
-		-payment-history "$(abspath $(FIRECRACKER_CODEX_PAYMENT_HISTORY))"
+		-payment-history "$(abspath $(FIRECRACKER_CODEX_PAYMENT_HISTORY))" \
+		$(if $(strip $(FIRECRACKER_CODEX_WORKLOAD_CONTRACT)),-workload-contract "$(abspath $(FIRECRACKER_CODEX_WORKLOAD_CONTRACT))",)
 
 # Explicit live-account target. It is intentionally not part of runtime-verify.
 runtime-codex-demo:

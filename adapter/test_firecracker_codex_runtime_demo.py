@@ -136,6 +136,11 @@ class FirecrackerCodexRuntimeDemoTests(unittest.TestCase):
                                 "host": str(fixture["workspace"]),
                                 "guest": "/workspace",
                             },
+                            "repository_change": {
+                                "base_root": "a" * 64,
+                                "final_root": "b" * 64,
+                                "operation_count": 1,
+                            },
                         }
                     )
                     + "\n",
@@ -153,10 +158,18 @@ class FirecrackerCodexRuntimeDemoTests(unittest.TestCase):
                     call_id="preflight-call-1",
                     effect_id="preflight-effect-1",
                     seed_archived=True,
-                    responses_request_count=3,
+                    responses_request_count=5,
                     models_request_count=1,
                     raw_record_count=1,
                     raw_jsonl_path=str(raw_path),
+                    workspace_edit_call_id="preflight-edit-1",
+                    workspace_patch_sha256=sha256(
+                        str(arguments["workspace_patch"]).encode("utf-8")
+                    ).hexdigest(),
+                    workspace_validation_call_id="preflight-validation-1",
+                    workspace_validation_command_sha256=sha256(
+                        str(arguments["workspace_validation_command"]).encode("utf-8")
+                    ).hexdigest(),
                 )
 
             with (
@@ -169,7 +182,11 @@ class FirecrackerCodexRuntimeDemoTests(unittest.TestCase):
                     side_effect=fake_preflight,
                 ) as preflight,
             ):
-                result = run_demo(**fixture["arguments"])
+                result = run_demo(
+                    **fixture["arguments"],
+                    workspace_patch="*** Begin Patch\n*** End Patch\n",
+                    workspace_validation_command="test -f changed-file",
+                )
 
             self.assertTrue(result["ok"])
             self.assertEqual(result["independent_evidence_check"], "required")
@@ -184,6 +201,18 @@ class FirecrackerCodexRuntimeDemoTests(unittest.TestCase):
             )
             self.assertEqual(
                 preflight.call_args.kwargs["workspace"], fixture["workspace"]
+            )
+            self.assertEqual(
+                result["preflight"]["workspace_edit_call_id"],
+                "preflight-edit-1",
+            )
+            self.assertEqual(
+                result["preflight"]["workspace_validation_call_id"],
+                "preflight-validation-1",
+            )
+            self.assertEqual(
+                preflight.call_args.kwargs["workspace_validation_shell"],
+                "/opt/codex/bin/sh",
             )
             self.assertEqual(
                 create.call_args.kwargs["evidence_dir"], fixture["runtime"]
@@ -228,7 +257,10 @@ class FirecrackerCodexRuntimeDemoTests(unittest.TestCase):
         with (
             mock.patch(
                 "adapter.firecracker_codex_runtime_demo._parse_args",
-                return_value=mock.Mock(),
+                return_value=mock.Mock(
+                    workspace_patch_file=None,
+                    workspace_validation_command=None,
+                ),
             ),
             mock.patch(
                 "adapter.firecracker_codex_runtime_demo.run_demo",
@@ -251,7 +283,10 @@ class FirecrackerCodexRuntimeDemoTests(unittest.TestCase):
         with (
             mock.patch(
                 "adapter.firecracker_codex_runtime_demo._parse_args",
-                return_value=mock.Mock(),
+                return_value=mock.Mock(
+                    workspace_patch_file=None,
+                    workspace_validation_command=None,
+                ),
             ),
             mock.patch(
                 "adapter.firecracker_codex_runtime_demo.run_demo",

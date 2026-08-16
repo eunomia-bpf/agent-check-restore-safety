@@ -29,6 +29,30 @@ func TestVerifyJoinsVMHistoryAndExternalCommit(t *testing.T) {
 	}
 }
 
+func TestVerifyBindsDeclaredWorkloadPatch(t *testing.T) {
+	fixture := newTestFixture(t)
+	contractPath := filepath.Join(filepath.Dir(fixture.options.adapterResult), "workload.json")
+	contract := workloadContract{
+		Schema: 1, Name: "test/workload",
+		PatchSHA256: fixture.adapter.Preflight.WorkspacePatchSHA256,
+		FilePath:    "file", RequiredSubstrings: []string{"new"},
+		ForbiddenSubstrings: []string{"old"}, DeltaOperationCount: 1,
+		ValidationCommand:       "compile",
+		ValidationCommandSHA256: fixture.adapter.Preflight.WorkspaceValidationCommandHash,
+		EsbuildSHA256:           hashBytes([]byte("esbuild")), ShellSHA256: hashBytes([]byte("shell")),
+	}
+	writePrivate(t, contractPath, append(mustMarshal(t, contract), '\n'))
+	fixture.options.workloadContract = contractPath
+	if _, err := verify(fixture.options); err != nil {
+		t.Fatalf("valid workload contract rejected: %v", err)
+	}
+	contract.PatchSHA256 = hashBytes([]byte("different patch"))
+	writePrivate(t, contractPath, append(mustMarshal(t, contract), '\n'))
+	if _, err := verify(fixture.options); err == nil {
+		t.Fatal("mismatched workload patch identity was accepted")
+	}
+}
+
 func TestVerifyRejectsIndependentEvidenceMutations(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -240,9 +264,70 @@ func newTestFixture(t *testing.T) *testFixture {
 	runtimePath := filepath.Join(runtimeDirectory, "result.json")
 	runtimeBytes := append(mustMarshal(t, runtime), '\n')
 	writePrivate(t, runtimePath, runtimeBytes)
+	appServerPath := filepath.Join(root, "app-server.jsonl")
+	appServerRecords := []appServerRecord{
+		{
+			Direction: "client_to_server", Sequence: 1, TimeNS: 1,
+			Payload: mustMarshal(t, map[string]any{
+				"method": "turn/start",
+				"params": map[string]any{
+					"threadId": "fork", "approvalPolicy": "never",
+					"sandboxPolicy": map[string]any{"type": "externalSandbox", "networkAccess": "restricted"},
+				},
+			}),
+		},
+		{
+			Direction: "server_to_client", Sequence: 2, TimeNS: 2,
+			Payload: mustMarshal(t, map[string]any{
+				"method": "item/completed",
+				"params": map[string]any{
+					"threadId": "fork", "turnId": "protected",
+					"item": map[string]any{
+						"id": "preflight-edit-1", "type": "fileChange", "status": "completed",
+						"changes": []any{map[string]any{"path": "/workspace/file", "diff": "edit"}},
+					},
+				},
+			}),
+		},
+		{
+			Direction: "server_to_client", Sequence: 3, TimeNS: 3,
+			Payload: mustMarshal(t, map[string]any{
+				"method": "item/completed",
+				"params": map[string]any{
+					"threadId": "fork", "turnId": "protected",
+					"item": map[string]any{
+						"id": "preflight-validation-1", "type": "commandExecution", "status": "completed",
+						"command": "/opt/codex/bin/sh -c 'compile'", "exitCode": 0,
+						"commandActions": []any{map[string]any{"command": "compile", "type": "unknown"}},
+					},
+				},
+			}),
+		},
+		{
+			Direction: "server_to_client", Sequence: 4, TimeNS: 4,
+			Payload: mustMarshal(t, map[string]any{
+				"method": "item/tool/call",
+				"params": map[string]any{
+					"threadId": "fork", "turnId": "protected", "tool": operationKind, "callId": callID,
+				},
+			}),
+		},
+	}
+	var appServerBytes bytes.Buffer
+	for _, record := range appServerRecords {
+		appServerBytes.Write(mustMarshal(t, record))
+		appServerBytes.WriteByte('\n')
+	}
+	writePrivate(t, appServerPath, appServerBytes.Bytes())
 	adapter := adapterResult{
 		Schema: 1, OK: true, ResultPath: adapterPath,
-		Artifacts: json.RawMessage(`{}`), Workspace: json.RawMessage(`{}`), Adapter: json.RawMessage(`{}`),
+		Artifacts: json.RawMessage(`{}`), Workspace: json.RawMessage(`{}`),
+		Adapter: adapterEvidenceSummary{
+			EvidenceDirectory: root,
+			AppServerJSONL: fileSummary{
+				Path: appServerPath, SHA256: hashBytes(appServerBytes.Bytes()), Size: int64(appServerBytes.Len()),
+			},
+		},
 		Runtime: adapterRuntime{
 			EvidenceDirectory: runtimeDirectory,
 			Result:            fileSummary{Path: runtimePath, SHA256: hashBytes(runtimeBytes), Size: int64(len(runtimeBytes))},
@@ -251,7 +336,10 @@ func newTestFixture(t *testing.T) *testFixture {
 		Preflight: preflightSummary{
 			OK: true, SeedThreadID: "seed", SeedTurnID: "seed-turn", ForkThreadID: "fork",
 			ProtectedTurnID: "protected", CallID: callID, EffectID: effectID, SeedArchived: true,
-			ResponsesRequestCount: 3, RawRecordCount: 10,
+			ResponsesRequestCount: 5, RawRecordCount: len(appServerRecords),
+			WorkspaceEditCallID: "preflight-edit-1", WorkspacePatchSHA256: hashBytes([]byte("patch")),
+			WorkspaceValidationCallID:      "preflight-validation-1",
+			WorkspaceValidationCommandHash: hashBytes([]byte("compile")),
 		},
 		IndependentEvidenceCheck: "required",
 		Control: controlSummary{

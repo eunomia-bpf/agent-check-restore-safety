@@ -17,6 +17,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -24,6 +25,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unicode/utf8"
 
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/repobundle"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/repodelta"
@@ -51,7 +53,21 @@ const (
 )
 
 type options struct {
-	evidence, adapterJSONL, payload, payloadResult, runner string
+	evidence, adapterJSONL, payload, payloadResult, runner, workloadContract string
+}
+
+type workloadContract struct {
+	Schema                  int      `json:"schema"`
+	Name                    string   `json:"name"`
+	PatchSHA256             string   `json:"patch_sha256"`
+	FilePath                string   `json:"file_path"`
+	RequiredSubstrings      []string `json:"required_substrings"`
+	ForbiddenSubstrings     []string `json:"forbidden_substrings"`
+	DeltaOperationCount     int      `json:"delta_operation_count"`
+	ValidationCommand       string   `json:"validation_command"`
+	ValidationCommandSHA256 string   `json:"validation_command_sha256"`
+	EsbuildSHA256           string   `json:"esbuild_sha256"`
+	ShellSHA256             string   `json:"shell_sha256"`
 }
 
 type verdict struct {
@@ -298,6 +314,7 @@ func main() {
 	flag.StringVar(&opts.payload, "payload", "", "canonical absolute SquashFS payload file")
 	flag.StringVar(&opts.payloadResult, "payload-result", "", "canonical absolute payload result JSON file")
 	flag.StringVar(&opts.runner, "runner", "", "canonical absolute firecracker-codex-shim executable used for the run")
+	flag.StringVar(&opts.workloadContract, "workload-contract", "", "optional canonical absolute workload contract JSON")
 	flag.Parse()
 	var err error
 	if flag.NArg() != 0 {
@@ -350,6 +367,9 @@ func verify(opts options) error {
 	if err := v.verifyAdapter(); err != nil {
 		return fmt.Errorf("App Server capture: %w", err)
 	}
+	if err := v.verifyWorkload(); err != nil {
+		return fmt.Errorf("workload: %w", err)
+	}
 	return nil
 }
 
@@ -369,8 +389,105 @@ func (v *verifier) validateInputs() error {
 			return fmt.Errorf("%s: %w", label, err)
 		}
 	}
+	if v.opts.workloadContract != "" {
+		if err := requireCanonicalDirect(v.opts.workloadContract, false); err != nil {
+			return fmt.Errorf("-workload-contract: %w", err)
+		}
+	}
 	if _, _, _, err := inspectExecutable(v.opts.runner); err != nil {
 		return fmt.Errorf("-runner: %w", err)
+	}
+	return nil
+}
+
+func (v *verifier) verifyWorkload() error {
+	if v.opts.workloadContract == "" {
+		return nil
+	}
+	contents, err := readBounded(v.opts.workloadContract, 1<<20)
+	if err != nil {
+		return err
+	}
+	var contract workloadContract
+	if err := decodeExact(contents, []string{
+		"schema", "name", "patch_sha256", "file_path", "required_substrings",
+		"forbidden_substrings", "delta_operation_count",
+		"validation_command", "validation_command_sha256", "esbuild_sha256", "shell_sha256",
+	}, &contract); err != nil {
+		return err
+	}
+	if contract.Schema != 1 || contract.Name == "" || !validDigest(contract.PatchSHA256) ||
+		contract.FilePath == "" || path.Clean(contract.FilePath) != contract.FilePath ||
+		strings.HasPrefix(contract.FilePath, "/") || strings.HasPrefix(contract.FilePath, "../") ||
+		len(contract.RequiredSubstrings) == 0 || len(contract.ForbiddenSubstrings) == 0 ||
+		contract.DeltaOperationCount < 1 || !validDigest(contract.ValidationCommandSHA256) ||
+		contract.ValidationCommand == "" || strings.IndexByte(contract.ValidationCommand, 0) >= 0 ||
+		hashBytes([]byte(contract.ValidationCommand)) != contract.ValidationCommandSHA256 ||
+		!validDigest(contract.EsbuildSHA256) || !validDigest(contract.ShellSHA256) {
+		return errors.New("workload contract is malformed")
+	}
+	for _, expected := range []struct {
+		path   string
+		digest string
+	}{
+		{path: "bin/esbuild", digest: contract.EsbuildSHA256},
+		{path: "bin/sh", digest: contract.ShellSHA256},
+	} {
+		matches := 0
+		for _, entry := range v.payloadResult.Payload.Manifest.Entries {
+			if entry.Path == expected.path {
+				matches++
+				if entry.Type != "file" || entry.Mode&0o111 == 0 || entry.Size <= 0 ||
+					entry.SHA256 != expected.digest {
+					return fmt.Errorf("payload tool %q differs from the workload contract", expected.path)
+				}
+			}
+		}
+		if matches != 1 {
+			return fmt.Errorf("payload does not contain exactly one %q", expected.path)
+		}
+	}
+	if v.baseRepository.TreeRoot == v.finalRepository.TreeRoot ||
+		len(v.repositoryDelta.Operations) != contract.DeltaOperationCount {
+		return errors.New("repository change does not match the workload contract")
+	}
+	var data []byte
+	for _, entry := range v.finalRepository.Entries {
+		if entry.Path == contract.FilePath {
+			if entry.Type != repobundle.EntryFile {
+				return errors.New("workload target is not a regular file")
+			}
+			data = entry.Data
+			break
+		}
+	}
+	if data == nil || !utf8.Valid(data) {
+		return errors.New("workload target is missing or not UTF-8")
+	}
+	seen := make(map[string]struct{})
+	for _, required := range contract.RequiredSubstrings {
+		if required == "" {
+			return errors.New("workload contract contains an empty required substring")
+		}
+		if _, duplicate := seen["required\x00"+required]; duplicate {
+			return errors.New("workload contract repeats a required substring")
+		}
+		seen["required\x00"+required] = struct{}{}
+		if !bytes.Contains(data, []byte(required)) {
+			return fmt.Errorf("workload target omits required content %q", required)
+		}
+	}
+	for _, forbidden := range contract.ForbiddenSubstrings {
+		if forbidden == "" {
+			return errors.New("workload contract contains an empty forbidden substring")
+		}
+		if _, duplicate := seen["forbidden\x00"+forbidden]; duplicate {
+			return errors.New("workload contract repeats a forbidden substring")
+		}
+		seen["forbidden\x00"+forbidden] = struct{}{}
+		if bytes.Contains(data, []byte(forbidden)) {
+			return fmt.Errorf("workload target retains forbidden content %q", forbidden)
+		}
 	}
 	return nil
 }

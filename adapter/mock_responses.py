@@ -34,6 +34,7 @@ class ResponseFixture:
     namespace: str | None = None
     tool: str | None = None
     arguments: Mapping[str, Any] | None = None
+    input: str | None = None
 
 
 @dataclass(frozen=True)
@@ -104,6 +105,18 @@ def _render_fixture(fixture: ResponseFixture) -> bytes:
                 sort_keys=True,
                 separators=(",", ":"),
             ),
+        }
+        if fixture.namespace is not None:
+            item["namespace"] = fixture.namespace
+        output = {"type": "response.output_item.done", "item": item}
+    elif fixture.kind == "custom_tool_call":
+        if fixture.call_id is None or fixture.tool is None or fixture.input is None:
+            raise ValueError("custom tool fixture requires call_id, tool, and input")
+        item = {
+            "type": "custom_tool_call",
+            "call_id": fixture.call_id,
+            "name": fixture.tool,
+            "input": fixture.input,
         }
         if fixture.namespace is not None:
             item["namespace"] = fixture.namespace
@@ -209,6 +222,34 @@ class DeterministicResponsesServer:
                     namespace=namespace,
                     tool=tool,
                     arguments=dict(arguments),
+                )
+            )
+            self._condition.notify_all()
+
+    def enqueue_custom_tool_call(
+        self,
+        tool: str,
+        input: str,
+        *,
+        call_id: str,
+        namespace: str | None = None,
+        response_id: str | None = None,
+    ) -> None:
+        """Queue one Responses API custom-tool call with its exact raw input."""
+
+        if not tool or not call_id or not input:
+            raise ValueError("tool, call_id, and input must be nonempty")
+        if response_id is None:
+            response_id = self._allocate_response_id()
+        with self._condition:
+            self._fixtures.append(
+                ResponseFixture(
+                    kind="custom_tool_call",
+                    response_id=response_id,
+                    call_id=call_id,
+                    namespace=namespace,
+                    tool=tool,
+                    input=input,
                 )
             )
             self._condition.notify_all()

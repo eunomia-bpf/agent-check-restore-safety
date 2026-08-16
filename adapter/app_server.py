@@ -523,7 +523,10 @@ class CodexAppServer:
         *,
         tool_name: str = "protected_commit",
         tool_description: str = "Commit one protected test effect",
+        sandbox: str = "read-only",
     ) -> dict[str, Any]:
+        if sandbox not in {"read-only", "workspace-write"}:
+            raise ValueError("seed thread sandbox must be read-only or workspace-write")
         result = self.request(
             "thread/start",
             {
@@ -531,7 +534,7 @@ class CodexAppServer:
                 "ephemeral": False,
                 "model": self.model,
                 "modelProvider": _PROVIDER_ID,
-                "sandbox": "read-only",
+                "sandbox": sandbox,
                 "approvalPolicy": "never",
                 "environments": [],
                 "serviceName": "authority_continuity_adapter",
@@ -659,13 +662,23 @@ class CodexAppServer:
         *,
         expected_tool: str = "protected_commit",
         expected_arguments: Mapping[str, Any] | None = None,
+        approval_policy: str | None = None,
+        sandbox_policy: Mapping[str, Any] | None = None,
         timeout: float | None = None,
     ) -> PendingToolCall:
         if timeout is None:
             timeout = self.turn_timeout
+        params: dict[str, Any] = {
+            "threadId": thread_id,
+            "input": [{"type": "text", "text": text}],
+        }
+        if approval_policy is not None:
+            params["approvalPolicy"] = approval_policy
+        if sandbox_policy is not None:
+            params["sandboxPolicy"] = dict(sandbox_policy)
         result = self.request(
             "turn/start",
-            {"threadId": thread_id, "input": [{"type": "text", "text": text}]},
+            params,
         )
         turn = result.get("turn")
         if not isinstance(turn, dict) or not isinstance(turn.get("id"), str):

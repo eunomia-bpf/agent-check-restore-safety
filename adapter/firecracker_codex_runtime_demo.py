@@ -35,6 +35,9 @@ from adapter.test_app_server import PreflightResult, run_preflight
 RESULT_SCHEMA = 1
 _MAX_RUNTIME_RESULT_BYTES = 8 << 20
 _MAX_CONTROL_RESPONSE_BYTES = 4 << 20
+_MAX_WORKSPACE_PATCH_BYTES = 1 << 20
+_MAX_WORKSPACE_VALIDATION_COMMAND_BYTES = 64 << 10
+_WORKSPACE_VALIDATION_SHELL = "/opt/codex/bin/sh"
 _CONTROL_CHARACTERS = frozenset(chr(value) for value in range(32)) | {chr(127)}
 
 
@@ -428,7 +431,7 @@ def _write_exclusive_json(path: Path, value: Mapping[str, Any]) -> None:
 def _preflight_record(result: PreflightResult) -> dict[str, Any]:
     if not result.ok or not result.seed_archived:
         raise DemoError("deterministic App Server preflight did not complete safely")
-    return {
+    record = {
         "ok": True,
         "seed_thread_id": result.seed_thread_id,
         "seed_turn_id": result.seed_turn_id,
@@ -441,6 +444,22 @@ def _preflight_record(result: PreflightResult) -> dict[str, Any]:
         "models_request_count": result.models_request_count,
         "raw_record_count": result.raw_record_count,
     }
+    if result.workspace_edit_call_id is not None:
+        if result.workspace_patch_sha256 is None:
+            raise DemoError("workspace edit omitted its patch identity")
+        record["workspace_edit_call_id"] = result.workspace_edit_call_id
+        record["workspace_patch_sha256"] = _digest(
+            result.workspace_patch_sha256, "workspace_patch_sha256"
+        )
+    if result.workspace_validation_call_id is not None:
+        if result.workspace_validation_command_sha256 is None:
+            raise DemoError("workspace validation omitted its command identity")
+        record["workspace_validation_call_id"] = result.workspace_validation_call_id
+        record["workspace_validation_command_sha256"] = _digest(
+            result.workspace_validation_command_sha256,
+            "workspace_validation_command_sha256",
+        )
+    return record
 
 
 def run_demo(
@@ -466,6 +485,8 @@ def run_demo(
     sandbox_socket: Path | None = None,
     payment_url: str | None = None,
     repository_tree_root: str | None = None,
+    workspace_patch: str | None = None,
+    workspace_validation_command: str | None = None,
 ) -> dict[str, Any]:
     """Run one deterministic preflight and publish sanitized evidence metadata."""
 
@@ -486,6 +507,36 @@ def run_demo(
         verified[label] = record
 
     codex_digest = _digest(codex_sha256, "codex_sha256")
+    workspace_patch_digest: str | None = None
+    if workspace_patch is not None:
+        try:
+            encoded_patch = workspace_patch.encode("utf-8")
+        except UnicodeEncodeError as error:
+            raise DemoError("workspace patch is not valid UTF-8") from error
+        if not encoded_patch or len(encoded_patch) > _MAX_WORKSPACE_PATCH_BYTES:
+            raise DemoError(
+                "workspace patch must contain 1 to "
+                f"{_MAX_WORKSPACE_PATCH_BYTES} UTF-8 bytes"
+            )
+        workspace_patch_digest = sha256(encoded_patch).hexdigest()
+    workspace_validation_digest: str | None = None
+    if workspace_validation_command is not None:
+        if workspace_patch is None:
+            raise DemoError("workspace validation requires a workspace patch")
+        try:
+            encoded_command = workspace_validation_command.encode("utf-8")
+        except UnicodeEncodeError as error:
+            raise DemoError("workspace validation command is not valid UTF-8") from error
+        if (
+            not encoded_command
+            or len(encoded_command) > _MAX_WORKSPACE_VALIDATION_COMMAND_BYTES
+            or b"\x00" in encoded_command
+        ):
+            raise DemoError(
+                "workspace validation command must contain 1 to "
+                f"{_MAX_WORKSPACE_VALIDATION_COMMAND_BYTES} NUL-free UTF-8 bytes"
+            )
+        workspace_validation_digest = sha256(encoded_command).hexdigest()
     runtime_dir = _directory(
         runtime_evidence, "runtime_evidence", private=True, empty=True
     )
@@ -616,6 +667,13 @@ def run_demo(
                 workspace=workspace_dir,
                 raw_jsonl_path=raw_jsonl,
                 tool_handler=protected_operation,
+                workspace_patch=workspace_patch,
+                workspace_validation_command=workspace_validation_command,
+                workspace_validation_shell=(
+                    _WORKSPACE_VALIDATION_SHELL
+                    if workspace_validation_command is not None
+                    else None
+                ),
             )
         finally:
             os.umask(previous_umask)
@@ -623,6 +681,17 @@ def run_demo(
     if Path(preflight.raw_jsonl_path) != raw_jsonl:
         raise DemoError("preflight reported an unexpected App Server capture path")
     preflight_record = _preflight_record(preflight)
+    if workspace_patch_digest is not None and (
+        preflight.workspace_edit_call_id is None
+        or preflight.workspace_patch_sha256 != workspace_patch_digest
+    ):
+        raise DemoError("native Codex did not report the requested workspace edit")
+    if workspace_validation_digest is not None and (
+        preflight.workspace_validation_call_id is None
+        or preflight.workspace_validation_command_sha256
+        != workspace_validation_digest
+    ):
+        raise DemoError("native Codex did not report the requested workspace validation")
     runtime_value, runtime_fingerprint = _read_runtime_result(
         runtime_dir / "result.json",
         runner_sha256=verified["runner"]["sha256"],
@@ -634,6 +703,18 @@ def run_demo(
     )
     if adapter_fingerprint["size"] <= 0 or preflight.raw_record_count <= 0:
         raise DemoError("App Server JSONL capture is empty")
+
+    if workspace_patch_digest is not None:
+        repository_change = runtime_value.get("repository_change")
+        if not isinstance(repository_change, dict):
+            raise DemoError("runtime result omitted repository change evidence")
+        base_root = _digest(str(repository_change.get("base_root", "")), "base_root")
+        final_root = _digest(
+            str(repository_change.get("final_root", "")), "final_root"
+        )
+        operation_count = repository_change.get("operation_count")
+        if base_root == final_root or not isinstance(operation_count, int) or operation_count < 1:
+            raise DemoError("native Codex edit did not produce a nonempty repository delta")
 
     control_record: dict[str, Any] | None = None
     if join_requested:
@@ -798,12 +879,71 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
         "--repository-tree-root",
         help="canonical input repository tree root recorded in the initial binding",
     )
+    parser.add_argument(
+        "--workspace-patch-file",
+        type=Path,
+        help=(
+            "optional absolute UTF-8 apply_patch input; native Codex executes it "
+            "inside the externally sandboxed Firecracker workspace"
+        ),
+    )
+    parser.add_argument(
+        "--workspace-validation-command",
+        help=(
+            "optional command executed after the native edit and before the "
+            "protected callback, using /opt/codex/bin/sh inside Firecracker"
+        ),
+    )
     return parser.parse_args(argv)
+
+
+def _read_workspace_patch_file(value: Path | None) -> str | None:
+    if value is None:
+        return None
+    path, info = _canonical_existing(value, "workspace_patch_file")
+    if not stat.S_ISREG(info.st_mode) or info.st_size <= 0:
+        raise DemoError("workspace_patch_file must be a nonempty regular file")
+    if info.st_size > _MAX_WORKSPACE_PATCH_BYTES:
+        raise DemoError(
+            f"workspace_patch_file exceeds {_MAX_WORKSPACE_PATCH_BYTES} bytes"
+        )
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as error:
+        raise DemoError("cannot open workspace_patch_file") from error
+    try:
+        opened = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(opened.st_mode)
+            or (opened.st_dev, opened.st_ino, opened.st_size)
+            != (info.st_dev, info.st_ino, info.st_size)
+        ):
+            raise DemoError("workspace_patch_file changed while it was opened")
+        data = bytearray()
+        while block := os.read(descriptor, 1 << 16):
+            data.extend(block)
+            if len(data) > _MAX_WORKSPACE_PATCH_BYTES:
+                raise DemoError("workspace_patch_file grew while it was read")
+    finally:
+        os.close(descriptor)
+    current = path.lstat()
+    if (current.st_dev, current.st_ino, current.st_size) != (
+        info.st_dev,
+        info.st_ino,
+        info.st_size,
+    ):
+        raise DemoError("workspace_patch_file changed while it was read")
+    try:
+        return bytes(data).decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise DemoError("cannot read workspace_patch_file as UTF-8") from error
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parse_args(argv)
     try:
+        workspace_patch = _read_workspace_patch_file(args.workspace_patch_file)
         result = run_demo(
             runner=args.runner,
             runner_sha256=args.runner_sha256,
@@ -826,6 +966,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             sandbox_socket=args.sandbox_socket,
             payment_url=args.payment_url,
             repository_tree_root=args.repository_tree_root,
+            workspace_patch=workspace_patch,
+            workspace_validation_command=args.workspace_validation_command,
         )
     except Exception as error:
         print(f"Firecracker Codex demo failed: {error}", file=sys.stderr)
