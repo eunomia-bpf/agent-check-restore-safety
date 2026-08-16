@@ -13,13 +13,20 @@ directories.
 from __future__ import annotations
 
 import argparse
+import base64
 from hashlib import sha256
+import http.client
 import json
 import os
 from pathlib import Path
+import secrets
+import socket
 import stat
 import sys
 from typing import Any, Mapping, Sequence
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlsplit
+from urllib.request import ProxyHandler, Request, build_opener
 
 from adapter.firecracker_codex import create_firecracker_codex
 from adapter.test_app_server import PreflightResult, run_preflight
@@ -27,6 +34,7 @@ from adapter.test_app_server import PreflightResult, run_preflight
 
 RESULT_SCHEMA = 1
 _MAX_RUNTIME_RESULT_BYTES = 8 << 20
+_MAX_CONTROL_RESPONSE_BYTES = 4 << 20
 _CONTROL_CHARACTERS = frozenset(chr(value) for value in range(32)) | {chr(127)}
 
 
@@ -161,6 +169,199 @@ def _fingerprint_private_file(path: Path, label: str) -> dict[str, Any]:
     }
 
 
+def _read_private_token(path: Path, label: str) -> str:
+    resolved, info = _canonical_existing(path, label)
+    if (
+        not stat.S_ISREG(info.st_mode)
+        or stat.S_IMODE(info.st_mode) != 0o600
+        or info.st_uid != os.geteuid()
+        or info.st_size < 32
+        or info.st_size > 4096
+    ):
+        raise DemoError(f"{label} must be a private current-user token file")
+    try:
+        value = resolved.read_text(encoding="utf-8").strip()
+    except (OSError, UnicodeError) as error:
+        raise DemoError(f"cannot read {label}") from error
+    if len(value) < 32 or any(character.isspace() for character in value):
+        raise DemoError(f"{label} contains an invalid token")
+    return value
+
+
+def _sandbox_socket_path(value: Path) -> Path:
+    raw = os.fspath(value)
+    if (
+        not raw
+        or not os.path.isabs(raw)
+        or os.path.normpath(raw) != raw
+        or len(os.fsencode(raw)) >= 108
+        or any(character in _CONTROL_CHARACTERS for character in raw)
+    ):
+        raise DemoError("sandbox_socket must be an absolute canonical Unix socket path")
+    parent = value.parent
+    try:
+        parent_info = parent.lstat()
+        resolved_parent = parent.resolve(strict=True)
+    except OSError as error:
+        raise DemoError("cannot inspect sandbox_socket parent") from error
+    if (
+        not stat.S_ISDIR(parent_info.st_mode)
+        or stat.S_ISLNK(parent_info.st_mode)
+        or resolved_parent != parent
+        or stat.S_IMODE(parent_info.st_mode) != 0o700
+        or parent_info.st_uid != os.geteuid()
+    ):
+        raise DemoError("sandbox_socket parent must be a private current-user directory")
+    return value
+
+
+def _verify_sandbox_socket(path: Path) -> None:
+    try:
+        info = path.lstat()
+    except OSError as error:
+        raise DemoError("sandbox endpoint was not published") from error
+    if (
+        not stat.S_ISSOCK(info.st_mode)
+        or stat.S_IMODE(info.st_mode) != 0o600
+        or info.st_uid != os.geteuid()
+    ):
+        raise DemoError("sandbox endpoint is not a private current-user Unix socket")
+
+
+class _UnixHTTPConnection(http.client.HTTPConnection):
+    def __init__(self, socket_path: Path) -> None:
+        super().__init__("localhost", timeout=45.0)
+        self._socket_path = os.fspath(socket_path)
+
+    def connect(self) -> None:
+        connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        connection.settimeout(self.timeout)
+        try:
+            connection.connect(self._socket_path)
+        except BaseException:
+            connection.close()
+            raise
+        self.sock = connection
+
+
+def _post_sandbox_json(socket_path: Path, value: Mapping[str, Any]) -> dict[str, Any]:
+    encoded = json.dumps(
+        dict(value), sort_keys=True, separators=(",", ":"), ensure_ascii=True
+    ).encode("utf-8")
+    connection = _UnixHTTPConnection(socket_path)
+    try:
+        connection.request(
+            "POST",
+            "/v1/execute",
+            body=encoded,
+            headers={"Content-Type": "application/json"},
+        )
+        response = connection.getresponse()
+        body = response.read(_MAX_CONTROL_RESPONSE_BYTES + 1)
+        status = response.status
+    except (OSError, http.client.HTTPException) as error:
+        raise DemoError("sandbox Operation request failed") from error
+    finally:
+        connection.close()
+    if status != 200 or len(body) > _MAX_CONTROL_RESPONSE_BYTES:
+        raise DemoError(
+            f"sandbox Operation request returned HTTP {status}: "
+            + body[:1024].decode("utf-8", "replace")
+        )
+    try:
+        result = json.loads(body)
+    except json.JSONDecodeError as error:
+        raise DemoError("sandbox Operation response is not valid JSON") from error
+    if not isinstance(result, dict):
+        raise DemoError("sandbox Operation response is not an object")
+    return result
+
+
+def _loopback_url(value: str, label: str) -> str:
+    try:
+        parsed = urlsplit(value)
+    except ValueError as error:
+        raise DemoError(f"{label} is not a URL") from error
+    if (
+        parsed.scheme != "http"
+        or parsed.hostname not in {"127.0.0.1", "::1"}
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+        or parsed.path not in {"", "/"}
+    ):
+        raise DemoError(f"{label} must be one credential-free loopback HTTP origin")
+    return value.rstrip("/")
+
+
+def _post_json(origin: str, token: str, path: str, value: Mapping[str, Any]) -> dict[str, Any]:
+    encoded = json.dumps(
+        dict(value), sort_keys=True, separators=(",", ":"), ensure_ascii=True
+    ).encode("utf-8")
+    request = Request(
+        origin + path,
+        data=encoded,
+        headers={
+            "Authorization": "Bearer " + token,
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    opener = build_opener(ProxyHandler({}))
+    try:
+        with opener.open(request, timeout=45.0) as response:
+            body = response.read(_MAX_CONTROL_RESPONSE_BYTES + 1)
+            status = response.status
+    except HTTPError as error:
+        detail = error.read(_MAX_CONTROL_RESPONSE_BYTES + 1)
+        raise DemoError(
+            f"control request {path} returned HTTP {error.code}: "
+            + detail[:1024].decode("utf-8", "replace")
+        ) from error
+    except (OSError, URLError) as error:
+        raise DemoError(f"control request {path} failed") from error
+    if status != 200 or len(body) > _MAX_CONTROL_RESPONSE_BYTES:
+        raise DemoError(f"control request {path} returned an invalid response")
+    try:
+        result = json.loads(body)
+    except json.JSONDecodeError as error:
+        raise DemoError(f"control request {path} returned invalid JSON") from error
+    if not isinstance(result, dict):
+        raise DemoError(f"control request {path} did not return an object")
+    return result
+
+
+def _requirement(identifier: str, payment_url: str) -> dict[str, Any]:
+    return {
+        "id": identifier,
+        "results": {"callback-committed": 1},
+        "capacities": {"external-write": 1},
+        "kinds": {
+            "protected_commit": {
+                "costs": {"external-write": 1},
+                "produces": {"callback-committed": 1},
+                "retry_safe": True,
+                "queryable": False,
+                "target": payment_url + "/v1/charge",
+                "method": "POST",
+                "response_classifier": "operation-receipt-v1",
+            }
+        },
+    }
+
+
+def _binding(host_instance_id: str, generation: int, repository_root: str) -> dict[str, Any]:
+    return {
+        "sandbox_id": "firecracker-codex",
+        "generation": generation,
+        "host_instance_id": host_instance_id,
+        "domain": "firecracker-codex-vm",
+        "allowed_kinds": ["protected_commit"],
+        "repository_root": repository_root,
+    }
+
+
 def _read_runtime_result(
     path: Path,
     *,
@@ -260,6 +461,11 @@ def run_demo(
     runtime_evidence: Path,
     adapter_evidence: Path,
     workspace: Path,
+    control_url: str | None = None,
+    admin_token_file: Path | None = None,
+    sandbox_socket: Path | None = None,
+    payment_url: str | None = None,
+    repository_tree_root: str | None = None,
 ) -> dict[str, Any]:
     """Run one deterministic preflight and publish sanitized evidence metadata."""
 
@@ -287,17 +493,105 @@ def run_demo(
         adapter_evidence, "adapter_evidence", private=True, empty=True
     )
     workspace_dir = _directory(workspace, "workspace", private=False, empty=True)
-    _require_pairwise_disjoint(
-        {
-            **artifact_paths,
-            "runtime_evidence": runtime_dir,
-            "adapter_evidence": adapter_dir,
-            "workspace": workspace_dir,
-        }
+    disjoint_paths = {
+        **artifact_paths,
+        "runtime_evidence": runtime_dir,
+        "adapter_evidence": adapter_dir,
+        "workspace": workspace_dir,
+    }
+    join_inputs = (
+        control_url,
+        admin_token_file,
+        sandbox_socket,
+        payment_url,
+        repository_tree_root,
     )
+    join_requested = any(value is not None for value in join_inputs)
+    if join_requested and not all(value is not None for value in join_inputs):
+        raise DemoError("the five control-join options must be supplied together")
+
+    admin_token: str | None = None
+    control_origin: str | None = None
+    payment_origin: str | None = None
+    sandbox_endpoint: Path | None = None
+    source_binding: dict[str, Any] | None = None
+    control_operation: dict[str, Any] = {}
+    if join_requested:
+        assert admin_token_file is not None
+        assert sandbox_socket is not None
+        admin_path, _ = _canonical_existing(admin_token_file, "admin_token_file")
+        disjoint_paths["admin_token_file"] = admin_path
+        admin_token = _read_private_token(admin_path, "admin_token_file")
+        sandbox_endpoint = _sandbox_socket_path(sandbox_socket)
+        disjoint_paths["sandbox_socket"] = sandbox_endpoint
+        assert control_url is not None
+        assert payment_url is not None
+        assert repository_tree_root is not None
+        control_origin = _loopback_url(control_url, "control_url")
+        payment_origin = _loopback_url(payment_url, "payment_url")
+        base_root = _digest(repository_tree_root, "repository_tree_root")
+        source_binding = _binding(
+            "host-" + secrets.token_hex(16), 1, base_root
+        )
+    _require_pairwise_disjoint(disjoint_paths)
+
+    if join_requested:
+        assert control_origin is not None
+        assert payment_origin is not None
+        assert admin_token is not None
+        assert source_binding is not None
+        certificate = _post_json(
+            control_origin,
+            admin_token,
+            "/v1/compile",
+            _requirement("firecracker-codex-before", payment_origin),
+        )
+        if certificate.get("decision") != "activate" or not isinstance(
+            certificate.get("rule"), dict
+        ):
+            raise DemoError("control refused the initial Firecracker Rule")
+        initial = _post_json(
+            control_origin,
+            admin_token,
+            "/v1/cutover",
+            {"certificate": certificate, "bindings": [source_binding]},
+        )
+        bindings = initial.get("bindings")
+        if not isinstance(bindings, list) or bindings != [source_binding]:
+            raise DemoError("control returned a different initial sandbox binding")
+        assert sandbox_endpoint is not None
+        _verify_sandbox_socket(sandbox_endpoint)
 
     raw_jsonl = adapter_dir / "app-server.jsonl"
     result_path = adapter_dir / "result.json"
+    def protected_operation(pending: Any) -> None:
+        if not join_requested:
+            pending.respond_text(f"receipt:{pending.arguments['effect_id']}")
+            return
+        assert control_origin is not None
+        assert sandbox_endpoint is not None
+        body = json.dumps(
+            {"effect_id": pending.arguments["effect_id"]},
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        outcome = _post_sandbox_json(
+            sandbox_endpoint,
+            {
+                "call_id": pending.call_id,
+                "kind": "protected_commit",
+                "body": base64.b64encode(body).decode("ascii"),
+            },
+        )
+        if (
+            outcome.get("phase") != "succeeded"
+            or not isinstance(outcome.get("operation_id"), str)
+            or not isinstance(outcome.get("result_hash"), str)
+        ):
+            raise DemoError("Operation gateway did not settle the protected callback")
+        control_operation.update(outcome)
+        pending.respond_text(f"receipt:{pending.arguments['effect_id']}")
+
     with create_firecracker_codex(
         runner=artifact_paths["runner"],
         runner_sha256=verified["runner"]["sha256"],
@@ -321,6 +615,7 @@ def run_demo(
                 codex_binary=os.fspath(wrapped.executable),
                 workspace=workspace_dir,
                 raw_jsonl_path=raw_jsonl,
+                tool_handler=protected_operation,
             )
         finally:
             os.umask(previous_umask)
@@ -340,6 +635,88 @@ def run_demo(
     if adapter_fingerprint["size"] <= 0 or preflight.raw_record_count <= 0:
         raise DemoError("App Server JSONL capture is empty")
 
+    control_record: dict[str, Any] | None = None
+    if join_requested:
+        assert control_origin is not None
+        assert payment_origin is not None
+        assert admin_token is not None
+        assert source_binding is not None
+        repository_change = runtime_value.get("repository_change")
+        artifacts = runtime_value.get("artifacts")
+        if not isinstance(repository_change, dict) or not isinstance(artifacts, dict):
+            raise DemoError("runtime result omitted repository change evidence")
+        checkpoint = artifacts.get("checkpoint")
+        final_bundle = artifacts.get("repository_final")
+        delta = artifacts.get("repository_delta")
+        if not all(isinstance(item, dict) for item in (checkpoint, final_bundle, delta)):
+            raise DemoError("runtime result omitted checkpoint or repository artifacts")
+        assert isinstance(checkpoint, dict)
+        assert isinstance(final_bundle, dict)
+        assert isinstance(delta, dict)
+        base_root = _digest(str(repository_change.get("base_root", "")), "base_root")
+        final_root = _digest(str(repository_change.get("final_root", "")), "final_root")
+        if base_root != source_binding["repository_root"]:
+            raise DemoError("runtime repository base differs from the active binding")
+        target_binding = _binding("host-" + secrets.token_hex(16), 2, final_root)
+        certificate = _post_json(
+            control_origin,
+            admin_token,
+            "/v1/compile",
+            _requirement("firecracker-codex-after", payment_origin),
+        )
+        history = certificate.get("history")
+        if certificate.get("decision") != "activate" or not isinstance(history, dict):
+            raise DemoError("control refused the post-execution Rule")
+        repository_record = {
+            "sandbox_id": source_binding["sandbox_id"],
+            "source_generation": source_binding["generation"],
+            "source_host_instance_id": source_binding["host_instance_id"],
+            "checkpoint_sha256": _digest(
+                str(checkpoint.get("sha256", "")), "checkpoint_sha256"
+            ),
+            "base_root": base_root,
+            "final_root": final_root,
+            "final_bundle_sha256": _digest(
+                str(final_bundle.get("sha256", "")), "final_bundle_sha256"
+            ),
+            "final_bundle_size": final_bundle.get("size"),
+            "delta_sha256": _digest(
+                str(delta.get("sha256", "")), "delta_sha256"
+            ),
+            "delta_size": delta.get("size"),
+        }
+        committed = _post_json(
+            control_origin,
+            admin_token,
+            "/v1/cutover",
+            {
+                "certificate": certificate,
+                "bindings": [target_binding],
+                "repositories": [repository_record],
+            },
+        )
+        state = committed.get("state")
+        bindings = committed.get("bindings")
+        if (
+            not isinstance(state, dict)
+            or not isinstance(state.get("history"), dict)
+            or bindings != [target_binding]
+        ):
+            raise DemoError("control returned a different repository Cutover")
+        control_record = {
+            "operation": {
+                "operation_id": control_operation["operation_id"],
+                "phase": control_operation["phase"],
+                "result_hash": control_operation["result_hash"],
+                "reused": bool(control_operation.get("reused", False)),
+            },
+            "certificate_history": history,
+            "committed_history": state["history"],
+            "source_binding": source_binding,
+            "target_binding": target_binding,
+            "repository": repository_record,
+        }
+
     record: dict[str, Any] = {
         "schema": RESULT_SCHEMA,
         "ok": True,
@@ -358,6 +735,8 @@ def run_demo(
         "preflight": preflight_record,
         "independent_evidence_check": "required",
     }
+    if control_record is not None:
+        record["control"] = control_record
     _write_exclusive_json(result_path, record)
     return record
 
@@ -404,6 +783,21 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
         type=Path,
         help="existing empty canonical host workspace",
     )
+    parser.add_argument(
+        "--control-url",
+        help="optional loopback control API; requires all other control-join options",
+    )
+    parser.add_argument("--admin-token-file", type=Path)
+    parser.add_argument(
+        "--sandbox-socket",
+        type=Path,
+        help="host-owned Unix socket for the bound Firecracker instance",
+    )
+    parser.add_argument("--payment-url", help="loopback external-effect service origin")
+    parser.add_argument(
+        "--repository-tree-root",
+        help="canonical input repository tree root recorded in the initial binding",
+    )
     return parser.parse_args(argv)
 
 
@@ -427,6 +821,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             runtime_evidence=args.runtime_evidence,
             adapter_evidence=args.adapter_evidence,
             workspace=args.workspace,
+            control_url=args.control_url,
+            admin_token_file=args.admin_token_file,
+            sandbox_socket=args.sandbox_socket,
+            payment_url=args.payment_url,
+            repository_tree_root=args.repository_tree_root,
         )
     except Exception as error:
         print(f"Firecracker Codex demo failed: {error}", file=sys.stderr)

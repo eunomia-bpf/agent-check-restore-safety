@@ -96,6 +96,24 @@ func TestManagerAttachFailureRemovesEveryPreparedSocket(t *testing.T) {
 	}
 }
 
+func TestManagerRejectsRepositoryRootMismatch(t *testing.T) {
+	controller, _, manager := newTestManager(t)
+	defer controller.Close()
+	defer manager.Close()
+	binding := testManagerBinding("vm", 1, "host-v1", "agent")
+	binding.RepositoryRoot = strings.Repeat("a", 64)
+	commitBindings(t, controller, "manager-repository-root", []control.SandboxBinding{binding})
+	wrong := binding
+	wrong.RepositoryRoot = strings.Repeat("b", 64)
+	if err := manager.ReplaceCommitted([]control.SandboxBinding{wrong}); err == nil ||
+		!strings.Contains(err.Error(), "committed sandbox set") {
+		t.Fatalf("repository root mismatch was accepted: %v", err)
+	}
+	if _, err := os.Lstat(manager.PathForSandbox(binding.SandboxID)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("mismatched endpoint was published: %v", err)
+	}
+}
+
 func TestManagerReplacesFreshGenerationAtStablePath(t *testing.T) {
 	controller, _, manager := newTestManager(t)
 	defer controller.Close()

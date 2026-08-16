@@ -125,6 +125,17 @@ Certificate binds all Operation progress at that head; a later Operation event
 makes the whole cutover stale. Existing clients may omit repository evidence
 and keep the original cutover protocol.
 
+The real Codex path now exercises this join rather than only emitting its
+inputs. Before the VM starts, control publishes a generation-bound private Unix
+socket. The protected Codex callback crosses that socket with only its stable
+call ID, kind, and payload; the host supplies the frozen provider route and
+derives an Operation identity owned by the sandbox. After snapshot restore and
+turn completion, one repository-aware Cutover records the replacement binding
+and artifacts. A separate offline checker joins the Firecracker result, all
+five History events, the external head anchor, and the provider's single
+durable commit. Repeating the same callback through the replacement generation
+returns the stored result without another provider delivery or History event.
+
 ## Add it to an HTTP service
 
 The business-service integration requires no workflow-engine plugin or SDK. It
@@ -697,11 +708,15 @@ general exactly-once claim nor proof that every unknown Operation can finish.
   from changing unless the same History event binds the source instance,
   canonical VM checkpoint, final bundle, delta, replacement binding, and
   History-bound Certificate;
+- a real Firecracker/Codex vertical path in which the callback uses a
+  credential-free generation-bound socket, becomes a sandbox-owned Operation,
+  commits once externally, and is reused by the replacement generation while
+  the final Cutover binds the VM and repository evidence;
 - an unmodified DeathStarBench application path where a Mongo commit with a
   lost response is recovered after deleting v1, without redispatch, and a v2
   Operation then completes through the replacement frontend; and
-- a separately implemented, standard-library-only Certificate checker binary,
-  required by both live Rule activation and durable History replay.
+- separately implemented, standard-library-only checkers for Certificates and
+  for the complete Firecracker/History/external-commit join.
 
 Run the daemon directly:
 
@@ -748,7 +763,8 @@ This is an early system slice, not the complete system. It does not yet provide:
 
 - a production multi-VM QEMU/Firecracker process manager; functional QEMU and
   Firecracker runners exist, but the Firecracker path does not yet use jailer,
-  dedicated identities, cgroups, or a fleet lifecycle manager;
+  a dedicated host identity, or a fleet lifecycle manager (the guest Codex
+  process tree does run in its own cgroup-v2 domain);
 - a maintained production application workload; DeathStarBench is a real,
   unmodified benchmark but not the eventual maintained order/payment target;
 - general host-level prevention of direct network or device access beyond the

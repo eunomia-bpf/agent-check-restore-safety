@@ -116,12 +116,19 @@ type resultRecord struct {
 	SealedBootInputs        []sealedArtifactRecord    `json:"sealed_boot_inputs,omitempty"`
 	SealedLoadInputs        []sealedArtifactRecord    `json:"sealed_load_inputs,omitempty"`
 	Checkpoint              *codexvm.Checkpoint       `json:"checkpoint,omitempty"`
+	RepositoryChange        *repositoryChangeRecord   `json:"repository_change,omitempty"`
 	Processes               []processRecord           `json:"processes,omitempty"`
 	G1SIGKILLConfirmed      bool                      `json:"g1_sigkill_confirmed"`
 	SnapshotLoadedPaused    bool                      `json:"snapshot_loaded_paused"`
 	RelayArmedBeforeResume  bool                      `json:"relay_armed_before_resume"`
 	ToolReleasedAfterAttach bool                      `json:"tool_released_after_g3_attach"`
 	CompletedTimeNS         int64                     `json:"completed_time_ns"`
+}
+
+type repositoryChangeRecord struct {
+	BaseRoot       string `json:"base_root"`
+	FinalRoot      string `json:"final_root"`
+	OperationCount int    `json:"operation_count"`
 }
 
 type workspaceMappingRecord struct {
@@ -1352,6 +1359,10 @@ func (r *runner) receiveFinalRepository() error {
 	}
 	r.result.Artifacts["repository_final"] = finalArtifact
 	r.result.Artifacts["repository_delta"] = deltaArtifact
+	r.result.RepositoryChange = &repositoryChangeRecord{
+		BaseRoot: r.repositoryTree.TreeRoot.String(), FinalRoot: finalBundle.TreeRoot.String(),
+		OperationCount: len(delta.Operations),
+	}
 	return r.events.Record("repository-exported", r.g3, map[string]any{
 		"base_root": r.repositoryTree.TreeRoot.String(), "final_root": finalBundle.TreeRoot.String(),
 		"operation_count": len(delta.Operations), "final_bundle": finalArtifact, "delta": deltaArtifact,

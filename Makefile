@@ -1,4 +1,4 @@
-.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-repository runtime-firecracker-codex-demo runtime-firecracker-codex-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
+.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-repository runtime-firecracker-codex-demo runtime-firecracker-codex-check runtime-firecracker-codex-control-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
 
 VM_ACCEL ?= tcg
 VM_BACKEND ?= qemu
@@ -18,6 +18,9 @@ FIRECRACKER_CODEX_ADAPTER_EVIDENCE ?=
 FIRECRACKER_CODEX_PAYLOAD ?=
 FIRECRACKER_CODEX_PAYLOAD_RESULT ?=
 FIRECRACKER_CODEX_RUNNER ?=
+FIRECRACKER_CODEX_CONTROL_HISTORY ?=
+FIRECRACKER_CODEX_HEAD_ANCHOR ?=
+FIRECRACKER_CODEX_PAYMENT_HISTORY ?=
 RUNTIME_IMAGE ?= safe-change-runtime:local
 RUNTIME_VERSION ?= dev
 RUNTIME_REVISION ?= $(shell git rev-parse --short=12 HEAD)
@@ -156,7 +159,7 @@ runtime-firecracker-codex-repository:
 
 runtime-firecracker-codex-demo:
 	@test -c /dev/kvm || { echo "/dev/kvm is missing or is not a character device" >&2; exit 2; }
-	@test -r /dev/kvm && test -w /dev/kvm || { echo "Firecracker Codex demo requires read/write access to /dev/kvm" >&2; exit 2; }
+	@test -r /dev/kvm && test -w /dev/kvm || { echo "Firecracker Codex demo requires read/write access to /dev/kvm; refresh the kvm group or run: sg kvm -c 'make runtime-firecracker-codex-demo ...'" >&2; exit 2; }
 	python3 -m adapter.firecracker_codex_runtime_demo \
 		$(FIRECRACKER_CODEX_DEMO_ARGS)
 
@@ -172,6 +175,19 @@ runtime-firecracker-codex-check:
 		-payload "$(abspath $(FIRECRACKER_CODEX_PAYLOAD))" \
 		-payload-result "$(abspath $(FIRECRACKER_CODEX_PAYLOAD_RESULT))" \
 		-runner "$(abspath $(FIRECRACKER_CODEX_RUNNER))"
+
+runtime-firecracker-codex-control-check:
+	@test -n "$(strip $(FIRECRACKER_CODEX_EVIDENCE))" || { echo "FIRECRACKER_CODEX_EVIDENCE must name the retained runtime evidence directory" >&2; exit 2; }
+	@test -n "$(strip $(FIRECRACKER_CODEX_ADAPTER_EVIDENCE))" || { echo "FIRECRACKER_CODEX_ADAPTER_EVIDENCE must name the retained adapter evidence directory" >&2; exit 2; }
+	@test -n "$(strip $(FIRECRACKER_CODEX_CONTROL_HISTORY))" || { echo "FIRECRACKER_CODEX_CONTROL_HISTORY must name the retained control History" >&2; exit 2; }
+	@test -n "$(strip $(FIRECRACKER_CODEX_HEAD_ANCHOR))" || { echo "FIRECRACKER_CODEX_HEAD_ANCHOR must name the retained external head anchor" >&2; exit 2; }
+	@test -n "$(strip $(FIRECRACKER_CODEX_PAYMENT_HISTORY))" || { echo "FIRECRACKER_CODEX_PAYMENT_HISTORY must name the retained external commit history" >&2; exit 2; }
+	cd runtime && go run ./cmd/check-firecracker-codex-control-evidence \
+		-runtime-evidence "$(abspath $(FIRECRACKER_CODEX_EVIDENCE))" \
+		-adapter-result "$(abspath $(FIRECRACKER_CODEX_ADAPTER_EVIDENCE))/result.json" \
+		-history "$(abspath $(FIRECRACKER_CODEX_CONTROL_HISTORY))" \
+		-head-anchor "$(abspath $(FIRECRACKER_CODEX_HEAD_ANCHOR))" \
+		-payment-history "$(abspath $(FIRECRACKER_CODEX_PAYMENT_HISTORY))"
 
 # Explicit live-account target. It is intentionally not part of runtime-verify.
 runtime-codex-demo:

@@ -316,6 +316,7 @@ func bindingSetsEqual(left, right []control.SandboxBinding) bool {
 			left[index].Generation != right[index].Generation ||
 			left[index].HostInstanceID != right[index].HostInstanceID ||
 			left[index].Domain != right[index].Domain ||
+			left[index].RepositoryRoot != right[index].RepositoryRoot ||
 			!stringsEqual(left[index].AllowedKinds, right[index].AllowedKinds) {
 			return false
 		}

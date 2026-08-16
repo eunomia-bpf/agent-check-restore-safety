@@ -139,26 +139,33 @@ type checkpointEvidence struct {
 	StreamCheckpoint   checkpoint `json:"stream_checkpoint"`
 }
 
+type repositoryChangeRecord struct {
+	BaseRoot       string `json:"base_root"`
+	FinalRoot      string `json:"final_root"`
+	OperationCount int    `json:"operation_count"`
+}
+
 type resultRecord struct {
-	Schema                  int                 `json:"schema"`
-	Success                 bool                `json:"success"`
-	SessionID               string              `json:"session_id"`
-	CodexSHA256             string              `json:"codex_sha256"`
-	RunnerSHA256            string              `json:"runner_sha256"`
-	ArgumentsSHA256         string              `json:"arguments_sha256"`
-	ArgumentsEncoding       string              `json:"arguments_encoding"`
-	ArgumentsCount          int                 `json:"arguments_count"`
-	WorkspaceMapping        workspaceMapping    `json:"workspace_mapping"`
-	Artifacts               map[string]artifact `json:"artifacts"`
-	SealedBootInputs        []sealedArtifact    `json:"sealed_boot_inputs"`
-	SealedLoadInputs        []sealedArtifact    `json:"sealed_load_inputs"`
-	Checkpoint              checkpoint          `json:"checkpoint"`
-	Processes               []processRecord     `json:"processes"`
-	G1SIGKILLConfirmed      bool                `json:"g1_sigkill_confirmed"`
-	SnapshotLoadedPaused    bool                `json:"snapshot_loaded_paused"`
-	RelayArmedBeforeResume  bool                `json:"relay_armed_before_resume"`
-	ToolReleasedAfterAttach bool                `json:"tool_released_after_g3_attach"`
-	CompletedTimeNS         int64               `json:"completed_time_ns"`
+	Schema                  int                    `json:"schema"`
+	Success                 bool                   `json:"success"`
+	SessionID               string                 `json:"session_id"`
+	CodexSHA256             string                 `json:"codex_sha256"`
+	RunnerSHA256            string                 `json:"runner_sha256"`
+	ArgumentsSHA256         string                 `json:"arguments_sha256"`
+	ArgumentsEncoding       string                 `json:"arguments_encoding"`
+	ArgumentsCount          int                    `json:"arguments_count"`
+	WorkspaceMapping        workspaceMapping       `json:"workspace_mapping"`
+	Artifacts               map[string]artifact    `json:"artifacts"`
+	SealedBootInputs        []sealedArtifact       `json:"sealed_boot_inputs"`
+	SealedLoadInputs        []sealedArtifact       `json:"sealed_load_inputs"`
+	Checkpoint              checkpoint             `json:"checkpoint"`
+	RepositoryChange        repositoryChangeRecord `json:"repository_change"`
+	Processes               []processRecord        `json:"processes"`
+	G1SIGKILLConfirmed      bool                   `json:"g1_sigkill_confirmed"`
+	SnapshotLoadedPaused    bool                   `json:"snapshot_loaded_paused"`
+	RelayArmedBeforeResume  bool                   `json:"relay_armed_before_resume"`
+	ToolReleasedAfterAttach bool                   `json:"tool_released_after_g3_attach"`
+	CompletedTimeNS         int64                  `json:"completed_time_ns"`
 }
 
 type guestConfig struct {
@@ -825,7 +832,7 @@ func (v *verifier) verifyResultAndArtifacts() error {
 	if err := requirePrivateFile(path); err != nil {
 		return err
 	}
-	fields := []string{"schema", "success", "session_id", "codex_sha256", "runner_sha256", "arguments_sha256", "arguments_encoding", "arguments_count", "workspace_mapping", "artifacts", "sealed_boot_inputs", "sealed_load_inputs", "checkpoint", "processes", "g1_sigkill_confirmed", "snapshot_loaded_paused", "relay_armed_before_resume", "tool_released_after_g3_attach", "completed_time_ns"}
+	fields := []string{"schema", "success", "session_id", "codex_sha256", "runner_sha256", "arguments_sha256", "arguments_encoding", "arguments_count", "workspace_mapping", "artifacts", "sealed_boot_inputs", "sealed_load_inputs", "checkpoint", "repository_change", "processes", "g1_sigkill_confirmed", "snapshot_loaded_paused", "relay_armed_before_resume", "tool_released_after_g3_attach", "completed_time_ns"}
 	data, err := readStrictJSON(path, fields, &v.result)
 	if err != nil {
 		return err
@@ -864,6 +871,9 @@ func (v *verifier) verifyResultAndArtifacts() error {
 		return err
 	}
 	if err := decodeCheckpoint(root["checkpoint"], &v.result.Checkpoint); err != nil {
+		return err
+	}
+	if err := decodeExact(root["repository_change"], []string{"base_root", "final_root", "operation_count"}, &v.result.RepositoryChange); err != nil {
 		return err
 	}
 	for _, field := range []struct {
@@ -1355,6 +1365,11 @@ func (v *verifier) verifyGuestAndInitramfs() error {
 		return errors.Join(errors.New("retained repository delta does not reconstruct the retained final tree"), err)
 	}
 	v.baseRepository, v.finalRepository, v.repositoryDelta = repository, finalRepository, delta
+	if v.result.RepositoryChange.BaseRoot != repository.TreeRoot.String() ||
+		v.result.RepositoryChange.FinalRoot != finalRepository.TreeRoot.String() ||
+		v.result.RepositoryChange.OperationCount != len(delta.Operations) {
+		return errors.New("result repository change differs from retained trees and delta")
+	}
 	if len(v.guest.Arguments) != v.result.ArgumentsCount || len(v.guest.Arguments) < 2 || v.guest.Arguments[0] != "app-server" || v.guest.Arguments[1] != "--stdio" {
 		return errors.New("guest arguments are not the fixed App Server entrypoint")
 	}

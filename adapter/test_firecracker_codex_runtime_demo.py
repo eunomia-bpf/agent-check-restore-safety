@@ -2,14 +2,25 @@ from __future__ import annotations
 
 from contextlib import redirect_stderr, redirect_stdout
 from hashlib import sha256
+from http.server import BaseHTTPRequestHandler
 import io
 import json
+import os
 from pathlib import Path
+import socketserver
 import tempfile
+import threading
 import unittest
 from unittest import mock
 
-from adapter.firecracker_codex_runtime_demo import DemoError, main, run_demo
+from adapter.firecracker_codex_runtime_demo import (
+    DemoError,
+    _post_sandbox_json,
+    _sandbox_socket_path,
+    _verify_sandbox_socket,
+    main,
+    run_demo,
+)
 from adapter.test_app_server import PreflightResult
 
 
@@ -25,6 +36,71 @@ class _Wrapped:
 
 
 class FirecrackerCodexRuntimeDemoTests(unittest.TestCase):
+    def test_sandbox_operation_uses_private_credential_free_unix_socket(self) -> None:
+        with tempfile.TemporaryDirectory(dir="/tmp") as raw:
+            directory = Path(raw)
+            directory.chmod(0o700)
+            socket_path = directory / "sandbox.sock"
+            observed: dict[str, object] = {}
+
+            class Handler(BaseHTTPRequestHandler):
+                def do_POST(self) -> None:
+                    length = int(self.headers.get("Content-Length", "0"))
+                    observed.update(
+                        {
+                            "path": self.path,
+                            "authorization": self.headers.get("Authorization"),
+                            "body": json.loads(self.rfile.read(length)),
+                        }
+                    )
+                    response = json.dumps(
+                        {
+                            "operation_id": "op-" + "a" * 64,
+                            "phase": "succeeded",
+                            "result_hash": "b" * 64,
+                        },
+                        separators=(",", ":"),
+                    ).encode("ascii")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Length", str(len(response)))
+                    self.end_headers()
+                    self.wfile.write(response)
+
+                def log_message(self, *unused: object) -> None:
+                    return None
+
+            server = socketserver.UnixStreamServer(os.fspath(socket_path), Handler)
+            socket_path.chmod(0o600)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                canonical = _sandbox_socket_path(socket_path)
+                _verify_sandbox_socket(canonical)
+                outcome = _post_sandbox_json(
+                    canonical,
+                    {
+                        "call_id": "preflight-call-1",
+                        "kind": "protected_commit",
+                        "body": "e30=",
+                    },
+                )
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+            self.assertEqual(outcome["phase"], "succeeded")
+            self.assertEqual(observed["path"], "/v1/execute")
+            self.assertIsNone(observed["authorization"])
+            self.assertEqual(
+                observed["body"],
+                {
+                    "call_id": "preflight-call-1",
+                    "kind": "protected_commit",
+                    "body": "e30=",
+                },
+            )
+
     def test_run_demo_uses_transparent_preflight_and_publishes_hashes(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             fixture = self._fixture(Path(raw))

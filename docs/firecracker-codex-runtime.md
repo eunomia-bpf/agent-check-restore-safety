@@ -1,7 +1,9 @@
 # Firecracker Codex continuity runtime
 
-**Status:** working real-KVM research prototype, 2026-08-16. It is not yet a
-production sandbox or an implementation of the complete History/Rule system.
+**Status:** working real-KVM vertical prototype, 2026-08-16. One real Codex
+callback, VM replacement, external commit, and repository Cutover now share a
+single durable History. It is not yet a production sandbox or general agent
+runtime.
 
 ## What the system is
 
@@ -21,7 +23,10 @@ At one declared dynamic-tool boundary, the runtime:
 4. starts a different VMM, loads the sealed snapshot while paused, installs
    authenticated host endpoints, resumes it, and reconnects the retained
    stream; and
-5. exposes the callback only after the restored guest is attached. Success is
+5. exposes the callback only after the restored guest is attached. The host
+   sends it through a credential-free Unix socket owned by that exact sandbox
+   generation; the guest cannot choose its identity, provider URL, method, or
+   provider headers. Success is
    reported only after the matching callback result has entered the retained
    stream, the same Codex turn has completed successfully, that completion has
    reached the client, and client input has closed; and
@@ -32,9 +37,9 @@ At one declared dynamic-tool boundary, the runtime:
 Firecracker supplies isolation and whole-machine snapshot/restore. It is a
 replaceable mechanism, not the research claim. The runtime contribution is the
 continuity boundary around it: external progress that a snapshot cannot erase
-must eventually be joined with the History/Rule control plane. This first
-slice validates the process, transport, and evidence mechanics; it does not
-yet perform that final join.
+is joined with the History/Rule control plane and the repository state that a
+replacement VM receives. This slice now performs that vertical join for one
+real Codex callback.
 
 ## Components
 
@@ -57,13 +62,24 @@ yet perform that final join.
   records, payload manifest, repository bundle, snapshot hashes, process
   identities, canonical checkpoint object, final repository and delta, and
   event order. It does not import the live runner lifecycle.
+- `runtime/cmd/control` publishes a private Unix socket for the active
+  Firecracker generation. The callback reaches the existing Operation gateway
+  through that socket without a bearer token. The first Cutover binds the
+  source VM and repository; the second atomically binds the replacement VM,
+  complete History head, checkpoint, final bundle, and host-derived delta.
+- `runtime/cmd/check-firecracker-codex-control-evidence` is a second,
+  standard-library-only checker. It independently recomputes the five-event
+  History chain, Certificate and Requirement digests, VM-bound Operation
+  identity and request hash, external receipt and durable commit, head-anchor
+  checksum, and repository artifact bindings. It imports none of their live
+  implementations.
 
 The client-facing boundary remains stdin/stdout JSONL. No Firecracker-specific
 branch is required in the App Server client.
 
 ## Current real execution
 
-A fresh local KVM execution of the current source completed in 13.0 seconds
+A fresh local KVM execution of the current source completed in 15.0 seconds
 with these fixed inputs:
 
 - Firecracker 1.16.1:
@@ -75,23 +91,35 @@ with these fixed inputs:
 - guest:
   `49cee411975645da7906a8c846f7f688f0b7e498a9f18de5c56cbd269fbefb72`;
 - shim:
-  `91418c295fa112147abbc7a81851e1192965a87cc2594ae45fae35569f90f96b`;
+  `467e39dbe9c39e8129126d22e9798baac2b824dec0ed5f441ffc5fbdb5ab7e4e`;
 - canonical Restate food-ordering repository:
   `8c815e42e1d5650feb40965c1a492caba24060297a7e285464fe487b6d335da2`
   (50,176 bytes, 37 entries, tree root
   `5023fab86509a198f38c6a81fec1b89f39404f4f65864dbd06855898098b1d8e`).
 
 The run retained 23 lifecycle events, 20 hashed artifacts, 82 canonical bridge
-commitments, and 358 App Server records. It created a 1 GiB memory snapshot;
+commitments, and 357 App Server records. It created a 1 GiB memory snapshot;
 both VMM PIDs were reaped. The final 37-entry bundle exactly matched the input
 tree, as expected for this read-only model fixture. The host still produced and
 verified a 160-byte, zero-operation delta bound to both tree roots. It also
 retained a 1,541-byte canonical checkpoint object with SHA-256
-`99602085075feea2c618c3920abcee69c9d76d3fd583cdf74ac933a68bb38cf1`.
+`6ac1e9ae66c15a3ef3b4a1cae1456bbe259c46fcbc4d378c34a6e6ef9cd79387`.
 The original shim, its runtime-retained copy, the result, and the first event
-all carry the same hash. The independent checker returned
-`{"schema":1,"valid":true}`. This is one observed functional execution, not a
-latency distribution or a production-security result.
+all carry the same hash.
+
+The joined control path recorded exactly five events: initial Cutover,
+Operation prepare, dispatch, success, and final repository-aware Cutover. The
+Operation is owned by sandbox `firecracker-codex` and domain
+`firecracker-codex-vm`. The external service durably recorded one delivery and
+one commit. Calling the same stable callback through the replacement
+generation returned `reused:true`; the external counts and History remained at
+one commit and five events. The Firecracker checker returned
+`{"schema":1,"valid":true}` and the joined checker returned
+`valid:true`, History sequence 5, Operation
+`op-a916d428972172262d64cb319440063299239010ad18456337a45848a7197090`,
+one external commit, and `repository_edit:false`.
+This is one observed functional execution, not a latency distribution or a
+production-security result.
 
 ## Reproduction entry points
 
@@ -116,6 +144,19 @@ make runtime-firecracker-codex-check \
   FIRECRACKER_CODEX_RUNNER=/private/build/firecracker-codex-shim
 ```
 
+For a run made with the five optional control-join arguments shown by
+`python3 -m adapter.firecracker_codex_runtime_demo --help`, verify the complete
+cross-system join with:
+
+```sh
+make runtime-firecracker-codex-control-check \
+  FIRECRACKER_CODEX_EVIDENCE=/private/runtime \
+  FIRECRACKER_CODEX_ADAPTER_EVIDENCE=/private/adapter \
+  FIRECRACKER_CODEX_CONTROL_HISTORY=/private/control/runtime.history \
+  FIRECRACKER_CODEX_HEAD_ANCHOR=/private/control/runtime.head \
+  FIRECRACKER_CODEX_PAYMENT_HISTORY=/private/control/payment.history
+```
+
 The demo requires read/write access to `/dev/kvm`, checksum-pinned Firecracker
 and kernel files, a prebuilt guest and shim, the read-only Codex payload, a
 canonical repository bundle, separate empty evidence/workspace directories,
@@ -132,16 +173,16 @@ The current slice is intentionally narrow:
   chroot;
 - the full snapshot is large, private, and may contain prompts or future
   credentials, so it must not be published as ordinary evidence;
-- the checker establishes internal consistency, not hardware attestation, and
-  currently trusts the supplied payload manifest for image contents; and
-- the callback is not yet a History-owned external Operation, so this run does
-  not prove safe payment replay, Rule activation, or the paper theorem.
+- the checkers establish internal and cross-system consistency, not hardware
+  attestation, and currently trust the supplied payload manifest for image
+  contents; and
+- this run exercises one successful retry-safe external Operation; it does not
+  cover unknown outcomes, query recovery, concurrent callbacks, or arbitrary
+  provider protocols inside this Firecracker path.
 
-The next high-value increment is not another VM demo. It is to join the
-host-derived delta, the existing Operation gateway, and an atomic History/Rule
-change at the VM checkpoint. The control API can now record that join in one
-event, and the Firecracker run now emits the independently checked checkpoint
-hash it consumes. The remaining integration work is to route this demo's
-deterministic callback through the real Operation gateway before committing
-that event. Portable certificates, jailer confinement, repeated boundaries,
-Claude, and a maintained build environment follow that vertical join.
+The next high-value increment is a maintained, writable build workload whose
+Codex turn makes a nonempty repository delta and performs multiple protected
+operations. That will test useful work, conflict handling, repeated boundaries,
+and failure recovery rather than another synthetic VM lifecycle. Portable
+certificates, jailer confinement, Claude, and a provider-independent adapter
+remain later steps.
