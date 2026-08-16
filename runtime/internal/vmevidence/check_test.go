@@ -176,10 +176,11 @@ func TestGuestNetworkTraceBindsScriptAndCanary(t *testing.T) {
 		},
 		nil,
 		nil,
+		nil,
 	}
 	events := []string{
 		"direct-host-canary-listening", "guest-user-data-served",
-		"guest-operation-gate-opened", "guest-operation-gate-served",
+		"guest-operation-gate-opened", "guest-operation-gate-served", "guest-operation-gate-served",
 	}
 	var lines []string
 	for index := range details {
@@ -234,6 +235,22 @@ func TestRetainedDiskImageWhenRequested(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := checkQEMULog(filepath.Join(directory, "qemu.log")); err != nil {
+		t.Fatal(err)
+	}
+	var operation guestOperation
+	encoded, err := readStrictJSONBytes(filepath.Join(directory, "guest-operation.json"), &operation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	script, err := os.ReadFile(filepath.Join(directory, "guest-script.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	guest, err := checkGuest(operation, encoded, script)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := checkGuestNetworkTrace(filepath.Join(directory, "guest-network.jsonl"), guest); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -296,7 +313,8 @@ func TestCheckTimelineRejectsResumeBeforeReplacement(t *testing.T) {
 	}
 	providers := []providerFact{{TimeNS: 140}, {TimeNS: 320}}
 	metadata := metadataFacts{
-		DirectCanaryTimeNS: 5, TimeNS: 45, GateOpenTimeNS: 115, GateServedTimeNS: 135,
+		DirectCanaryTimeNS: 5, TimeNS: 45, GateOpenTimeNS: 115,
+		FirstGateServedNS: 135, SecondGateServedNS: 315,
 	}
 	if err := checkTimeline(qmp, supervisor, providers, metadata); err != nil {
 		t.Fatalf("valid host/QMP timeline rejected: %v", err)

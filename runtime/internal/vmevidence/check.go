@@ -237,7 +237,8 @@ type metadataFacts struct {
 	DirectCanaryAddress string
 	DirectCanaryTimeNS  int64
 	GateOpenTimeNS      int64
-	GateServedTimeNS    int64
+	FirstGateServedNS   int64
+	SecondGateServedNS  int64
 }
 
 type canaryDetails struct {
@@ -665,16 +666,21 @@ func checkGuestNetworkTrace(path string, guest guestFacts) (metadataFacts, error
 			facts.GateOpenTimeNS = record.TimeNS
 			phase = 1
 		case "guest-operation-gate-served":
-			if phase != 1 || len(record.Details) != 0 {
+			if (phase != 1 && phase != 2) || len(record.Details) != 0 {
 				return metadataFacts{}, errors.New("guest Operation gate was served out of order")
 			}
-			facts.GateServedTimeNS = record.TimeNS
-			phase = 2
+			if phase == 1 {
+				facts.FirstGateServedNS = record.TimeNS
+				phase = 2
+			} else {
+				facts.SecondGateServedNS = record.TimeNS
+				phase = 3
+			}
 		default:
 			return metadataFacts{}, fmt.Errorf("unexpected guest network event %q", record.Event)
 		}
 	}
-	if phase != 2 {
+	if phase != 3 {
 		return metadataFacts{}, errors.New("guest network trace does not prove the saved-before-Operation gate")
 	}
 	return facts, nil
@@ -1129,8 +1135,9 @@ func checkTimeline(qmp qmpFacts, supervisor supervisorFacts, providers []provide
 			return fmt.Errorf("VM lifecycle is not strictly ordered at step %d: %v", index, ordered)
 		}
 	}
-	if metadata.GateServedTimeNS <= commands[4].TimeNS || metadata.GateServedTimeNS >= providers[0].TimeNS {
-		return errors.New("guest Operation gate was not served after resume and before provider delivery")
+	if metadata.FirstGateServedNS <= commands[4].TimeNS || metadata.FirstGateServedNS >= providers[0].TimeNS ||
+		metadata.SecondGateServedNS <= commands[9].TimeNS || metadata.SecondGateServedNS >= providers[1].TimeNS {
+		return errors.New("guest Operation gate was not served once after each resume and before each provider delivery")
 	}
 	return nil
 }
