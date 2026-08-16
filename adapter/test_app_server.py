@@ -30,6 +30,7 @@ from adapter.app_server import (
     TURN_TIMEOUT_SECONDS,
     AppServerProtocolError,
     CodexAppServer,
+    MCPStdioServer,
     PendingToolCall,
 )
 from adapter.mock_responses import DeterministicResponsesServer
@@ -734,6 +735,62 @@ class DeterministicResponsesServerTests(unittest.TestCase):
 
 
 class CodexAppServerModeTests(unittest.TestCase):
+    def test_explicit_mcp_command_is_bounded_and_default_remains_empty(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="codex-mcp-config-test-") as directory:
+            root = Path(directory)
+            executable = root / "mcp-server"
+            executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            executable.chmod(0o500)
+            mcp = MCPStdioServer(
+                name="continuity",
+                command=executable,
+                args=("-config", "/operator/tools.json"),
+                enabled_tools=("commit_effect",),
+            )
+            client = CodexAppServer(
+                model_base_url="http://127.0.0.1:1",
+                workspace=root,
+                raw_jsonl_path=root / "mcp.jsonl",
+                mcp_server=mcp,
+            )
+            command = client._command()
+            joined = " ".join(command)
+            self.assertIn("mcp_servers={}", command)
+            self.assertIn("mcp_servers.continuity=", joined)
+            self.assertIn('enabled_tools=["commit_effect"]', joined)
+            self.assertIn('approval_mode="approve"', joined)
+            self.assertNotIn("env=", joined)
+            self.assertNotIn("bearer", joined)
+
+            default = CodexAppServer(
+                model_base_url="http://127.0.0.1:1",
+                workspace=root,
+                raw_jsonl_path=root / "default.jsonl",
+            )
+            self.assertIn("mcp_servers={}", default._command())
+            self.assertFalse(any("mcp_servers.continuity" in item for item in default._command()))
+
+    def test_mcp_configuration_rejects_untrusted_command_and_unbounded_inputs(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="codex-mcp-config-test-") as directory:
+            root = Path(directory)
+            executable = root / "mcp-server"
+            executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            executable.chmod(0o500)
+            with self.assertRaisesRegex(ValueError, "absolute canonical"):
+                MCPStdioServer(
+                    name="continuity",
+                    command="relative-server",
+                    args=("-serve",),
+                    enabled_tools=("commit_effect",),
+                )
+            with self.assertRaisesRegex(ValueError, "tool allow list"):
+                MCPStdioServer(
+                    name="continuity",
+                    command=executable,
+                    args=("-serve",),
+                    enabled_tools=(),
+                )
+
     def test_logged_in_account_requires_explicit_opt_in(self) -> None:
         with tempfile.TemporaryDirectory(prefix="codex-mode-test-") as directory:
             root = Path(directory)

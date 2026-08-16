@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "tools": [
+    {
+      "name": "commit_effect",
+      "description": "Commit one external effect through the continuity runtime.",
+      "kind": "protected_commit",
+      "arguments": [
+        {
+          "name": "effect_id",
+          "description": "Application-owned identity of the effect to commit.",
+          "type": "string",
+          "required": true,
+          "max_length": 128
+        }
+      ]
+    }
+  ]
+}

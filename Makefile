@@ -1,4 +1,4 @@
-.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-repository runtime-firecracker-codex-demo runtime-firecracker-codex-check runtime-firecracker-codex-control-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
+.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-repository runtime-firecracker-codex-demo runtime-firecracker-codex-check runtime-firecracker-codex-control-check runtime-mcp-operation-build runtime-mcp-operation-check runtime-mcp-operation-demo runtime-codex-mcp-build runtime-codex-mcp-demo runtime-codex-mcp-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
 
 VM_ACCEL ?= tcg
 VM_BACKEND ?= qemu
@@ -22,6 +22,9 @@ FIRECRACKER_CODEX_CONTROL_HISTORY ?=
 FIRECRACKER_CODEX_HEAD_ANCHOR ?=
 FIRECRACKER_CODEX_PAYMENT_HISTORY ?=
 FIRECRACKER_CODEX_WORKLOAD_CONTRACT ?=
+MCP_OPERATION_BUILD_DIR ?= $(shell python3 -c 'import os; print(os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "safe-change-runtime", "mcp-operation"))')
+CODEX_MCP_DEMO_ARGS ?=
+CODEX_MCP_EVIDENCE ?=
 RUNTIME_IMAGE ?= safe-change-runtime:local
 RUNTIME_VERSION ?= dev
 RUNTIME_REVISION ?= $(shell git rev-parse --short=12 HEAD)
@@ -192,6 +195,46 @@ runtime-firecracker-codex-control-check:
 		-payment-history "$(abspath $(FIRECRACKER_CODEX_PAYMENT_HISTORY))" \
 		$(if $(strip $(FIRECRACKER_CODEX_WORKLOAD_CONTRACT)),-workload-contract "$(abspath $(FIRECRACKER_CODEX_WORKLOAD_CONTRACT))",)
 
+# Provider-independent MCP stdio boundary. The server binary contains no
+# provider target or credential; an active sandbox Unix socket supplies both.
+runtime-mcp-operation-build:
+	@mkdir -p "$(MCP_OPERATION_BUILD_DIR)"
+	@chmod 0700 "$(MCP_OPERATION_BUILD_DIR)"
+	cd runtime && CGO_ENABLED=0 go build -buildvcs=false -trimpath \
+		-o "$(MCP_OPERATION_BUILD_DIR)/mcp-operation-server" ./cmd/mcp-operation-server
+	@chmod 0500 "$(MCP_OPERATION_BUILD_DIR)/mcp-operation-server"
+	@sha256sum "$(MCP_OPERATION_BUILD_DIR)/mcp-operation-server"
+
+runtime-mcp-operation-check:
+	cd runtime && go test -count=1 ./internal/mcpoperation ./cmd/mcp-operation-server
+
+# Real Control/History/Unix-socket/payment recovery, with no account or model.
+runtime-mcp-operation-demo:
+	cd runtime && go test -count=1 -v \
+		-run '^TestRealHistoryMCPBoundaryRecoversLostResponseThenContinues$$' \
+		./internal/mcpoperation
+
+# Real Codex 0.147+ code-mode MCP, two App Server processes, durable MCP
+# restart, query recovery, and a deliberately non-idempotent provider.
+runtime-codex-mcp-build: runtime-mcp-operation-build
+	cd runtime && CGO_ENABLED=0 go build -buildvcs=false -trimpath \
+		-o "$(MCP_OPERATION_BUILD_DIR)/control" ./cmd/control
+	cd runtime && CGO_ENABLED=0 go build -buildvcs=false -trimpath \
+		-o "$(MCP_OPERATION_BUILD_DIR)/payment" ./cmd/payment
+	@chmod 0500 "$(MCP_OPERATION_BUILD_DIR)/control" "$(MCP_OPERATION_BUILD_DIR)/payment"
+	@sha256sum "$(MCP_OPERATION_BUILD_DIR)/control" "$(MCP_OPERATION_BUILD_DIR)/payment"
+
+runtime-codex-mcp-demo: runtime-codex-mcp-build
+	python3 -m adapter.codex_mcp_runtime_demo \
+		--control-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/control" \
+		--payment-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/payment" \
+		--mcp-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/mcp-operation-server" \
+		$(CODEX_MCP_DEMO_ARGS)
+
+runtime-codex-mcp-check:
+	@test -n "$(strip $(CODEX_MCP_EVIDENCE))" || { echo "CODEX_MCP_EVIDENCE must name the retained evidence directory" >&2; exit 2; }
+	python3 -m adapter.check_codex_mcp_evidence "$(abspath $(CODEX_MCP_EVIDENCE))"
+
 # Explicit live-account target. It is intentionally not part of runtime-verify.
 runtime-codex-demo:
 	python3 -m adapter.codex_runtime_demo $(CODEX_DEMO_ARGS)
@@ -230,6 +273,7 @@ runtime-verify:
 	cd runtime && go test -race ./...
 	cd runtime && go vet ./...
 	python3 -m unittest \
+		adapter.test_app_server.CodexAppServerModeTests \
 		adapter.test_docker_codex \
 		adapter.test_firecracker_codex \
 		adapter.test_firecracker_codex_runtime_demo \

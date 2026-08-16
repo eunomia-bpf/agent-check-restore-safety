@@ -273,6 +273,7 @@ make runtime-demo
 make runtime-microservice-demo
 make runtime-vm-demo
 make runtime-firecracker-kvm-test
+make runtime-codex-mcp-demo
 make runtime-codex-demo
 make runtime-codex-isolated-demo
 make runtime-codex-isolated-check
@@ -692,6 +693,13 @@ general exactly-once claim nor proof that every unknown Operation can finish.
   directory into credential-free Unix sockets, publishes the complete new
   sandbox set all-or-none with each Cutover, and leaves replayed bindings
   unattached after a daemon restart;
+- a provider-independent MCP stdio server that exposes only declared business
+  arguments, assigns supervisor-scoped stable call identities in an fsynced
+  hash-chained journal, and reaches the active Operation gateway through a
+  credential-free sandbox socket;
+- a real Codex 0.147 code-mode MCP path that recovers a lost response, restarts
+  Codex and its MCP child, returns the exact result for the replayed model call,
+  and then admits a distinct call against a non-idempotent payment service;
 - adapter credentials bound to one domain and an allowed kind set, with the
   Operation identity derived server-side from that domain and call identity;
 - History-based recovery of a previously registered Operation's frozen kind,

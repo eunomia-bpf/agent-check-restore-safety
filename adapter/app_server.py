@@ -14,7 +14,9 @@ import json
 import os
 from pathlib import Path
 import queue
+import re
 import shutil
+import stat
 import subprocess
 import threading
 import time
@@ -27,6 +29,8 @@ TURN_TIMEOUT_SECONDS = 30.0
 _PROCESS_STOP_TIMEOUT_SECONDS = 3.0
 _PROVIDER_ID = "authority_continuity_mock"
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+_MCP_SERVER_NAME = re.compile(r"[A-Za-z][A-Za-z0-9_-]{0,63}\Z")
+_MAX_MCP_ARGUMENT_BYTES = 4096
 
 
 class AppServerError(RuntimeError):
@@ -48,6 +52,67 @@ class AppServerRPCError(AppServerError):
         self.method = method
         self.error = dict(error)
         super().__init__(f"{method} failed: {json.dumps(self.error, sort_keys=True)}")
+
+
+@dataclass(frozen=True)
+class MCPStdioServer:
+    """One operator-selected local MCP process exposed to real Codex.
+
+    This deliberately omits environment forwarding, network endpoints, and
+    authentication material.  The continuity supervisor passes only paths and
+    non-secret execution identity to the credential-free stdio process.
+    """
+
+    name: str
+    command: str | os.PathLike[str]
+    args: tuple[str, ...]
+    enabled_tools: tuple[str, ...]
+    startup_timeout_sec: int = 10
+    tool_timeout_sec: int = 60
+
+    def __post_init__(self) -> None:
+        if _MCP_SERVER_NAME.fullmatch(self.name) is None:
+            raise ValueError("MCP server name must be a bounded safe identifier")
+        command = Path(self.command)
+        if not command.is_absolute() or command.resolve() != command:
+            raise ValueError("MCP server command must be an absolute canonical path")
+        try:
+            info = command.lstat()
+        except OSError as error:
+            raise ValueError("MCP server command does not exist") from error
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or stat.S_ISLNK(info.st_mode)
+            or info.st_uid != os.geteuid()
+            or stat.S_IMODE(info.st_mode) & 0o022 != 0
+            or not os.access(command, os.X_OK)
+        ):
+            raise ValueError(
+                "MCP server command must be a direct executable regular file owned by the current user"
+            )
+        if not self.args or not self.enabled_tools:
+            raise ValueError("MCP server requires fixed arguments and a tool allow list")
+        for label, values in (("argument", self.args), ("tool", self.enabled_tools)):
+            if not isinstance(values, tuple) or len(values) > 256:
+                raise ValueError(f"MCP server {label}s must be a bounded tuple")
+            for value in values:
+                if (
+                    not isinstance(value, str)
+                    or not value
+                    or len(value.encode("utf-8")) > _MAX_MCP_ARGUMENT_BYTES
+                    or any(ord(character) < 0x20 for character in value)
+                ):
+                    raise ValueError(f"MCP server {label} is malformed")
+            if len(set(values)) != len(values):
+                raise ValueError(f"MCP server {label}s are duplicated")
+        if not 1 <= self.startup_timeout_sec <= 60:
+            raise ValueError("MCP startup timeout must be between 1 and 60 seconds")
+        if not 1 <= self.tool_timeout_sec <= 600:
+            raise ValueError("MCP tool timeout must be between 1 and 600 seconds")
+
+    @property
+    def command_path(self) -> str:
+        return os.fspath(Path(self.command))
 
 
 @dataclass
@@ -108,6 +173,10 @@ def _toml_string(value: str) -> str:
     return json.dumps(value, ensure_ascii=True)
 
 
+def _toml_array(values: tuple[str, ...]) -> str:
+    return "[" + ",".join(_toml_string(value) for value in values) + "]"
+
+
 class CodexAppServer:
     """Thread-safe JSONL client for ``codex app-server --stdio``."""
 
@@ -120,6 +189,7 @@ class CodexAppServer:
         codex_binary: str = "codex",
         model: str | None = None,
         use_logged_in_account: bool = False,
+        mcp_server: MCPStdioServer | None = None,
         rpc_timeout: float = RPC_TIMEOUT_SECONDS,
         turn_timeout: float = TURN_TIMEOUT_SECONDS,
     ) -> None:
@@ -160,6 +230,7 @@ class CodexAppServer:
             else "gpt-5.6-sol"
         )
         self._uses_logged_in_account = use_logged_in_account
+        self.mcp_server = mcp_server
         self.rpc_timeout = float(rpc_timeout)
         self.turn_timeout = float(turn_timeout)
 
@@ -178,6 +249,7 @@ class CodexAppServer:
         self._raw_lock = threading.Lock()
         self._raw_sequence = 0
         self._unexpected_mcp_events: list[dict[str, Any]] = []
+        self._mcp_startup_events: list[dict[str, Any]] = []
         self.initialize_result: dict[str, Any] | None = None
 
     @property
@@ -190,10 +262,37 @@ class CodexAppServer:
             return tuple(self._unexpected_mcp_events)
 
     @property
+    def mcp_startup_events(self) -> tuple[dict[str, Any], ...]:
+        with self._events_condition:
+            return tuple(self._mcp_startup_events)
+
+    @property
     def uses_logged_in_account(self) -> bool:
         return self._uses_logged_in_account
 
     def _command(self) -> list[str]:
+        mcp_overrides = ["mcp_servers={}"]
+        if self.mcp_server is not None:
+            configured = (
+                "{"
+                f"command={_toml_string(self.mcp_server.command_path)},"
+                f"args={_toml_array(self.mcp_server.args)},"
+                f"startup_timeout_sec={self.mcp_server.startup_timeout_sec},"
+                f"tool_timeout_sec={self.mcp_server.tool_timeout_sec},"
+                "enabled=true,required=true,"
+                f"enabled_tools={_toml_array(self.mcp_server.enabled_tools)},"
+                'default_tools_approval_mode="approve",'
+                "tools={"
+                + ",".join(
+                    f"{_toml_string(tool)}={{approval_mode=\"approve\"}}"
+                    for tool in self.mcp_server.enabled_tools
+                )
+                + "}"
+                "}"
+            )
+            mcp_overrides.append(
+                f"mcp_servers.{self.mcp_server.name}={configured}"
+            )
         if self.uses_logged_in_account:
             overrides = [
                 "analytics.enabled=false",
@@ -201,8 +300,7 @@ class CodexAppServer:
                 "features.apps=false",
                 "features.enable_mcp_apps=false",
                 "features.plugins=false",
-                "mcp_servers={}",
-            ]
+            ] + mcp_overrides
             command = [self.codex_binary, "app-server", "--stdio"]
             for override in overrides:
                 command.extend(("-c", override))
@@ -229,8 +327,7 @@ class CodexAppServer:
             "features.apps=false",
             "features.enable_mcp_apps=false",
             "features.plugins=false",
-            "mcp_servers={}",
-        ]
+        ] + mcp_overrides
         command = [self.codex_binary, "app-server", "--stdio"]
         for override in overrides:
             command.extend(("-c", override))
@@ -375,7 +472,13 @@ class CodexAppServer:
         with self._events_condition:
             self._events.append(message)
             if message.get("method") == "mcpServer/startupStatus/updated":
-                self._unexpected_mcp_events.append(message)
+                self._mcp_startup_events.append(message)
+                params = message.get("params")
+                configured_name = (
+                    self.mcp_server.name if self.mcp_server is not None else None
+                )
+                if not isinstance(params, dict) or params.get("name") != configured_name:
+                    self._unexpected_mcp_events.append(message)
             self._events_condition.notify_all()
 
     def _set_fatal(self, error: BaseException) -> None:
@@ -608,6 +711,45 @@ class CodexAppServer:
             raise AppServerProtocolError("account thread is not ephemeral")
         if result.get("modelProvider") == _PROVIDER_ID:
             raise AppServerProtocolError("account thread escaped to the test provider")
+        return thread
+
+    def create_mcp_thread(
+        self,
+        *,
+        sandbox: str = "read-only",
+        ephemeral: bool = True,
+        developer_instructions: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a real Codex thread with only the configured MCP tools."""
+
+        if self.mcp_server is None:
+            raise AppServerProtocolError("MCP thread requires an explicit stdio server")
+        if sandbox not in {"read-only", "workspace-write"}:
+            raise ValueError("MCP thread sandbox must be read-only or workspace-write")
+        params: dict[str, Any] = {
+            "cwd": str(self.workspace),
+            "ephemeral": bool(ephemeral),
+            "sandbox": sandbox,
+            "approvalPolicy": "never",
+            "environments": [],
+            "serviceName": "continuity_runtime_mcp",
+        }
+        if self.model:
+            params["model"] = self.model
+        if not self.uses_logged_in_account:
+            params["modelProvider"] = _PROVIDER_ID
+        if developer_instructions:
+            params["developerInstructions"] = developer_instructions
+        result = self.request("thread/start", params)
+        thread = result.get("thread")
+        if not isinstance(thread, dict) or not isinstance(thread.get("id"), str):
+            raise AppServerProtocolError("thread/start omitted the MCP thread id")
+        if thread.get("ephemeral") is not bool(ephemeral):
+            raise AppServerProtocolError("MCP thread persistence differs from the request")
+        if (thread.get("path") is None) != bool(ephemeral):
+            raise AppServerProtocolError("MCP thread rollout path is inconsistent")
+        if not self.uses_logged_in_account and result.get("modelProvider") != _PROVIDER_ID:
+            raise AppServerProtocolError("MCP thread escaped the local model provider")
         return thread
 
     def start_turn_and_wait(
