@@ -7,8 +7,10 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/certcheck"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/control"
@@ -21,6 +23,37 @@ const (
 	adminToken     = "admin-token-0000000000000000000000000000"
 	operationToken = "operation-token-000000000000000000000000"
 )
+
+type blockingResponseWriter struct {
+	header  http.Header
+	entered chan struct{}
+	release chan struct{}
+	once    sync.Once
+	status  int
+	body    bytes.Buffer
+}
+
+func newBlockingResponseWriter() *blockingResponseWriter {
+	return &blockingResponseWriter{
+		header: make(http.Header), entered: make(chan struct{}), release: make(chan struct{}),
+	}
+}
+
+func (writer *blockingResponseWriter) Header() http.Header {
+	return writer.header
+}
+
+func (writer *blockingResponseWriter) WriteHeader(status int) {
+	writer.once.Do(func() { close(writer.entered) })
+	<-writer.release
+	writer.status = status
+}
+
+func (writer *blockingResponseWriter) Write(body []byte) (int, error) {
+	return writer.body.Write(body)
+}
+
+func (writer *blockingResponseWriter) Flush() {}
 
 func testRequirement(id, target string) kernel.Requirement {
 	return kernel.Requirement{
@@ -431,5 +464,251 @@ func TestDuplicateAdapterTokenIsRejected(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("one token was bound to two adapter domains")
+	}
+}
+
+func TestHostBoundSandboxNeedsNoCredentialAndCannotReachAdmin(t *testing.T) {
+	var deliveries atomic.Int32
+	sink := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		deliveries.Add(1)
+		writer.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(writer).Encode(map[string]any{
+			"schema": 1, "operation_id": request.Header.Get("X-Operation-ID"),
+			"outcome": "succeeded", "result_hash": strings.Repeat("a", 64),
+			"remote_reference": "sandbox-result",
+		})
+	}))
+	defer sink.Close()
+
+	c, err := control.Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	serverAPI, err := New(c, nil, testCredentials())
+	if err != nil {
+		t.Fatal(err)
+	}
+	adminServer := httptest.NewServer(serverAPI.Handler())
+	defer adminServer.Close()
+
+	first := control.SandboxBinding{
+		SandboxID: "codex-vm", Generation: 1, HostInstanceID: "host-vm-1",
+		Domain: "test-adapter", AllowedKinds: []string{"finish"},
+	}
+	certificate, err := c.Compile(testRequirement("sandbox-v1", sink.URL))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cutover CutoverResponse
+	if status := postJSON(t, adminServer.Client(), adminServer.URL+"/v1/cutover", adminToken,
+		CutoverRequest{Certificate: certificate, Bindings: []control.SandboxBinding{first}}, &cutover); status != http.StatusOK {
+		t.Fatalf("cutover status=%d response=%+v", status, cutover)
+	}
+	if cutover.State == nil || cutover.State.Rule == nil || len(cutover.Bindings) != 1 ||
+		cutover.Bindings[0].HostInstanceID != first.HostInstanceID {
+		t.Fatalf("cutover response=%+v", cutover)
+	}
+
+	sandboxHandler, err := serverAPI.HandlerForSandbox(first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sandboxServer := httptest.NewServer(sandboxHandler)
+	defer sandboxServer.Close()
+	request := sandboxExecuteRequest{CallID: "order/A-17/payment", Kind: "finish"}
+	var outcome gateway.Outcome
+	if status := postJSON(t, sandboxServer.Client(), sandboxServer.URL+"/v1/execute", "", request, &outcome); status != http.StatusOK {
+		t.Fatalf("credential-free sandbox execute status=%d outcome=%+v", status, outcome)
+	}
+	if outcome.Phase != kernel.Succeeded || deliveries.Load() != 1 {
+		t.Fatalf("sandbox outcome=%+v deliveries=%d", outcome, deliveries.Load())
+	}
+	var bypass OperationError
+	if status := postJSON(t, adminServer.Client(), adminServer.URL+"/v1/execute", operationToken, request, &bypass); status != http.StatusConflict {
+		t.Fatalf("bearer bypass status=%d response=%+v", status, bypass)
+	}
+	if bypass.Code != OperationErrorSandboxStale || deliveries.Load() != 1 {
+		t.Fatalf("bearer bypass response=%+v deliveries=%d", bypass, deliveries.Load())
+	}
+
+	adminRequest, err := http.NewRequest(http.MethodGet, sandboxServer.URL+"/v1/state", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	adminRequest.Header.Set("Authorization", "Bearer "+adminToken)
+	adminResponse, err := sandboxServer.Client().Do(adminRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	adminResponse.Body.Close()
+	if adminResponse.StatusCode != http.StatusNotFound {
+		t.Fatalf("sandbox endpoint exposed admin route: status=%d", adminResponse.StatusCode)
+	}
+
+	forged := map[string]any{
+		"call_id": "order/A-18/payment", "kind": "finish", "url": sink.URL,
+		"sandbox_id": "other", "generation": 999, "domain": "other",
+	}
+	if status := postJSON(t, sandboxServer.Client(), sandboxServer.URL+"/v1/execute", "", forged, &errorBody{}); status != http.StatusBadRequest {
+		t.Fatalf("guest-supplied binding fields status=%d", status)
+	}
+	withTarget := map[string]any{
+		"call_id": "order/A-18/payment", "kind": "finish", "url": sink.URL,
+	}
+	if status := postJSON(t, sandboxServer.Client(), sandboxServer.URL+"/v1/execute", "", withTarget, &errorBody{}); status != http.StatusBadRequest {
+		t.Fatalf("guest-supplied provider target status=%d", status)
+	}
+	if status := postJSON(t, sandboxServer.Client(), sandboxServer.URL+"/v1/execute", operationToken, request, &errorBody{}); status != http.StatusBadRequest {
+		t.Fatalf("sandbox endpoint accepted a guest bearer token: status=%d", status)
+	}
+
+	second := first
+	second.Generation = 2
+	second.HostInstanceID = "host-vm-2"
+	secondCertificate, err := c.Compile(testRequirement("sandbox-v2", sink.URL))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status := postJSON(t, adminServer.Client(), adminServer.URL+"/v1/cutover", adminToken,
+		CutoverRequest{Certificate: secondCertificate, Bindings: []control.SandboxBinding{second}}, &CutoverResponse{}); status != http.StatusOK {
+		t.Fatalf("second cutover status=%d", status)
+	}
+	var stale OperationError
+	if status := postJSON(t, sandboxServer.Client(), sandboxServer.URL+"/v1/execute", "", request, &stale); status != http.StatusConflict {
+		t.Fatalf("stale sandbox status=%d response=%+v", status, stale)
+	}
+	if stale.Code != OperationErrorSandboxStale || deliveries.Load() != 1 {
+		t.Fatalf("stale sandbox response=%+v deliveries=%d", stale, deliveries.Load())
+	}
+
+	currentHandler, err := serverAPI.HandlerForSandbox(second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	currentServer := httptest.NewServer(currentHandler)
+	defer currentServer.Close()
+	var reused gateway.Outcome
+	if status := postJSON(t, currentServer.Client(), currentServer.URL+"/v1/execute", "", request, &reused); status != http.StatusOK {
+		t.Fatalf("current sandbox reuse status=%d outcome=%+v", status, reused)
+	}
+	if !reused.Reused || reused.Phase != kernel.Succeeded || deliveries.Load() != 1 {
+		t.Fatalf("current sandbox outcome=%+v deliveries=%d", reused, deliveries.Load())
+	}
+}
+
+func TestPureSandboxServerNeedsNoAdapterCredential(t *testing.T) {
+	c, err := control.Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	serverAPI, err := New(c, nil, Credentials{AdminToken: adminToken})
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodPost, "/v1/execute", strings.NewReader(`{}`))
+	recorder := httptest.NewRecorder()
+	serverAPI.Handler().ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("credential-free legacy execute status = %d", recorder.Code)
+	}
+}
+
+func TestSandboxResponseWriteCompletesBeforeCutover(t *testing.T) {
+	var deliveries atomic.Int32
+	sink := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		deliveries.Add(1)
+		writer.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(writer).Encode(map[string]any{
+			"schema": 1, "operation_id": request.Header.Get("X-Operation-ID"),
+			"outcome": "succeeded", "result_hash": strings.Repeat("a", 64),
+			"remote_reference": "response-lease-result",
+		})
+	}))
+	defer sink.Close()
+
+	c, err := control.Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	serverAPI, err := New(c, nil, Credentials{AdminToken: adminToken})
+	if err != nil {
+		t.Fatal(err)
+	}
+	first := control.SandboxBinding{
+		SandboxID: "vm", Generation: 1, HostInstanceID: "vm-host-1",
+		Domain: "agent", AllowedKinds: []string{"finish"},
+	}
+	certificate, err := c.Compile(testRequirement("response-v1", sink.URL))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Cutover(certificate, []control.SandboxBinding{first}); err != nil {
+		t.Fatal(err)
+	}
+	handler, err := serverAPI.HandlerForSandbox(first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, err := json.Marshal(sandboxExecuteRequest{CallID: "call-1", Kind: "finish"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	call := func(writer http.ResponseWriter) {
+		request := httptest.NewRequest(http.MethodPost, "/v1/execute", bytes.NewReader(body))
+		request.Header.Set("Content-Type", "application/json")
+		handler.ServeHTTP(writer, request)
+	}
+	firstResponse := httptest.NewRecorder()
+	call(firstResponse)
+	if firstResponse.Code != http.StatusOK || deliveries.Load() != 1 {
+		t.Fatalf("first response=%d deliveries=%d", firstResponse.Code, deliveries.Load())
+	}
+
+	secondCertificate, err := c.Compile(testRequirement("response-v2", sink.URL))
+	if err != nil {
+		t.Fatal(err)
+	}
+	second := first
+	second.Generation = 2
+	second.HostInstanceID = "vm-host-2"
+	blocked := newBlockingResponseWriter()
+	handlerDone := make(chan struct{})
+	go func() {
+		call(blocked)
+		close(handlerDone)
+	}()
+	select {
+	case <-blocked.entered:
+	case <-time.After(5 * time.Second):
+		close(blocked.release)
+		t.Fatal("sandbox response did not reach the transport")
+	}
+	cutoverStarted := make(chan struct{})
+	cutoverDone := make(chan error, 1)
+	go func() {
+		close(cutoverStarted)
+		cutoverDone <- c.Cutover(secondCertificate, []control.SandboxBinding{second})
+	}()
+	<-cutoverStarted
+	select {
+	case err := <-cutoverDone:
+		close(blocked.release)
+		<-handlerDone
+		t.Fatalf("cutover crossed response commit: %v", err)
+	case <-time.After(50 * time.Millisecond):
+	}
+	close(blocked.release)
+	<-handlerDone
+	if blocked.status != http.StatusOK {
+		t.Fatalf("blocked response status = %d", blocked.status)
+	}
+	if err := <-cutoverDone; err != nil {
+		t.Fatal(err)
+	}
+	if deliveries.Load() != 1 {
+		t.Fatalf("settled response was redispatched: deliveries=%d", deliveries.Load())
 	}
 }

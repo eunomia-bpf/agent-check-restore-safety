@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -1033,5 +1034,207 @@ func TestChangedCallerRetriesFrozenOperationWithoutStateMigration(t *testing.T) 
 	defer mu.Unlock()
 	if deliveries["/v1/charge"] != 2 || deliveries["/v2/charge"] != 1 || len(committed) != 2 {
 		t.Fatalf("deliveries=%v committed=%d", deliveries, len(committed))
+	}
+}
+
+func testSandboxBinding(generation uint64, host string) control.SandboxBinding {
+	return control.SandboxBinding{
+		SandboxID: "agent-vm", Generation: generation, HostInstanceID: host,
+		Domain: "sandbox-domain", AllowedKinds: []string{"charge"},
+	}
+}
+
+func cutoverSandbox(
+	t *testing.T,
+	c *control.Control,
+	requirement kernel.Requirement,
+	binding control.SandboxBinding,
+) {
+	t.Helper()
+	certificate, err := c.Compile(requirement)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Cutover(certificate, []control.SandboxBinding{binding}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.AttachSandboxHost(binding); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSandboxCutoverFirstRejectsBeforeOperationLookupAndProvider(t *testing.T) {
+	var deliveries atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		deliveries.Add(1)
+		writeTestReceipt(t, writer, request.Header.Get("X-Operation-ID"), kernel.Succeeded)
+	}))
+	defer server.Close()
+
+	c, err := control.Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	first := testSandboxBinding(1, "host-instance-1")
+	second := testSandboxBinding(2, "host-instance-2")
+	requirement := paymentRequirement(true, server.URL)
+	cutoverSandbox(t, c, requirement, first)
+	cutoverSandbox(t, c, requirement, second)
+	g, err := New(c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	request := Request{
+		ID: "sandbox-charge-1", Domain: "guest-forged-domain", Kind: "charge", URL: server.URL,
+	}
+	outcome, err := g.ExecuteBound(context.Background(), first, request)
+	if !errors.Is(err, control.ErrStaleSandboxBinding) {
+		t.Fatalf("stale sandbox outcome=%+v error=%v", outcome, err)
+	}
+	if !reflect.DeepEqual(outcome, Outcome{}) || deliveries.Load() != 0 {
+		t.Fatalf("stale sandbox outcome=%+v deliveries=%d", outcome, deliveries.Load())
+	}
+	if _, exists := c.Operation(request.ID); exists {
+		t.Fatal("stale sandbox reached Operation lookup/prepare")
+	}
+
+	outcome, err = g.ExecuteBound(context.Background(), second, request)
+	if err != nil || outcome.Phase != kernel.Succeeded || deliveries.Load() != 1 {
+		t.Fatalf("current sandbox outcome=%+v deliveries=%d error=%v", outcome, deliveries.Load(), err)
+	}
+	operation, exists := c.Operation(request.ID)
+	if !exists || operation.Domain != second.Domain {
+		t.Fatalf("host binding did not own Operation domain: %+v exists=%t", operation, exists)
+	}
+}
+
+func TestSandboxCutoverDuringDeliveryRecordsResultButFencesCaller(t *testing.T) {
+	var deliveries atomic.Int32
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if deliveries.Add(1) == 1 {
+			close(entered)
+		}
+		<-release
+		writeTestReceipt(t, writer, request.Header.Get("X-Operation-ID"), kernel.Succeeded)
+	}))
+	defer server.Close()
+
+	c, err := control.Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	first := testSandboxBinding(1, "host-instance-1")
+	second := testSandboxBinding(2, "host-instance-2")
+	requirement := paymentRequirement(true, server.URL)
+	cutoverSandbox(t, c, requirement, first)
+	g, err := New(c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := Request{ID: "sandbox-charge-2", Kind: "charge", URL: server.URL}
+	type result struct {
+		outcome Outcome
+		err     error
+	}
+	completed := make(chan result, 1)
+	go func() {
+		outcome, err := g.ExecuteBound(context.Background(), first, request)
+		completed <- result{outcome: outcome, err: err}
+	}()
+	select {
+	case <-entered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("sandbox dispatch did not reach provider")
+	}
+
+	// The durable Dispatched marker is already in History, so a newly
+	// compiled Certificate accounts for the in-flight Operation. Its cutover
+	// fences the old caller but does not prevent the host from recording the
+	// provider's definitive response.
+	cutoverSandbox(t, c, requirement, second)
+	close(release)
+	old := <-completed
+	if !errors.Is(old.err, control.ErrStaleSandboxBinding) || !reflect.DeepEqual(old.outcome, Outcome{}) {
+		t.Fatalf("old sandbox received result: outcome=%+v error=%v", old.outcome, old.err)
+	}
+	operation, exists := c.Operation(request.ID)
+	if !exists || operation.Phase != kernel.Succeeded || deliveries.Load() != 1 {
+		t.Fatalf("host did not retain settlement: operation=%+v exists=%t deliveries=%d", operation, exists, deliveries.Load())
+	}
+
+	current, err := g.ExecuteBound(context.Background(), second, request)
+	if err != nil || current.Phase != kernel.Succeeded || !current.Reused || deliveries.Load() != 1 {
+		t.Fatalf("new sandbox did not reuse result: outcome=%+v deliveries=%d error=%v", current, deliveries.Load(), err)
+	}
+}
+
+func TestSandboxDispatchMarkerMakesPriorCutoverCertificateStale(t *testing.T) {
+	var deliveries atomic.Int32
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if deliveries.Add(1) == 1 {
+			close(entered)
+		}
+		<-release
+		writeTestReceipt(t, writer, request.Header.Get("X-Operation-ID"), kernel.Succeeded)
+	}))
+	defer server.Close()
+
+	c, err := control.Open(filepath.Join(t.TempDir(), "runtime.history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	first := testSandboxBinding(1, "host-instance-1")
+	second := testSandboxBinding(2, "host-instance-2")
+	requirement := paymentRequirement(true, server.URL)
+	cutoverSandbox(t, c, requirement, first)
+	priorCertificate, err := c.Compile(requirement)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g, err := New(c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	type result struct {
+		outcome Outcome
+		err     error
+	}
+	completed := make(chan result, 1)
+	go func() {
+		outcome, err := g.ExecuteBound(context.Background(), first, Request{
+			ID: "sandbox-charge-3", Kind: "charge", URL: server.URL,
+		})
+		completed <- result{outcome: outcome, err: err}
+	}()
+	select {
+	case <-entered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("sandbox dispatch did not reach provider")
+	}
+
+	// Prepare and the pre-network Dispatched marker are already durable. A
+	// Certificate from before this call cannot close the old generation as if
+	// the Operation did not exist.
+	if err := c.Cutover(priorCertificate, []control.SandboxBinding{second}); err == nil ||
+		!strings.Contains(err.Error(), "stale") {
+		close(release)
+		t.Fatalf("pre-dispatch Certificate survived Operation progress: %v", err)
+	}
+	if err := c.ValidateSandbox(first); err != nil {
+		close(release)
+		t.Fatalf("failed cutover fenced the active sandbox: %v", err)
+	}
+	close(release)
+	finished := <-completed
+	if finished.err != nil || finished.outcome.Phase != kernel.Succeeded || deliveries.Load() != 1 {
+		t.Fatalf("winning call outcome=%+v deliveries=%d error=%v", finished.outcome, deliveries.Load(), finished.err)
 	}
 }

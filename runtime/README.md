@@ -49,6 +49,23 @@ The only five core terms are:
 - **Certificate**: history-bound evidence for activating a Rule or for reporting
   that no Rule exists in the declared model.
 
+## Current VM/sandbox enforcement slice
+
+The control library can now publish a Rule and the exact host-created VM
+instances allowed to use it in one History event. A VM endpoint captures its
+identity and generation on the host; the guest sends no credential, generation,
+provider address, or sandbox identifier. A replaced VM is rejected before an
+Operation lookup or provider request, while a result already committed by the
+host can be reused by the new VM. Restarting control leaves every old endpoint
+closed until the host publishes and attaches a fresh VM instance.
+
+This is not yet a Firecracker integration. The existing `runtime-vm-demo` still
+uses QEMU and the older bearer-token endpoint, so it demonstrates whole-VM
+restore and Operation reuse but not atomic VM replacement. The next executable
+step is a host supervisor that serves one restricted endpoint per QEMU or
+Firecracker instance, keeps provider egress outside the guest, loads a snapshot
+paused, publishes the new Rule and VM generation, and only then resumes it.
+
 ## Add it to an HTTP service
 
 The business-service integration requires no workflow-engine plugin or SDK. It
@@ -585,6 +602,8 @@ process with the same host account outside the Docker deployment.
 
 This is an early system slice, not the complete system. It does not yet provide:
 
+- a QEMU or Firecracker supervisor wired to the new host-owned VM endpoint;
+  the current VM demo still carries a legacy adapter token inside the guest;
 - a maintained production application workload; DeathStarBench is a real,
   unmodified benchmark but not the eventual maintained order/payment target;
 - general host-level prevention of direct network or device access beyond the

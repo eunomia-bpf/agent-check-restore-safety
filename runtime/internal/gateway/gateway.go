@@ -145,12 +145,76 @@ func resultHash(status int, body []byte) string {
 }
 
 func (g *Gateway) Execute(ctx context.Context, request Request) (Outcome, error) {
-	release, err := g.control.BeginDispatch()
+	return g.execute(ctx, nil, request)
+}
+
+// ExecuteBound executes on behalf of one host-attached sandbox. The binding
+// is supplied by the host endpoint, never by request bytes from the sandbox.
+// Its domain replaces any caller value, and every security-sensitive lookup,
+// prepare, and pre-network dispatch marker is checked against the same
+// binding used by an atomic Rule-and-sandbox cutover.
+func (g *Gateway) ExecuteBound(
+	ctx context.Context,
+	binding control.SandboxBinding,
+	request Request,
+) (Outcome, error) {
+	binding.AllowedKinds = append([]string(nil), binding.AllowedKinds...)
+	request.Domain = binding.Domain
+	return g.execute(ctx, &binding, request)
+}
+
+func (g *Gateway) moveBeforeNetwork(
+	binding *control.SandboxBinding,
+	id string,
+	update kernel.OperationUpdate,
+) error {
+	if binding == nil {
+		return g.control.Move(id, update)
+	}
+	return g.control.MoveForSandbox(*binding, id, update)
+}
+
+func (g *Gateway) cancelPrepared(binding *control.SandboxBinding, id string) {
+	_ = g.moveBeforeNetwork(binding, id, kernel.OperationUpdate{Phase: kernel.Cancelled})
+}
+
+func (g *Gateway) execute(
+	ctx context.Context,
+	binding *control.SandboxBinding,
+	request Request,
+) (outcome Outcome, returnErr error) {
+	var release func()
+	var err error
+	if binding == nil {
+		release, err = g.control.BeginAdapterDispatch(request.Domain)
+	} else {
+		release, err = g.control.BeginSandboxDispatch(*binding)
+	}
 	if err != nil {
 		return Outcome{}, err
 	}
 	defer release()
-	prior, exists := g.control.Operation(request.ID)
+	if binding != nil {
+		// A cutover may happen after an external request was sent. Host-owned
+		// settlement still belongs in History, but a stale sandbox must not
+		// receive the result or use it to continue acting.
+		defer func() {
+			if err := g.control.ValidateSandbox(*binding); err != nil {
+				outcome = Outcome{}
+				returnErr = err
+			}
+		}()
+	}
+	var prior kernel.Operation
+	var exists bool
+	if binding == nil {
+		prior, exists = g.control.Operation(request.ID)
+	} else {
+		prior, exists, err = g.control.OperationForSandbox(*binding, request.ID)
+		if err != nil {
+			return Outcome{}, err
+		}
+	}
 	if exists {
 		if prior.Domain != request.Domain {
 			return Outcome{}, errors.New("stable operation identity belongs to another adapter domain")
@@ -185,9 +249,16 @@ func (g *Gateway) Execute(ctx context.Context, request Request) (Outcome, error)
 	if exists && digest != prior.RequestHash {
 		return Outcome{}, ErrStoredRequestMismatch
 	}
-	operation, err := g.control.PrepareWithRequest(
-		request.ID, request.Domain, request.Kind, digest, callerHeaders, body,
-	)
+	var operation kernel.Operation
+	if binding == nil {
+		operation, err = g.control.PrepareWithRequest(
+			request.ID, request.Domain, request.Kind, digest, callerHeaders, body,
+		)
+	} else {
+		operation, err = g.control.PrepareWithRequestForSandbox(
+			*binding, request.ID, request.Kind, digest, callerHeaders, body,
+		)
+	}
 	if err != nil {
 		return Outcome{}, err
 	}
@@ -197,7 +268,7 @@ func (g *Gateway) Execute(ctx context.Context, request Request) (Outcome, error)
 	}
 	if operation.Target == "" || operation.Target != httpRequest.URL.String() || registeredMethod != httpRequest.Method {
 		if operation.Phase == kernel.Prepared {
-			_ = g.control.Move(operation.ID, kernel.OperationUpdate{Phase: kernel.Cancelled})
+			g.cancelPrepared(binding, operation.ID)
 		}
 		return Outcome{}, errors.New("external request differs from the registered operation target")
 	}
@@ -219,7 +290,7 @@ func (g *Gateway) Execute(ctx context.Context, request Request) (Outcome, error)
 		}
 		// A crash after the durable dispatch marker cannot reveal whether the
 		// request crossed the network boundary.
-		if err := g.control.Move(operation.ID, kernel.OperationUpdate{
+		if err := g.moveBeforeNetwork(binding, operation.ID, kernel.OperationUpdate{
 			Phase: kernel.Unknown, RemoteReference: operation.RemoteReference,
 		}); err != nil {
 			return Outcome{}, err
@@ -252,23 +323,25 @@ func (g *Gateway) Execute(ctx context.Context, request Request) (Outcome, error)
 	}
 	if operation.ResponseClassifier == "" {
 		if operation.Phase == kernel.Prepared {
-			_ = g.control.Move(operation.ID, kernel.OperationUpdate{Phase: kernel.Cancelled})
+			g.cancelPrepared(binding, operation.ID)
 		}
 		return Outcome{}, errors.New("operation has no registered response classifier")
 	}
 	if !supportedClassifier(operation.ResponseClassifier) {
 		if operation.Phase == kernel.Prepared {
-			_ = g.control.Move(operation.ID, kernel.OperationUpdate{Phase: kernel.Cancelled})
+			g.cancelPrepared(binding, operation.ID)
 		}
 		return Outcome{}, fmt.Errorf("unsupported response classifier %q", operation.ResponseClassifier)
 	}
 
-	if err := g.control.Move(operation.ID, kernel.OperationUpdate{
+	dispatch := kernel.OperationUpdate{
 		Phase:              kernel.Dispatched,
 		RemoteReference:    operation.RemoteReference,
 		DispatchOwner:      g.control.BootID(),
 		DispatchGeneration: operation.DispatchGeneration + 1,
-	}); err != nil {
+	}
+	err = g.moveBeforeNetwork(binding, operation.ID, dispatch)
+	if err != nil {
 		return Outcome{}, err
 	}
 

@@ -81,10 +81,14 @@ type Control struct {
 	history          *history.History
 	anchor           *headanchor.Anchor
 	state            *kernel.State
+	bindings         sandboxRegistry
+	attachEligible   map[string]SandboxBinding
+	attachedBindings map[string]SandboxBinding
 	bootID           string
 	failed           error
 	closing          bool
 	activeDispatches int
+	activeAdapters   map[string]int
 	dispatchesDone   *sync.Cond
 }
 
@@ -105,13 +109,14 @@ func OpenWithAnchor(path, anchorPath string) (*Control, error) {
 		return nil, err
 	}
 	state := kernel.NewState()
+	bindings := newSandboxRegistry()
 	for _, event := range record.Events() {
 		if event.Sequence != state.History.Sequence+1 || event.PreviousHash != state.History.Hash {
 			_ = anchor.Close()
 			_ = record.Close()
 			return nil, errors.New("durable event does not extend reconstructed state")
 		}
-		if err := apply(state, event.Operation, event.Data); err != nil {
+		if err := apply(state, &bindings, event.Operation, event.Data); err != nil {
 			_ = anchor.Close()
 			_ = record.Close()
 			return nil, fmt.Errorf("replay event %d: %w", event.Sequence, err)
@@ -131,7 +136,10 @@ func OpenWithAnchor(path, anchorPath string) (*Control, error) {
 		return nil, fmt.Errorf("create control boot identity: %w", err)
 	}
 	control := &Control{
-		history: record, anchor: anchor, state: state, bootID: hex.EncodeToString(bootBytes),
+		history: record, anchor: anchor, state: state, bindings: bindings,
+		attachEligible: make(map[string]SandboxBinding), attachedBindings: make(map[string]SandboxBinding),
+		activeAdapters: make(map[string]int),
+		bootID:         hex.EncodeToString(bootBytes),
 	}
 	control.dispatchesDone = sync.NewCond(&control.mu)
 	return control, nil
@@ -323,6 +331,9 @@ func (c *Control) Activate(certificate kernel.Certificate) error {
 	if c.failed != nil {
 		return fmt.Errorf("%w: %v", ErrNeedsReopen, c.failed)
 	}
+	if len(c.bindings.desired) != 0 {
+		return ErrActiveSandboxBindings
+	}
 	if err := checkCertificate(c.state, certificate); err != nil {
 		return err
 	}
@@ -498,6 +509,15 @@ func (c *Control) prepare(
 ) (kernel.Operation, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	return c.prepareLocked(id, domain, kind, requestHash, requestStored, headers, body)
+}
+
+func (c *Control) prepareLocked(
+	id, domain, kind, requestHash string,
+	requestStored bool,
+	headers map[string]string,
+	body []byte,
+) (kernel.Operation, error) {
 	if c.history == nil {
 		return kernel.Operation{}, history.ErrClosed
 	}
@@ -539,6 +559,10 @@ func (c *Control) prepare(
 func (c *Control) Move(id string, update kernel.OperationUpdate) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	return c.moveLocked(id, update)
+}
+
+func (c *Control) moveLocked(id string, update kernel.OperationUpdate) error {
 	if c.history == nil {
 		return history.ErrClosed
 	}
@@ -587,9 +611,15 @@ func (c *Control) appendError(err error) error {
 	return err
 }
 
-func apply(state *kernel.State, operation string, data json.RawMessage) error {
+func apply(state *kernel.State, bindings *sandboxRegistry, operation string, data json.RawMessage) error {
 	switch operation {
 	case eventRuleActivated:
+		if bindings == nil {
+			return errors.New("nil sandbox binding registry")
+		}
+		if len(bindings.desired) != 0 {
+			return ErrActiveSandboxBindings
+		}
 		var event ruleEvent
 		if err := decodeStrict(data, &event); err != nil {
 			return err
@@ -638,6 +668,8 @@ func apply(state *kernel.State, operation string, data json.RawMessage) error {
 			return fmt.Errorf("unsupported phase semantic version %d", event.SemanticVersion)
 		}
 		return state.MoveOperation(event.ID, event.Update)
+	case eventRuleBindingsCutover:
+		return applyRuleBindingsCutover(state, bindings, data)
 	default:
 		return fmt.Errorf("unknown durable event %q", operation)
 	}
