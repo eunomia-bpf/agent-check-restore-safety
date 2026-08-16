@@ -784,7 +784,7 @@ func runExternal(ctx context.Context, configuration options, tools hostTools, in
 		verifiedImagePath,
 		configuration.externalSandboxSocket,
 	); err != nil {
-		return err
+		return withQEMULog(err, qemuLogPath)
 	}
 
 	qmp, err := dialQMPWithTrace(
