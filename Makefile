@@ -1,6 +1,7 @@
 .PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
 
 VM_ACCEL ?= tcg
+VM_DEMO_ARGS ?=
 RUNTIME_IMAGE ?= safe-change-runtime:local
 RUNTIME_VERSION ?= dev
 RUNTIME_REVISION ?= $(shell git rev-parse --short=12 HEAD)
@@ -39,7 +40,7 @@ runtime-microservice-demo:
 	bash runtime/deploy/microservice/run.sh
 
 runtime-vm-demo:
-	cd runtime && go run ./cmd/vm-demo -accel "$(VM_ACCEL)"
+	cd runtime && go run ./cmd/vm-demo -accel "$(VM_ACCEL)" $(VM_DEMO_ARGS)
 
 # Explicit live-account target. It is intentionally not part of runtime-verify.
 runtime-codex-demo:

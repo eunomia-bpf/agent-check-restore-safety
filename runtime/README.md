@@ -59,12 +59,12 @@ Operation lookup or provider request, while a result already committed by the
 host can be reused by the new VM. Restarting control leaves every old endpoint
 closed until the host publishes and attaches a fresh VM instance.
 
-This is not yet a Firecracker integration. The existing `runtime-vm-demo` still
-uses QEMU and the older bearer-token endpoint, so it demonstrates whole-VM
-restore and Operation reuse but not atomic VM replacement. The next executable
-step is a host supervisor that serves one restricted endpoint per QEMU or
-Firecracker instance, keeps provider egress outside the guest, loads a snapshot
-paused, publishes the new Rule and VM generation, and only then resumes it.
+This is not yet a Firecracker integration. The standalone `runtime-vm-demo`
+uses this host-bound endpoint with a complete QEMU guest: it loads the snapshot
+while QEMU is paused, publishes the new Rule and VM generation, replaces the
+endpoint, and only then resumes the guest. The shared-control mode used by the
+older integrated Codex demo still uses its bearer-token protocol; migrating
+that path and adding a Firecracker backend remain separate executable steps.
 
 ## Add it to an HTTP service
 
@@ -388,25 +388,38 @@ make runtime-vm-demo VM_ACCEL=kvm
 ```
 
 The runner creates one QEMU user network with `restrict=on`, disables all
-implicit NICs, and defines only two fixed guest forwards: metadata/gate and the
-Operation API. There is no forward to payment. The checked sequence is:
+implicit NICs, and defines only two fixed guest forwards: metadata/gate and one
+VM-specific Operation endpoint. There is no forward to payment. The injected
+guest program has no bearer token, provider method or address, VM identity, or
+generation; it sends only a stable call ID, an Operation kind, and its payload.
+The checked sequence is:
 
 1. Boot Ubuntu and wait at a guest-visible gate before its Operation.
 2. Stop QEMU and use `savevm` to save RAM, devices, and the qcow2 guest disk.
-3. Resume the guest. Its direct connection to payment must fail. Its gateway
-   request reaches payment, which syncs one commit and drops the response,
-   leaving the Operation `unknown` in host History.
-4. Stop QEMU, use `loadvm` to restore the complete guest to the saved point,
-   and resume it. Host History and payment state are outside that restore.
-5. The restored guest again fails to reach payment directly and repeats the
-   identical stable call. The runtime retries the frozen Operation, obtains its
-   receipt, and returns `succeeded` without a second payment commit.
+3. Resume the guest. Its connection to an unforwarded host canary must fail. Its
+   credential-free host endpoint resolves the physical payment route, which
+   syncs one commit and drops the response, leaving the Operation `unknown` in
+   host History.
+4. Stop QEMU and close the old VM endpoint. Use `loadvm` to restore the complete
+   guest and verify that it remains paused. Host History and payment state are
+   outside that restore.
+5. Compile from the current History, publish the new Rule together with VM
+   generation 2, reject generation 1, and bind the replacement endpoint to the
+   same host port. Only then resume QEMU.
+6. The restored guest again fails the direct-host probe and repeats the same
+   logical call. The runtime retries the frozen Operation, obtains its receipt,
+   and returns `succeeded` without a second payment commit.
 
-The retained TCG run booted kernel `6.8.0-136-generic`, observed two remote
-deliveries and one commit, and ended at host History sequence 6. The runner
-also asks `qemu-img` to verify that the named internal snapshot exists. Use
-`cd runtime && go run ./cmd/vm-demo -keep` to retain the guest overlay, serial
-console, QEMU log, History, head anchor, and payment state for inspection.
+The runner verifies the internal snapshot and writes `result.json`, the exact
+credential-free guest request and script, a synced host-supervisor trace, a
+redacted QEMU command, the synced QMP command trace, source provenance, serial
+console, QEMU log, History, head anchor, a synced provider-delivery trace,
+payment state, and `SHA256SUMS` over that evidence. Retain them through the
+public target with:
+
+```sh
+make runtime-vm-demo VM_ACCEL=kvm VM_DEMO_ARGS=-keep
+```
 
 ## Run one purchase across Codex, a service, and a full VM
 
@@ -602,8 +615,9 @@ process with the same host account outside the Docker deployment.
 
 This is an early system slice, not the complete system. It does not yet provide:
 
-- a QEMU or Firecracker supervisor wired to the new host-owned VM endpoint;
-  the current VM demo still carries a legacy adapter token inside the guest;
+- a production multi-VM QEMU/Firecracker process manager; the standalone QEMU
+  runner uses the host-owned endpoint, but the older integrated Codex/VM path
+  still carries a legacy adapter token and no Firecracker backend exists yet;
 - a maintained production application workload; DeathStarBench is a real,
   unmodified benchmark but not the eventual maintained order/payment target;
 - general host-level prevention of direct network or device access beyond the

@@ -64,7 +64,9 @@ finishes the old order and sends a new order to the new payment endpoint.
 The VM demo boots a checksum-pinned Ubuntu 24.04 cloud image under QEMU, saves
 the complete running guest before an Operation, then restores the guest after
 the remote payment committed but its response was lost. A host-owned restricted
-network exposes only metadata and control to the guest. The restored guest
+network exposes only metadata and a VM-specific, credential-free Operation
+endpoint to the guest. While the restored VM remains paused, the host replaces
+its Rule and VM binding before reconnecting and resuming it. The restored guest
 repeats the call, History recovers it, and payment still commits once.
 
 The Codex demo uses the locally logged-in account and the real Codex App Server,

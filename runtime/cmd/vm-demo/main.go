@@ -24,7 +24,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	goruntime "runtime"
+	"sort"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -33,6 +36,7 @@ import (
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/gateway"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/kernel"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/payment"
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/sandboxhost"
 )
 
 const (
@@ -130,6 +134,20 @@ func run(configuration options) error {
 	serialPath := filepath.Join(work, "guest.serial.log")
 	qemuLogPath := filepath.Join(work, "qemu.log")
 	qmpPath := filepath.Join(work, "qmp.sock")
+	qmpTracePath := filepath.Join(work, "qmp-protocol.jsonl")
+	supervisorTrace, err := openSyncedTrace(filepath.Join(work, "host-supervisor.jsonl"))
+	if err != nil {
+		return err
+	}
+	defer supervisorTrace.Close()
+	providerTrace, err := openSyncedTrace(filepath.Join(work, "provider-deliveries.jsonl"))
+	if err != nil {
+		return err
+	}
+	defer providerTrace.Close()
+	if err := writeSourceProvenance(work, configuration); err != nil {
+		return err
+	}
 
 	paymentService, err := payment.Open(paymentPath, true)
 	if err != nil {
@@ -140,72 +158,118 @@ func run(configuration options) error {
 	if err != nil {
 		return err
 	}
-	paymentServer := &http.Server{Handler: paymentService.Handler(), ReadHeaderTimeout: 5 * time.Second}
+	paymentHandler := paymentService.Handler()
+	paymentServer := &http.Server{
+		Handler: http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			if request.URL.Path == "/v1/charge" {
+				if err := providerTrace.Record("provider-request-received", map[string]any{
+					"method": request.Method, "path": request.URL.Path,
+					"operation_id": request.Header.Get("X-Operation-ID"),
+				}); err != nil {
+					http.Error(writer, "provider evidence write failed", http.StatusInternalServerError)
+					return
+				}
+			}
+			paymentHandler.ServeHTTP(writer, request)
+		}),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
 	go serve(paymentServer, paymentListener)
 	defer shutdown(paymentServer)
 	paymentTarget := "http://" + paymentListener.Addr().String() + "/v1/charge"
+	var directCanaryReached atomic.Bool
+	directCanaryListener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return err
+	}
+	directCanaryServer := &http.Server{
+		Handler: http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+			directCanaryReached.Store(true)
+			writer.WriteHeader(http.StatusNoContent)
+		}),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+	go serve(directCanaryServer, directCanaryListener)
+	defer shutdown(directCanaryServer)
 
 	controller, err := control.OpenWithAnchor(historyPath, anchorPath)
 	if err != nil {
 		return err
 	}
 	defer controller.Close()
-	requirement := kernel.Requirement{
-		ID: "vm-restore-v1", Results: map[string]uint32{"written": 1},
-		Capacities: map[string]uint32{"slot": 1},
-		Kinds: map[string]kernel.KindSpec{
-			"vm-write": {
-				Costs: map[string]uint32{"slot": 1}, Produces: map[string]uint32{"written": 1},
-				RetrySafe: true, Target: paymentTarget, Method: http.MethodPost,
-				ResponseClassifier: gateway.ResponseReceiptV1,
-			},
-		},
-	}
+	requirement := vmRequirement("vm-restore-v1", paymentTarget)
 	certificate, err := controller.Compile(requirement)
 	if err != nil {
-		return err
-	}
-	if err := controller.Activate(certificate); err != nil {
 		return err
 	}
 	adminToken, err := randomToken()
 	if err != nil {
 		return err
 	}
-	operationToken, err := randomToken()
+	firstHostID, err := randomToken()
 	if err != nil {
+		return err
+	}
+	firstBinding := control.SandboxBinding{
+		SandboxID: "full-linux-vm", Generation: 1,
+		HostInstanceID: "qemu-" + firstHostID, Domain: "full-linux-vm",
+		AllowedKinds: []string{"vm-write"},
+	}
+	if err := controller.Cutover(certificate, []control.SandboxBinding{firstBinding}); err != nil {
+		return err
+	}
+	if err := supervisorTrace.Record("rule-and-sandbox-cutover", map[string]any{
+		"history_sequence": controller.Snapshot().History.Sequence, "binding": firstBinding,
+	}); err != nil {
 		return err
 	}
 	serverAPI, err := controlapi.New(controller, nil, controlapi.Credentials{
 		AdminToken: adminToken,
-		Adapters: []controlapi.AdapterCredential{{
-			Token: operationToken, Domain: "full-linux-vm", Kinds: []string{"vm-write"},
-		}},
 	})
 	if err != nil {
 		return err
 	}
-	controlListener, err := net.Listen("tcp", "127.0.0.1:0")
+	sandboxEndpoint, err := sandboxhost.Listen(
+		controller, serverAPI, firstBinding, "127.0.0.1:0",
+	)
 	if err != nil {
 		return err
 	}
-	controlServer := &http.Server{Handler: serverAPI.Handler(), ReadHeaderTimeout: 5 * time.Second}
-	go serve(controlServer, controlListener)
-	defer shutdown(controlServer)
+	defer func() {
+		closeContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = sandboxEndpoint.Close(closeContext)
+	}()
+	if err := supervisorTrace.Record("sandbox-endpoint-bound", map[string]any{
+		"binding": firstBinding, "address": sandboxEndpoint.Address(),
+	}); err != nil {
+		return err
+	}
+	sandboxPort, err := sandboxEndpoint.Port()
+	if err != nil {
+		return err
+	}
 
-	executeJSON, err := json.Marshal(map[string]any{
-		"call_id": "vm/job-1/write", "kind": "vm-write", "method": http.MethodPost,
-		"url": paymentTarget, "body": []byte(`{"job":"job-1","value":42}`),
-	})
+	executeJSON, err := makeSandboxExecuteJSON(
+		"vm/job-1/write", "vm-write", []byte(`{"job":"job-1","value":42}`),
+	)
 	if err != nil {
 		return err
 	}
 	var gate atomic.Bool
 	guestScript := makeGuestScript(
-		operationToken,
 		base64.StdEncoding.EncodeToString(executeJSON),
-		paymentListener.Addr().(*net.TCPAddr).Port,
+		directCanaryListener.Addr().(*net.TCPAddr).Port,
 	)
+	if err := validateStandaloneGuestBoundary(executeJSON, guestScript, paymentTarget); err != nil {
+		return err
+	}
+	if err := writePrivateFile(filepath.Join(work, "guest-operation.json"), append(executeJSON, '\n')); err != nil {
+		return err
+	}
+	if err := writePrivateFile(filepath.Join(work, "guest-script.sh"), []byte(guestScript)); err != nil {
+		return err
+	}
 	userData := makeUserData(guestScript)
 	seedListener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -228,7 +292,7 @@ func run(configuration options) error {
 		netcatPath,
 		seedListener.Addr().(*net.TCPAddr).Port,
 		netcatPath,
-		controlListener.Addr().(*net.TCPAddr).Port,
+		sandboxPort,
 	)
 	qemuArgs := []string{
 		"-name", "safe-change-vm", "-machine", "q35", "-m", "1024", "-smp", "2",
@@ -242,6 +306,11 @@ func run(configuration options) error {
 		qemuArgs = append(qemuArgs, "-accel", "tcg,thread=multi")
 	} else {
 		qemuArgs = append(qemuArgs, "-accel", "kvm")
+	}
+	if err := writeQEMUCommand(
+		filepath.Join(work, "qemu-command.json"), qemuArgs, work, configuration.imagePath,
+	); err != nil {
+		return err
 	}
 	qemu := exec.CommandContext(ctx, "qemu-system-x86_64", qemuArgs...)
 	qemu.Stdout, qemu.Stderr = qemuLog, qemuLog
@@ -258,7 +327,7 @@ func run(configuration options) error {
 		}
 	}()
 
-	qmp, err := dialQMP(ctx, qmpPath)
+	qmp, err := dialQMPWithTrace(ctx, qmpPath, qmpTracePath)
 	if err != nil {
 		return withQEMULog(err, qemuLogPath)
 	}
@@ -267,6 +336,12 @@ func run(configuration options) error {
 		return withQEMULog(err, qemuLogPath)
 	}
 	if err := qmp.command("stop", nil); err != nil {
+		return err
+	}
+	if err := qmp.requireStatus("paused"); err != nil {
+		return err
+	}
+	if err := supervisorTrace.Record("snapshot-save-paused", nil); err != nil {
 		return err
 	}
 	if err := qmp.human("savevm before_operation"); err != nil {
@@ -279,16 +354,96 @@ func run(configuration options) error {
 	if err := waitForText(ctx, serialPath, "SAFE_CHANGE_VM_FIRST_UNKNOWN", 2*time.Minute); err != nil {
 		return err
 	}
+	if err := supervisorTrace.Record("first-operation-unknown", map[string]any{
+		"history_sequence": controller.Snapshot().History.Sequence,
+	}); err != nil {
+		return err
+	}
 	if err := qmp.command("stop", nil); err != nil {
 		return err
 	}
+	if err := qmp.requireStatus("paused"); err != nil {
+		return err
+	}
+	if err := supervisorTrace.Record("restore-pause-confirmed", nil); err != nil {
+		return err
+	}
+	oldEndpointAddress := sandboxEndpoint.Address()
+	closeContext, cancelClose := context.WithTimeout(ctx, 10*time.Second)
+	if err := sandboxEndpoint.Close(closeContext); err != nil {
+		cancelClose()
+		return fmt.Errorf("close old sandbox endpoint while VM is paused: %w", err)
+	}
+	cancelClose()
+	if err := requireTCPClosed(oldEndpointAddress); err != nil {
+		return err
+	}
+	if err := supervisorTrace.Record("old-sandbox-endpoint-closed", map[string]any{
+		"binding": firstBinding, "address": oldEndpointAddress,
+	}); err != nil {
+		return err
+	}
 	if err := qmp.human("loadvm before_operation"); err != nil {
+		return err
+	}
+	if err := qmp.requireStatus("paused"); err != nil {
+		return fmt.Errorf("restored VM was not kept paused for host cutover: %w", err)
+	}
+	if err := supervisorTrace.Record("snapshot-loaded-paused", nil); err != nil {
+		return err
+	}
+	secondCertificate, err := controller.Compile(vmRequirement("vm-restore-v2", paymentTarget))
+	if err != nil {
+		return err
+	}
+	secondHostID, err := randomToken()
+	if err != nil {
+		return err
+	}
+	secondBinding := control.SandboxBinding{
+		SandboxID: firstBinding.SandboxID, Generation: 2,
+		HostInstanceID: "qemu-" + secondHostID, Domain: firstBinding.Domain,
+		AllowedKinds: append([]string(nil), firstBinding.AllowedKinds...),
+	}
+	if err := controller.Cutover(secondCertificate, []control.SandboxBinding{secondBinding}); err != nil {
+		return err
+	}
+	if err := supervisorTrace.Record("rule-and-sandbox-cutover", map[string]any{
+		"history_sequence": controller.Snapshot().History.Sequence, "binding": secondBinding,
+	}); err != nil {
+		return err
+	}
+	if err := controller.ValidateSandbox(firstBinding); !errors.Is(err, control.ErrStaleSandboxBinding) {
+		return fmt.Errorf("old sandbox generation was not fenced: %v", err)
+	}
+	if err := supervisorTrace.Record("old-sandbox-generation-rejected", map[string]any{
+		"binding": firstBinding, "reason": control.ErrStaleSandboxBinding.Error(),
+	}); err != nil {
+		return err
+	}
+	sandboxEndpoint, err = sandboxhost.Listen(
+		controller, serverAPI, secondBinding, oldEndpointAddress,
+	)
+	if err != nil {
+		return fmt.Errorf("bind replacement sandbox endpoint while VM is paused: %w", err)
+	}
+	if sandboxEndpoint.Address() != oldEndpointAddress {
+		return fmt.Errorf("replacement sandbox endpoint moved from %s to %s", oldEndpointAddress, sandboxEndpoint.Address())
+	}
+	if err := supervisorTrace.Record("sandbox-endpoint-bound", map[string]any{
+		"binding": secondBinding, "address": sandboxEndpoint.Address(),
+	}); err != nil {
 		return err
 	}
 	if err := qmp.command("cont", nil); err != nil {
 		return err
 	}
 	if err := waitForText(ctx, serialPath, "SAFE_CHANGE_VM_RESTORED_SUCCEEDED", 2*time.Minute); err != nil {
+		return err
+	}
+	if err := supervisorTrace.Record("restored-operation-succeeded", map[string]any{
+		"history_sequence": controller.Snapshot().History.Sequence,
+	}); err != nil {
 		return err
 	}
 	select {
@@ -302,6 +457,9 @@ func run(configuration options) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+	if err := qemuLog.Sync(); err != nil {
+		return err
+	}
 
 	serial, err := os.ReadFile(serialPath)
 	if err != nil {
@@ -310,7 +468,10 @@ func run(configuration options) error {
 	serialText := string(serial)
 	if strings.Contains(serialText, "SAFE_CHANGE_VM_DIRECT_BYPASS_REACHABLE") ||
 		strings.Count(serialText, "SAFE_CHANGE_VM_DIRECT_BYPASS_BLOCKED") < 2 {
-		return errors.New("guest direct-payment isolation check failed")
+		return errors.New("guest direct-host isolation check failed")
+	}
+	if directCanaryReached.Load() {
+		return errors.New("guest reached the unforwarded host canary")
 	}
 	guestKernel := markerField(serialText, "SAFE_CHANGE_VM_READY kernel=")
 	if guestKernel == "" {
@@ -318,7 +479,7 @@ func run(configuration options) error {
 	}
 	stats := paymentService.Stats()
 	state := controller.Snapshot()
-	if stats.Deliveries != 2 || stats.Commits != 1 || len(state.Operations) != 1 {
+	if stats.Deliveries != 2 || providerTrace.Count() != 2 || stats.Commits != 1 || len(state.Operations) != 1 {
 		return fmt.Errorf("unexpected final facts: payment=%+v operations=%d", stats, len(state.Operations))
 	}
 	for _, operation := range state.Operations {
@@ -330,13 +491,23 @@ func run(configuration options) error {
 	if err != nil || !strings.Contains(string(snapshotOutput), "before_operation") {
 		return fmt.Errorf("guest snapshot not present: %w: %s", err, snapshotOutput)
 	}
+	if err := writePrivateFile(filepath.Join(work, "snapshots.txt"), snapshotOutput); err != nil {
+		return err
+	}
 	summary := map[string]any{
 		"accelerator":                          configuration.accel,
 		"base_image_sha256":                    configuration.imageSHA,
 		"full_linux_guest":                     true,
 		"guest_kernel":                         guestKernel,
 		"host_owned_restricted_network":        true,
-		"direct_payment_from_guest":            "blocked_before_and_after_restore",
+		"direct_host_canary_from_guest":        "blocked_before_and_after_restore",
+		"injected_guest_provider_target":       false,
+		"injected_guest_bearer_token":          false,
+		"host_bound_sandbox_generations":       []uint64{1, 2},
+		"old_sandbox_generation_rejected":      true,
+		"endpoint_rebound_while_vm_paused":     true,
+		"rule_and_sandbox_cutovers":            2,
+		"runner_completed":                     true,
 		"snapshot_saved_before_operation":      true,
 		"first_network_result":                 kernel.Unknown,
 		"whole_vm_restored":                    true,
@@ -350,7 +521,27 @@ func run(configuration options) error {
 	if configuration.keep {
 		summary["evidence_directory"] = work
 	}
-	encoded, _ := json.MarshalIndent(summary, "", "  ")
+	encoded, err := json.MarshalIndent(summary, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := writePrivateFile(filepath.Join(work, "result.json"), append(encoded, '\n')); err != nil {
+		return err
+	}
+	if err := supervisorTrace.Close(); err != nil {
+		return err
+	}
+	if err := providerTrace.Close(); err != nil {
+		return err
+	}
+	if err := writeEvidenceManifest(work, []string{
+		"guest-operation.json", "guest-script.sh", "guest.qcow2", "guest.serial.log",
+		"host.head", "host.history", "host-supervisor.jsonl", "payment.history",
+		"provenance.json", "provider-deliveries.jsonl", "qemu-command.json", "qemu.log", "qmp-protocol.jsonl",
+		"result.json", "snapshots.txt",
+	}); err != nil {
+		return err
+	}
 	fmt.Println(string(encoded))
 	return nil
 }
@@ -474,7 +665,7 @@ func runExternal(ctx context.Context, configuration options, netcatPath string, 
 	} else {
 		qemuArgs = append(qemuArgs, "-accel", "kvm")
 	}
-	if err := writeExternalQEMUCommand(
+	if err := writeQEMUCommand(
 		filepath.Join(evidenceDirectory, "qemu-command.json"),
 		qemuArgs,
 		evidenceDirectory,
@@ -756,7 +947,7 @@ func writeExternalEvent(writer io.Writer, value map[string]any) error {
 	return json.NewEncoder(writer).Encode(value)
 }
 
-func writeExternalQEMUCommand(path string, arguments []string, evidenceDirectory, imagePath string) error {
+func writeQEMUCommand(path string, arguments []string, evidenceDirectory, imagePath string) error {
 	redacted := make([]string, len(arguments))
 	for index, argument := range arguments {
 		argument = strings.ReplaceAll(argument, evidenceDirectory, "<vm-evidence>")
@@ -775,7 +966,7 @@ func writeExternalQEMUCommand(path string, arguments []string, evidenceDirectory
 	if err := encoder.Encode(value); err != nil {
 		return err
 	}
-	return os.WriteFile(path, encoded.Bytes(), 0o600)
+	return writePrivateFile(path, encoded.Bytes())
 }
 
 func markerFieldFromLast(path, marker string) string {
@@ -813,6 +1004,244 @@ func randomToken() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(data), nil
+}
+
+func vmRequirement(id, target string) kernel.Requirement {
+	return kernel.Requirement{
+		ID: id, Results: map[string]uint32{"written": 1},
+		Capacities: map[string]uint32{"slot": 1},
+		Kinds: map[string]kernel.KindSpec{
+			"vm-write": {
+				Costs: map[string]uint32{"slot": 1}, Produces: map[string]uint32{"written": 1},
+				RetrySafe: true, Target: target, Method: http.MethodPost,
+				ResponseClassifier: gateway.ResponseReceiptV1,
+			},
+		},
+	}
+}
+
+type sandboxExecutePayload struct {
+	CallID string `json:"call_id"`
+	Kind   string `json:"kind"`
+	Body   []byte `json:"body,omitempty"`
+}
+
+func makeSandboxExecuteJSON(callID, kind string, body []byte) ([]byte, error) {
+	return json.Marshal(sandboxExecutePayload{CallID: callID, Kind: kind, Body: body})
+}
+
+func validateStandaloneGuestBoundary(requestData []byte, script, providerTarget string) error {
+	decoder := json.NewDecoder(bytes.NewReader(requestData))
+	decoder.DisallowUnknownFields()
+	var request sandboxExecutePayload
+	if err := decoder.Decode(&request); err != nil {
+		return fmt.Errorf("validate sandbox guest request: %w", err)
+	}
+	var extra any
+	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
+		return errors.New("sandbox guest request contains trailing JSON")
+	}
+	if request.CallID == "" || request.Kind == "" {
+		return errors.New("sandbox guest request is missing logical identity")
+	}
+	for _, forbidden := range []string{
+		"Authorization:", "Bearer ", providerTarget,
+		base64.StdEncoding.EncodeToString([]byte(providerTarget)), "/v1/charge",
+	} {
+		if forbidden != "" && strings.Contains(script, forbidden) {
+			return fmt.Errorf("sandbox guest script contains host-owned provider data %q", forbidden)
+		}
+	}
+	if bytes.Contains(request.Body, []byte(providerTarget)) {
+		return errors.New("sandbox guest payload contains the provider target")
+	}
+	return nil
+}
+
+type syncedTrace struct {
+	mu       sync.Mutex
+	file     *os.File
+	sequence uint64
+	closed   bool
+}
+
+func openSyncedTrace(path string) (*syncedTrace, error) {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	if err != nil {
+		return nil, err
+	}
+	return &syncedTrace{file: file}, nil
+}
+
+func (trace *syncedTrace) Record(event string, details map[string]any) error {
+	if trace == nil {
+		return errors.New("host trace is nil")
+	}
+	trace.mu.Lock()
+	defer trace.mu.Unlock()
+	if trace.closed {
+		return errors.New("host supervisor trace is closed")
+	}
+	if event == "" {
+		return errors.New("host supervisor trace event is empty")
+	}
+	trace.sequence++
+	record := map[string]any{
+		"sequence": trace.sequence, "time_ns": time.Now().UnixNano(), "event": event,
+	}
+	if len(details) != 0 {
+		record["details"] = details
+	}
+	if err := json.NewEncoder(trace.file).Encode(record); err != nil {
+		return err
+	}
+	return trace.file.Sync()
+}
+
+func (trace *syncedTrace) Close() error {
+	if trace == nil {
+		return nil
+	}
+	trace.mu.Lock()
+	defer trace.mu.Unlock()
+	if trace.closed {
+		return nil
+	}
+	trace.closed = true
+	return trace.file.Close()
+}
+
+func (trace *syncedTrace) Count() uint64 {
+	if trace == nil {
+		return 0
+	}
+	trace.mu.Lock()
+	defer trace.mu.Unlock()
+	return trace.sequence
+}
+
+func writeEvidenceManifest(directory string, names []string) error {
+	owned := append([]string(nil), names...)
+	sort.Strings(owned)
+	var manifest strings.Builder
+	for index, name := range owned {
+		if name == "" || filepath.Base(name) != name || name == "SHA256SUMS" ||
+			(index > 0 && owned[index-1] == name) {
+			return fmt.Errorf("invalid evidence manifest name %q", name)
+		}
+		digest, err := fileSHA(filepath.Join(directory, name))
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(&manifest, "%s  %s\n", digest, name)
+	}
+	if err := writePrivateFile(filepath.Join(directory, "SHA256SUMS"), []byte(manifest.String())); err != nil {
+		return err
+	}
+	directoryFile, err := os.Open(directory)
+	if err != nil {
+		return err
+	}
+	syncErr := directoryFile.Sync()
+	closeErr := directoryFile.Close()
+	return errors.Join(syncErr, closeErr)
+}
+
+func writePrivateFile(path string, data []byte) error {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+	if err != nil {
+		return err
+	}
+	if _, err := file.Write(data); err != nil {
+		_ = file.Close()
+		return err
+	}
+	if err := file.Sync(); err != nil {
+		_ = file.Close()
+		return err
+	}
+	return file.Close()
+}
+
+func writeSourceProvenance(directory string, configuration options) error {
+	reproductionCommand := fmt.Sprintf("make runtime-vm-demo VM_ACCEL=%s", configuration.accel)
+	if configuration.keep {
+		reproductionCommand += " VM_DEMO_ARGS=-keep"
+	}
+	provenance := map[string]any{
+		"schema": 1, "recorded_at": time.Now().UTC().Format(time.RFC3339Nano),
+		"public_entrypoint": "make runtime-vm-demo", "runner_arguments": os.Args[1:],
+		"reproduction_command": reproductionCommand,
+		"accelerator":          configuration.accel,
+		"go_version":           goruntime.Version(),
+	}
+	if unameOutput, err := exec.Command("uname", "-srmo").CombinedOutput(); err == nil {
+		provenance["host_uname"] = strings.TrimSpace(string(unameOutput))
+	}
+	tools := make([]map[string]any, 0, 3)
+	for _, name := range []string{"qemu-system-x86_64", "qemu-img", "nc"} {
+		record := map[string]any{"name": name}
+		path, err := exec.LookPath(name)
+		if err != nil {
+			record["error"] = err.Error()
+		} else {
+			record["path"] = path
+			if digest, digestErr := fileSHA(path); digestErr == nil {
+				record["sha256"] = digest
+			} else {
+				record["error"] = digestErr.Error()
+			}
+		}
+		tools = append(tools, record)
+	}
+	provenance["host_tools"] = tools
+	if configuration.accel == "kvm" {
+		device, err := os.OpenFile("/dev/kvm", os.O_RDWR, 0)
+		provenance["kvm_device_read_write"] = err == nil
+		if err != nil {
+			provenance["kvm_device_error"] = err.Error()
+		} else {
+			_ = device.Close()
+		}
+	}
+	rootOutput, rootErr := exec.Command("git", "rev-parse", "--show-toplevel").CombinedOutput()
+	if rootErr != nil {
+		provenance["source_state"] = "git-unavailable"
+		provenance["source_error"] = strings.TrimSpace(string(rootOutput))
+	} else {
+		root := strings.TrimSpace(string(rootOutput))
+		revisionOutput, revisionErr := exec.Command("git", "-C", root, "rev-parse", "HEAD").CombinedOutput()
+		statusOutput, statusErr := exec.Command(
+			"git", "-C", root, "status", "--porcelain", "--untracked-files=all", "--",
+			"Makefile", "README.md", "runtime/README.md", "runtime/cmd/vm-demo", "runtime/internal/sandboxhost",
+		).CombinedOutput()
+		if revisionErr != nil || statusErr != nil {
+			provenance["source_state"] = "git-inspection-failed"
+			provenance["source_error"] = strings.TrimSpace(string(append(revisionOutput, statusOutput...)))
+		} else {
+			status := strings.TrimSpace(string(statusOutput))
+			provenance["source_state"] = "git"
+			provenance["git_revision"] = strings.TrimSpace(string(revisionOutput))
+			provenance["selected_source_clean"] = status == ""
+			if status != "" {
+				provenance["selected_source_status"] = strings.Split(status, "\n")
+			}
+		}
+	}
+	encoded, err := json.MarshalIndent(provenance, "", "  ")
+	if err != nil {
+		return err
+	}
+	return writePrivateFile(filepath.Join(directory, "provenance.json"), append(encoded, '\n'))
+}
+
+func requireTCPClosed(address string) error {
+	connection, err := net.DialTimeout("tcp", address, 250*time.Millisecond)
+	if err != nil {
+		return nil
+	}
+	_ = connection.Close()
+	return fmt.Errorf("old sandbox endpoint %s remained reachable while VM was paused", address)
 }
 
 func ensureImage(ctx context.Context, path, source, expected string) error {
@@ -922,7 +1351,7 @@ func makeUserData(script string) string {
 		"  - [bash, -lc, /usr/local/sbin/safe-change-guest]\n"
 }
 
-func makeGuestScript(operationToken, encodedRequest string, paymentPort int) string {
+func makeGuestScript(encodedRequest string, directCanaryPort int) string {
 	return fmt.Sprintf(`#!/usr/bin/env bash
 set -uo pipefail
 log_marker() { printf '%%s\n' "$1" > /dev/ttyS0; }
@@ -936,8 +1365,8 @@ fi
 log_marker SAFE_CHANGE_VM_DIRECT_BYPASS_BLOCKED
 printf '%%s' '%s' | base64 -d > /run/safe-change-execute.json
 status=$(curl -sS --max-time 45 -o /run/safe-change-response.json -w '%%{http_code}' \
-  -X POST -H 'Authorization: Bearer %s' -H 'Content-Type: application/json' \
-  --data-binary @/run/safe-change-execute.json http://10.0.2.100:8787/v1/execute) || status=transport-error
+	-X POST -H 'Content-Type: application/json' \
+	--data-binary @/run/safe-change-execute.json http://10.0.2.100:8787/v1/execute) || status=transport-error
 phase=$(python3 -c 'import json; d=json.load(open("/run/safe-change-response.json")); print((d.get("outcome") or d).get("phase", ""))' 2>/dev/null || true)
 if [[ "$status" == 409 && "$phase" == unknown ]]; then
   log_marker SAFE_CHANGE_VM_FIRST_UNKNOWN
@@ -953,7 +1382,7 @@ fi
 log_marker "SAFE_CHANGE_VM_UNEXPECTED status=$status phase=$phase"
 /sbin/poweroff -f
 exit 1
-`, paymentPort, encodedRequest, operationToken)
+`, directCanaryPort, encodedRequest)
 }
 
 func seedHandler(userData string, gate *atomic.Bool) http.Handler {
@@ -1117,6 +1546,24 @@ func (q *qmpClient) record(direction string, payload any) error {
 func (q *qmpClient) command(name string, arguments any) error {
 	_, err := q.commandResult(name, arguments)
 	return err
+}
+
+func (q *qmpClient) requireStatus(expected string) error {
+	data, err := q.commandResult("query-status", nil)
+	if err != nil {
+		return err
+	}
+	var status struct {
+		Running bool   `json:"running"`
+		Status  string `json:"status"`
+	}
+	if err := json.Unmarshal(data, &status); err != nil {
+		return err
+	}
+	if status.Status != expected || (expected == "paused" && status.Running) {
+		return fmt.Errorf("QEMU status is %q (running=%t), want %q", status.Status, status.Running, expected)
+	}
+	return nil
 }
 
 func (q *qmpClient) commandResult(name string, arguments any) (json.RawMessage, error) {

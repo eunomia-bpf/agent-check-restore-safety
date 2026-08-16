@@ -6,11 +6,13 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -68,6 +70,120 @@ func TestMarkerField(t *testing.T) {
 	serial := "boot\r\nSAFE_CHANGE_VM_READY kernel=6.8.0-90-generic\r\n"
 	if got := markerField(serial, "SAFE_CHANGE_VM_READY kernel="); got != "6.8.0-90-generic" {
 		t.Fatalf("kernel marker=%q", got)
+	}
+}
+
+func TestStandaloneGuestUsesOnlyHostBoundOperationFields(t *testing.T) {
+	request, err := makeSandboxExecuteJSON(
+		"vm/job-1/write", "vm-write", []byte(`{"job":"job-1"}`),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fields map[string]any
+	if err := json.Unmarshal(request, &fields); err != nil {
+		t.Fatal(err)
+	}
+	if len(fields) != 3 || fields["call_id"] != "vm/job-1/write" || fields["kind"] != "vm-write" {
+		t.Fatalf("sandbox request fields = %+v", fields)
+	}
+	for _, forbidden := range []string{"url", "method", "headers", "token", "sandbox_id", "generation"} {
+		if _, exists := fields[forbidden]; exists {
+			t.Fatalf("sandbox request contains host-owned field %q", forbidden)
+		}
+	}
+	script := makeGuestScript(base64.StdEncoding.EncodeToString(request), 12345)
+	for _, forbidden := range []string{"Authorization", "Bearer", "provider.example", "/v1/charge"} {
+		if strings.Contains(script, forbidden) {
+			t.Fatalf("standalone guest script contains %q", forbidden)
+		}
+	}
+	if !strings.Contains(script, "http://10.0.2.100:8787/v1/execute") {
+		t.Fatal("standalone guest script omits its host-owned endpoint")
+	}
+	providerTarget := "http://127.0.0.1:45678/v1/charge"
+	if err := validateStandaloneGuestBoundary(request, script, providerTarget); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateStandaloneGuestBoundary(request, script+providerTarget, providerTarget); err == nil {
+		t.Fatal("guest boundary accepted a provider target")
+	}
+}
+
+func TestEvidenceManifestCoversDeclaredFiles(t *testing.T) {
+	directory := t.TempDir()
+	if err := writePrivateFile(filepath.Join(directory, "a.txt"), []byte("a\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := writePrivateFile(filepath.Join(directory, "b.txt"), []byte("b\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeEvidenceManifest(directory, []string{"b.txt", "a.txt"}); err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := os.ReadFile(filepath.Join(directory, "SHA256SUMS"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(manifest)), "\n")
+	if len(lines) != 2 || !strings.HasSuffix(lines[0], "  a.txt") || !strings.HasSuffix(lines[1], "  b.txt") {
+		t.Fatalf("manifest = %q", manifest)
+	}
+	if err := writeEvidenceManifest(directory, []string{"../a.txt"}); err == nil {
+		t.Fatal("manifest accepted an unsafe path")
+	}
+}
+
+func TestSyncedTraceSerializesConcurrentRecords(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "trace.jsonl")
+	trace, err := openSyncedTrace(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wait sync.WaitGroup
+	errorsFromWriters := make(chan error, 8)
+	for index := 0; index < 8; index++ {
+		wait.Add(1)
+		go func(value int) {
+			defer wait.Done()
+			errorsFromWriters <- trace.Record("request", map[string]any{"value": value})
+		}(index)
+	}
+	wait.Wait()
+	close(errorsFromWriters)
+	for err := range errorsFromWriters {
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if trace.Count() != 8 {
+		t.Fatalf("trace count = %d", trace.Count())
+	}
+	if err := trace.Close(); err != nil {
+		t.Fatal(err)
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	sequence := 0
+	for scanner.Scan() {
+		sequence++
+		var record map[string]any
+		if err := json.Unmarshal(scanner.Bytes(), &record); err != nil {
+			t.Fatal(err)
+		}
+		if record["sequence"] != float64(sequence) {
+			t.Fatalf("trace record %d = %+v", sequence, record)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if sequence != 8 {
+		t.Fatalf("trace lines = %d", sequence)
 	}
 }
 
@@ -154,7 +270,7 @@ func TestExpectExternalCommandIsExact(t *testing.T) {
 	}
 }
 
-func TestExternalQEMUCommandRedactsPrivatePaths(t *testing.T) {
+func TestQEMUCommandRedactsPrivatePaths(t *testing.T) {
 	directory := t.TempDir()
 	path := filepath.Join(directory, "qemu-command.json")
 	image := filepath.Join(directory, "base.qcow2")
@@ -163,7 +279,7 @@ func TestExternalQEMUCommandRedactsPrivatePaths(t *testing.T) {
 		"-netdev", "user,id=opnet,restrict=on",
 		"-image", image,
 	}
-	if err := writeExternalQEMUCommand(path, arguments, directory, image); err != nil {
+	if err := writeQEMUCommand(path, arguments, directory, image); err != nil {
 		t.Fatal(err)
 	}
 	contents, err := os.ReadFile(path)
