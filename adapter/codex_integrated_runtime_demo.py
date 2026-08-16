@@ -1187,6 +1187,7 @@ def run_demo(
         account_home = private_dir / "codex-home"
         wrapper_dir = private_dir / "wrapper"
         vm_work = private_dir / "vm-work"
+        vm_stderr = private_dir / "vm-runner.stderr"
         binary_dir = private_dir / "bin"
         for directory in (
             state_dir,
@@ -1279,8 +1280,6 @@ def run_demo(
             vm_request_path.chmod(0o600)
             ledger_container = deployment.service_container("ledger")
             ledger_ip = _network_ip(ledger_container, deployment.effects_network)
-            vm_stderr = private_dir / "vm-runner.stderr"
-
             with VMProcess(
                 binary=vm_binary,
                 accel=vm_accel,
@@ -1908,7 +1907,21 @@ def run_demo(
                     "evidence_directory": output_dir.name,
                 }
         finally:
-            deployment.close()
+            try:
+                deployment.close()
+            finally:
+                if vm_stderr.is_file():
+                    vm_error = vm_stderr.read_text(
+                        encoding="utf-8", errors="replace"
+                    )
+                    if vm_error:
+                        vm_error = vm_error.replace(
+                            str(private_dir), "<redacted-private>"
+                        ).replace(str(Path.home()), "<redacted-home>")
+                        (output_dir / "logs/vm-runner.stderr").write_text(
+                            vm_error,
+                            encoding="utf-8",
+                        )
 
     if result is None:
         raise DemoError("integrated experiment ended without a result")
