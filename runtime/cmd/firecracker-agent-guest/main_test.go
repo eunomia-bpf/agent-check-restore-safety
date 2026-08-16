@@ -87,7 +87,9 @@ func TestCodexChildInvocationAcceptsOnlyFixedInternalMode(t *testing.T) {
 func TestRunPID1CancelsEverythingOnSessionFailure(t *testing.T) {
 	sessionFailure := errors.New("session protocol failed")
 	process := newBlockingCodex()
-	proxyStopped := make(chan struct{})
+	var proxyStops sync.WaitGroup
+	proxyStops.Add(2)
+	var proxyPorts []uint32
 	var logs bytes.Buffer
 	config := validGuestConfig()
 	deps := dependencies{
@@ -110,8 +112,9 @@ func TestRunPID1CancelsEverythingOnSessionFailure(t *testing.T) {
 			return process.running(), nil
 		},
 		startProxy: func(done <-chan struct{}, port uint32, dial func(uint32) (agentguest.Stream, error), _ *log.Logger) (<-chan error, error) {
-			if port != config.ModelPort {
-				t.Errorf("model port = %d, want %d", port, config.ModelPort)
+			proxyPorts = append(proxyPorts, port)
+			if port != config.ModelPort && port != agentguest.DefaultMCPPort {
+				t.Errorf("proxy port = %d, want model or MCP port", port)
 			}
 			if _, err := dial(port); !errors.Is(err, errTestDial) {
 				t.Errorf("model dial error = %v", err)
@@ -119,7 +122,7 @@ func TestRunPID1CancelsEverythingOnSessionFailure(t *testing.T) {
 			result := make(chan error, 1)
 			go func() {
 				<-done
-				close(proxyStopped)
+				proxyStops.Done()
 				result <- nil
 			}()
 			return result, nil
@@ -148,7 +151,10 @@ func TestRunPID1CancelsEverythingOnSessionFailure(t *testing.T) {
 	assertClosed(t, process.waited, "Codex was not reaped")
 	assertClosed(t, process.stdin.closed, "Codex stdin was not closed")
 	assertClosed(t, process.stdout.closed, "Codex stdout was not closed")
-	assertClosed(t, proxyStopped, "model proxy was not canceled")
+	proxyStops.Wait()
+	if len(proxyPorts) != 2 || proxyPorts[0] != config.ModelPort || proxyPorts[1] != agentguest.DefaultMCPPort {
+		t.Fatalf("proxy ports = %v, want [%d %d]", proxyPorts, config.ModelPort, agentguest.DefaultMCPPort)
+	}
 }
 
 func TestRunPID1ExportsOnlyAfterNormalSessionAndDomainShutdown(t *testing.T) {
@@ -246,7 +252,8 @@ func TestRunPID1PropagatesProxyAndCodexFailures(t *testing.T) {
 
 func TestRunPID1CancelsProxyWhenCodexStartFails(t *testing.T) {
 	startFailure := errors.New("exec rejected")
-	proxyStopped := make(chan struct{})
+	var proxyStops sync.WaitGroup
+	proxyStops.Add(2)
 	deps := baseDependencies(newBlockingCodex())
 	deps.startCodex = func(agentguest.Config, io.Writer) (runningCodex, error) {
 		return runningCodex{}, startFailure
@@ -255,7 +262,7 @@ func TestRunPID1CancelsProxyWhenCodexStartFails(t *testing.T) {
 		result := make(chan error, 1)
 		go func() {
 			<-done
-			close(proxyStopped)
+			proxyStops.Done()
 			result <- nil
 		}()
 		return result, nil
@@ -264,7 +271,38 @@ func TestRunPID1CancelsProxyWhenCodexStartFails(t *testing.T) {
 	if !errors.Is(err, startFailure) {
 		t.Fatalf("runPID1 error = %v, want start failure", err)
 	}
-	assertClosed(t, proxyStopped, "model proxy was not canceled after start failure")
+	proxyStops.Wait()
+}
+
+func TestRunPID1CancelsModelProxyWhenMCPProxyBindFails(t *testing.T) {
+	bindFailure := errors.New("MCP loopback address already in use")
+	modelStopped := make(chan struct{})
+	startedCodex := false
+	deps := baseDependencies(newBlockingCodex())
+	deps.startProxy = func(done <-chan struct{}, port uint32, _ func(uint32) (agentguest.Stream, error), _ *log.Logger) (<-chan error, error) {
+		if port == agentguest.DefaultMCPPort {
+			return nil, bindFailure
+		}
+		result := make(chan error, 1)
+		go func() {
+			<-done
+			close(modelStopped)
+			result <- nil
+		}()
+		return result, nil
+	}
+	deps.startCodex = func(agentguest.Config, io.Writer) (runningCodex, error) {
+		startedCodex = true
+		return runningCodex{}, errors.New("must not run")
+	}
+	err := runPID1(context.Background(), deps, log.New(io.Discard, "", 0))
+	if !errors.Is(err, bindFailure) {
+		t.Fatalf("runPID1 error = %v, want MCP bind failure", err)
+	}
+	if startedCodex {
+		t.Fatal("Codex launched before the MCP proxy listener was ready")
+	}
+	assertClosed(t, modelStopped, "model proxy was not canceled after MCP bind failure")
 }
 
 func TestRunPID1DoesNotLaunchCodexBeforeProxyBindSucceeds(t *testing.T) {

@@ -341,6 +341,45 @@ func TestRelayCloseReportsForcedDrainAndWaitsForAuditSafety(t *testing.T) {
 	}
 }
 
+func TestRelayAbortCutsPersistentStreamWithoutDrainFailure(t *testing.T) {
+	directory := privateDirectory(t)
+	sandboxPath, accepted := echoSocket(t, directory, "sandbox.sock")
+	relay, err := Arm(RelayConfig{
+		Generation: 1, BasePath: filepath.Join(directory, "fc"), Port: 83,
+		FirecrackerPID: os.Getpid(), VerifyProcess: testProcessVerifier,
+		SandboxSocket: sandboxPath, DrainTimeout: 100 * time.Millisecond,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, err := net.DialUnix("unix", nil, &net.UnixAddr{Name: relay.SocketPath(), Net: "unix"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	if _, err := client.Write([]byte("persistent MCP stream")); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(time.Second)
+	for accepted.Load() == 0 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if accepted.Load() != 1 {
+		t.Fatal("relay did not establish the persistent sandbox stream")
+	}
+	if err := relay.Abort(); err != nil {
+		t.Fatalf("Abort persistent relay = %v", err)
+	}
+	waitContext, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := relay.Wait(waitContext); err != nil {
+		t.Fatalf("Wait after abort = %v", err)
+	}
+	if _, err := os.Lstat(relay.SocketPath()); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("aborted relay socket remained: %v", err)
+	}
+}
+
 func privateDirectory(t *testing.T) string {
 	t.Helper()
 	directory := t.TempDir()

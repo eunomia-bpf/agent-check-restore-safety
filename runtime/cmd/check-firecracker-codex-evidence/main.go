@@ -38,6 +38,7 @@ const (
 	payloadSchema      = 1
 	manifestSchema     = 1
 	streamPort         = uint32(7000)
+	mcpPort            = uint32(7002)
 	firstGeneration    = uint64(1)
 	restoredGeneration = uint64(3)
 	guestWorkspace     = "/workspace"
@@ -305,6 +306,7 @@ type verifier struct {
 	modelTarget, proxySocket, argumentModelTarget string
 	baseRepository, finalRepository               repobundle.Bundle
 	repositoryDelta                               repodelta.Delta
+	mcpConfigured, mcpEnabled                     bool
 }
 
 func main() {
@@ -792,6 +794,10 @@ func validDigest(value string) bool {
 	}
 	_, err := hex.DecodeString(value)
 	return err == nil
+}
+
+func validOperationID(value string) bool {
+	return strings.HasPrefix(value, "op-") && validDigest(strings.TrimPrefix(value, "op-"))
 }
 
 func hashFile(path string) (string, int64, error) {
@@ -1310,7 +1316,8 @@ func validatePinnedGuestArguments(arguments []string, modelPort uint32) (string,
 	if err != nil || port == 0 || uint32(port) != modelPort || parsed.Host != "127.0.0.1:"+strconv.FormatUint(port, 10) {
 		return "", errors.New("model base_url port differs from the immutable guest model port")
 	}
-	if !reflect.DeepEqual(arguments, pinnedArguments(baseURLs[0])) {
+	if !reflect.DeepEqual(arguments, pinnedArguments(baseURLs[0])) &&
+		!reflect.DeepEqual(arguments, pinnedMCPArguments(baseURLs[0])) {
 		return "", errors.New("guest arguments contain unpinned options, auth, providers, or feature overrides")
 	}
 	return parsed.Host, nil
@@ -1328,6 +1335,11 @@ func pinnedArguments(baseURL string) []string {
 		arguments = append(arguments, "-c", override)
 	}
 	return arguments
+}
+
+func pinnedMCPArguments(baseURL string) []string {
+	arguments := pinnedArguments(baseURL)
+	return append(arguments, "-c", `mcp_servers.continuity={command="/opt/codex/bin/mcp-operation-relay",args=["-loopback-port","7002"],startup_timeout_sec=10,tool_timeout_sec=60,enabled=true,required=true,enabled_tools=["commit_effect"],default_tools_approval_mode="approve",tools={"commit_effect"={approval_mode="approve"}}}`)
 }
 
 func scanBaseURLs(override string) ([]string, error) {
@@ -1506,6 +1518,10 @@ func (v *verifier) verifyGuestAndInitramfs() error {
 	if err != nil {
 		return err
 	}
+	v.mcpConfigured = reflect.DeepEqual(
+		v.guest.Arguments,
+		pinnedMCPArguments("http://"+v.argumentModelTarget+"/v1"),
+	)
 
 	initramfsBytes, err := readBounded(evidencePath(v, "guest-initramfs.cpio"), 80<<20)
 	if err != nil {
@@ -2240,6 +2256,9 @@ func verifyVMStateRequest(raw []byte, want string) error {
 func (v *verifier) verifyRelaysAndProxy() error {
 	var relayBytes []string
 	shimPID := 0
+	mcpPID := 0
+	mcpDevice, mcpInode := uint64(0), uint64(0)
+	mcpConnections := 0
 	for _, item := range []struct {
 		label   string
 		process processRecord
@@ -2248,61 +2267,118 @@ func (v *verifier) verifyRelaysAndProxy() error {
 		if err := requirePrivateFile(path); err != nil {
 			return err
 		}
-		accepts, bytesCount := 0, 0
+		modelAccepts, modelBytes := 0, 0
+		mcpAccepts, mcpBytes := 0, 0
 		err := readJSONL(path, func(raw []byte) error {
 			var header relayRecord
 			if err := decodeAllowed(raw, []string{"event", "time", "generation", "port", "pid", "sandbox_peer_pid", "sandbox_device", "sandbox_inode", "guest_to_host_bytes", "host_to_guest_bytes"}, []string{"event"}, &header); err != nil {
 				return err
 			}
 			var record relayRecord
+			isModel := false
 			switch header.Event {
 			case "accept":
 				if err := decodeExact(raw, []string{"event", "time", "generation", "port", "pid", "sandbox_device", "sandbox_inode", "guest_to_host_bytes", "host_to_guest_bytes"}, &record); err != nil {
 					return err
 				}
-				accepts++
+				isModel = record.Port == v.guest.ModelPort
+				if !isModel && record.Port != mcpPort {
+					return fmt.Errorf("relay used forbidden guest port %d", record.Port)
+				}
 				if record.PID != item.process.PID || record.SandboxPID != 0 || record.GuestToHost != 0 || record.HostToGuest != 0 {
 					return errors.New("relay accept PID/zero counters are malformed")
+				}
+				if isModel {
+					modelAccepts++
+				} else {
+					mcpAccepts++
 				}
 			case "bytes":
 				if err := decodeExact(raw, []string{"event", "time", "generation", "port", "sandbox_peer_pid", "sandbox_device", "sandbox_inode", "guest_to_host_bytes", "host_to_guest_bytes"}, &record); err != nil {
 					return err
 				}
-				bytesCount++
-				if bytesCount > accepts || record.PID != 0 || record.SandboxPID <= 0 || record.GuestToHost <= 0 || record.HostToGuest <= 0 {
+				isModel = record.Port == v.guest.ModelPort
+				if !isModel && record.Port != mcpPort {
+					return fmt.Errorf("relay used forbidden guest port %d", record.Port)
+				}
+				if record.PID != 0 || record.SandboxPID <= 0 || record.GuestToHost <= 0 || record.HostToGuest <= 0 {
 					return errors.New("relay byte record lacks a preceding accepted connection")
 				}
-				if shimPID == 0 {
-					shimPID = record.SandboxPID
-				} else if shimPID != record.SandboxPID {
-					return errors.New("relay records name different sandbox peer PIDs")
+				if isModel {
+					modelBytes++
+					if modelBytes > modelAccepts {
+						return errors.New("model relay byte record lacks a preceding accepted connection")
+					}
+					if shimPID == 0 {
+						shimPID = record.SandboxPID
+					} else if shimPID != record.SandboxPID {
+						return errors.New("model relay records name different shim PIDs")
+					}
+					relayBytes = append(relayBytes, bytePair(record.GuestToHost, record.HostToGuest))
+				} else {
+					mcpBytes++
+					if mcpBytes > mcpAccepts {
+						return errors.New("MCP relay byte record lacks a preceding accepted connection")
+					}
+					if mcpPID == 0 {
+						mcpPID = record.SandboxPID
+					} else if mcpPID != record.SandboxPID {
+						return errors.New("MCP relay records name different trusted host PIDs")
+					}
 				}
-				relayBytes = append(relayBytes, bytePair(record.GuestToHost, record.HostToGuest))
 			default:
 				return fmt.Errorf("forbidden relay event %q", header.Event)
 			}
-			if record.Time.IsZero() || record.Generation != item.process.Generation || record.Port != v.guest.ModelPort || record.SandboxDevice == 0 || record.SandboxInode == 0 {
+			if record.Time.IsZero() || record.Generation != item.process.Generation || record.SandboxDevice == 0 || record.SandboxInode == 0 {
 				return errors.New("relay record identity is incomplete")
 			}
-			timeNS := record.Time.UnixNano()
-			if item.process.Generation == firstGeneration {
-				if timeNS <= v.events[5].TimeNS || timeNS >= v.events[7].TimeNS {
-					return errors.New("g1 model traffic was not closed before model-path quiescence")
+			if !isModel {
+				if mcpDevice == 0 {
+					mcpDevice, mcpInode = record.SandboxDevice, record.SandboxInode
+				} else if mcpDevice != record.SandboxDevice || mcpInode != record.SandboxInode {
+					return errors.New("trusted MCP host socket identity changed across VMM generations")
 				}
-			} else if timeNS <= v.events[19].TimeNS || timeNS >= v.events[20].TimeNS {
-				return errors.New("g3 model traffic was not confined after tool release and before session completion")
+			}
+			timeNS := record.Time.UnixNano()
+			if isModel {
+				if item.process.Generation == firstGeneration {
+					if timeNS <= v.events[5].TimeNS || timeNS >= v.events[7].TimeNS {
+						return errors.New("g1 model traffic was not closed before model-path quiescence")
+					}
+				} else if timeNS <= v.events[19].TimeNS || timeNS >= v.events[20].TimeNS {
+					return errors.New("g3 model traffic was not confined after tool release and before session completion")
+				}
+			} else if item.process.Generation == firstGeneration {
+				if timeNS <= v.events[4].TimeNS || timeNS >= v.events[8].TimeNS {
+					return errors.New("g1 MCP traffic was not confined between endpoint arming and VM pause")
+				}
+			} else if timeNS <= v.events[15].TimeNS || timeNS >= v.events[21].TimeNS {
+				return errors.New("g3 MCP traffic was not confined between endpoint arming and repository export")
 			}
 			return nil
 		})
 		if err != nil {
 			return fmt.Errorf("%s: %w", item.label, err)
 		}
-		if accepts == 0 || accepts != bytesCount {
-			return fmt.Errorf("%s relay has %d accepts and %d byte records", item.label, accepts, bytesCount)
+		if modelAccepts == 0 || modelAccepts != modelBytes {
+			return fmt.Errorf("%s model relay has %d accepts and %d byte records", item.label, modelAccepts, modelBytes)
+		}
+		if mcpAccepts != mcpBytes {
+			return fmt.Errorf("%s MCP relay has %d accepts and %d byte records", item.label, mcpAccepts, mcpBytes)
+		}
+		if mcpAccepts > 0 {
+			mcpConnections++
 		}
 	}
 	if shimPID <= 0 {
 		return errors.New("relay did not record a sandbox peer PID")
+	}
+	if mcpConnections != 0 && (mcpConnections != 2 || mcpPID <= 0 || mcpPID == shimPID) {
+		return errors.New("MCP traffic did not cross both VMM generations through one separate trusted host")
+	}
+	v.mcpEnabled = mcpConnections == 2
+	if v.mcpConfigured != v.mcpEnabled {
+		return errors.New("guest MCP configuration and attested relay traffic disagree")
 	}
 
 	proxyPath := evidencePath(v, "model-proxy.jsonl")
@@ -2375,6 +2451,9 @@ func (v *verifier) verifyRelaysAndProxy() error {
 			var record relayRecord
 			if err := decodeAllowed(raw, []string{"event", "time", "generation", "port", "pid", "sandbox_peer_pid", "sandbox_device", "sandbox_inode", "guest_to_host_bytes", "host_to_guest_bytes"}, []string{"event", "time", "generation", "port", "sandbox_device", "sandbox_inode", "guest_to_host_bytes", "host_to_guest_bytes"}, &record); err != nil {
 				return err
+			}
+			if record.Port != v.guest.ModelPort {
+				return nil
 			}
 			if record.SandboxDevice != device || record.SandboxInode != inode {
 				return errors.New("relay sandbox socket differs from proxy socket")
@@ -2587,6 +2666,143 @@ func (v *verifier) verifyAdapter() error {
 	}
 	if err := v.verifyAdapterToolLifecycle(records, bridgeProofs, calls, responses); err != nil {
 		return err
+	}
+	if err := v.verifyAdapterMCP(records, calls[0]); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (v *verifier) verifyAdapterMCP(records []rawAdapterRecord, callback adapterCallEvidence) error {
+	type mcpItem struct {
+		Type      string         `json:"type"`
+		Status    string         `json:"status"`
+		Server    string         `json:"server"`
+		Tool      string         `json:"tool"`
+		Arguments map[string]any `json:"arguments"`
+		Result    struct {
+			Structured struct {
+				Schema           int    `json:"schema"`
+				Phase            string `json:"phase"`
+				OperationID      string `json:"operation_id"`
+				ResultHash       string `json:"result_hash"`
+				ExecutionFenced  bool   `json:"execution_fenced"`
+				RecoveredByQuery bool   `json:"recovered_by_query"`
+			} `json:"structuredContent"`
+		} `json:"result"`
+	}
+	type completion struct {
+		record   rawAdapterRecord
+		threadID string
+		turnID   string
+		item     mcpItem
+		effect   string
+	}
+	var completions []completion
+	ready := false
+	for _, record := range records {
+		if record.Direction != "server_to_client" {
+			continue
+		}
+		var envelope struct {
+			Method string `json:"method"`
+			Params struct {
+				Name     string          `json:"name"`
+				ThreadID string          `json:"threadId"`
+				TurnID   string          `json:"turnId"`
+				Status   json.RawMessage `json:"status"`
+				Item     json.RawMessage `json:"item"`
+			} `json:"params"`
+		}
+		if err := json.Unmarshal(record.Payload, &envelope); err != nil {
+			return err
+		}
+		if envelope.Method == "mcpServer/startupStatus/updated" && envelope.Params.Name == "continuity" {
+			var status string
+			if err := json.Unmarshal(envelope.Params.Status, &status); err != nil {
+				return errors.New("continuity MCP startup status is malformed")
+			}
+			if status == "ready" || status == "completed" {
+				ready = true
+			}
+		}
+		if envelope.Method != "item/completed" || len(envelope.Params.Item) == 0 {
+			continue
+		}
+		var item mcpItem
+		if err := json.Unmarshal(envelope.Params.Item, &item); err != nil || item.Type != "mcpToolCall" {
+			continue
+		}
+		effect, ok := item.Arguments["effect_id"].(string)
+		if !ok || effect == "" {
+			return errors.New("MCP completion has no effect identity")
+		}
+		completions = append(completions, completion{
+			record: record, threadID: envelope.Params.ThreadID, turnID: envelope.Params.TurnID,
+			item: item, effect: effect,
+		})
+	}
+	if !v.mcpEnabled {
+		if len(completions) != 0 {
+			return errors.New("App Server emitted MCP completions without a checked Firecracker MCP relay")
+		}
+		return nil
+	}
+	if !ready || len(completions) != 3 || completions[0].effect != completions[1].effect || completions[1].effect == completions[2].effect {
+		return errors.New("checked Firecracker MCP relay lacks one pre-checkpoint completion, its replay, and one new completion")
+	}
+	for index, completion := range completions {
+		structured := completion.item.Result.Structured
+		if completion.item.Status != "completed" || completion.item.Server != "continuity" || completion.item.Tool != "commit_effect" ||
+			structured.Schema != 1 || structured.Phase != "succeeded" || !validOperationID(structured.OperationID) ||
+			!validDigest(structured.ResultHash) || structured.ExecutionFenced {
+			return errors.New("Firecracker MCP completion identity or durable result is malformed")
+		}
+		if index == 0 && (completion.threadID != callback.params.ThreadID || completion.turnID != callback.params.TurnID) {
+			return errors.New("pre-checkpoint MCP completion is outside the checkpoint turn")
+		}
+		if index > 0 && (completion.threadID == "" || completion.turnID == "" || completion.threadID == callback.params.ThreadID) {
+			return errors.New("post-restore MCP completion did not use a rebuilt tool session")
+		}
+	}
+	if completions[1].threadID != completions[2].threadID || completions[1].turnID != completions[2].turnID {
+		return errors.New("post-restore MCP replay and new operation did not share one rebuilt tool session")
+	}
+	first := completions[0].item.Result.Structured
+	replay := completions[1].item.Result.Structured
+	if first.OperationID != replay.OperationID || first.ResultHash != replay.ResultHash {
+		return errors.New("post-restore MCP replay did not return the original durable result")
+	}
+	if replay.OperationID == completions[2].item.Result.Structured.OperationID {
+		return errors.New("post-restore MCP operation did not advance to a new durable identity")
+	}
+	if !(v.events[5].TimeNS < completions[0].record.TimeNS && completions[0].record.TimeNS < v.events[6].TimeNS &&
+		v.events[19].TimeNS < completions[1].record.TimeNS && completions[1].record.TimeNS <= completions[2].record.TimeNS && completions[2].record.TimeNS < v.events[20].TimeNS) {
+		return errors.New("MCP completions do not straddle the Firecracker checkpoint")
+	}
+	configured := false
+	for _, argument := range v.guest.Arguments {
+		if strings.Contains(argument, "mcp_servers.continuity=") &&
+			strings.Contains(argument, `command="/opt/codex/bin/mcp-operation-relay"`) &&
+			strings.Contains(argument, `args=["-loopback-port","7002"]`) &&
+			strings.Contains(argument, `enabled_tools=["commit_effect"]`) {
+			configured = true
+		}
+	}
+	if !configured {
+		return errors.New("guest arguments do not bind continuity MCP to the attested loopback relay")
+	}
+	matches := 0
+	for _, entry := range v.payloadResult.Payload.Manifest.Entries {
+		if entry.Path == "bin/mcp-operation-relay" {
+			matches++
+			if entry.Type != "file" || entry.Size <= 0 || entry.Mode&0o111 == 0 || !validDigest(entry.SHA256) {
+				return errors.New("payload MCP relay is not an executable hashed regular file")
+			}
+		}
+	}
+	if matches != 1 {
+		return errors.New("payload does not contain exactly one MCP relay")
 	}
 	return nil
 }

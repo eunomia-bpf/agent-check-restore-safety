@@ -1,9 +1,11 @@
 # Firecracker Codex continuity runtime
 
-**Status:** working real-KVM vertical prototype, 2026-08-16. One native Codex
-code edit, two ordered protected callbacks, VM replacement, two external
-commits, and repository Cutover now share a single durable History. It is not
-yet a production sandbox or general agent runtime.
+**Status:** working real-KVM vertical prototype, 2026-08-16. The runtime now
+supports both ordered native callbacks and ordinary Codex MCP calls across a
+full-machine restore. One native Codex process, two Firecracker VMM
+generations, a host-retained MCP journal, two external Operations, and one
+durable History have been joined in a checked execution. It is not yet a
+production sandbox or general agent runtime.
 
 ## What the system is
 
@@ -63,6 +65,10 @@ bounded ordered set of real Codex callbacks.
   bound, replay is deduplicated, and client-visible output has one total order.
 - `runtime/internal/firecracker` owns exact-process lifecycle checks,
   peer-bound Unix/vsock endpoints, the fixed model relay, and API traces.
+- `runtime/cmd/mcp-operation-host` remains outside the VM restore domain. The
+  guest contains only an untrusted relay. Guest PID 1 maps its fixed loopback
+  port 7002 onto a generation-bound host relay, while the host serializes
+  protected requests into one fsynced journal and one History order.
 - `runtime/cmd/check-firecracker-codex-evidence` independently parses the
   retained result, VMM API calls, relay logs, bridge commitments, App Server
   records, payload manifest, repository bundle, snapshot hashes, process
@@ -82,14 +88,42 @@ bounded ordered set of real Codex callbacks.
   external commits, head-anchor checksum, repository artifact bindings,
   native file-change completion, and a successful declared build before the
   protected callbacks. It imports none of their live implementations.
+- `adapter/check_firecracker_codex_mcp_evidence.py` independently joins the
+  Codex MCP completions, MCP journal chain, binary History chain and external
+  head, provider commits, host process identities, and the identical relay
+  hash recorded on the host and in the guest payload manifest.
 
 The client-facing boundary remains stdin/stdout JSONL. No Firecracker-specific
 branch is required in the App Server client.
 
-## Current real execution
+## Current MCP execution
 
-A fresh local KVM execution of the current source completed in 16.6 seconds
-with these fixed inputs:
+The public MCP target completed on KVM with Firecracker 1.16.1, Linux 6.1.155,
+and native Codex 0.147.0. Codex completed Operation A before the checkpoint.
+The runtime then paused the VM, created a 1 GiB full snapshot, killed and
+reaped the first VMM, loaded the snapshot into a different paused VMM, armed
+both host relays, and resumed it. A new MCP tool session first replayed A and
+received the exact original `operation_id` and `result_hash`; it then submitted
+Operation B under a new identity. The deliberately non-idempotent provider
+recorded exactly two deliveries and two commits, not three.
+
+The run retained three guest-to-host MCP relay lifetimes across the two VMM
+generations. The guest relay SHA-256 was
+`83f65fe02dfc5bce7999504798f74cb76c06e4ab190fa61206786d4bbce71d90`,
+and the offline checker proved that the same digest named the executable host
+input and the only `bin/mcp-operation-relay` entry in the immutable payload.
+The Firecracker checker returned `{"schema":1,"valid":true}`. The independent
+continuity checker also returned `valid:true`, with three MCP completions, two
+Operations, two provider commits, two VMM generations, and Codex 0.147.0.
+
+This execution proves completed-call replay and safe admission of later work
+across a full VM replacement. It does not yet snapshot while a provider write
+is in flight.
+
+## Earlier repository-edit execution
+
+A retained local KVM execution of the repository-edit path completed in
+16.6 seconds with these fixed inputs:
 
 - Firecracker 1.16.1:
   `2fd0171309af7e24cf8dafc8a6f921c1434c49b5f9349bb996b7ed0a4deb8aa7`;
@@ -166,6 +200,7 @@ go run ./runtime/cmd/firecracker-codex-payload --help
 make runtime-firecracker-codex-repository \
   FIRECRACKER_CODEX_REPOSITORY_ARGS='-source /source -output /private/repository.bundle -result /private/repository.json'
 python3 -m adapter.firecracker_codex_runtime_demo --help
+python3 -m adapter.firecracker_codex_mcp_runtime_demo --help
 ```
 
 Pass
@@ -199,6 +234,18 @@ make runtime-firecracker-codex-control-check \
   FIRECRACKER_CODEX_WORKLOAD_CONTRACT=$PWD/runtime/workloads/restate-food-ordering/workload.json
 ```
 
+For the MCP path, `make runtime-firecracker-codex-mcp-demo` is the public KVM
+entry point. After retaining the combined evidence directory, run both
+independent checkers with one command:
+
+```sh
+make runtime-firecracker-codex-mcp-check \
+  FIRECRACKER_CODEX_MCP_EVIDENCE=/private/combined \
+  FIRECRACKER_CODEX_PAYLOAD=/private/codex.squashfs \
+  FIRECRACKER_CODEX_PAYLOAD_RESULT=/private/payload.json \
+  FIRECRACKER_CODEX_RUNNER=/private/build/firecracker-codex-shim
+```
+
 The demo requires read/write access to `/dev/kvm`, checksum-pinned Firecracker
 and kernel files, a prebuilt guest and shim, the read-only Codex payload, a
 canonical repository bundle, separate empty evidence/workspace directories,
@@ -222,7 +269,10 @@ The current slice is intentionally narrow:
   contents; and
 - this run exercises one query-recovered unknown outcome followed by one
   direct external Operation; it does not cover concurrent callbacks or
-  arbitrary provider protocols inside this Firecracker path.
+  arbitrary provider protocols inside this Firecracker path; and
+- the MCP run checkpoints after A has settled. It validates exact replay and
+  later admission after restore, but not an MCP call suspended inside an
+  unknown provider outcome at snapshot time.
 
 The next high-value increment is to put the same continuity protocol behind a
 second agent runtime or sandbox backend without changing the client workflow.

@@ -36,6 +36,7 @@ const (
 	EnvCodexSHA256       = "SAFE_CHANGE_CODEX_SHA256"
 	EnvEvidenceDir       = "SAFE_CHANGE_EVIDENCE_DIR"
 	EnvWorkspace         = "SAFE_CHANGE_WORKSPACE"
+	EnvMCPHostSocket     = "SAFE_CHANGE_MCP_HOST_SOCKET"
 
 	MaxArguments     = 256
 	MaxArgumentBytes = 64 << 10
@@ -82,6 +83,7 @@ type Config struct {
 	Arguments         []string
 	HostModelTarget   string
 	GuestModelPort    uint32
+	MCPHostSocket     string
 }
 
 // LoadConfig reads exactly the fixed host-shim environment contract and
@@ -151,6 +153,23 @@ func LoadConfig(arguments []string, lookupEnv func(string) (string, bool)) (Conf
 	if pathsOverlap(config.Repository, config.Workspace) || pathsOverlap(config.Repository, config.EvidenceDir) {
 		return Config{}, errors.New("repository, workspace, and evidence paths must not overlap")
 	}
+	if mcpSocket, present := lookupEnv(EnvMCPHostSocket); present {
+		if mcpSocket == "" {
+			return Config{}, fmt.Errorf("optional environment variable %s is empty", EnvMCPHostSocket)
+		}
+		if config.MCPHostSocket, err = validatePrivateUnixSocket(mcpSocket, EnvMCPHostSocket); err != nil {
+			return Config{}, err
+		}
+		for label, path := range map[string]string{
+			EnvEvidenceDir: config.EvidenceDir,
+			EnvWorkspace:   config.Workspace,
+			EnvRepository:  config.Repository,
+		} {
+			if pathsOverlap(config.MCPHostSocket, path) {
+				return Config{}, fmt.Errorf("%s and %s paths must not overlap", EnvMCPHostSocket, label)
+			}
+		}
+	}
 
 	modelURL, err := validateArguments(arguments)
 	if err != nil {
@@ -206,6 +225,30 @@ func validateArtifactPath(value, label string, executable bool) (string, error) 
 	}
 	if executable && info.Mode().Perm()&0o111 == 0 {
 		return "", fmt.Errorf("%s must have an executable mode bit", label)
+	}
+	return value, nil
+}
+
+func validatePrivateUnixSocket(value, label string) (string, error) {
+	info, err := validateCanonicalPath(value, label)
+	if err != nil {
+		return "", err
+	}
+	if info.Mode()&os.ModeSocket == 0 || info.Mode().Perm() != 0o600 {
+		return "", fmt.Errorf("%s must be a direct Unix socket with mode 0600", label)
+	}
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok || stat.Uid != uint32(os.Geteuid()) {
+		return "", fmt.Errorf("%s must be owned by the current user", label)
+	}
+	parent := filepath.Dir(value)
+	parentInfo, err := validateCanonicalPath(parent, label+" parent")
+	if err != nil || !parentInfo.IsDir() || parentInfo.Mode().Perm() != 0o700 {
+		return "", fmt.Errorf("%s parent must be a direct current-user directory with mode 0700", label)
+	}
+	parentStat, ok := parentInfo.Sys().(*syscall.Stat_t)
+	if !ok || parentStat.Uid != uint32(os.Geteuid()) {
+		return "", fmt.Errorf("%s parent must be owned by the current user", label)
 	}
 	return value, nil
 }

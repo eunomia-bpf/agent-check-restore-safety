@@ -1,11 +1,10 @@
 # MCP continuity runtime
 
-**Status:** real Codex 0.147 across a hardened Docker boundary,
-2026-08-16. Two independent Codex containers each start an untrusted stdio
-relay. Both relays connect to one long-lived trusted host that retains the
-journal and joins it to the real Control, binary History, generation-bound
-Unix socket, and external payment service. The equivalent microVM transport
-and the Claude integration remain future work.
+**Status:** real Codex 0.147 across both hardened Docker and real Firecracker
+boundaries, 2026-08-16. Untrusted stdio relays connect to one long-lived
+trusted host that retains the journal and joins it to the real Control, binary
+History, generation-bound Unix socket, and external payment service. The
+Claude integration remains future work.
 
 ## Why this layer exists
 
@@ -73,11 +72,11 @@ path and the legacy `initialize` path, plus `ping`, `tools/list`, and
 newline-delimited stdio for compatibility. The stronger path keeps it in
 `mcp-operation-host`; `mcp-operation-relay` only copies bytes between stdio and
 a private same-UID Unix socket. The host authenticates each relay with
-`SO_PEERCRED`, accepts one at a time, and keeps the same server and journal
-across clean exits and transport failures. Responses carry current MCP server
-metadata, and list results are private and immediately stale. Tool inputs are
-validated again inside the trusted host; advertised JSON Schema is not the
-security boundary.
+`SO_PEERCRED`, may serve overlapping relay lifetimes, and serializes every
+protected request through one shared server and journal order. Responses carry
+current MCP server metadata, and list results are private and immediately
+stale. Tool inputs are validated again inside the trusted host; advertised
+JSON Schema is not the security boundary.
 
 The current MCP specification deliberately uses a stateless core and says
 stateful applications should carry explicit handles. That is useful for
@@ -130,6 +129,18 @@ payment port through container loopback and the Docker gateway fail. The model
 fixture alone binds the private gateway, while payment remains on host
 loopback.
 
+The Firecracker target runs the same guest relay at fixed loopback port 7002.
+Guest PID 1 is the only process allowed to translate that port into a
+generation-bound host stream; the seccomp-confined Codex domain has no direct
+vsock authority. The trusted MCP host, journal, History, and provider remain
+outside the snapshot. In the checked KVM run, Codex completed A, the runtime
+snapshotted and replaced the entire VMM, and a new MCP session replayed A
+before submitting B. The replay returned the exact cached response without a
+provider delivery. The run retained three relay lifetimes, three successful
+Codex MCP completions, two History Operations, and exactly two commits at a
+non-idempotent provider. Separate Firecracker and continuity checkers rebuilt
+the result from the retained records.
+
 Run the public checks and build with:
 
 ```sh
@@ -138,10 +149,18 @@ make runtime-mcp-operation-demo
 make runtime-mcp-operation-build
 make runtime-codex-mcp-demo
 make runtime-codex-mcp-docker-demo
+make runtime-firecracker-codex-mcp-demo
 
 # Check a retained run printed by the command above.
 make runtime-codex-mcp-check \
   CODEX_MCP_EVIDENCE=/absolute/path/to/evidence
+
+# Check retained Firecracker evidence.
+make runtime-firecracker-codex-mcp-check \
+  FIRECRACKER_CODEX_MCP_EVIDENCE=/absolute/path/to/combined \
+  FIRECRACKER_CODEX_PAYLOAD=/absolute/path/to/codex.squashfs \
+  FIRECRACKER_CODEX_PAYLOAD_RESULT=/absolute/path/to/payload.json \
+  FIRECRACKER_CODEX_RUNNER=/absolute/path/to/firecracker-codex-shim
 ```
 
 The compatibility binary requires four host/supervisor-owned inputs:
@@ -178,13 +197,14 @@ For a microVM, the same relay also accepts a fixed numeric guest loopback port:
 mcp-operation-relay -loopback-port 7002
 ```
 
-The intended Firecracker composition is deliberately indirect. The
+The Firecracker composition is deliberately indirect. The
 seccomp-confined Codex domain retains no `AF_VSOCK` authority. It connects to a
 guest-PID-1 loopback proxy; PID 1 opens the generation-bound host-vsock stream;
 the existing peer-checked Firecracker relay fixes that stream to the same
 host-owned MCP socket used by Docker. Port 7002 is now reserved in the guest
-ABI and the loopback relay path is tested, but the PID 1 proxy and KVM evidence
-join are not yet wired into the full Firecracker run.
+ABI. The PID 1 proxy, two VMM generations, payload relay, host socket, raw
+Codex records, journal, History, and provider commits are now joined by the
+real-KVM run and its offline checks.
 
 ## Exact boundary and next work
 
@@ -196,12 +216,14 @@ This is not yet complete mediation for an arbitrary agent. It currently:
 - protects only tools routed through this server; and
 - has not yet been invoked by a real Claude client.
 
-The Docker result proves containment for the exercised Codex/MCP path; it does
-not prove that every possible Agent effect path is mediated. The next
-increment carries the same boundary across Firecracker through the existing
-host bridge, followed by a Claude runtime driver. Docker, Firecracker, QEMU,
-and future sandbox backends should remain replaceable containment mechanisms;
-the stable contract is the host-retained Operation identity and History.
+The Docker and Firecracker results prove containment for their exercised
+Codex/MCP paths; they do not prove that every possible Agent effect path is
+mediated. The Firecracker run checkpoints after the first Operation has
+settled, so an MCP stream interrupted during an unknown provider write remains
+unproved. A Claude runtime driver and that in-flight checkpoint case are the
+next portability tests. Docker, Firecracker, QEMU, and future sandbox backends
+remain replaceable containment mechanisms; the stable contract is the
+host-retained Operation identity and History.
 
 ## External protocol references
 

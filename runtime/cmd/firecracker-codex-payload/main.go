@@ -20,6 +20,7 @@ import (
 
 type options struct {
 	source, output, result, mksquashfs string
+	requireMCPRelay                    bool
 }
 
 type payloadRecord struct {
@@ -44,6 +45,7 @@ func main() {
 	flag.StringVar(&config.output, "output", "", "new absolute SquashFS output path")
 	flag.StringVar(&config.result, "result", "", "new absolute JSON result path")
 	flag.StringVar(&config.mksquashfs, "mksquashfs", "", "absolute mksquashfs executable (PATH lookup by default)")
+	flag.BoolVar(&config.requireMCPRelay, "require-mcp-relay", false, "require executable bin/mcp-operation-relay in the immutable payload")
 	flag.Parse()
 	if err := run(context.Background(), config, os.Stdout); err != nil {
 		log.Printf("Codex payload build failed: %v", err)
@@ -69,6 +71,11 @@ func run(ctx context.Context, config options, stdout io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("payload image %q was built but is unusable: %w", built.ImagePath, err)
 	}
+	if config.requireMCPRelay {
+		if _, err := requireExecutable(built.Manifest, "bin/mcp-operation-relay"); err != nil {
+			return fmt.Errorf("payload image %q was built but is unusable: %w", built.ImagePath, err)
+		}
+	}
 	record := payloadRecord{Schema: 1, Payload: built, Codex: codex}
 	if err := writeExclusiveJSON(resultPath, record); err != nil {
 		return fmt.Errorf("payload image %q was built but result publication failed: %w", built.ImagePath, err)
@@ -80,20 +87,24 @@ func run(ctx context.Context, config options, stdout io.Writer) error {
 }
 
 func requireNativeCodex(manifest firecracker.PayloadManifest) (firecracker.PayloadManifestEntry, error) {
+	return requireExecutable(manifest, "bin/codex")
+}
+
+func requireExecutable(manifest firecracker.PayloadManifest, path string) (firecracker.PayloadManifestEntry, error) {
 	var matches []firecracker.PayloadManifestEntry
 	for _, entry := range manifest.Entries {
-		if entry.Path == "bin/codex" {
+		if entry.Path == path {
 			matches = append(matches, entry)
 		}
 	}
 	if len(matches) != 1 {
-		return firecracker.PayloadManifestEntry{}, fmt.Errorf("manifest contains %d bin/codex entries, require one", len(matches))
+		return firecracker.PayloadManifestEntry{}, fmt.Errorf("manifest contains %d %s entries, require one", len(matches), path)
 	}
-	codex := matches[0]
-	if codex.Type != firecracker.PayloadEntryFile || codex.Size <= 0 || codex.Mode&0o111 == 0 || len(codex.SHA256) != 64 {
-		return firecracker.PayloadManifestEntry{}, errors.New("bin/codex must be a nonempty executable regular file with SHA-256")
+	executable := matches[0]
+	if executable.Type != firecracker.PayloadEntryFile || executable.Size <= 0 || executable.Mode&0o111 == 0 || len(executable.SHA256) != 64 {
+		return firecracker.PayloadManifestEntry{}, fmt.Errorf("%s must be a nonempty executable regular file with SHA-256", path)
 	}
-	return codex, nil
+	return executable, nil
 }
 
 func validateResultPath(result, source, output string) (string, error) {

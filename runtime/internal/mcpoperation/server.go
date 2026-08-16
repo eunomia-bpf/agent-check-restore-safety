@@ -12,6 +12,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/gateway"
@@ -45,6 +46,7 @@ type Server struct {
 	tools          map[string]Tool
 	orderedTools   []Tool
 	journal        *Journal
+	requestMu      sync.Mutex
 }
 
 type rpcRequest struct {
@@ -144,7 +146,9 @@ func (s *Server) Serve(ctx context.Context, input io.Reader, output io.Writer, d
 			return err
 		}
 		line := append([]byte(nil), scanner.Bytes()...)
+		s.requestMu.Lock()
 		response, respond, err := s.handle(ctx, line, diagnostics)
+		s.requestMu.Unlock()
 		if err != nil {
 			return err
 		}

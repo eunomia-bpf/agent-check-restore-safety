@@ -49,6 +49,7 @@ make runtime-firecracker-kvm-test
 make runtime-mcp-operation-check
 make runtime-codex-mcp-demo
 make runtime-codex-mcp-docker-demo
+make runtime-firecracker-codex-mcp-demo
 make runtime-codex-demo
 make runtime-codex-isolated-demo
 make runtime-codex-isolated-check
@@ -90,6 +91,13 @@ and only then releases the callback. Build, real-KVM, checker, trust-boundary,
 and current limitation details are in
 [`docs/firecracker-codex-runtime.md`](docs/firecracker-codex-runtime.md).
 
+That Firecracker path now also supports the ordinary Codex MCP boundary. The
+MCP host and fsynced journal stay outside the VM; the guest contains only a
+fixed relay reached through PID 1. A checked KVM run completed A, replaced the
+whole VMM from snapshot, replayed A without another provider write, and then
+committed B. `make runtime-firecracker-codex-mcp-check` independently verifies
+both the VM lifecycle and the Codex-to-journal-to-History-to-provider join.
+
 The Codex demo uses the locally logged-in account and the real Codex App Server,
 not a model fixture. A strict dynamic tool requests one application-chosen
 Operation. Payment commits and loses its first response; while the tool callback
@@ -107,7 +115,9 @@ Docker inspection and direct-provider probes are checked offline. The first
 payment commits and loses its response; the host recovers it by query, returns
 the exact result after Codex restarts, and then admits a distinct payment. The
 checker also proves from raw Codex commands that the Agent receives no journal,
-execution identity, sandbox binding, provider route, or credential. See
+execution identity, sandbox binding, provider route, or credential. The same
+contract now runs inside Firecracker without changing the MCP tool surface.
+See
 [`docs/mcp-continuity-runtime.md`](docs/mcp-continuity-runtime.md).
 
 The stronger isolated target runs that same real App Server inside a hardened

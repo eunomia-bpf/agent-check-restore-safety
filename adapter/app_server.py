@@ -72,6 +72,7 @@ class MCPStdioServer:
     command: str | os.PathLike[str]
     args: tuple[str, ...]
     enabled_tools: tuple[str, ...]
+    runtime_command: str | os.PathLike[str] | None = None
     startup_timeout_sec: int = 10
     tool_timeout_sec: int = 60
 
@@ -95,6 +96,20 @@ class MCPStdioServer:
             raise ValueError(
                 "MCP server command must be a direct executable regular file owned by the current user"
             )
+        if self.runtime_command is not None:
+            runtime_command = os.fspath(self.runtime_command)
+            if (
+                not os.path.isabs(runtime_command)
+                or os.path.normpath(runtime_command) != runtime_command
+                or len(runtime_command.encode("utf-8")) > _MAX_MCP_ARGUMENT_BYTES
+                or any(
+                    ord(character) < 0x20 or ord(character) == 0x7F
+                    for character in runtime_command
+                )
+            ):
+                raise ValueError(
+                    "MCP runtime command must be a bounded absolute canonical path"
+                )
         if not self.args or not self.enabled_tools:
             raise ValueError("MCP server requires fixed arguments and a tool allow list")
         for label, values in (("argument", self.args), ("tool", self.enabled_tools)):
@@ -118,6 +133,12 @@ class MCPStdioServer:
     @property
     def command_path(self) -> str:
         return os.fspath(Path(self.command))
+
+    @property
+    def configured_command_path(self) -> str:
+        if self.runtime_command is None:
+            return self.command_path
+        return os.fspath(self.runtime_command)
 
 
 @dataclass
@@ -296,7 +317,7 @@ class CodexAppServer:
         if self.mcp_server is not None:
             configured = (
                 "{"
-                f"command={_toml_string(self.mcp_server.command_path)},"
+                f"command={_toml_string(self.mcp_server.configured_command_path)},"
                 f"args={_toml_array(self.mcp_server.args)},"
                 f"startup_timeout_sec={self.mcp_server.startup_timeout_sec},"
                 f"tool_timeout_sec={self.mcp_server.tool_timeout_sec},"

@@ -28,6 +28,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import ProxyHandler, Request, build_opener
 
+from adapter.app_server import MCPStdioServer
 from adapter.firecracker_codex import create_firecracker_codex
 from adapter.test_app_server import PreflightResult, run_preflight
 
@@ -38,6 +39,8 @@ _MAX_CONTROL_RESPONSE_BYTES = 4 << 20
 _MAX_WORKSPACE_PATCH_BYTES = 1 << 20
 _MAX_WORKSPACE_VALIDATION_COMMAND_BYTES = 64 << 10
 _WORKSPACE_VALIDATION_SHELL = "/opt/codex/bin/sh"
+_GUEST_MCP_RELAY = "/opt/codex/bin/mcp-operation-relay"
+_GUEST_MCP_PORT = 7002
 _CONTROL_CHARACTERS = frozenset(chr(value) for value in range(32)) | {chr(127)}
 
 
@@ -523,6 +526,10 @@ def run_demo(
     workspace_validation_command: str | None = None,
     protected_effect_ids: Sequence[str] | None = None,
     recover_first_unknown: bool = False,
+    mcp_relay: Path | None = None,
+    mcp_relay_sha256: str | None = None,
+    mcp_host_socket: Path | None = None,
+    mcp_effect_ids: Sequence[str] | None = None,
 ) -> dict[str, Any]:
     """Run one deterministic preflight and publish sanitized evidence metadata."""
 
@@ -535,6 +542,17 @@ def run_demo(
         raise DemoError("protected effect identities must contain 1 to 8 unique values")
     if any(not isinstance(effect_id, str) or not effect_id for effect_id in effect_ids):
         raise DemoError("protected effect identities must be nonempty strings")
+    mcp_effects = () if mcp_effect_ids is None else tuple(mcp_effect_ids)
+    mcp_inputs = (mcp_relay, mcp_relay_sha256, mcp_host_socket)
+    mcp_requested = any(value is not None for value in mcp_inputs) or bool(mcp_effects)
+    if mcp_requested and (not all(value is not None for value in mcp_inputs) or len(mcp_effects) != 2):
+        raise DemoError(
+            "MCP Firecracker mode requires relay, relay SHA-256, host socket, and two effects"
+        )
+    if mcp_requested and (len(effect_ids) != 1 or len(set(mcp_effects)) != 2 or any(not value for value in mcp_effects)):
+        raise DemoError(
+            "MCP Firecracker mode requires one checkpoint callback and two unique MCP effects"
+        )
 
     verified: dict[str, dict[str, Any]] = {}
     artifact_paths: dict[str, Path] = {}
@@ -551,6 +569,14 @@ def run_demo(
         )
         artifact_paths[label] = artifact_path
         verified[label] = record
+    if mcp_requested:
+        assert mcp_relay is not None
+        assert mcp_relay_sha256 is not None
+        relay_path, relay_record = _verified_artifact(
+            mcp_relay, mcp_relay_sha256, "mcp_relay", executable=True
+        )
+        artifact_paths["mcp_relay"] = relay_path
+        verified["mcp_relay"] = relay_record
 
     codex_digest = _digest(codex_sha256, "codex_sha256")
     workspace_patch_digest: str | None = None
@@ -596,6 +622,12 @@ def run_demo(
         "adapter_evidence": adapter_dir,
         "workspace": workspace_dir,
     }
+    mcp_endpoint: Path | None = None
+    if mcp_requested:
+        assert mcp_host_socket is not None
+        mcp_endpoint = _sandbox_socket_path(mcp_host_socket)
+        _verify_sandbox_socket(mcp_endpoint)
+        disjoint_paths["mcp_host_socket"] = mcp_endpoint
     join_inputs = (
         control_url,
         admin_token_file,
@@ -668,6 +700,15 @@ def run_demo(
 
     raw_jsonl = adapter_dir / "app-server.jsonl"
     result_path = adapter_dir / "result.json"
+    mcp_server: MCPStdioServer | None = None
+    if mcp_requested:
+        mcp_server = MCPStdioServer(
+            name="continuity",
+            command=artifact_paths["mcp_relay"],
+            runtime_command=_GUEST_MCP_RELAY,
+            args=("-loopback-port", str(_GUEST_MCP_PORT)),
+            enabled_tools=("commit_effect",),
+        )
     def protected_operation(pending: Any) -> None:
         if not join_requested:
             pending.respond_text(f"receipt:{pending.arguments['effect_id']}")
@@ -745,6 +786,7 @@ def run_demo(
         codex_sha256=codex_digest,
         evidence_dir=runtime_dir,
         workspace=workspace_dir,
+        mcp_host_socket=mcp_endpoint,
     ) as wrapped:
         previous_umask = os.umask(0o077)
         try:
@@ -761,6 +803,8 @@ def run_demo(
                     else None
                 ),
                 protected_effect_ids=effect_ids,
+                mcp_server=mcp_server,
+                mcp_effect_ids=mcp_effects or None,
             )
         finally:
             os.umask(previous_umask)
@@ -917,6 +961,12 @@ def run_demo(
     }
     if control_record is not None:
         record["control"] = control_record
+    if mcp_requested:
+        record["mcp"] = {
+            "effect_ids": list(mcp_effects),
+            "guest_relay": _GUEST_MCP_RELAY,
+            "guest_port": _GUEST_MCP_PORT,
+        }
     _write_exclusive_json(result_path, record)
     return record
 
@@ -1010,6 +1060,23 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
             "it through the provider query contract"
         ),
     )
+    parser.add_argument(
+        "--mcp-relay",
+        type=Path,
+        help="optional host copy of the MCP relay attested into the guest payload",
+    )
+    parser.add_argument("--mcp-relay-sha256")
+    parser.add_argument(
+        "--mcp-host-socket",
+        type=Path,
+        help="private trusted MCP host socket outside the microVM restore domain",
+    )
+    parser.add_argument(
+        "--mcp-effect-id",
+        action="append",
+        dest="mcp_effect_ids",
+        help="MCP effect identity; supply exactly twice for before/after restore",
+    )
     return parser.parse_args(argv)
 
 
@@ -1086,6 +1153,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             workspace_validation_command=args.workspace_validation_command,
             protected_effect_ids=args.protected_effect_ids,
             recover_first_unknown=args.recover_first_unknown,
+            mcp_relay=args.mcp_relay,
+            mcp_relay_sha256=args.mcp_relay_sha256,
+            mcp_host_socket=args.mcp_host_socket,
+            mcp_effect_ids=args.mcp_effect_ids,
         )
     except Exception as error:
         print(f"Firecracker Codex demo failed: {error}", file=sys.stderr)

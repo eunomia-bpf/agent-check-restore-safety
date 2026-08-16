@@ -1,4 +1,4 @@
-.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-repository runtime-firecracker-codex-demo runtime-firecracker-codex-check runtime-firecracker-codex-control-check runtime-mcp-operation-build runtime-mcp-operation-check runtime-mcp-operation-demo runtime-codex-mcp-build runtime-codex-mcp-demo runtime-codex-mcp-docker-demo runtime-codex-mcp-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
+.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-repository runtime-firecracker-codex-demo runtime-firecracker-codex-mcp-demo runtime-firecracker-codex-mcp-check runtime-firecracker-codex-check runtime-firecracker-codex-control-check runtime-mcp-operation-build runtime-mcp-operation-check runtime-mcp-operation-demo runtime-codex-mcp-build runtime-codex-mcp-demo runtime-codex-mcp-docker-demo runtime-codex-mcp-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
 
 VM_ACCEL ?= tcg
 VM_BACKEND ?= qemu
@@ -11,6 +11,7 @@ FIRECRACKER_PRODUCTION_PREFLIGHT_ARGS ?=
 FIRECRACKER_BUILD_DIR ?= $(shell python3 -c 'import os; print(os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "safe-change-runtime", "firecracker", "build"))')
 FIRECRACKER_FETCH_INPUTS := runtime/deploy/firecracker/assets.lock.json runtime/deploy/firecracker/fetch-assets.sh
 FIRECRACKER_CODEX_DEMO_ARGS ?=
+FIRECRACKER_CODEX_MCP_DEMO_ARGS ?=
 FIRECRACKER_CODEX_PAYLOAD_ARGS ?=
 FIRECRACKER_CODEX_REPOSITORY_ARGS ?=
 FIRECRACKER_CODEX_EVIDENCE ?=
@@ -168,6 +169,24 @@ runtime-firecracker-codex-demo:
 	@test -r /dev/kvm && test -w /dev/kvm || { echo "Firecracker Codex demo requires read/write access to /dev/kvm; refresh the kvm group or run: sg kvm -c 'make runtime-firecracker-codex-demo ...'" >&2; exit 2; }
 	python3 -m adapter.firecracker_codex_runtime_demo \
 		$(FIRECRACKER_CODEX_DEMO_ARGS)
+
+runtime-firecracker-codex-mcp-demo:
+	@test -c /dev/kvm || { echo "/dev/kvm is missing or is not a character device" >&2; exit 2; }
+	@test -r /dev/kvm && test -w /dev/kvm || { echo "Firecracker Codex MCP demo requires read/write access to /dev/kvm; refresh the kvm group or run: sg kvm -c 'make runtime-firecracker-codex-mcp-demo ...'" >&2; exit 2; }
+	python3 -m adapter.firecracker_codex_mcp_runtime_demo \
+		$(FIRECRACKER_CODEX_MCP_DEMO_ARGS)
+
+runtime-firecracker-codex-mcp-check:
+	@test -n "$(strip $(FIRECRACKER_CODEX_MCP_EVIDENCE))" || { echo "FIRECRACKER_CODEX_MCP_EVIDENCE must name the retained combined evidence directory" >&2; exit 2; }
+	$(MAKE) runtime-firecracker-codex-check \
+		FIRECRACKER_CODEX_EVIDENCE="$(abspath $(FIRECRACKER_CODEX_MCP_EVIDENCE))/runtime" \
+		FIRECRACKER_CODEX_ADAPTER_EVIDENCE="$(abspath $(FIRECRACKER_CODEX_MCP_EVIDENCE))/adapter" \
+		FIRECRACKER_CODEX_PAYLOAD="$(FIRECRACKER_CODEX_PAYLOAD)" \
+		FIRECRACKER_CODEX_PAYLOAD_RESULT="$(FIRECRACKER_CODEX_PAYLOAD_RESULT)" \
+		FIRECRACKER_CODEX_RUNNER="$(FIRECRACKER_CODEX_RUNNER)"
+	python3 -m adapter.check_firecracker_codex_mcp_evidence \
+		"$(abspath $(FIRECRACKER_CODEX_MCP_EVIDENCE))" \
+		"$(abspath $(FIRECRACKER_CODEX_PAYLOAD_RESULT))"
 
 runtime-firecracker-codex-check:
 	@test -n "$(strip $(FIRECRACKER_CODEX_EVIDENCE))" || { echo "FIRECRACKER_CODEX_EVIDENCE must name the retained runtime evidence directory" >&2; exit 2; }

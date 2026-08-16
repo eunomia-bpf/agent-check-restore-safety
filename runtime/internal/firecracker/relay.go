@@ -419,18 +419,38 @@ func (r *Relay) auditFailure() error {
 // the caller-owned AuditLog. Close only removes the relay socket if the path
 // still names the socket originally created by this relay.
 func (r *Relay) Close() error {
+	return r.shutdown(false)
+}
+
+// Abort is the restore-boundary form of Close for protocols that intentionally
+// keep streams open while idle. It closes every authenticated current-
+// generation stream immediately, waits until no handler can write AuditLog,
+// and removes the relay socket. Unlike Close, the intentional cut is not
+// reported as a drain timeout.
+func (r *Relay) Abort() error {
+	return r.shutdown(true)
+}
+
+func (r *Relay) shutdown(immediate bool) error {
 	r.closeOnce.Do(func() {
 		r.mu.Lock()
 		r.stop = true
 		r.mu.Unlock()
 		listenerErr := r.listener.Close()
-		deadline := time.Now().Add(r.config.DrainTimeout)
-		if !waitLoopbackProxyUntil(r.done, deadline) {
+		if immediate {
 			r.closeConnections()
-			r.closeErr = errors.Join(r.closeErr, errors.New("Firecracker relay connection drain timed out"))
-			forcedDeadline := time.Now().Add(r.config.DrainTimeout)
-			if !waitLoopbackProxyUntil(r.done, forcedDeadline) {
-				r.closeErr = errors.Join(r.closeErr, errors.New("Firecracker relay forced shutdown timed out"))
+			if !waitLoopbackProxyUntil(r.done, time.Now().Add(r.config.DrainTimeout)) {
+				r.closeErr = errors.Join(r.closeErr, errors.New("Firecracker relay abort timed out"))
+			}
+		} else {
+			deadline := time.Now().Add(r.config.DrainTimeout)
+			if !waitLoopbackProxyUntil(r.done, deadline) {
+				r.closeConnections()
+				r.closeErr = errors.Join(r.closeErr, errors.New("Firecracker relay connection drain timed out"))
+				forcedDeadline := time.Now().Add(r.config.DrainTimeout)
+				if !waitLoopbackProxyUntil(r.done, forcedDeadline) {
+					r.closeErr = errors.Join(r.closeErr, errors.New("Firecracker relay forced shutdown timed out"))
+				}
 			}
 		}
 		removeErr := removeSameSocket(r.socketPath, r.listenerInfo)

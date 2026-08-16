@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import socket
 import stat
 import subprocess
 import tempfile
@@ -84,6 +85,57 @@ class FirecrackerCodexTests(unittest.TestCase):
                 })
                 self.assertEqual(
                     wrapped.command(arguments), (os.fspath(runner), *arguments)
+                )
+
+    def test_wrapper_passes_only_validated_optional_mcp_socket(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            runner = root / "runner"
+            runner.write_text(
+                "#!/usr/bin/env python3\n"
+                "import json,os\n"
+                "print(json.dumps(dict(os.environ),sort_keys=True))\n",
+                encoding="utf-8",
+            )
+            runner.chmod(0o700)
+            inputs = self._inputs(root)
+            socket_directory = root / "mcp-host"
+            socket_directory.mkdir(mode=0o700)
+            socket_directory.chmod(0o700)
+            socket_path = socket_directory / "host.sock"
+            listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            try:
+                listener.bind(os.fspath(socket_path))
+                socket_path.chmod(0o600)
+                with create_firecracker_codex(
+                    runner=runner,
+                    mcp_host_socket=socket_path,
+                    **inputs,
+                    **_DIGESTS,
+                ) as wrapped:
+                    completed = subprocess.run(
+                        [os.fspath(wrapped)],
+                        check=True,
+                        capture_output=True,
+                        text=True,
+                    )
+                environment = json.loads(completed.stdout)
+                self.assertEqual(
+                    environment["SAFE_CHANGE_MCP_HOST_SOCKET"],
+                    os.fspath(socket_path),
+                )
+            finally:
+                listener.close()
+
+            bad_path = socket_directory / "not-a-socket"
+            bad_path.write_text("no", encoding="utf-8")
+            bad_path.chmod(0o600)
+            with self.assertRaisesRegex(ValueError, "Unix socket"):
+                create_firecracker_codex(
+                    runner=runner,
+                    mcp_host_socket=bad_path,
+                    **inputs,
+                    **_DIGESTS,
                 )
 
     def test_wrapper_fails_closed_on_oversized_stderr_line(self) -> None:

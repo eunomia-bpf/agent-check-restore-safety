@@ -22,11 +22,14 @@ func TestPayloadCommandBuildsAndPublishesNativeCodexIdentity(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(source, "bin", "codex"), []byte("native-codex"), 0o700); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(source, "bin", "mcp-operation-relay"), []byte("native-mcp-relay"), 0o500); err != nil {
+		t.Fatal(err)
+	}
 	tool := fakeMksquashfs(t, root)
 	output := filepath.Join(root, "payload.squashfs")
 	result := filepath.Join(root, "payload.json")
 	var stdout bytes.Buffer
-	if err := run(context.Background(), options{source: source, output: output, result: result, mksquashfs: tool}, &stdout); err != nil {
+	if err := run(context.Background(), options{source: source, output: output, result: result, mksquashfs: tool, requireMCPRelay: true}, &stdout); err != nil {
 		t.Fatal(err)
 	}
 	var got summary
@@ -44,6 +47,27 @@ func TestPayloadCommandBuildsAndPublishesNativeCodexIdentity(t *testing.T) {
 	data, _ := os.ReadFile(result)
 	if err := json.Unmarshal(data, &record); err != nil || record.Codex.Path != "bin/codex" || record.Codex.SHA256 != got.CodexSHA256 {
 		t.Fatalf("record=%+v err=%v", record, err)
+	}
+}
+
+func TestPayloadCommandCanRequireMCPRelay(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Chmod(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	source := filepath.Join(root, "vendor")
+	if err := os.MkdirAll(filepath.Join(source, "bin"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(source, "bin", "codex"), []byte("native-codex"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	err := run(context.Background(), options{
+		source: source, output: filepath.Join(root, "payload"), result: filepath.Join(root, "result"),
+		mksquashfs: fakeMksquashfs(t, root), requireMCPRelay: true,
+	}, &bytes.Buffer{})
+	if err == nil || !strings.Contains(err.Error(), "bin/mcp-operation-relay") {
+		t.Fatalf("missing MCP relay error = %v", err)
 	}
 }
 

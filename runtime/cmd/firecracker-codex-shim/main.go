@@ -205,6 +205,7 @@ type generation struct {
 	listener       *firecracker.VsockListener
 	exportListener *firecracker.VsockListener
 	relay          *firecracker.Relay
+	mcpRelay       *firecracker.Relay
 	apiTrace       *evidenceFile
 	relayAudit     *evidenceFile
 	apiSocket      socketRecord
@@ -483,8 +484,8 @@ func (r *runner) execute() error {
 	}); err != nil {
 		return err
 	}
-	if err := r.closeModelRelay(r.g1); err != nil {
-		return fmt.Errorf("quiesce g1 model path before snapshot: %w", err)
+	if err := r.closeRelays(r.g1); err != nil {
+		return fmt.Errorf("quiesce g1 host relays before snapshot: %w", err)
 	}
 	idleContext, idleCancel := context.WithTimeout(r.ctx, endpointDrainLimit)
 	idleErr := r.proxy.WaitIdle(idleContext)
@@ -793,6 +794,16 @@ func (r *runner) armEndpoints(g *generation) error {
 		return fmt.Errorf("arm g%d model relay: %w", g.number, err)
 	}
 	g.relayAuditSafe = false
+	if r.config.MCPHostSocket != "" {
+		g.mcpRelay, err = firecracker.Arm(firecracker.RelayConfig{
+			Generation: g.number, BasePath: g.basePath, Port: agentguest.DefaultMCPPort,
+			FirecrackerPID: g.process.PID(), VerifyProcess: g.process.VerifyIdentity,
+			SandboxSocket: r.config.MCPHostSocket, AuditLog: g.relayAudit, DrainTimeout: endpointDrainLimit,
+		})
+		if err != nil {
+			return fmt.Errorf("arm g%d MCP relay: %w", g.number, err)
+		}
+	}
 	g.listener, err = firecracker.ArmVsockListener(firecracker.VsockListenerConfig{
 		BasePath: g.basePath, Port: agentguest.DefaultStreamPort,
 		FirecrackerPID: g.process.PID(), VerifyProcess: g.process.VerifyIdentity,
@@ -920,8 +931,8 @@ func (r *runner) closeEndpoints(g *generation) error {
 		errs = append(errs, g.exportListener.Close())
 		g.exportListener = nil
 	}
-	if g.relay != nil {
-		errs = append(errs, r.closeModelRelay(g))
+	if g.relay != nil || g.mcpRelay != nil {
+		errs = append(errs, r.closeRelays(g))
 	}
 	if g.acceptDone != nil {
 		select {
@@ -1008,18 +1019,34 @@ func (r *runner) cleanup() error {
 	return errors.Join(errs...)
 }
 
-func (r *runner) closeModelRelay(g *generation) error {
-	if g == nil || g.relay == nil {
+func (r *runner) closeRelays(g *generation) error {
+	if g == nil {
 		return nil
 	}
-	relay := g.relay
-	closeErr := relay.Close()
+	var errs []error
+	errs = append(errs, closeRelay(&g.relay, false), closeRelay(&g.mcpRelay, true))
+	if g.relay == nil && g.mcpRelay == nil {
+		g.relayAuditSafe = true
+	}
+	return errors.Join(errs...)
+}
+
+func closeRelay(relayPointer **firecracker.Relay, abort bool) error {
+	if relayPointer == nil || *relayPointer == nil {
+		return nil
+	}
+	relay := *relayPointer
+	closeErr := error(nil)
+	if abort {
+		closeErr = relay.Abort()
+	} else {
+		closeErr = relay.Close()
+	}
 	waitContext, waitCancel := context.WithTimeout(context.Background(), endpointDrainLimit)
 	waitErr := relay.Wait(waitContext)
 	waitCancel()
 	if !errors.Is(waitErr, context.DeadlineExceeded) {
-		g.relayAuditSafe = true
-		g.relay = nil
+		*relayPointer = nil
 	}
 	return errors.Join(closeErr, waitErr)
 }

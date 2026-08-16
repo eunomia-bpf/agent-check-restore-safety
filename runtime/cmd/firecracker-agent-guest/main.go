@@ -219,34 +219,49 @@ func runPID1(ctx context.Context, deps dependencies, logger *log.Logger) error {
 
 	runContext, cancel := context.WithCancel(ctx)
 	defer cancel()
-	results := make(chan componentResult, 3)
-	proxyResult, err := deps.startProxy(runContext.Done(), config.ModelPort, deps.dial, logger)
-	if err != nil {
-		return fmt.Errorf("start guest model proxy: %w", err)
-	}
-	if proxyResult == nil {
-		return errors.New("guest model proxy returned no completion channel")
-	}
-	go func() {
-		results <- componentResult{
-			component: "model proxy",
-			err:       <-proxyResult,
+	results := make(chan componentResult, 4)
+	startedProxies := 0
+	for _, proxy := range []struct {
+		name string
+		port uint32
+	}{
+		{name: "model proxy", port: config.ModelPort},
+		{name: "MCP proxy", port: agentguest.DefaultMCPPort},
+	} {
+		proxyResult, startErr := deps.startProxy(runContext.Done(), proxy.port, deps.dial, logger)
+		if startErr != nil {
+			cancel()
+			if !waitForShutdown(results, startedProxies) {
+				return errors.Join(fmt.Errorf("start guest %s: %w", proxy.name, startErr), errors.New("started guest proxies did not stop after cancellation"))
+			}
+			return fmt.Errorf("start guest %s: %w", proxy.name, startErr)
 		}
-	}()
+		if proxyResult == nil {
+			cancel()
+			if !waitForShutdown(results, startedProxies) {
+				return errors.New("started guest proxies did not stop after a proxy returned no completion channel")
+			}
+			return fmt.Errorf("guest %s returned no completion channel", proxy.name)
+		}
+		startedProxies++
+		go func(name string, result <-chan error) {
+			results <- componentResult{component: name, err: <-result}
+		}(proxy.name, proxyResult)
+	}
 
 	codex, err := deps.startCodex(config, logger.Writer())
 	if err != nil {
 		cancel()
-		if !waitForShutdown(results, 1) {
-			return errors.Join(fmt.Errorf("start payload Codex: %w", err), errors.New("model proxy did not stop after cancellation"))
+		if !waitForShutdown(results, startedProxies) {
+			return errors.Join(fmt.Errorf("start payload Codex: %w", err), errors.New("guest proxies did not stop after cancellation"))
 		}
 		return fmt.Errorf("start payload Codex: %w", err)
 	}
 	if err := codex.validate(); err != nil {
 		cancel()
 		_ = codex.closePipes()
-		if !waitForShutdown(results, 1) {
-			return errors.Join(err, errors.New("model proxy did not stop after cancellation"))
+		if !waitForShutdown(results, startedProxies) {
+			return errors.Join(err, errors.New("guest proxies did not stop after cancellation"))
 		}
 		return err
 	}
@@ -269,7 +284,7 @@ func runPID1(ctx context.Context, deps dependencies, logger *log.Logger) error {
 	}
 	_ = codex.stdout.Close()
 
-	remaining := 3 - completed
+	remaining := 2 + startedProxies - completed
 	if !waitForShutdown(results, remaining) {
 		err = errors.Join(err, errors.New("agent guest components did not stop after cancellation"))
 	}

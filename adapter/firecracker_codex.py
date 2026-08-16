@@ -95,6 +95,7 @@ def create_firecracker_codex(
     codex_sha256: str,
     evidence_dir: str | os.PathLike[str],
     workspace: str | os.PathLike[str],
+    mcp_host_socket: str | os.PathLike[str] | None = None,
     temp_parent: str | os.PathLike[str] | None = None,
 ) -> FirecrackerCodex:
     """Create a transparent executable with immutable microVM configuration.
@@ -125,6 +126,10 @@ def create_firecracker_codex(
         "workspace": workspace_path,
         "evidence_dir": evidence_path,
     }
+    if mcp_host_socket is not None:
+        paths["mcp_host_socket"] = _private_socket(
+            mcp_host_socket, "mcp_host_socket"
+        )
     _require_pairwise_disjoint(paths)
     _require_empty(workspace_path, "workspace")
     _require_empty(evidence_path, "evidence_dir")
@@ -149,6 +154,10 @@ def create_firecracker_codex(
         environment: values[label]
         for environment, label in _CONFIG_ENVIRONMENT.items()
     }
+    if mcp_host_socket is not None:
+        fixed_environment["SAFE_CHANGE_MCP_HOST_SOCKET"] = values[
+            "mcp_host_socket"
+        ]
 
     parent = _directory(temp_parent, "temp_parent") if temp_parent is not None else None
     temporary = tempfile.TemporaryDirectory(
@@ -338,6 +347,35 @@ def _directory(value: str | os.PathLike[str], label: str) -> Path:
     original = Path(os.fspath(value))
     if original.is_symlink() or not path.is_dir():
         raise NotADirectoryError(f"{label} must be a real directory: {path}")
+    return path
+
+
+def _private_socket(value: str | os.PathLike[str], label: str) -> Path:
+    path = _absolute(value, label)
+    original = Path(os.fspath(value))
+    info = original.lstat()
+    parent = original.parent
+    parent_info = parent.lstat()
+    if (
+        original.is_symlink()
+        or path != original
+        or not stat.S_ISSOCK(info.st_mode)
+        or stat.S_IMODE(info.st_mode) != 0o600
+        or info.st_uid != os.geteuid()
+    ):
+        raise ValueError(
+            f"{label} must be a direct current-user Unix socket with mode 0600"
+        )
+    if (
+        parent.is_symlink()
+        or parent.resolve(strict=True) != parent
+        or not stat.S_ISDIR(parent_info.st_mode)
+        or stat.S_IMODE(parent_info.st_mode) != 0o700
+        or parent_info.st_uid != os.geteuid()
+    ):
+        raise ValueError(
+            f"{label} parent must be a direct current-user directory with mode 0700"
+        )
     return path
 
 

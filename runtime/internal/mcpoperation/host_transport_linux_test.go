@@ -3,6 +3,7 @@
 package mcpoperation
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"net"
@@ -12,6 +13,63 @@ import (
 	"testing"
 	"time"
 )
+
+func TestUnixHostAcceptsConcurrentThreadRelays(t *testing.T) {
+	directory := t.TempDir()
+	if err := os.Chmod(directory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	journal, err := OpenJournal(filepath.Join(directory, "calls.jsonl"), "concurrent-relays")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer journal.Close()
+	server, err := NewServer(&fakeExecutor{}, testServerConfig(t), ServerOptions{
+		ExecutionID: "concurrent-relays", Journal: journal,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	host, err := ListenUnixHost(filepath.Join(directory, "host.sock"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- host.Serve(ctx, server, &bytes.Buffer{}) }()
+
+	first, err := net.DialUnix("unix", nil, &net.UnixAddr{Name: host.Path(), Net: "unix"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	initialize := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25"}}` + "\n"
+	if _, err := first.Write([]byte(initialize)); err != nil {
+		t.Fatal(err)
+	}
+	if response, err := bufio.NewReader(first).ReadString('\n'); err != nil || !strings.Contains(response, `"serverInfo"`) {
+		t.Fatalf("first relay initialize response=%q error=%v", response, err)
+	}
+
+	var secondOutput bytes.Buffer
+	secondContext, secondCancel := context.WithTimeout(context.Background(), 2*time.Second)
+	secondErr := RelayUnix(secondContext, host.Path(), strings.NewReader(
+		`{"jsonrpc":"2.0","id":2,"method":"ping"}`+"\n",
+	), &secondOutput)
+	secondCancel()
+	if secondErr != nil || !strings.Contains(secondOutput.String(), `"result"`) {
+		t.Fatalf("concurrent second relay output=%q error=%v", secondOutput.String(), secondErr)
+	}
+	_ = first.Close()
+	cancel()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("concurrent trusted MCP host did not stop")
+	}
+}
 
 func relayRequests(t *testing.T, path string, requests ...string) []string {
 	t.Helper()

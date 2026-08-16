@@ -29,6 +29,17 @@ type UnixHost struct {
 	closed     bool
 }
 
+type lockedWriter struct {
+	mu     sync.Mutex
+	writer io.Writer
+}
+
+func (writer *lockedWriter) Write(data []byte) (int, error) {
+	writer.mu.Lock()
+	defer writer.mu.Unlock()
+	return writer.writer.Write(data)
+}
+
 func ListenUnixHost(path string) (*UnixHost, error) {
 	parentInfo, err := validateHostSocketPath(path, false)
 	if err != nil {
@@ -127,17 +138,24 @@ func peerCredentials(connection *net.UnixConn) (*unix.Ucred, error) {
 	return credential, nil
 }
 
-// Serve accepts replacement relays until cancellation. MCP framing and all
-// durable call state remain in Server; disconnects are transport failures and
-// never erase or recreate the Journal.
+// Serve accepts concurrent and replacement relays until cancellation. MCP
+// framing and all durable call state remain in Server; Server serializes
+// requests from every connection into one execution order. Disconnects are
+// transport failures and never erase or recreate the Journal.
 func (host *UnixHost) Serve(ctx context.Context, server *Server, diagnostics io.Writer) error {
 	if host == nil || host.listener == nil || server == nil || ctx == nil || diagnostics == nil {
 		return errors.New("trusted MCP host requires context, listener, server, and diagnostics")
 	}
+	serveContext, cancel := context.WithCancel(ctx)
+	defer cancel()
 	go func() {
-		<-ctx.Done()
+		<-serveContext.Done()
 		_ = host.Close()
 	}()
+	serializedDiagnostics := &lockedWriter{writer: diagnostics}
+	fatal := make(chan error, 1)
+	var handlers sync.WaitGroup
+	defer handlers.Wait()
 	for {
 		if err := host.validateParent(); err != nil {
 			return err
@@ -147,33 +165,43 @@ func (host *UnixHost) Serve(ctx context.Context, server *Server, diagnostics io.
 			if ctx.Err() != nil {
 				return nil
 			}
+			select {
+			case failure := <-fatal:
+				return failure
+			default:
+			}
 			return fmt.Errorf("accept MCP relay: %w", err)
 		}
 		credential, credentialErr := peerCredentials(connection)
 		if credentialErr != nil || credential == nil || int(credential.Uid) != os.Geteuid() {
-			_, _ = fmt.Fprintf(diagnostics, "rejected MCP relay peer: %v\n", credentialErr)
+			_, _ = fmt.Fprintf(serializedDiagnostics, "rejected MCP relay peer: %v\n", credentialErr)
 			_ = connection.Close()
 			continue
 		}
-		_, _ = fmt.Fprintf(diagnostics, "{\"event\":\"relay_accept\",\"pid\":%d,\"uid\":%d}\n", credential.Pid, credential.Uid)
-		connectionDone := make(chan struct{})
-		go func() {
-			select {
-			case <-ctx.Done():
-				_ = connection.Close()
-			case <-connectionDone:
+		_, _ = fmt.Fprintf(serializedDiagnostics, "{\"event\":\"relay_accept\",\"pid\":%d,\"uid\":%d}\n", credential.Pid, credential.Uid)
+		handlers.Add(1)
+		go func(connection *net.UnixConn, credential *unix.Ucred) {
+			defer handlers.Done()
+			connectionDone := make(chan struct{})
+			go func() {
+				select {
+				case <-serveContext.Done():
+					_ = connection.Close()
+				case <-connectionDone:
+				}
+			}()
+			serveErr := server.Serve(serveContext, connection, connection, serializedDiagnostics)
+			close(connectionDone)
+			_ = connection.Close()
+			_, _ = fmt.Fprintf(serializedDiagnostics, "{\"event\":\"relay_disconnect\",\"pid\":%d,\"uid\":%d}\n", credential.Pid, credential.Uid)
+			if serveContext.Err() == nil && serveErr != nil && !errors.Is(serveErr, ErrTransport) {
+				select {
+				case fatal <- serveErr:
+				default:
+				}
+				cancel()
 			}
-		}()
-		serveErr := server.Serve(ctx, connection, connection, diagnostics)
-		close(connectionDone)
-		_ = connection.Close()
-		_, _ = fmt.Fprintf(diagnostics, "{\"event\":\"relay_disconnect\",\"pid\":%d,\"uid\":%d}\n", credential.Pid, credential.Uid)
-		if ctx.Err() != nil {
-			return nil
-		}
-		if serveErr != nil && !errors.Is(serveErr, ErrTransport) {
-			return serveErr
-		}
+		}(connection, credential)
 	}
 }
 

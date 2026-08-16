@@ -1,6 +1,7 @@
 package codexvm
 
 import (
+	"net"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -23,8 +24,9 @@ func TestLoadConfigAcceptsStrictContractAndCopiesArguments(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(lookedUp, requiredEnvironment[:]) {
-		t.Fatalf("environment lookups = %q, want %q", lookedUp, requiredEnvironment)
+	wantLookups := append(append([]string(nil), requiredEnvironment[:]...), EnvMCPHostSocket)
+	if !reflect.DeepEqual(lookedUp, wantLookups) {
+		t.Fatalf("environment lookups = %q, want %q", lookedUp, wantLookups)
 	}
 	if config.RunnerSHA256 != fixture.environment[EnvRunnerSHA256] || config.Firecracker != fixture.environment[EnvFirecracker] || config.FirecrackerSHA256 != fixture.environment[EnvFirecrackerSHA256] ||
 		config.Kernel != fixture.environment[EnvKernel] || config.KernelSHA256 != fixture.environment[EnvKernelSHA256] ||
@@ -43,6 +45,71 @@ func TestLoadConfigAcceptsStrictContractAndCopiesArguments(t *testing.T) {
 	if config.Arguments[0] != "app-server" || strings.Contains(strings.Join(config.Arguments, " "), "mutated") {
 		t.Fatalf("Config retained caller's argument backing array: %q", config.Arguments)
 	}
+}
+
+func TestLoadConfigAcceptsOptionalPrivateMCPHostSocket(t *testing.T) {
+	fixture := newConfigFixture(t)
+	socketDirectory := filepath.Join(fixture.root, "mcp-host")
+	if err := os.Mkdir(socketDirectory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	socketPath := filepath.Join(socketDirectory, "host.sock")
+	listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: socketPath, Net: "unix"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	if err := os.Chmod(socketPath, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	fixture.environment[EnvMCPHostSocket] = socketPath
+	config, err := LoadConfig(validArguments(`http://127.0.0.1:43210/v1`), fixture.lookup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if config.MCPHostSocket != socketPath {
+		t.Fatalf("MCP host socket = %q, want %q", config.MCPHostSocket, socketPath)
+	}
+}
+
+func TestLoadConfigRejectsUnsafeOptionalMCPHostSocket(t *testing.T) {
+	t.Run("empty", func(t *testing.T) {
+		fixture := newConfigFixture(t)
+		fixture.environment[EnvMCPHostSocket] = ""
+		if _, err := LoadConfig(validArguments(`http://127.0.0.1:1/v1`), fixture.lookup); err == nil || !strings.Contains(err.Error(), "empty") {
+			t.Fatalf("empty MCP socket error = %v", err)
+		}
+	})
+	t.Run("regular file", func(t *testing.T) {
+		fixture := newConfigFixture(t)
+		fixture.environment[EnvMCPHostSocket] = writeConfigFile(t, filepath.Join(fixture.root, "not-a-socket"), 0o600)
+		if _, err := LoadConfig(validArguments(`http://127.0.0.1:1/v1`), fixture.lookup); err == nil || !strings.Contains(err.Error(), "Unix socket") {
+			t.Fatalf("regular MCP socket error = %v", err)
+		}
+	})
+	t.Run("public parent", func(t *testing.T) {
+		fixture := newConfigFixture(t)
+		directory := filepath.Join(fixture.root, "public-mcp")
+		if err := os.Mkdir(directory, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chmod(directory, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		path := filepath.Join(directory, "host.sock")
+		listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: path, Net: "unix"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer listener.Close()
+		if err := os.Chmod(path, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		fixture.environment[EnvMCPHostSocket] = path
+		if _, err := LoadConfig(validArguments(`http://127.0.0.1:1/v1`), fixture.lookup); err == nil || !strings.Contains(err.Error(), "parent") {
+			t.Fatalf("public MCP parent error = %v", err)
+		}
+	})
 }
 
 func TestLoadConfigRejectsUnsupportedGuestIPv6Family(t *testing.T) {

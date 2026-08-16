@@ -309,6 +309,10 @@ func TestValidatePinnedGuestArgumentsRejectsAuthorityExpansion(t *testing.T) {
 	if target, err := validatePinnedGuestArguments(valid, 12345); err != nil || target != "127.0.0.1:12345" {
 		t.Fatalf("valid pinned arguments = %q, %v", target, err)
 	}
+	mcpValid := pinnedMCPArguments("http://127.0.0.1:12345/v1")
+	if target, err := validatePinnedGuestArguments(mcpValid, 12345); err != nil || target != "127.0.0.1:12345" {
+		t.Fatalf("valid pinned MCP arguments = %q, %v", target, err)
+	}
 	tests := []struct {
 		name string
 		port uint32
@@ -323,6 +327,11 @@ func TestValidatePinnedGuestArgumentsRejectsAuthorityExpansion(t *testing.T) {
 		{"duplicate base url", 12345, func(args []string) []string { return append(args, "-c", `base_url="http://127.0.0.1:12345/v1"`) }},
 		{"query authority", 12345, func(args []string) []string {
 			args[7] = strings.Replace(args[7], "/v1\"", "/v1?token=x\"", 1)
+			return args
+		}},
+		{"different MCP port", 12345, func(_ []string) []string {
+			args := append([]string(nil), mcpValid...)
+			args[len(args)-1] = strings.Replace(args[len(args)-1], `"7002"`, `"7003"`, 1)
 			return args
 		}},
 	}

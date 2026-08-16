@@ -21,6 +21,7 @@ from pathlib import Path
 import posixpath
 import shutil
 import tempfile
+import time
 from typing import Any, Callable, Mapping, Sequence, cast
 import unittest
 from urllib.request import Request, urlopen
@@ -77,6 +78,7 @@ class PreflightResult:
     workspace_validation_call_id: str | None = None
     workspace_validation_command_sha256: str | None = None
     protected_calls: tuple[ProtectedCallResult, ...] = ()
+    mcp_effect_ids: tuple[str, ...] = ()
 
 
 ToolHandler = Callable[[PendingToolCall], None]
@@ -135,6 +137,7 @@ def _validate_raw_protocol(
     sandbox: str,
     workspace_edit_call_id: str | None,
     workspace_validation_call_id: str | None,
+    mcp_effect_ids: Sequence[str] = (),
 ) -> None:
     checks = {
         "experimental initialize": _has_message(
@@ -234,6 +237,61 @@ def _validate_raw_protocol(
             == "completed"
             and payload.get("params", {}).get("item", {}).get("exitCode") == 0,
         )
+    if mcp_effect_ids:
+        completions: list[tuple[int, str, str, str]] = []
+        callback_sequence: int | None = None
+        for record in records:
+            sequence = record.get("sequence")
+            payload = record.get("payload")
+            if not isinstance(sequence, int) or not isinstance(payload, dict):
+                continue
+            params = payload.get("params")
+            if not isinstance(params, dict):
+                continue
+            if (
+                record.get("direction") == "server_to_client"
+                and payload.get("method") == "item/tool/call"
+                and params.get("threadId") == fork_thread_id
+                and params.get("turnId") == protected_turn_id
+            ):
+                callback_sequence = sequence
+            item = params.get("item")
+            if (
+                record.get("direction") == "server_to_client"
+                and payload.get("method") == "item/completed"
+                and isinstance(item, dict)
+                and item.get("type") == "mcpToolCall"
+                and item.get("status") == "completed"
+                and item.get("server") == "continuity"
+                and item.get("tool") == "commit_effect"
+                and isinstance(item.get("arguments"), dict)
+                and isinstance(item["arguments"].get("effect_id"), str)
+            ):
+                thread_id = params.get("threadId")
+                turn_id = params.get("turnId")
+                if isinstance(thread_id, str) and isinstance(turn_id, str):
+                    completions.append(
+                        (sequence, item["arguments"]["effect_id"], thread_id, turn_id)
+                    )
+        expected_mcp_effects = [mcp_effect_ids[0], *mcp_effect_ids]
+        if (
+            callback_sequence is None
+            or [effect for _, effect, _, _ in completions]
+            != expected_mcp_effects
+            or len(completions) != 3
+            or not (
+                completions[0][0]
+                < callback_sequence
+                < completions[1][0]
+                < completions[2][0]
+            )
+            or completions[0][2:] != (fork_thread_id, protected_turn_id)
+            or completions[1][2] == fork_thread_id
+            or completions[1][2:] != completions[2][2:]
+        ):
+            raise AssertionError(
+                "MCP calls did not replay then advance across the VM checkpoint"
+            )
     missing = [name for name, present in checks.items() if not present]
     if missing:
         raise AssertionError(
@@ -347,6 +405,84 @@ def _validate_workspace_gate(
         )
 
 
+def _wait_mcp_ready(
+    client: CodexAppServer, thread_id: str, server_name: str
+) -> None:
+    deadline = time.monotonic() + 15
+    while time.monotonic() < deadline:
+        event = client.wait_for_message(
+            lambda message: (
+                message.get("method") == "mcpServer/startupStatus/updated"
+                and isinstance(message.get("params"), dict)
+                and message["params"].get("name") == server_name
+                and message["params"].get("threadId") == thread_id
+            ),
+            description=f"MCP startup for {server_name}",
+            timeout=max(0.1, deadline - time.monotonic()),
+        )
+        status = event["params"].get("status")
+        if status in {"ready", "completed"}:
+            return
+        if status in {"failed", "error"}:
+            raise AppServerProtocolError(
+                f"MCP server {server_name} failed to start: {event!r}"
+            )
+    raise AppServerProtocolError(f"MCP server {server_name} did not become ready")
+
+
+def _find_mcp_callable(
+    request: Mapping[str, Any], server_name: str, tool_name: str
+) -> str:
+    metadata = request.get("client_metadata")
+    encoded = (
+        metadata.get("x-codex-turn-metadata")
+        if isinstance(metadata, dict)
+        else None
+    )
+    if not isinstance(encoded, str):
+        raise AppServerProtocolError("model request omitted MCP tool metadata")
+    try:
+        turn_metadata = json.loads(encoded)
+    except json.JSONDecodeError as error:
+        raise AppServerProtocolError("model request has malformed MCP metadata") from error
+    names = (
+        turn_metadata.get("code_mode_tool_names")
+        if isinstance(turn_metadata, dict)
+        else None
+    )
+    if not isinstance(names, dict):
+        raise AppServerProtocolError("model request omitted MCP callable names")
+    matches = [
+        callable_name
+        for callable_name, descriptor in names.items()
+        if isinstance(callable_name, str)
+        and descriptor
+        == {"name": tool_name, "namespace": "mcp__" + server_name}
+    ]
+    if len(matches) != 1:
+        raise AppServerProtocolError(
+            f"model request exposed {len(matches)} matching MCP callables"
+        )
+    return matches[0]
+
+
+def _enqueue_mcp_effect(
+    responses: DeterministicResponsesServer,
+    callable_name: str,
+    effect_id: str,
+    call_id: str,
+) -> None:
+    arguments = json.dumps(
+        {"effect_id": effect_id}, sort_keys=True, separators=(",", ":")
+    )
+    responses.enqueue_custom_tool_call(
+        "exec",
+        f"const outcome = await tools.{callable_name}({arguments}); text(outcome);",
+        call_id=call_id,
+        response_id="fixture-" + call_id,
+    )
+
+
 def run_preflight(
     *,
     codex_binary: str = "codex",
@@ -358,6 +494,8 @@ def run_preflight(
     workspace_validation_command: str | None = None,
     workspace_validation_shell: str | None = None,
     protected_effect_ids: Sequence[str] | None = None,
+    mcp_server: MCPStdioServer | None = None,
+    mcp_effect_ids: Sequence[str] | None = None,
 ) -> PreflightResult:
     """Run one deterministic end-to-end App Server boundary preflight.
 
@@ -373,6 +511,18 @@ def run_preflight(
         if protected_effect_ids is None
         else tuple(protected_effect_ids)
     )
+    mcp_effects = () if mcp_effect_ids is None else tuple(mcp_effect_ids)
+    if (mcp_server is None) != (len(mcp_effects) == 0):
+        raise ValueError("MCP preflight requires both a server and effect identities")
+    if mcp_effects and (
+        len(mcp_effects) != 2
+        or len(set(mcp_effects)) != 2
+        or any(not isinstance(effect, str) or not effect for effect in mcp_effects)
+        or len(effect_ids) != 1
+    ):
+        raise ValueError(
+            "MCP checkpoint preflight requires two unique MCP effects and one protected callback"
+        )
     if not 1 <= len(effect_ids) <= _MAX_PREFLIGHT_PROTECTED_CALLS:
         raise ValueError(
             "preflight requires 1 to "
@@ -449,41 +599,6 @@ def run_preflight(
         responses.enqueue_assistant(
             "seed acknowledged", response_id="fixture-seed-response"
         )
-        if workspace_patch is not None:
-            responses.enqueue_custom_tool_call(
-                "apply_patch",
-                workspace_patch,
-                call_id=_PREFLIGHT_EDIT_CALL_ID,
-                response_id="fixture-edit-response",
-            )
-        if workspace_validation_command is not None:
-            assert workspace_validation_shell is not None
-            responses.enqueue_tool_call(
-                "exec_command",
-                {
-                    "cmd": workspace_validation_command,
-                    "workdir": ".",
-                    "shell": workspace_validation_shell,
-                    "login": False,
-                    "yield_time_ms": 10_000,
-                    "max_output_tokens": 1_000,
-                },
-                call_id=_PREFLIGHT_VALIDATION_CALL_ID,
-                response_id="fixture-validation-response",
-            )
-        for index, (call_id, effect_id) in enumerate(
-            zip(expected_call_ids, effect_ids, strict=True), start=1
-        ):
-            responses.enqueue_tool_call(
-                "protected_commit",
-                {"effect_id": effect_id},
-                call_id=call_id,
-                response_id=f"fixture-tool-response-{index}",
-            )
-        responses.enqueue_assistant(
-            "protected commit acknowledged", response_id="fixture-final-response"
-        )
-
         client = CodexAppServer(
             model_base_url=responses.base_url,
             workspace=workspace_path,
@@ -491,16 +606,77 @@ def run_preflight(
             codex_binary=codex_binary,
             rpc_timeout=RPC_TIMEOUT_SECONDS,
             turn_timeout=TURN_TIMEOUT_SECONDS,
+            mcp_server=mcp_server,
         )
         with client:
             initialize_result = dict(client.initialize_result or {})
             try:
                 seed = client.create_seed_thread(sandbox=sandbox)
                 seed_thread_id = seed["id"]
+                if mcp_server is not None:
+                    _wait_mcp_ready(client, seed_thread_id, mcp_server.name)
                 seed_turn_id, _ = client.start_turn_and_wait(
                     seed_thread_id,
                     "Acknowledge this deterministic seed turn.",
                     timeout=TURN_TIMEOUT_SECONDS,
+                )
+
+                callable_name: str | None = None
+                if mcp_server is not None:
+                    model_requests = [
+                        request
+                        for request in responses.requests
+                        if request.method == "POST"
+                        and request.path.endswith("/responses")
+                    ]
+                    if len(model_requests) != 1:
+                        raise AppServerProtocolError(
+                            "MCP discovery did not make exactly one model request"
+                        )
+                    callable_name = _find_mcp_callable(
+                        model_requests[0].body,
+                        mcp_server.name,
+                        mcp_server.enabled_tools[0],
+                    )
+
+                if workspace_patch is not None:
+                    responses.enqueue_custom_tool_call(
+                        "apply_patch",
+                        workspace_patch,
+                        call_id=_PREFLIGHT_EDIT_CALL_ID,
+                        response_id="fixture-edit-response",
+                    )
+                if workspace_validation_command is not None:
+                    assert workspace_validation_shell is not None
+                    responses.enqueue_tool_call(
+                        "exec_command",
+                        {
+                            "cmd": workspace_validation_command,
+                            "workdir": ".",
+                            "shell": workspace_validation_shell,
+                            "login": False,
+                            "yield_time_ms": 10_000,
+                            "max_output_tokens": 1_000,
+                        },
+                        call_id=_PREFLIGHT_VALIDATION_CALL_ID,
+                        response_id="fixture-validation-response",
+                    )
+                if callable_name is not None:
+                    _enqueue_mcp_effect(
+                        responses, callable_name, mcp_effects[0], "preflight-mcp-call-1"
+                    )
+                for index, (call_id, effect_id) in enumerate(
+                    zip(expected_call_ids, effect_ids, strict=True), start=1
+                ):
+                    responses.enqueue_tool_call(
+                        "protected_commit",
+                        {"effect_id": effect_id},
+                        call_id=call_id,
+                        response_id=f"fixture-tool-response-{index}",
+                    )
+                responses.enqueue_assistant(
+                    "protected commit acknowledged",
+                    response_id="fixture-final-response",
                 )
 
                 fork = client.fork_at_turn(seed_thread_id, seed_turn_id)
@@ -577,6 +753,31 @@ def run_preflight(
                         )
                     handler(pending)
                 pending.wait_turn_completed(timeout=TURN_TIMEOUT_SECONDS)
+                if callable_name is not None:
+                    assert mcp_server is not None
+                    restored_thread = client.create_mcp_thread(sandbox=sandbox)
+                    _wait_mcp_ready(client, restored_thread["id"], mcp_server.name)
+                    _enqueue_mcp_effect(
+                        responses,
+                        callable_name,
+                        mcp_effects[0],
+                        "preflight-mcp-replay-1",
+                    )
+                    _enqueue_mcp_effect(
+                        responses,
+                        callable_name,
+                        mcp_effects[1],
+                        "preflight-mcp-call-2",
+                    )
+                    responses.enqueue_assistant(
+                        "post-restore MCP operation acknowledged",
+                        response_id="fixture-post-restore-response",
+                    )
+                    client.start_turn_and_wait(
+                        restored_thread["id"],
+                        "Commit the post-restore protected operation.",
+                        timeout=TURN_TIMEOUT_SECONDS,
+                    )
                 client.assert_hermetic_runtime()
             finally:
                 if seed_thread_id is not None and archive_seed:
@@ -590,6 +791,8 @@ def run_preflight(
             2 + len(effect_ids)
             + int(workspace_patch is not None)
             + int(workspace_validation_command is not None)
+            + len(mcp_effects)
+            + 2 * int(bool(mcp_effects))
         )
         if response_count != expected_response_count:
             raise AssertionError(
@@ -646,6 +849,7 @@ def run_preflight(
             if workspace_validation_command is not None
             else None
         ),
+        mcp_effect_ids=mcp_effects,
     )
     return PreflightResult(
         ok=True,
@@ -673,6 +877,7 @@ def run_preflight(
         ),
         workspace_validation_command_sha256=validation_command_digest,
         protected_calls=tuple(protected_calls),
+        mcp_effect_ids=mcp_effects,
     )
 
 
@@ -773,6 +978,7 @@ class CodexAppServerModeTests(unittest.TestCase):
                 command=executable,
                 args=("-config", "/operator/tools.json"),
                 enabled_tools=("commit_effect",),
+                runtime_command="/opt/codex/bin/mcp-operation-relay",
             )
             client = CodexAppServer(
                 model_base_url="http://127.0.0.1:1",
@@ -784,6 +990,10 @@ class CodexAppServerModeTests(unittest.TestCase):
             joined = " ".join(command)
             self.assertIn("mcp_servers={}", command)
             self.assertIn("mcp_servers.continuity=", joined)
+            self.assertIn(
+                'command="/opt/codex/bin/mcp-operation-relay"', joined
+            )
+            self.assertNotIn(str(executable), joined)
             self.assertIn('enabled_tools=["commit_effect"]', joined)
             self.assertIn('approval_mode="approve"', joined)
             self.assertNotIn("env=", joined)
@@ -816,6 +1026,14 @@ class CodexAppServerModeTests(unittest.TestCase):
                     command=executable,
                     args=("-serve",),
                     enabled_tools=(),
+                )
+            with self.assertRaisesRegex(ValueError, "runtime command"):
+                MCPStdioServer(
+                    name="continuity",
+                    command=executable,
+                    args=("-serve",),
+                    enabled_tools=("commit_effect",),
+                    runtime_command="relative/server",
                 )
 
     def test_logged_in_account_requires_explicit_opt_in(self) -> None:
