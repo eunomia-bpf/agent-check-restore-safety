@@ -206,7 +206,8 @@ runtime-mcp-operation-build:
 	@sha256sum "$(MCP_OPERATION_BUILD_DIR)/mcp-operation-server"
 
 runtime-mcp-operation-check:
-	cd runtime && go test -count=1 ./internal/mcpoperation ./cmd/mcp-operation-server
+	cd runtime && go test -count=1 ./internal/mcpoperation ./cmd/mcp-operation-server \
+		./cmd/mcp-operation-host ./cmd/mcp-operation-relay
 
 # Real Control/History/Unix-socket/payment recovery, with no account or model.
 runtime-mcp-operation-demo:
@@ -221,14 +222,21 @@ runtime-codex-mcp-build: runtime-mcp-operation-build
 		-o "$(MCP_OPERATION_BUILD_DIR)/control" ./cmd/control
 	cd runtime && CGO_ENABLED=0 go build -buildvcs=false -trimpath \
 		-o "$(MCP_OPERATION_BUILD_DIR)/payment" ./cmd/payment
-	@chmod 0500 "$(MCP_OPERATION_BUILD_DIR)/control" "$(MCP_OPERATION_BUILD_DIR)/payment"
-	@sha256sum "$(MCP_OPERATION_BUILD_DIR)/control" "$(MCP_OPERATION_BUILD_DIR)/payment"
+	cd runtime && CGO_ENABLED=0 go build -buildvcs=false -trimpath \
+		-o "$(MCP_OPERATION_BUILD_DIR)/mcp-operation-host" ./cmd/mcp-operation-host
+	cd runtime && CGO_ENABLED=0 go build -buildvcs=false -trimpath \
+		-o "$(MCP_OPERATION_BUILD_DIR)/mcp-operation-relay" ./cmd/mcp-operation-relay
+	@chmod 0500 "$(MCP_OPERATION_BUILD_DIR)/control" "$(MCP_OPERATION_BUILD_DIR)/payment" \
+		"$(MCP_OPERATION_BUILD_DIR)/mcp-operation-host" "$(MCP_OPERATION_BUILD_DIR)/mcp-operation-relay"
+	@sha256sum "$(MCP_OPERATION_BUILD_DIR)/control" "$(MCP_OPERATION_BUILD_DIR)/payment" \
+		"$(MCP_OPERATION_BUILD_DIR)/mcp-operation-host" "$(MCP_OPERATION_BUILD_DIR)/mcp-operation-relay"
 
 runtime-codex-mcp-demo: runtime-codex-mcp-build
 	python3 -m adapter.codex_mcp_runtime_demo \
 		--control-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/control" \
 		--payment-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/payment" \
-		--mcp-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/mcp-operation-server" \
+		--mcp-host-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/mcp-operation-host" \
+		--mcp-relay-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/mcp-operation-relay" \
 		$(CODEX_MCP_DEMO_ARGS)
 
 runtime-codex-mcp-check:

@@ -88,6 +88,34 @@ def _json_lines(root: Path, name: str, *, mode: int | None = None) -> list[dict[
     return records
 
 
+def _external_artifact(
+    artifacts: dict[str, Any], key: str, *, executable: bool
+) -> Path:
+    artifact = artifacts.get(key)
+    value = artifact.get("path") if isinstance(artifact, dict) else None
+    if not isinstance(value, str):
+        raise EvidenceError(f"result omits {key} artifact path")
+    path = Path(value)
+    try:
+        resolved = path.resolve(strict=True)
+        info = path.lstat()
+    except OSError as error:
+        raise EvidenceError(f"cannot inspect {key} artifact") from error
+    if (
+        not path.is_absolute()
+        or resolved != path
+        or not stat.S_ISREG(info.st_mode)
+        or stat.S_ISLNK(info.st_mode)
+        or info.st_uid != os.geteuid()
+        or info.st_size <= 0
+        or stat.S_IMODE(info.st_mode) & 0o022
+        or (executable and not os.access(path, os.X_OK))
+        or artifact.get("sha256") != _sha(path)
+    ):
+        raise EvidenceError(f"unsafe or changed {key} artifact")
+    return path
+
+
 def _journal(root: Path, execution_id: str) -> list[dict[str, Any]]:
     records = _json_lines(root, "mcp-calls.jsonl", mode=0o600)
     if len(records) != 4:
@@ -166,6 +194,79 @@ def _mcp_items(records: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], lis
     return items, versions
 
 
+def _process_command(records: list[dict[str, Any]], label: str) -> list[str]:
+    commands = [
+        payload.get("command")
+        for record in records
+        for payload in [record.get("payload")]
+        if record.get("direction") == "meta"
+        and isinstance(payload, dict)
+        and payload.get("event") == "process_start"
+    ]
+    if (
+        len(commands) != 1
+        or not isinstance(commands[0], list)
+        or not commands[0]
+        or not all(isinstance(item, str) and item for item in commands[0])
+    ):
+        raise EvidenceError(f"{label} log does not contain one valid process command")
+    return commands[0]
+
+
+def _check_codex_relay_command(
+    command: list[str], *, codex: Path, relay: Path, socket_path: Path
+) -> None:
+    expected_mcp = (
+        "mcp_servers.continuity={"
+        f"command={json.dumps(os.fspath(relay), ensure_ascii=True)},"
+        f"args=[\"-socket\",{json.dumps(os.fspath(socket_path), ensure_ascii=True)}],"
+        "startup_timeout_sec=10,tool_timeout_sec=60,enabled=true,required=true,"
+        "enabled_tools=[\"commit_effect\"],default_tools_approval_mode=\"approve\","
+        "tools={\"commit_effect\"={approval_mode=\"approve\"}}}"
+    )
+    overrides = [
+        command[index + 1]
+        for index, item in enumerate(command[:-1])
+        if item == "-c"
+    ]
+    joined = "\x00".join(command)
+    forbidden = (
+        "-config",
+        "-sandbox-socket",
+        "-listen-socket",
+        "-execution-id",
+        "-journal",
+        "mcp-operation-host",
+    )
+    if (
+        command[0] != os.fspath(codex)
+        or command[1:3] != ["app-server", "--stdio"]
+        or overrides.count("mcp_servers={}") != 1
+        or overrides.count(expected_mcp) != 1
+        or sum(value.startswith("mcp_servers.continuity=") for value in overrides) != 1
+        or any(value in joined for value in forbidden)
+    ):
+        raise EvidenceError("Codex was not connected through the bounded untrusted relay")
+
+
+def _check_host_events(
+    records: list[dict[str, Any]], *, host_pid: int
+) -> None:
+    expected = ["relay_accept", "relay_disconnect"] * 2
+    if [record.get("event") for record in records] != expected:
+        raise EvidenceError("trusted MCP host did not retain exactly two relay lifetimes")
+    pids = [record.get("pid") for record in records]
+    uids = [record.get("uid") for record in records]
+    if (
+        not all(isinstance(pid, int) and pid > 1 and pid != host_pid for pid in pids)
+        or pids[0] != pids[1]
+        or pids[2] != pids[3]
+        or pids[0] == pids[2]
+        or uids != [os.geteuid()] * 4
+    ):
+        raise EvidenceError("trusted MCP host peer credentials are inconsistent")
+
+
 def _outcome(item: dict[str, Any], effect: str) -> dict[str, Any]:
     result = item.get("result")
     structured = result.get("structuredContent") if isinstance(result, dict) else None
@@ -187,13 +288,64 @@ def _outcome(item: dict[str, Any], effect: str) -> dict[str, Any]:
 def check(path: Path) -> dict[str, Any]:
     root = _private_root(path)
     result = _json_file(root, "result.json", mode=0o600)
-    if not isinstance(result, dict) or result.get("schema") != 1 or result.get("success") is not True:
+    if (
+        not isinstance(result, dict)
+        or result.get("schema") != 1
+        or result.get("success") is not True
+        or result.get("system") != "real-codex-split-mcp-continuity"
+        or result.get("codex_processes") != 2
+        or result.get("trusted_mcp_hosts") != 1
+        or result.get("mcp_relay_connections") != 2
+    ):
         raise EvidenceError("result does not report a successful schema-1 run")
     execution_id = result.get("execution_id")
     if not isinstance(execution_id, str):
         raise EvidenceError("result omits execution identity")
+    artifacts = result.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise EvidenceError("result omits artifact fingerprints")
+    codex = _external_artifact(artifacts, "codex", executable=True)
+    host = _external_artifact(artifacts, "mcp_host", executable=True)
+    relay = _external_artifact(artifacts, "mcp_relay", executable=True)
+    tools_config = _external_artifact(artifacts, "tools_config", executable=False)
     first_records = _json_lines(root, "codex-first.jsonl")
     second_records = _json_lines(root, "codex-second.jsonl")
+    relay_socket = root / "relay" / "mcp-host.sock"
+    _check_codex_relay_command(
+        _process_command(first_records, "first Codex"),
+        codex=codex,
+        relay=relay,
+        socket_path=relay_socket,
+    )
+    _check_codex_relay_command(
+        _process_command(second_records, "second Codex"),
+        codex=codex,
+        relay=relay,
+        socket_path=relay_socket,
+    )
+    host_process = _json_file(root, "mcp-host-process.json", mode=0o600)
+    host_pid = host_process.get("pid") if isinstance(host_process, dict) else None
+    host_command = host_process.get("command") if isinstance(host_process, dict) else None
+    sandbox_name = "sandbox-" + sha256(b"codex-mcp").hexdigest()[:32] + ".sock"
+    expected_host_command = [
+        os.fspath(host),
+        "-config",
+        os.fspath(tools_config),
+        "-sandbox-socket",
+        os.fspath(root / "sockets" / sandbox_name),
+        "-listen-socket",
+        os.fspath(relay_socket),
+        "-execution-id",
+        execution_id,
+        "-journal",
+        os.fspath(root / "mcp-calls.jsonl"),
+    ]
+    if not isinstance(host_pid, int) or host_pid <= 1 or host_command != expected_host_command:
+        raise EvidenceError("trusted MCP host process boundary is malformed")
+    host_records = _json_lines(root, "mcp-host.stderr.log", mode=0o600)
+    _check_host_events(host_records, host_pid=host_pid)
+    if result.get("relay_events") != host_records:
+        raise EvidenceError("result relay summary differs from the trusted host log")
     first_items, first_versions = _mcp_items(first_records)
     second_items, second_versions = _mcp_items(second_records)
     if len(first_items) != 1 or len(second_items) != 2:
@@ -280,10 +432,9 @@ def check(path: Path) -> dict[str, Any]:
     }:
         raise EvidenceError("external payment commits differ from History")
 
-    artifacts = result.get("artifacts")
-    if not isinstance(artifacts, dict):
-        raise EvidenceError("result omits artifact fingerprints")
     for key, name in (
+        ("mcp_host_process", "mcp-host-process.json"),
+        ("mcp_host_log", "mcp-host.stderr.log"),
         ("journal", "mcp-calls.jsonl"),
         ("first_raw", "codex-first.jsonl"),
         ("second_raw", "codex-second.jsonl"),
@@ -297,6 +448,8 @@ def check(path: Path) -> dict[str, Any]:
         "valid": True,
         "codex_version": first_versions[-1],
         "codex_processes": 2,
+        "trusted_mcp_hosts": 1,
+        "mcp_relay_connections": 2,
         "mcp_items": 3,
         "operations": 2,
         "provider_deliveries": 2,

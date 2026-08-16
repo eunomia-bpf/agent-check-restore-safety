@@ -1,5 +1,5 @@
-// Command mcp-operation-server exposes sandbox-bound durable Operations over
-// the standard MCP stdio transport. It carries no provider route or credential.
+// Command mcp-operation-host keeps protected MCP state outside the Agent
+// sandbox and serves replacement stdio relays over one private Unix socket.
 package main
 
 import (
@@ -7,6 +7,8 @@ import (
 	"flag"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/mcpoperation"
@@ -15,17 +17,19 @@ import (
 func main() {
 	var configPath string
 	var sandboxSocket string
+	var listenSocket string
 	var executionID string
 	var journalPath string
 	var executeTimeout time.Duration
 	flag.StringVar(&configPath, "config", "", "strict operator-owned MCP tool configuration")
-	flag.StringVar(&sandboxSocket, "sandbox-socket", "", "credential-free active sandbox Unix socket")
+	flag.StringVar(&sandboxSocket, "sandbox-socket", "", "credential-free active sandbox Operation socket")
+	flag.StringVar(&listenSocket, "listen-socket", "", "private Unix socket exposed only to the Agent relay")
 	flag.StringVar(&executionID, "execution-id", "", "stable identity supplied by the continuity supervisor")
-	flag.StringVar(&journalPath, "journal", "", "host-durable private MCP call journal outside the sandbox restore domain")
+	flag.StringVar(&journalPath, "journal", "", "host-durable MCP call journal outside the Agent restore domain")
 	flag.DurationVar(&executeTimeout, "execute-timeout", mcpoperation.DefaultExecuteTimeout, "deadline for one protected tool call")
 	flag.Parse()
-	if configPath == "" || sandboxSocket == "" || executionID == "" || journalPath == "" {
-		log.Fatal("-config, -sandbox-socket, -execution-id, and -journal are required")
+	if configPath == "" || sandboxSocket == "" || listenSocket == "" || executionID == "" || journalPath == "" {
+		log.Fatal("-config, -sandbox-socket, -listen-socket, -execution-id, and -journal are required")
 	}
 	config, err := mcpoperation.LoadConfigFile(configPath)
 	if err != nil {
@@ -49,7 +53,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := server.Serve(context.Background(), os.Stdin, os.Stdout, os.Stderr); err != nil {
+	host, err := mcpoperation.ListenUnixHost(listenSocket)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer host.Close()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	if err := host.Serve(ctx, server, os.Stderr); err != nil {
 		log.Fatal(err)
 	}
 }

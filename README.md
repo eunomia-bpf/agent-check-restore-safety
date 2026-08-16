@@ -46,6 +46,8 @@ make runtime-microservice-demo
 make runtime-vm-demo
 make runtime-vm-check VM_EVIDENCE=/tmp/safe-change-vm-123456789
 make runtime-firecracker-kvm-test
+make runtime-mcp-operation-check
+make runtime-codex-mcp-demo
 make runtime-codex-demo
 make runtime-codex-isolated-demo
 make runtime-codex-isolated-check
@@ -93,6 +95,17 @@ Operation. Payment commits and loses its first response; while the tool callback
 is pending, the control process is replaced. The restarted control process
 finishes the same Operation, Codex replies `DONE`, and payment retains one
 durable commit. This explicit live-account target is not run by ordinary tests.
+
+The credential-free MCP target exercises a different production boundary with
+no account requirement. Two real Codex App Server processes each launch a tiny
+untrusted stdio relay, while one trusted host process retains call identity and
+the fsynced journal across both relay lifetimes. The first payment commits and
+loses its response; the host recovers it by query, returns the exact result
+after Codex restarts, and then admits a distinct payment. The offline checker
+proves from raw Codex commands that the Agent receives only the relay socket,
+not the journal, execution identity, sandbox binding, provider route, or
+credential. See
+[`docs/mcp-continuity-runtime.md`](docs/mcp-continuity-runtime.md).
 
 The stronger isolated target runs that same real App Server inside a hardened
 Docker boundary. Codex and payment share no network; control is the only

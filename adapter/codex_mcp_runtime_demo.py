@@ -1,10 +1,11 @@
 """Run real Codex against the host-durable MCP continuity boundary.
 
-The model endpoint is deterministic and loopback-only; Codex App Server, MCP
-stdio, Control/History, the sandbox-bound Unix endpoint, and the external
-payment service are real processes.  The first provider response is dropped
-after commit.  Codex and its MCP child are then restarted, the same model tool
-call is replayed, and a second distinct call is issued.
+The model endpoint is deterministic and loopback-only; Codex App Server, the
+untrusted MCP stdio relay, the long-lived trusted MCP host, Control/History,
+the sandbox-bound Unix endpoint, and the external payment service are real
+processes.  The first provider response is dropped after commit.  Codex and
+its relay are then restarted, the same model tool call is replayed, and a
+second distinct call is issued through the original trusted host.
 """
 
 from __future__ import annotations
@@ -334,6 +335,32 @@ def _raw_mcp_completions(path: Path) -> list[dict[str, Any]]:
     return completions
 
 
+def _wait_relay_events(path: Path, process: _Process) -> list[dict[str, Any]]:
+    deadline = time.monotonic() + 10
+    last_error: BaseException | None = None
+    while time.monotonic() < deadline:
+        if process.process.poll() is not None:
+            raise DemoError("trusted MCP host exited before both relays disconnected")
+        try:
+            records = [
+                json.loads(line)
+                for line in path.read_text(encoding="utf-8").splitlines()
+                if line
+            ]
+            if [record.get("event") for record in records] == [
+                "relay_accept",
+                "relay_disconnect",
+                "relay_accept",
+                "relay_disconnect",
+            ]:
+                return records
+        except (OSError, json.JSONDecodeError) as error:
+            last_error = error
+        time.sleep(0.05)
+    detail = f": {last_error}" if last_error is not None else ""
+    raise DemoError("trusted MCP host did not retain two relay lifetimes" + detail)
+
+
 def run(
     *,
     workspace: Path,
@@ -341,7 +368,8 @@ def run(
     codex_binary: Path,
     control_binary: Path,
     payment_binary: Path,
-    mcp_binary: Path,
+    mcp_host_binary: Path,
+    mcp_relay_binary: Path,
     tools_config: Path,
 ) -> dict[str, Any]:
     workspace = workspace.resolve()
@@ -358,6 +386,9 @@ def run(
     history_path = root / "control.history"
     payment_history_path = root / "payment.history"
     journal_path = root / "mcp-calls.jsonl"
+    relay_directory = root / "relay"
+    relay_directory.mkdir(mode=0o700)
+    relay_socket_path = relay_directory / "mcp-host.sock"
     socket_path = _sandbox_socket(sockets)
 
     processes: list[_Process] = []
@@ -423,18 +454,42 @@ def run(
         if cutover.get("bindings") != [binding] or not socket_path.is_socket():
             raise DemoError("Control did not publish the expected sandbox endpoint")
 
-        mcp = MCPStdioServer(
-            name=_MCP_NAME,
-            command=mcp_binary,
-            args=(
+        mcp_host = _Process(
+            "mcp-host",
+            [
+                os.fspath(mcp_host_binary),
                 "-config",
                 os.fspath(tools_config),
                 "-sandbox-socket",
                 os.fspath(socket_path),
+                "-listen-socket",
+                os.fspath(relay_socket_path),
                 "-execution-id",
                 _EXECUTION_ID,
                 "-journal",
                 os.fspath(journal_path),
+            ],
+            root,
+        )
+        processes.append(mcp_host)
+        _write_private_json(
+            root / "mcp-host-process.json",
+            {"pid": mcp_host.process.pid, "command": mcp_host.command},
+        )
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline and not relay_socket_path.is_socket():
+            if mcp_host.process.poll() is not None:
+                raise DemoError("trusted MCP host exited before publishing its relay socket")
+            time.sleep(0.05)
+        if not relay_socket_path.is_socket():
+            raise DemoError("trusted MCP host did not publish its relay socket")
+
+        mcp = MCPStdioServer(
+            name=_MCP_NAME,
+            command=mcp_relay_binary,
+            args=(
+                "-socket",
+                os.fspath(relay_socket_path),
             ),
             enabled_tools=(_TOOL_NAME,),
         )
@@ -562,15 +617,18 @@ def run(
         for item in first_items + second_items:
             if item.get("server") != _MCP_NAME or item.get("tool") != _TOOL_NAME or item.get("status") != "completed":
                 raise DemoError(f"Codex emitted an unsuccessful MCP item: {item!r}")
+        relay_events = _wait_relay_events(root / "mcp-host.stderr.log", mcp_host)
 
         result = {
             "schema": 1,
             "success": True,
-            "system": "real-codex-mcp-continuity",
+            "system": "real-codex-split-mcp-continuity",
             "execution_id": _EXECUTION_ID,
             "tool_descriptor": descriptor,
             "mcp_startup_statuses": statuses,
             "codex_processes": 2,
+            "trusted_mcp_hosts": 1,
+            "mcp_relay_connections": 2,
             "codex_mcp_items": len(first_items) + len(second_items),
             "history": state,
             "payment": stats,
@@ -578,7 +636,26 @@ def run(
                 "codex": {"path": os.fspath(codex_binary), "sha256": _sha256_file(codex_binary)},
                 "control": {"path": os.fspath(control_binary), "sha256": _sha256_file(control_binary)},
                 "payment": {"path": os.fspath(payment_binary), "sha256": _sha256_file(payment_binary)},
-                "mcp": {"path": os.fspath(mcp_binary), "sha256": _sha256_file(mcp_binary)},
+                "mcp_host": {
+                    "path": os.fspath(mcp_host_binary),
+                    "sha256": _sha256_file(mcp_host_binary),
+                },
+                "mcp_relay": {
+                    "path": os.fspath(mcp_relay_binary),
+                    "sha256": _sha256_file(mcp_relay_binary),
+                },
+                "tools_config": {
+                    "path": os.fspath(tools_config),
+                    "sha256": _sha256_file(tools_config),
+                },
+                "mcp_host_process": {
+                    "path": os.fspath(root / "mcp-host-process.json"),
+                    "sha256": _sha256_file(root / "mcp-host-process.json"),
+                },
+                "mcp_host_log": {
+                    "path": os.fspath(root / "mcp-host.stderr.log"),
+                    "sha256": _sha256_file(root / "mcp-host.stderr.log"),
+                },
                 "journal": {"path": os.fspath(journal_path), "sha256": _sha256_file(journal_path)},
                 "first_raw": {"path": os.fspath(raw_first), "sha256": _sha256_file(raw_first)},
                 "second_raw": {"path": os.fspath(raw_second), "sha256": _sha256_file(raw_second)},
@@ -587,6 +664,7 @@ def run(
                     "sha256": _sha256_file(root / "responses.json"),
                 },
             },
+            "relay_events": relay_events,
         }
         _write_private_json(root / "result.json", result)
         return {"evidence": os.fspath(root), **result}
@@ -608,7 +686,8 @@ def main() -> int:
     parser.add_argument("--codex-binary", default="codex")
     parser.add_argument("--control-binary", type=Path, required=True)
     parser.add_argument("--payment-binary", type=Path, required=True)
-    parser.add_argument("--mcp-binary", type=Path, required=True)
+    parser.add_argument("--mcp-host-binary", type=Path, required=True)
+    parser.add_argument("--mcp-relay-binary", type=Path, required=True)
     parser.add_argument(
         "--tools-config",
         type=Path,
@@ -624,7 +703,8 @@ def main() -> int:
         codex_binary=_owned_executable(Path(codex).resolve(), "Codex"),
         control_binary=_owned_executable(args.control_binary.resolve(), "Control"),
         payment_binary=_owned_executable(args.payment_binary.resolve(), "payment service"),
-        mcp_binary=_owned_executable(args.mcp_binary.resolve(), "MCP server"),
+        mcp_host_binary=_owned_executable(args.mcp_host_binary.resolve(), "trusted MCP host"),
+        mcp_relay_binary=_owned_executable(args.mcp_relay_binary.resolve(), "MCP relay"),
         tools_config=args.tools_config.resolve(),
     )
     print(json.dumps(result, sort_keys=True))

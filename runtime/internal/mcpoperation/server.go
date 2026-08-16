@@ -27,6 +27,8 @@ const (
 	legacyProtocolVersion = "2025-11-25"
 )
 
+var ErrTransport = errors.New("MCP transport failed")
+
 type Executor interface {
 	Execute(context.Context, string, string, []byte) (gateway.Outcome, error)
 }
@@ -150,17 +152,17 @@ func (s *Server) Serve(ctx context.Context, input io.Reader, output io.Writer, d
 			continue
 		}
 		if _, err := writer.Write(response); err != nil {
-			return fmt.Errorf("write MCP response: %w", err)
+			return fmt.Errorf("%w: write MCP response: %w", ErrTransport, err)
 		}
 		if err := writer.WriteByte('\n'); err != nil {
-			return fmt.Errorf("terminate MCP response: %w", err)
+			return fmt.Errorf("%w: terminate MCP response: %w", ErrTransport, err)
 		}
 		if err := writer.Flush(); err != nil {
-			return fmt.Errorf("flush MCP response: %w", err)
+			return fmt.Errorf("%w: flush MCP response: %w", ErrTransport, err)
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("read MCP request: %w", err)
+		return fmt.Errorf("%w: read MCP request: %w", ErrTransport, err)
 	}
 	return nil
 }
