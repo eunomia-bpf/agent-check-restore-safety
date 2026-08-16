@@ -261,17 +261,7 @@ func runPID1(ctx context.Context, deps dependencies, logger *log.Logger) error {
 		results <- componentResult{component: "Codex process", err: codex.wait()}
 	}()
 
-	var first componentResult
-	select {
-	case first = <-results:
-		if first.component == "agent stream session" && first.err == nil {
-			err = nil
-		} else {
-			err = componentFailure(first)
-		}
-	case <-ctx.Done():
-		err = ctx.Err()
-	}
+	err, completed := awaitSessionCompletion(ctx, results)
 	cancel()
 	_ = codex.stdin.Close()
 	if killErr := codex.kill(); killErr != nil && !errors.Is(killErr, os.ErrProcessDone) {
@@ -279,10 +269,7 @@ func runPID1(ctx context.Context, deps dependencies, logger *log.Logger) error {
 	}
 	_ = codex.stdout.Close()
 
-	remaining := 3
-	if first.component != "" {
-		remaining--
-	}
+	remaining := 3 - completed
 	if !waitForShutdown(results, remaining) {
 		err = errors.Join(err, errors.New("agent guest components did not stop after cancellation"))
 	}
@@ -292,6 +279,39 @@ func runPID1(ctx context.Context, deps dependencies, logger *log.Logger) error {
 		}
 	}
 	return err
+}
+
+// awaitSessionCompletion accepts only an authenticated, clean agent-stream
+// shutdown as successful completion. Codex can observe the stream closing and
+// exit cleanly just before that shutdown result reaches PID 1, so tolerate that
+// ordering for a bounded interval without treating a clean process exit alone
+// as proof of success.
+func awaitSessionCompletion(ctx context.Context, results <-chan componentResult) (error, int) {
+	select {
+	case result := <-results:
+		if result.component == "agent stream session" {
+			return componentFailureOrNil(result), 1
+		}
+		if result.component != "Codex process" || result.err != nil {
+			return componentFailure(result), 1
+		}
+	case <-ctx.Done():
+		return ctx.Err(), 0
+	}
+
+	timer := time.NewTimer(shutdownTimeout)
+	defer timer.Stop()
+	select {
+	case result := <-results:
+		if result.component == "agent stream session" {
+			return componentFailureOrNil(result), 2
+		}
+		return componentFailure(result), 2
+	case <-ctx.Done():
+		return ctx.Err(), 1
+	case <-timer.C:
+		return errors.New("Codex process exited cleanly before authenticated agent stream shutdown"), 1
+	}
 }
 
 func (deps dependencies) validate() error {
@@ -324,6 +344,13 @@ func componentFailure(result componentResult) error {
 		return fmt.Errorf("%s stopped unexpectedly", result.component)
 	}
 	return fmt.Errorf("%s failed: %w", result.component, result.err)
+}
+
+func componentFailureOrNil(result componentResult) error {
+	if result.err == nil {
+		return nil
+	}
+	return componentFailure(result)
 }
 
 func waitForShutdown(results <-chan componentResult, count int) bool {

@@ -2403,6 +2403,7 @@ type adapterCallEvidence struct {
 	record rawAdapterRecord
 	id     string
 	params adapterToolParams
+	effect string
 }
 
 type adapterResponseEvidence struct {
@@ -2483,95 +2484,108 @@ func (v *verifier) verifyAdapter() error {
 		if err != nil {
 			return err
 		}
-		if call.Method != "item/tool/call" || call.Params.CallID != "preflight-call-1" || call.Params.ThreadID == "" || call.Params.TurnID == "" || call.Params.Tool != "protected_commit" || call.Params.Namespace != nil {
-			return errors.New("item/tool/call is not the fixed protected preflight callback")
+		if call.Method != "item/tool/call" || call.Params.CallID == "" || call.Params.ThreadID == "" || call.Params.TurnID == "" || call.Params.Tool != "protected_commit" || call.Params.Namespace != nil {
+			return errors.New("item/tool/call is not a protected preflight callback")
 		}
-		if err := requirePreflightArguments(call.Params.Arguments); err != nil {
+		effect, err := requirePreflightArguments(call.Params.Arguments)
+		if err != nil {
 			return err
 		}
-		calls = append(calls, adapterCallEvidence{record: record, id: id, params: call.Params})
+		calls = append(calls, adapterCallEvidence{record: record, id: id, params: call.Params, effect: effect})
 	}
-	if len(calls) != 1 {
-		return fmt.Errorf("captured %d item/tool/call messages, require exactly one", len(calls))
+	if len(calls) < 1 || len(calls) > 8 {
+		return fmt.Errorf("captured %d item/tool/call messages, require 1 to 8", len(calls))
 	}
-	call := calls[0]
-	callProof, ok := bridgeProofs[call.record.Sequence]
-	if !ok || callProof.First.Phase != "authorized" || callProof.Second == nil || callProof.Second.Phase != "delivered" {
-		return errors.New("item/tool/call lacks an authorized/delivered bridge commitment")
-	}
-	if !(v.events[18].TimeNS < callProof.First.TimeNS && callProof.First.TimeNS < callProof.Second.TimeNS && callProof.Second.TimeNS < v.events[19].TimeNS) {
-		return errors.New("item/tool/call bridge commitment is outside its runtime authorization/delivery events")
-	}
-	if call.record.TimeNS <= callProof.First.TimeNS || call.record.TimeNS >= v.events[20].TimeNS {
-		return errors.New("adapter did not capture the protected callback after authorization and before session completion")
+	for index, call := range calls {
+		if call.params.CallID != fmt.Sprintf("preflight-call-%d", index+1) ||
+			call.effect != fmt.Sprintf("preflight-effect-%d", index+1) ||
+			(index > 0 && (call.params.ThreadID != calls[0].params.ThreadID || call.params.TurnID != calls[0].params.TurnID)) {
+			return errors.New("protected callbacks are not uniquely ordered in one App Server turn")
+		}
+		callProof, ok := bridgeProofs[call.record.Sequence]
+		if !ok || callProof.First.Phase != "authorized" || callProof.Second == nil || callProof.Second.Phase != "delivered" {
+			return errors.New("item/tool/call lacks an authorized/delivered bridge commitment")
+		}
+		if index == 0 {
+			if !(v.events[18].TimeNS < callProof.First.TimeNS && callProof.First.TimeNS < callProof.Second.TimeNS && callProof.Second.TimeNS < v.events[19].TimeNS) {
+				return errors.New("first item/tool/call is outside the snapshot release boundary")
+			}
+		} else if !(v.events[19].TimeNS < callProof.First.TimeNS && callProof.First.TimeNS < callProof.Second.TimeNS && callProof.Second.TimeNS < v.events[20].TimeNS) {
+			return errors.New("later item/tool/call was not authorized and delivered after restore")
+		}
+		if call.record.TimeNS <= callProof.First.TimeNS || call.record.TimeNS >= v.events[20].TimeNS {
+			return errors.New("adapter did not capture a protected callback after authorization and before session completion")
+		}
 	}
 	var responses []adapterResponseEvidence
-	for _, record := range records {
-		if record.Direction != "client_to_server" || record.Sequence <= call.record.Sequence {
-			continue
-		}
-		var object map[string]json.RawMessage
-		_ = json.Unmarshal(record.Payload, &object)
-		idRaw, hasID := object["id"]
-		_, hasResult := object["result"]
-		if !hasID || !hasResult {
-			continue
-		}
-		id, err := normalizeRPCID(idRaw)
-		if err != nil {
-			continue
-		}
-		if id != call.id {
-			continue
-		}
-		var response struct {
-			ID     json.RawMessage `json:"id"`
-			Result struct {
-				ContentItems []struct {
-					Type string `json:"type"`
-					Text string `json:"text"`
-				} `json:"contentItems"`
-				Success bool `json:"success"`
-			} `json:"result"`
-		}
-		if err := decodeExact(record.Payload, []string{"id", "result"}, &response); err != nil {
-			return err
-		}
-		var root map[string]json.RawMessage
-		_ = json.Unmarshal(record.Payload, &root)
-		if err := decodeExact(root["result"], []string{"contentItems", "success"}, &response.Result); err != nil {
-			return err
-		}
-		if !response.Result.Success || len(response.Result.ContentItems) != 1 {
-			return errors.New("tool response is unsuccessful or empty")
-		}
-		var resultRoot map[string]json.RawMessage
-		_ = json.Unmarshal(root["result"], &resultRoot)
-		var itemRaws []json.RawMessage
-		if err := json.Unmarshal(resultRoot["contentItems"], &itemRaws); err != nil {
-			return err
-		}
-		for index, item := range response.Result.ContentItems {
-			if err := decodeExact(itemRaws[index], []string{"type", "text"}, &item); err != nil {
+	for _, call := range calls {
+		var matches []adapterResponseEvidence
+		for _, record := range records {
+			if record.Direction != "client_to_server" || record.Sequence <= call.record.Sequence {
+				continue
+			}
+			var object map[string]json.RawMessage
+			_ = json.Unmarshal(record.Payload, &object)
+			idRaw, hasID := object["id"]
+			_, hasResult := object["result"]
+			if !hasID || !hasResult {
+				continue
+			}
+			id, err := normalizeRPCID(idRaw)
+			if err != nil || id != call.id {
+				continue
+			}
+			var response struct {
+				ID     json.RawMessage `json:"id"`
+				Result struct {
+					ContentItems []struct {
+						Type string `json:"type"`
+						Text string `json:"text"`
+					} `json:"contentItems"`
+					Success bool `json:"success"`
+				} `json:"result"`
+			}
+			if err := decodeExact(record.Payload, []string{"id", "result"}, &response); err != nil {
 				return err
 			}
-			if item.Type != "inputText" || item.Text != "receipt:preflight-effect-1" {
+			var root map[string]json.RawMessage
+			_ = json.Unmarshal(record.Payload, &root)
+			if err := decodeExact(root["result"], []string{"contentItems", "success"}, &response.Result); err != nil {
+				return err
+			}
+			if !response.Result.Success || len(response.Result.ContentItems) != 1 {
+				return errors.New("tool response is unsuccessful or empty")
+			}
+			var resultRoot map[string]json.RawMessage
+			_ = json.Unmarshal(root["result"], &resultRoot)
+			var itemRaws []json.RawMessage
+			if err := json.Unmarshal(resultRoot["contentItems"], &itemRaws); err != nil {
+				return err
+			}
+			item := response.Result.ContentItems[0]
+			if err := decodeExact(itemRaws[0], []string{"type", "text"}, &item); err != nil {
+				return err
+			}
+			if item.Type != "inputText" || item.Text != "receipt:"+call.effect {
 				return errors.New("tool response content item is malformed")
 			}
+			if record.TimeNS < call.record.TimeNS || record.TimeNS >= v.events[20].TimeNS {
+				return errors.New("tool response does not follow its call before session completion")
+			}
+			matches = append(matches, adapterResponseEvidence{record: record, contentItems: append(json.RawMessage(nil), resultRoot["contentItems"]...)})
 		}
-		if record.TimeNS < call.record.TimeNS || record.TimeNS >= v.events[20].TimeNS {
-			return errors.New("tool response does not follow the g3-exposed call before session completion")
+		if len(matches) != 1 {
+			return fmt.Errorf("captured %d responses for %s, require one", len(matches), call.params.CallID)
 		}
-		responses = append(responses, adapterResponseEvidence{record: record, contentItems: append(json.RawMessage(nil), resultRoot["contentItems"]...)})
+		response := matches[0]
+		responseProof, ok := bridgeProofs[response.record.Sequence]
+		callProof := bridgeProofs[call.record.Sequence]
+		if !ok || responseProof.First.Phase != "observed" || responseProof.Second != nil || responseProof.First.TimeNS <= callProof.First.TimeNS || responseProof.First.TimeNS >= v.events[20].TimeNS {
+			return errors.New("tool response lacks a post-authorization, pre-completion observed bridge commitment")
+		}
+		responses = append(responses, response)
 	}
-	if len(responses) != 1 {
-		return fmt.Errorf("captured %d matching tool responses, require one", len(responses))
-	}
-	responseProof, ok := bridgeProofs[responses[0].record.Sequence]
-	if !ok || responseProof.First.Phase != "observed" || responseProof.Second != nil || responseProof.First.TimeNS <= callProof.First.TimeNS || responseProof.First.TimeNS >= v.events[20].TimeNS {
-		return errors.New("tool response lacks a post-authorization, pre-completion observed bridge commitment")
-	}
-	if err := v.verifyAdapterToolLifecycle(records, bridgeProofs, call, responses[0]); err != nil {
+	if err := v.verifyAdapterToolLifecycle(records, bridgeProofs, calls, responses); err != nil {
 		return err
 	}
 	return nil
@@ -2681,15 +2695,15 @@ func (v *verifier) verifyBridgeIO(adapterRecords []rawAdapterRecord) (map[uint64
 	return proofs, nil
 }
 
-func requirePreflightArguments(arguments map[string]json.RawMessage) error {
+func requirePreflightArguments(arguments map[string]json.RawMessage) (string, error) {
 	if len(arguments) != 1 {
-		return errors.New("protected callback arguments must contain exactly effect_id")
+		return "", errors.New("protected callback arguments must contain exactly effect_id")
 	}
 	var effectID string
-	if err := json.Unmarshal(arguments["effect_id"], &effectID); err != nil || effectID != "preflight-effect-1" {
-		return errors.New("protected callback effect_id differs from the preflight fixture")
+	if err := json.Unmarshal(arguments["effect_id"], &effectID); err != nil || effectID == "" {
+		return "", errors.New("protected callback effect_id differs from the preflight fixture")
 	}
-	return nil
+	return effectID, nil
 }
 
 func (v *verifier) verifyAdapterProcessRecords(records []rawAdapterRecord) error {
@@ -2764,9 +2778,21 @@ type dynamicToolItem struct {
 	Type         string                     `json:"type"`
 }
 
-func (v *verifier) verifyAdapterToolLifecycle(records []rawAdapterRecord, bridgeProofs map[uint64]bridgeMessageProof, call adapterCallEvidence, response adapterResponseEvidence) error {
-	started, completed, turnCompleted := 0, 0, 0
+func (v *verifier) verifyAdapterToolLifecycle(records []rawAdapterRecord, bridgeProofs map[uint64]bridgeMessageProof, calls []adapterCallEvidence, responses []adapterResponseEvidence) error {
+	if len(calls) == 0 || len(calls) != len(responses) {
+		return errors.New("protected lifecycle lacks matching calls and responses")
+	}
+	callIndex := make(map[string]int, len(calls))
+	started := make([]int, len(calls))
+	completed := make([]int, len(calls))
 	var completedSequence uint64
+	for index, call := range calls {
+		if _, exists := callIndex[call.params.CallID]; exists {
+			return errors.New("protected lifecycle reuses a dynamic tool identity")
+		}
+		callIndex[call.params.CallID] = index
+	}
+	turnCompleted := 0
 	for _, record := range records {
 		if record.Direction != "server_to_client" {
 			continue
@@ -2810,6 +2836,11 @@ func (v *verifier) verifyAdapterToolLifecycle(records []rawAdapterRecord, bridge
 			if err := decodeExact(itemRaw, []string{"arguments", "contentItems", "durationMs", "id", "namespace", "status", "success", "tool", "type"}, &item); err != nil {
 				return err
 			}
+			index, exists := callIndex[item.ID]
+			if !exists {
+				return errors.New("dynamic tool lifecycle contains an unclaimed call")
+			}
+			call, response := calls[index], responses[index]
 			var threadID, turnID string
 			if method == "item/started" {
 				var params struct {
@@ -2822,8 +2853,8 @@ func (v *verifier) verifyAdapterToolLifecycle(records []rawAdapterRecord, bridge
 					return errors.New("dynamic tool item/started envelope is malformed")
 				}
 				threadID, turnID = params.ThreadID, params.TurnID
-				started++
-				if started != 1 || record.Sequence >= call.record.Sequence || item.Status != "inProgress" || item.DurationMS != nil || item.Success != nil || string(item.ContentItems) != "null" {
+				started[index]++
+				if started[index] != 1 || record.Sequence >= call.record.Sequence || item.Status != "inProgress" || item.DurationMS != nil || item.Success != nil || string(item.ContentItems) != "null" {
 					return errors.New("dynamic tool start does not precede the protected callback")
 				}
 			} else {
@@ -2837,11 +2868,13 @@ func (v *verifier) verifyAdapterToolLifecycle(records []rawAdapterRecord, bridge
 					return errors.New("dynamic tool item/completed envelope is malformed")
 				}
 				threadID, turnID = params.ThreadID, params.TurnID
-				completed++
-				if completed != 1 || record.Sequence <= response.record.Sequence || item.Status != "completed" || item.DurationMS == nil || *item.DurationMS < 0 || item.Success == nil || !*item.Success || !sameCanonicalJSON(item.ContentItems, response.contentItems) {
+				completed[index]++
+				if completed[index] != 1 || record.Sequence <= response.record.Sequence || item.Status != "completed" || item.DurationMS == nil || *item.DurationMS < 0 || item.Success == nil || !*item.Success || !sameCanonicalJSON(item.ContentItems, response.contentItems) {
 					return errors.New("dynamic tool completion does not follow/match the callback response")
 				}
-				completedSequence = record.Sequence
+				if record.Sequence > completedSequence {
+					completedSequence = record.Sequence
+				}
 			}
 			if item.ID != call.params.CallID || item.Tool != call.params.Tool || item.Namespace != nil || threadID != call.params.ThreadID || turnID != call.params.TurnID || !sameArgumentMaps(item.Arguments, call.params.Arguments) {
 				return errors.New("dynamic tool lifecycle identity differs from item/tool/call")
@@ -2862,7 +2895,7 @@ func (v *verifier) verifyAdapterToolLifecycle(records []rawAdapterRecord, bridge
 				ThreadID string          `json:"threadId"`
 				Turn     json.RawMessage `json:"turn"`
 			}
-			if err := decodeExact(envelope.Params, []string{"threadId", "turn"}, &params); err != nil || params.ThreadID != call.params.ThreadID {
+			if err := decodeExact(envelope.Params, []string{"threadId", "turn"}, &params); err != nil || params.ThreadID != calls[0].params.ThreadID {
 				continue
 			}
 			var turn struct {
@@ -2878,12 +2911,13 @@ func (v *verifier) verifyAdapterToolLifecycle(records []rawAdapterRecord, bridge
 			if err := decodeExact(params.Turn, []string{"completedAt", "durationMs", "error", "id", "items", "itemsView", "startedAt", "status"}, &turn); err != nil {
 				return err
 			}
-			if turn.ID != call.params.TurnID {
+			if turn.ID != calls[0].params.TurnID {
 				continue
 			}
 			turnCompleted++
 			turnProof, hasTurnProof := bridgeProofs[record.Sequence]
-			responseProof, hasResponseProof := bridgeProofs[response.record.Sequence]
+			lastResponse := responses[len(responses)-1]
+			responseProof, hasResponseProof := bridgeProofs[lastResponse.record.Sequence]
 			if turnCompleted != 1 || record.Sequence <= completedSequence || turn.Status != "completed" || string(turn.Error) != "null" || turn.CompletedAt <= 0 || turn.StartedAt <= 0 || turn.DurationMS < 0 || turn.ItemsView != "summary" || record.TimeNS >= v.events[20].TimeNS ||
 				!hasTurnProof || turnProof.First.Phase != "authorized" || turnProof.Second == nil || turnProof.Second.Phase != "delivered" || turnProof.Second.TimeNS >= v.events[20].TimeNS ||
 				!hasResponseProof || responseProof.First.Phase != "observed" || responseProof.Second != nil || responseProof.First.TimeNS >= turnProof.First.TimeNS {
@@ -2891,8 +2925,13 @@ func (v *verifier) verifyAdapterToolLifecycle(records []rawAdapterRecord, bridge
 			}
 		}
 	}
-	if started != 1 || completed != 1 || turnCompleted != 1 {
-		return fmt.Errorf("protected lifecycle counts are started=%d completed=%d turn=%d", started, completed, turnCompleted)
+	for index := range calls {
+		if started[index] != 1 || completed[index] != 1 {
+			return fmt.Errorf("protected lifecycle %d counts are started=%d completed=%d", index+1, started[index], completed[index])
+		}
+	}
+	if turnCompleted != 1 {
+		return fmt.Errorf("protected lifecycle has %d completed turns", turnCompleted)
 	}
 	return nil
 }

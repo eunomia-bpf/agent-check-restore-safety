@@ -101,6 +101,54 @@ class FirecrackerCodexRuntimeDemoTests(unittest.TestCase):
                 },
             )
 
+    def test_sandbox_operation_preserves_unknown_progress_for_recovery(self) -> None:
+        with tempfile.TemporaryDirectory(dir="/tmp") as raw:
+            directory = Path(raw)
+            directory.chmod(0o700)
+            socket_path = directory / "sandbox.sock"
+
+            class Handler(BaseHTTPRequestHandler):
+                def do_POST(self) -> None:
+                    self.rfile.read(int(self.headers.get("Content-Length", "0")))
+                    response = json.dumps(
+                        {
+                            "code": "outcome_unknown",
+                            "error": "response lost",
+                            "outcome": {
+                                "operation_id": "op-" + "a" * 64,
+                                "phase": "unknown",
+                                "result_hash": "",
+                                "reused": False,
+                                "recovered_by_query": False,
+                            },
+                        },
+                        separators=(",", ":"),
+                    ).encode("ascii")
+                    self.send_response(409)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Length", str(len(response)))
+                    self.end_headers()
+                    self.wfile.write(response)
+
+                def log_message(self, *unused: object) -> None:
+                    return None
+
+            server = socketserver.UnixStreamServer(os.fspath(socket_path), Handler)
+            socket_path.chmod(0o600)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                outcome = _post_sandbox_json(
+                    _sandbox_socket_path(socket_path),
+                    {"call_id": "preflight-call-1", "kind": "protected_commit"},
+                )
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+            self.assertEqual(outcome["phase"], "unknown")
+            self.assertTrue(outcome["outcome_unknown"])
+
     def test_run_demo_uses_transparent_preflight_and_publishes_hashes(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             fixture = self._fixture(Path(raw))

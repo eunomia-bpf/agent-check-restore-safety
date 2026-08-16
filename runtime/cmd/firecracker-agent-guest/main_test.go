@@ -180,6 +180,39 @@ func TestRunPID1ExportsOnlyAfterNormalSessionAndDomainShutdown(t *testing.T) {
 	}
 }
 
+func TestAwaitSessionCompletionAcceptsCleanCodexExitOnlyAfterAuthenticatedShutdown(t *testing.T) {
+	t.Run("reordered clean shutdown", func(t *testing.T) {
+		results := make(chan componentResult, 2)
+		results <- componentResult{component: "Codex process"}
+		results <- componentResult{component: "agent stream session"}
+		err, completed := awaitSessionCompletion(context.Background(), results)
+		if err != nil || completed != 2 {
+			t.Fatalf("awaitSessionCompletion = (%v, %d), want (nil, 2)", err, completed)
+		}
+	})
+
+	t.Run("session failure after clean exit", func(t *testing.T) {
+		sessionFailure := errors.New("shutdown authentication failed")
+		results := make(chan componentResult, 2)
+		results <- componentResult{component: "Codex process"}
+		results <- componentResult{component: "agent stream session", err: sessionFailure}
+		err, completed := awaitSessionCompletion(context.Background(), results)
+		if !errors.Is(err, sessionFailure) || completed != 2 {
+			t.Fatalf("awaitSessionCompletion = (%v, %d), want session failure after 2 results", err, completed)
+		}
+	})
+
+	t.Run("proxy exit is not shutdown proof", func(t *testing.T) {
+		results := make(chan componentResult, 2)
+		results <- componentResult{component: "Codex process"}
+		results <- componentResult{component: "model proxy"}
+		err, completed := awaitSessionCompletion(context.Background(), results)
+		if err == nil || !strings.Contains(err.Error(), "model proxy stopped unexpectedly") || completed != 2 {
+			t.Fatalf("awaitSessionCompletion = (%v, %d), want proxy failure after 2 results", err, completed)
+		}
+	})
+}
+
 func TestRunPID1PropagatesProxyAndCodexFailures(t *testing.T) {
 	t.Run("proxy", func(t *testing.T) {
 		proxyFailure := errors.New("proxy bind failed")

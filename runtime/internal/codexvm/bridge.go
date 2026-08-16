@@ -28,6 +28,7 @@ const (
 	PhaseObserved           = "observed"
 	PhaseAuthorized         = "authorized"
 	PhaseDelivered          = "delivered"
+	maxProtectedCalls       = 8
 )
 
 // IOAudit synchronously commits one client-visible App Server JSON object.
@@ -71,26 +72,28 @@ type Bridge struct {
 	guestWorkspace string
 	audit          IOAudit
 
-	mu                 sync.Mutex
-	condition          *sync.Cond
-	generation         uint64
-	active             *activeConnection
-	frozen             bool
-	checkpoint         *Checkpoint
-	advance            *Checkpoint
-	pending            []byte
-	barrier            *agentstream.Barrier
-	releasing          bool
-	released           bool
-	closed             bool
-	failure            error
-	protected          *protectedCall
-	responseAccepted   bool
-	terminalPending    bool
-	terminalDelivered  bool
-	inputEOF           bool
-	attachedGeneration uint64
-	attachedChanged    chan struct{}
+	mu                  sync.Mutex
+	condition           *sync.Cond
+	generation          uint64
+	active              *activeConnection
+	frozen              bool
+	checkpoint          *Checkpoint
+	advance             *Checkpoint
+	pending             []byte
+	barrier             *agentstream.Barrier
+	releasing           bool
+	released            bool
+	closed              bool
+	failure             error
+	protected           *protectedCall
+	protectedRequestIDs map[string]bool
+	protectedCallIDs    map[string]bool
+	responseAccepted    bool
+	terminalPending     bool
+	terminalDelivered   bool
+	inputEOF            bool
+	attachedGeneration  uint64
+	attachedChanged     chan struct{}
 
 	quiescent     chan Checkpoint
 	inputDone     chan struct{}
@@ -530,12 +533,39 @@ func (bridge *Bridge) receiveFrame(active *activeConnection, frame agentstream.F
 		return nil, fmt.Errorf("inspect Codex App Server output: %w", err)
 	}
 	if toolCall != nil {
-		if bridge.pending != nil || bridge.released {
+		if bridge.released {
+			if bridge.protected == nil || toolCall.threadID != bridge.protected.threadID ||
+				toolCall.turnID != bridge.protected.turnID {
+				bridge.mu.Unlock()
+				return nil, errors.New("later protected tool boundary escaped the restored turn")
+			}
+			if len(bridge.protectedCallIDs) >= maxProtectedCalls ||
+				bridge.protectedRequestIDs[toolCall.requestID] || bridge.protectedCallIDs[toolCall.callID] {
+				bridge.mu.Unlock()
+				return nil, errors.New("later protected tool boundary is duplicate or exceeds the bounded turn")
+			}
+			bridge.protectedRequestIDs[toolCall.requestID] = true
+			bridge.protectedCallIDs[toolCall.callID] = true
+			outputLine, mapErr := bridge.mapGuestOutput(frame.Line)
+			if mapErr != nil {
+				bridge.mu.Unlock()
+				return nil, mapErr
+			}
+			ticket := bridge.reserveOutputLocked()
+			bridge.mu.Unlock()
+			if err := bridge.writeOutput(ticket, outputLine); err != nil {
+				return nil, err
+			}
+			return nil, nil
+		}
+		if bridge.pending != nil {
 			bridge.mu.Unlock()
 			return nil, errors.New("Codex VM bridge observed more than one protected tool boundary")
 		}
 		bridge.pending = bytes.Clone(frame.Line)
 		bridge.protected = toolCall
+		bridge.protectedRequestIDs = map[string]bool{toolCall.requestID: true}
+		bridge.protectedCallIDs = map[string]bool{toolCall.callID: true}
 		bridge.frozen = true
 		barrier := bridge.transcript.Barrier()
 		bridge.barrier = &barrier

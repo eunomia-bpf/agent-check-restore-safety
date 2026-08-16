@@ -149,6 +149,29 @@ func TestBridgeHoldsToolCallAcrossQuiescentGenerationAdvance(t *testing.T) {
 	if result, err := guest.Receive(*responseMessage.Frame); err != nil || result != agentstream.Received || !bytes.Equal(responseMessage.Frame.Line, responseLine) {
 		t.Fatalf("protected callback receive result=%v err=%v line=%q", result, err, responseMessage.Frame.Line)
 	}
+	secondToolLine := []byte(`{"id":10,"method":"item/tool/call","params":{"callId":"call-2","threadId":"thread-1","turnId":"turn-1"}}`)
+	secondToolFrame, err := guest.Send(secondToolLine)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := writerThree.Write(agentwire.Message{Type: agentwire.TypeFrame, Frame: &secondToolFrame}); err != nil {
+		t.Fatal(err)
+	}
+	waitForContains(t, &output, string(secondToolLine))
+	if strings.Count(output.String(), string(secondToolLine)) != 1 {
+		t.Fatalf("later tool callback emission count differs: %s", output.String())
+	}
+	secondResponseLine := []byte(`{"id":10,"result":{"contentItems":[{"type":"inputText","text":"receipt-2"}],"success":true}}`)
+	if _, err := inputWriter.Write(append(bytes.Clone(secondResponseLine), '\n')); err != nil {
+		t.Fatal(err)
+	}
+	secondResponseMessage := readWireWithDeadline(t, guestThree, readerThree)
+	if secondResponseMessage.Type != agentwire.TypeFrame || secondResponseMessage.Frame == nil {
+		t.Fatalf("later callback response message = %+v", secondResponseMessage)
+	}
+	if result, err := guest.Receive(*secondResponseMessage.Frame); err != nil || result != agentstream.Received || !bytes.Equal(secondResponseMessage.Frame.Line, secondResponseLine) {
+		t.Fatalf("later callback receive result=%v err=%v line=%q", result, err, secondResponseMessage.Frame.Line)
+	}
 	terminalLine := []byte(`{"method":"turn/completed","params":{"threadId":"thread-1","turn":{"id":"turn-1","status":"completed","error":null}}}`)
 	terminalFrame, err := guest.Send(terminalLine)
 	if err != nil {

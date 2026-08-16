@@ -266,7 +266,7 @@ def _post_sandbox_json(socket_path: Path, value: Mapping[str, Any]) -> dict[str,
         raise DemoError("sandbox Operation request failed") from error
     finally:
         connection.close()
-    if status != 200 or len(body) > _MAX_CONTROL_RESPONSE_BYTES:
+    if len(body) > _MAX_CONTROL_RESPONSE_BYTES:
         raise DemoError(
             f"sandbox Operation request returned HTTP {status}: "
             + body[:1024].decode("utf-8", "replace")
@@ -277,7 +277,17 @@ def _post_sandbox_json(socket_path: Path, value: Mapping[str, Any]) -> dict[str,
         raise DemoError("sandbox Operation response is not valid JSON") from error
     if not isinstance(result, dict):
         raise DemoError("sandbox Operation response is not an object")
-    return result
+    if status == 200:
+        return result
+    if status == 409 and result.get("code") == "outcome_unknown":
+        outcome = result.get("outcome")
+        if not isinstance(outcome, dict):
+            raise DemoError("unknown Operation response omitted durable progress")
+        return {**outcome, "outcome_unknown": True}
+    raise DemoError(
+        f"sandbox Operation request returned HTTP {status}: "
+        + body[:1024].decode("utf-8", "replace")
+    )
 
 
 def _loopback_url(value: str, label: str) -> str:
@@ -335,22 +345,37 @@ def _post_json(origin: str, token: str, path: str, value: Mapping[str, Any]) -> 
     return result
 
 
-def _requirement(identifier: str, payment_url: str) -> dict[str, Any]:
+def _requirement(
+    identifier: str,
+    payment_url: str,
+    *,
+    operation_count: int = 1,
+    queryable: bool = False,
+) -> dict[str, Any]:
+    if not 1 <= operation_count <= 8:
+        raise DemoError("Requirement must admit 1 to 8 protected operations")
+    kind = {
+        "costs": {"external-write": 1},
+        "produces": {"callback-committed": 1},
+        "retry_safe": not queryable,
+        "queryable": queryable,
+        "target": payment_url + "/v1/charge",
+        "method": "POST",
+        "response_classifier": "operation-receipt-v1",
+    }
+    if queryable:
+        kind.update(
+            {
+                "query_target": payment_url + "/v1/query",
+                "query_method": "POST",
+                "query_classifier": "operation-observation-v1",
+            }
+        )
     return {
         "id": identifier,
-        "results": {"callback-committed": 1},
-        "capacities": {"external-write": 1},
-        "kinds": {
-            "protected_commit": {
-                "costs": {"external-write": 1},
-                "produces": {"callback-committed": 1},
-                "retry_safe": True,
-                "queryable": False,
-                "target": payment_url + "/v1/charge",
-                "method": "POST",
-                "response_classifier": "operation-receipt-v1",
-            }
-        },
+        "results": {"callback-committed": operation_count},
+        "capacities": {"external-write": operation_count},
+        "kinds": {"protected_commit": kind},
     }
 
 
@@ -444,6 +469,15 @@ def _preflight_record(result: PreflightResult) -> dict[str, Any]:
         "models_request_count": result.models_request_count,
         "raw_record_count": result.raw_record_count,
     }
+    if result.protected_calls:
+        record["protected_calls"] = [
+            {
+                "request_id": item.request_id,
+                "call_id": item.call_id,
+                "effect_id": item.effect_id,
+            }
+            for item in result.protected_calls
+        ]
     if result.workspace_edit_call_id is not None:
         if result.workspace_patch_sha256 is None:
             raise DemoError("workspace edit omitted its patch identity")
@@ -487,8 +521,20 @@ def run_demo(
     repository_tree_root: str | None = None,
     workspace_patch: str | None = None,
     workspace_validation_command: str | None = None,
+    protected_effect_ids: Sequence[str] | None = None,
+    recover_first_unknown: bool = False,
 ) -> dict[str, Any]:
     """Run one deterministic preflight and publish sanitized evidence metadata."""
+
+    effect_ids = (
+        ("preflight-effect-1",)
+        if protected_effect_ids is None
+        else tuple(protected_effect_ids)
+    )
+    if not 1 <= len(effect_ids) <= 8 or len(set(effect_ids)) != len(effect_ids):
+        raise DemoError("protected effect identities must contain 1 to 8 unique values")
+    if any(not isinstance(effect_id, str) or not effect_id for effect_id in effect_ids):
+        raise DemoError("protected effect identities must be nonempty strings")
 
     verified: dict[str, dict[str, Any]] = {}
     artifact_paths: dict[str, Path] = {}
@@ -560,13 +606,15 @@ def run_demo(
     join_requested = any(value is not None for value in join_inputs)
     if join_requested and not all(value is not None for value in join_inputs):
         raise DemoError("the five control-join options must be supplied together")
+    if recover_first_unknown and not join_requested:
+        raise DemoError("unknown-outcome recovery requires the control join")
 
     admin_token: str | None = None
     control_origin: str | None = None
     payment_origin: str | None = None
     sandbox_endpoint: Path | None = None
     source_binding: dict[str, Any] | None = None
-    control_operation: dict[str, Any] = {}
+    control_operations: list[dict[str, Any]] = []
     if join_requested:
         assert admin_token_file is not None
         assert sandbox_socket is not None
@@ -595,7 +643,12 @@ def run_demo(
             control_origin,
             admin_token,
             "/v1/compile",
-            _requirement("firecracker-codex-before", payment_origin),
+            _requirement(
+                "firecracker-codex-before",
+                payment_origin,
+                operation_count=len(effect_ids),
+                queryable=recover_first_unknown,
+            ),
         )
         if certificate.get("decision") != "activate" or not isinstance(
             certificate.get("rule"), dict
@@ -634,13 +687,46 @@ def run_demo(
                 "body": base64.b64encode(body).decode("ascii"),
             },
         )
+        unknown_observed = bool(outcome.pop("outcome_unknown", False))
+        if unknown_observed:
+            if not recover_first_unknown or control_operations:
+                raise DemoError("only the first protected Operation may require recovery")
+            operation_id = outcome.get("operation_id")
+            if (
+                outcome.get("phase") != "unknown"
+                or not isinstance(operation_id, str)
+                or len(operation_id) != 67
+                or not operation_id.startswith("op-")
+                or any(character not in "0123456789abcdef" for character in operation_id[3:])
+            ):
+                raise DemoError("Operation gateway returned malformed unknown progress")
+            assert admin_token is not None
+            outcome = _post_json(
+                control_origin,
+                admin_token,
+                f"/v1/operations/{operation_id}/recover",
+                {},
+            )
+            if outcome.get("recovered_by_query") is not True:
+                raise DemoError("unknown Operation did not settle by provider query")
         if (
             outcome.get("phase") != "succeeded"
             or not isinstance(outcome.get("operation_id"), str)
             or not isinstance(outcome.get("result_hash"), str)
         ):
             raise DemoError("Operation gateway did not settle the protected callback")
-        control_operation.update(outcome)
+        control_operations.append(
+            {
+                "call_id": pending.call_id,
+                "effect_id": pending.arguments["effect_id"],
+                "operation_id": outcome["operation_id"],
+                "phase": outcome["phase"],
+                "result_hash": outcome["result_hash"],
+                "reused": bool(outcome.get("reused", False)),
+                "recovered_by_query": bool(outcome.get("recovered_by_query", False)),
+                "unknown_observed": unknown_observed,
+            }
+        )
         pending.respond_text(f"receipt:{pending.arguments['effect_id']}")
 
     with create_firecracker_codex(
@@ -674,6 +760,7 @@ def run_demo(
                     if workspace_validation_command is not None
                     else None
                 ),
+                protected_effect_ids=effect_ids,
             )
         finally:
             os.umask(previous_umask)
@@ -681,6 +768,17 @@ def run_demo(
     if Path(preflight.raw_jsonl_path) != raw_jsonl:
         raise DemoError("preflight reported an unexpected App Server capture path")
     preflight_record = _preflight_record(preflight)
+    observed_effects = tuple(item.effect_id for item in preflight.protected_calls)
+    if preflight.protected_calls and observed_effects != effect_ids:
+        raise DemoError("preflight reported a different protected callback sequence")
+    if join_requested and len(control_operations) != len(effect_ids):
+        raise DemoError("control did not settle every protected callback")
+    if recover_first_unknown and (
+        not control_operations
+        or control_operations[0]["unknown_observed"] is not True
+        or control_operations[0]["recovered_by_query"] is not True
+    ):
+        raise DemoError("the first protected callback did not exercise query recovery")
     if workspace_patch_digest is not None and (
         preflight.workspace_edit_call_id is None
         or preflight.workspace_patch_sha256 != workspace_patch_digest
@@ -743,7 +841,12 @@ def run_demo(
             control_origin,
             admin_token,
             "/v1/compile",
-            _requirement("firecracker-codex-after", payment_origin),
+            _requirement(
+                "firecracker-codex-after",
+                payment_origin,
+                operation_count=len(effect_ids),
+                queryable=recover_first_unknown,
+            ),
         )
         history = certificate.get("history")
         if certificate.get("decision") != "activate" or not isinstance(history, dict):
@@ -785,12 +888,8 @@ def run_demo(
         ):
             raise DemoError("control returned a different repository Cutover")
         control_record = {
-            "operation": {
-                "operation_id": control_operation["operation_id"],
-                "phase": control_operation["phase"],
-                "result_hash": control_operation["result_hash"],
-                "reused": bool(control_operation.get("reused", False)),
-            },
+            "operation": control_operations[0],
+            "operations": control_operations,
             "certificate_history": history,
             "committed_history": state["history"],
             "source_binding": source_binding,
@@ -894,6 +993,23 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
             "protected callback, using /opt/codex/bin/sh inside Firecracker"
         ),
     )
+    parser.add_argument(
+        "--protected-effect-id",
+        action="append",
+        dest="protected_effect_ids",
+        help=(
+            "protected effect identity; repeat to issue multiple ordered calls "
+            "in the same Codex turn"
+        ),
+    )
+    parser.add_argument(
+        "--recover-first-unknown",
+        action="store_true",
+        help=(
+            "require the first protected Operation to become unknown and settle "
+            "it through the provider query contract"
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -968,6 +1084,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             repository_tree_root=args.repository_tree_root,
             workspace_patch=workspace_patch,
             workspace_validation_command=args.workspace_validation_command,
+            protected_effect_ids=args.protected_effect_ids,
+            recover_first_unknown=args.recover_first_unknown,
         )
     except Exception as error:
         print(f"Firecracker Codex demo failed: {error}", file=sys.stderr)

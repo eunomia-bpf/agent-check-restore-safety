@@ -685,6 +685,28 @@ class CodexAppServer:
             raise AppServerProtocolError("turn/start omitted the protected turn id")
         turn_id = turn["id"]
 
+        return self.wait_protected_call(
+            thread_id,
+            turn_id,
+            expected_tool=expected_tool,
+            expected_arguments=expected_arguments,
+            timeout=timeout,
+        )
+
+    def wait_protected_call(
+        self,
+        thread_id: str,
+        turn_id: str,
+        *,
+        expected_tool: str = "protected_commit",
+        expected_arguments: Mapping[str, Any] | None = None,
+        timeout: float | None = None,
+    ) -> PendingToolCall:
+        """Wait for the next protected callback in an already running turn."""
+
+        if timeout is None:
+            timeout = self.turn_timeout
+
         def matches(message: dict[str, Any]) -> bool:
             if message.get("method") != "item/tool/call" or "id" not in message:
                 return False

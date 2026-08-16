@@ -1,9 +1,9 @@
 # Firecracker Codex continuity runtime
 
 **Status:** working real-KVM vertical prototype, 2026-08-16. One native Codex
-code edit, protected callback, VM replacement, external commit, and repository
-Cutover now share a single durable History. It is not yet a production sandbox
-or general agent runtime.
+code edit, two ordered protected callbacks, VM replacement, two external
+commits, and repository Cutover now share a single durable History. It is not
+yet a production sandbox or general agent runtime.
 
 ## What the system is
 
@@ -16,25 +16,26 @@ model relay is the only model path. Codex is told that Firecracker is its
 external sandbox, so file tools operate directly in the guest workspace while
 the microVM remains the isolation boundary.
 
-At one declared dynamic-tool boundary, the runtime:
+During one declared Codex turn, the runtime:
 
 1. lets native Codex complete a declared workspace edit and a declared build
-   command inside the same guest, then retains the protected callback instead
-   of exposing it to the client. The live gate refuses to invoke the protected
-   handler unless both records are unique, ordered, and successful;
+   command inside the same guest, then retains the first protected callback
+   instead of exposing it to the client. The live gate refuses to invoke a
+   protected handler unless both records are unique, ordered, and successful;
 2. establishes a two-way stream checkpoint and drains the model path;
 3. pauses the first VM, creates a full snapshot, sends `SIGKILL` to the exact
    first VMM, and waits for that child to be reaped;
 4. starts a different VMM, loads the sealed snapshot while paused, installs
    authenticated host endpoints, resumes it, and reconnects the retained
    stream; and
-5. exposes the callback only after the restored guest is attached. The host
-   sends it through a credential-free Unix socket owned by that exact sandbox
+5. exposes the first callback only after the restored guest is attached, then
+   admits later ordered callbacks from the same turn. The host sends each one
+   through a credential-free Unix socket owned by that exact sandbox
    generation; the guest cannot choose its identity, provider URL, method, or
-   provider headers. Success is
-   reported only after the matching callback result has entered the retained
-   stream, the same Codex turn has completed successfully, that completion has
-   reached the client, and client input has closed; and
+   provider headers. Success is reported only after every matching callback
+   result has entered the retained stream, the same Codex turn has completed
+   successfully, that completion has reached the client, and client input has
+   closed; and
 6. sends an authenticated shutdown to the guest, freezes and empties the
    complete Codex cgroup, exports the resulting full repository tree, and
    derives the canonical delta on the host.
@@ -43,8 +44,8 @@ Firecracker supplies isolation and whole-machine snapshot/restore. It is a
 replaceable mechanism, not the research claim. The runtime contribution is the
 continuity boundary around it: external progress that a snapshot cannot erase
 is joined with the History/Rule control plane and the repository state that a
-replacement VM receives. This slice now performs that vertical join for one
-real Codex callback.
+replacement VM receives. This slice now performs that vertical join for a
+bounded ordered set of real Codex callbacks.
 
 ## Components
 
@@ -75,19 +76,19 @@ real Codex callback.
   source VM and repository; the second atomically binds the replacement VM,
   complete History head, checkpoint, final bundle, and host-derived delta.
 - `runtime/cmd/check-firecracker-codex-control-evidence` is a second,
-  standard-library-only checker. It independently recomputes the five-event
-  History chain, Certificate and Requirement digests, VM-bound Operation
-  identity and request hash, external receipt and durable commit, head-anchor
-  checksum, repository artifact bindings, native file-change completion, and
-  a successful declared build between that edit and the protected callback. It
-  imports none of their live implementations.
+  standard-library-only checker. It independently recomputes the ordered
+  History chain, Certificate and Requirement digests, every VM-bound Operation
+  identity and request hash, query observations or direct receipts, durable
+  external commits, head-anchor checksum, repository artifact bindings,
+  native file-change completion, and a successful declared build before the
+  protected callbacks. It imports none of their live implementations.
 
 The client-facing boundary remains stdin/stdout JSONL. No Firecracker-specific
 branch is required in the App Server client.
 
 ## Current real execution
 
-A fresh local KVM execution of the current source completed in 14.0 seconds
+A fresh local KVM execution of the current source completed in 16.6 seconds
 with these fixed inputs:
 
 - Firecracker 1.16.1:
@@ -97,9 +98,9 @@ with these fixed inputs:
 - native Codex 0.147.0:
   `cb0a15567e9a60a5820d54b0f6ae86d504dc3805c1eab21a47f70e3eb7b73a40`;
 - guest:
-  `49cee411975645da7906a8c846f7f688f0b7e498a9f18de5c56cbd269fbefb72`;
+  `2a8f2421b996da3ec83a63825caee33f322ca0fd434f66a68d3ef59c6266a191`;
 - shim:
-  `467e39dbe9c39e8129126d22e9798baac2b824dec0ed5f441ffc5fbdb5ab7e4e`;
+  `fd4fc39459b2be845cd91dd9f9aaad26dd0f9a5b9808b21e8199a209fce2a671`;
 - immutable payload:
   `faef1237b7d832ffa5f1c0cab5813833b5125cd2a8692f7df2d1cf5443a0d82e`,
   containing static esbuild 0.25.4
@@ -120,7 +121,7 @@ changed TypeScript file with the payload's esbuild. App Server retained the
 exact command, its
 `0a3eb7cbb19ca99ac481e793f04729e9b0bd9e9ed1437cff951fa7022d868677`
 identity, exit code zero, and compiler output. The run retained 23 lifecycle
-events, 20 hashed artifacts, 110 canonical bridge commitments, and 376 App
+events, 20 hashed artifacts, 125 canonical bridge commitments, and 383 App
 Server records. It created a 1 GiB memory snapshot;
 both VMM PIDs were reaped. The final tree root is
 `8b5d0ea59aac9ab63af747dc4a6520278201dc955637361895e0dc3cd5fd1e62`.
@@ -128,26 +129,30 @@ The host derived and reconstructed a 1,320-byte, one-operation delta; the final
 bundle SHA-256 is
 `aaa70c587f86852fb550222207b4b2eaf200afa1d2b9e385d17f1fee01976fbb`.
 It also retained a 1,543-byte canonical checkpoint object with SHA-256
-`d10e30cbc2304efd2e10420bd39b8400d261cf82fa06aaf7c251abb0c55ac8bc`.
+`6702cd8e21de786e126ab07e12e4953155ef4966019efa8e7bec06fcc23a7810`.
 The original shim, its runtime-retained copy, the result, and the first event
 all carry the same hash.
 
-The joined control path recorded exactly five events: initial Cutover,
-Operation prepare, dispatch, success, and final repository-aware Cutover. The
-Operation is owned by sandbox `firecracker-codex` and domain
-`firecracker-codex-vm`. The external service durably recorded one delivery and
-one commit. Calling the same stable callback through the replacement
-generation returned `reused:true`; the external counts and History remained at
-one commit and five events. The Firecracker checker returned
-`{"schema":1,"valid":true}` and the joined checker returned
-`valid:true`, History sequence 5, Operation
-`op-a916d428972172262d64cb319440063299239010ad18456337a45848a7197090`,
-one external commit, and `repository_edit:true`. With the checked workload
-contract, the VM checker also verified that all three safe log strings are in
-the final canonical bundle, the token-bearing form is absent, and the declared
-compiler and shell are the executables fixed by the payload manifest. The
-joined checker independently verified the edit, build, and callback order and
-the build's zero exit status.
+The joined control path recorded exactly nine events: initial Cutover; prepare,
+dispatch, unknown outcome, and query-settled success for the first Operation;
+prepare, dispatch, and direct success for the second; and final
+repository-aware Cutover. Both Operations are owned by sandbox
+`firecracker-codex` and domain `firecracker-codex-vm`. For the first Operation,
+the external service committed and deliberately dropped the response; recovery
+queried that durable fact instead of dispatching the write again. The second
+Operation then committed normally in the same Codex turn. The service retained
+exactly two durable commits. Their identities are
+`op-a916d428972172262d64cb319440063299239010ad18456337a45848a7197090`
+and
+`op-812de3bd7ad0ccdafcd4398d9c193be1cce5e4810eaac1f5635dee1c28126d3f`.
+The Firecracker checker returned `{"schema":1,"valid":true}` and the joined
+checker returned `valid:true`, History sequence 9, two external commits, and
+`repository_edit:true`. With the checked workload contract, the VM checker
+also verified that all three safe log strings are in the final canonical
+bundle, the token-bearing form is absent, and the declared compiler and shell
+are the executables fixed by the payload manifest. The joined checker
+independently verified the edit, successful build, two callbacks, query
+recovery, direct receipt, and final Cutover order.
 This is one observed functional execution, not a latency distribution or a
 production-security result.
 
@@ -203,7 +208,8 @@ and no live account.
 
 The current slice is intentionally narrow:
 
-- it protects exactly one dynamic-tool callback and one successful turn;
+- it protects one to eight ordered dynamic-tool callbacks in one successful
+  turn; only the first callback is currently used as the snapshot barrier;
 - the guest payload contains a real TypeScript compiler and static shell, but
   not yet the workload's complete dependency tree or test runner;
 - the model fixture is local, fixed, and credential-free;
@@ -214,13 +220,12 @@ The current slice is intentionally narrow:
 - the checkers establish internal and cross-system consistency, not hardware
   attestation, and currently trust the supplied payload manifest for image
   contents; and
-- this run exercises one successful retry-safe external Operation; it does not
-  cover unknown outcomes, query recovery, concurrent callbacks, or arbitrary
-  provider protocols inside this Firecracker path.
+- this run exercises one query-recovered unknown outcome followed by one
+  direct external Operation; it does not cover concurrent callbacks or
+  arbitrary provider protocols inside this Firecracker path.
 
-The next high-value increment is to perform multiple protected operations and
-exercise an unknown outcome plus query recovery in the same real Codex turn.
-That will test conflict handling, repeated boundaries, and failure recovery
-rather than only one checked source edit and compilation.
-Portable certificates, jailer confinement, Claude, and a provider-independent
-adapter remain later steps.
+The next high-value increment is to put the same continuity protocol behind a
+second agent runtime or sandbox backend without changing the client workflow.
+That will test whether the boundary is genuinely portable rather than a Codex
+and Firecracker special case. Portable certificates, jailer confinement,
+Claude, and a provider-independent adapter remain later steps.

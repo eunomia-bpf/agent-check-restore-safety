@@ -38,6 +38,7 @@ const (
 	resultName           = "callback-committed"
 	capacityName         = "external-write"
 	responseClassifier   = "operation-receipt-v1"
+	queryClassifier      = "operation-observation-v1"
 )
 
 var historyMagic = [4]byte{'H', 'S', 'T', '1'}
@@ -153,19 +154,30 @@ type repositoryRecord struct {
 }
 
 type operationSummary struct {
-	OperationID string `json:"operation_id"`
-	Phase       string `json:"phase"`
-	ResultHash  string `json:"result_hash"`
-	Reused      bool   `json:"reused"`
+	CallID           string `json:"call_id,omitempty"`
+	EffectID         string `json:"effect_id,omitempty"`
+	OperationID      string `json:"operation_id"`
+	Phase            string `json:"phase"`
+	ResultHash       string `json:"result_hash"`
+	Reused           bool   `json:"reused"`
+	RecoveredByQuery bool   `json:"recovered_by_query,omitempty"`
+	UnknownObserved  bool   `json:"unknown_observed,omitempty"`
 }
 
 type controlSummary struct {
-	Operation          operationSummary `json:"operation"`
-	CertificateHistory historyPoint     `json:"certificate_history"`
-	CommittedHistory   historyPoint     `json:"committed_history"`
-	SourceBinding      sandboxBinding   `json:"source_binding"`
-	TargetBinding      sandboxBinding   `json:"target_binding"`
-	Repository         repositoryRecord `json:"repository"`
+	Operation          operationSummary   `json:"operation"`
+	Operations         []operationSummary `json:"operations,omitempty"`
+	CertificateHistory historyPoint       `json:"certificate_history"`
+	CommittedHistory   historyPoint       `json:"committed_history"`
+	SourceBinding      sandboxBinding     `json:"source_binding"`
+	TargetBinding      sandboxBinding     `json:"target_binding"`
+	Repository         repositoryRecord   `json:"repository"`
+}
+
+type protectedCallSummary struct {
+	RequestID json.RawMessage `json:"request_id"`
+	CallID    string          `json:"call_id"`
+	EffectID  string          `json:"effect_id"`
 }
 
 type fileSummary struct {
@@ -181,21 +193,22 @@ type adapterRuntime struct {
 }
 
 type preflightSummary struct {
-	OK                             bool   `json:"ok"`
-	SeedThreadID                   string `json:"seed_thread_id"`
-	SeedTurnID                     string `json:"seed_turn_id"`
-	ForkThreadID                   string `json:"fork_thread_id"`
-	ProtectedTurnID                string `json:"protected_turn_id"`
-	CallID                         string `json:"call_id"`
-	EffectID                       string `json:"effect_id"`
-	SeedArchived                   bool   `json:"seed_archived"`
-	ResponsesRequestCount          int    `json:"responses_request_count"`
-	ModelsRequestCount             int    `json:"models_request_count"`
-	RawRecordCount                 int    `json:"raw_record_count"`
-	WorkspaceEditCallID            string `json:"workspace_edit_call_id,omitempty"`
-	WorkspacePatchSHA256           string `json:"workspace_patch_sha256,omitempty"`
-	WorkspaceValidationCallID      string `json:"workspace_validation_call_id,omitempty"`
-	WorkspaceValidationCommandHash string `json:"workspace_validation_command_sha256,omitempty"`
+	OK                             bool                   `json:"ok"`
+	SeedThreadID                   string                 `json:"seed_thread_id"`
+	SeedTurnID                     string                 `json:"seed_turn_id"`
+	ForkThreadID                   string                 `json:"fork_thread_id"`
+	ProtectedTurnID                string                 `json:"protected_turn_id"`
+	CallID                         string                 `json:"call_id"`
+	EffectID                       string                 `json:"effect_id"`
+	SeedArchived                   bool                   `json:"seed_archived"`
+	ResponsesRequestCount          int                    `json:"responses_request_count"`
+	ModelsRequestCount             int                    `json:"models_request_count"`
+	RawRecordCount                 int                    `json:"raw_record_count"`
+	WorkspaceEditCallID            string                 `json:"workspace_edit_call_id,omitempty"`
+	WorkspacePatchSHA256           string                 `json:"workspace_patch_sha256,omitempty"`
+	WorkspaceValidationCallID      string                 `json:"workspace_validation_call_id,omitempty"`
+	WorkspaceValidationCommandHash string                 `json:"workspace_validation_command_sha256,omitempty"`
+	ProtectedCalls                 []protectedCallSummary `json:"protected_calls,omitempty"`
 }
 
 type adapterEvidenceSummary struct {
@@ -356,6 +369,15 @@ type receipt struct {
 	Schema          int    `json:"schema"`
 }
 
+type observation struct {
+	Schema          int    `json:"schema"`
+	OperationID     string `json:"operation_id"`
+	RequestHash     string `json:"request_hash"`
+	Outcome         string `json:"outcome"`
+	FactHash        string `json:"fact_hash"`
+	RemoteReference string `json:"remote_reference"`
+}
+
 func main() {
 	var arguments options
 	flag.StringVar(&arguments.runtimeEvidence, "runtime-evidence", "", "retained Firecracker runtime evidence directory")
@@ -424,6 +446,38 @@ func verify(arguments options) (verdict, error) {
 		adapter.Preflight.ResponsesRequestCount <= 0 {
 		return verdict{}, errors.New("adapter result does not describe one successful protected preflight")
 	}
+	protectedCalls := adapter.Preflight.ProtectedCalls
+	if len(protectedCalls) == 0 {
+		protectedCalls = []protectedCallSummary{{
+			CallID: adapter.Preflight.CallID, EffectID: adapter.Preflight.EffectID,
+		}}
+	}
+	if len(protectedCalls) > 8 || protectedCalls[0].CallID != adapter.Preflight.CallID ||
+		protectedCalls[0].EffectID != adapter.Preflight.EffectID {
+		return verdict{}, errors.New("adapter protected callback summary is inconsistent")
+	}
+	operations := adapter.Control.Operations
+	if len(operations) == 0 {
+		operations = []operationSummary{adapter.Control.Operation}
+	}
+	if len(operations) != len(protectedCalls) || !reflect.DeepEqual(adapter.Control.Operation, operations[0]) {
+		return verdict{}, errors.New("adapter Operation summaries do not match protected callbacks")
+	}
+	seenCalls := make(map[string]bool, len(protectedCalls))
+	seenEffects := make(map[string]bool, len(protectedCalls))
+	for index, call := range protectedCalls {
+		expectedCallID := fmt.Sprintf("preflight-call-%d", index+1)
+		if call.CallID != expectedCallID || call.EffectID == "" || seenCalls[call.CallID] || seenEffects[call.EffectID] ||
+			(len(adapter.Preflight.ProtectedCalls) > 0 && len(call.RequestID) == 0) {
+			return verdict{}, errors.New("adapter protected callbacks are not unique and ordered")
+		}
+		seenCalls[call.CallID], seenEffects[call.EffectID] = true, true
+		summary := operations[index]
+		if (summary.CallID != "" && summary.CallID != call.CallID) ||
+			(summary.EffectID != "" && summary.EffectID != call.EffectID) {
+			return verdict{}, errors.New("adapter Operation identity differs from its protected callback")
+		}
+	}
 	hasEditCall := adapter.Preflight.WorkspaceEditCallID != ""
 	hasPatchDigest := adapter.Preflight.WorkspacePatchSHA256 != ""
 	if hasEditCall != hasPatchDigest || (hasPatchDigest && !validDigest(adapter.Preflight.WorkspacePatchSHA256)) {
@@ -442,14 +496,11 @@ func verify(arguments options) (verdict, error) {
 		adapter.Preflight.WorkspaceValidationCommandHash != contract.ValidationCommandSHA256) {
 		return verdict{}, errors.New("adapter validation identity differs from the workload contract")
 	}
-	if hasValidationCall && adapter.Preflight.ResponsesRequestCount != 5 {
-		return verdict{}, errors.New("validated workspace edit did not make the exact five model requests")
-	}
-	if hasEditCall && !hasValidationCall && adapter.Preflight.ResponsesRequestCount != 4 {
-		return verdict{}, errors.New("workspace edit preflight did not make the exact four model requests")
-	}
-	if !hasEditCall && adapter.Preflight.ResponsesRequestCount != 3 {
-		return verdict{}, errors.New("read-only preflight did not make the exact three model requests")
+	expectedResponseCount := 2 + len(protectedCalls) + boolInt(hasEditCall) + boolInt(hasValidationCall)
+	if adapter.Preflight.ResponsesRequestCount != expectedResponseCount {
+		return verdict{}, fmt.Errorf(
+			"preflight made %d model requests, want exactly %d", adapter.Preflight.ResponsesRequestCount, expectedResponseCount,
+		)
 	}
 	adapterDirectory, err := validatePrivateDirectory(adapter.Adapter.EvidenceDirectory, "adapter evidence")
 	if err != nil {
@@ -532,8 +583,14 @@ func verify(arguments options) (verdict, error) {
 	if err != nil {
 		return verdict{}, err
 	}
-	if len(events) != 5 {
-		return verdict{}, fmt.Errorf("History has %d events, want the exact five-event join", len(events))
+	expectedHistoryEvents := 2
+	for _, summary := range operations {
+		expectedHistoryEvents += 3 + boolInt(summary.UnknownObserved)
+	}
+	if len(events) != expectedHistoryEvents {
+		return verdict{}, fmt.Errorf(
+			"History has %d events, want the exact %d-event join", len(events), expectedHistoryEvents,
+		)
 	}
 	anchor, err := readAnchor(anchorPath)
 	if err != nil {
@@ -549,64 +606,100 @@ func verify(arguments options) (verdict, error) {
 	if err != nil {
 		return verdict{}, err
 	}
-	prepared, err := decodeEventData[prepareData](events[1])
+	final, err := decodeEventData[cutoverData](events[len(events)-1])
 	if err != nil {
 		return verdict{}, err
 	}
-	dispatched, err := decodeEventData[phaseData](events[2])
-	if err != nil {
-		return verdict{}, err
-	}
-	succeeded, err := decodeEventData[phaseData](events[3])
-	if err != nil {
-		return verdict{}, err
-	}
-	final, err := decodeEventData[cutoverData](events[4])
-	if err != nil {
-		return verdict{}, err
-	}
-	if events[0].Operation != "rule.bindings.cutover" || events[1].Operation != "operation.prepared" ||
-		events[2].Operation != "operation.phase" || events[3].Operation != "operation.phase" ||
-		events[4].Operation != "rule.bindings.cutover" {
-		return verdict{}, errors.New("History operations are not the required cutover/prepare/dispatch/succeed/cutover chain")
+	if events[0].Operation != "rule.bindings.cutover" || events[len(events)-1].Operation != "rule.bindings.cutover" {
+		return verdict{}, errors.New("History does not begin and end with the required Cutovers")
 	}
 
-	if err := checkInitialCutover(initial, adapter.Control.SourceBinding); err != nil {
+	queryable := false
+	for _, summary := range operations {
+		queryable = queryable || summary.UnknownObserved || summary.RecoveredByQuery
+	}
+	if err := checkInitialCutover(initial, adapter.Control.SourceBinding, len(operations), queryable); err != nil {
 		return verdict{}, err
 	}
-	requestBody, err := json.Marshal(map[string]string{"effect_id": adapter.Preflight.EffectID})
+	payment, err := readPayments(paymentPath, len(operations))
 	if err != nil {
 		return verdict{}, err
 	}
-	expectedID := deriveSandboxOperationID(sandboxDomain, sandboxID, adapter.Preflight.CallID)
-	if err := checkPrepared(prepared, initial, expectedID, requestBody); err != nil {
-		return verdict{}, err
+	cursor := 1
+	expectedIDs := make([]string, 0, len(operations))
+	for index, summary := range operations {
+		if events[cursor].Operation != "operation.prepared" || events[cursor+1].Operation != "operation.phase" {
+			return verdict{}, fmt.Errorf("Operation %d lacks its prepare/dispatch History events", index+1)
+		}
+		prepared, decodeErr := decodeEventData[prepareData](events[cursor])
+		if decodeErr != nil {
+			return verdict{}, decodeErr
+		}
+		dispatched, decodeErr := decodeEventData[phaseData](events[cursor+1])
+		if decodeErr != nil {
+			return verdict{}, decodeErr
+		}
+		cursor += 2
+		var unknown *phaseData
+		if summary.UnknownObserved {
+			if events[cursor].Operation != "operation.phase" {
+				return verdict{}, fmt.Errorf("Operation %d lacks its unknown History event", index+1)
+			}
+			value, decodeErr := decodeEventData[phaseData](events[cursor])
+			if decodeErr != nil {
+				return verdict{}, decodeErr
+			}
+			unknown = &value
+			cursor++
+		}
+		if events[cursor].Operation != "operation.phase" {
+			return verdict{}, fmt.Errorf("Operation %d lacks its success History event", index+1)
+		}
+		succeeded, decodeErr := decodeEventData[phaseData](events[cursor])
+		if decodeErr != nil {
+			return verdict{}, decodeErr
+		}
+		cursor++
+		requestBody, marshalErr := json.Marshal(map[string]string{"effect_id": protectedCalls[index].EffectID})
+		if marshalErr != nil {
+			return verdict{}, marshalErr
+		}
+		expectedID := deriveSandboxOperationID(sandboxDomain, sandboxID, protectedCalls[index].CallID)
+		expectedIDs = append(expectedIDs, expectedID)
+		if err := checkPrepared(prepared, initial, expectedID, requestBody); err != nil {
+			return verdict{}, err
+		}
+		if err := checkProgress(dispatched, unknown, succeeded, prepared.Operation); err != nil {
+			return verdict{}, err
+		}
+		expectedSummary := operationSummary{
+			CallID: protectedCalls[index].CallID, EffectID: protectedCalls[index].EffectID,
+			OperationID: expectedID, Phase: "succeeded", ResultHash: succeeded.Update.ResultHash,
+			RecoveredByQuery: unknown != nil, UnknownObserved: unknown != nil,
+		}
+		if summary.CallID == "" {
+			expectedSummary.CallID, expectedSummary.EffectID = "", ""
+		}
+		if !reflect.DeepEqual(summary, expectedSummary) {
+			return verdict{}, fmt.Errorf("adapter Operation summary %d does not match History", index+1)
+		}
+		if err := checkExternalCommit(payment[index], prepared.Operation, succeeded.Update, requestBody); err != nil {
+			return verdict{}, err
+		}
 	}
-	if err := checkProgress(dispatched, succeeded, prepared.Operation); err != nil {
-		return verdict{}, err
+	if cursor != len(events)-1 {
+		return verdict{}, errors.New("History contains unclaimed Operation events")
 	}
-	if adapter.Control.Operation != (operationSummary{
-		OperationID: expectedID, Phase: "succeeded", ResultHash: succeeded.Update.ResultHash, Reused: false,
-	}) {
-		return verdict{}, errors.New("adapter Operation summary does not match History")
+	prior := events[len(events)-2]
+	if adapter.Control.CertificateHistory != (historyPoint{Sequence: prior.Sequence, Hash: prior.Hash}) {
+		return verdict{}, errors.New("post-execution Certificate was not compiled at the final succeeded Operation head")
 	}
-	if adapter.Control.CertificateHistory != (historyPoint{Sequence: events[3].Sequence, Hash: events[3].Hash}) {
-		return verdict{}, errors.New("post-execution Certificate was not compiled at the succeeded Operation head")
-	}
-
-	payment, err := readPayment(paymentPath)
-	if err != nil {
-		return verdict{}, err
-	}
-	if err := checkExternalCommit(payment, prepared.Operation, succeeded.Update, requestBody); err != nil {
-		return verdict{}, err
-	}
-	if err := checkFinalCutover(final, initial, adapter.Control, runtime, events[3]); err != nil {
+	if err := checkFinalCutover(final, initial, adapter.Control, runtime, prior); err != nil {
 		return verdict{}, err
 	}
 	return verdict{
 		Schema: verdictSchema, Valid: true, HistorySequence: last.Sequence,
-		OperationID: expectedID, ExternalCommits: 1,
+		OperationID: expectedIDs[0], ExternalCommits: len(payment),
 		RepositoryEdit: runtime.RepositoryChange.BaseRoot != runtime.RepositoryChange.FinalRoot,
 	}, nil
 }
@@ -644,8 +737,15 @@ func checkAppServerRecords(contents []byte, preflight preflightSummary) error {
 	if len(lines) != preflight.RawRecordCount {
 		return errors.New("App Server JSONL record count differs from the preflight summary")
 	}
-	var editSequence, validationSequence, callbackSequence uint64
-	var editOccurrences, validationOccurrences, callbackOccurrences int
+	structuredCallbacks := len(preflight.ProtectedCalls) > 0
+	protectedCalls := preflight.ProtectedCalls
+	if len(protectedCalls) == 0 {
+		protectedCalls = []protectedCallSummary{{CallID: preflight.CallID, EffectID: preflight.EffectID}}
+	}
+	var editSequence, validationSequence uint64
+	var editOccurrences, validationOccurrences int
+	callbackSequences := make([]uint64, 0, len(protectedCalls))
+	callbackResponses := make(map[string]int, len(protectedCalls))
 	seenExternalBoundary := false
 	for index, line := range lines {
 		if len(line) == 0 {
@@ -704,25 +804,52 @@ func checkAppServerRecords(contents []byte, preflight preflightSummary) error {
 		if record.Direction == "server_to_client" && method == "item/tool/call" && params != nil &&
 			stringValue(params, "threadId") == preflight.ForkThreadID &&
 			stringValue(params, "turnId") == preflight.ProtectedTurnID &&
-			stringValue(params, "tool") == operationKind &&
-			stringValue(params, "callId") == preflight.CallID {
-			callbackOccurrences++
-			callbackSequence = record.Sequence
+			stringValue(params, "tool") == operationKind {
+			position := len(callbackSequences)
+			if position >= len(protectedCalls) {
+				return errors.New("App Server JSONL contains an extra protected callback")
+			}
+			expected := protectedCalls[position]
+			arguments, _ := params["arguments"].(map[string]any)
+			if stringValue(params, "callId") != expected.CallID ||
+				(structuredCallbacks && (arguments == nil || stringValue(arguments, "effect_id") != expected.EffectID)) ||
+				(len(expected.RequestID) > 0 && !rawJSONMatchesValue(expected.RequestID, payload["id"])) {
+				return errors.New("App Server JSONL protected callbacks differ from their ordered summary")
+			}
+			callbackSequences = append(callbackSequences, record.Sequence)
+		}
+		if record.Direction == "client_to_server" && method == "" && payload["result"] != nil {
+			for _, expected := range protectedCalls {
+				if len(expected.RequestID) > 0 && rawJSONMatchesValue(expected.RequestID, payload["id"]) {
+					callbackResponses[expected.CallID]++
+				}
+			}
 		}
 	}
-	if callbackSequence == 0 || callbackOccurrences != 1 {
-		return errors.New("App Server JSONL does not contain exactly one protected callback")
+	if len(callbackSequences) != len(protectedCalls) {
+		return errors.New("App Server JSONL does not contain every ordered protected callback")
 	}
+	for _, expected := range protectedCalls {
+		if len(expected.RequestID) > 0 && callbackResponses[expected.CallID] != 1 {
+			return errors.New("App Server JSONL does not contain exactly one response per protected callback")
+		}
+	}
+	firstCallbackSequence := callbackSequences[0]
 	if preflight.WorkspaceEditCallID != "" &&
-		(!seenExternalBoundary || editSequence == 0 || editOccurrences != 1 || editSequence >= callbackSequence) {
+		(!seenExternalBoundary || editSequence == 0 || editOccurrences != 1 || editSequence >= firstCallbackSequence) {
 		return errors.New("App Server JSONL does not place a completed native edit before the protected callback")
 	}
 	if preflight.WorkspaceValidationCallID != "" &&
 		(validationSequence == 0 || validationOccurrences != 1 || editSequence == 0 || editSequence >= validationSequence ||
-			validationSequence >= callbackSequence) {
+			validationSequence >= firstCallbackSequence) {
 		return errors.New("App Server JSONL does not place a successful workspace validation between edit and protected callback")
 	}
 	return nil
+}
+
+func rawJSONMatchesValue(raw json.RawMessage, value any) bool {
+	encoded, err := json.Marshal(value)
+	return err == nil && bytes.Equal(raw, encoded)
 }
 
 func jsonNumberIsZero(value any) bool {
@@ -780,7 +907,7 @@ func checkCheckpoint(contents []byte, runtime runtimeResult) error {
 	return nil
 }
 
-func checkInitialCutover(value cutoverData, summary sandboxBinding) error {
+func checkInitialCutover(value cutoverData, summary sandboxBinding, operationCount int, queryable bool) error {
 	if value.SemanticVersion != 1 || len(value.Bindings) != 1 || len(value.Repositories) != 0 ||
 		!reflect.DeepEqual(value.Bindings[0], summary) || !validBinding(summary, 1) {
 		return errors.New("initial Cutover does not bind exactly one source Firecracker instance")
@@ -793,7 +920,7 @@ func checkInitialCutover(value cutoverData, summary sandboxBinding) error {
 		certificate.Requirement.ID != "firecracker-codex-before" {
 		return errors.New("initial Certificate has the wrong rule or History point")
 	}
-	if err := checkRequirement(certificate.Requirement); err != nil {
+	if err := checkRequirement(certificate.Requirement, operationCount, queryable); err != nil {
 		return fmt.Errorf("initial Certificate: %w", err)
 	}
 	return checkCertificateDigests(certificate)
@@ -801,7 +928,8 @@ func checkInitialCutover(value cutoverData, summary sandboxBinding) error {
 
 func checkPrepared(value prepareData, initial cutoverData, expectedID string, body []byte) error {
 	op := value.Operation
-	target := initial.Certificate.Requirement.Kinds[operationKind].Target
+	spec := initial.Certificate.Requirement.Kinds[operationKind]
+	target := spec.Target
 	requestHash := operationRequestHash("POST", target, map[string]string{
 		"Accept-Encoding": "identity",
 		"Idempotency-Key": expectedID,
@@ -810,10 +938,10 @@ func checkPrepared(value prepareData, initial cutoverData, expectedID string, bo
 	}, body)
 	if value.SemanticVersion != 1 || op.ID != expectedID || op.Domain != sandboxDomain ||
 		op.SandboxID != sandboxID || op.Kind != operationKind || op.RequestHash != requestHash ||
-		op.RuleVersion != 1 || !reflect.DeepEqual(op.Costs, map[string]uint32{capacityName: 1}) ||
-		!reflect.DeepEqual(op.Produces, map[string]uint32{resultName: 1}) || !op.RetrySafe || op.Queryable ||
-		op.Target != target || op.Method != "POST" || op.ResponseClassifier != responseClassifier ||
-		op.QueryTarget != "" || op.QueryMethod != "" || op.QueryClassifier != "" || !op.RequestStored ||
+		op.RuleVersion != 1 || !reflect.DeepEqual(op.Costs, spec.Costs) ||
+		!reflect.DeepEqual(op.Produces, spec.Produces) || op.RetrySafe != spec.RetrySafe || op.Queryable != spec.Queryable ||
+		op.Target != target || op.Method != spec.Method || op.ResponseClassifier != spec.ResponseClassifier ||
+		op.QueryTarget != spec.QueryTarget || op.QueryMethod != spec.QueryMethod || op.QueryClassifier != spec.QueryClassifier || !op.RequestStored ||
 		len(op.RequestHeaders) != 0 ||
 		!bytes.Equal(op.RequestBody, body) || op.Phase != "prepared" || op.ResultHash != "" ||
 		op.StatusCode != 0 || len(op.ResultBody) != 0 || op.RemoteReference != "" ||
@@ -823,20 +951,30 @@ func checkPrepared(value prepareData, initial cutoverData, expectedID string, bo
 	return nil
 }
 
-func checkProgress(dispatched, succeeded phaseData, prepared operation) error {
+func checkProgress(dispatched phaseData, unknown *phaseData, succeeded phaseData, prepared operation) error {
 	if dispatched.SemanticVersion != 1 || dispatched.ID != prepared.ID ||
 		dispatched.Update.Phase != "dispatched" || !validLowerHex(dispatched.Update.DispatchOwner, 16) ||
 		dispatched.Update.DispatchGeneration != 1 || dispatched.Update.ResultHash != "" ||
 		dispatched.Update.StatusCode != 0 || len(dispatched.Update.ResultBody) != 0 ||
 		dispatched.Update.RemoteReference != "" || dispatched.Update.Settlement != "" {
-		return errors.New("third History event is not the first durable dispatch")
+		return errors.New("History event is not the Operation's first durable dispatch")
+	}
+	if unknown != nil && (unknown.SemanticVersion != 1 || unknown.ID != prepared.ID ||
+		unknown.Update.Phase != "unknown" || unknown.Update.ResultHash != "" || unknown.Update.StatusCode != 0 ||
+		len(unknown.Update.ResultBody) != 0 || unknown.Update.RemoteReference != "" ||
+		unknown.Update.DispatchOwner != "" || unknown.Update.DispatchGeneration != 0 || unknown.Update.Settlement != "") {
+		return errors.New("History event is not the definitive unknown outcome")
+	}
+	expectedSettlement := ""
+	if unknown != nil {
+		expectedSettlement = "query"
 	}
 	if succeeded.SemanticVersion != 1 || succeeded.ID != prepared.ID ||
 		succeeded.Update.Phase != "succeeded" || !validDigest(succeeded.Update.ResultHash) ||
 		succeeded.Update.StatusCode != 200 || len(succeeded.Update.ResultBody) == 0 ||
 		succeeded.Update.RemoteReference == "" || succeeded.Update.DispatchOwner != "" ||
-		succeeded.Update.DispatchGeneration != 0 || succeeded.Update.Settlement != "" {
-		return errors.New("fourth History event is not one definitive success")
+		succeeded.Update.DispatchGeneration != 0 || succeeded.Update.Settlement != expectedSettlement {
+		return errors.New("History event is not one definitive success with the expected settlement source")
 	}
 	return nil
 }
@@ -851,13 +989,25 @@ func checkExternalCommit(payment paymentRecord, prepared operation, update opera
 		update.RemoteReference != payment.RemoteReference {
 		return errors.New("external durable commit does not match the succeeded Operation")
 	}
-	var response receipt
-	if err := decodeStrict(update.ResultBody, &response); err != nil {
-		return fmt.Errorf("Operation receipt: %w", err)
-	}
-	if response.Schema != 1 || response.OperationID != prepared.ID || response.Outcome != "succeeded" ||
-		response.ResultHash != payment.ResultHash || response.RemoteReference != payment.RemoteReference {
-		return errors.New("stored Operation receipt does not match the external commit")
+	if update.Settlement == "query" {
+		var response observation
+		if err := decodeStrict(update.ResultBody, &response); err != nil {
+			return fmt.Errorf("Operation observation: %w", err)
+		}
+		if response.Schema != 1 || response.OperationID != prepared.ID || response.RequestHash != prepared.RequestHash ||
+			response.Outcome != "succeeded" || response.FactHash != payment.ResultHash ||
+			response.RemoteReference != payment.RemoteReference {
+			return errors.New("stored Operation observation does not match the external commit")
+		}
+	} else {
+		var response receipt
+		if err := decodeStrict(update.ResultBody, &response); err != nil {
+			return fmt.Errorf("Operation receipt: %w", err)
+		}
+		if response.Schema != 1 || response.OperationID != prepared.ID || response.Outcome != "succeeded" ||
+			response.ResultHash != payment.ResultHash || response.RemoteReference != payment.RemoteReference {
+			return errors.New("stored Operation receipt does not match the external commit")
+		}
 	}
 	return nil
 }
@@ -910,16 +1060,16 @@ func checkFinalCutover(value cutoverData, initial cutoverData, summary controlSu
 	return nil
 }
 
-func checkRequirement(value requirement) error {
-	if !reflect.DeepEqual(value.Results, map[string]uint32{resultName: 1}) ||
-		!reflect.DeepEqual(value.Capacities, map[string]uint32{capacityName: 1}) || len(value.Kinds) != 1 {
+func checkRequirement(value requirement, operationCount int, queryable bool) error {
+	count := uint32(operationCount)
+	if !reflect.DeepEqual(value.Results, map[string]uint32{resultName: count}) ||
+		!reflect.DeepEqual(value.Capacities, map[string]uint32{capacityName: count}) || len(value.Kinds) != 1 {
 		return errors.New("Requirement has the wrong result or capacity")
 	}
 	spec, ok := value.Kinds[operationKind]
 	if !ok || !reflect.DeepEqual(spec.Costs, map[string]uint32{capacityName: 1}) ||
-		!reflect.DeepEqual(spec.Produces, map[string]uint32{resultName: 1}) || !spec.RetrySafe ||
-		spec.Queryable || spec.Method != "POST" || spec.ResponseClassifier != responseClassifier ||
-		spec.QueryTarget != "" || spec.QueryMethod != "" || spec.QueryClassifier != "" {
+		!reflect.DeepEqual(spec.Produces, map[string]uint32{resultName: 1}) || spec.RetrySafe == queryable ||
+		spec.Queryable != queryable || spec.Method != "POST" || spec.ResponseClassifier != responseClassifier {
 		return errors.New("Requirement has the wrong Operation contract")
 	}
 	parsed, err := url.Parse(spec.Target)
@@ -927,6 +1077,16 @@ func checkRequirement(value requirement) error {
 		parsed.Port() == "" || parsed.Path != "/v1/charge" || parsed.RawQuery != "" || parsed.Fragment != "" ||
 		parsed.User != nil {
 		return errors.New("Requirement target is not one credential-free loopback payment endpoint")
+	}
+	if queryable {
+		query, err := url.Parse(spec.QueryTarget)
+		if err != nil || query.Scheme != parsed.Scheme || query.Host != parsed.Host || query.Path != "/v1/query" ||
+			query.RawQuery != "" || query.Fragment != "" || query.User != nil || spec.QueryMethod != "POST" ||
+			spec.QueryClassifier != queryClassifier {
+			return errors.New("Requirement query contract is not the matching loopback observer")
+		}
+	} else if spec.QueryTarget != "" || spec.QueryMethod != "" || spec.QueryClassifier != "" {
+		return errors.New("non-queryable Requirement carries a query contract")
 	}
 	return nil
 }
@@ -1028,24 +1188,38 @@ func readAnchor(path string) (anchorRecord, error) {
 	return record, nil
 }
 
-func readPayment(path string) (paymentRecord, error) {
+func readPayments(path string, expected int) ([]paymentRecord, error) {
 	contents, _, err := readPrivateFile(path, maxEvidenceFile, "payment history")
 	if err != nil {
-		return paymentRecord{}, err
+		return nil, err
 	}
 	lines := bytes.Split(contents, []byte{'\n'})
-	if len(lines) != 2 || len(lines[0]) == 0 || len(lines[1]) != 0 {
-		return paymentRecord{}, errors.New("payment history must contain exactly one durable commit")
+	if expected < 1 || len(lines) != expected+1 || len(lines[len(lines)-1]) != 0 {
+		return nil, fmt.Errorf("payment history must contain exactly %d durable commits", expected)
 	}
-	var record paymentRecord
-	if err := decodeStrict(lines[0], &record); err != nil {
-		return paymentRecord{}, fmt.Errorf("payment history: %w", err)
+	records := make([]paymentRecord, 0, expected)
+	for index, line := range lines[:len(lines)-1] {
+		if len(line) == 0 {
+			return nil, errors.New("payment history contains an empty record")
+		}
+		var record paymentRecord
+		if err := decodeStrict(line, &record); err != nil {
+			return nil, fmt.Errorf("payment history record %d: %w", index+1, err)
+		}
+		canonical, err := json.Marshal(record)
+		if err != nil || !bytes.Equal(canonical, line) {
+			return nil, fmt.Errorf("payment history record %d is not canonical JSON", index+1)
+		}
+		records = append(records, record)
 	}
-	canonical, err := json.Marshal(record)
-	if err != nil || !bytes.Equal(canonical, lines[0]) {
-		return paymentRecord{}, errors.New("payment history is not canonical JSON")
+	return records, nil
+}
+
+func boolInt(value bool) int {
+	if value {
+		return 1
 	}
-	return record, nil
+	return 0
 }
 
 func decodeEventData[T any](event storedEvent) (T, error) {

@@ -41,6 +41,16 @@ _PREFLIGHT_EDIT_CALL_ID = "preflight-edit-1"
 _PREFLIGHT_VALIDATION_CALL_ID = "preflight-validation-1"
 _MAX_WORKSPACE_PATCH_BYTES = 1 << 20
 _MAX_WORKSPACE_VALIDATION_COMMAND_BYTES = 64 << 10
+_MAX_PREFLIGHT_PROTECTED_CALLS = 8
+
+
+@dataclass(frozen=True)
+class ProtectedCallResult:
+    """Identity of one protected callback completed in the preflight turn."""
+
+    request_id: int | str
+    call_id: str
+    effect_id: str
 
 
 @dataclass(frozen=True)
@@ -65,6 +75,7 @@ class PreflightResult:
     workspace_patch_sha256: str | None = None
     workspace_validation_call_id: str | None = None
     workspace_validation_command_sha256: str | None = None
+    protected_calls: tuple[ProtectedCallResult, ...] = ()
 
 
 ToolHandler = Callable[[PendingToolCall], None]
@@ -119,7 +130,7 @@ def _validate_raw_protocol(
     seed_turn_id: str,
     fork_thread_id: str,
     protected_turn_id: str,
-    callback_request_id: int | str,
+    protected_calls: Sequence[ProtectedCallResult],
     sandbox: str,
     workspace_edit_call_id: str | None,
     workspace_validation_call_id: str | None,
@@ -154,22 +165,28 @@ def _validate_raw_protocol(
             and payload.get("params", {}).get("lastTurnId") == seed_turn_id
             and payload.get("params", {}).get("ephemeral") is True,
         ),
-        "real pending callback": _has_message(
+    }
+    for index, protected in enumerate(protected_calls, start=1):
+        checks[f"real pending callback {index}"] = _has_message(
             records,
             "server_to_client",
-            lambda payload: payload.get("method") == "item/tool/call"
-            and payload.get("id") == callback_request_id
+            lambda payload, protected=protected: payload.get("method")
+            == "item/tool/call"
+            and payload.get("id") == protected.request_id
             and payload.get("params", {}).get("threadId") == fork_thread_id
             and payload.get("params", {}).get("turnId") == protected_turn_id
-            and payload.get("params", {}).get("tool") == "protected_commit",
-        ),
-        "callback response": _has_message(
+            and payload.get("params", {}).get("tool") == "protected_commit"
+            and payload.get("params", {}).get("callId") == protected.call_id
+            and payload.get("params", {}).get("arguments")
+            == {"effect_id": protected.effect_id},
+        )
+        checks[f"callback response {index}"] = _has_message(
             records,
             "client_to_server",
-            lambda payload: payload.get("id") == callback_request_id
+            lambda payload, protected=protected: payload.get("id")
+            == protected.request_id
             and isinstance(payload.get("result"), dict),
-        ),
-    }
+        )
     if workspace_edit_call_id is not None:
         checks.update(
             {
@@ -339,6 +356,7 @@ def run_preflight(
     workspace_patch: str | None = None,
     workspace_validation_command: str | None = None,
     workspace_validation_shell: str | None = None,
+    protected_effect_ids: Sequence[str] | None = None,
 ) -> PreflightResult:
     """Run one deterministic end-to-end App Server boundary preflight.
 
@@ -349,6 +367,23 @@ def run_preflight(
     """
 
     workspace_path = Path.cwd() if workspace is None else Path(workspace)
+    effect_ids = (
+        (_PREFLIGHT_EFFECT_ID,)
+        if protected_effect_ids is None
+        else tuple(protected_effect_ids)
+    )
+    if not 1 <= len(effect_ids) <= _MAX_PREFLIGHT_PROTECTED_CALLS:
+        raise ValueError(
+            "preflight requires 1 to "
+            f"{_MAX_PREFLIGHT_PROTECTED_CALLS} protected effects"
+        )
+    if len(set(effect_ids)) != len(effect_ids) or any(
+        not isinstance(effect_id, str) or not effect_id for effect_id in effect_ids
+    ):
+        raise ValueError("preflight protected effect identities must be nonempty and unique")
+    expected_call_ids = tuple(
+        f"preflight-call-{index}" for index in range(1, len(effect_ids) + 1)
+    )
     if workspace_patch is not None:
         encoded_patch = workspace_patch.encode("utf-8")
         if not encoded_patch or len(encoded_patch) > _MAX_WORKSPACE_PATCH_BYTES:
@@ -405,8 +440,7 @@ def run_preflight(
     seed_turn_id: str | None = None
     fork_thread_id: str | None = None
     protected_turn_id: str | None = None
-    callback_request_id: int | str | None = None
-    call_id: str | None = None
+    protected_calls: list[ProtectedCallResult] = []
     initialize_result: dict[str, Any] | None = None
     seed_archived = False
 
@@ -436,12 +470,15 @@ def run_preflight(
                 call_id=_PREFLIGHT_VALIDATION_CALL_ID,
                 response_id="fixture-validation-response",
             )
-        responses.enqueue_tool_call(
-            "protected_commit",
-            {"effect_id": _PREFLIGHT_EFFECT_ID},
-            call_id=_PREFLIGHT_CALL_ID,
-            response_id="fixture-tool-response",
-        )
+        for index, (call_id, effect_id) in enumerate(
+            zip(expected_call_ids, effect_ids, strict=True), start=1
+        ):
+            responses.enqueue_tool_call(
+                "protected_commit",
+                {"effect_id": effect_id},
+                call_id=call_id,
+                response_id=f"fixture-tool-response-{index}",
+            )
         responses.enqueue_assistant(
             "protected commit acknowledged", response_id="fixture-final-response"
         )
@@ -470,9 +507,11 @@ def run_preflight(
 
                 pending = client.start_protected_turn(
                     fork_thread_id,
-                    "Call protected_commit once for preflight-effect-1, then finish.",
+                    "Call protected_commit in order for "
+                    + ", ".join(effect_ids)
+                    + ", then finish.",
                     expected_tool="protected_commit",
-                    expected_arguments={"effect_id": _PREFLIGHT_EFFECT_ID},
+                    expected_arguments={"effect_id": effect_ids[0]},
                     approval_policy=("never" if workspace_patch is not None else None),
                     sandbox_policy=(
                         {
@@ -485,8 +524,13 @@ def run_preflight(
                     timeout=TURN_TIMEOUT_SECONDS,
                 )
                 protected_turn_id = pending.turn_id
-                callback_request_id = pending.request_id
-                call_id = pending.call_id
+                protected_calls.append(
+                    ProtectedCallResult(
+                        request_id=pending.request_id,
+                        call_id=pending.call_id,
+                        effect_id=effect_ids[0],
+                    )
+                )
 
                 if workspace_patch is not None:
                     gate_records = _read_raw_jsonl(raw_path.resolve())
@@ -494,7 +538,7 @@ def run_preflight(
                         gate_records,
                         fork_thread_id=fork_thread_id,
                         protected_turn_id=protected_turn_id,
-                        callback_request_id=callback_request_id,
+                        callback_request_id=pending.request_id,
                         workspace_edit_call_id=_PREFLIGHT_EDIT_CALL_ID,
                         workspace_validation_call_id=(
                             _PREFLIGHT_VALIDATION_CALL_ID
@@ -508,6 +552,29 @@ def run_preflight(
                 # This is the experiment seam: the real App Server and its
                 # pending callback remain alive while caller-owned logic runs.
                 handler(pending)
+                for call_id, effect_id in zip(
+                    expected_call_ids[1:], effect_ids[1:], strict=True
+                ):
+                    pending = client.wait_protected_call(
+                        fork_thread_id,
+                        protected_turn_id,
+                        expected_tool="protected_commit",
+                        expected_arguments={"effect_id": effect_id},
+                        timeout=TURN_TIMEOUT_SECONDS,
+                    )
+                    protected_calls.append(
+                        ProtectedCallResult(
+                            request_id=pending.request_id,
+                            call_id=pending.call_id,
+                            effect_id=effect_id,
+                        )
+                    )
+                    if pending.call_id != call_id:
+                        raise AppServerProtocolError(
+                            "dynamic tool call order changed: "
+                            f"expected={call_id!r} actual={pending.call_id!r}"
+                        )
+                    handler(pending)
                 pending.wait_turn_completed(timeout=TURN_TIMEOUT_SECONDS)
                 client.assert_hermetic_runtime()
             finally:
@@ -519,7 +586,7 @@ def run_preflight(
         response_count = responses.responses_request_count
         models_count = responses.models_request_count
         expected_response_count = (
-            3
+            2 + len(effect_ids)
             + int(workspace_patch is not None)
             + int(workspace_validation_command is not None)
         )
@@ -536,18 +603,18 @@ def run_preflight(
         "seed_turn_id": seed_turn_id,
         "fork_thread_id": fork_thread_id,
         "protected_turn_id": protected_turn_id,
-        "callback_request_id": callback_request_id,
-        "call_id": call_id,
+        "protected_calls": protected_calls or None,
     }
     missing_values = [name for name, value in required_values.items() if value is None]
     if missing_values:
         raise AppServerProtocolError(
             "preflight completed without required values: " + ", ".join(missing_values)
         )
-    if call_id != _PREFLIGHT_CALL_ID:
+    actual_call_ids = tuple(item.call_id for item in protected_calls)
+    if actual_call_ids != expected_call_ids:
         raise AppServerProtocolError(
-            f"dynamic tool call id changed: expected={_PREFLIGHT_CALL_ID!r} "
-            f"actual={call_id!r}"
+            f"dynamic tool call ids changed: expected={expected_call_ids!r} "
+            f"actual={actual_call_ids!r}"
         )
     if archive_seed and not seed_archived:
         raise AppServerProtocolError("persistent preflight seed was not archived")
@@ -559,8 +626,7 @@ def run_preflight(
     seed_turn_id = cast(str, seed_turn_id)
     fork_thread_id = cast(str, fork_thread_id)
     protected_turn_id = cast(str, protected_turn_id)
-    callback_request_id = cast(int | str, callback_request_id)
-    call_id = cast(str, call_id)
+    first_call = protected_calls[0]
 
     records = _read_raw_jsonl(raw_path.resolve())
     _validate_raw_protocol(
@@ -569,7 +635,7 @@ def run_preflight(
         seed_turn_id=seed_turn_id,
         fork_thread_id=fork_thread_id,
         protected_turn_id=protected_turn_id,
-        callback_request_id=callback_request_id,
+        protected_calls=protected_calls,
         sandbox=sandbox,
         workspace_edit_call_id=(
             _PREFLIGHT_EDIT_CALL_ID if workspace_patch is not None else None
@@ -588,8 +654,8 @@ def run_preflight(
         seed_turn_id=seed_turn_id,
         fork_thread_id=fork_thread_id,
         protected_turn_id=protected_turn_id,
-        call_id=call_id,
-        effect_id=_PREFLIGHT_EFFECT_ID,
+        call_id=first_call.call_id,
+        effect_id=first_call.effect_id,
         seed_archived=seed_archived,
         responses_request_count=response_count,
         models_request_count=models_count,
@@ -605,6 +671,7 @@ def run_preflight(
             else None
         ),
         workspace_validation_command_sha256=validation_command_digest,
+        protected_calls=tuple(protected_calls),
     )
 
 
@@ -729,6 +796,38 @@ class RealCodexAppServerTests(unittest.TestCase):
             self.assertGreater(result.raw_record_count, 0)
             self.assertTrue(raw_path.is_file())
             self.assertNotEqual(result.seed_thread_id, result.fork_thread_id)
+
+    def test_preflight_multiple_protected_calls_share_one_turn(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="codex-multi-boundary-test-") as temp_dir:
+            temp_path = Path(temp_dir)
+            observed: list[tuple[str, str, str]] = []
+
+            def handler(pending: PendingToolCall) -> None:
+                observed.append(
+                    (
+                        pending.turn_id,
+                        pending.call_id,
+                        str(pending.arguments["effect_id"]),
+                    )
+                )
+                pending.respond_text(f"receipt:{pending.arguments['effect_id']}")
+
+            result = run_preflight(
+                workspace=temp_path,
+                raw_jsonl_path=temp_path / "app-server.jsonl",
+                protected_effect_ids=("preflight-effect-1", "preflight-effect-2"),
+                tool_handler=handler,
+            )
+
+            self.assertEqual(result.responses_request_count, 4)
+            self.assertEqual(
+                observed,
+                [
+                    (result.protected_turn_id, "preflight-call-1", "preflight-effect-1"),
+                    (result.protected_turn_id, "preflight-call-2", "preflight-effect-2"),
+                ],
+            )
+            self.assertEqual(len(result.protected_calls), 2)
 
     def test_preflight_applies_native_workspace_patch(self) -> None:
         with tempfile.TemporaryDirectory(prefix="codex-writable-boundary-test-") as temp_dir:
