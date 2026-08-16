@@ -40,9 +40,10 @@ import (
 )
 
 const (
-	defaultImageURL = "https://cloud-images.ubuntu.com/releases/noble/release-20260725/ubuntu-24.04-server-cloudimg-amd64.img"
-	defaultImageSHA = "d1940f7d69d343355e183dff1e08a59852d32e7309baa7a4bad8365b11b005ac"
-	maxImageBytes   = 2 << 30
+	defaultImageURL  = "https://cloud-images.ubuntu.com/releases/noble/release-20260725/ubuntu-24.04-server-cloudimg-amd64.img"
+	defaultImageSHA  = "d1940f7d69d343355e183dff1e08a59852d32e7309baa7a4bad8365b11b005ac"
+	defaultImageSize = 624105472
+	maxImageBytes    = 2 << 30
 )
 
 type options struct {
@@ -145,6 +146,11 @@ func run(configuration options) error {
 		return err
 	}
 	defer providerTrace.Close()
+	metadataTrace, err := openSyncedTrace(filepath.Join(work, "guest-network.jsonl"))
+	if err != nil {
+		return err
+	}
+	defer metadataTrace.Close()
 	if err := writeSourceProvenance(work, configuration); err != nil {
 		return err
 	}
@@ -191,6 +197,11 @@ func run(configuration options) error {
 	}
 	go serve(directCanaryServer, directCanaryListener)
 	defer shutdown(directCanaryServer)
+	if err := metadataTrace.Record("direct-host-canary-listening", map[string]any{
+		"address": directCanaryListener.Addr().String(),
+	}); err != nil {
+		return err
+	}
 
 	controller, err := control.OpenWithAnchor(historyPath, anchorPath)
 	if err != nil {
@@ -275,7 +286,10 @@ func run(configuration options) error {
 	if err != nil {
 		return err
 	}
-	seedServer := &http.Server{Handler: seedHandler(userData, &gate), ReadHeaderTimeout: 5 * time.Second}
+	seedServer := &http.Server{Handler: seedHandler(userData, &gate, &seedEvidence{
+		trace: metadataTrace, address: seedListener.Addr().String(),
+		guestScriptSHA256: dataSHA256([]byte(guestScript)), userDataSHA256: dataSHA256([]byte(userData)),
+	}), ReadHeaderTimeout: 5 * time.Second}
 	go serve(seedServer, seedListener)
 	defer shutdown(seedServer)
 
@@ -345,6 +359,9 @@ func run(configuration options) error {
 		return err
 	}
 	if err := qmp.human("savevm before_operation"); err != nil {
+		return err
+	}
+	if err := metadataTrace.Record("guest-operation-gate-opened", nil); err != nil {
 		return err
 	}
 	gate.Store(true)
@@ -495,6 +512,7 @@ func run(configuration options) error {
 		return err
 	}
 	summary := map[string]any{
+		"evidence_schema":                      2,
 		"accelerator":                          configuration.accel,
 		"base_image_sha256":                    configuration.imageSHA,
 		"full_linux_guest":                     true,
@@ -534,8 +552,11 @@ func run(configuration options) error {
 	if err := providerTrace.Close(); err != nil {
 		return err
 	}
+	if err := metadataTrace.Close(); err != nil {
+		return err
+	}
 	if err := writeEvidenceManifest(work, []string{
-		"guest-operation.json", "guest-script.sh", "guest.qcow2", "guest.serial.log",
+		"guest-network.jsonl", "guest-operation.json", "guest-script.sh", "guest.qcow2", "guest.serial.log",
 		"host.head", "host.history", "host-supervisor.jsonl", "payment.history",
 		"provenance.json", "provider-deliveries.jsonl", "qemu-command.json", "qemu.log", "qmp-protocol.jsonl",
 		"result.json", "snapshots.txt",
@@ -630,7 +651,7 @@ func runExternal(ctx context.Context, configuration options, netcatPath string, 
 		return err
 	}
 	seedServer := &http.Server{
-		Handler: seedHandler(userData, &gate), ReadHeaderTimeout: 5 * time.Second,
+		Handler: seedHandler(userData, &gate, nil), ReadHeaderTimeout: 5 * time.Second,
 	}
 	go serve(seedServer, seedListener)
 	defer shutdown(seedServer)
@@ -1164,6 +1185,14 @@ func writePrivateFile(path string, data []byte) error {
 }
 
 func writeSourceProvenance(directory string, configuration options) error {
+	selectedSourcePaths := []string{
+		"Makefile", "README.md", "runtime/README.md", "runtime/go.mod", "runtime/go.sum",
+		"runtime/cmd/check-vm-evidence", "runtime/cmd/vm-demo",
+		"runtime/internal/api", "runtime/internal/certcheck", "runtime/internal/control",
+		"runtime/internal/gateway", "runtime/internal/headanchor", "runtime/internal/history",
+		"runtime/internal/kernel", "runtime/internal/payment", "runtime/internal/sandboxhost",
+		"runtime/internal/vmevidence",
+	}
 	reproductionCommand := fmt.Sprintf("make runtime-vm-demo VM_ACCEL=%s", configuration.accel)
 	if configuration.keep {
 		reproductionCommand += " VM_DEMO_ARGS=-keep"
@@ -1171,9 +1200,10 @@ func writeSourceProvenance(directory string, configuration options) error {
 	provenance := map[string]any{
 		"schema": 1, "recorded_at": time.Now().UTC().Format(time.RFC3339Nano),
 		"public_entrypoint": "make runtime-vm-demo", "runner_arguments": os.Args[1:],
-		"reproduction_command": reproductionCommand,
-		"accelerator":          configuration.accel,
-		"go_version":           goruntime.Version(),
+		"reproduction_command":  reproductionCommand,
+		"accelerator":           configuration.accel,
+		"go_version":            goruntime.Version(),
+		"selected_source_paths": selectedSourcePaths,
 	}
 	if unameOutput, err := exec.Command("uname", "-srmo").CombinedOutput(); err == nil {
 		provenance["host_uname"] = strings.TrimSpace(string(unameOutput))
@@ -1211,10 +1241,9 @@ func writeSourceProvenance(directory string, configuration options) error {
 	} else {
 		root := strings.TrimSpace(string(rootOutput))
 		revisionOutput, revisionErr := exec.Command("git", "-C", root, "rev-parse", "HEAD").CombinedOutput()
-		statusOutput, statusErr := exec.Command(
-			"git", "-C", root, "status", "--porcelain", "--untracked-files=all", "--",
-			"Makefile", "README.md", "runtime/README.md", "runtime/cmd/vm-demo", "runtime/internal/sandboxhost",
-		).CombinedOutput()
+		statusArguments := []string{"-C", root, "status", "--porcelain", "--untracked-files=all", "--"}
+		statusArguments = append(statusArguments, selectedSourcePaths...)
+		statusOutput, statusErr := exec.Command("git", statusArguments...).CombinedOutput()
 		if revisionErr != nil || statusErr != nil {
 			provenance["source_state"] = "git-inspection-failed"
 			provenance["source_error"] = strings.TrimSpace(string(append(revisionOutput, statusOutput...)))
@@ -1245,7 +1274,10 @@ func requireTCPClosed(address string) error {
 }
 
 func ensureImage(ctx context.Context, path, source, expected string) error {
-	if _, err := os.Stat(path); err == nil {
+	if info, err := os.Lstat(path); err == nil {
+		if !info.Mode().IsRegular() || (expected == defaultImageSHA && info.Size() != defaultImageSize) {
+			return fmt.Errorf("cached image %q is not the expected regular file", path)
+		}
 		actual, err := fileSHA(path)
 		if err != nil {
 			return err
@@ -1339,6 +1371,11 @@ func fileSHA(path string) (string, error) {
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
+func dataSHA256(data []byte) string {
+	digest := sha256.Sum256(data)
+	return hex.EncodeToString(digest[:])
+}
+
 func makeUserData(script string) string {
 	return "#cloud-config\n" +
 		"write_files:\n" +
@@ -1385,13 +1422,30 @@ exit 1
 `, directCanaryPort, encodedRequest)
 }
 
-func seedHandler(userData string, gate *atomic.Bool) http.Handler {
+type seedEvidence struct {
+	trace             *syncedTrace
+	address           string
+	guestScriptSHA256 string
+	userDataSHA256    string
+}
+
+func seedHandler(userData string, gate *atomic.Bool, evidence *seedEvidence) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		switch request.URL.Path {
 		case "/meta-data":
 			writer.Header().Set("Content-Type", "text/plain")
 			_, _ = io.WriteString(writer, "instance-id: safe-change-vm-1\nlocal-hostname: safe-change-vm\n")
 		case "/user-data":
+			if evidence != nil {
+				if err := evidence.trace.Record("guest-user-data-served", map[string]any{
+					"method": request.Method, "path": request.URL.Path, "address": evidence.address,
+					"guest_script_sha256": evidence.guestScriptSHA256,
+					"user_data_sha256":    evidence.userDataSHA256,
+				}); err != nil {
+					http.Error(writer, "guest metadata evidence write failed", http.StatusInternalServerError)
+					return
+				}
+			}
 			writer.Header().Set("Content-Type", "text/plain")
 			_, _ = io.WriteString(writer, userData)
 		case "/vendor-data":
@@ -1401,6 +1455,12 @@ func seedHandler(userData string, gate *atomic.Bool) http.Handler {
 			if !gate.Load() {
 				http.Error(writer, "not yet", http.StatusServiceUnavailable)
 				return
+			}
+			if evidence != nil {
+				if err := evidence.trace.Record("guest-operation-gate-served", nil); err != nil {
+					http.Error(writer, "guest gate evidence write failed", http.StatusInternalServerError)
+					return
+				}
 			}
 			_, _ = io.WriteString(writer, "go\n")
 		default:

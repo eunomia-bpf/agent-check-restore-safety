@@ -44,6 +44,7 @@ make runtime-starter-check
 make runtime-demo
 make runtime-microservice-demo
 make runtime-vm-demo
+make runtime-vm-check VM_EVIDENCE=/tmp/safe-change-vm-123456789
 make runtime-codex-demo
 make runtime-codex-isolated-demo
 make runtime-codex-isolated-check

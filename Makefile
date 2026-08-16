@@ -1,7 +1,8 @@
-.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
+.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
 
 VM_ACCEL ?= tcg
 VM_DEMO_ARGS ?=
+VM_EVIDENCE ?=
 RUNTIME_IMAGE ?= safe-change-runtime:local
 RUNTIME_VERSION ?= dev
 RUNTIME_REVISION ?= $(shell git rev-parse --short=12 HEAD)
@@ -41,6 +42,10 @@ runtime-microservice-demo:
 
 runtime-vm-demo:
 	cd runtime && go run ./cmd/vm-demo -accel "$(VM_ACCEL)" $(VM_DEMO_ARGS)
+
+runtime-vm-check:
+	@test -n "$(strip $(VM_EVIDENCE))" || { echo "VM_EVIDENCE must name a retained VM evidence directory" >&2; exit 2; }
+	cd runtime && go run ./cmd/check-vm-evidence -evidence "$(abspath $(VM_EVIDENCE))"
 
 # Explicit live-account target. It is intentionally not part of runtime-verify.
 runtime-codex-demo:

@@ -421,6 +421,24 @@ public target with:
 make runtime-vm-demo VM_ACCEL=kvm VM_DEMO_ARGS=-keep
 ```
 
+The runner prints the retained private directory. Independently validate that
+directory with:
+
+```sh
+make runtime-vm-check VM_EVIDENCE=/tmp/safe-change-vm-123456789
+```
+
+The checker does not trust `result.json` as its verdict. It verifies every
+manifest digest, replays copies of the raw History and external head, derives
+the Operation identity from the guest call, and cross-checks the QMP,
+host-supervisor, provider-delivery, payment, serial-console, snapshot, and QEMU
+records. In particular, it rejects a failed pause/load command or any timeline
+that resumes the VM before the replacement generation is bound. The retained
+tool and source metadata is provenance, not a remote attestation of the host.
+Validation also requires the checksum-pinned backing image to remain available
+at the qcow2-recorded path and the selected verifier checkout to remain at the
+recorded clean Git revision.
+
 ## Run one purchase across Codex, a service, and a full VM
 
 `make runtime-integrated-demo` is the first vertical system target. It requires
