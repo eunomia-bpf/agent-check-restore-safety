@@ -59,11 +59,27 @@ Operation lookup or provider request, while a result already committed by the
 host can be reused by the new VM. Restarting control leaves every old endpoint
 closed until the host publishes and attaches a fresh VM instance.
 
-This is not yet a Firecracker integration. Both QEMU runners use this
-host-bound endpoint with a complete guest: they load the snapshot while QEMU is
-paused, publish the new Rule and VM generation, replace the endpoint, and only
-then resume the guest. Adding a Firecracker backend remains a separate
-executable step.
+The QEMU runners use this host-bound endpoint with a complete Ubuntu guest. A
+second backend now performs the same cutover with two real Firecracker
+processes: a static PID 1 runs from initramfs with no NIC and no root disk, the
+successor loads the snapshot paused with a fresh vsock path, and the host arms
+the new endpoint before resume. The executable slice pins Firecracker 1.16.1
+and requires read/write access to `/dev/kvm`:
+
+```sh
+make runtime-firecracker-kvm-test
+```
+
+This first Firecracker result is a KVM integration smoke test, not a production
+sandbox: it does not yet launch through `jailer`. Asset provenance, individual
+targets, the two-level machine-readable preflight, and the retained-evidence
+checker are documented in
+[`deploy/firecracker/`](deploy/firecracker/).
+
+The retained Firecracker bundle includes `snapshot.state`, `snapshot.memory`,
+and `guest-initramfs.cpio` as private read-only payloads. The offline checker
+streams their hashes and verifies the deterministic initramfs layout; it does
+not accept a compact JSON-only provenance bundle.
 
 ## Add it to an HTTP service
 
@@ -196,6 +212,7 @@ make runtime-certcheck
 make runtime-demo
 make runtime-microservice-demo
 make runtime-vm-demo
+make runtime-firecracker-kvm-test
 make runtime-codex-demo
 make runtime-codex-isolated-demo
 make runtime-codex-isolated-check
@@ -445,7 +462,8 @@ an existing `codex login` and combines, in one purchase and one History:
 
 - a real logged-in Codex App Server in a hardened container;
 - a replaceable order microservice;
-- a complete Ubuntu 24.04 QEMU guest restored from a live `savevm` snapshot;
+- either a complete Ubuntu 24.04 QEMU guest or an initramfs-only Firecracker
+  microVM restored from a paused snapshot;
 - one durable control service; and
 - separate payment, inventory, and ledger services with separate synced files.
 
@@ -483,13 +501,13 @@ order joins only the internal application network; payment, inventory, and
 ledger join only the internal effects network. Fixed ingress and control form
 the only cross-network path. Saved probes show that Codex and order can reach
 their intended next hop but cannot reach any effect service by either name or
-address. QEMU has no implicit NIC and uses one `restrict=on` user network with
-only a metadata TCP forward and a guest-to-host Unix-socket forward. The guest's
-direct effect probe fails both before and after restore. Retained guest input
-and script evidence show that it contains no bearer credential or provider
-route. Socket lifecycle evidence records a 0700 parent, 0600 endpoint, the
-runtime UID, successful health probes for generations 1--3, and absence after
-control restart.
+address. The QEMU backend has no implicit NIC and uses one `restrict=on` user
+network with only a metadata TCP forward and a guest-to-host Unix-socket
+forward. The Firecracker backend has no NIC or root disk and exposes only its
+generation-bound vsock relay. Retained guest input shows that neither path
+contains a bearer credential or provider route. Socket lifecycle evidence
+records a 0700 parent, 0600 endpoint, the runtime UID, successful health probes
+for generations 1--3, and absence after control restart.
 
 The retained run used KVM. It is evidence that the composition and whole-VM
 save/load path execute on this host, not a latency or throughput claim. The
@@ -500,6 +518,21 @@ Run a fresh live experiment with, for example:
 ```sh
 make runtime-integrated-demo VM_ACCEL=kvm \
   INTEGRATED_DEMO_ARGS='--output-dir /tmp/integrated-runtime-evidence'
+```
+
+Select Firecracker with one additional Make variable. The target fetches and
+checksum-verifies its pinned VMM and kernel when needed:
+
+```sh
+sg kvm -c 'make runtime-integrated-demo VM_BACKEND=firecracker VM_ACCEL=kvm \
+  INTEGRATED_DEMO_ARGS="--output-dir /tmp/integrated-firecracker-evidence"'
+```
+
+Check that exact retained directory without account access:
+
+```sh
+make runtime-integrated-check \
+  INTEGRATED_EVIDENCE=/tmp/integrated-firecracker-evidence
 ```
 
 The retained evidence and its current verification status are documented in
@@ -513,10 +546,12 @@ make runtime-integrated-check
 
 That checker does not import the live runner. It replays the binary History,
 reruns all three Certificate checks, and joins the effect, Docker, App Server,
-QEMU, guest request, and socket lifecycle records. Mutation tests require it to
-reject changed History bytes, QMP restore commands, network membership, Codex
-tool identity, guest routing or bearer fields, unsafe socket modes, TCP control
-forwarding, and inventory paths.
+VM, guest request, and socket lifecycle records. For Firecracker, it also
+streams the retained snapshot and initramfs, runs the checker selected by the
+recorded Git revision, and correlates the VMM supervisor clock with Docker and
+Codex. Mutation tests require rejection of changed History bytes, restore
+commands, network membership, Codex tool identity, guest routing or bearer
+fields, unsafe socket modes, control forwarding, and inventory paths.
 
 ## Delete an old real-service version after its effect commits
 
@@ -657,9 +692,9 @@ process with the same host account outside the Docker deployment.
 
 This is an early system slice, not the complete system. It does not yet provide:
 
-- a production multi-VM QEMU/Firecracker process manager; the standalone and
-  integrated QEMU paths use the host-owned endpoint, but no Firecracker backend
-  exists yet;
+- a production multi-VM QEMU/Firecracker process manager; functional QEMU and
+  Firecracker runners exist, but the Firecracker path does not yet use jailer,
+  dedicated identities, cgroups, or a fleet lifecycle manager;
 - a maintained production application workload; DeathStarBench is a real,
   unmodified benchmark but not the eventual maintained order/payment target;
 - general host-level prevention of direct network or device access beyond the

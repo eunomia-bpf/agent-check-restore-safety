@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "architecture": "x86_64",
+  "firecracker": {
+    "version": "1.16.1",
+    "archive_url": "https://github.com/firecracker-microvm/firecracker/releases/download/v1.16.1/firecracker-v1.16.1-x86_64.tgz",
+    "archive_size": 7486686,
+    "archive_sha256": "382a02a869e4d6d5cb14c40577f9545e8458021ea8b0b2d3fc10ec14d9c242e6",
+    "binary_path": "release-v1.16.1-x86_64/firecracker-v1.16.1-x86_64",
+    "binary_size": 3527456,
+    "binary_sha256": "2fd0171309af7e24cf8dafc8a6f921c1434c49b5f9349bb996b7ed0a4deb8aa7",
+    "jailer_path": "release-v1.16.1-x86_64/jailer-v1.16.1-x86_64",
+    "jailer_size": 2181264,
+    "jailer_sha256": "1f3a0c1fe86212d0001819bfe0819071c01208b3ccc9398c3b3bc1b84cf21edd",
+    "snapshot_format": "v10.0.0"
+  },
+  "kernel": {
+    "version": "6.1.155",
+    "source": "official-firecracker-ci-v1.15",
+    "url": "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.15/x86_64/vmlinux-6.1.155",
+    "size": 44279576,
+    "sha256": "e20e46d0c36c55c0d1014eb20576171b3f3d922260d9f792017aeff53af3d4f2"
+  }
+}

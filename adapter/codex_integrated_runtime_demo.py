@@ -1,4 +1,4 @@
-"""Run one purchase across real Codex, containers, and a restored QEMU VM.
+"""Run one purchase across real Codex, containers, and a restored VM.
 
 This explicit live-account experiment is the first vertical composition.  One
 Codex dynamic-tool callback stays pending while three independently scoped
@@ -91,7 +91,13 @@ def _selected_source_path(path: str) -> bool:
                 path.endswith(".go")
                 or path.endswith("/Dockerfile")
                 or path.endswith("/compose.yaml")
-                or path in {"runtime/go.mod", "runtime/go.sum"}
+                or path
+                in {
+                    "runtime/go.mod",
+                    "runtime/go.sum",
+                    "runtime/deploy/firecracker/assets.lock.json",
+                    "runtime/deploy/firecracker/fetch-assets.sh",
+                }
             )
         )
     )
@@ -554,7 +560,10 @@ class VMProcess:
         self,
         *,
         binary: Path,
+        backend: str,
         accel: str,
+        guest_binary: Path | None,
+        host_instance_ids: Mapping[int, str] | None,
         sandbox_socket: Path,
         request_path: Path,
         direct_probe: str,
@@ -563,21 +572,17 @@ class VMProcess:
         expected_binary_sha256: str,
         process_evidence_path: Path,
     ) -> None:
-        command = [
-            str(binary),
-            "-accel",
-            accel,
-            "-timeout",
-            "18m",
-            "-external-sandbox-socket",
-            str(sandbox_socket),
-            "-external-request",
-            str(request_path),
-            "-external-direct-probe",
-            direct_probe,
-            "-external-evidence-dir",
-            str(evidence_dir),
-        ]
+        command = _vm_runner_command(
+            binary=binary,
+            backend=backend,
+            accel=accel,
+            guest_binary=guest_binary,
+            host_instance_ids=host_instance_ids,
+            sandbox_socket=sandbox_socket,
+            request_path=request_path,
+            direct_probe=direct_probe,
+            evidence_dir=evidence_dir,
+        )
         self._stderr = stderr_path.open("w", encoding="utf-8")
         expected_descriptor = os.open(binary, os.O_RDONLY | os.O_CLOEXEC)
         try:
@@ -613,16 +618,18 @@ class VMProcess:
                     raise DemoError(
                         "running VM runner bytes differ from its build digest"
                     )
-                _write_json(
-                    process_evidence_path,
-                    {
-                        "schema": 1,
-                        "source": "linux-proc-exe-fd",
-                        "pid": self.process.pid,
-                        "executable": "vm-demo",
-                        "executable_sha256": process_sha256,
-                    },
-                )
+                process_evidence: dict[str, Any] = {
+                    "schema": 1,
+                    "source": "linux-proc-exe-fd",
+                    "pid": self.process.pid,
+                    "executable": (
+                        "vm-demo" if backend == "qemu" else "firecracker-demo"
+                    ),
+                    "executable_sha256": process_sha256,
+                }
+                if backend == "firecracker":
+                    process_evidence["backend"] = "firecracker"
+                _write_json(process_evidence_path, process_evidence)
             except Exception:
                 self.process.kill()
                 self.process.wait(timeout=5.0)
@@ -700,6 +707,116 @@ class VMProcess:
 
     def __exit__(self, *unused: object) -> None:
         self.close()
+
+
+def _vm_runner_command(
+    *,
+    binary: Path,
+    backend: str,
+    accel: str,
+    guest_binary: Path | None,
+    host_instance_ids: Mapping[int, str] | None,
+    sandbox_socket: Path,
+    request_path: Path,
+    direct_probe: str,
+    evidence_dir: Path,
+) -> list[str]:
+    if backend not in {"qemu", "firecracker"}:
+        raise ValueError(f"unsupported VM backend {backend!r}")
+    if backend == "firecracker" and guest_binary is None:
+        raise ValueError("Firecracker VM runner requires a static guest binary")
+    if backend == "firecracker":
+        if (
+            host_instance_ids is None
+            or set(host_instance_ids) != {1, 3}
+            or any(
+                not isinstance(host_instance_ids[generation], str)
+                or not host_instance_ids[generation]
+                for generation in (1, 3)
+            )
+            or host_instance_ids[1] == host_instance_ids[3]
+        ):
+            raise ValueError(
+                "Firecracker VM runner requires distinct generation 1 and 3 "
+                "HostInstanceIDs"
+            )
+    elif host_instance_ids is not None:
+        raise ValueError("QEMU VM runner does not accept Firecracker HostInstanceIDs")
+    command = [
+        str(binary),
+        "-accel",
+        accel,
+        "-timeout",
+        "18m",
+        "-external-sandbox-socket",
+        str(sandbox_socket),
+        "-external-request",
+        str(request_path),
+        "-external-direct-probe",
+        direct_probe,
+        "-external-evidence-dir",
+        str(evidence_dir),
+    ]
+    if backend == "firecracker":
+        # firecracker-demo verifies its pinned Firecracker/kernel defaults; the
+        # runtime-specific input supplied by this orchestrator is the static
+        # guest to package into its initramfs.
+        assert host_instance_ids is not None
+        command.extend(
+            [
+                "-guest",
+                str(guest_binary),
+                "-host-instance-id-g1",
+                host_instance_ids[1],
+                "-host-instance-id-g3",
+                host_instance_ids[3],
+            ]
+        )
+    return command
+
+
+def _vm_result_summary(
+    *,
+    backend: str,
+    runner_pid: int,
+    accel: str,
+    completed: Mapping[str, Any],
+) -> dict[str, Any]:
+    if backend not in {"qemu", "firecracker"}:
+        raise ValueError(f"unsupported VM backend {backend!r}")
+    first_reused = completed.get("first_operation_reused")
+    restored_reused = completed.get("restored_operation_reused")
+    if type(first_reused) is not bool or restored_reused is not True:
+        raise DemoError("VM runner did not report exact Operation reuse outcomes")
+    summary: dict[str, Any] = {
+        "runner_pid": runner_pid,
+        "accelerator": accel,
+        "snapshot": "before_purchase",
+        "first_reused": first_reused,
+        "restored_reused": restored_reused,
+        "credential_free": True,
+        "sandbox_generation": 3,
+        "transport": "host-unix-socket",
+    }
+    if backend == "qemu":
+        if first_reused is not False:
+            raise DemoError("QEMU first Operation unexpectedly reused an earlier outcome")
+        qemu_pid = completed.get("qemu_pid")
+        if not isinstance(qemu_pid, int) or qemu_pid <= 0:
+            raise DemoError("QEMU runner did not report its process PID")
+        summary["qemu_pid"] = qemu_pid
+        return summary
+    firecracker_pids = completed.get("firecracker_pids")
+    if (
+        not isinstance(firecracker_pids, list)
+        or len(firecracker_pids) != 2
+        or any(not isinstance(pid, int) or pid <= 0 for pid in firecracker_pids)
+        or firecracker_pids[0] == firecracker_pids[1]
+    ):
+        raise DemoError("Firecracker runner did not report two distinct VMM PIDs")
+    summary["backend"] = "firecracker"
+    summary["firecracker_pids"] = firecracker_pids
+    return summary
 
 
 def _kind(
@@ -837,11 +954,15 @@ def _compile_and_activate(
     return certificate, active
 
 
-def _vm_binding(project: str, generation: int) -> dict[str, Any]:
+def _vm_binding(
+    project: str, generation: int, backend: str = "qemu"
+) -> dict[str, Any]:
+    if backend not in {"qemu", "firecracker"}:
+        raise ValueError(f"unsupported VM backend {backend!r}")
     return {
         "sandbox_id": VM_SANDBOX_ID,
         "generation": generation,
-        "host_instance_id": f"qemu-{project}-g{generation}",
+        "host_instance_id": f"{backend}-{project}-g{generation}",
         "domain": VM_DOMAIN,
         "allowed_kinds": [AUDIT_KIND],
     }
@@ -856,6 +977,7 @@ def _wait_sandbox_socket(
     path: Path,
     *,
     generation: int,
+    record_device: bool = False,
     timeout: float = 10.0,
 ) -> dict[str, Any]:
     deadline = time.monotonic() + timeout
@@ -882,7 +1004,7 @@ def _wait_sandbox_socket(
                 )
                 response = connection.recv(4096)
             if response.startswith(b"HTTP/1.1 200"):
-                return {
+                evidence = {
                     "event": "published",
                     "generation": generation,
                     "observed_time_ns": time.time_ns(),
@@ -893,6 +1015,9 @@ def _wait_sandbox_socket(
                     "inode": socket_info.st_ino,
                     "health_status": 200,
                 }
+                if record_device:
+                    evidence["device"] = socket_info.st_dev
+                return evidence
             raise DemoError(f"sandbox health response is {response[:80]!r}")
         except OSError as error:
             last_error = error
@@ -998,6 +1123,8 @@ def _submit_order(
 def _validate_networks(
     deployment: IntegratedDeployment,
     codex_container: str,
+    *,
+    vm_backend: str = "qemu",
 ) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, str]]:
     services = ["ingress", "order", "control", "payment", "inventory", "ledger"]
     containers = {
@@ -1053,6 +1180,12 @@ def _validate_networks(
                         f"{actor_name} reached {effect} directly by {suffix}"
                     )
                 observations.append(probe)
+    if vm_backend == "qemu":
+        vm_path = "qemu-guestfwd->host-sandbox-socket"
+    elif vm_backend == "firecracker":
+        vm_path = "firecracker-vsock->host-sandbox-socket"
+    else:
+        raise ValueError(f"unsupported VM backend {vm_backend!r}")
     topology = {
         "networks": normalized,
         "agent_to_effect_shared_networks": [],
@@ -1060,31 +1193,159 @@ def _validate_networks(
         "fixed_actor_paths": {
             "codex": "ingress->control",
             "order": "control",
-            "vm": "qemu-guestfwd->host-sandbox-socket",
+            "vm": vm_path,
         },
     }
     return topology, observations, effect_ips
 
 
-def _copy_vm_evidence(source: Path, destination: Path, private_root: Path) -> None:
-    destination.mkdir(mode=0o700)
-    for name in (
-        "result.json",
-        "base-image-provenance.json",
-        "guest.serial.log",
-        "guest-request.json",
-        "guest-script.sh",
-        "host-tools.json",
-        "snapshots.txt",
-        "qemu-command.json",
-        "qemu-process-command.json",
-        "qmp-protocol.jsonl",
+_FIRECRACKER_API_PATH_KEYS = frozenset(
+    {
+        "backend_path",
+        "initrd_path",
+        "kernel_image_path",
+        "mem_file_path",
+        "snapshot_path",
+        "uds_path",
+    }
+)
+
+
+def _canonicalize_firecracker_api_value(
+    value: Any,
+    *,
+    source_root: Path,
+    private_root: Path,
+    field: str | None = None,
+) -> Any:
+    if isinstance(value, dict):
+        return {
+            key: _canonicalize_firecracker_api_value(
+                nested,
+                source_root=source_root,
+                private_root=private_root,
+                field=key,
+            )
+            for key, nested in value.items()
+        }
+    if isinstance(value, list):
+        return [
+            _canonicalize_firecracker_api_value(
+                nested,
+                source_root=source_root,
+                private_root=private_root,
+                field=field,
+            )
+            for nested in value
+        ]
+    if field not in _FIRECRACKER_API_PATH_KEYS or not isinstance(value, str):
+        return value
+    for root, label in (
+        (source_root.resolve(), "<vm-evidence>"),
+        (private_root.resolve(), "<private>"),
     ):
-        shutil.copy2(source / name, destination / name)
-    log = (source / "qemu.log").read_text(encoding="utf-8", errors="replace")
-    log = log.replace(str(Path.home()), "<redacted-home>")
-    log = log.replace(str(private_root), "<redacted-private>")
-    (destination / "qemu.log").write_text(log, encoding="utf-8")
+        prefix = os.fspath(root)
+        if value == prefix:
+            return label
+        if value.startswith(prefix + os.sep):
+            return label + value[len(prefix) :]
+    return value
+
+
+def _copy_firecracker_api_trace(
+    source_path: Path,
+    destination_path: Path,
+    *,
+    source_root: Path,
+    private_root: Path,
+) -> None:
+    try:
+        raw = source_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as error:
+        raise DemoError(f"cannot read Firecracker API trace {source_path.name}") from error
+    if not raw or not raw.endswith("\n"):
+        raise DemoError(f"Firecracker API trace {source_path.name} is incomplete")
+    canonical_records: list[str] = []
+    for index, line in enumerate(raw.splitlines(), 1):
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError as error:
+            raise DemoError(
+                f"Firecracker API trace {source_path.name} line {index} is invalid"
+            ) from error
+        if not isinstance(record, dict):
+            raise DemoError(
+                f"Firecracker API trace {source_path.name} line {index} is not an object"
+            )
+        canonical = _canonicalize_firecracker_api_value(
+            record,
+            source_root=source_root,
+            private_root=private_root,
+        )
+        canonical_records.append(
+            json.dumps(canonical, sort_keys=True, separators=(",", ":")) + "\n"
+        )
+    retained = "".join(canonical_records)
+    if os.fspath(private_root.resolve()) in retained:
+        raise DemoError(
+            f"Firecracker API trace {source_path.name} retained a private path"
+        )
+    _write_private(destination_path, retained)
+
+
+def _copy_vm_evidence(
+    source: Path,
+    destination: Path,
+    private_root: Path,
+    *,
+    backend: str = "qemu",
+) -> None:
+    destination.mkdir(mode=0o700)
+    if backend == "qemu":
+        names = (
+            "result.json", "base-image-provenance.json", "guest.serial.log",
+            "guest-request.json", "guest-script.sh", "host-tools.json",
+            "snapshots.txt", "qemu-command.json", "qemu-process-command.json",
+            "qmp-protocol.jsonl",
+        )
+        log_name = "qemu.log"
+    elif backend == "firecracker":
+        names = (
+            "result.json", "assets.json", "guest-request.json",
+            "guest-results.json", "snapshot-provenance.json",
+            "firecracker-processes.json", "firecracker-supervisor.jsonl",
+            "timeline.json", "firecracker-api-g1.jsonl", "firecracker-api-g3.jsonl",
+            "firecracker-gate-g1.jsonl", "firecracker-gate-g3.jsonl",
+            "firecracker-relay-g1.jsonl", "firecracker-relay-g3.jsonl",
+            "snapshot.state", "snapshot.memory", "guest-initramfs.cpio",
+        )
+        log_name = "firecracker-g1.log"
+    else:
+        raise ValueError(f"unsupported VM backend {backend!r}")
+    firecracker_api_names = {
+        "firecracker-api-g1.jsonl",
+        "firecracker-api-g3.jsonl",
+    }
+    for name in names:
+        if backend == "firecracker" and name in firecracker_api_names:
+            _copy_firecracker_api_trace(
+                source / name,
+                destination / name,
+                source_root=source,
+                private_root=private_root,
+            )
+        else:
+            shutil.copy2(source / name, destination / name)
+    log_names = (
+        (log_name,)
+        if backend == "qemu"
+        else ("firecracker-g1.log", "firecracker-g3.log")
+    )
+    for name in log_names:
+        log = (source / name).read_text(encoding="utf-8", errors="replace")
+        log = log.replace(str(Path.home()), "<redacted-home>")
+        log = log.replace(str(private_root), "<redacted-private>")
+        (destination / name).write_text(log, encoding="utf-8")
 
 
 def _configure_private_state(state_dir: Path) -> dict[str, str]:
@@ -1134,11 +1395,16 @@ def run_demo(
     vendor_bundle: Path | None,
     model: str | None,
     vm_accel: str,
+    vm_backend: str = "qemu",
 ) -> dict[str, Any]:
     if not sys.flags.isolated or not sys.flags.no_user_site:
         raise DemoError("integrated evidence must run under isolated Python")
     if vm_accel not in {"tcg", "kvm"}:
         raise DemoError("VM accelerator must be tcg or kvm")
+    if vm_backend not in {"qemu", "firecracker"}:
+        raise DemoError("VM backend must be qemu or firecracker")
+    if vm_backend == "firecracker" and vm_accel != "kvm":
+        raise DemoError("Firecracker requires --vm-accel kvm")
     if vm_accel == "kvm":
         try:
             kvm_descriptor = os.open(
@@ -1156,7 +1422,10 @@ def run_demo(
             os.close(kvm_descriptor)
     repository = Path(__file__).resolve().parents[1]
     output_dir = output_dir.resolve()
-    for command in ("docker", "qemu-system-x86_64", "qemu-img", "nc"):
+    required_commands = ("docker",)
+    if vm_backend == "qemu":
+        required_commands += ("qemu-system-x86_64", "qemu-img", "nc")
+    for command in required_commands:
         if shutil.which(command) is None:
             raise DemoError(f"required integrated-system command is absent: {command}")
     vendor = _find_vendor_bundle(vendor_bundle)
@@ -1204,30 +1473,63 @@ def run_demo(
         purchase_id = f"{PURCHASE_STEM}-{project.rsplit('-', 1)[-1]}"
         image = "safe-change-runtime:" + project
         requirement_v1, requirement_v2 = _requirements(project)
+        vm_bindings = {
+            generation: _vm_binding(project, generation, vm_backend)
+            for generation in (1, 2, 3)
+        }
         _write_release(
             state_dir / "order-config/order.json",
             "v1",
             RESERVE_V1_KIND,
             "http://inventory:8081/v1/charge",
         )
-        vm_binary = binary_dir / "vm-demo"
-        _run(
-            ["go", "build", "-trimpath", "-o", str(vm_binary), "./cmd/vm-demo"],
-            cwd=runtime_dir,
-            timeout=120.0,
+        vm_binary = binary_dir / (
+            "vm-demo" if vm_backend == "qemu" else "firecracker-demo"
         )
+        vm_guest_binary: Path | None = None
+        if vm_backend == "qemu":
+            _run(
+                ["go", "build", "-trimpath", "-o", str(vm_binary), "./cmd/vm-demo"],
+                cwd=runtime_dir,
+                timeout=120.0,
+            )
+        else:
+            vm_guest_binary = binary_dir / "firecracker-guest"
+            static_environment = os.environ.copy()
+            static_environment["CGO_ENABLED"] = "0"
+            _run(
+                [
+                    "go",
+                    "build",
+                    "-trimpath",
+                    "-o",
+                    str(vm_guest_binary),
+                    "./cmd/firecracker-guest",
+                ],
+                cwd=runtime_dir,
+                env=static_environment,
+                timeout=120.0,
+            )
+            _run(
+                ["go", "build", "-trimpath", "-o", str(vm_binary), "./cmd/firecracker-demo"],
+                cwd=runtime_dir,
+                timeout=120.0,
+            )
         _verify_source_provenance(source_provenance)
         vm_binary_sha256 = _sha256_file(vm_binary)
-        _write_json(
-            output_dir / "runtime-build-provenance.json",
-            {
+        build_provenance: dict[str, Any] = {
                 "schema": 1,
                 "build_input": "git-archive",
                 "revision": source_provenance["revision"],
                 "source_tree_sha256": source_provenance["source_tree_sha256"],
-                "vm_demo_sha256": vm_binary_sha256,
-            },
-        )
+        }
+        if vm_backend == "qemu":
+            build_provenance["vm_demo_sha256"] = vm_binary_sha256
+        else:
+            build_provenance["vm_backend"] = "firecracker"
+            build_provenance["firecracker_demo_sha256"] = vm_binary_sha256
+            build_provenance["firecracker_guest_sha256"] = _sha256_file(vm_guest_binary)
+        _write_json(output_dir / "runtime-build-provenance.json", build_provenance)
         control_port = _free_port()
         order_port = _free_port()
         while order_port == control_port:
@@ -1256,12 +1558,16 @@ def run_demo(
                 admin_token=tokens["admin"],
                 requirement=requirement_v1,
                 label="v1",
-                bindings=[_vm_binding(project, 1)],
+                bindings=[vm_bindings[1]],
             )
             timeline["rule_v1_activated_ns"] = time.time_ns()
             sandbox_socket = _sandbox_socket_path(state_dir)
             sandbox_lifecycle.append(
-                _wait_sandbox_socket(sandbox_socket, generation=1)
+                _wait_sandbox_socket(
+                    sandbox_socket,
+                    generation=1,
+                    record_device=vm_backend == "firecracker",
+                )
             )
 
             vm_call_id = f"purchase/{purchase_id}/audit"
@@ -1282,7 +1588,19 @@ def run_demo(
             ledger_ip = _network_ip(ledger_container, deployment.effects_network)
             with VMProcess(
                 binary=vm_binary,
+                backend=vm_backend,
                 accel=vm_accel,
+                guest_binary=vm_guest_binary,
+                host_instance_ids=(
+                    {
+                        generation: str(
+                            vm_bindings[generation]["host_instance_id"]
+                        )
+                        for generation in (1, 3)
+                    }
+                    if vm_backend == "firecracker"
+                    else None
+                ),
                 sandbox_socket=sandbox_socket,
                 request_path=vm_request_path,
                 direct_probe=f"http://{ledger_ip}:8081/v1/stats",
@@ -1430,7 +1748,9 @@ def run_demo(
                             output_dir / "docker-network-inspect.json",
                         )
                         topology, probes, effect_ips = _validate_networks(
-                            deployment, docker_codex.container_name
+                            deployment,
+                            docker_codex.container_name,
+                            vm_backend=vm_backend,
                         )
                         _write_json(output_dir / "network-topology.json", topology)
                         _write_json(output_dir / "network-probes.json", probes)
@@ -1488,11 +1808,15 @@ def run_demo(
                             admin_token=tokens["admin"],
                             requirement=requirement_v2,
                             label="v2",
-                            bindings=[_vm_binding(project, 2)],
+                            bindings=[vm_bindings[2]],
                         )
                         timeline["rule_v2_activated_ns"] = time.time_ns()
                         sandbox_lifecycle.append(
-                            _wait_sandbox_socket(sandbox_socket, generation=2)
+                            _wait_sandbox_socket(
+                                sandbox_socket,
+                                generation=2,
+                                record_device=vm_backend == "firecracker",
+                            )
                         )
                         _write_release(
                             state_dir / "order-config/order.json",
@@ -1563,11 +1887,12 @@ def run_demo(
                             admin_token=tokens["admin"],
                             requirement=requirement_v2,
                             label="v2-reopen",
-                            bindings=[_vm_binding(project, 3)],
+                            bindings=[vm_bindings[3]],
                         )
                         generation_3 = _wait_sandbox_socket(
                             sandbox_socket,
                             generation=3,
+                            record_device=vm_backend == "firecracker",
                         )
                         sandbox_lifecycle.append(generation_3)
                         timeline["sandbox_generation_3_ns"] = generation_3[
@@ -1584,6 +1909,7 @@ def run_demo(
                             vm_work,
                             output_dir / "vm",
                             private_dir,
+                            backend=vm_backend,
                         )
 
                         recovered_payment = _http_json(
@@ -1854,6 +2180,19 @@ def run_demo(
                     output_dir / "sandbox-lifecycle.json",
                     sandbox_lifecycle,
                 )
+                vm_summary = _vm_result_summary(
+                    backend=vm_backend,
+                    runner_pid=vm.pid,
+                    accel=vm_accel,
+                    completed=vm_completed,
+                )
+                vm_provenance: dict[str, Any] = {}
+                if vm_backend == "qemu":
+                    vm_provenance["vm_demo_sha256"] = vm_binary_sha256
+                else:
+                    vm_provenance["vm_backend"] = "firecracker"
+                    vm_provenance["firecracker_demo_sha256"] = vm_binary_sha256
+                    vm_provenance["firecracker_guest_sha256"] = _sha256_file(vm_guest_binary)
                 result = {
                     "run_id": project,
                     "purchase_id": purchase_id,
@@ -1884,17 +2223,7 @@ def run_demo(
                     "effects": stats,
                     "network": topology,
                     "effect_ips": effect_ips,
-                    "vm": {
-                        "runner_pid": vm.pid,
-                        "qemu_pid": vm_completed["qemu_pid"],
-                        "accelerator": vm_accel,
-                        "snapshot": "before_purchase",
-                        "first_reused": False,
-                        "restored_reused": True,
-                        "credential_free": True,
-                        "sandbox_generation": 3,
-                        "transport": "host-unix-socket",
-                    },
+                    "vm": vm_summary,
                     "protocol": protocol,
                     "provenance": {
                         "revision": source_provenance["revision"],
@@ -1902,7 +2231,7 @@ def run_demo(
                             "source_tree_sha256"
                         ],
                         "runtime_image_id": image_provenance["image_id"],
-                        "vm_demo_sha256": vm_binary_sha256,
+                        **vm_provenance,
                     },
                     "evidence_directory": output_dir.name,
                 }
@@ -1940,6 +2269,9 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     )
     parser.add_argument("--vendor-bundle", type=Path)
     parser.add_argument("--model")
+    parser.add_argument(
+        "--vm-backend", choices=("qemu", "firecracker"), default="qemu"
+    )
     parser.add_argument("--vm-accel", choices=("tcg", "kvm"), default="tcg")
     return parser.parse_args(argv)
 
@@ -1957,6 +2289,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         vendor_bundle=arguments.vendor_bundle,
         model=arguments.model,
         vm_accel=arguments.vm_accel,
+        vm_backend=arguments.vm_backend,
     )
     print(json.dumps(result, sort_keys=True, indent=2))
     return 0

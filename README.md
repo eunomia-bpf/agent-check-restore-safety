@@ -45,6 +45,7 @@ make runtime-demo
 make runtime-microservice-demo
 make runtime-vm-demo
 make runtime-vm-check VM_EVIDENCE=/tmp/safe-change-vm-123456789
+make runtime-firecracker-kvm-test
 make runtime-codex-demo
 make runtime-codex-isolated-demo
 make runtime-codex-isolated-check
@@ -69,6 +70,14 @@ network exposes only metadata and a VM-specific, credential-free Operation
 endpoint to the guest. While the restored VM remains paused, the host replaces
 its Rule and VM binding before reconnecting and resuming it. The restored guest
 repeats the call, History recovers it, and payment still commits once.
+
+The optional Firecracker backend runs the same restore boundary with two real
+microVM processes, a static initramfs guest, no NIC, no root disk, and one
+generation-bound vsock relay per active microVM. Its real-KVM test and
+independent evidence checker are available with
+`make runtime-firecracker-kvm-test`; the integrated Agent runtime selects it
+with `VM_BACKEND=firecracker VM_ACCEL=kvm`. This path is currently an unjailed
+functional prototype, not yet a production sandbox.
 
 The Codex demo uses the locally logged-in account and the real Codex App Server,
 not a model fixture. A strict dynamic tool requests one application-chosen

@@ -3,19 +3,21 @@
 The live runner is deliberately not imported.  This checker replays the exact
 binary History frames, validates all three Certificates, derives three Operation
 identities and requests, joins three independently durable effect records, and
-checks raw Docker, App Server, QEMU, and QMP evidence.
+checks raw Docker, App Server, and QEMU or Firecracker evidence.
 """
 
 from __future__ import annotations
 
 import argparse
 import base64
+from contextlib import contextmanager
 from hashlib import sha256
 import json
 import os
 from pathlib import Path
 import re
 import subprocess
+import tempfile
 from typing import Any, Mapping, Sequence
 
 from adapter.check_codex_isolated_evidence import (
@@ -66,7 +68,13 @@ def _selected_source_path(path: str) -> bool:
                 path.endswith(".go")
                 or path.endswith("/Dockerfile")
                 or path.endswith("/compose.yaml")
-                or path in {"runtime/go.mod", "runtime/go.sum"}
+                or path
+                in {
+                    "runtime/go.mod",
+                    "runtime/go.sum",
+                    "runtime/deploy/firecracker/assets.lock.json",
+                    "runtime/deploy/firecracker/fetch-assets.sh",
+                }
             )
         )
     )
@@ -193,18 +201,40 @@ def _check_provenance(
         _json_file(directory, "runtime-build-provenance.json"),
         "runtime build provenance",
     )
-    vm_demo_sha256 = build.get("vm_demo_sha256")
-    _require(
-        build
-        == {
+    backend = build.get("vm_backend", "qemu")
+    if backend == "qemu":
+        vm_demo_sha256 = build.get("vm_demo_sha256")
+        expected_build = {
             "schema": 1,
             "build_input": "git-archive",
             "revision": revision,
             "source_tree_sha256": tree_hash,
             "vm_demo_sha256": vm_demo_sha256,
         }
+    else:
+        vm_demo_sha256 = build.get("firecracker_demo_sha256")
+        guest_sha256 = build.get("firecracker_guest_sha256")
+        expected_build = {
+            "schema": 1,
+            "build_input": "git-archive",
+            "revision": revision,
+            "source_tree_sha256": tree_hash,
+            "vm_backend": "firecracker",
+            "firecracker_demo_sha256": vm_demo_sha256,
+            "firecracker_guest_sha256": guest_sha256,
+        }
+    _require(
+        backend in {"qemu", "firecracker"}
+        and build == expected_build
         and isinstance(vm_demo_sha256, str)
-        and re.fullmatch(r"[0-9a-f]{64}", vm_demo_sha256) is not None,
+        and re.fullmatch(r"[0-9a-f]{64}", vm_demo_sha256) is not None
+        and (
+            backend == "qemu"
+            or (
+                isinstance(guest_sha256, str)
+                and re.fullmatch(r"[0-9a-f]{64}", guest_sha256) is not None
+            )
+        ),
         "runtime build is not tied to the committed Git archive",
     )
 
@@ -258,7 +288,63 @@ def _check_provenance(
         "compose_version": compose_version,
         "container_images": container_images,
         "vm_demo_sha256": vm_demo_sha256,
+        "vm_backend": backend,
+        "firecracker_guest_sha256": build.get("firecracker_guest_sha256"),
+        "source_files": recorded_files,
     }
+
+
+@contextmanager
+def _recorded_runtime_source(
+    repository: Path, provenance: Mapping[str, Any]
+) -> Any:
+    """Materialize the exact recorded Go verifier source into a private tree."""
+
+    revision = provenance.get("revision")
+    source_files = _object(provenance.get("source_files"), "source file hashes")
+    _require(isinstance(revision, str), "recorded source revision is absent")
+    with tempfile.TemporaryDirectory(
+        prefix="safe-change-recorded-runtime-"
+    ) as temporary:
+        root = Path(temporary)
+        runtime = root / "runtime"
+        runtime.mkdir(mode=0o700)
+        materialized: set[str] = set()
+        for path in sorted(source_files):
+            if not path.startswith("runtime/") or not (
+                path.endswith(".go") or path in {"runtime/go.mod", "runtime/go.sum"}
+            ):
+                continue
+            parts = Path(path).parts
+            _require(
+                parts
+                and parts[0] == "runtime"
+                and ".." not in parts
+                and not Path(path).is_absolute(),
+                "recorded runtime source contains an unsafe path",
+            )
+            content = _git_bytes(repository, ["show", f"{revision}:{path}"])
+            expected = source_files[path]
+            _require(
+                sha256(content).hexdigest() == expected,
+                f"recorded runtime source digest changed for {path}",
+            )
+            destination = root.joinpath(*parts)
+            destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            destination.write_bytes(content)
+            materialized.add(path)
+        required = {
+            "runtime/go.mod",
+            "runtime/go.sum",
+            "runtime/cmd/check-certificate/main.go",
+        }
+        if provenance.get("vm_backend") == "firecracker":
+            required.add("runtime/cmd/check-firecracker-evidence/main.go")
+        _require(
+            required <= materialized,
+            "recorded runtime source omits an independent verifier",
+        )
+        yield runtime
 
 
 def _canonical(value: Any) -> bytes:
@@ -328,11 +414,12 @@ def _requirements(run_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
     return first, second
 
 
-def _vm_binding(run_id: str, generation: int) -> dict[str, Any]:
+def _vm_binding(run_id: str, generation: int, backend: str = "qemu") -> dict[str, Any]:
+    prefix = "firecracker" if backend == "firecracker" else "qemu"
     return {
         "sandbox_id": VM_SANDBOX_ID,
         "generation": generation,
-        "host_instance_id": f"qemu-{run_id}-g{generation}",
+        "host_instance_id": f"{prefix}-{run_id}-g{generation}",
         "domain": VM_DOMAIN,
         "allowed_kinds": [AUDIT_KIND],
     }
@@ -504,6 +591,7 @@ def _check_history_and_effects(
     run_id: str,
     purchase_id: str,
     runtime_dir: Path | None,
+    vm_backend: str = "qemu",
 ) -> dict[str, Any]:
     requirement_v1, requirement_v2 = _requirements(run_id)
     _require(
@@ -564,23 +652,45 @@ def _check_history_and_effects(
         first_rule
         == {
             "certificate": certificate_v1,
-            "bindings": [_vm_binding(run_id, 1)],
+            "bindings": [_vm_binding(run_id, 1, vm_backend)],
             "semantic_version": 1,
         }
         and second_rule
         == {
             "certificate": certificate_v2,
-            "bindings": [_vm_binding(run_id, 2)],
+            "bindings": [_vm_binding(run_id, 2, vm_backend)],
             "semantic_version": 1,
         }
         and third_rule
         == {
             "certificate": certificate_v2_reopen,
-            "bindings": [_vm_binding(run_id, 3)],
+            "bindings": [_vm_binding(run_id, 3, vm_backend)],
             "semantic_version": 1,
         },
         "Rule-and-sandbox cutover events differ from retained evidence",
     )
+    vm_host_instance_ids: dict[int, str] = {}
+    for generation, rule in (
+        (1, first_rule),
+        (2, second_rule),
+        (3, third_rule),
+    ):
+        bindings = _list(
+            rule.get("bindings"), f"generation {generation} History bindings"
+        )
+        _require(
+            len(bindings) == 1,
+            f"generation {generation} History binding count differs",
+        )
+        binding = _object(
+            bindings[0], f"generation {generation} History binding"
+        )
+        host_instance_id = binding.get("host_instance_id")
+        _require(
+            isinstance(host_instance_id, str) and bool(host_instance_id),
+            f"generation {generation} History HostInstanceID is absent",
+        )
+        vm_host_instance_ids[generation] = host_instance_id
     _require(
         certificate_v1.get("history")
         == {"sequence": 0, "hash": "0" * 64}
@@ -976,7 +1086,10 @@ def _check_history_and_effects(
     ):
         _require(
             _json_file(directory, f"cutover-{label}.json")
-            == {"state": active, "bindings": [_vm_binding(run_id, generation)]},
+            == {
+                "state": active,
+                "bindings": [_vm_binding(run_id, generation, vm_backend)],
+            },
             f"{label} cutover response differs from its committed State and binding",
         )
     return {
@@ -990,6 +1103,7 @@ def _check_history_and_effects(
         "state": state,
         "first_owner": first_owner,
         "second_owner": second_owner,
+        "vm_host_instance_ids": vm_host_instance_ids,
         "certificates": (certificate_v1, certificate_v2, certificate_v2_reopen),
     }
 
@@ -1360,7 +1474,11 @@ def _check_docker(
             "fixed_actor_paths": {
                 "codex": "ingress->control",
                 "order": "control",
-                "vm": "qemu-guestfwd->host-sandbox-socket",
+                "vm": (
+                    "firecracker-vsock->host-sandbox-socket"
+                    if provenance.get("vm_backend") == "firecracker"
+                    else "qemu-guestfwd->host-sandbox-socket"
+                ),
             },
         },
         "network summary differs from raw Docker inspection",
@@ -1619,6 +1737,492 @@ def _jsonl(path: Path, label: str) -> list[dict[str, Any]]:
         )
         prior = int(record["time_ns"])
     return records
+
+
+def _firecracker_supervisor_jsonl(
+    path: Path,
+    expected_instance_ids: Mapping[int, str] | None = None,
+) -> list[dict[str, Any]]:
+    """Read the durable Firecracker supervisor trace without QMP assumptions."""
+
+    if expected_instance_ids is not None:
+        _require(
+            set(expected_instance_ids) == {1, 3}
+            and all(
+                isinstance(expected_instance_ids[generation], str)
+                and bool(expected_instance_ids[generation])
+                for generation in (1, 3)
+            )
+            and expected_instance_ids[1] != expected_instance_ids[3],
+            "History does not contain two distinct Firecracker HostInstanceIDs",
+        )
+    label = "Firecracker supervisor"
+    raw = _read(path, limit=1 << 20)
+    lines = raw.splitlines()
+    _require(lines and raw.endswith(b"\n"), f"{label} is empty or unterminated")
+    records = [
+        _object(_loads(line, f"{label} line {index}"), f"{label} record")
+        for index, line in enumerate(lines, 1)
+    ]
+    expected = [
+        ("run-started", 0),
+        ("process-started", 1),
+        ("guest-ready", 1),
+        ("snapshot-created-paused", 1),
+        ("relay-armed-paused", 1),
+        ("vm-resumed", 1),
+        ("operation-result", 1),
+        ("vm-paused", 1),
+        ("process-stopped", 1),
+        ("process-started", 3),
+        ("snapshot-loaded-paused", 3),
+        ("relay-armed-paused", 3),
+        ("vm-resumed", 3),
+        ("operation-result", 3),
+        ("process-stopped", 3),
+        ("run-completed", 0),
+    ]
+    _require(
+        len(records) == len(expected),
+        "Firecracker supervisor event count differs",
+    )
+    prior_time = 0
+    prior_elapsed = 0
+    base_keys = {"schema", "sequence", "event", "time_ns", "elapsed_ns"}
+    process_keys = {"generation", "instance_id", "pid", "start_time_ticks"}
+    for index, (record, (event, generation)) in enumerate(
+        zip(records, expected), 1
+    ):
+        allowed_keys = base_keys | process_keys | {"details"}
+        _require(
+            set(record) <= allowed_keys
+            and base_keys <= set(record)
+            and record.get("schema") == 1
+            and record.get("sequence") == index
+            and record.get("event") == event
+            and type(record.get("time_ns")) is int
+            and record["time_ns"] > prior_time
+            and type(record.get("elapsed_ns")) is int
+            and record["elapsed_ns"] > prior_elapsed,
+            "Firecracker supervisor sequence or clock differs",
+        )
+        if generation == 0:
+            _require(
+                not (process_keys & set(record)),
+                "global Firecracker supervisor event is process-bound",
+            )
+        else:
+            _require(
+                process_keys <= set(record)
+                and record.get("generation") == generation
+                and isinstance(record.get("instance_id"), str)
+                and bool(record["instance_id"])
+                and (
+                    expected_instance_ids is None
+                    or record["instance_id"]
+                    == expected_instance_ids[generation]
+                )
+                and type(record.get("pid")) is int
+                and record["pid"] > 0
+                and type(record.get("start_time_ticks")) is int
+                and record["start_time_ticks"] > 0,
+                "Firecracker supervisor process binding differs",
+            )
+        if "details" in record:
+            _object(record["details"], "Firecracker supervisor details")
+        if event == "process-stopped":
+            details = _object(
+                record.get("details"),
+                f"Firecracker generation {generation} stop details",
+            )
+            _require(
+                details
+                == {
+                    "exit_confirmed": True,
+                    "termination": "supervisor",
+                },
+                f"Firecracker generation {generation} was not stopped by the supervisor",
+            )
+        prior_time = int(record["time_ns"])
+        prior_elapsed = int(record["elapsed_ns"])
+    return records
+
+
+def _firecracker_api_jsonl(
+    path: Path,
+    *,
+    generation: int,
+    expected_instance_id: str,
+) -> list[dict[str, Any]]:
+    label = f"Firecracker API generation {generation}"
+    raw = _read(path, limit=4 << 20)
+    lines = raw.splitlines()
+    _require(lines and raw.endswith(b"\n"), f"{label} trace is empty or unterminated")
+    records = [
+        _object(_loads(line, f"{label} line {index}"), f"{label} record")
+        for index, line in enumerate(lines, 1)
+    ]
+    prior_time = 0
+    allowed = {
+        "sequence",
+        "time_ns",
+        "method",
+        "path",
+        "request",
+        "status",
+        "response",
+    }
+    for index, record in enumerate(records, 1):
+        _require(
+            set(record) <= allowed
+            and {"sequence", "time_ns", "method", "path", "status"}
+            <= set(record)
+            and record.get("sequence") == index
+            and type(record.get("time_ns")) is int
+            and record["time_ns"] > prior_time
+            and isinstance(record.get("method"), str)
+            and isinstance(record.get("path"), str)
+            and type(record.get("status")) is int
+            and record["status"] in {200, 204},
+            f"{label} envelope or clock differs",
+        )
+        prior_time = int(record["time_ns"])
+
+    states = [
+        _object(record.get("response"), f"{label} instance response")
+        for record in records
+        if record.get("method") == "GET" and record.get("path") == "/"
+    ]
+    _require(
+        bool(states)
+        and all(state.get("id") == expected_instance_id for state in states),
+        f"{label} instance ID differs from the committed HostInstanceID",
+    )
+
+    def request(method: str, api_path: str) -> dict[str, Any]:
+        matches = [
+            record
+            for record in records
+            if record.get("method") == method and record.get("path") == api_path
+        ]
+        _require(
+            len(matches) == 1,
+            f"{label} does not contain exactly one {method} {api_path}",
+        )
+        return _object(matches[0].get("request"), f"{label} {api_path} request")
+
+    if generation == 1:
+        vsock = request("PUT", "/vsock")
+        snapshot = request("PUT", "/snapshot/create")
+        _require(
+            vsock.get("uds_path") == "<vm-evidence>/vsock-g1"
+            and snapshot.get("snapshot_path")
+            == "<vm-evidence>/snapshot.state"
+            and snapshot.get("mem_file_path")
+            == "<vm-evidence>/snapshot.memory",
+            "generation 1 Firecracker API trace retained non-canonical private paths",
+        )
+    elif generation == 3:
+        load = request("PUT", "/snapshot/load")
+        override = _object(
+            load.get("vsock_override"), "generation 3 Firecracker vsock override"
+        )
+        _require(
+            override.get("uds_path") == "<vm-evidence>/vsock-g3",
+            "generation 3 Firecracker API trace retained a non-canonical private path",
+        )
+    else:
+        raise EvidenceError(f"unsupported Firecracker generation {generation}")
+    return records
+
+
+def _check_firecracker_vm(
+    directory: Path,
+    runtime_dir: Path | None,
+    provenance: Mapping[str, Any],
+    run_id: str,
+    purchase_id: str,
+    host_instance_ids: Mapping[int, str],
+    operation_id: str,
+    external: Mapping[str, Any],
+    ledger_ip: str,
+) -> dict[str, Any]:
+    """Delegate byte-level Firecracker evidence checks to the Go checker.
+
+    The retained directory is checked with source-provenance-selected runtime
+    source, rather than trusting the VM result summary.  Python still binds
+    that result and the two VMM PIDs to the top-level runner result below.
+    """
+    _require(runtime_dir is not None, "Firecracker checker source is unavailable")
+    _require(
+        set(host_instance_ids) == {1, 2, 3}
+        and all(
+            isinstance(host_instance_ids[generation], str)
+            and bool(host_instance_ids[generation])
+            for generation in (1, 2, 3)
+        )
+        and len(set(host_instance_ids.values())) == 3,
+        "History does not contain three distinct sandbox HostInstanceIDs",
+    )
+    expected_instance_ids = {
+        generation: host_instance_ids[generation] for generation in (1, 3)
+    }
+    checker_path = "runtime/cmd/check-firecracker-evidence/main.go"
+    source_files = _object(provenance.get("source_files"), "source file hashes")
+    expected_digest = source_files.get(checker_path)
+    _require(
+        isinstance(expected_digest, str)
+        and re.fullmatch(r"[0-9a-f]{64}", expected_digest) is not None,
+        "source provenance does not bind the Firecracker checker",
+    )
+    checker_source = _read(
+        runtime_dir / "cmd" / "check-firecracker-evidence" / "main.go",
+        limit=4 << 20,
+    )
+    _require(
+        sha256(checker_source).hexdigest() == expected_digest,
+        "committed Firecracker checker differs from source provenance",
+    )
+    vm_dir = directory / "vm"
+    try:
+        completed = subprocess.run(
+            [
+                "go",
+                "run",
+                "./cmd/check-firecracker-evidence",
+                "-evidence",
+                str(vm_dir),
+            ],
+            cwd=runtime_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            text=True,
+            timeout=180.0,
+        )
+    except subprocess.TimeoutExpired:
+        raise EvidenceError("Firecracker evidence checker timed out") from None
+    _require(
+        completed.returncode == 0,
+        "Firecracker evidence checker rejected retained VM evidence: "
+        + completed.stderr[-1000:].strip(),
+    )
+    result = _object(_json_file(vm_dir, "result.json"), "Firecracker VM result")
+    assets = _object(_json_file(vm_dir, "assets.json"), "Firecracker VM assets")
+    pids = result.get("firecracker_pids")
+    first_reused = result.get("first_operation_reused")
+    _require(
+        result.get("backend") == "firecracker"
+        and result.get("accelerator") == "kvm"
+        and isinstance(pids, list) and len(pids) == 2
+        and all(type(pid) is int and pid > 0 for pid in pids) and pids[0] != pids[1]
+        and result.get("operation_call_id") == f"purchase/{purchase_id}/audit"
+        and result.get("operation_id") == operation_id
+        and result.get("direct_probe_host") == f"{ledger_ip}:8081"
+        and result.get("successor_termination") == "host-after-final-result"
+        and _object(assets.get("guest"), "Firecracker guest artifact").get("sha256")
+        == provenance.get("firecracker_guest_sha256")
+        and type(first_reused) is bool
+        and result.get("restored_operation_reused") is True,
+        "Firecracker VM summary is incomplete",
+    )
+    process_envelope = _object(
+        _json_file(vm_dir, "firecracker-processes.json"),
+        "Firecracker process identities",
+    )
+    processes = _list(
+        process_envelope.get("processes"), "Firecracker process identity list"
+    )
+    process_by_generation: dict[int, dict[str, Any]] = {}
+    for value in processes:
+        process = _object(value, "Firecracker process identity")
+        generation = process.get("generation")
+        _require(
+            type(generation) is int
+            and generation in {1, 3}
+            and generation not in process_by_generation,
+            "Firecracker process generations are incomplete or duplicated",
+        )
+        process_by_generation[generation] = process
+    _require(
+        process_envelope.get("schema") == 1
+        and set(process_envelope) == {"schema", "processes"}
+        and set(process_by_generation) == {1, 3}
+        and all(
+            process_by_generation[generation].get("id")
+            == expected_instance_ids[generation]
+            and process_by_generation[generation].get("pid")
+            == pids[index]
+            and process_by_generation[generation].get("termination")
+            == "supervisor"
+            for index, generation in enumerate((1, 3))
+        ),
+        "Firecracker process identity or supervisor termination differs",
+    )
+    supervisor = _firecracker_supervisor_jsonl(
+        vm_dir / "firecracker-supervisor.jsonl",
+        expected_instance_ids,
+    )
+    operation_results = {
+        record.get("generation"): _object(
+            record.get("details"),
+            f"Firecracker generation {record.get('generation')} operation result",
+        )
+        for record in supervisor
+        if record.get("event") == "operation-result"
+    }
+    _require(
+        operation_results
+        == {
+            1: {"operation_id": operation_id, "reused": first_reused},
+            3: {"operation_id": operation_id, "reused": True},
+        },
+        "Firecracker supervisor Operation reuse differs from the VM summary",
+    )
+    for generation in (1, 3):
+        _firecracker_api_jsonl(
+            vm_dir / f"firecracker-api-g{generation}.jsonl",
+            generation=generation,
+            expected_instance_id=expected_instance_ids[generation],
+        )
+    request = _object(
+        _json_file(vm_dir, "guest-request.json"), "Firecracker guest request"
+    )
+    expected_call = f"purchase/{purchase_id}/audit"
+    _require(
+        set(request) == {"call_id", "kind", "body"}
+        and request.get("call_id") == expected_call
+        and request.get("kind") == AUDIT_KIND
+        and isinstance(request.get("body"), str),
+        "Firecracker guest request is not bound to this integrated run",
+    )
+    try:
+        body = json.loads(base64.b64decode(request["body"], validate=True))
+    except (ValueError, json.JSONDecodeError):
+        raise EvidenceError(
+            "Firecracker guest request body is not valid base64 JSON"
+        ) from None
+    _require(
+        body == {"purchase_id": purchase_id, "run_id": run_id},
+        "Firecracker guest request body belongs to another run",
+    )
+    expected_outcome = {
+        "operation_id": operation_id,
+        "phase": "succeeded",
+        "status_code": 200,
+        "body": base64.b64encode(external["receipt_body"]).decode(),
+        "result_hash": external["gateway_result_hash"],
+        "recovered_by_query": False,
+    }
+    guest_results = _object(
+        _json_file(vm_dir, "guest-results.json"), "Firecracker guest results"
+    )
+    _require(
+        guest_results
+        == {
+            "schema": 1,
+            "first": {
+                "event": "RESULT",
+                "status": 200,
+                "body": {**expected_outcome, "reused": first_reused},
+            },
+            "restored": {
+                "event": "RESULT",
+                "status": 200,
+                "body": {**expected_outcome, "reused": True},
+            },
+        },
+        "Firecracker guest results differ from the durable History outcome",
+    )
+    # Relay evidence identifies the pinned control-socket target and independently
+    # observes its peer PID. Do not infer peer device/inode from either value;
+    # future peer identity fields must likewise be observed and retained.
+    sandbox_identities: dict[int, dict[str, int]] = {}
+    for generation in (1, 3):
+        path = vm_dir / f"firecracker-relay-g{generation}.jsonl"
+        raw = _read(path, limit=1 << 20)
+        lines = raw.splitlines()
+        _require(
+            len(lines) >= 2 and len(lines) % 2 == 0 and raw.endswith(b"\n"),
+            f"Firecracker relay generation {generation} trace is incomplete",
+        )
+        identities = set()
+        sandbox_peer_pids = set()
+        byte_records: list[dict[str, Any]] = []
+        for index, line in enumerate(lines, 1):
+            record = _object(
+                _loads(line, f"Firecracker relay g{generation} line {index}"),
+                f"Firecracker relay g{generation} record",
+            )
+            device = record.get("sandbox_device")
+            inode = record.get("sandbox_inode")
+            _require(
+                type(device) is int
+                and device > 0
+                and type(inode) is int
+                and inode > 0,
+                f"Firecracker relay generation {generation} lacks sandbox identity",
+            )
+            identities.add((int(device), int(inode)))
+            event = record.get("event")
+            expected_event = "accept" if index % 2 == 1 else "bytes"
+            _require(
+                event == expected_event,
+                f"Firecracker relay generation {generation} attempts are reordered",
+            )
+            sandbox_peer_pid = record.get("sandbox_peer_pid")
+            if event == "bytes":
+                guest_to_host = record.get("guest_to_host_bytes")
+                host_to_guest = record.get("host_to_guest_bytes")
+                _require(
+                    type(sandbox_peer_pid) is int
+                    and sandbox_peer_pid > 0
+                    and type(guest_to_host) is int
+                    and guest_to_host > 0
+                    and type(host_to_guest) is int
+                    and host_to_guest >= 0
+                    and (index != len(lines) or host_to_guest > 0),
+                    f"Firecracker relay generation {generation} lacks an observed "
+                    "sandbox peer PID or complete byte counts",
+                )
+                sandbox_peer_pids.add(int(sandbox_peer_pid))
+                byte_records.append(record)
+            else:
+                _require(
+                    "sandbox_peer_pid" not in record,
+                    f"Firecracker relay generation {generation} attached a peer PID "
+                    "to a non-bytes event",
+                )
+        _require(
+            len(identities) == 1,
+            f"Firecracker relay generation {generation} changed sandbox identity",
+        )
+        _require(
+            len(sandbox_peer_pids) == 1,
+            f"Firecracker relay generation {generation} changed sandbox peer PID",
+        )
+        if generation == 1 and first_reused:
+            _require(
+                len(byte_records) >= 2
+                and any(
+                    record.get("host_to_guest_bytes") == 0
+                    for record in byte_records[:-1]
+                ),
+                "Firecracker first-generation reuse lacks a prior lost response",
+            )
+        device, inode = identities.pop()
+        sandbox_identities[generation] = {
+            "device": device,
+            "inode": inode,
+            "sandbox_peer_pid": sandbox_peer_pids.pop(),
+        }
+    return {
+        "backend": "firecracker",
+        "result": result,
+        "firecracker_pids": pids,
+        "host_instance_ids": expected_instance_ids,
+        "sandbox_identities": sandbox_identities,
+    }
 
 
 def _check_vm(
@@ -2622,10 +3226,198 @@ def _check_timeline(
     return {name: int(timeline[name]) for name in names}
 
 
+def _check_firecracker_timeline(
+    directory: Path,
+    docker: Mapping[str, Any],
+    vm: Mapping[str, Any],
+    protocol: Mapping[str, Any],
+) -> dict[str, int]:
+    """Bind outer runner observations to the Firecracker supervisor clock."""
+    timeline = _object(_json_file(directory, "timeline.json"), "run timeline")
+    ordered = [
+        "run_start_ns",
+        "rule_v1_activated_ns",
+        "vm_snapshot_ready_ns",
+        "codex_tool_call_ns",
+        "network_checks_finished_ns",
+        "codex_payment_unknown_ns",
+        "inventory_unknown_ns",
+        "vm_first_succeeded_ns",
+        "vm_paused_ns",
+        "rule_v2_activated_ns",
+        "order_replaced_ns",
+        "control_restarted_ns",
+        "vm_restore_loaded_ns",
+        "sandbox_generation_3_ns",
+        "vm_restore_completed_ns",
+        "codex_turn_completed_ns",
+        "run_facts_complete_ns",
+    ]
+    _require(
+        set(timeline) == set(ordered)
+        and all(type(timeline.get(name)) is int and timeline[name] > 0 for name in ordered)
+        and [timeline[name] for name in ordered] == sorted(timeline[name] for name in ordered)
+        and len({timeline[name] for name in ordered}) == len(ordered),
+        "Firecracker run timeline fields or fault order are invalid",
+    )
+    call_id = vm["result"].get("operation_call_id")
+    events = _list(_json_file(directory, "vm-events.json"), "VM runner events")
+    expected_events = [
+        "snapshot-ready",
+        "first-succeeded",
+        "paused-after-first",
+        "restore-loaded-paused",
+        "completed",
+    ]
+    _require(
+        len(events) == 5
+        and [value.get("event") if isinstance(value, dict) else None for value in events]
+        == expected_events,
+        "Firecracker VM events are incomplete or reordered",
+    )
+    event_values = [
+        _object(value, f"Firecracker VM event {index}")
+        for index, value in enumerate(events)
+    ]
+    snapshot, first, paused, loaded, completed = event_values
+    _require(
+        snapshot == {
+            "event": "snapshot-ready",
+            "guest_kernel": "6.1.155",
+            "firecracker_version": "1.16.1",
+            "observed_time_ns": snapshot.get("observed_time_ns"),
+        }
+        and first
+        == {
+            "event": "first-succeeded",
+            "operation_call_id": call_id,
+            "observed_time_ns": first.get("observed_time_ns"),
+        }
+        and paused
+        == {
+            "event": "paused-after-first",
+            "operation_call_id": call_id,
+            "observed_time_ns": paused.get("observed_time_ns"),
+        }
+        and loaded
+        == {
+            "event": "restore-loaded-paused",
+            "operation_call_id": call_id,
+            "observed_time_ns": loaded.get("observed_time_ns"),
+        }
+        and {
+            key: value
+            for key, value in completed.items()
+            if key not in {"event", "observed_time_ns"}
+        }
+        == vm["result"],
+        "Firecracker VM events do not bind the guest result",
+    )
+    observed = [value.get("observed_time_ns") for value in event_values]
+    _require(
+        all(type(value) is int and value > 0 for value in observed)
+        and observed == [
+            timeline["vm_snapshot_ready_ns"],
+            timeline["vm_first_succeeded_ns"],
+            timeline["vm_paused_ns"],
+            timeline["vm_restore_loaded_ns"],
+            timeline["vm_restore_completed_ns"],
+        ],
+        "Firecracker VM event clocks differ from top-level timeline",
+    )
+    supervisor = _firecracker_supervisor_jsonl(
+        directory / "vm" / "firecracker-supervisor.jsonl"
+    )
+    by_event_generation = {
+        (record.get("event"), record.get("generation")): record
+        for record in supervisor
+        if isinstance(record, dict)
+    }
+    required = [
+        ("run-started", None),
+        ("snapshot-created-paused", 1),
+        ("relay-armed-paused", 1),
+        ("vm-resumed", 1),
+        ("operation-result", 1),
+        ("vm-paused", 1),
+        ("process-stopped", 1),
+        ("process-started", 3),
+        ("snapshot-loaded-paused", 3),
+        ("relay-armed-paused", 3),
+        ("vm-resumed", 3),
+        ("operation-result", 3),
+        ("process-stopped", 3),
+        ("run-completed", None),
+    ]
+    _require(
+        all(
+            key in by_event_generation
+            and type(by_event_generation[key].get("time_ns")) is int
+            for key in required
+        ),
+        "Firecracker supervisor omits restored causal events",
+    )
+    supervisor_time = {
+        key: int(by_event_generation[key]["time_ns"]) for key in required
+    }
+    one_second = 1_000_000_000
+    _require(
+        timeline["rule_v1_activated_ns"]
+        < supervisor_time[("run-started", None)]
+        < supervisor_time[("snapshot-created-paused", 1)]
+        < supervisor_time[("relay-armed-paused", 1)]
+        < timeline["vm_snapshot_ready_ns"]
+        < protocol["process_start_ns"]
+        and protocol["tool_call_ns"]
+        <= timeline["codex_tool_call_ns"]
+        <= protocol["tool_call_ns"] + one_second
+        and timeline["codex_tool_call_ns"] <= docker["probe_start_ns"]
+        and docker["probe_finish_ns"]
+        <= timeline["network_checks_finished_ns"]
+        <= docker["probe_finish_ns"] + one_second
+        and supervisor_time[("relay-armed-paused", 1)]
+        < supervisor_time[("vm-resumed", 1)]
+        and timeline["inventory_unknown_ns"]
+        < supervisor_time[("vm-resumed", 1)]
+        < supervisor_time[("operation-result", 1)]
+        < timeline["vm_first_succeeded_ns"]
+        < supervisor_time[("vm-paused", 1)]
+        < supervisor_time[("process-stopped", 1)]
+        < timeline["vm_paused_ns"]
+        < timeline["rule_v2_activated_ns"]
+        and docker["order_replacement_start_ns"]
+        <= timeline["order_replaced_ns"]
+        < docker["control_crash_started_ns"]
+        and docker["control_crash_finished_ns"]
+        < docker["control_restart_start_ns"]
+        <= timeline["control_restarted_ns"]
+        < supervisor_time[("process-started", 3)]
+        < supervisor_time[("snapshot-loaded-paused", 3)]
+        < timeline["vm_restore_loaded_ns"]
+        < timeline["sandbox_generation_3_ns"]
+        < supervisor_time[("relay-armed-paused", 3)]
+        < supervisor_time[("vm-resumed", 3)]
+        < supervisor_time[("operation-result", 3)]
+        < supervisor_time[("process-stopped", 3)]
+        < supervisor_time[("run-completed", None)]
+        < timeline["vm_restore_completed_ns"]
+        < protocol["callback_ns"]
+        and protocol["turn_completed_ns"]
+        <= timeline["codex_turn_completed_ns"]
+        <= protocol["turn_completed_ns"] + one_second
+        and protocol["process_stop_ns"] <= timeline["run_facts_complete_ns"],
+        "raw Docker, App Server, Firecracker, and runner clocks do not correlate",
+    )
+    return {name: int(timeline[name]) for name in ordered}
+
+
 def _check_sandbox_lifecycle(
     directory: Path,
     docker: Mapping[str, Any],
     timeline: Mapping[str, int],
+    *,
+    vm_backend: str = "qemu",
+    vm: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     records = _list(
         _json_file(directory, "sandbox-lifecycle.json"),
@@ -2639,22 +3431,26 @@ def _check_sandbox_lifecycle(
     basename = "sandbox-" + sha256(VM_SANDBOX_ID.encode()).hexdigest()[:32] + ".sock"
     published: dict[int, int] = {}
     published_inodes: dict[int, int] = {}
+    published_devices: dict[int, int] = {}
     for value, generation in zip((values[0], values[1], values[4]), (1, 2, 3)):
         observed = value.get("observed_time_ns")
         inode = value.get("inode")
+        device = value.get("device")
+        expected_publication = {
+            "event": "published",
+            "generation": generation,
+            "observed_time_ns": observed,
+            "path_basename": basename,
+            "parent_mode": "0700",
+            "socket_mode": "0600",
+            "owner_uid": docker["runtime_uid"],
+            "inode": inode,
+            "health_status": 200,
+        }
+        if vm_backend == "firecracker":
+            expected_publication["device"] = device
         _require(
-            value
-            == {
-                "event": "published",
-                "generation": generation,
-                "observed_time_ns": observed,
-                "path_basename": basename,
-                "parent_mode": "0700",
-                "socket_mode": "0600",
-                "owner_uid": docker["runtime_uid"],
-                "inode": inode,
-                "health_status": 200,
-            }
+            value == expected_publication
             and type(observed) is int
             and type(inode) is int
             and observed > 0
@@ -2663,6 +3459,12 @@ def _check_sandbox_lifecycle(
         )
         published[generation] = int(observed)
         published_inodes[generation] = int(inode)
+        if vm_backend == "firecracker":
+            _require(
+                type(device) is int and device > 0,
+                f"sandbox generation {generation} lacks a device identity",
+            )
+            published_devices[generation] = int(device)
     stale = values[2]
     stale_time = stale.get("observed_time_ns")
     _require(
@@ -2710,6 +3512,27 @@ def _check_sandbox_lifecycle(
         and published[3] == timeline["sandbox_generation_3_ns"],
         "sandbox socket observations do not match the cutover and restart order",
     )
+    if vm_backend == "firecracker":
+        _require(vm is not None, "Firecracker sandbox identity evidence is absent")
+        relay_identities = _object(
+            vm.get("sandbox_identities"), "Firecracker relay sandbox identities"
+        )
+        _require(
+            relay_identities
+            == {
+                generation: {
+                    "device": published_devices[generation],
+                    "inode": published_inodes[generation],
+                    "sandbox_peer_pid": (
+                        docker["control_pid_before"]
+                        if generation == 1
+                        else docker["control_pid_after"]
+                    ),
+                }
+                for generation in (1, 3)
+            },
+            "Firecracker relays did not use the published control sockets",
+        )
     return {
         "credential_free": True,
         "sigkill_stale_inode_observed": True,
@@ -2781,6 +3604,38 @@ def _check_runner_result(
         result.get("protocol") == protocol,
         "runner protocol summary differs from App Server records",
     )
+    _require(
+        result.get("faults")
+        == {
+            "control_pid_after": docker["control_pid_after"],
+            "control_pid_before": docker["control_pid_before"],
+            "control_process_restarted": True,
+            "control_restart_mode": "sigkill",
+            "order_container_after": docker["order_id_after"],
+            "order_container_before": docker["order_id_before"],
+            "order_process_replaced": True,
+            "whole_vm_restored": True,
+        },
+        "runner fault summary differs from Docker and VM evidence",
+    )
+    codex = _object(result.get("codex"), "runner Codex summary")
+    _require(
+        codex
+        == {
+            "login_status": "Logged in using ChatGPT",
+            "model": protocol["model"],
+            "model_provider": "openai",
+            "native_binary_sha256": NATIVE_CODEX_SHA,
+            "real_app_server": True,
+            "version": "codex-cli 0.147.0",
+        },
+        "runner Codex summary does not identify the pinned logged-in App Server",
+    )
+    if provenance.get("vm_backend") == "firecracker":
+        _check_firecracker_runner_result(
+            directory, result, run_id, purchase_id, vm, provenance
+        )
+        return
     _require(
         result.get("provenance")
         == {
@@ -2864,6 +3719,89 @@ def _check_runner_result(
     )
 
 
+def _check_firecracker_runner_result(
+    directory: Path,
+    result: Mapping[str, Any],
+    run_id: str,
+    purchase_id: str,
+    vm: Mapping[str, Any],
+    provenance: Mapping[str, Any],
+) -> None:
+    _require(
+        set(result)
+        == {
+            "codex",
+            "effect_ips",
+            "effects",
+            "evidence_directory",
+            "faults",
+            "history",
+            "network",
+            "provenance",
+            "protocol",
+            "purchase_id",
+            "run_id",
+            "vm",
+        }
+        and result.get("run_id") == run_id
+        and result.get("purchase_id") == purchase_id
+        and isinstance(result.get("evidence_directory"), str)
+        and "/" not in result["evidence_directory"],
+        "Firecracker runner result belongs to another run",
+    )
+    summary = _object(result.get("vm"), "Firecracker runner VM summary")
+    first_reused = vm["result"].get("first_operation_reused")
+    _require(
+        summary
+        == {
+            "backend": "firecracker",
+            "runner_pid": summary.get("runner_pid"),
+            "accelerator": "kvm",
+            "snapshot": "before_purchase",
+            "first_reused": first_reused,
+            "restored_reused": True,
+            "credential_free": True,
+            "sandbox_generation": 3,
+            "transport": "host-unix-socket",
+            "firecracker_pids": vm["firecracker_pids"],
+        }
+        and type(first_reused) is bool
+        and vm["result"].get("restored_operation_reused") is True
+        and type(summary.get("runner_pid")) is int
+        and summary["runner_pid"] > 0
+        and summary["runner_pid"] not in vm["firecracker_pids"],
+        "runner Firecracker VM summary differs from retained evidence",
+    )
+    expected_provenance = {
+        "revision": provenance["revision"],
+        "source_tree_sha256": provenance["source_tree_sha256"],
+        "runtime_image_id": provenance["image_id"],
+        "vm_backend": "firecracker",
+        "firecracker_demo_sha256": provenance["vm_demo_sha256"],
+        "firecracker_guest_sha256": provenance["firecracker_guest_sha256"],
+    }
+    _require(
+        result.get("provenance") == expected_provenance,
+        "runner Firecracker build provenance differs",
+    )
+    runner = _object(
+        _json_file(directory, "vm-runner-process.json"),
+        "Firecracker runner process",
+    )
+    _require(
+        runner
+        == {
+            "schema": 1,
+            "source": "linux-proc-exe-fd",
+            "pid": summary["runner_pid"],
+            "executable": "firecracker-demo",
+            "executable_sha256": provenance["vm_demo_sha256"],
+            "backend": "firecracker",
+        },
+        "Firecracker runner process is not tied to the retained build",
+    )
+
+
 def check_evidence(
     directory: Path, *, runtime_dir: Path | None = None
 ) -> dict[str, Any]:
@@ -2901,16 +3839,34 @@ def check_evidence(
         else Path(__file__).resolve().parents[1]
     )
     provenance = _check_provenance(directory, run_id, repository)
-    history = _check_history_and_effects(
-        directory, run_id, purchase_id, runtime_dir
-    )
-    docker = _check_docker(directory, run_id, provenance)
-    vm = _check_vm(
-        directory,
-        run_id,
-        purchase_id,
-        str(docker["effect_ips"]["ledger"]),
-    )
+    with _recorded_runtime_source(repository, provenance) as verifier_runtime:
+        history = _check_history_and_effects(
+            directory,
+            run_id,
+            purchase_id,
+            verifier_runtime,
+            provenance["vm_backend"],
+        )
+        docker = _check_docker(directory, run_id, provenance)
+        if provenance["vm_backend"] == "qemu":
+            vm = _check_vm(
+                directory,
+                run_id,
+                purchase_id,
+                str(docker["effect_ips"]["ledger"]),
+            )
+        else:
+            vm = _check_firecracker_vm(
+                directory,
+                verifier_runtime,
+                provenance,
+                run_id,
+                purchase_id,
+                history["vm_host_instance_ids"],
+                history["operation_ids"]["vm"],
+                history["external"]["vm"],
+                str(docker["effect_ips"]["ledger"]),
+            )
     remotes = {
         name: str(history["external"][name]["remote_reference"])
         for name in ("codex", "order", "vm")
@@ -2927,8 +3883,20 @@ def check_evidence(
     _check_outcomes(
         directory, history["operation_ids"], history["external"]
     )
-    timeline = _check_timeline(directory, docker, vm, protocol_timing)
-    sandbox_boundary = _check_sandbox_lifecycle(directory, docker, timeline)
+    if provenance["vm_backend"] == "qemu":
+        timeline = _check_timeline(directory, docker, vm, protocol_timing)
+        sandbox_boundary = _check_sandbox_lifecycle(directory, docker, timeline)
+    else:
+        timeline = _check_firecracker_timeline(
+            directory, docker, vm, protocol_timing
+        )
+        sandbox_boundary = _check_sandbox_lifecycle(
+            directory,
+            docker,
+            timeline,
+            vm_backend="firecracker",
+            vm=vm,
+        )
 
     credential = _object(
         _json_file(directory, "credential-lifecycle.json"), "credential lifecycle"
@@ -2962,15 +3930,13 @@ def check_evidence(
     deliveries = sum(int(value["deliveries"]) for value in history["stats"].values())
     commits = sum(int(value["commits"]) for value in history["stats"].values())
     _require(deliveries == 5 and commits == 3, "derived external totals differ")
-    _require(
-        vm["load_command_time_ns"] > docker["control_restart_start_ns"]
-        and vm["load_status_response_time_ns"]
-        <= timeline["vm_restore_loaded_ns"]
-        < timeline["sandbox_generation_3_ns"]
-        < vm["resume_command_time_ns"]
-        and protocol_timing["callback_ns"] > vm["completion_time_ns"],
-        "restored VM or Codex callback did not cross the replaced control process",
-    )
+    if provenance["vm_backend"] == "qemu":
+        _require(vm["load_command_time_ns"] > docker["control_restart_start_ns"] and vm["load_status_response_time_ns"] <= timeline["vm_restore_loaded_ns"] < timeline["sandbox_generation_3_ns"] < vm["resume_command_time_ns"] and protocol_timing["callback_ns"] > vm["completion_time_ns"], "restored VM or Codex callback did not cross the replaced control process")
+    else:
+        _require(
+            timeline["vm_restore_completed_ns"] < protocol_timing["callback_ns"],
+            "Firecracker callback did not follow the restored VM completion",
+        )
     return {
         "valid": True,
         "run_id": run_id,
@@ -3018,12 +3984,21 @@ def check_evidence(
             "completed_turns": 1,
             "final_agent_message": "DONE",
         },
-        "vm": {
-            "accelerator": vm["result"]["accelerator"],
-            "base_image_sha256": BASE_IMAGE_SHA,
-            "qmp_records": vm["qmp_records"],
-            "snapshot": "before_purchase",
-        },
+        "vm": (
+            {
+                "accelerator": vm["result"]["accelerator"],
+                "base_image_sha256": BASE_IMAGE_SHA,
+                "qmp_records": vm["qmp_records"],
+                "snapshot": "before_purchase",
+            }
+            if provenance["vm_backend"] == "qemu"
+            else {
+                "accelerator": vm["result"]["accelerator"],
+                "backend": "firecracker",
+                "firecracker_pids": vm["firecracker_pids"],
+                "snapshot": "before_purchase",
+            }
+        ),
     }
 
 

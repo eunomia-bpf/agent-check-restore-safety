@@ -1,8 +1,15 @@
-.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
+.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
 
 VM_ACCEL ?= tcg
+VM_BACKEND ?= qemu
 VM_DEMO_ARGS ?=
 VM_EVIDENCE ?=
+FIRECRACKER_EVIDENCE ?=
+FIRECRACKER_KVM_TEST_ARGS ?=
+FIRECRACKER_PREFLIGHT_ARGS ?=
+FIRECRACKER_PRODUCTION_PREFLIGHT_ARGS ?=
+FIRECRACKER_BUILD_DIR ?= $(shell python3 -c 'import os; print(os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "safe-change-runtime", "firecracker", "build"))')
+FIRECRACKER_FETCH_INPUTS := runtime/deploy/firecracker/assets.lock.json runtime/deploy/firecracker/fetch-assets.sh
 RUNTIME_IMAGE ?= safe-change-runtime:local
 RUNTIME_VERSION ?= dev
 RUNTIME_REVISION ?= $(shell git rev-parse --short=12 HEAD)
@@ -47,6 +54,74 @@ runtime-vm-check:
 	@test -n "$(strip $(VM_EVIDENCE))" || { echo "VM_EVIDENCE must name a retained VM evidence directory" >&2; exit 2; }
 	cd runtime && go run ./cmd/check-vm-evidence -evidence "$(abspath $(VM_EVIDENCE))"
 
+# Fetches only checksum-pinned Firecracker v1.16.1 and guest-kernel assets.
+# This target does not open /dev/kvm or start a microVM.
+runtime-firecracker-source-check:
+	@for firecracker_input in $(FIRECRACKER_FETCH_INPUTS); do \
+		test -f "$$firecracker_input" && test ! -L "$$firecracker_input" || { \
+			echo "$$firecracker_input must be a direct regular file" >&2; \
+			exit 2; \
+		}; \
+		expected_hash="$$(git rev-parse --verify "HEAD:$$firecracker_input" 2>/dev/null)" || { \
+			echo "$$firecracker_input must be committed before the Firecracker fetcher can run" >&2; \
+			exit 2; \
+		}; \
+		actual_hash="$$(git hash-object --no-filters "$$firecracker_input")" || exit 2; \
+		test "$$actual_hash" = "$$expected_hash" || { \
+			echo "$$firecracker_input bytes do not match HEAD" >&2; \
+			exit 2; \
+		}; \
+	done
+	@test -z "$$(git status --porcelain=v1 --untracked-files=all -- $(FIRECRACKER_FETCH_INPUTS))" || { \
+		echo "Firecracker fetch inputs must match HEAD before execution" >&2; \
+		git status --short -- $(FIRECRACKER_FETCH_INPUTS) >&2; \
+		exit 2; \
+	}
+
+runtime-firecracker-fetch: runtime-firecracker-source-check
+	bash runtime/deploy/firecracker/fetch-assets.sh
+
+runtime-firecracker-build:
+	@mkdir -p "$(FIRECRACKER_BUILD_DIR)"
+	@chmod 0700 "$(FIRECRACKER_BUILD_DIR)"
+	cd runtime && CGO_ENABLED=0 go build -trimpath \
+		-o "$(FIRECRACKER_BUILD_DIR)/firecracker-guest" ./cmd/firecracker-guest
+	cd runtime && CGO_ENABLED=0 go build -trimpath \
+		-o "$(FIRECRACKER_BUILD_DIR)/firecracker-demo" ./cmd/firecracker-demo
+	@chmod 0500 \
+		"$(FIRECRACKER_BUILD_DIR)/firecracker-guest" \
+		"$(FIRECRACKER_BUILD_DIR)/firecracker-demo"
+	@printf '%s\n' \
+		"FIRECRACKER_GUEST=$(FIRECRACKER_BUILD_DIR)/firecracker-guest" \
+		"FIRECRACKER_RUNNER=$(FIRECRACKER_BUILD_DIR)/firecracker-demo"
+
+# Read-only admission checks. Fetch/build are separate so a failed preflight
+# never fixes or hides the condition it was asked to report.
+runtime-firecracker-preflight:
+	@cd runtime && go run ./cmd/firecracker-preflight \
+		-level prototype \
+		-guest "$(abspath $(FIRECRACKER_BUILD_DIR)/firecracker-guest)" $(FIRECRACKER_PREFLIGHT_ARGS)
+
+# This remains NOT READY until the runner itself launches only through jailer.
+runtime-firecracker-production-preflight:
+	@cd runtime && go run ./cmd/firecracker-preflight \
+		-level production \
+		-guest "$(abspath $(FIRECRACKER_BUILD_DIR)/firecracker-guest)" $(FIRECRACKER_PRODUCTION_PREFLIGHT_ARGS)
+
+# Explicit real-KVM integration test. It is intentionally excluded from
+# runtime-verify so ordinary builds never acquire hardware virtualization.
+runtime-firecracker-kvm-test: runtime-firecracker-fetch runtime-firecracker-build
+	@test -c /dev/kvm || { echo "/dev/kvm is missing or is not a character device" >&2; exit 2; }
+	@test -r /dev/kvm && test -w /dev/kvm || { echo "Firecracker requires read/write access to /dev/kvm; refresh the kvm group or run: sg kvm -c 'make runtime-firecracker-kvm-test'" >&2; exit 2; }
+	cd runtime && FIRECRACKER_KVM_INTEGRATION=1 go test -count=1 -v \
+		-run '^TestFirecrackerKVMRestore$$' ./cmd/firecracker-demo \
+		$(FIRECRACKER_KVM_TEST_ARGS)
+
+runtime-firecracker-check:
+	@test -n "$(strip $(FIRECRACKER_EVIDENCE))" || { echo "FIRECRACKER_EVIDENCE must name a retained Firecracker evidence directory" >&2; exit 2; }
+	cd runtime && go run ./cmd/check-firecracker-evidence \
+		-evidence "$(abspath $(FIRECRACKER_EVIDENCE))"
+
 # Explicit live-account target. It is intentionally not part of runtime-verify.
 runtime-codex-demo:
 	python3 -m adapter.codex_runtime_demo $(CODEX_DEMO_ARGS)
@@ -60,9 +135,12 @@ runtime-codex-isolated-check:
 		"$(CODEX_ISOLATED_EVIDENCE)" --runtime-dir runtime
 
 # Explicit live-account + full-VM target. All actors share one History.
+ifeq ($(VM_BACKEND),firecracker)
+runtime-integrated-demo: runtime-firecracker-fetch
+endif
 runtime-integrated-demo:
 	python3 -I -c 'import runpy,sys; sys.path.insert(0,"$(CURDIR)"); runpy.run_module("adapter.codex_integrated_runtime_demo",run_name="__main__")' \
-		--vm-accel "$(VM_ACCEL)" $(INTEGRATED_DEMO_ARGS)
+		--vm-backend "$(VM_BACKEND)" --vm-accel "$(VM_ACCEL)" $(INTEGRATED_DEMO_ARGS)
 
 runtime-integrated-check:
 	python3 -m adapter.check_codex_integrated_evidence \
