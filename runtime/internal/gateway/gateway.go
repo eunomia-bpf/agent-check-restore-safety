@@ -249,6 +249,10 @@ func (g *Gateway) execute(
 	if exists && digest != prior.RequestHash {
 		return Outcome{}, ErrStoredRequestMismatch
 	}
+	// The digest is computed without this self-describing header, then attached
+	// to the exact request that crosses the external boundary. Provider
+	// adapters use it to bind durable effect facts to the History record.
+	httpRequest.Header.Set("X-Operation-Request-Hash", digest)
 	var operation kernel.Operation
 	if binding == nil {
 		operation, err = g.control.PrepareWithRequest(

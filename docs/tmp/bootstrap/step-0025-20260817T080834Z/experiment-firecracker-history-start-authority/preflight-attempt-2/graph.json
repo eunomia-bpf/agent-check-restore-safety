@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "repository": "https://github.com/delimitrou/DeathStarBench.git",
+  "tag": "hotelReservation-0.3.5",
+  "commit": "6ecb09706140f8730b5385c08f1386c654c3c526",
+  "tree": "0ac0fd6d4ccfa1472d3895384d45fef5c6246b03",
+  "official_services": 24,
+  "official_compose_running": 23,
+  "compose_frontend_scaled_to_zero": true,
+  "custom_unmodified_frontend_running": true,
+  "application_image": "safe-change-step25/deathstar:hotel-reservation-0.3.5",
+  "application_image_id": "sha256:10fcbf072859c2cbb6492657b0077480f6931cbd057b2b562485633ec2667162",
+  "runtime_image": "safe-change-step25/runtime:local",
+  "runtime_image_id": "sha256:dd0cf8bf87a4a2318bb907e479b020d005dfbb5690dbfee610691c7d34df6403",
+  "runtime_tree_hash": "93932d0dbfc77354884d8e49654e7d59433556f5a20796add3e7d68c03a68384",
+  "runtime_status": " M Makefile\n M adapter/firecracker_claude_mcp_runtime_demo.py\n M runtime/cmd/firecracker-claude-cell/main.go\n M runtime/internal/vmresume/guard.go\n M runtime/internal/vmresume/guard_test.go\n?? adapter/check_firecracker_history_start_evidence.py\n?? adapter/firecracker_history_cleanup.py\n?? adapter/firecracker_history_start_demo.py\n?? adapter/test_firecracker_history_start.py\n?? runtime/cmd/firecracker-claude-cell/launch_baseline.go\n?? runtime/cmd/firecracker-claude-cell/launch_history.go\n?? runtime/cmd/firecracker-claude-cell/launch_history_test.go\n?? runtime/deploy/firecracker-history/run.sh\n?? runtime/internal/vmresume/lifecycle.go\n?? runtime/internal/vmresume/lifecycle_test.go",
+  "networks": {
+    "application": "safe-change-firecracker-history-step25_default",
+    "frontdoor": "safe-change-step25-frontdoor",
+    "observation": "safe-change-step25-observation"
+  },
+  "source_modified": false,
+  "pass": true
+}

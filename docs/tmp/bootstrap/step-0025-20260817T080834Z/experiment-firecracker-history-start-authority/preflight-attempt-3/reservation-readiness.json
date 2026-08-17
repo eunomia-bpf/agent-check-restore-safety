@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "customer_name": "step25-readiness",
+  "response": {
+    "message": "Reserve successfully!"
+  },
+  "observed_time_ns": 1786957124169021797,
+  "disjoint_from_measured_operations": true
+}

@@ -11,8 +11,8 @@ import (
 const (
 	// HeaderOperationID carries the stable runtime Operation identity.
 	HeaderOperationID = "X-Operation-ID"
-	// HeaderOperationRequestHash binds an observation to the request stored in
-	// History. It is present only on observation requests.
+	// HeaderOperationRequestHash binds an effect or observation to the request
+	// stored in History.
 	HeaderOperationRequestHash = "X-Operation-Request-Hash"
 	// HeaderIdempotencyKey is equal to HeaderOperationID on effect requests.
 	HeaderIdempotencyKey = "Idempotency-Key"
@@ -37,6 +37,7 @@ const (
 type Effect struct {
 	OperationID    string
 	IdempotencyKey string
+	RequestHash    string
 	ContentType    string
 	Body           []byte
 }

@@ -1,0 +1,79 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.34kB done
+#1 DONE 0.1s
+
+#2 [internal] load metadata for docker.io/library/alpine:3.22.2@sha256:4b7ce07002c69e8f3d704a9c5d6fd3053be500b7f1c69fc0d80990c2ad8dd412
+#2 DONE 0.1s
+
+#3 [internal] load metadata for docker.io/library/golang:1.25.13-alpine@sha256:844b27705f54e73773e0f9bc3c780633b9d7f4b4831bf35cdad02a81a4c80bd0
+#3 DONE 0.1s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 DONE 0.0s
+
+#6 [stage-1 1/3] FROM docker.io/library/alpine:3.22.2@sha256:4b7ce07002c69e8f3d704a9c5d6fd3053be500b7f1c69fc0d80990c2ad8dd412
+#6 resolve docker.io/library/alpine:3.22.2@sha256:4b7ce07002c69e8f3d704a9c5d6fd3053be500b7f1c69fc0d80990c2ad8dd412 0.0s done
+#6 ...
+
+#7 [build 1/5] FROM docker.io/library/golang:1.25.13-alpine@sha256:844b27705f54e73773e0f9bc3c780633b9d7f4b4831bf35cdad02a81a4c80bd0
+#7 resolve docker.io/library/golang:1.25.13-alpine@sha256:844b27705f54e73773e0f9bc3c780633b9d7f4b4831bf35cdad02a81a4c80bd0 0.0s done
+#7 DONE 0.1s
+
+#6 [stage-1 1/3] FROM docker.io/library/alpine:3.22.2@sha256:4b7ce07002c69e8f3d704a9c5d6fd3053be500b7f1c69fc0d80990c2ad8dd412
+#6 CACHED
+
+#5 [internal] load build context
+#5 transferring context: 41.74kB 0.0s done
+#5 DONE 0.1s
+
+#8 [build 2/5] WORKDIR /src
+#8 CACHED
+
+#9 [build 3/5] COPY go.mod go.sum ./
+#9 CACHED
+
+#10 [build 4/5] COPY . ./
+#10 DONE 0.2s
+
+#11 [stage-1 2/3] RUN apk add --no-cache ca-certificates
+#11 0.355 fetch https://dl-cdn.alpinelinux.org/alpine/v3.22/main/x86_64/APKINDEX.tar.gz
+#11 0.485 fetch https://dl-cdn.alpinelinux.org/alpine/v3.22/community/x86_64/APKINDEX.tar.gz
+#11 0.871 (1/1) Installing ca-certificates (20260611-r0)
+#11 0.957 Executing busybox-1.37.0-r19.trigger
+#11 0.970 Executing ca-certificates-20260611-r0.trigger
+#11 1.014 OK: 8 MiB in 17 packages
+#11 DONE 1.2s
+
+#12 [build 5/5] RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/control ./cmd/control &&     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/safe-change ./cmd/safe-change &&     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/effect-proxy ./cmd/effect-proxy &&     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/order ./cmd/order &&     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/payment ./cmd/payment &&     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/ingress ./cmd/ingress &&     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/deathstar-adapter ./cmd/deathstar-adapter
+#12 0.295 go: downloading golang.org/x/sys v0.30.0
+#12 11.73 go: downloading go.mongodb.org/mongo-driver/v2 v2.8.0
+#12 12.30 go: downloading github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78
+#12 12.30 go: downloading github.com/klauspost/compress v1.17.6
+#12 12.30 go: downloading github.com/xdg-go/scram v1.2.0
+#12 12.30 go: downloading github.com/xdg-go/stringprep v1.0.4
+#12 12.30 go: downloading golang.org/x/sync v0.21.0
+#12 12.30 go: downloading golang.org/x/crypto v0.33.0
+#12 12.36 go: downloading golang.org/x/text v0.39.0
+#12 DONE 19.3s
+
+#13 [stage-1 3/3] COPY --from=build /out/control /out/safe-change /out/effect-proxy /out/order /out/payment /out/ingress /out/deathstar-adapter /usr/local/bin/
+#13 DONE 0.3s
+
+#14 exporting to image
+#14 exporting layers
+#14 exporting layers 2.3s done
+#14 exporting manifest sha256:cdf8dd1f9c69836b25cf7ae6c905fa6efc0d2373037162f9e7ab0d192b54cf50 0.0s done
+#14 exporting config sha256:21cf4549e8c553f262763391c2e842c2698c4e241c53ec8f04271002c858b626 0.0s done
+#14 exporting attestation manifest sha256:84808427ce03411ea7d956634d5ec50047bf2fbd962416101b9ceef50111ade4 0.0s done
+#14 exporting manifest list sha256:6c781c69faf2726e3b1260f34a3f24a65e9d93ebe47a561cb4cdb5ffacd55f48 0.0s done
+#14 naming to docker.io/safe-change-step25/runtime:local
+#14 naming to docker.io/safe-change-step25/runtime:local done
+#14 unpacking to docker.io/safe-change-step25/runtime:local
+#14 unpacking to docker.io/safe-change-step25/runtime:local 0.4s done
+#14 DONE 2.9s

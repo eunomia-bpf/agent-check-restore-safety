@@ -1,4 +1,4 @@
-.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-qemu-agent-restore-build runtime-qemu-agent-restore-preflight runtime-qemu-agent-restore-admit runtime-qemu-agent-restore-demo runtime-qemu-agent-restore-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-repository runtime-firecracker-codex-demo runtime-firecracker-codex-mcp-demo runtime-firecracker-codex-mcp-inflight-demo runtime-firecracker-codex-mcp-check runtime-firecracker-codex-check runtime-firecracker-codex-control-check runtime-firecracker-claude-build runtime-firecracker-claude-payload runtime-firecracker-claude-demo runtime-firecracker-claude-check runtime-firecracker-deathstar-build runtime-firecracker-deathstar-payload runtime-firecracker-deathstar-demo runtime-firecracker-deathstar-check runtime-mcp-operation-build runtime-mcp-operation-check runtime-mcp-operation-demo runtime-codex-mcp-build runtime-codex-mcp-demo runtime-codex-mcp-docker-demo runtime-codex-mcp-check runtime-claude-source-check runtime-claude-fetch runtime-claude-mcp-demo runtime-claude-mcp-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
+.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-qemu-agent-restore-build runtime-qemu-agent-restore-preflight runtime-qemu-agent-restore-admit runtime-qemu-agent-restore-demo runtime-qemu-agent-restore-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-repository runtime-firecracker-codex-demo runtime-firecracker-codex-mcp-demo runtime-firecracker-codex-mcp-inflight-demo runtime-firecracker-codex-mcp-check runtime-firecracker-codex-check runtime-firecracker-codex-control-check runtime-firecracker-claude-build runtime-firecracker-claude-payload runtime-firecracker-claude-demo runtime-firecracker-claude-check runtime-firecracker-deathstar-build runtime-firecracker-deathstar-payload runtime-firecracker-deathstar-demo runtime-firecracker-deathstar-check runtime-firecracker-history-build runtime-firecracker-history-payload runtime-firecracker-history-preflight runtime-firecracker-history-admit runtime-firecracker-history-demo runtime-firecracker-history-check runtime-mcp-operation-build runtime-mcp-operation-check runtime-mcp-operation-demo runtime-codex-mcp-build runtime-codex-mcp-demo runtime-codex-mcp-docker-demo runtime-codex-mcp-check runtime-claude-source-check runtime-claude-fetch runtime-claude-mcp-demo runtime-claude-mcp-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
 
 VM_ACCEL ?= tcg
 VM_BACKEND ?= qemu
@@ -37,6 +37,13 @@ FIRECRACKER_DEATHSTAR_BASH ?= /bin/bash
 FIRECRACKER_DEATHSTAR_BASH_LIBRARY ?= $(shell readlink -f /lib/x86_64-linux-gnu/libtinfo.so.6)
 FIRECRACKER_DEATHSTAR_EVIDENCE ?= docs/tmp/bootstrap/step-0022-20260817T025925Z/experiment-firecracker-deathstar-egress/raw
 FIRECRACKER_DEATHSTAR_REPETITIONS ?= 3
+FIRECRACKER_HISTORY_BUILD_DIR ?= $(shell python3 -c 'import os; print(os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "safe-change-runtime", "firecracker-history"))')
+FIRECRACKER_HISTORY_PROTECTED_CELL ?= $(FIRECRACKER_HISTORY_BUILD_DIR)/firecracker-history-cell
+FIRECRACKER_HISTORY_BASELINE_CELL ?= $(FIRECRACKER_HISTORY_BUILD_DIR)/firecracker-baseline-cell
+FIRECRACKER_HISTORY_EVIDENCE ?= docs/tmp/bootstrap/step-0025-20260817T080834Z/experiment-firecracker-history-start-authority/raw
+FIRECRACKER_HISTORY_PREFLIGHT_EVIDENCE ?= docs/tmp/bootstrap/step-0025-20260817T080834Z/experiment-firecracker-history-start-authority/preflight-attempt-1
+FIRECRACKER_HISTORY_PREFLIGHT_GATE ?= docs/tmp/bootstrap/step-0025-20260817T080834Z/experiment-firecracker-history-start-authority/preflight-pass.json
+FIRECRACKER_HISTORY_REPETITIONS ?= 3
 MCP_OPERATION_BUILD_DIR ?= $(shell python3 -c 'import os; print(os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "safe-change-runtime", "mcp-operation"))')
 MCP_RELAY_BUNDLE_DIR ?= $(MCP_OPERATION_BUILD_DIR)/relay-bundle
 CODEX_MCP_DEMO_ARGS ?=
@@ -394,6 +401,83 @@ runtime-firecracker-deathstar-check:
 	python3 -m adapter.check_firecracker_deathstar_egress_evidence \
 		"$(abspath $(FIRECRACKER_DEATHSTAR_EVIDENCE))" \
 		--expected-repetitions "$(FIRECRACKER_DEATHSTAR_REPETITIONS)"
+
+# History is the sole owner of InstanceStart in the protected executable.
+# The baseline executable is built without that path and is never admitted to
+# a protected lane.
+runtime-firecracker-history-build: runtime-firecracker-deathstar-build
+	@mkdir -p "$(FIRECRACKER_HISTORY_BUILD_DIR)"
+	@chmod 0700 "$(FIRECRACKER_HISTORY_BUILD_DIR)"
+	cd runtime && CGO_ENABLED=0 go build -buildvcs=false -trimpath -tags historyguard \
+		-o "$(FIRECRACKER_HISTORY_PROTECTED_CELL)" ./cmd/firecracker-claude-cell
+	cd runtime && CGO_ENABLED=0 go build -buildvcs=false -trimpath \
+		-o "$(FIRECRACKER_HISTORY_BASELINE_CELL)" ./cmd/firecracker-claude-cell
+	cd runtime && CGO_ENABLED=0 go build -buildvcs=false -trimpath \
+		-o "$(FIRECRACKER_HISTORY_BUILD_DIR)/deathstar-adapter" ./cmd/deathstar-adapter
+	cd runtime && CGO_ENABLED=0 go build -buildvcs=false -trimpath \
+		-o "$(FIRECRACKER_HISTORY_BUILD_DIR)/check-certificate" ./cmd/check-certificate
+	@chmod 0500 "$(FIRECRACKER_HISTORY_PROTECTED_CELL)" "$(FIRECRACKER_HISTORY_BASELINE_CELL)" \
+		"$(FIRECRACKER_HISTORY_BUILD_DIR)/deathstar-adapter" \
+		"$(FIRECRACKER_HISTORY_BUILD_DIR)/check-certificate"
+	@test "$$(sha256sum "$(FIRECRACKER_HISTORY_PROTECTED_CELL)" | cut -d' ' -f1)" != \
+		"$$(sha256sum "$(FIRECRACKER_HISTORY_BASELINE_CELL)" | cut -d' ' -f1)"
+	@sha256sum "$(FIRECRACKER_HISTORY_PROTECTED_CELL)" "$(FIRECRACKER_HISTORY_BASELINE_CELL)" \
+		"$(FIRECRACKER_HISTORY_BUILD_DIR)/deathstar-adapter" \
+		"$(FIRECRACKER_HISTORY_BUILD_DIR)/check-certificate"
+
+runtime-firecracker-history-payload: runtime-firecracker-deathstar-payload
+
+runtime-firecracker-history-preflight: runtime-firecracker-history-build runtime-firecracker-history-payload
+	PROTECTED_CELL_BINARY="$(abspath $(FIRECRACKER_HISTORY_PROTECTED_CELL))" \
+	BASELINE_CELL_BINARY="$(abspath $(FIRECRACKER_HISTORY_BASELINE_CELL))" \
+	GUEST_BINARY="$(abspath $(FIRECRACKER_CLAUDE_GUEST))" \
+	PAYLOAD="$(abspath $(FIRECRACKER_DEATHSTAR_PAYLOAD))" \
+	PAYLOAD_RESULT="$(abspath $(FIRECRACKER_DEATHSTAR_PAYLOAD_RESULT))" \
+	CLAUDE_BINARY="$(abspath $(CLAUDE_CODE_BINARY))" CLAUDE_SHA256="$(CLAUDE_CODE_SHA256)" \
+	CONTROL_BINARY="$(abspath $(MCP_OPERATION_BUILD_DIR))/control" \
+	EFFECT_PROXY_BINARY="$(abspath $(FIRECRACKER_CLAUDE_BUILD_DIR))/effect-proxy" \
+	DEATHSTAR_ADAPTER_BINARY="$(abspath $(FIRECRACKER_HISTORY_BUILD_DIR))/deathstar-adapter" \
+	CERTIFICATE_CHECKER_BINARY="$(abspath $(FIRECRACKER_HISTORY_BUILD_DIR))/check-certificate" \
+	EVIDENCE_DIR="$(abspath $(FIRECRACKER_HISTORY_PREFLIGHT_EVIDENCE))" REPETITIONS=1 \
+	bash runtime/deploy/firecracker-history/run.sh
+
+runtime-firecracker-history-admit: runtime-firecracker-history-build
+	@test -n "$(strip $(FIRECRACKER_HISTORY_PREFLIGHT_EVIDENCE))" || { echo "FIRECRACKER_HISTORY_PREFLIGHT_EVIDENCE is required" >&2; exit 2; }
+	@if test -e "$(abspath $(FIRECRACKER_HISTORY_PREFLIGHT_GATE))"; then \
+		python3 -I adapter/qemu_agent_restore_gate.py verify \
+			--repo-root "$(CURDIR)" --gate "$(abspath $(FIRECRACKER_HISTORY_PREFLIGHT_GATE))" \
+			--checker "$(CURDIR)/adapter/check_firecracker_history_start_evidence.py" \
+			--certificate-checker "$(FIRECRACKER_HISTORY_BUILD_DIR)/check-certificate"; \
+	else \
+		python3 -I adapter/qemu_agent_restore_gate.py create \
+			--repo-root "$(CURDIR)" --evidence "$(abspath $(FIRECRACKER_HISTORY_PREFLIGHT_EVIDENCE))" \
+			--gate "$(abspath $(FIRECRACKER_HISTORY_PREFLIGHT_GATE))" \
+			--checker "$(CURDIR)/adapter/check_firecracker_history_start_evidence.py" \
+			--certificate-checker "$(FIRECRACKER_HISTORY_BUILD_DIR)/check-certificate"; \
+	fi
+
+runtime-firecracker-history-demo: runtime-firecracker-history-build runtime-firecracker-history-payload runtime-firecracker-history-admit
+	PROTECTED_CELL_BINARY="$(abspath $(FIRECRACKER_HISTORY_PROTECTED_CELL))" \
+	BASELINE_CELL_BINARY="$(abspath $(FIRECRACKER_HISTORY_BASELINE_CELL))" \
+	GUEST_BINARY="$(abspath $(FIRECRACKER_CLAUDE_GUEST))" \
+	PAYLOAD="$(abspath $(FIRECRACKER_DEATHSTAR_PAYLOAD))" \
+	PAYLOAD_RESULT="$(abspath $(FIRECRACKER_DEATHSTAR_PAYLOAD_RESULT))" \
+	CLAUDE_BINARY="$(abspath $(CLAUDE_CODE_BINARY))" CLAUDE_SHA256="$(CLAUDE_CODE_SHA256)" \
+	CONTROL_BINARY="$(abspath $(MCP_OPERATION_BUILD_DIR))/control" \
+	EFFECT_PROXY_BINARY="$(abspath $(FIRECRACKER_CLAUDE_BUILD_DIR))/effect-proxy" \
+	DEATHSTAR_ADAPTER_BINARY="$(abspath $(FIRECRACKER_HISTORY_BUILD_DIR))/deathstar-adapter" \
+	CERTIFICATE_CHECKER_BINARY="$(abspath $(FIRECRACKER_HISTORY_BUILD_DIR))/check-certificate" \
+	EVIDENCE_CHECKER="$(CURDIR)/adapter/check_firecracker_history_start_evidence.py" \
+	PREFLIGHT_GATE="$(abspath $(FIRECRACKER_HISTORY_PREFLIGHT_GATE))" \
+	EVIDENCE_DIR="$(abspath $(FIRECRACKER_HISTORY_EVIDENCE))" REPETITIONS="$(FIRECRACKER_HISTORY_REPETITIONS)" \
+	bash runtime/deploy/firecracker-history/run.sh
+
+runtime-firecracker-history-check: runtime-firecracker-history-build
+	@test -n "$(strip $(FIRECRACKER_HISTORY_EVIDENCE))" || { echo "FIRECRACKER_HISTORY_EVIDENCE is required" >&2; exit 2; }
+	python3 -I adapter/check_firecracker_history_start_evidence.py \
+		--evidence "$(abspath $(FIRECRACKER_HISTORY_EVIDENCE))" \
+		--certificate-checker "$(FIRECRACKER_HISTORY_BUILD_DIR)/check-certificate" \
+		--expected-repetitions "$(FIRECRACKER_HISTORY_REPETITIONS)"
 
 # Provider-independent MCP stdio boundary. The server binary contains no
 # provider target or credential; an active sandbox Unix socket supplies both.

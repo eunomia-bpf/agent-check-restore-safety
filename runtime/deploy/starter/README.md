@@ -80,8 +80,10 @@ The `provider` network is internal. If the adapter must call an Internet API,
 attach only that adapter to a second egress-enabled network; never add egress
 to `control`, `effect-proxy`, or the `provider` network itself.
 
-The effect endpoint receives `Idempotency-Key` and `X-Operation-ID`. A settled
-200 JSON response must implement `operation-receipt-v1`:
+The effect endpoint receives `Idempotency-Key`, `X-Operation-ID`, and
+`X-Operation-Request-Hash`. The request hash binds the provider-side action to
+the exact request recorded in History. A settled 200 JSON response must
+implement `operation-receipt-v1`:
 
 ```json
 {"schema":1,"operation_id":"<X-Operation-ID>","outcome":"succeeded","result_hash":"<64 lowercase hex>","remote_reference":"provider/object-id"}

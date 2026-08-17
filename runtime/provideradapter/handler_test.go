@@ -58,6 +58,7 @@ func effectRequest(body string) *http.Request {
 	request := httptest.NewRequest(http.MethodPost, "http://adapter.test/v1/payment", strings.NewReader(body))
 	request.Header.Set(HeaderOperationID, testOperationID)
 	request.Header.Set(HeaderIdempotencyKey, testOperationID)
+	request.Header.Set(HeaderOperationRequestHash, testRequestHash)
 	request.Header.Set("Content-Type", "application/json; charset=utf-8")
 	return request
 }
@@ -102,6 +103,7 @@ func TestHandlerWritesStrictReceiptAndObservation(t *testing.T) {
 		t.Fatal("security response headers are missing")
 	}
 	if driver.effect.OperationID != testOperationID || driver.effect.IdempotencyKey != testOperationID ||
+		driver.effect.RequestHash != testRequestHash ||
 		driver.effect.ContentType != "application/json; charset=utf-8" || string(driver.effect.Body) != body {
 		t.Fatalf("Driver received effect %+v", driver.effect)
 	}
@@ -202,9 +204,14 @@ func TestHandlerRejectsInvalidHeadersBeforeDriver(t *testing.T) {
 			request.Header.Set(HeaderIdempotencyKey, "op-"+strings.Repeat("c", 64))
 			return request
 		}},
-		{name: "effect-observation-hash", request: func() *http.Request {
+		{name: "effect-missing-request-hash", request: func() *http.Request {
 			request := effectRequest(`{}`)
-			request.Header.Set(HeaderOperationRequestHash, testRequestHash)
+			request.Header.Del(HeaderOperationRequestHash)
+			return request
+		}},
+		{name: "effect-noncanonical-request-hash", request: func() *http.Request {
+			request := effectRequest(`{}`)
+			request.Header.Set(HeaderOperationRequestHash, strings.Repeat("B", 64))
 			return request
 		}},
 		{name: "duplicate-content-type", request: func() *http.Request {

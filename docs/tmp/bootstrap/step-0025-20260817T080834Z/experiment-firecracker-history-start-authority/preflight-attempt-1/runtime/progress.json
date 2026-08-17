@@ -1,0 +1,1 @@
+{"elapsed_seconds":1.056017791,"error":"DemoError: h1-1-source exited before ready: 2026/08/17 08:51:40 Firecracker Claude cell failed: lifecycle runtime facts are not canonical JSON\n","repetitions":1,"schema":1,"stage":"failed","started_time_ns":1786956699592242563,"status":"failed","updated_time_ns":1786956700648260354}

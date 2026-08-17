@@ -66,6 +66,7 @@ type options struct {
 	busyBoxSHA256     string
 	bashSHA256        string
 	evidenceDir       string
+	launchManifest    string
 }
 
 type artifactRecord struct {
@@ -100,6 +101,9 @@ type cellResult struct {
 	NetworkInterfaces  int                       `json:"network_interfaces"`
 	RootBlockDevices   int                       `json:"root_block_devices"`
 	ReadOnlyPayload    bool                      `json:"read_only_payload"`
+	LaunchGuarded      bool                      `json:"launch_guarded"`
+	LaunchDecision     string                    `json:"launch_decision"`
+	InstanceStarted    bool                      `json:"instance_started"`
 	GuestResult        *firecracker.Result       `json:"guest_result,omitempty"`
 	Process            processRecord             `json:"process"`
 	Artifacts          map[string]artifactRecord `json:"artifacts"`
@@ -108,6 +112,21 @@ type cellResult struct {
 type sealedArtifact struct {
 	file   *os.File
 	record artifactRecord
+}
+
+type launchInputs struct {
+	client        *firecracker.Client
+	process       *firecracker.Process
+	artifacts     map[string]artifactRecord
+	artifactFiles map[string]*os.File
+	configuration json.RawMessage
+	evidenceDir   string
+}
+
+type launchResult struct {
+	Guarded  bool
+	Decision string
+	Started  bool
 }
 
 func main() {
@@ -133,6 +152,7 @@ func main() {
 	flag.StringVar(&config.busyBoxSHA256, "busybox-sha256", "", "required HTTP-profile BusyBox SHA-256")
 	flag.StringVar(&config.bashSHA256, "bash-sha256", "", "required HTTP-profile Bash wrapper SHA-256")
 	flag.StringVar(&config.evidenceDir, "evidence-dir", "", "empty private evidence directory")
+	registerLaunchFlags(&config)
 	flag.Parse()
 	if err := run(config, os.Stdin, os.Stdout); err != nil {
 		log.Printf("Firecracker Claude cell failed: %v", err)
@@ -175,6 +195,9 @@ func run(config options, input io.Reader, output io.Writer) (returnErr error) {
 	if config.profile == agentguest.ClaudeHTTPProfile && (config.egressTarget == "" || config.busyBoxSHA256 == "" || config.bashSHA256 == "") {
 		return errors.New("HTTP profile requires egress target, BusyBox, and Bash SHA-256")
 	}
+	if err := validateLaunchOptions(config); err != nil {
+		return err
+	}
 	if err := requireKVM(); err != nil {
 		return err
 	}
@@ -182,6 +205,7 @@ func run(config options, input io.Reader, output io.Writer) (returnErr error) {
 	if config.mcpHostSocket != "" {
 		paths = append(paths, &config.mcpHostSocket)
 	}
+	paths = append(paths, launchOptionPaths(&config)...)
 	for _, pointer := range paths {
 		absolute, err := filepath.Abs(*pointer)
 		if err != nil {
@@ -386,18 +410,63 @@ func run(config options, input io.Reader, output io.Writer) (returnErr error) {
 	}
 	defer operationRelay.Abort()
 
-	if err := client.Configure(ctx,
-		firecracker.MachineConfig{VCPUCount: 1, MemSizeMiB: guestMemoryMiB, SMT: false, TrackDirtyPages: false},
-		firecracker.BootSource{KernelImagePath: "/proc/self/fd/4", InitrdPath: "/proc/self/fd/5", BootArgs: bootArguments},
-		firecracker.VsockDevice{GuestCID: guestCID, UDSPath: basePath},
-	); err != nil {
+	machine := firecracker.MachineConfig{VCPUCount: 1, MemSizeMiB: guestMemoryMiB, SMT: false, TrackDirtyPages: false}
+	boot := firecracker.BootSource{KernelImagePath: "/proc/self/fd/4", InitrdPath: "/proc/self/fd/5", BootArgs: bootArguments}
+	vsock := firecracker.VsockDevice{GuestCID: guestCID, UDSPath: basePath}
+	drive := firecracker.Drive{DriveID: "payload", PathOnHost: "/proc/self/fd/6", IsRootDevice: false, IsReadOnly: true}
+	machineDescription, err := json.Marshal(struct {
+		Schema      int                       `json:"schema"`
+		Machine     firecracker.MachineConfig `json:"machine"`
+		Boot        firecracker.BootSource    `json:"boot"`
+		Vsock       firecracker.VsockDevice   `json:"vsock"`
+		Drive       firecracker.Drive         `json:"drive"`
+		ToolProfile string                    `json:"tool_profile"`
+	}{1, machine, boot, vsock, drive, config.profile})
+	if err != nil {
 		return err
 	}
-	if err := client.ConfigureDrive(ctx, firecracker.Drive{DriveID: "payload", PathOnHost: "/proc/self/fd/6", IsRootDevice: false, IsReadOnly: true}); err != nil {
+	if err := writePrivateFile(filepath.Join(config.evidenceDir, "machine-config.json"), append(machineDescription, '\n')); err != nil {
 		return err
 	}
-	if err := client.Start(ctx); err != nil {
+	if err := client.Configure(ctx, machine, boot, vsock); err != nil {
 		return err
+	}
+	if err := client.ConfigureDrive(ctx, drive); err != nil {
+		return err
+	}
+	launch, err := launchConfiguredCell(ctx, config, launchInputs{
+		client: client, process: process, artifacts: artifacts,
+		artifactFiles: map[string]*os.File{
+			"kernel": kernel.file, "initramfs": initramfsArtifact.file, "payload": payload.file,
+		},
+		configuration: machineDescription, evidenceDir: config.evidenceDir,
+	})
+	if err != nil {
+		return err
+	}
+	if !launch.Started {
+		termination, err = process.TerminateWithDisposition(ctx)
+		stoppedTimeNS = time.Now().UnixNano()
+		if err != nil {
+			return err
+		}
+		identity := process.Identity()
+		result := cellResult{
+			Schema: 1, Valid: true, Backend: "firecracker-kvm", FirecrackerVersion: officialFirecrackerVersion,
+			KernelVersion: officialKernelVersion, Generation: config.generation, SessionID: config.sessionID,
+			Disposition: "launch-denied", ToolProfile: config.profile, NetworkInterfaces: 0, RootBlockDevices: 0, ReadOnlyPayload: true,
+			LaunchGuarded: launch.Guarded, LaunchDecision: launch.Decision, InstanceStarted: false, Artifacts: artifacts,
+			Process: processRecord{Generation: config.generation, InstanceID: config.instanceID, PID: identity.PID,
+				Executable: identity.Executable, ExecutableSHA256: identity.ExecutableSHA256, StartTimeTicks: identity.StartTimeTicks,
+				StartedTimeNS: startedTimeNS, StoppedTimeNS: stoppedTimeNS, Termination: termination},
+		}
+		if err := writePrivateJSON(filepath.Join(config.evidenceDir, "result.json"), result); err != nil {
+			return err
+		}
+		return emit(output, map[string]any{
+			"event": "launch-denied", "generation": config.generation, "decision": launch.Decision,
+			"instance_started": false, "vmm_pid": process.PID(),
+		})
 	}
 	if err := gate.WaitReady(ctx); err != nil {
 		return fmt.Errorf("wait for Claude guest READY: %w", err)
@@ -454,6 +523,7 @@ func run(config options, input io.Reader, output io.Writer) (returnErr error) {
 		Schema: 1, Valid: true, Backend: "firecracker-kvm", FirecrackerVersion: officialFirecrackerVersion,
 		KernelVersion: officialKernelVersion, Generation: config.generation, SessionID: config.sessionID,
 		Disposition: disposition, ToolProfile: config.profile, NetworkInterfaces: 0, RootBlockDevices: 0, ReadOnlyPayload: true,
+		LaunchGuarded: launch.Guarded, LaunchDecision: launch.Decision, InstanceStarted: true,
 		GuestResult: authenticated, Artifacts: artifacts,
 		Process: processRecord{Generation: config.generation, InstanceID: config.instanceID, PID: identity.PID,
 			Executable: identity.Executable, ExecutableSHA256: identity.ExecutableSHA256, StartTimeTicks: identity.StartTimeTicks,

@@ -127,14 +127,15 @@ func (g *Guard) Authorize(ctx context.Context, request Request) (Authorization, 
 	// including when the new decision is denied or a host fact fails validation.
 	g.pending = nil
 	g.used = false
+	decision := decisionRequest{
+		CheckedState: request.CheckedState, Certificate: request.Certificate,
+		ActivatedHistory: request.ActivatedHistory,
+	}
+	if err := validateCheckedDecision(decision); err != nil {
+		return Authorization{}, err
+	}
 	if request.Certificate.Decision != kernel.Activate {
 		return Authorization{}, fmt.Errorf("%w: Certificate decision is %q", ErrDenied, request.Certificate.Decision)
-	}
-	if request.CheckedState == nil {
-		return Authorization{}, errors.New("VM resume request has no checked State")
-	}
-	if err := kernel.VerifyCertificate(request.CheckedState, request.Certificate); err != nil {
-		return Authorization{}, fmt.Errorf("verify checked Certificate: %w", err)
 	}
 	if err := g.validateCurrent(ctx, request); err != nil {
 		return Authorization{}, err
@@ -180,32 +181,16 @@ func (g *Guard) Resume(ctx context.Context, authorization Authorization) error {
 }
 
 func (g *Guard) validateCurrent(ctx context.Context, request Request) error {
-	if request.Certificate.Rule == nil {
-		return errors.New("activate Certificate has no Rule")
-	}
-	if request.Certificate.History != request.CheckedState.History {
-		return errors.New("Certificate is not bound to the supplied checked State")
-	}
 	state, err := g.sources.CurrentState()
 	if err != nil {
 		return fmt.Errorf("read current State: %w", err)
 	}
-	if state == nil || state.Requirement == nil || state.Rule == nil {
-		return errors.New("current State has no active Rule")
+	decision := decisionRequest{
+		CheckedState: request.CheckedState, Certificate: request.Certificate,
+		ActivatedHistory: request.ActivatedHistory,
 	}
-	if state.History != request.ActivatedHistory {
-		return errors.New("current History head differs from the authorized cutover")
-	}
-	if !reflect.DeepEqual(state.Rule, request.Certificate.Rule) ||
-		!reflect.DeepEqual(*state.Requirement, request.Certificate.Requirement) {
-		return errors.New("current Rule differs from the checked Certificate")
-	}
-	requirementHash, err := kernel.RequirementHash(*state.Requirement)
-	if err != nil {
+	if err := validateActivatedState(state, decision); err != nil {
 		return err
-	}
-	if requirementHash != state.Rule.RequirementHash {
-		return errors.New("current Requirement hash differs from the active Rule")
 	}
 	if err := VerifyCheckpoint(request.Checkpoint); err != nil {
 		return err
@@ -239,6 +224,49 @@ func (g *Guard) validateCurrent(ctx context.Context, request Request) error {
 	}
 	if err := g.sources.ProbeEndpoint(ctx, request.Endpoint); err != nil {
 		return fmt.Errorf("probe sandbox endpoint: %w", err)
+	}
+	return nil
+}
+
+type decisionRequest struct {
+	CheckedState     *kernel.State
+	Certificate      kernel.Certificate
+	ActivatedHistory kernel.HistoryPoint
+}
+
+func validateCheckedDecision(request decisionRequest) error {
+	if request.CheckedState == nil {
+		return errors.New("lifecycle request has no checked State")
+	}
+	if request.Certificate.History != request.CheckedState.History {
+		return errors.New("Certificate is not bound to the supplied checked State")
+	}
+	if err := kernel.VerifyCertificate(request.CheckedState, request.Certificate); err != nil {
+		return fmt.Errorf("verify checked Certificate: %w", err)
+	}
+	return nil
+}
+
+func validateActivatedState(state *kernel.State, request decisionRequest) error {
+	if request.Certificate.Decision != kernel.Activate || request.Certificate.Rule == nil {
+		return errors.New("activate Certificate has no Rule")
+	}
+	if state == nil || state.Requirement == nil || state.Rule == nil {
+		return errors.New("current State has no active Rule")
+	}
+	if state.History != request.ActivatedHistory {
+		return errors.New("current History head differs from the authorized cutover")
+	}
+	if !reflect.DeepEqual(state.Rule, request.Certificate.Rule) ||
+		!reflect.DeepEqual(*state.Requirement, request.Certificate.Requirement) {
+		return errors.New("current Rule differs from the checked Certificate")
+	}
+	requirementHash, err := kernel.RequirementHash(*state.Requirement)
+	if err != nil {
+		return err
+	}
+	if requirementHash != state.Rule.RequirementHash {
+		return errors.New("current Requirement hash differs from the active Rule")
 	}
 	return nil
 }

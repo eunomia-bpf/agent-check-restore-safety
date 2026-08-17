@@ -43,6 +43,7 @@ func ExampleNewHandler() {
 	request := httptest.NewRequest(http.MethodPost, "http://adapter/v1/payment", strings.NewReader(`{"amount":4200}`))
 	request.Header.Set(provideradapter.HeaderOperationID, operationID)
 	request.Header.Set(provideradapter.HeaderIdempotencyKey, operationID)
+	request.Header.Set(provideradapter.HeaderOperationRequestHash, strings.Repeat("b", 64))
 	request.Header.Set("Content-Type", "application/json")
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, request)

@@ -1,0 +1,74 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 415B done
+#1 WARN: FromAsCasing: 'as' and 'FROM' keywords' casing do not match (line 1)
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/golang:1.21
+#2 DONE 0.3s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [ 1/14] FROM docker.io/library/golang:1.21@sha256:4746d26432a9117a5f58e95cb9f954ddf0de128e9d5816886514199316e4a2fb
+#4 resolve docker.io/library/golang:1.21@sha256:4746d26432a9117a5f58e95cb9f954ddf0de128e9d5816886514199316e4a2fb 0.0s done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 21.67MB 0.2s done
+#5 DONE 0.3s
+
+#6 [ 4/14] COPY go.mod go.mod
+#6 CACHED
+
+#7 [ 6/14] COPY cmd/ cmd/
+#7 CACHED
+
+#8 [ 8/14] COPY registry/ registry/
+#8 CACHED
+
+#9 [ 9/14] COPY services/ services/
+#9 CACHED
+
+#10 [10/14] COPY tls/ tls/
+#10 CACHED
+
+#11 [ 7/14] COPY dialer/ dialer/
+#11 CACHED
+
+#12 [ 2/14] WORKDIR /workspace
+#12 CACHED
+
+#13 [13/14] COPY config.json config.json
+#13 CACHED
+
+#14 [12/14] COPY tune/ tune/
+#14 CACHED
+
+#15 [ 3/14] COPY go.sum go.sum
+#15 CACHED
+
+#16 [ 5/14] COPY vendor/ vendor/
+#16 CACHED
+
+#17 [11/14] COPY tracing/ tracing/
+#17 CACHED
+
+#18 [14/14] RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go install -ldflags="-s -w" -mod=vendor ./cmd/...
+#18 CACHED
+
+#19 exporting to image
+#19 exporting layers
+#19 exporting layers done
+#19 exporting manifest sha256:2895c6dc15fbb3a072fb2d30b3ed0f3ca862eff9312fcd1c3e9a3a20d9ece609 done
+#19 exporting config sha256:22aeedce945b5f789a2f34cf373c615a86e91af1c7b103c88cfdb7b0f1f288ce done
+#19 exporting attestation manifest sha256:c80177cd48847a7fdbb00eece75b7302f1250b419c9dc410a013203bc1e9d678 0.0s done
+#19 exporting manifest list sha256:160a2aae7290ee28afa2a819b7fdbc52cbced38f452bbb6549ab6a497fb33988 0.0s done
+#19 naming to docker.io/safe-change-step25/deathstar:hotel-reservation-0.3.5 done
+#19 unpacking to docker.io/safe-change-step25/deathstar:hotel-reservation-0.3.5 0.0s done
+#19 DONE 0.1s
+
+ [33m1 warning found (use docker --debug to expand):
+[0m - FromAsCasing: 'as' and 'FROM' keywords' casing do not match (line 1)

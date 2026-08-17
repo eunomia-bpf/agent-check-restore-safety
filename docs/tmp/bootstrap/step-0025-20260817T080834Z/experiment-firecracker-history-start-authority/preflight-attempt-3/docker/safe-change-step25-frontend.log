@@ -1,0 +1,35 @@
+{"level":"info","time":"2026-08-17T08:58:40Z","message":"TLS disabled."}
+{"level":"info","time":"2026-08-17T08:58:40Z","message":"Set global log level: info"}
+{"level":"info","time":"2026-08-17T08:58:40Z","message":"Tune: setGCPercent to 100"}
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mcmd/frontend/main.go:23[0m[36m >[0m Reading config...
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mcmd/frontend/main.go:44[0m[36m >[0m Initializing jaeger agent [service name: frontend | host: jaeger:6831]...
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mtracing/tracer.go:27[0m[36m >[0m Jaeger client: adjusted sample ratio 0.010000
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mtracing/tracer.go:41[0m[36m >[0m Overriding Jaeger config with env variables
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mcmd/frontend/main.go:49[0m[36m >[0m Jaeger agent initialized
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mcmd/frontend/main.go:51[0m[36m >[0m Initializing consul agent [host: consul:8500]...
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mcmd/frontend/main.go:56[0m[36m >[0m Consul agent initialized
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mcmd/frontend/main.go:67[0m[36m >[0m Starting server...
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mservices/frontend/server.go:57[0m[36m >[0m Loading static content...
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mservices/frontend/server.go:63[0m[36m >[0m Initializing gRPC clients...
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mservices/frontend/server.go:195[0m[36m >[0m get Grpc conn is :
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mservices/frontend/server.go:196[0m[36m >[0m
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mservices/frontend/server.go:197[0m[36m >[0m srv-search.
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mservices/frontend/server.go:195[0m[36m >[0m get Grpc conn is :
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mservices/frontend/server.go:196[0m[36m >[0m
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mservices/frontend/server.go:197[0m[36m >[0m srv-profile.
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mservices/frontend/server.go:195[0m[36m >[0m get Grpc conn is :
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mservices/frontend/server.go:196[0m[36m >[0m
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mservices/frontend/server.go:197[0m[36m >[0m srv-recommendation.
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mservices/frontend/server.go:195[0m[36m >[0m get Grpc conn is :
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mservices/frontend/server.go:196[0m[36m >[0m
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mservices/frontend/server.go:197[0m[36m >[0m srv-user.
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mservices/frontend/server.go:195[0m[36m >[0m get Grpc conn is :
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mservices/frontend/server.go:196[0m[36m >[0m
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mservices/frontend/server.go:197[0m[36m >[0m srv-reservation.
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mservices/frontend/server.go:92[0m[36m >[0m Successful
+[90m2026-08-17T08:58:40Z[0m [32mINF[0m [1mservices/frontend/server.go:118[0m[36m >[0m Serving http
+2026/08/17 08:59:14 ERROR: [transport] Client received GoAway with error code ENHANCE_YOUR_CALM and debug data equal to ASCII "too_many_pings".
+2026/08/17 08:59:14 ERROR: [transport] Client received GoAway with error code ENHANCE_YOUR_CALM and debug data equal to ASCII "too_many_pings".
+2026/08/17 08:59:20 ERROR: [transport] Client received GoAway with error code ENHANCE_YOUR_CALM and debug data equal to ASCII "too_many_pings".
+2026/08/17 08:59:20 ERROR: [transport] Client received GoAway with error code ENHANCE_YOUR_CALM and debug data equal to ASCII "too_many_pings".
+2026/08/17 08:59:20 ERROR: [transport] Client received GoAway with error code ENHANCE_YOUR_CALM and debug data equal to ASCII "too_many_pings".

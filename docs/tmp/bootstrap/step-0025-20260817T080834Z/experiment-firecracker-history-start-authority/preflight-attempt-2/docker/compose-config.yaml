@@ -1,0 +1,477 @@
+name: safe-change-firecracker-history-step25
+services:
+  attractions:
+    depends_on:
+      consul:
+        condition: service_started
+        required: true
+      mongodb-attractions:
+        condition: service_started
+        required: true
+    entrypoint:
+      - attractions
+    environment:
+      GC: null
+      JAEGER_SAMPLE_RATIO: null
+      LOG_LEVEL: null
+      MEMC_TIMEOUT: null
+      TLS: null
+    image: safe-change-step25/deathstar:hotel-reservation-0.3.5
+    networks:
+      default: null
+    restart: always
+  consul:
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    image: hashicorp/consul:latest
+    networks:
+      default: null
+    restart: always
+  frontend:
+    configs:
+      - source: server_config
+        target: /config.json
+    depends_on:
+      consul:
+        condition: service_started
+        required: true
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    entrypoint:
+      - frontend
+    environment:
+      GC: null
+      JAEGER_SAMPLE_RATIO: null
+      LOG_LEVEL: null
+      TLS: null
+    image: safe-change-step25/deathstar:hotel-reservation-0.3.5
+    networks:
+      default: null
+    restart: always
+  geo:
+    configs:
+      - source: server_config
+        target: /config.json
+    depends_on:
+      consul:
+        condition: service_started
+        required: true
+      mongodb-geo:
+        condition: service_started
+        required: true
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    entrypoint:
+      - geo
+    environment:
+      GC: null
+      JAEGER_SAMPLE_RATIO: null
+      LOG_LEVEL: null
+      TLS: null
+    image: safe-change-step25/deathstar:hotel-reservation-0.3.5
+    networks:
+      default: null
+    restart: always
+  jaeger:
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    image: jaegertracing/all-in-one:latest
+    networks:
+      default: null
+    restart: always
+  memcached-profile:
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    environment:
+      MEMCACHED_CACHE_SIZE: "128"
+      MEMCACHED_THREADS: "2"
+    hostname: user-memcached
+    image: memcached:latest
+    logging:
+      options:
+        max-size: 50m
+    networks:
+      default: null
+    restart: always
+  memcached-rate:
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    environment:
+      MEMCACHED_CACHE_SIZE: "128"
+      MEMCACHED_THREADS: "2"
+    hostname: user-memcached
+    image: memcached:latest
+    logging:
+      options:
+        max-size: 50m
+    networks:
+      default: null
+    restart: always
+  memcached-reserve:
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    environment:
+      MEMCACHED_CACHE_SIZE: "128"
+      MEMCACHED_THREADS: "2"
+    hostname: user-memcached
+    image: memcached:latest
+    logging:
+      options:
+        max-size: 50m
+    networks:
+      default: null
+    restart: always
+  memcached-review:
+    environment:
+      MEMCACHED_CACHE_SIZE: "128"
+      MEMCACHED_THREADS: "2"
+    image: memcached
+    logging:
+      options:
+        max-size: 50m
+    networks:
+      default: null
+    restart: always
+  mongodb-attractions:
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    hostname: attractions-db
+    image: mongo:5.0
+    networks:
+      default: null
+    restart: always
+    volumes:
+      - type: volume
+        source: attractions
+        target: /data/db
+        volume: {}
+  mongodb-geo:
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    hostname: geo-db
+    image: mongo:5.0
+    networks:
+      default: null
+    restart: always
+    volumes:
+      - type: volume
+        source: geo
+        target: /data/db
+        volume: {}
+  mongodb-profile:
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    hostname: profile-db
+    image: mongo:5.0
+    networks:
+      default: null
+    restart: always
+    volumes:
+      - type: volume
+        source: profile
+        target: /data/db
+        volume: {}
+  mongodb-rate:
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    hostname: rate-db
+    image: mongo:5.0
+    networks:
+      default: null
+    restart: always
+    volumes:
+      - type: volume
+        source: rate
+        target: /data/db
+        volume: {}
+  mongodb-recommendation:
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    hostname: recommendation-db
+    image: mongo:5.0
+    networks:
+      default: null
+    restart: always
+    volumes:
+      - type: volume
+        source: recommendation
+        target: /data/db
+        volume: {}
+  mongodb-reservation:
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    hostname: reservation-db
+    image: mongo:5.0
+    networks:
+      default: null
+    restart: always
+    volumes:
+      - type: volume
+        source: reservation
+        target: /data/db
+        volume: {}
+  mongodb-review:
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    hostname: review-db
+    image: mongo:5.0
+    networks:
+      default: null
+    restart: always
+    volumes:
+      - type: volume
+        source: review
+        target: /data/db
+        volume: {}
+  mongodb-user:
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    hostname: user-db
+    image: mongo:5.0
+    networks:
+      default: null
+    restart: always
+    volumes:
+      - type: volume
+        source: user
+        target: /data/db
+        volume: {}
+  profile:
+    configs:
+      - source: server_config
+        target: /config.json
+    depends_on:
+      consul:
+        condition: service_started
+        required: true
+      memcached-profile:
+        condition: service_started
+        required: true
+      mongodb-profile:
+        condition: service_started
+        required: true
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    entrypoint:
+      - profile
+    environment:
+      GC: null
+      JAEGER_SAMPLE_RATIO: null
+      LOG_LEVEL: null
+      TLS: null
+    image: safe-change-step25/deathstar:hotel-reservation-0.3.5
+    networks:
+      default: null
+    restart: always
+  rate:
+    configs:
+      - source: server_config
+        target: /config.json
+    depends_on:
+      consul:
+        condition: service_started
+        required: true
+      memcached-rate:
+        condition: service_started
+        required: true
+      mongodb-rate:
+        condition: service_started
+        required: true
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    entrypoint:
+      - rate
+    environment:
+      GC: null
+      JAEGER_SAMPLE_RATIO: null
+      LOG_LEVEL: null
+      TLS: null
+    image: safe-change-step25/deathstar:hotel-reservation-0.3.5
+    networks:
+      default: null
+    restart: always
+  recommendation:
+    configs:
+      - source: server_config
+        target: /config.json
+    depends_on:
+      consul:
+        condition: service_started
+        required: true
+      mongodb-recommendation:
+        condition: service_started
+        required: true
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    entrypoint:
+      - recommendation
+    environment:
+      GC: null
+      JAEGER_SAMPLE_RATIO: null
+      LOG_LEVEL: null
+      TLS: null
+    image: safe-change-step25/deathstar:hotel-reservation-0.3.5
+    networks:
+      default: null
+    restart: always
+  reservation:
+    configs:
+      - source: server_config
+        target: /config.json
+    depends_on:
+      consul:
+        condition: service_started
+        required: true
+      memcached-reserve:
+        condition: service_started
+        required: true
+      mongodb-reservation:
+        condition: service_started
+        required: true
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    entrypoint:
+      - reservation
+    environment:
+      GC: null
+      JAEGER_SAMPLE_RATIO: null
+      LOG_LEVEL: null
+      TLS: null
+    image: safe-change-step25/deathstar:hotel-reservation-0.3.5
+    networks:
+      default: null
+    restart: always
+  review:
+    depends_on:
+      consul:
+        condition: service_started
+        required: true
+      memcached-review:
+        condition: service_started
+        required: true
+      mongodb-review:
+        condition: service_started
+        required: true
+    entrypoint:
+      - review
+    environment:
+      GC: null
+      JAEGER_SAMPLE_RATIO: null
+      LOG_LEVEL: null
+      MEMC_TIMEOUT: null
+      TLS: null
+    image: safe-change-step25/deathstar:hotel-reservation-0.3.5
+    networks:
+      default: null
+    restart: always
+  search:
+    configs:
+      - source: server_config
+        target: /config.json
+    depends_on:
+      consul:
+        condition: service_started
+        required: true
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    entrypoint:
+      - search
+    environment:
+      GC: null
+      JAEGER_SAMPLE_RATIO: null
+      LOG_LEVEL: null
+      TLS: null
+    image: safe-change-step25/deathstar:hotel-reservation-0.3.5
+    networks:
+      default: null
+    restart: always
+  user:
+    configs:
+      - source: server_config
+        target: /config.json
+    depends_on:
+      consul:
+        condition: service_started
+        required: true
+      mongodb-user:
+        condition: service_started
+        required: true
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+    entrypoint:
+      - user
+    environment:
+      GC: null
+      JAEGER_SAMPLE_RATIO: null
+      LOG_LEVEL: null
+      TLS: null
+    image: safe-change-step25/deathstar:hotel-reservation-0.3.5
+    networks:
+      default: null
+    restart: always
+networks:
+  default:
+    name: safe-change-firecracker-history-step25_default
+volumes:
+  attractions:
+    name: safe-change-firecracker-history-step25_attractions
+  geo:
+    name: safe-change-firecracker-history-step25_geo
+  profile:
+    name: safe-change-firecracker-history-step25_profile
+  rate:
+    name: safe-change-firecracker-history-step25_rate
+  recommendation:
+    name: safe-change-firecracker-history-step25_recommendation
+  reservation:
+    name: safe-change-firecracker-history-step25_reservation
+  review:
+    name: safe-change-firecracker-history-step25_review
+  user:
+    name: safe-change-firecracker-history-step25_user
+configs:
+  server_config:
+    name: safe-change-firecracker-history-step25_server_config
+    file: /tmp/safe-change-firecracker-history-step25.uVNsFf/repository/hotelReservation/config.json

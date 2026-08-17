@@ -316,6 +316,29 @@ func TestLostResponseRetryUsesOneRemoteOperation(t *testing.T) {
 	}
 }
 
+func TestEffectReceivesRecordedRequestHash(t *testing.T) {
+	var observed string
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		observed = request.Header.Get("X-Operation-Request-Hash")
+		writeTestReceipt(t, writer, request.Header.Get("X-Operation-ID"), kernel.Succeeded)
+	}))
+	defer server.Close()
+
+	c, gateway := openGateway(t, filepath.Join(t.TempDir(), "runtime.history"), true, server.URL)
+	defer c.Close()
+	request := Request{
+		ID: "request-hash-42", Domain: "microservice", Kind: "charge", URL: server.URL,
+		Headers: map[string]string{"Content-Type": "application/json"}, Body: []byte(`{"amount":42}`),
+	}
+	if outcome, err := gateway.Execute(context.Background(), request); err != nil || outcome.Phase != kernel.Succeeded {
+		t.Fatalf("outcome=%+v error=%v", outcome, err)
+	}
+	operation := c.Snapshot().Operations[request.ID]
+	if observed == "" || observed != operation.RequestHash {
+		t.Fatalf("effect request hash=%q, recorded=%q", observed, operation.RequestHash)
+	}
+}
+
 func TestOneExecuteCannotBeReplayedInsideHTTPTransport(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {

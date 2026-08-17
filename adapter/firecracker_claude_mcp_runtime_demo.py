@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import asdict
+from hashlib import sha256
 import json
 import os
 from pathlib import Path
@@ -66,6 +67,7 @@ class _ClaudeCell:
         busybox_sha256: str | None = None,
         bash_sha256: str | None = None,
         session_id: str | None = None,
+        launch_manifest: Path | None = None,
     ) -> None:
         self.label = label
         self.generation = generation
@@ -92,6 +94,8 @@ class _ClaudeCell:
         ]
         if session_id is not None:
             self.command.extend(["-session-id", session_id])
+        if launch_manifest is not None:
+            self.command.extend(["-launch-manifest", os.fspath(launch_manifest)])
         if profile == "mcp":
             if mcp_host_socket is None:
                 raise DemoError("MCP Claude cell requires its host socket")
@@ -134,6 +138,41 @@ class _ClaudeCell:
             },
             start_new_session=True,
         )
+        try:
+            identity_deadline = time.monotonic() + 1
+            command = b""
+            while not command:
+                command = Path(f"/proc/{self.process.pid}/cmdline").read_bytes()
+                if command:
+                    break
+                if self.process.poll() is not None or time.monotonic() >= identity_deadline:
+                    raise DemoError(f"{label} runner identity is unavailable")
+                time.sleep(0.01)
+            raw_stat = Path(f"/proc/{self.process.pid}/stat").read_text()
+            stat_end = raw_stat.rfind(")")
+            fields = raw_stat[stat_end + 2 :].split() if stat_end >= 0 else []
+            runner = {
+                "schema": 1,
+                "kind": "firecracker-cell-runner",
+                "pid": self.process.pid,
+                "process_group_id": os.getpgid(self.process.pid),
+                "session_id": os.getsid(self.process.pid),
+                "start_time_ticks": int(fields[19]) if len(fields) > 19 else 0,
+                "command_sha256": sha256(command).hexdigest(),
+                "executable_sha256": _sha256_file(Path(f"/proc/{self.process.pid}/exe")),
+            }
+            if (
+                not command
+                or runner["process_group_id"] != self.process.pid
+                or runner["session_id"] != self.process.pid
+                or runner["start_time_ticks"] <= 0
+            ):
+                raise DemoError(f"{label} runner identity is incomplete")
+            _write_private_json(root / f"{label}.runner-process.json", runner)
+            self.runner = runner
+        except BaseException:
+            self.close()
+            raise
         if self.process.stdin is None or self.process.stdout is None:
             self.close()
             raise DemoError("Claude cell did not expose control streams")
@@ -161,6 +200,17 @@ class _ClaudeCell:
         if event.get("disposition") != "completed":
             raise DemoError(f"{self.label} did not complete")
         self._wait_exit()
+
+    def wait_denied(self) -> dict[str, Any]:
+        event = self._wait_event("launch-denied", 60)
+        if (
+            event.get("generation") != self.generation
+            or event.get("decision") != "impossible"
+            or event.get("instance_started") is not False
+        ):
+            raise DemoError(f"{self.label} did not confirm denied launch")
+        self._wait_exit()
+        return event
 
     def _wait_event(self, wanted: str, timeout: float) -> dict[str, Any]:
         assert self.process.stdout is not None
@@ -252,6 +302,7 @@ class _ClaudeCell:
             "started_time_ns": self.started_time_ns,
             "stopped_time_ns": self.stopped_time_ns,
             "exit_code": self.exit_code,
+            "runner": self.runner,
             "events": self.events,
             "evidence": os.fspath(self.evidence),
             "result": self.result(),

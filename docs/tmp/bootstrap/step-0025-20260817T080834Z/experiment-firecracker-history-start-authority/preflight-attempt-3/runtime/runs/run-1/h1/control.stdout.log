@@ -1,0 +1,4 @@
+control API listening on http://127.0.0.1:53675
+admin token: /home/will/agent-check-restore-safety/docs/tmp/bootstrap/step-0025-20260817T080834Z/experiment-firecracker-history-start-authority/preflight-attempt-3/runtime/runs/run-1/h1/admin.token
+adapter credentials: 0
+sandbox endpoints: /tmp/fc-history-c4dgqmpu/run-1-h1-sockets

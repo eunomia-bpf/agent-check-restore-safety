@@ -124,8 +124,9 @@ func (handler *Handler) execute(writer http.ResponseWriter, request *http.Reques
 		writeError(writer, http.StatusBadRequest, "effect request has a mismatched idempotency identity")
 		return
 	}
-	if len(headerValues(request.Header, HeaderOperationRequestHash)) != 0 {
-		writeError(writer, http.StatusBadRequest, "effect request carries an observation hash")
+	requestHash, err := exactlyOneHeader(request.Header, HeaderOperationRequestHash)
+	if err != nil || !canonicalSHA256(requestHash) {
+		writeError(writer, http.StatusBadRequest, "effect request has an invalid request hash")
 		return
 	}
 	contentType, err := contentTypeHeader(request.Header)
@@ -141,7 +142,7 @@ func (handler *Handler) execute(writer http.ResponseWriter, request *http.Reques
 
 	result, err := handler.driver.Execute(request.Context(), Effect{
 		OperationID: operationID, IdempotencyKey: idempotencyKey,
-		ContentType: contentType, Body: body,
+		RequestHash: requestHash, ContentType: contentType, Body: body,
 	})
 	if err != nil {
 		writeError(writer, http.StatusBadGateway, "provider adapter could not settle the effect")

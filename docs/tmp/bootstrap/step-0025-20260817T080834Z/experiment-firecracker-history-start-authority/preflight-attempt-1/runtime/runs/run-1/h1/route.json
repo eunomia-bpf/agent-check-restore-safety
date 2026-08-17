@@ -1,0 +1,1 @@
+{"routes":[{"content_types":["application/json"],"kind":"reserve","method":"POST","name":"reserve","path":"/v1/reserve","url":"http://127.0.0.1:54397/v1/reserve"}],"schema":2}

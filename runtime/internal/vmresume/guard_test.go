@@ -44,19 +44,20 @@ func newGuardFixture(t *testing.T, decision kernel.Decision) *guardFixture {
 	checked := state.Clone()
 	target := initial
 	target.ID = "after"
+	if decision == kernel.Impossible {
+		target.Results = map[string]uint32{"done": 2}
+	}
 	certificate, err := kernel.Compile(checked, target, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if decision == kernel.Impossible {
-		certificate.Decision = kernel.Impossible
-		certificate.Rule = nil
-		certificate.Witness = &kernel.Witness{Reason: "test denial"}
-		certificate.Digest = ""
-		// A manually altered Certificate is deliberately not verified in the
-		// denied path: decision rejection precedes Certificate consumption.
-	} else if err := state.Activate(certificate); err != nil {
-		t.Fatal(err)
+	if certificate.Decision != decision {
+		t.Fatalf("fixture Certificate decision = %q, want %q", certificate.Decision, decision)
+	}
+	if decision == kernel.Activate {
+		if err := state.Activate(certificate); err != nil {
+			t.Fatal(err)
+		}
 	}
 	activated := kernel.HistoryPoint{Sequence: 9, Hash: digest([]byte("cutover"))}
 	state.History = activated
@@ -218,8 +219,7 @@ func TestDeniedAuthorizationRevokesOlderPermit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	denied := fixture.request
-	denied.Certificate.Decision = kernel.Impossible
+	denied := newGuardFixture(t, kernel.Impossible).request
 	if _, err := guard.Authorize(context.Background(), denied); !errors.Is(err, ErrDenied) {
 		t.Fatalf("denied authorize error = %v", err)
 	}
