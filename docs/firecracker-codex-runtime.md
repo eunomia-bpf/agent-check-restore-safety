@@ -234,9 +234,11 @@ make runtime-firecracker-codex-control-check \
   FIRECRACKER_CODEX_WORKLOAD_CONTRACT=$PWD/runtime/workloads/restate-food-ordering/workload.json
 ```
 
-For the MCP path, `make runtime-firecracker-codex-mcp-demo` is the public KVM
-entry point. After retaining the combined evidence directory, run both
-independent checkers with one command:
+For the MCP path, `make runtime-firecracker-codex-mcp-demo` is the settled-call
+entry point. `make runtime-firecracker-codex-mcp-inflight-demo` captures the
+provider-committed/unresolved case and cold-replaces the VM when its restored
+live transport fails. After retaining either combined evidence directory, run
+both independent checkers with one command:
 
 ```sh
 make runtime-firecracker-codex-mcp-check \
@@ -250,6 +252,12 @@ The demo requires read/write access to `/dev/kvm`, checksum-pinned Firecracker
 and kernel files, a prebuilt guest and shim, the read-only Codex payload, a
 canonical repository bundle, separate empty evidence/workspace directories,
 and no live account.
+
+The in-flight mode makes the trust boundary explicit: a full-machine snapshot
+is evidence and a recovery optimization, not the authority for whether an
+external action happened. The MCP host, fsynced call journal, Control History,
+and provider state remain outside both the failed restore attempt and the cold
+replacement VM.
 
 ## Exact boundary and remaining work
 

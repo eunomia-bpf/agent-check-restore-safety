@@ -803,6 +803,13 @@ class CodexAppServer:
     ) -> tuple[str, dict[str, Any]]:
         if timeout is None:
             timeout = self.turn_timeout
+        turn_id = self.start_turn(thread_id, text)
+        completed = self.wait_turn_completed(thread_id, turn_id, timeout=timeout)
+        return turn_id, completed
+
+    def start_turn(self, thread_id: str, text: str) -> str:
+        """Start one turn without waiting, allowing another thread to observe it."""
+
         result = self.request(
             "turn/start",
             {"threadId": thread_id, "input": [{"type": "text", "text": text}]},
@@ -810,9 +817,7 @@ class CodexAppServer:
         turn = result.get("turn")
         if not isinstance(turn, dict) or not isinstance(turn.get("id"), str):
             raise AppServerProtocolError("turn/start omitted the turn id")
-        turn_id = turn["id"]
-        completed = self.wait_turn_completed(thread_id, turn_id, timeout=timeout)
-        return turn_id, completed
+        return turn["id"]
 
     def fork_at_turn(
         self,

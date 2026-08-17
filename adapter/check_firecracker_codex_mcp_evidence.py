@@ -133,7 +133,7 @@ def _artifact(record: Any, label: str, *, executable: bool) -> Path:
     return path
 
 
-def _history(root: Path) -> list[dict[str, Any]]:
+def _history(root: Path, checkpoint_mode: str) -> list[dict[str, Any]]:
     data = _private_file(root / "control.history", "Control History")
     records: list[dict[str, Any]] = []
     offset = 0
@@ -179,7 +179,8 @@ def _history(root: Path) -> list[dict[str, Any]]:
             raise EvidenceError(f"History event {sequence} fails its hash chain")
         previous = digest.hexdigest()
         records.append(record)
-    if len(records) != 8:
+    expected_records = 8 if checkpoint_mode == "settled" else 7
+    if len(records) != expected_records:
         raise EvidenceError("History does not contain the exact two-Operation lifecycle")
     return records
 
@@ -255,17 +256,30 @@ def _check_history_and_payment(
     history: list[dict[str, Any]],
     journal: list[dict[str, Any]],
     outcomes: tuple[dict[str, Any], dict[str, Any]],
+    checkpoint_mode: str,
 ) -> list[str]:
-    expected_operations = [
-        "rule.bindings.cutover",
-        "operation.prepared",
-        "operation.phase",
-        "operation.phase",
-        "operation.phase",
-        "operation.prepared",
-        "operation.phase",
-        "operation.phase",
-    ]
+    expected_operations = (
+        [
+            "rule.bindings.cutover",
+            "operation.prepared",
+            "operation.phase",
+            "operation.phase",
+            "operation.phase",
+            "operation.prepared",
+            "operation.phase",
+            "operation.phase",
+        ]
+        if checkpoint_mode == "settled"
+        else [
+            "rule.bindings.cutover",
+            "operation.prepared",
+            "operation.phase",
+            "operation.phase",
+            "operation.prepared",
+            "operation.phase",
+            "operation.phase",
+        ]
+    )
     if [record["operation"] for record in history] != expected_operations:
         raise EvidenceError("History Operation lifecycle order is wrong")
     cutover = history[0]["data"]
@@ -277,8 +291,12 @@ def _check_history_and_payment(
     ):
         raise EvidenceError("History Cutover does not authorize exactly two protected commits")
 
-    prepared_events = (history[1], history[5])
-    phase_groups = ((history[2], history[3], history[4]), (history[6], history[7]))
+    if checkpoint_mode == "settled":
+        prepared_events = (history[1], history[5])
+        phase_groups = ((history[2], history[3], history[4]), (history[6], history[7]))
+    else:
+        prepared_events = (history[1], history[4])
+        phase_groups = ((history[2], history[3]), (history[5], history[6]))
     operation_ids: list[str] = []
     for index, (effect, prepared_event, phases, outcome) in enumerate(
         zip(_EFFECTS, prepared_events, phase_groups, outcomes, strict=True)
@@ -300,7 +318,11 @@ def _check_history_and_payment(
             != {"effect_id": effect}
         ):
             raise EvidenceError(f"History prepared Operation for {effect} is malformed")
-        expected_phases = ["dispatched", "unknown", "succeeded"] if index == 0 else ["dispatched", "succeeded"]
+        expected_phases = (
+            ["dispatched", "unknown", "succeeded"]
+            if index == 0 and checkpoint_mode == "settled"
+            else ["dispatched", "succeeded"]
+        )
         updates: list[dict[str, Any]] = []
         for phase_event, expected_phase in zip(phases, expected_phases, strict=True):
             phase_data = phase_event["data"]
@@ -317,12 +339,19 @@ def _check_history_and_payment(
         if (
             succeeded.get("result_hash") != outcome.get("result_hash")
             or succeeded.get("remote_reference") != f"firecracker-mcp/{expected_id}/commit-1"
-            or (index == 0 and succeeded.get("settlement") != "query")
-            or (index == 1 and "settlement" in succeeded)
+            or (
+                index == 0
+                and checkpoint_mode == "settled"
+                and succeeded.get("settlement") != "query"
+            )
+            or (
+                (index == 1 or checkpoint_mode == "inflight")
+                and "settlement" in succeeded
+            )
         ):
             raise EvidenceError(f"History outcome for {effect} differs from MCP")
         result_body = _decode_body(succeeded.get("result_body"), "History result")
-        if index == 0:
+        if index == 0 and checkpoint_mode == "settled":
             if (
                 result_body.get("operation_id") != expected_id
                 or result_body.get("outcome") != "succeeded"
@@ -365,6 +394,9 @@ def check(path: Path, payload_result_path: Path) -> dict[str, Any]:
     adapter_dir = _private_subdirectory(root, "adapter")
     runtime_dir = _private_subdirectory(root, "runtime")
     result = _json_path(root / "result.json", "combined result", canonical=True)
+    checkpoint_mode = (
+        result.get("checkpoint_mode", "settled") if isinstance(result, dict) else None
+    )
     if (
         not isinstance(result, dict)
         or result.get("schema") != 1
@@ -375,7 +407,9 @@ def check(path: Path, payload_result_path: Path) -> dict[str, Any]:
         or result.get("history") != os.fspath(root / "control.history")
         or result.get("journal") != os.fspath(root / "mcp-calls.jsonl")
         or result.get("payment_history") != os.fspath(root / "payment.history")
-        or result.get("mcp_relay_lifetimes") != 3
+        or checkpoint_mode not in {"settled", "inflight"}
+        or result.get("mcp_relay_lifetimes")
+        != (5 if checkpoint_mode == "inflight" else 3)
         or result.get("provider_deliveries") != 2
         or result.get("provider_commits") != 2
     ):
@@ -395,6 +429,35 @@ def check(path: Path, payload_result_path: Path) -> dict[str, Any]:
         for name, record in artifacts.items()
     }
 
+    payment_process_path = root / "payment-process.json"
+    if payment_process_path.exists() or checkpoint_mode == "inflight":
+        payment_process = _json_path(
+            payment_process_path, "payment process", canonical=True
+        )
+        payment_pid = payment_process.get("pid") if isinstance(payment_process, dict) else None
+        payment_command = payment_process.get("command") if isinstance(payment_process, dict) else None
+        payment_fault = (
+            "-hold-after-commit"
+            if checkpoint_mode == "inflight"
+            else "-drop-first-response"
+        )
+        if (
+            not isinstance(payment_pid, int)
+            or payment_pid <= 1
+            or not isinstance(payment_command, list)
+            or len(payment_command) != 9
+            or payment_command[0] != os.fspath(trusted["payment"])
+            or payment_command[1] != "-listen"
+            or not isinstance(payment_command[2], str)
+            or not payment_command[2].startswith("127.0.0.1:")
+            or payment_command[3:5]
+            != ["-state", os.fspath(root / "payment.history")]
+            or payment_command[5] != payment_fault
+            or payment_command[6:]
+            != ["-non-idempotent", "-reference-prefix", "firecracker-mcp"]
+        ):
+            raise EvidenceError("payment process does not bind the declared checkpoint fault")
+
     adapter = _json_path(adapter_dir / "result.json", "adapter result", canonical=True)
     if (
         not isinstance(adapter, dict)
@@ -402,14 +465,38 @@ def check(path: Path, payload_result_path: Path) -> dict[str, Any]:
         or adapter.get("ok") is not True
         or adapter.get("result_path") != os.fspath(adapter_dir / "result.json")
         or adapter.get("independent_evidence_check") != "required"
-        or adapter.get("mcp")
-        != {
-            "effect_ids": ["effect-A", "effect-B"],
-            "guest_port": 7002,
-            "guest_relay": "/opt/codex/bin/mcp-operation-relay",
-        }
     ):
         raise EvidenceError("adapter result does not describe the checked MCP run")
+    adapter_mcp = adapter.get("mcp")
+    expected_mcp = {
+        "effect_ids": ["effect-A", "effect-B"],
+        "guest_port": 7002,
+        "guest_relay": "/opt/codex/bin/mcp-operation-relay",
+    }
+    if not isinstance(adapter_mcp, dict):
+        raise EvidenceError("adapter result omits the checked MCP run")
+    adapter_mcp = dict(adapter_mcp)
+    recovery_mode = "settled" if checkpoint_mode == "inflight" else checkpoint_mode
+    adapter_mode = adapter_mcp.pop("checkpoint_mode", "settled")
+    if adapter_mode != recovery_mode or adapter_mcp != expected_mcp:
+        raise EvidenceError("adapter result describes a different MCP mode")
+    preflight = adapter.get("preflight")
+    if (
+        not isinstance(preflight, dict)
+        or preflight.get("mcp_checkpoint_mode", "settled") != recovery_mode
+    ):
+        raise EvidenceError("adapter preflight omits the MCP checkpoint mode")
+    if recovery_mode == "inflight":
+        if (
+            not isinstance(preflight.get("mcp_inflight_thread_id"), str)
+            or not isinstance(preflight.get("mcp_inflight_turn_id"), str)
+            or preflight.get("fork_thread_id") != preflight.get("seed_thread_id")
+            or preflight.get("mcp_inflight_thread_id")
+            == preflight.get("seed_thread_id")
+        ):
+            raise EvidenceError("adapter preflight has malformed in-flight identities")
+    elif "mcp_inflight_thread_id" in preflight or "mcp_inflight_turn_id" in preflight:
+        raise EvidenceError("settled checkpoint unexpectedly reports an in-flight turn")
     adapter_artifacts = adapter.get("artifacts")
     relay_summary = adapter_artifacts.get("mcp_relay") if isinstance(adapter_artifacts, dict) else None
     if (
@@ -461,18 +548,30 @@ def check(path: Path, payload_result_path: Path) -> dict[str, Any]:
         raise EvidenceError("trusted MCP host command is malformed")
     host_events = _json_lines_path(root / "mcp-host.stderr.log", "MCP host log")
     peer_pids = {event.get("pid") for event in host_events}
+    expected_lifetimes = 5 if checkpoint_mode == "inflight" else 3
+    expected_peer_processes = 2 if checkpoint_mode == "inflight" else 1
     if (
-        len(host_events) != 6
-        or [event.get("event") for event in host_events].count("relay_accept") != 3
-        or [event.get("event") for event in host_events].count("relay_disconnect") != 3
-        or len(peer_pids) != 1
+        len(host_events) != expected_lifetimes * 2
+        or [event.get("event") for event in host_events].count("relay_accept")
+        != expected_lifetimes
+        or [event.get("event") for event in host_events].count("relay_disconnect")
+        != expected_lifetimes
+        or len(peer_pids) != expected_peer_processes
         or host_pid in peer_pids
         or any(event.get("uid") != os.geteuid() for event in host_events)
     ):
-        raise EvidenceError("trusted MCP host did not retain three bounded relay lifetimes")
-    peer_pid = next(iter(peer_pids))
-    if not isinstance(peer_pid, int) or peer_pid <= 1:
-        raise EvidenceError("trusted MCP relay peer identity is malformed")
+        raise EvidenceError("trusted MCP host did not retain every bounded relay lifetime")
+    for peer_pid in peer_pids:
+        peer_events = [event.get("event") for event in host_events if event.get("pid") == peer_pid]
+        if (
+            not isinstance(peer_pid, int)
+            or peer_pid <= 1
+            or peer_events.count("relay_accept") != peer_events.count("relay_disconnect")
+        ):
+            raise EvidenceError("trusted MCP relay peer identity is malformed")
+    recovery_peer = host_events[-1].get("pid")
+    if not isinstance(recovery_peer, int):
+        raise EvidenceError("recovery relay identity is absent")
     for generation in ("g1", "g3"):
         relay_records = _json_lines_path(
             runtime_dir / f"firecracker-relay-{generation}.jsonl",
@@ -488,7 +587,7 @@ def check(path: Path, payload_result_path: Path) -> dict[str, Any]:
             for record in relay_records
             if record.get("event") == "bytes" and record.get("port") == 7002
         }
-        if model_peers != {peer_pid} or mcp_peers != {host_pid}:
+        if model_peers != {recovery_peer} or mcp_peers != {host_pid}:
             raise EvidenceError("Firecracker relay identities do not join the trusted MCP host")
 
     app_path = adapter_dir / "app-server.jsonl"
@@ -503,17 +602,44 @@ def check(path: Path, payload_result_path: Path) -> dict[str, Any]:
     app_records = _json_lines_path(app_path, "App Server log")
     items, versions = _mcp_items(app_records)
     if len(items) != 3 or not versions:
-        raise EvidenceError("App Server log lacks the A, replay-A, B MCP completions")
-    first_a = _outcome(items[0], "effect-A")
-    replay_a = _outcome(items[1], "effect-A")
-    second_b = _outcome(items[2], "effect-B")
-    if (
-        first_a != replay_a
-        or first_a.get("recovered_by_query") is not True
-        or second_b.get("recovered_by_query") is not False
-        or first_a.get("operation_id") == second_b.get("operation_id")
-    ):
-        raise EvidenceError("restored Codex did not replay A exactly before advancing to B")
+        raise EvidenceError("App Server log lacks the exact MCP terminal lifecycle")
+    terminal_records: list[tuple[dict[str, Any], dict[str, Any], dict[str, Any]]] = []
+    started_records: list[tuple[dict[str, Any], dict[str, Any], dict[str, Any]]] = []
+    for record in app_records:
+        payload = record.get("payload")
+        params = payload.get("params") if isinstance(payload, dict) else None
+        item = params.get("item") if isinstance(params, dict) else None
+        if not isinstance(item, dict) or item.get("type") != "mcpToolCall":
+            continue
+        if payload.get("method") == "item/completed":
+            terminal_records.append((record, params, item))
+        elif payload.get("method") == "item/started":
+            started_records.append((record, params, item))
+    if [item for _, _, item in terminal_records] != items:
+        raise EvidenceError("MCP terminal record extraction is inconsistent")
+
+    if checkpoint_mode == "settled":
+        first_a = _outcome(items[0], "effect-A")
+        replay_a = _outcome(items[1], "effect-A")
+        second_b = _outcome(items[2], "effect-B")
+        if (
+            first_a != replay_a
+            or first_a.get("recovered_by_query") is not True
+            or second_b.get("recovered_by_query") is not False
+            or first_a.get("operation_id") == second_b.get("operation_id")
+        ):
+            raise EvidenceError("restored Codex did not replay A exactly before advancing to B")
+    else:
+        first_a = _outcome(items[0], "effect-A")
+        replay_a = _outcome(items[1], "effect-A")
+        second_b = _outcome(items[2], "effect-B")
+        if (
+            first_a != replay_a
+            or first_a.get("recovered_by_query") is not False
+            or second_b.get("recovered_by_query") is not False
+            or replay_a.get("operation_id") == second_b.get("operation_id")
+        ):
+            raise EvidenceError("cold-replacement Codex did not replay held A before advancing to B")
 
     journal = _journal(root, _EXECUTION_ID)
     outcomes = (first_a, second_b)
@@ -530,9 +656,161 @@ def check(path: Path, payload_result_path: Path) -> dict[str, Any]:
         if response.get("jsonrpc") != "2.0" or response.get("id") != index or structured != outcome:
             raise EvidenceError(f"journal result for {effect} differs from Codex")
 
-    history = _history(root)
+    if checkpoint_mode == "inflight":
+        attempt_root = _private_subdirectory(root, "inflight-attempt")
+        attempt_runtime = _private_subdirectory(attempt_root, "runtime")
+        attempt_adapter = _private_subdirectory(attempt_root, "adapter")
+        attempt_workspace = _private_subdirectory(attempt_root, "workspace")
+        attempt_record = result.get("inflight_attempt")
+        if (
+            not isinstance(attempt_record, dict)
+            or attempt_record.get("runtime_evidence") != os.fspath(attempt_runtime)
+            or attempt_record.get("adapter_evidence") != os.fspath(attempt_adapter)
+            or attempt_record.get("workspace") != os.fspath(attempt_workspace)
+            or attempt_record.get("runtime_result")
+            != os.fspath(attempt_runtime / "result.json")
+            or "App Server stdout closed unexpectedly"
+            not in str(attempt_record.get("failure"))
+        ):
+            raise EvidenceError("combined result omits the failed in-flight VM attempt")
+        attempt_result = _json_path(
+            attempt_runtime / "result.json", "in-flight runtime result"
+        )
+        if (
+            not isinstance(attempt_result, dict)
+            or attempt_result.get("schema") != 1
+            or attempt_result.get("success") is not False
+            or attempt_result.get("g1_sigkill_confirmed") is not True
+            or attempt_result.get("snapshot_loaded_paused") is not True
+            or len(attempt_result.get("processes", [])) != 2
+        ):
+            raise EvidenceError("in-flight runtime did not fail closed after VM replacement")
+        attempt_app_records = _json_lines_path(
+            attempt_adapter / "app-server.jsonl", "in-flight App Server log"
+        )
+        attempt_started: list[tuple[dict[str, Any], dict[str, Any]]] = []
+        attempt_terminal: list[dict[str, Any]] = []
+        for record in attempt_app_records:
+            payload = record.get("payload")
+            params = payload.get("params") if isinstance(payload, dict) else None
+            item = params.get("item") if isinstance(params, dict) else None
+            if not isinstance(item, dict) or item.get("type") != "mcpToolCall":
+                continue
+            if payload.get("method") == "item/started":
+                attempt_started.append((record, item))
+            elif payload.get("method") == "item/completed":
+                attempt_terminal.append(item)
+        if (
+            len(attempt_started) != 1
+            or attempt_started[0][1].get("server") != "continuity"
+            or attempt_started[0][1].get("tool") != "commit_effect"
+            or attempt_started[0][1].get("arguments") != {"effect_id": "effect-A"}
+            or attempt_terminal
+        ):
+            raise EvidenceError("failed VM attempt did not capture exactly one unresolved A")
+
+        inflight_path = root / "inflight-checkpoint.json"
+        inflight = _json_path(
+            inflight_path, "in-flight checkpoint", canonical=True
+        )
+        if (
+            result.get("inflight_checkpoint") != os.fspath(inflight_path)
+            or not isinstance(inflight, dict)
+            or set(inflight)
+            != {
+                "schema",
+                "checkpoint_mode",
+                "provider_commit_observed_time_ns",
+                "provider_record_sha256",
+                "journal_prepared_record_sha256",
+                "stats_before_checkpoint",
+                "journal_records_before_checkpoint",
+                "snapshot_created_time_ns",
+                "release_signal_time_ns",
+                "journal_completed_observed_time_ns",
+                "journal_records_after_release",
+            }
+            or inflight.get("schema") != 1
+            or inflight.get("checkpoint_mode") != "inflight"
+            or inflight.get("journal_records_before_checkpoint") != 1
+            or inflight.get("journal_records_after_release") != 2
+            or inflight.get("stats_before_checkpoint", {}).get("deliveries") != 1
+            or inflight.get("stats_before_checkpoint", {}).get("commits") != 1
+        ):
+            raise EvidenceError("in-flight checkpoint record is malformed")
+        payment_data = _private_file(root / "payment.history", "payment history")
+        journal_data = _private_file(root / "mcp-calls.jsonl", "MCP journal")
+        first_payment = payment_data.splitlines(keepends=True)[0]
+        first_journal = journal_data.splitlines(keepends=True)[0]
+        if (
+            sha256(first_payment).hexdigest()
+            != inflight.get("provider_record_sha256")
+            or sha256(first_journal).hexdigest()
+            != inflight.get("journal_prepared_record_sha256")
+        ):
+            raise EvidenceError("in-flight record does not bind the pre-checkpoint durable bytes")
+        runtime_events = _json_lines_path(
+            attempt_runtime / "events.jsonl", "in-flight runtime events"
+        )
+        event_times = {
+            name: [
+                event.get("time_ns")
+                for event in runtime_events
+                if event.get("event") == name
+            ]
+            for name in (
+                "tool-call-observed-checkpoint-quiescent",
+                "snapshot-created-paused",
+                "g1-sigkill-confirmed",
+                "run-failed",
+            )
+        }
+        commit_time = inflight.get("provider_commit_observed_time_ns")
+        release_time = inflight.get("release_signal_time_ns")
+        completed_time = inflight.get("journal_completed_observed_time_ns")
+        snapshot_time = inflight.get("snapshot_created_time_ns")
+        replay_time = terminal_records[0][0].get("time_ns")
+        if (
+            any(len(values) != 1 for values in event_times.values())
+            or not all(
+                isinstance(value, int) and value > 0
+                for value in (
+                    commit_time,
+                    snapshot_time,
+                    release_time,
+                    completed_time,
+                    replay_time,
+                )
+            )
+            or snapshot_time != event_times["snapshot-created-paused"][0]
+            or not (
+                commit_time
+                < event_times["tool-call-observed-checkpoint-quiescent"][0]
+                < snapshot_time
+                < release_time
+                <= completed_time
+                < event_times["g1-sigkill-confirmed"][0]
+                < event_times["run-failed"][0]
+                < replay_time
+            )
+        ):
+            raise EvidenceError("in-flight commit/release/replay times do not cross the VM checkpoint")
+        payment_log = _private_file(
+            root / "payment.stderr.log", "payment diagnostic log"
+        ).decode("utf-8", errors="strict")
+        if (
+            payment_log.count("released held post-commit response") != 1
+            or "ignored SIGUSR1" in payment_log
+        ):
+            raise EvidenceError("provider log does not prove one held-response release")
+    elif "inflight_checkpoint" in result or (root / "inflight-checkpoint.json").exists():
+        raise EvidenceError("settled checkpoint unexpectedly retained in-flight evidence")
+
+    history = _history(root, checkpoint_mode)
     _check_anchor(root, history)
-    operation_ids = _check_history_and_payment(root, history, journal, outcomes)
+    operation_ids = _check_history_and_payment(
+        root, history, journal, outcomes, checkpoint_mode
+    )
     if result.get("operations") != sorted(operation_ids):
         raise EvidenceError("combined result names different durable Operations")
 
@@ -541,9 +819,12 @@ def check(path: Path, payload_result_path: Path) -> dict[str, Any]:
         "valid": True,
         "containment": "firecracker",
         "codex_version": versions[-1],
+        "checkpoint_mode": checkpoint_mode,
         "vmm_generations": 2,
-        "mcp_relay_lifetimes": 3,
+        "mcp_relay_lifetimes": expected_lifetimes,
         "mcp_completions": 3,
+        "failed_vm_attempts": 1 if checkpoint_mode == "inflight" else 0,
+        "unresolved_calls_captured": 1 if checkpoint_mode == "inflight" else 0,
         "operations": 2,
         "provider_commits": 2,
     }

@@ -23,7 +23,7 @@ import secrets
 import socket
 import stat
 import sys
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import ProxyHandler, Request, build_opener
@@ -530,6 +530,8 @@ def run_demo(
     mcp_relay_sha256: str | None = None,
     mcp_host_socket: Path | None = None,
     mcp_effect_ids: Sequence[str] | None = None,
+    mcp_inflight_wait: Callable[[], None] | None = None,
+    mcp_inflight_release: Callable[[], None] | None = None,
 ) -> dict[str, Any]:
     """Run one deterministic preflight and publish sanitized evidence metadata."""
 
@@ -545,6 +547,7 @@ def run_demo(
     mcp_effects = () if mcp_effect_ids is None else tuple(mcp_effect_ids)
     mcp_inputs = (mcp_relay, mcp_relay_sha256, mcp_host_socket)
     mcp_requested = any(value is not None for value in mcp_inputs) or bool(mcp_effects)
+    mcp_inflight = mcp_inflight_wait is not None or mcp_inflight_release is not None
     if mcp_requested and (not all(value is not None for value in mcp_inputs) or len(mcp_effects) != 2):
         raise DemoError(
             "MCP Firecracker mode requires relay, relay SHA-256, host socket, and two effects"
@@ -552,6 +555,15 @@ def run_demo(
     if mcp_requested and (len(effect_ids) != 1 or len(set(mcp_effects)) != 2 or any(not value for value in mcp_effects)):
         raise DemoError(
             "MCP Firecracker mode requires one checkpoint callback and two unique MCP effects"
+        )
+    if mcp_inflight and (
+        mcp_inflight_wait is None
+        or mcp_inflight_release is None
+        or not mcp_requested
+        or workspace_patch is not None
+    ):
+        raise DemoError(
+            "in-flight MCP checkpoint requires both hooks, MCP mode, and no workspace edit"
         )
 
     verified: dict[str, dict[str, Any]] = {}
@@ -710,6 +722,8 @@ def run_demo(
             enabled_tools=("commit_effect",),
         )
     def protected_operation(pending: Any) -> None:
+        if mcp_inflight_release is not None:
+            mcp_inflight_release()
         if not join_requested:
             pending.respond_text(f"receipt:{pending.arguments['effect_id']}")
             return
@@ -805,6 +819,7 @@ def run_demo(
                 protected_effect_ids=effect_ids,
                 mcp_server=mcp_server,
                 mcp_effect_ids=mcp_effects or None,
+                mcp_inflight_wait=mcp_inflight_wait,
             )
         finally:
             os.umask(previous_umask)
@@ -966,6 +981,7 @@ def run_demo(
             "effect_ids": list(mcp_effects),
             "guest_relay": _GUEST_MCP_RELAY,
             "guest_port": _GUEST_MCP_PORT,
+            "checkpoint_mode": "inflight" if mcp_inflight else "settled",
         }
     _write_exclusive_json(result_path, record)
     return record

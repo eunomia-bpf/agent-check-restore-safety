@@ -21,6 +21,7 @@ from pathlib import Path
 import posixpath
 import shutil
 import tempfile
+import threading
 import time
 from typing import Any, Callable, Mapping, Sequence, cast
 import unittest
@@ -496,6 +497,7 @@ def run_preflight(
     protected_effect_ids: Sequence[str] | None = None,
     mcp_server: MCPStdioServer | None = None,
     mcp_effect_ids: Sequence[str] | None = None,
+    mcp_inflight_wait: Callable[[], None] | None = None,
 ) -> PreflightResult:
     """Run one deterministic end-to-end App Server boundary preflight.
 
@@ -512,6 +514,7 @@ def run_preflight(
         else tuple(protected_effect_ids)
     )
     mcp_effects = () if mcp_effect_ids is None else tuple(mcp_effect_ids)
+    mcp_inflight = mcp_inflight_wait is not None
     if (mcp_server is None) != (len(mcp_effects) == 0):
         raise ValueError("MCP preflight requires both a server and effect identities")
     if mcp_effects and (
@@ -522,6 +525,10 @@ def run_preflight(
     ):
         raise ValueError(
             "MCP checkpoint preflight requires two unique MCP effects and one protected callback"
+        )
+    if mcp_inflight and (not mcp_effects or workspace_patch is not None):
+        raise ValueError(
+            "in-flight MCP checkpoint requires MCP effects and no workspace edit"
         )
     if not 1 <= len(effect_ids) <= _MAX_PREFLIGHT_PROTECTED_CALLS:
         raise ValueError(
@@ -592,8 +599,12 @@ def run_preflight(
     fork_thread_id: str | None = None
     protected_turn_id: str | None = None
     protected_calls: list[ProtectedCallResult] = []
+    mcp_inflight_thread_id: str | None = None
+    mcp_inflight_turn_id: str | None = None
     initialize_result: dict[str, Any] | None = None
     seed_archived = False
+    inflight_waiter: threading.Thread | None = None
+    inflight_errors: list[Exception] = []
 
     with DeterministicResponsesServer() as responses:
         responses.enqueue_assistant(
@@ -665,6 +676,32 @@ def run_preflight(
                     _enqueue_mcp_effect(
                         responses, callable_name, mcp_effects[0], "preflight-mcp-call-1"
                     )
+                if mcp_inflight:
+                    assert callable_name is not None
+                    assert mcp_inflight_wait is not None
+                    inflight_fork = client.fork_at_turn(seed_thread_id, seed_turn_id)
+                    mcp_inflight_thread_id = inflight_fork["id"]
+                    mcp_inflight_turn_id = client.start_turn(
+                        mcp_inflight_thread_id,
+                        "Commit the protected MCP operation and wait for its result.",
+                    )
+
+                    def wait_inflight_turn() -> None:
+                        try:
+                            client.wait_turn_completed(
+                                mcp_inflight_thread_id,
+                                mcp_inflight_turn_id,
+                                timeout=TURN_TIMEOUT_SECONDS,
+                            )
+                        except Exception as error:
+                            inflight_errors.append(error)
+
+                    inflight_waiter = threading.Thread(
+                        target=wait_inflight_turn,
+                        name="codex-inflight-mcp-turn",
+                    )
+                    inflight_waiter.start()
+                    mcp_inflight_wait()
                 for index, (call_id, effect_id) in enumerate(
                     zip(expected_call_ids, effect_ids, strict=True), start=1
                 ):
@@ -679,8 +716,14 @@ def run_preflight(
                     response_id="fixture-final-response",
                 )
 
-                fork = client.fork_at_turn(seed_thread_id, seed_turn_id)
-                fork_thread_id = fork["id"]
+                if mcp_inflight:
+                    # The seed already owns an initialized MCP transport.  A
+                    # third thread would block its MCP startup behind the
+                    # deliberately unresolved protected request.
+                    fork_thread_id = seed_thread_id
+                else:
+                    fork = client.fork_at_turn(seed_thread_id, seed_turn_id)
+                    fork_thread_id = fork["id"]
 
                 pending = client.start_protected_turn(
                     fork_thread_id,
@@ -753,6 +796,18 @@ def run_preflight(
                         )
                     handler(pending)
                 pending.wait_turn_completed(timeout=TURN_TIMEOUT_SECONDS)
+                if inflight_waiter is not None:
+                    inflight_waiter.join(TURN_TIMEOUT_SECONDS)
+                    if inflight_waiter.is_alive():
+                        raise AppServerProtocolError(
+                            "in-flight MCP turn remained live after VM replacement"
+                        )
+                    if len(inflight_errors) != 1 or not isinstance(
+                        inflight_errors[0], AppServerProtocolError
+                    ):
+                        raise AppServerProtocolError(
+                            "in-flight MCP turn did not fail at the replaced transport"
+                        )
                 if callable_name is not None:
                     assert mcp_server is not None
                     restored_thread = client.create_mcp_thread(sandbox=sandbox)

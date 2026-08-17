@@ -28,7 +28,7 @@ func main() {
 	flag.BoolVar(&dropFirst, "drop-first-response", false, "commit the first new payment and drop its response")
 	flag.BoolVar(&alwaysDropBeforeCommit, "always-drop-before-commit", false, "drop every new payment request before committing it")
 	flag.BoolVar(&holdBeforeCommit, "hold-before-commit", false, "hold every new payment before commit until its connection is canceled")
-	flag.BoolVar(&holdAfterCommit, "hold-after-commit", false, "commit every new payment and hold until its connection is canceled")
+	flag.BoolVar(&holdAfterCommit, "hold-after-commit", false, "commit the next payment and hold its response until SIGUSR1 or cancellation")
 	flag.BoolVar(&nonIdempotent, "non-idempotent", false, "commit repeated deliveries of identical Operation work independently")
 	flag.StringVar(&referencePrefix, "reference-prefix", "payment", "label used in durable remote references")
 	flag.Parse()
@@ -42,6 +42,18 @@ func main() {
 		log.Fatal(err)
 	}
 	defer service.Close()
+	releaseSignals := make(chan os.Signal, 1)
+	signal.Notify(releaseSignals, syscall.SIGUSR1)
+	defer signal.Stop(releaseSignals)
+	go func() {
+		for range releaseSignals {
+			if service.ReleaseHeldAfterCommit() {
+				log.Printf("released held post-commit response")
+			} else {
+				log.Printf("ignored SIGUSR1 without an active post-commit hold")
+			}
+		}
+	}()
 	server := &http.Server{
 		Addr: listenAddress, Handler: service.Handler(),
 		ReadHeaderTimeout: 5 * time.Second, IdleTimeout: 30 * time.Second,

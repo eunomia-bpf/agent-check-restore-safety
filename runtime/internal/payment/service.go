@@ -41,8 +41,9 @@ type Stats struct {
 // Options keeps the default service idempotent while making provider behavior
 // and fault timing explicit for experiments. At most one fault mode can be
 // selected. The hold modes publish their progress through the existing Stats
-// counters, release the service lock, and wait until the client connection is
-// canceled without writing an HTTP response.
+// counters and release the service lock. Hold-after-commit may then be
+// released explicitly by the provider supervisor; cancellation remains the
+// fail-safe for either hold mode.
 type Options struct {
 	DropFirstResponse      bool
 	AlwaysDropBeforeCommit bool
@@ -62,6 +63,7 @@ type Service struct {
 	dropBeforeCommit bool
 	holdBeforeCommit bool
 	holdAfterCommit  bool
+	holdAfterRelease chan struct{}
 	nonIdempotent    bool
 	referencePrefix  string
 	closed           bool
@@ -159,6 +161,9 @@ func OpenWithOptions(path string, options Options) (*Service, error) {
 	service.dropBeforeCommit = options.AlwaysDropBeforeCommit
 	service.holdBeforeCommit = options.HoldBeforeCommit
 	service.holdAfterCommit = options.HoldAfterCommit
+	if options.HoldAfterCommit {
+		service.holdAfterRelease = make(chan struct{})
+	}
 	service.nonIdempotent = options.NonIdempotent
 	service.referencePrefix = options.ReferencePrefix
 	return service, nil
@@ -225,6 +230,23 @@ func (s *Service) Stats() Stats {
 	return Stats{Deliveries: s.deliveries, Commits: commits, Paths: paths}
 }
 
+// ReleaseHeldAfterCommit publishes the already-durable provider response and
+// disables the one-shot hold for later work. It returns false when this
+// service was not configured with an active post-commit hold.
+func (s *Service) ReleaseHeldAfterCommit() bool {
+	s.mu.Lock()
+	if !s.holdAfterCommit || s.holdAfterRelease == nil {
+		s.mu.Unlock()
+		return false
+	}
+	release := s.holdAfterRelease
+	s.holdAfterCommit = false
+	s.holdAfterRelease = nil
+	s.mu.Unlock()
+	close(release)
+	return true
+}
+
 func (s *Service) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(writer http.ResponseWriter, _ *http.Request) {
@@ -288,6 +310,7 @@ func (s *Service) charge(writer http.ResponseWriter, request *http.Request) {
 	var item record
 	drop := false
 	hold := false
+	var holdRelease <-chan struct{}
 	if willCommit {
 		item = newRecord(id, requestHash, request.URL.Path, len(items)+1, s.nonIdempotent, s.referencePrefix)
 		encoded, err := json.Marshal(item)
@@ -312,13 +335,15 @@ func (s *Service) charge(writer http.ResponseWriter, request *http.Request) {
 			s.dropNext = false
 		}
 		hold = s.holdAfterCommit
+		holdRelease = s.holdAfterRelease
 	} else {
 		item = items[0]
 	}
 	s.mu.Unlock()
 	if hold {
-		holdUntilCanceled(request)
-		return
+		if !holdUntilReleased(request, holdRelease) {
+			return
+		}
 	}
 	if drop {
 		if err := dropResponse(writer); err != nil {
@@ -421,6 +446,18 @@ func validReferencePrefix(value string) bool {
 
 func holdUntilCanceled(request *http.Request) {
 	<-request.Context().Done()
+}
+
+func holdUntilReleased(request *http.Request, release <-chan struct{}) bool {
+	if release == nil {
+		return false
+	}
+	select {
+	case <-release:
+		return true
+	case <-request.Context().Done():
+		return false
+	}
 }
 
 func dropResponse(writer http.ResponseWriter) error {

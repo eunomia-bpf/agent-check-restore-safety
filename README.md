@@ -50,6 +50,7 @@ make runtime-mcp-operation-check
 make runtime-codex-mcp-demo
 make runtime-codex-mcp-docker-demo
 make runtime-firecracker-codex-mcp-demo
+make runtime-firecracker-codex-mcp-inflight-demo
 make runtime-codex-demo
 make runtime-codex-isolated-demo
 make runtime-codex-isolated-check
@@ -97,6 +98,13 @@ fixed relay reached through PID 1. A checked KVM run completed A, replaced the
 whole VMM from snapshot, replayed A without another provider write, and then
 committed B. `make runtime-firecracker-codex-mcp-check` independently verifies
 both the VM lifecycle and the Codex-to-journal-to-History-to-provider join.
+
+The stronger in-flight target snapshots while A is already durable at the
+provider but still unresolved in Codex. A live vsock call cannot be trusted to
+survive whole-VM restore, so the runtime fails that VM closed and starts a
+fresh microVM. The new Codex session obtains A from the host journal before it
+submits B. Thus Firecracker supplies replaceable containment; it is not the
+source of external-operation correctness.
 
 The Codex demo uses the locally logged-in account and the real Codex App Server,
 not a model fixture. A strict dynamic tool requests one application-chosen

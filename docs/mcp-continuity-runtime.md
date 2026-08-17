@@ -150,6 +150,8 @@ make runtime-mcp-operation-build
 make runtime-codex-mcp-demo
 make runtime-codex-mcp-docker-demo
 make runtime-firecracker-codex-mcp-demo
+make runtime-firecracker-codex-mcp-inflight-demo \
+  FIRECRACKER_CODEX_MCP_INFLIGHT_DEMO_ARGS="<the same pinned artifact arguments>"
 
 # Check a retained run printed by the command above.
 make runtime-codex-mcp-check \
@@ -162,6 +164,14 @@ make runtime-firecracker-codex-mcp-check \
   FIRECRACKER_CODEX_PAYLOAD_RESULT=/absolute/path/to/payload.json \
   FIRECRACKER_CODEX_RUNNER=/absolute/path/to/firecracker-codex-shim
 ```
+
+The in-flight target deliberately tests the harder boundary. The provider
+fsyncs A while Codex is still waiting, then Firecracker takes a full snapshot.
+The restored live vsock transport is not assumed correct: that VM is allowed
+to fail closed, while the host-owned journal remains authoritative. A cold
+replacement microVM replays the exact A response and advances to B. The
+checker joins both VM attempts to one journal, one History chain, and exactly
+two non-idempotent provider commits.
 
 The compatibility binary requires four host/supervisor-owned inputs:
 

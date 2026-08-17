@@ -13,8 +13,10 @@ import json
 import os
 from pathlib import Path
 import secrets
+import signal
 import stat
 import sys
+import threading
 import time
 from typing import Any, Sequence
 
@@ -115,7 +117,10 @@ def run(
     payment_binary: Path,
     mcp_host_binary: Path,
     tools_config: Path,
+    checkpoint_mode: str = "settled",
 ) -> dict[str, Any]:
+    if checkpoint_mode not in {"settled", "inflight"}:
+        raise DemoError("checkpoint mode must be settled or inflight")
     control_binary = _owned_executable(control_binary, "Control binary")
     payment_binary = _owned_executable(payment_binary, "payment binary")
     mcp_host_binary = _owned_executable(mcp_host_binary, "MCP host binary")
@@ -136,7 +141,16 @@ def run(
     adapter = root / "adapter"
     workspace = root / "workspace"
     sockets = root / "sockets"
-    for directory in (runtime, adapter, workspace, sockets):
+    inflight_attempt = root / "inflight-attempt"
+    attempt_runtime = inflight_attempt / "runtime"
+    attempt_adapter = inflight_attempt / "adapter"
+    attempt_workspace = inflight_attempt / "workspace"
+    directories = [runtime, adapter, workspace, sockets]
+    if checkpoint_mode == "inflight":
+        directories.extend(
+            [inflight_attempt, attempt_runtime, attempt_adapter, attempt_workspace]
+        )
+    for directory in directories:
         directory.mkdir(mode=0o700)
 
     control_port = _reserve_loopback_port()
@@ -154,6 +168,11 @@ def run(
 
     processes: list[_Process] = []
     try:
+        payment_fault = (
+            "-hold-after-commit"
+            if checkpoint_mode == "inflight"
+            else "-drop-first-response"
+        )
         payment = _Process(
             "payment",
             [
@@ -162,7 +181,7 @@ def run(
                 f"127.0.0.1:{payment_port}",
                 "-state",
                 os.fspath(payment_history_path),
-                "-drop-first-response",
+                payment_fault,
                 "-non-idempotent",
                 "-reference-prefix",
                 "firecracker-mcp",
@@ -170,6 +189,10 @@ def run(
             root,
         )
         processes.append(payment)
+        _write_private_json(
+            root / "payment-process.json",
+            {"pid": payment.process.pid, "command": payment.command},
+        )
         _wait_healthy(payment_origin, payment)
 
         control = _Process(
@@ -246,32 +269,238 @@ def run(
         if not relay_socket_path.is_socket():
             raise DemoError("trusted MCP host did not publish its socket")
 
-        firecracker_result = run_demo(
-            runner=runner,
-            runner_sha256=runner_sha256,
-            firecracker=firecracker,
-            firecracker_sha256=firecracker_sha256,
-            kernel=kernel,
-            kernel_sha256=kernel_sha256,
-            guest=guest,
-            guest_sha256=guest_sha256,
-            payload=payload,
-            payload_sha256=payload_sha256,
-            repository=repository,
-            repository_sha256=repository_sha256,
-            codex_sha256=codex_sha256,
-            runtime_evidence=runtime,
-            adapter_evidence=adapter,
-            workspace=workspace,
-            protected_effect_ids=("preflight-effect-1",),
-            mcp_relay=mcp_relay,
-            mcp_relay_sha256=mcp_relay_sha256,
-            mcp_host_socket=relay_socket_path,
-            mcp_effect_ids=("effect-A", "effect-B"),
+        inflight_evidence: dict[str, Any] = {}
+        release_errors: list[Exception] = []
+        release_thread: threading.Thread | None = None
+
+        def read_records(path: Path, label: str) -> list[bytes]:
+            try:
+                data = path.read_bytes()
+            except OSError as error:
+                raise DemoError(f"cannot read {label}") from error
+            if not data or not data.endswith(b"\n"):
+                raise DemoError(f"{label} is empty or incomplete")
+            return [line + b"\n" for line in data.splitlines()]
+
+        def wait_for_inflight_commit() -> None:
+            nonlocal release_thread
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline:
+                if payment.process.poll() is not None or mcp_host.process.poll() is not None:
+                    raise DemoError("provider or MCP host exited before in-flight commit")
+                try:
+                    stats_before = _http_json("GET", payment_origin + "/v1/stats")
+                    provider_records = read_records(
+                        payment_history_path, "in-flight payment History"
+                    )
+                    journal_records = read_records(
+                        journal_path, "in-flight MCP journal"
+                    )
+                    journal_event = json.loads(journal_records[0])
+                except (DemoError, json.JSONDecodeError, OSError):
+                    time.sleep(0.05)
+                    continue
+                if (
+                    stats_before.get("deliveries") == 1
+                    and stats_before.get("commits") == 1
+                    and len(provider_records) == 1
+                    and len(journal_records) == 1
+                    and journal_event.get("event") == "prepared"
+                ):
+                    inflight_evidence.update(
+                        {
+                            "schema": 1,
+                            "checkpoint_mode": "inflight",
+                            "provider_commit_observed_time_ns": time.time_ns(),
+                            "provider_record_sha256": _sha256_file(
+                                payment_history_path
+                            ),
+                            "journal_prepared_record_sha256": _sha256_file(
+                                journal_path
+                            ),
+                            "stats_before_checkpoint": stats_before,
+                            "journal_records_before_checkpoint": 1,
+                        }
+                    )
+                    release_thread = threading.Thread(
+                        target=release_after_snapshot,
+                        name="release-provider-after-firecracker-snapshot",
+                    )
+                    release_thread.start()
+                    return
+                time.sleep(0.05)
+            raise DemoError(
+                "provider did not reach a durable held commit before checkpoint"
+            )
+
+        def release_after_snapshot() -> None:
+            try:
+                deadline = time.monotonic() + 20
+                snapshot_time: int | None = None
+                while time.monotonic() < deadline:
+                    try:
+                        runtime_events = [
+                            json.loads(line)
+                            for line in (attempt_runtime / "events.jsonl")
+                            .read_text(encoding="utf-8")
+                            .splitlines()
+                            if line
+                        ]
+                    except (OSError, json.JSONDecodeError):
+                        time.sleep(0.01)
+                        continue
+                    snapshots = [
+                        event.get("time_ns")
+                        for event in runtime_events
+                        if event.get("event") == "snapshot-created-paused"
+                    ]
+                    if len(snapshots) == 1 and isinstance(snapshots[0], int):
+                        snapshot_time = snapshots[0]
+                        break
+                    time.sleep(0.01)
+                if snapshot_time is None:
+                    raise DemoError("Firecracker did not publish its paused snapshot event")
+                if "release_signal_time_ns" in inflight_evidence:
+                    raise DemoError("in-flight provider release was attempted twice")
+                inflight_evidence["snapshot_created_time_ns"] = snapshot_time
+                inflight_evidence["release_signal_time_ns"] = time.time_ns()
+                payment.process.send_signal(signal.SIGUSR1)
+                deadline = time.monotonic() + 10
+                while time.monotonic() < deadline:
+                    if payment.process.poll() is not None or mcp_host.process.poll() is not None:
+                        raise DemoError("provider or MCP host exited during in-flight release")
+                    try:
+                        journal_records = read_records(
+                            journal_path, "released MCP journal"
+                        )
+                        journal_events = [
+                            json.loads(record) for record in journal_records
+                        ]
+                    except (DemoError, json.JSONDecodeError, OSError):
+                        time.sleep(0.01)
+                        continue
+                    if (
+                        len(journal_events) == 2
+                        and journal_events[0].get("event") == "prepared"
+                        and journal_events[1].get("event") == "completed"
+                    ):
+                        inflight_evidence["journal_completed_observed_time_ns"] = (
+                            time.time_ns()
+                        )
+                        inflight_evidence["journal_records_after_release"] = 2
+                        return
+                    time.sleep(0.01)
+                raise DemoError("host MCP journal did not complete the released operation")
+            except Exception as error:
+                release_errors.append(error)
+
+        def release_inflight_commit() -> None:
+            if release_thread is None:
+                raise DemoError("in-flight release watcher was not started")
+            release_thread.join(30)
+            if release_thread.is_alive():
+                raise DemoError("in-flight release watcher did not finish")
+            if release_errors:
+                raise DemoError(f"in-flight release watcher failed: {release_errors[0]}")
+
+        def run_firecracker(
+            runtime_directory: Path,
+            adapter_directory: Path,
+            workspace_directory: Path,
+            *,
+            inflight: bool,
+        ) -> dict[str, Any]:
+            return run_demo(
+                runner=runner,
+                runner_sha256=runner_sha256,
+                firecracker=firecracker,
+                firecracker_sha256=firecracker_sha256,
+                kernel=kernel,
+                kernel_sha256=kernel_sha256,
+                guest=guest,
+                guest_sha256=guest_sha256,
+                payload=payload,
+                payload_sha256=payload_sha256,
+                repository=repository,
+                repository_sha256=repository_sha256,
+                codex_sha256=codex_sha256,
+                runtime_evidence=runtime_directory,
+                adapter_evidence=adapter_directory,
+                workspace=workspace_directory,
+                protected_effect_ids=("preflight-effect-1",),
+                mcp_relay=mcp_relay,
+                mcp_relay_sha256=mcp_relay_sha256,
+                mcp_host_socket=relay_socket_path,
+                mcp_effect_ids=("effect-A", "effect-B"),
+                mcp_inflight_wait=(wait_for_inflight_commit if inflight else None),
+                mcp_inflight_release=(release_inflight_commit if inflight else None),
+            )
+
+        attempt_record: dict[str, Any] | None = None
+        if checkpoint_mode == "inflight":
+            attempt_error: Exception | None = None
+            try:
+                run_firecracker(
+                    attempt_runtime,
+                    attempt_adapter,
+                    attempt_workspace,
+                    inflight=True,
+                )
+            except Exception as error:
+                attempt_error = error
+            if release_thread is not None:
+                release_thread.join(30)
+            if (
+                attempt_error is None
+                or "App Server stdout closed unexpectedly" not in str(attempt_error)
+                or release_thread is None
+                or release_thread.is_alive()
+                or release_errors
+            ):
+                raise DemoError(
+                    "in-flight Firecracker attempt did not fail closed at its live transport"
+                ) from attempt_error
+            required_inflight = {
+                "provider_commit_observed_time_ns",
+                "snapshot_created_time_ns",
+                "release_signal_time_ns",
+                "journal_completed_observed_time_ns",
+            }
+            if not required_inflight.issubset(inflight_evidence):
+                raise DemoError("in-flight checkpoint evidence is incomplete")
+            _write_private_json(root / "inflight-checkpoint.json", inflight_evidence)
+            attempt_result_path = attempt_runtime / "result.json"
+            try:
+                attempt_result = json.loads(attempt_result_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as error:
+                raise DemoError("in-flight attempt omitted its runtime result") from error
+            if (
+                not isinstance(attempt_result, dict)
+                or attempt_result.get("schema") != 1
+                or attempt_result.get("success") is not False
+                or attempt_result.get("g1_sigkill_confirmed") is not True
+                or attempt_result.get("snapshot_loaded_paused") is not True
+            ):
+                raise DemoError("in-flight attempt did not retain a failed full-VM replacement")
+            attempt_record = {
+                "runtime_evidence": os.fspath(attempt_runtime),
+                "adapter_evidence": os.fspath(attempt_adapter),
+                "workspace": os.fspath(attempt_workspace),
+                "runtime_result": os.fspath(attempt_result_path),
+                "failure": str(attempt_error),
+            }
+
+        firecracker_result = run_firecracker(
+            runtime,
+            adapter,
+            workspace,
+            inflight=False,
         )
 
         relay_events = _wait_mcp_lifetimes(
-            root / "mcp-host.stderr.log", mcp_host, expected=3
+            root / "mcp-host.stderr.log",
+            mcp_host,
+            expected=5 if checkpoint_mode == "inflight" else 3,
         )
         state = _http_json("GET", control_origin + "/v1/state", token=token)
         stats = _http_json("GET", payment_origin + "/v1/stats")
@@ -290,7 +519,14 @@ def run(
         if (
             set(by_effect) != {"effect-A", "effect-B"}
             or by_effect["effect-A"].get("phase") != "succeeded"
-            or by_effect["effect-A"].get("settlement") != "query"
+            or (
+                checkpoint_mode == "settled"
+                and by_effect["effect-A"].get("settlement") != "query"
+            )
+            or (
+                checkpoint_mode == "inflight"
+                and by_effect["effect-A"].get("settlement") not in {None, ""}
+            )
             or by_effect["effect-B"].get("phase") != "succeeded"
             or stats.get("deliveries") != 2
             or stats.get("commits") != 2
@@ -301,6 +537,7 @@ def run(
         result = {
             "schema": 1,
             "valid": True,
+            "checkpoint_mode": checkpoint_mode,
             "firecracker_result": firecracker_result["result_path"],
             "runtime_evidence": os.fspath(runtime),
             "adapter_evidence": os.fspath(adapter),
@@ -313,6 +550,13 @@ def run(
             "mcp_relay_lifetimes": len(relay_events) // 2,
             "artifacts": trusted_artifacts,
         }
+        if checkpoint_mode == "inflight":
+            result["inflight_checkpoint"] = os.fspath(
+                root / "inflight-checkpoint.json"
+            )
+            if attempt_record is None:
+                raise DemoError("in-flight mode omitted its failed replacement attempt")
+            result["inflight_attempt"] = attempt_record
         _write_private_json(root / "result.json", result)
         return result
     finally:
@@ -339,6 +583,11 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("--mcp-host-binary", required=True, type=Path)
     parser.add_argument("--tools-config", required=True, type=Path)
     parser.add_argument("--evidence-dir", required=True, type=Path)
+    parser.add_argument(
+        "--checkpoint-mode",
+        choices=("settled", "inflight"),
+        default="settled",
+    )
     return parser.parse_args(argv)
 
 
@@ -366,6 +615,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             payment_binary=args.payment_binary,
             mcp_host_binary=args.mcp_host_binary,
             tools_config=args.tools_config,
+            checkpoint_mode=args.checkpoint_mode,
         )
     except Exception as error:
         print(f"Firecracker Codex MCP demo failed: {error}", file=sys.stderr)

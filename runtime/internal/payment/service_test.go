@@ -288,9 +288,10 @@ func TestHoldFaultsExposeCommitBoundaryAndWaitForCancellation(t *testing.T) {
 		name        string
 		options     Options
 		wantCommits int
+		release     bool
 	}{
 		{name: "before commit", options: Options{HoldBeforeCommit: true}, wantCommits: 0},
-		{name: "after commit", options: Options{HoldAfterCommit: true}, wantCommits: 1},
+		{name: "after commit", options: Options{HoldAfterCommit: true}, wantCommits: 1, release: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			service, err := OpenWithOptions(filepath.Join(t.TempDir(), "payment.history"), test.options)
@@ -301,6 +302,7 @@ func TestHoldFaultsExposeCommitBoundaryAndWaitForCancellation(t *testing.T) {
 			server := httptest.NewServer(service.Handler())
 			defer server.Close()
 			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 			request, err := http.NewRequestWithContext(ctx, http.MethodPost, server.URL+"/v1/charge",
 				bytes.NewReader([]byte(`{"order_id":"A-17","amount":42}`)))
 			if err != nil {
@@ -322,10 +324,19 @@ func TestHoldFaultsExposeCommitBoundaryAndWaitForCancellation(t *testing.T) {
 				t.Fatalf("held request returned before cancellation: %v", err)
 			default:
 			}
-			cancel()
+			if test.release {
+				if !service.ReleaseHeldAfterCommit() || service.ReleaseHeldAfterCommit() {
+					t.Fatal("post-commit hold did not release exactly once")
+				}
+			} else {
+				cancel()
+			}
 			select {
 			case err := <-done:
-				if err == nil {
+				if test.release && err != nil {
+					t.Fatalf("released request failed: %v", err)
+				}
+				if !test.release && err == nil {
 					t.Fatal("held request returned an HTTP response")
 				}
 			case <-time.After(2 * time.Second):
