@@ -1,0 +1,1 @@
+{"mcpServers":{"continuity":{"args":["-socket","/home/will/agent-check-restore-safety/docs/tmp/bootstrap/step-0019-20260817T010000Z/experiment-claude-process-continuity/raw/relay/mcp-host.sock"],"command":"/home/will/.cache/safe-change-runtime/mcp-operation/relay-bundle/mcp-operation-relay","env":{},"type":"stdio"}}}

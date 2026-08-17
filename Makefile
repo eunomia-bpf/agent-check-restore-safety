@@ -1,4 +1,4 @@
-.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-repository runtime-firecracker-codex-demo runtime-firecracker-codex-mcp-demo runtime-firecracker-codex-mcp-inflight-demo runtime-firecracker-codex-mcp-check runtime-firecracker-codex-check runtime-firecracker-codex-control-check runtime-mcp-operation-build runtime-mcp-operation-check runtime-mcp-operation-demo runtime-codex-mcp-build runtime-codex-mcp-demo runtime-codex-mcp-docker-demo runtime-codex-mcp-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
+.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-repository runtime-firecracker-codex-demo runtime-firecracker-codex-mcp-demo runtime-firecracker-codex-mcp-inflight-demo runtime-firecracker-codex-mcp-check runtime-firecracker-codex-check runtime-firecracker-codex-control-check runtime-mcp-operation-build runtime-mcp-operation-check runtime-mcp-operation-demo runtime-codex-mcp-build runtime-codex-mcp-demo runtime-codex-mcp-docker-demo runtime-codex-mcp-check runtime-claude-source-check runtime-claude-fetch runtime-claude-mcp-demo runtime-claude-mcp-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
 
 VM_ACCEL ?= tcg
 VM_BACKEND ?= qemu
@@ -29,6 +29,13 @@ MCP_RELAY_BUNDLE_DIR ?= $(MCP_OPERATION_BUILD_DIR)/relay-bundle
 CODEX_MCP_DEMO_ARGS ?=
 CODEX_MCP_DOCKER_ARGS ?=
 CODEX_MCP_EVIDENCE ?=
+CLAUDE_CODE_LOCK := runtime/deploy/claude-code/assets.lock.json
+CLAUDE_CODE_FETCH_INPUTS := $(CLAUDE_CODE_LOCK) runtime/deploy/claude-code/fetch-assets.sh
+CLAUDE_CODE_CACHE_ROOT ?= $(shell python3 -c 'import os; print(os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "safe-change-runtime", "claude"))')
+CLAUDE_CODE_BINARY ?= $(CLAUDE_CODE_CACHE_ROOT)/2.1.233/claude
+CLAUDE_CODE_SHA256 ?= 55d281096f57d411ebbdd94dbf5e9ff3accb7c05713e37348c2c11d4b83bf9d9
+CLAUDE_MCP_DEMO_ARGS ?=
+CLAUDE_MCP_EVIDENCE ?=
 RUNTIME_IMAGE ?= safe-change-runtime:local
 RUNTIME_VERSION ?= dev
 RUNTIME_REVISION ?= $(shell git rev-parse --short=12 HEAD)
@@ -286,6 +293,47 @@ runtime-codex-mcp-check:
 	@test -n "$(strip $(CODEX_MCP_EVIDENCE))" || { echo "CODEX_MCP_EVIDENCE must name the retained evidence directory" >&2; exit 2; }
 	python3 -m adapter.check_codex_mcp_evidence "$(abspath $(CODEX_MCP_EVIDENCE))"
 
+# Pinned official Claude Code release. The fetcher verifies Anthropic's release
+# key fingerprint, detached manifest signature, manifest entry, size, and hash.
+runtime-claude-source-check:
+	@for claude_input in $(CLAUDE_CODE_FETCH_INPUTS); do \
+		test -f "$$claude_input" && test ! -L "$$claude_input" || { \
+			echo "$$claude_input must be a direct regular file" >&2; exit 2; \
+		}; \
+		expected_hash="$$(git rev-parse --verify "HEAD:$$claude_input" 2>/dev/null)" || { \
+			echo "$$claude_input must be committed before the Claude fetcher can run" >&2; exit 2; \
+		}; \
+		actual_hash="$$(git hash-object --no-filters "$$claude_input")" || exit 2; \
+		test "$$actual_hash" = "$$expected_hash" || { \
+			echo "$$claude_input bytes do not match HEAD" >&2; exit 2; \
+		}; \
+	done
+	@test -z "$$(git status --porcelain=v1 --untracked-files=all -- $(CLAUDE_CODE_FETCH_INPUTS))" || { \
+		echo "Claude fetch inputs must match HEAD before execution" >&2; \
+		git status --short -- $(CLAUDE_CODE_FETCH_INPUTS) >&2; exit 2; \
+	}
+
+runtime-claude-fetch: runtime-claude-source-check
+	bash runtime/deploy/claude-code/fetch-assets.sh
+
+# Real Claude Code 2.1.233, two clean process lifetimes, one durable MCP host,
+# and a non-idempotent provider held after its first commit.
+runtime-claude-mcp-demo: runtime-claude-fetch runtime-codex-mcp-build
+	python3 -m adapter.claude_mcp_runtime_demo \
+		--claude-binary "$(abspath $(CLAUDE_CODE_BINARY))" \
+		--claude-sha256 "$(CLAUDE_CODE_SHA256)" \
+		--claude-lock "$(abspath $(CLAUDE_CODE_LOCK))" \
+		--control-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/control" \
+		--payment-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/payment" \
+		--mcp-host-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/mcp-operation-host" \
+		--mcp-relay-binary "$(abspath $(MCP_RELAY_BUNDLE_DIR))/mcp-operation-relay" \
+		--tools-config "$(abspath runtime/deploy/mcp-operation/tools.json)" \
+		$(CLAUDE_MCP_DEMO_ARGS)
+
+runtime-claude-mcp-check:
+	@test -n "$(strip $(CLAUDE_MCP_EVIDENCE))" || { echo "CLAUDE_MCP_EVIDENCE must name the retained evidence directory" >&2; exit 2; }
+	python3 -m adapter.check_claude_mcp_evidence "$(abspath $(CLAUDE_MCP_EVIDENCE))"
+
 # Explicit live-account target. It is intentionally not part of runtime-verify.
 runtime-codex-demo:
 	python3 -m adapter.codex_runtime_demo $(CODEX_DEMO_ARGS)
@@ -329,6 +377,8 @@ runtime-verify:
 		adapter.test_docker_codex \
 		adapter.test_firecracker_codex \
 		adapter.test_firecracker_codex_runtime_demo \
+		adapter.test_mock_anthropic \
+		adapter.test_check_claude_mcp_evidence \
 		adapter.test_codex_isolated_runtime_demo \
 		adapter.test_check_codex_isolated_evidence \
 		adapter.test_codex_integrated_runtime_demo \

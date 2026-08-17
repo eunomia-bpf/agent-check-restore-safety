@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "claude_code": {
+    "version": "2.1.233",
+    "platform": "linux-x64",
+    "repository_url": "https://downloads.claude.ai/claude-code-releases",
+    "signing_key_url": "https://downloads.claude.ai/keys/claude-code.asc",
+    "signing_key_fingerprint": "31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE",
+    "signing_key_size": 1688,
+    "signing_key_sha256": "bd70a5e4a268002704024ceba7f8446024114e94f3f0bdd11c23a9e592be81c6",
+    "manifest_url": "https://downloads.claude.ai/claude-code-releases/2.1.233/manifest.json",
+    "manifest_size": 2025,
+    "manifest_sha256": "bc6dd66a82043cca6550d19bac1f2cb4ad61310de670426a938168940b5f6477",
+    "manifest_signature_url": "https://downloads.claude.ai/claude-code-releases/2.1.233/manifest.json.sig",
+    "manifest_signature_size": 833,
+    "manifest_signature_sha256": "396eb376f03528b353fb569fdf01019467f2a3e8dcba9318d18cfad7315d323c",
+    "binary_url": "https://downloads.claude.ai/claude-code-releases/2.1.233/linux-x64/claude",
+    "binary_size": 324598064,
+    "binary_sha256": "55d281096f57d411ebbdd94dbf5e9ff3accb7c05713e37348c2c11d4b83bf9d9",
+    "version_output": "2.1.233 (Claude Code)"
+  }
+}

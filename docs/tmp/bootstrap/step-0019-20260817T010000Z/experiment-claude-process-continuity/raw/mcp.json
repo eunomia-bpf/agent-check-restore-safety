@@ -1,0 +1,1 @@
+{"mcpServers":{"continuity":{"args":["-socket","/tmp/claude-mcp-transport-xdojlbxz/relay/mcp-host.sock"],"command":"/home/will/.cache/safe-change-runtime/mcp-operation/relay-bundle/mcp-operation-relay","env":{},"type":"stdio"}}}

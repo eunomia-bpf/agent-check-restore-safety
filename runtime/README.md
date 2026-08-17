@@ -274,6 +274,7 @@ make runtime-microservice-demo
 make runtime-vm-demo
 make runtime-firecracker-kvm-test
 make runtime-codex-mcp-demo
+make runtime-claude-mcp-demo
 make runtime-codex-demo
 make runtime-codex-isolated-demo
 make runtime-codex-isolated-check
@@ -297,6 +298,23 @@ The same run also shows that:
 - a Certificate becomes stale after any Operation progress, even when a view
   containing only authorization events would be unchanged; and
 - a settled retry returns the recorded result without another network call.
+
+## Replace a real Claude Code process during an external commit
+
+`make runtime-claude-mcp-demo` downloads and cryptographically verifies the
+pinned official Claude Code 2.1.233 binary, then launches two clean Claude
+process groups against the same host-owned MCP journal. The provider commits
+`effect-A` and holds its response; the supervisor kills the first Claude and
+its stdio relay with `SIGKILL`; the host completes A; and a second Claude
+process replays A, commits B, and returns `DONE`. The provider sees exactly one
+delivery and commit for each effect.
+
+The Agent-facing integration is an ordinary explicit MCP configuration. The
+stdio executable is only a byte relay. Tool meaning, external identity,
+History, Rule, provider route, and recovery state stay in the host process and
+therefore survive replacement of either Claude or Codex. Reproduce and inspect
+the independently checked evidence using
+[`docs/claude-mcp-runtime.md`](../docs/claude-mcp-runtime.md).
 
 ## Replace a real service process
 
@@ -700,6 +718,9 @@ general exactly-once claim nor proof that every unknown Operation can finish.
 - a real Codex 0.147 code-mode MCP path that recovers a lost response, restarts
   Codex and its MCP child, returns the exact result for the replayed model call,
   and then admits a distinct call against a non-idempotent payment service;
+- a real Claude Code 2.1.233 path over the same host MCP boundary that kills
+  the complete Agent process group after a provider commit, starts a clean
+  Claude session, replays the exact result, and commits the next Operation;
 - adapter credentials bound to one domain and an allowed kind set, with the
   Operation identity derived server-side from that domain and call identity;
 - History-based recovery of a previously registered Operation's frozen kind,

@@ -865,3 +865,39 @@ with a real repository and the durable Operation gateway, then change a Rule
 at the same VM boundary and compare useful continuation against the strongest
 update and isolation baselines. The exact implementation boundary is in
 `docs/firecracker-codex-runtime.md`.
+
+## 17. Real Claude Code process replacement
+
+Paper-value role: **supporting portability evidence** for RQ4, not a separate
+headline experiment. The uncertainty was whether the durable MCP boundary was
+an artifact of Codex App Server behavior or could remain outside another
+unmodified Agent runtime. The real preflight and full checked run both use the
+official Claude Code 2.1.233 Linux executable and its documented bare,
+headless, strict-MCP path.
+
+The provider durably committed A before the first Claude process received its
+tool result. The supervisor then killed the source session with `SIGKILL` and
+released the held provider response. The host MCP process completed A before a
+new Claude session started. The new session repeated A, received the exact
+journaled response without a provider delivery, executed B once, returned
+`DONE`, and exited zero. Final counts are two provider deliveries, two commits,
+two Operations, seven History events, four MCP journal records, four model
+requests, and two relay lifetimes.
+
+The independent standard-library checker passed on retained evidence at
+`docs/tmp/bootstrap/step-0019-20260817T010000Z/experiment-claude-process-continuity/raw/`.
+It recomputes the History and journal hash
+chains, Operation and request identities, provider facts, process/relay
+relations, raw vendor streams, model-request placement, config isolation, and
+credential removal. This supports provider-independent process continuity but
+does not answer RQ4 alone: it is one correctness run with a deterministic model
+endpoint, no performance comparison, no arbitrary built-in-tool mediation, and
+no Claude-in-Firecracker replacement. Reproduction and checker commands are in
+`docs/claude-mcp-runtime.md`.
+
+- Plan:
+  `docs/tmp/bootstrap/step-0019-20260817T010000Z/experiment-claude-process-continuity/plan.md`.
+- Result review:
+  `docs/tmp/bootstrap/step-0019-20260817T010000Z/experiment-claude-process-continuity/result-review.md`.
+- Final raw evidence:
+  `docs/tmp/bootstrap/step-0019-20260817T010000Z/experiment-claude-process-continuity/raw/`.

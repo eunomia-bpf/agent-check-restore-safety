@@ -1,6 +1,6 @@
 # Implementation and Evidence Boundary
 
-**Status:** repository truth as of 2026-08-16. This document distinguishes implemented artifacts, positively reviewed finite-model evidence, conditional refinement assumptions, and proposed runtime work so the paper never reports an abstract theorem as deployed-product safety.
+**Status:** repository truth as of 2026-08-17. This document distinguishes implemented artifacts, positively reviewed finite-model evidence, conditional refinement assumptions, and proposed runtime work so the paper never reports an abstract theorem as deployed-product safety.
 
 ## 1. Branch and paper source of truth
 
@@ -120,6 +120,32 @@ import a real repository, export a patch, mediate all built-in tools, run under
 Firecracker jailer/cgroups, or bind the callback to the durable History/Rule
 activation protocol. Full details and reproduction entry points are in
 `docs/firecracker-codex-runtime.md`.
+
+### Real Claude Code over the shared host boundary
+
+The provider-independent MCP boundary now runs the pinned official Claude Code
+2.1.233 binary without modifying or globally installing it. The fetcher checks
+Anthropic's published signing-key fingerprint, detached release-manifest
+signature, signed Linux entry, size, SHA-256, and version output. Claude starts
+in documented bare headless mode with an explicit MCP file and a private config
+directory; its stdio child is an untrusted relay containing none of the tool,
+provider, History, Rule, or recovery state.
+
+In the retained real execution, the provider committed A while its response
+was held. The supervisor killed the exact Claude process group, including the
+relay. The host MCP process completed A in its fsynced journal, a second clean
+Claude process replayed that response without another A delivery, B committed
+once, and Claude returned `DONE`. The independent checker reconstructs the
+seven History events, four MCP records, two provider facts, four model
+requests, two raw Claude streams, and Linux `/proc` identities. It also verifies
+that the runtime admin token was removed and the fixture credential was not
+retained. Full commands and the honest boundary are in
+`docs/claude-mcp-runtime.md`.
+
+This proves portability of one process-level continuity seam, not complete
+mediation or whole-VM Claude replacement. The model endpoint is deterministic,
+and built-in tools are present but unused. The next implementation step is to
+place this same Claude contract inside the existing Firecracker execution cell.
 
 ### Not implemented
 
