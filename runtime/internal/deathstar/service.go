@@ -78,18 +78,24 @@ type ReservationStore interface {
 }
 
 type EffectConfig struct {
-	FrontendURL       string
-	AuditPath         string
-	DropFirstResponse bool
-	PostCommitDelay   time.Duration
-	Transport         http.RoundTripper
+	FrontendURL            string
+	AuditPath              string
+	DropFirstResponse      bool
+	AbortBeforeUpstream    bool
+	PreUpstreamAbortDelay  time.Duration
+	TerminalFenceDirectory string
+	PostCommitDelay        time.Duration
+	Transport              http.RoundTripper
 }
 
 type EffectService struct {
-	frontend        *url.URL
-	client          *http.Client
-	audit           *auditLog
-	postCommitDelay time.Duration
+	frontend              *url.URL
+	client                *http.Client
+	audit                 *auditLog
+	fences                *terminalFenceStore
+	abortBeforeUpstream   bool
+	preUpstreamAbortDelay time.Duration
+	postCommitDelay       time.Duration
 }
 
 type auditRecord struct {
@@ -121,6 +127,9 @@ func OpenEffect(config EffectConfig) (*EffectService, error) {
 	if config.PostCommitDelay < 0 || config.PostCommitDelay > time.Minute {
 		return nil, errors.New("DeathStarBench post-commit delay must be between 0 and 1m")
 	}
+	if config.PreUpstreamAbortDelay < 0 || config.PreUpstreamAbortDelay > time.Minute {
+		return nil, errors.New("DeathStarBench pre-upstream abort delay must be between 0 and 1m")
+	}
 	frontend, err := url.Parse(config.FrontendURL)
 	if err != nil || (frontend.Scheme != "http" && frontend.Scheme != "https") || frontend.Host == "" || frontend.User != nil || frontend.Fragment != "" {
 		return nil, errors.New("DeathStarBench frontend must be an absolute HTTP(S) URL")
@@ -135,6 +144,18 @@ func OpenEffect(config EffectConfig) (*EffectService, error) {
 	if err != nil {
 		return nil, err
 	}
+	var fences *terminalFenceStore
+	if config.TerminalFenceDirectory != "" {
+		fences, err = openTerminalFenceStore(config.TerminalFenceDirectory)
+		if err != nil {
+			_ = audit.close()
+			return nil, err
+		}
+	}
+	if config.AbortBeforeUpstream && fences == nil {
+		_ = audit.close()
+		return nil, errors.New("pre-upstream abort requires a terminal fence directory")
+	}
 	transport := config.Transport
 	if transport == nil {
 		transport = http.DefaultTransport
@@ -148,8 +169,11 @@ func OpenEffect(config EffectConfig) (*EffectService, error) {
 				return http.ErrUseLastResponse
 			},
 		},
-		audit:           audit,
-		postCommitDelay: config.PostCommitDelay,
+		audit:                 audit,
+		fences:                fences,
+		abortBeforeUpstream:   config.AbortBeforeUpstream,
+		preUpstreamAbortDelay: config.PreUpstreamAbortDelay,
+		postCommitDelay:       config.PostCommitDelay,
 	}, nil
 }
 
@@ -273,6 +297,43 @@ func (s *EffectService) reserve(writer http.ResponseWriter, request *http.Reques
 		writeError(writer, http.StatusBadRequest, err)
 		return
 	}
+	requestHash := request.Header.Get("X-Operation-Request-Hash")
+	if s.fences != nil {
+		if !validDigest(requestHash) {
+			writeError(writer, http.StatusBadRequest, errors.New("valid Operation request hash is required by the terminal fence"))
+			return
+		}
+		_, fenced, err := s.fences.lookup(operationID, requestHash)
+		if err != nil {
+			writeError(writer, http.StatusInternalServerError, err)
+			return
+		}
+		if s.abortBeforeUpstream || fenced {
+			if _, err := s.fences.record(operationID, requestHash); err != nil {
+				writeError(writer, http.StatusInternalServerError, err)
+				return
+			}
+			if s.preUpstreamAbortDelay > 0 {
+				timer := time.NewTimer(s.preUpstreamAbortDelay)
+				defer timer.Stop()
+				select {
+				case <-timer.C:
+				case <-request.Context().Done():
+				}
+			}
+			hijacker, ok := writer.(http.Hijacker)
+			if !ok {
+				writeError(writer, http.StatusInternalServerError, errors.New("terminal abort requires a connection-owning HTTP server"))
+				return
+			}
+			connection, _, err := hijacker.Hijack()
+			if err != nil {
+				return
+			}
+			_ = connection.Close()
+			return
+		}
+	}
 	upstreamURL := *s.frontend
 	upstreamURL.Path = strings.TrimRight(upstreamURL.Path, "/") + "/reservation"
 	query := upstreamURL.Query()
@@ -384,23 +445,37 @@ type Observation struct {
 
 type observedFact struct {
 	Observation
-	Count          int64             `json:"count"`
-	Facts          []ReservationFact `json:"facts"`
-	FactsHash      string            `json:"facts_hash"`
-	ObservedTimeNS int64             `json:"observed_time_ns"`
+	Count          int64                `json:"count"`
+	Facts          []ReservationFact    `json:"facts"`
+	FactsHash      string               `json:"facts_hash"`
+	TerminalFence  *terminalFenceRecord `json:"terminal_fence,omitempty"`
+	ObservedTimeNS int64                `json:"observed_time_ns"`
 }
 
 type ObserverService struct {
-	store ReservationStore
-	mu    sync.Mutex
-	items []observedFact
+	store  ReservationStore
+	fences *terminalFenceStore
+	mu     sync.Mutex
+	items  []observedFact
 }
 
 func NewObserver(store ReservationStore) (*ObserverService, error) {
+	return NewObserverWithTerminalFences(store, "")
+}
+
+func NewObserverWithTerminalFences(store ReservationStore, directory string) (*ObserverService, error) {
 	if store == nil {
 		return nil, errors.New("observer requires a reservation store")
 	}
-	return &ObserverService{store: store}, nil
+	var fences *terminalFenceStore
+	var err error
+	if directory != "" {
+		fences, err = openTerminalFenceStore(directory)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &ObserverService{store: store, fences: fences}, nil
 }
 
 func (s *ObserverService) Handler() http.Handler {
@@ -444,6 +519,21 @@ func (s *ObserverService) query(writer http.ResponseWriter, request *http.Reques
 	}
 	outcome := "inconclusive"
 	factHash := ""
+	var terminalFence *terminalFenceRecord
+	if s.fences != nil {
+		fence, found, err := s.fences.lookup(operationID, requestHash)
+		if err != nil {
+			writeError(writer, http.StatusInternalServerError, err)
+			return
+		}
+		if found {
+			terminalFence = &fence
+			if match.Count != 0 {
+				writeError(writer, http.StatusInternalServerError, errors.New("terminal pre-upstream fence contradicts application state"))
+				return
+			}
+		}
+	}
 	// Preserve the distinction between "no facts" and an absent field in the
 	// retained evidence contract. Both unique and inconclusive observations
 	// therefore encode facts as a JSON array, never null.
@@ -451,15 +541,21 @@ func (s *ObserverService) query(writer http.ResponseWriter, request *http.Reques
 	if match.Count == 1 {
 		outcome = "succeeded"
 		factHash = canonicalFactHash(facts)
+	} else if match.Count == 0 && terminalFence != nil {
+		outcome = "failed"
+		factHash = terminalFence.FactHash
 	}
 	observation := Observation{
 		Schema: 1, OperationID: operationID, RequestHash: requestHash,
 		Outcome: outcome, FactHash: factHash,
 		RemoteReference: fmt.Sprintf("reservation-db.reservation/count=%d", match.Count),
 	}
+	if terminalFence != nil {
+		observation.RemoteReference += ";terminal-pre-upstream-abort=" + terminalFence.FactHash
+	}
 	s.mu.Lock()
 	s.items = append(s.items, observedFact{
-		Observation: observation, Count: match.Count, Facts: facts,
+		Observation: observation, Count: match.Count, Facts: facts, TerminalFence: terminalFence,
 		FactsHash: canonicalFactHash(facts), ObservedTimeNS: time.Now().UnixNano(),
 	})
 	s.mu.Unlock()

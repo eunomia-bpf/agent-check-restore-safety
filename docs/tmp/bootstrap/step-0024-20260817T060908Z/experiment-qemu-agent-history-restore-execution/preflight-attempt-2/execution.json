@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "overall_started_time_ns": 1786952276247816106,
+  "driver_started_time_ns": 1786952293139422622,
+  "driver_finished_time_ns": 1786952395173302973,
+  "overall_finished_time_ns": 1786952395662696526,
+  "total_duration_seconds": 119.414880256,
+  "driver_duration_seconds": 102.03388032,
+  "driver_exit_status": 1,
+  "timeout_seconds": 7200,
+  "timed_out": false
+}

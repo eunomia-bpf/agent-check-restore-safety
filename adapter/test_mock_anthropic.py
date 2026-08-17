@@ -33,6 +33,14 @@ def _request(server: DeterministicAnthropicServer, messages: list[dict]) -> byte
 
 
 class DeterministicAnthropicServerTests(unittest.TestCase):
+    def test_health_probe_does_not_consume_a_model_request(self) -> None:
+        with DeterministicAnthropicServer(("effect-A",)) as server:
+            request = Request(server.base_url + "/health", method="GET")
+            with build_opener(ProxyHandler({})).open(request, timeout=5) as response:
+                self.assertEqual(json.loads(response.read()), {"status": "ok"})
+            self.assertEqual(server.requests, ())
+            self.assertIsNone(server.failure)
+
     def test_streams_protected_call_then_done(self) -> None:
         with DeterministicAnthropicServer(("effect-A",)) as server:
             first = _request(

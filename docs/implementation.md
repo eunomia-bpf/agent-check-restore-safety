@@ -172,6 +172,25 @@ ordering, VMM identities, Firecracker device configuration, relay bytes, and
 official Claude stream. Reproduction and the exact limit are in
 `docs/firecracker-deathstar-runtime.md`.
 
+### Full-QEMU History-dependent resume prototype
+
+The repository also contains a complete-QEMU prototype in
+`runtime/cmd/vm-demo/agent_cell.go`, `runtime/internal/vmresume/`, and
+`adapter/qemu_agent_restore_demo.py`. It loads a named snapshot halted, binds a
+single-use resume authorization to live authenticated Control state, the exact
+History and Certificate, QEMU executable/argv identity, the opened qcow2 inode
+and digest, and the active generation endpoint, then permits QMP `cont` only
+through the guard callback. The denied path invokes the same guard and quits
+without `cont`. The driver and independent checker also retain raw QMP,
+History, Mongo, relay, Agent, process, disk, deadline, and cleanup evidence.
+
+This prototype has not passed a real end-to-end preflight. Three retained
+attempts all stopped before an Agent action; the final attempt proved its model
+guest forward reachable but official Claude emitted no Messages request within
+the bounded startup window. No H1/H0/native result or paper evidence exists.
+The implementation remains a debug/full-VM backend candidate, while the next
+integration should reuse the already validated Firecracker Claude/HTTP path.
+
 ### Not implemented
 
 There is currently no:

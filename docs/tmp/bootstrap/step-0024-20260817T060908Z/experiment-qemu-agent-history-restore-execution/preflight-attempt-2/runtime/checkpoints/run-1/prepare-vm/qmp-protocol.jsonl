@@ -1,0 +1,14 @@
+{"direction":"server_to_client","payload":{"QMP":{"version":{"qemu":{"micro":2,"minor":2,"major":8},"package":"Debian 1:8.2.2+ds-0ubuntu1.18"},"capabilities":["oob"]}},"sequence":1,"time_ns":1786952299067715787}
+{"direction":"client_to_server","payload":{"execute":"qmp_capabilities","id":"command-1"},"sequence":2,"time_ns":1786952299071604462}
+{"direction":"server_to_client","payload":{"id":"command-1","return":{}},"sequence":3,"time_ns":1786952299097568749}
+{"direction":"client_to_server","payload":{"execute":"stop","id":"command-2"},"sequence":4,"time_ns":1786952334302046296}
+{"direction":"server_to_client","payload":{"data":{"path":"/machine/peripheral-anon/device[0]/virtio-backend"},"event":"NIC_RX_FILTER_CHANGED","timestamp":{"seconds":1786952318,"microseconds":764479}},"sequence":5,"time_ns":1786952334315541130}
+{"direction":"server_to_client","payload":{"event":"STOP","timestamp":{"seconds":1786952334,"microseconds":317421}},"sequence":6,"time_ns":1786952334319280152}
+{"direction":"server_to_client","payload":{"id":"command-2","return":{}},"sequence":7,"time_ns":1786952334325982498}
+{"direction":"client_to_server","payload":{"execute":"query-status","id":"command-3"},"sequence":8,"time_ns":1786952334334415802}
+{"direction":"server_to_client","payload":{"id":"command-3","return":{"status":"paused","singlestep":false,"running":false}},"sequence":9,"time_ns":1786952334342246883}
+{"direction":"client_to_server","payload":{"arguments":{"command-line":"savevm before_agent"},"execute":"human-monitor-command","id":"command-4"},"sequence":10,"time_ns":1786952334345949134}
+{"direction":"server_to_client","payload":{"id":"command-4","return":""},"sequence":11,"time_ns":1786952340732649995}
+{"direction":"client_to_server","payload":{"execute":"quit","id":"command-5"},"sequence":12,"time_ns":1786952340735412965}
+{"direction":"server_to_client","payload":{"data":{"guest":false,"reason":"host-qmp-quit"},"event":"SHUTDOWN","timestamp":{"seconds":1786952340,"microseconds":738278}},"sequence":13,"time_ns":1786952340738373100}
+{"direction":"server_to_client","payload":{"id":"command-5","return":{}},"sequence":14,"time_ns":1786952340742503450}

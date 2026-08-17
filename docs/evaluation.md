@@ -1038,3 +1038,30 @@ output, or fleet control.
   `docs/tmp/bootstrap/step-0022-20260817T025925Z/experiment-firecracker-deathstar-egress/raw/`.
 - Reproduction:
   `docs/firecracker-deathstar-runtime.md`.
+
+## 21. Full-QEMU History-gated Agent Restore attempt
+
+Paper-value role: **incomplete systems integration; no RQ evidence**. The
+experiment implemented an exact host-side resume guard over complete
+Ubuntu/QEMU, official Claude Code 2.1.233, live authenticated Control state,
+binary History, checked Certificate, exact QEMU process/disk identity, and the
+full DeathStarBench/Mongo path. Its planned H1/H0/native comparison would have
+made the History-dependent decision the only route to QMP `cont`.
+
+None of the three permitted real preflights reached a complete comparison.
+Attempt 1 stopped at transient runner identity capture. Attempt 2 launched
+Claude but had insufficient model-stage diagnostics. After entering a private
+workspace, adding a same-`guestfwd` health probe, and retaining failure data,
+attempt 3 proved the model path reachable but observed exactly zero Messages
+requests for 90 seconds. It produced no Bash call, History Operation, relay
+connection, terminal fence, or DeathStarBench delivery. Every QEMU and runner
+was reaped without residual repair, and no run timed out.
+
+The full matrix and checker were not run, so these attempts provide no positive
+or negative evidence about the History decision. The QEMU path closes under
+its three-preflight limit. The implementation and complete failure provenance
+remain under
+`docs/tmp/bootstrap/step-0024-20260817T060908Z/`; no result enters the paper.
+The next experiment should bind the same decision to the already successful
+official-Claude Firecracker/DeathStarBench replacement path rather than retry
+this QEMU startup branch.

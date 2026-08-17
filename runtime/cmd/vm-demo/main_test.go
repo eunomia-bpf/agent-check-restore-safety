@@ -15,8 +15,11 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
+
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/kernel"
 )
 
 func TestEnsureImageDownloadsAndVerifiesOnce(t *testing.T) {
@@ -144,6 +147,13 @@ func TestReadNonemptyProcessCommandObservesLiveProcess(t *testing.T) {
 	}
 	if len(bytes.Split(data, []byte{0})) < 2 {
 		t.Fatalf("live process command=%q", data)
+	}
+}
+
+func TestAgentQEMUCommandKillsChildWhenRunnerDies(t *testing.T) {
+	command := agentQEMUCommand(context.Background(), "/bin/true", []string{"argument"})
+	if command.SysProcAttr == nil || command.SysProcAttr.Pdeathsig != syscall.SIGKILL {
+		t.Fatalf("QEMU parent-death signal=%+v", command.SysProcAttr)
 	}
 }
 
@@ -352,6 +362,17 @@ func TestExternalGuestScriptContainsNoCredentialPath(t *testing.T) {
 	}
 }
 
+func TestAgentGuestScriptProbesModelAndUsesPrivateWorkspace(t *testing.T) {
+	script := agentGuestScript(strings.Repeat("a", 64))
+	modelReady := strings.Index(script, "http://10.0.2.100:9000/health")
+	workspace := strings.Index(script, "cd /run/claude-workspace")
+	claudeStarted := strings.Index(script, "SAFE_CHANGE_QEMU_AGENT_CLAUDE_STARTED")
+	if modelReady < 0 || workspace < 0 || claudeStarted < 0 ||
+		modelReady >= workspace || workspace >= claudeStarted {
+		t.Fatalf("Agent guest does not prove model reachability and enter its private workspace before Claude: %s", script)
+	}
+}
+
 func TestExpectExternalCommandIsExact(t *testing.T) {
 	scanner := bufio.NewScanner(strings.NewReader("start\npause\nrestore\nresume\n"))
 	if err := expectExternalCommand(context.Background(), scanner, "start"); err != nil {
@@ -429,5 +450,52 @@ func TestQEMUCommandRedactsPrivatePaths(t *testing.T) {
 	}
 	if !strings.Contains(text, "restrict=on") || !strings.Contains(text, "<vm-evidence>") {
 		t.Fatalf("QEMU boundary projection is incomplete: %s", text)
+	}
+}
+
+func TestValidateQEMUStatusDistinguishesInitialHaltFromStop(t *testing.T) {
+	if err := validateQEMUStatus([]byte(`{"status":"prelaunch","running":false}`), "prelaunch"); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateQEMUStatus([]byte(`{"status":"paused","running":false}`), "prelaunch"); err == nil {
+		t.Fatal("an explicit stop state was accepted as the initial -S halt")
+	}
+	if err := validateQEMUStatus([]byte(`{"status":"prelaunch","running":true}`), "prelaunch"); err == nil {
+		t.Fatal("a running VM was accepted as initially halted")
+	}
+}
+
+func TestOpenAgentControlClientRequiresPrivateLoopbackAuthority(t *testing.T) {
+	state := kernel.NewState()
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.Header.Get("Authorization") != "Bearer agent-control-token-00000000000000000000" {
+			t.Errorf("Authorization=%q", request.Header.Get("Authorization"))
+		}
+		writer.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(writer).Encode(state)
+	}))
+	defer server.Close()
+	tokenPath := filepath.Join(t.TempDir(), "admin.token")
+	if err := os.WriteFile(tokenPath, []byte("agent-control-token-00000000000000000000\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manifest := agentGuardManifest{ControlURL: server.URL, ControlTokenPath: tokenPath}
+	client, err := openAgentControlClient(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.State(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	manifest.ControlURL = "http://control.example:8080"
+	if _, err := openAgentControlClient(manifest); err == nil {
+		t.Fatal("non-loopback Control authority was accepted")
+	}
+	manifest.ControlURL = server.URL
+	if err := os.Chmod(tokenPath, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := openAgentControlClient(manifest); err == nil {
+		t.Fatal("public Control token was accepted")
 	}
 }

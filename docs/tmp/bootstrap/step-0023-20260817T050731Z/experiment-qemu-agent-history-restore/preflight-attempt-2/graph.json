@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "repository": "https://github.com/delimitrou/DeathStarBench.git",
+  "tag": "hotelReservation-0.3.5",
+  "commit": "6ecb09706140f8730b5385c08f1386c654c3c526",
+  "tree": "0ac0fd6d4ccfa1472d3895384d45fef5c6246b03",
+  "official_services": 24,
+  "official_compose_running": 23,
+  "compose_frontend_scaled_to_zero": true,
+  "custom_unmodified_frontend_running": true,
+  "application_image": "safe-change-step23/deathstar:hotel-reservation-0.3.5",
+  "application_image_id": "sha256:ac4419b69a830b3382f97bc4ad6f78bb64aa6378054ec0b3b94aa0033ff3979e",
+  "runtime_image": "safe-change-step23/runtime:local",
+  "runtime_image_id": "sha256:6cc793810789289515dd545dd2421a170d9f5c62927be846d4ec7d50726095e1",
+  "runtime_tree_hash": "51564bb6d9764d864f7730946d211b8b0de5aa146678af542c806f4dd8931ebe",
+  "runtime_status": " M Makefile\n M runtime/cmd/deathstar-adapter/main.go\n M runtime/cmd/vm-demo/main.go\n M runtime/internal/deathstar/service.go\n M runtime/internal/deathstar/service_test.go\n?? adapter/check_qemu_agent_restore_evidence.py\n?? adapter/qemu_agent_restore_demo.py\n?? runtime/cmd/vm-demo/agent_cell.go\n?? runtime/deploy/qemu-agent-restore/run.sh\n?? runtime/internal/deathstar/terminal_fence.go\n?? runtime/internal/vmresume/guard.go\n?? runtime/internal/vmresume/guard_test.go",
+  "networks": {
+    "application": "safe-change-qemu-agent-restore-step23_default",
+    "frontdoor": "safe-change-step23-frontdoor",
+    "observation": "safe-change-step23-observation"
+  },
+  "source_modified": false,
+  "pass": true
+}

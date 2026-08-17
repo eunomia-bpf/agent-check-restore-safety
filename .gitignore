@@ -57,6 +57,11 @@ arxiv-submission.tar.gz
 # Temp files
 *.tex.tmp.*
 
+# Local VM disks and retained experiment overlays
+*.qcow2
+docs/tmp/**/admin.token
+docs/tmp/**/snapshots.txt
+
 # Editor files
 *.swp
 *.swo

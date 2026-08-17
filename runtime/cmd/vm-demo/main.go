@@ -60,6 +60,20 @@ type options struct {
 	externalRequestPath     string
 	externalDirectProbe     string
 	externalEvidenceDirPath string
+	agentMode               string
+	agentOverlayPath        string
+	agentSealedPath         string
+	agentSealedSHA          string
+	agentPreopenSHA         string
+	agentEvidenceDirPath    string
+	agentClaudePath         string
+	agentClaudeSHA          string
+	agentMetadataAddress    string
+	agentModelAddress       string
+	agentEgressAddress      string
+	agentSessionID          string
+	agentBarrierPath        string
+	agentGuardManifestPath  string
 }
 
 type executableIdentity struct {
@@ -93,6 +107,20 @@ func main() {
 	flag.StringVar(&configuration.externalRequestPath, "external-request", "", "strict execute-request JSON for shared-control mode")
 	flag.StringVar(&configuration.externalDirectProbe, "external-direct-probe", "", "effect URL that the restored guest must not reach directly")
 	flag.StringVar(&configuration.externalEvidenceDirPath, "external-evidence-dir", "", "empty directory for sanitized shared-control VM evidence")
+	flag.StringVar(&configuration.agentMode, "agent-mode", "", "full-Agent VM mode: prepare, source, or restore")
+	flag.StringVar(&configuration.agentOverlayPath, "agent-overlay", "", "complete qcow2 checkpoint or private lane copy")
+	flag.StringVar(&configuration.agentSealedPath, "agent-sealed-checkpoint", "", "immutable sealed checkpoint used by the resume guard")
+	flag.StringVar(&configuration.agentSealedSHA, "agent-sealed-sha256", "", "SHA-256 of the immutable sealed checkpoint")
+	flag.StringVar(&configuration.agentPreopenSHA, "agent-preopen-sha256", "", "required lane-copy SHA-256 before QEMU opens it")
+	flag.StringVar(&configuration.agentEvidenceDirPath, "agent-evidence-dir", "", "empty private directory for one full-Agent VM phase")
+	flag.StringVar(&configuration.agentClaudePath, "agent-claude", "", "verified official Claude executable used while preparing the checkpoint")
+	flag.StringVar(&configuration.agentClaudeSHA, "agent-claude-sha256", "", "required official Claude executable SHA-256")
+	flag.StringVar(&configuration.agentMetadataAddress, "agent-metadata-listen", "", "fixed loopback metadata address used by QEMU guestfwd")
+	flag.StringVar(&configuration.agentModelAddress, "agent-model-target", "", "fixed loopback Anthropic fixture target used by QEMU guestfwd")
+	flag.StringVar(&configuration.agentEgressAddress, "agent-egress-target", "", "fixed loopback egress target used by QEMU guestfwd")
+	flag.StringVar(&configuration.agentSessionID, "agent-session-id", "", "16-byte lowercase hexadecimal Agent execution identity")
+	flag.StringVar(&configuration.agentBarrierPath, "agent-kill-barrier", "", "source-phase barrier file created only after the external observation")
+	flag.StringVar(&configuration.agentGuardManifestPath, "agent-guard-manifest", "", "restore authorization manifest; omit only for the native baseline")
 	flag.Parse()
 	if err := run(configuration); err != nil {
 		log.Printf("VM demo failed: %v", err)
@@ -151,6 +179,9 @@ func run(configuration options) error {
 	}
 	if err := ensureImage(ctx, configuration.imagePath, configuration.imageURL, configuration.imageSHA); err != nil {
 		return err
+	}
+	if configuration.agentMode != "" {
+		return runAgentCell(ctx, configuration, tools, os.Stdout)
 	}
 	if external {
 		return runExternal(ctx, configuration, tools, os.Stdin, os.Stdout)
@@ -1191,6 +1222,7 @@ func writeQEMUProcessCommand(
 		"executable":        "qemu-system-x86_64",
 		"executable_path":   expectedExecutable.path,
 		"executable_sha256": processIdentity.sha256,
+		"command_sha256":    dataSHA256(data),
 		"arguments": redactQEMUArguments(
 			arguments, evidenceDirectory, imagePath, privatePaths...,
 		),
@@ -2024,6 +2056,10 @@ func (q *qmpClient) requireStatus(expected string) error {
 	if err != nil {
 		return err
 	}
+	return validateQEMUStatus(data, expected)
+}
+
+func validateQEMUStatus(data []byte, expected string) error {
 	var status struct {
 		Running bool   `json:"running"`
 		Status  string `json:"status"`
@@ -2031,7 +2067,7 @@ func (q *qmpClient) requireStatus(expected string) error {
 	if err := json.Unmarshal(data, &status); err != nil {
 		return err
 	}
-	if status.Status != expected || (expected == "paused" && status.Running) {
+	if status.Status != expected || (expected != "running" && status.Running) {
 		return fmt.Errorf("QEMU status is %q (running=%t), want %q", status.Status, status.Running, expected)
 	}
 	return nil

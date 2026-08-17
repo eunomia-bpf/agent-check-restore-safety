@@ -1,4 +1,4 @@
-.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-repository runtime-firecracker-codex-demo runtime-firecracker-codex-mcp-demo runtime-firecracker-codex-mcp-inflight-demo runtime-firecracker-codex-mcp-check runtime-firecracker-codex-check runtime-firecracker-codex-control-check runtime-firecracker-claude-build runtime-firecracker-claude-payload runtime-firecracker-claude-demo runtime-firecracker-claude-check runtime-firecracker-deathstar-build runtime-firecracker-deathstar-payload runtime-firecracker-deathstar-demo runtime-firecracker-deathstar-check runtime-mcp-operation-build runtime-mcp-operation-check runtime-mcp-operation-demo runtime-codex-mcp-build runtime-codex-mcp-demo runtime-codex-mcp-docker-demo runtime-codex-mcp-check runtime-claude-source-check runtime-claude-fetch runtime-claude-mcp-demo runtime-claude-mcp-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
+.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-qemu-agent-restore-build runtime-qemu-agent-restore-preflight runtime-qemu-agent-restore-admit runtime-qemu-agent-restore-demo runtime-qemu-agent-restore-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-repository runtime-firecracker-codex-demo runtime-firecracker-codex-mcp-demo runtime-firecracker-codex-mcp-inflight-demo runtime-firecracker-codex-mcp-check runtime-firecracker-codex-check runtime-firecracker-codex-control-check runtime-firecracker-claude-build runtime-firecracker-claude-payload runtime-firecracker-claude-demo runtime-firecracker-claude-check runtime-firecracker-deathstar-build runtime-firecracker-deathstar-payload runtime-firecracker-deathstar-demo runtime-firecracker-deathstar-check runtime-mcp-operation-build runtime-mcp-operation-check runtime-mcp-operation-demo runtime-codex-mcp-build runtime-codex-mcp-demo runtime-codex-mcp-docker-demo runtime-codex-mcp-check runtime-claude-source-check runtime-claude-fetch runtime-claude-mcp-demo runtime-claude-mcp-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
 
 VM_ACCEL ?= tcg
 VM_BACKEND ?= qemu
@@ -55,6 +55,14 @@ RUNTIME_REVISION ?= $(shell git rev-parse --short=12 HEAD)
 CODEX_ISOLATED_EVIDENCE ?= docs/tmp/bootstrap/step-0013-20260815T124944Z
 INTEGRATED_EVIDENCE ?= docs/tmp/bootstrap/step-0018-20260816T125801Z
 DEATHSTAR_EVIDENCE ?= docs/tmp/bootstrap/step-0015-20260815T141250Z
+QEMU_AGENT_RESTORE_BUILD_DIR ?= $(shell python3 -c 'import os; print(os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "safe-change-runtime", "qemu-agent-restore"))')
+QEMU_AGENT_RESTORE_EVIDENCE ?= docs/tmp/bootstrap/step-0024-20260817T060908Z/experiment-qemu-agent-history-restore-execution/raw
+QEMU_AGENT_RESTORE_PREFLIGHT_EVIDENCE ?= docs/tmp/bootstrap/step-0024-20260817T060908Z/experiment-qemu-agent-history-restore-execution/preflight-attempt-1
+QEMU_AGENT_RESTORE_PREFLIGHT_GATE ?= docs/tmp/bootstrap/step-0024-20260817T060908Z/experiment-qemu-agent-history-restore-execution/preflight-pass.json
+QEMU_AGENT_RESTORE_REPETITIONS ?= 3
+QEMU_AGENT_RESTORE_IMAGE ?= $(shell python3 -c 'import os; print(os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "safe-change-runtime", "images", "ubuntu-24.04-20260725-amd64.img"))')
+QEMU_AGENT_RESTORE_IMAGE_SHA256 ?= d1940f7d69d343355e183dff1e08a59852d32e7309baa7a4bad8365b11b005ac
+QEMU_AGENT_RESTORE_ACCEL ?= kvm
 
 runtime-build:
 	cd runtime && go build ./...
@@ -92,6 +100,64 @@ runtime-vm-demo:
 runtime-vm-check:
 	@test -n "$(strip $(VM_EVIDENCE))" || { echo "VM_EVIDENCE must name a retained VM evidence directory" >&2; exit 2; }
 	cd runtime && go run ./cmd/check-vm-evidence -evidence "$(abspath $(VM_EVIDENCE))"
+
+runtime-qemu-agent-restore-build:
+	@mkdir -p "$(QEMU_AGENT_RESTORE_BUILD_DIR)"
+	@chmod 0700 "$(QEMU_AGENT_RESTORE_BUILD_DIR)"
+	cd runtime && go build -trimpath -o "$(QEMU_AGENT_RESTORE_BUILD_DIR)/vm-demo" ./cmd/vm-demo
+	cd runtime && go build -trimpath -o "$(QEMU_AGENT_RESTORE_BUILD_DIR)/control" ./cmd/control
+	cd runtime && go build -trimpath -o "$(QEMU_AGENT_RESTORE_BUILD_DIR)/effect-proxy" ./cmd/effect-proxy
+	cd runtime && go build -trimpath -o "$(QEMU_AGENT_RESTORE_BUILD_DIR)/deathstar-adapter" ./cmd/deathstar-adapter
+	cd runtime && go build -trimpath -o "$(QEMU_AGENT_RESTORE_BUILD_DIR)/check-certificate" ./cmd/check-certificate
+	@chmod 0500 "$(QEMU_AGENT_RESTORE_BUILD_DIR)/vm-demo" \
+		"$(QEMU_AGENT_RESTORE_BUILD_DIR)/control" \
+		"$(QEMU_AGENT_RESTORE_BUILD_DIR)/effect-proxy" \
+		"$(QEMU_AGENT_RESTORE_BUILD_DIR)/deathstar-adapter" \
+		"$(QEMU_AGENT_RESTORE_BUILD_DIR)/check-certificate"
+
+runtime-qemu-agent-restore-preflight: runtime-qemu-agent-restore-build
+	QEMU_BINARY="$(QEMU_AGENT_RESTORE_BUILD_DIR)/vm-demo" \
+	CLAUDE_BINARY="$(CLAUDE_CODE_BINARY)" CLAUDE_SHA256="$(CLAUDE_CODE_SHA256)" \
+	CONTROL_BINARY="$(QEMU_AGENT_RESTORE_BUILD_DIR)/control" \
+	EFFECT_PROXY_BINARY="$(QEMU_AGENT_RESTORE_BUILD_DIR)/effect-proxy" \
+	DEATHSTAR_ADAPTER_BINARY="$(QEMU_AGENT_RESTORE_BUILD_DIR)/deathstar-adapter" \
+	UBUNTU_IMAGE="$(QEMU_AGENT_RESTORE_IMAGE)" UBUNTU_IMAGE_SHA256="$(QEMU_AGENT_RESTORE_IMAGE_SHA256)" \
+	EVIDENCE_DIR="$(abspath $(QEMU_AGENT_RESTORE_PREFLIGHT_EVIDENCE))" REPETITIONS=1 QEMU_ACCEL="$(QEMU_AGENT_RESTORE_ACCEL)" \
+	bash runtime/deploy/qemu-agent-restore/run.sh
+
+runtime-qemu-agent-restore-admit: runtime-qemu-agent-restore-build
+	@test -n "$(strip $(QEMU_AGENT_RESTORE_PREFLIGHT_EVIDENCE))" || { echo "QEMU_AGENT_RESTORE_PREFLIGHT_EVIDENCE is required" >&2; exit 2; }
+	@if test -e "$(abspath $(QEMU_AGENT_RESTORE_PREFLIGHT_GATE))"; then \
+		python3 -I adapter/qemu_agent_restore_gate.py verify \
+			--repo-root "$(CURDIR)" --gate "$(abspath $(QEMU_AGENT_RESTORE_PREFLIGHT_GATE))" \
+			--checker "$(CURDIR)/adapter/check_qemu_agent_restore_evidence.py" \
+			--certificate-checker "$(QEMU_AGENT_RESTORE_BUILD_DIR)/check-certificate"; \
+	else \
+		python3 -I adapter/qemu_agent_restore_gate.py create \
+			--repo-root "$(CURDIR)" --evidence "$(abspath $(QEMU_AGENT_RESTORE_PREFLIGHT_EVIDENCE))" \
+			--gate "$(abspath $(QEMU_AGENT_RESTORE_PREFLIGHT_GATE))" \
+			--checker "$(CURDIR)/adapter/check_qemu_agent_restore_evidence.py" \
+			--certificate-checker "$(QEMU_AGENT_RESTORE_BUILD_DIR)/check-certificate"; \
+	fi
+
+runtime-qemu-agent-restore-demo: runtime-qemu-agent-restore-build runtime-qemu-agent-restore-admit
+	QEMU_BINARY="$(QEMU_AGENT_RESTORE_BUILD_DIR)/vm-demo" \
+	CLAUDE_BINARY="$(CLAUDE_CODE_BINARY)" CLAUDE_SHA256="$(CLAUDE_CODE_SHA256)" \
+	CONTROL_BINARY="$(QEMU_AGENT_RESTORE_BUILD_DIR)/control" \
+	EFFECT_PROXY_BINARY="$(QEMU_AGENT_RESTORE_BUILD_DIR)/effect-proxy" \
+	DEATHSTAR_ADAPTER_BINARY="$(QEMU_AGENT_RESTORE_BUILD_DIR)/deathstar-adapter" \
+	CERTIFICATE_CHECKER_BINARY="$(QEMU_AGENT_RESTORE_BUILD_DIR)/check-certificate" \
+	EVIDENCE_CHECKER="$(CURDIR)/adapter/check_qemu_agent_restore_evidence.py" \
+	PREFLIGHT_GATE="$(abspath $(QEMU_AGENT_RESTORE_PREFLIGHT_GATE))" \
+	UBUNTU_IMAGE="$(QEMU_AGENT_RESTORE_IMAGE)" UBUNTU_IMAGE_SHA256="$(QEMU_AGENT_RESTORE_IMAGE_SHA256)" \
+	EVIDENCE_DIR="$(abspath $(QEMU_AGENT_RESTORE_EVIDENCE))" REPETITIONS="$(QEMU_AGENT_RESTORE_REPETITIONS)" QEMU_ACCEL="$(QEMU_AGENT_RESTORE_ACCEL)" \
+	bash runtime/deploy/qemu-agent-restore/run.sh
+
+runtime-qemu-agent-restore-check: runtime-qemu-agent-restore-build
+	@test -n "$(strip $(QEMU_AGENT_RESTORE_EVIDENCE))" || { echo "QEMU_AGENT_RESTORE_EVIDENCE is required" >&2; exit 2; }
+	python3 -I adapter/check_qemu_agent_restore_evidence.py \
+		--evidence "$(abspath $(QEMU_AGENT_RESTORE_EVIDENCE))" \
+		--certificate-checker "$(QEMU_AGENT_RESTORE_BUILD_DIR)/check-certificate"
 
 # Fetches only checksum-pinned Firecracker v1.16.1 and guest-kernel assets.
 # This target does not open /dev/kvm or start a microVM.

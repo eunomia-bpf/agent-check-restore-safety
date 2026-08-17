@@ -1,0 +1,1 @@
+{"completed_stages":["initialized","run-1-checkpoint-sealed","failed"],"elapsed_seconds":166.720887938,"error":"DemoError: H1 source official Claude did not reach the Anthropic Messages endpoint: observed=0 required=1 fixture_failure=none","repetitions":1,"schema":1,"stage":"failed","started_time_ns":1786953560307400701,"status":"failed","updated_time_ns":1786953727028288639}

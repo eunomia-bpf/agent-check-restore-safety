@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "repository": "https://github.com/delimitrou/DeathStarBench.git",
+  "tag": "hotelReservation-0.3.5",
+  "commit": "6ecb09706140f8730b5385c08f1386c654c3c526",
+  "tree": "0ac0fd6d4ccfa1472d3895384d45fef5c6246b03",
+  "official_services": 24,
+  "official_compose_running": 23,
+  "compose_frontend_scaled_to_zero": true,
+  "custom_unmodified_frontend_running": true,
+  "application_image": "safe-change-step24/deathstar:hotel-reservation-0.3.5",
+  "application_image_id": "sha256:c7346a0e3777604f42c1b481e17a7c2d3a283cc6e7b226976debe4ed92a94b4a",
+  "runtime_image": "safe-change-step24/runtime:local",
+  "runtime_image_id": "sha256:cbe3eb081560d527d627f854a42fd4eac4e92993b6f32dd542fa415c2c5cb0ec",
+  "runtime_tree_hash": "84fa045b12c351f080c31664ba48651f1a8cd449446693b19d26503def7f64dc",
+  "runtime_status": " M Makefile\n M adapter/mock_anthropic.py\n M adapter/test_mock_anthropic.py\n M runtime/cmd/deathstar-adapter/main.go\n M runtime/cmd/vm-demo/main.go\n M runtime/cmd/vm-demo/main_test.go\n M runtime/internal/apiclient/client.go\n M runtime/internal/apiclient/client_test.go\n M runtime/internal/deathstar/service.go\n M runtime/internal/deathstar/service_test.go\n?? adapter/check_qemu_agent_restore_evidence.py\n?? adapter/qemu_agent_restore_cleanup.py\n?? adapter/qemu_agent_restore_demo.py\n?? adapter/qemu_agent_restore_gate.py\n?? adapter/test_qemu_agent_restore_evidence.py\n?? runtime/cmd/vm-demo/agent_cell.go\n?? runtime/deploy/qemu-agent-restore/run.sh\n?? runtime/internal/deathstar/terminal_fence.go\n?? runtime/internal/vmresume/guard.go\n?? runtime/internal/vmresume/guard_test.go",
+  "networks": {
+    "application": "safe-change-qemu-agent-restore-step24_default",
+    "frontdoor": "safe-change-step24-frontdoor",
+    "observation": "safe-change-step24-observation"
+  },
+  "source_modified": false,
+  "pass": true
+}

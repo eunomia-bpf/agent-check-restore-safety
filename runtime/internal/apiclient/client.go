@@ -15,6 +15,7 @@ import (
 	"unicode"
 
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/api"
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/control"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/gateway"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/kernel"
 )
@@ -124,6 +125,13 @@ func (c *Client) State(ctx context.Context) (kernel.State, error) {
 	var state kernel.State
 	err := c.callControl(ctx, http.MethodGet, "/v1/state", nil, &state)
 	return state, err
+}
+
+// SandboxBindings returns the complete currently active host binding set.
+func (c *Client) SandboxBindings(ctx context.Context) ([]control.SandboxBinding, error) {
+	var bindings []control.SandboxBinding
+	err := c.callControl(ctx, http.MethodGet, "/v1/sandbox-bindings", nil, &bindings)
+	return bindings, err
 }
 
 // Compile computes a Certificate without activating it.

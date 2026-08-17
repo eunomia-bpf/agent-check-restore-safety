@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "tools": {
+    "nc": {
+      "path": "/usr/bin/nc.openbsd",
+      "sha256": "2a6fac3d98e090468962ef18003cb8b89fbffa7219917ca12567d5e42b156948",
+      "version": "OpenBSD netcat (Debian patchlevel 1.226-1ubuntu2)"
+    },
+    "qemu-img": {
+      "path": "/usr/bin/qemu-img",
+      "sha256": "634320b91165669917123e8e79cce1c4d00cee0a4aa4d662d7c0a8186479b3fb",
+      "version": "qemu-img version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)"
+    },
+    "qemu-system-x86_64": {
+      "path": "/usr/bin/qemu-system-x86_64",
+      "sha256": "8a35ccba41582fc6c38b9df85fc9e35fa1d42f414d2d7d8090ee9b2f5e7c0854",
+      "version": "QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "device": 2049,
+  "inode": 15749383,
+  "schema": 1,
+  "sha256": "47633cc3fa9ed49e553be2976a51b833897697a235036d1a8ad5acb650b89bfb",
+  "size": 2935029760,
+  "verified_before_qemu_open": true,
+  "verified_time_ns": 1786952353834521942
+}

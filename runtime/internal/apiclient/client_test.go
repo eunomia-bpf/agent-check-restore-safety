@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/api"
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/control"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/gateway"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/kernel"
 )
@@ -53,6 +54,10 @@ func TestClientImplementsEveryControlContract(t *testing.T) {
 		History:    kernel.HistoryPoint{Sequence: 3, Hash: strings.Repeat("c", 64)},
 		Operations: map[string]kernel.Operation{},
 	}
+	bindings := []control.SandboxBinding{{
+		SandboxID: "agent", Generation: 2, HostInstanceID: "host-2",
+		Domain: "test", AllowedKinds: []string{"finish"},
+	}}
 	executeRequest := api.ExecuteRequest{
 		CallID: "call-7", Kind: "finish", Method: http.MethodPut,
 		URL:     "https://effects.invalid/v1/finish",
@@ -74,6 +79,11 @@ func TestClientImplementsEveryControlContract(t *testing.T) {
 				t.Errorf("State request = %s body=%v", request.Method, request.Body)
 			}
 			writeJSON(t, writer, http.StatusOK, state)
+		case "/v1/sandbox-bindings":
+			if request.Method != http.MethodGet {
+				t.Errorf("SandboxBindings request = %s", request.Method)
+			}
+			writeJSON(t, writer, http.StatusOK, bindings)
 		case "/v1/compile":
 			if request.Method != http.MethodPost || request.Header.Get("Content-Type") != "application/json" {
 				t.Errorf("Compile request = %s Content-Type=%q", request.Method, request.Header.Get("Content-Type"))
@@ -114,6 +124,10 @@ func TestClientImplementsEveryControlContract(t *testing.T) {
 	if err != nil || !reflect.DeepEqual(gotState, state) {
 		t.Fatalf("State=%+v error=%v", gotState, err)
 	}
+	gotBindings, err := client.SandboxBindings(ctx)
+	if err != nil || !reflect.DeepEqual(gotBindings, bindings) {
+		t.Fatalf("SandboxBindings=%+v error=%v", gotBindings, err)
+	}
 	gotCertificate, err := client.Compile(ctx, requirement)
 	if err != nil || !reflect.DeepEqual(gotCertificate, certificate) {
 		t.Fatalf("Compile=%+v error=%v", gotCertificate, err)
@@ -134,8 +148,8 @@ func TestClientImplementsEveryControlContract(t *testing.T) {
 	if err != nil || !reflect.DeepEqual(gotOutcome, outcome) {
 		t.Fatalf("Recover=%+v error=%v", gotOutcome, err)
 	}
-	if calls.Load() != 6 {
-		t.Fatalf("HTTP calls = %d, want 6", calls.Load())
+	if calls.Load() != 7 {
+		t.Fatalf("HTTP calls = %d, want 7", calls.Load())
 	}
 }
 

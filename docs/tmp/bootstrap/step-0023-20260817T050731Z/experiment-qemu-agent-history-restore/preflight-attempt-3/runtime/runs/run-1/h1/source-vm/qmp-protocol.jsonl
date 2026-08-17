@@ -1,0 +1,5 @@
+{"direction":"server_to_client","payload":{"QMP":{"version":{"qemu":{"micro":2,"minor":2,"major":8},"package":"Debian 1:8.2.2+ds-0ubuntu1.18"},"capabilities":["oob"]}},"sequence":1,"time_ns":1786946625665482542}
+{"direction":"client_to_server","payload":{"execute":"qmp_capabilities","id":"command-1"},"sequence":2,"time_ns":1786946625670248648}
+{"direction":"server_to_client","payload":{"id":"command-1","return":{}},"sequence":3,"time_ns":1786946634530765048}
+{"direction":"client_to_server","payload":{"execute":"query-status","id":"command-2"},"sequence":4,"time_ns":1786946634552103770}
+{"direction":"server_to_client","payload":{"id":"command-2","return":{"status":"prelaunch","singlestep":false,"running":false}},"sequence":5,"time_ns":1786946634556299743}

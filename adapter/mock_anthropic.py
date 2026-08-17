@@ -88,6 +88,26 @@ class DeterministicAnthropicServer:
             protocol_version = "HTTP/1.1"
             server_version = "authority-continuity-anthropic-fixture/1"
 
+            def do_GET(self) -> None:  # noqa: N802 - stdlib callback name
+                try:
+                    if urlsplit(self.path).path != "/health":
+                        raise AnthropicFixtureError(
+                            f"unexpected Anthropic health path {self.path!r}"
+                        )
+                    self._send_json(200, {"status": "ok"})
+                except BaseException as error:
+                    owner._fail(error)
+                    self._send_json(
+                        400,
+                        {
+                            "type": "error",
+                            "error": {
+                                "type": "invalid_request_error",
+                                "message": str(error),
+                            },
+                        },
+                    )
+
             def do_POST(self) -> None:  # noqa: N802 - stdlib callback name
                 try:
                     body = self._read_json()

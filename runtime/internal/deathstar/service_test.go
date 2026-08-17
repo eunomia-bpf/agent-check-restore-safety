@@ -262,6 +262,52 @@ func TestDropHappensOnlyAfterUpstreamCommitAndDurableAudit(t *testing.T) {
 	}
 }
 
+func TestTerminalFencePreventsEveryUpstreamDelivery(t *testing.T) {
+	directory := filepath.Join(t.TempDir(), "fences")
+	if err := os.Mkdir(directory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	var calls atomic.Int32
+	service, err := OpenEffect(EffectConfig{
+		FrontendURL: "http://frontend:5000", AuditPath: filepath.Join(t.TempDir(), "adapter.audit.jsonl"),
+		AbortBeforeUpstream: true, TerminalFenceDirectory: directory,
+		Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+			calls.Add(1)
+			return upstreamResponse(http.StatusOK, `{"message":"Reserve successfully!"}`), nil
+		}),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = service.Close() })
+	requestHash := digestOf("exact gateway request")
+	for range 2 {
+		writer := newHijackWriter(nil)
+		request := effectRequest(validBody)
+		request.Header.Set("X-Operation-Request-Hash", requestHash)
+		service.Handler().ServeHTTP(writer, request)
+		one := make([]byte, 1)
+		if count, err := writer.peer.Read(one); count != 0 || !errors.Is(err, io.EOF) {
+			t.Fatalf("terminal abort read = %d, %v; want EOF", count, err)
+		}
+		_ = writer.peer.Close()
+	}
+	if calls.Load() != 0 {
+		t.Fatalf("terminally fenced request reached upstream %d times", calls.Load())
+	}
+	store, err := openTerminalFenceStore(directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	record, found, err := store.lookup("reserve-17", requestHash)
+	if err != nil || !found || record.FactHash != terminalFenceFactHash("reserve-17", requestHash) {
+		t.Fatalf("terminal fence = %+v, %v, %v", record, found, err)
+	}
+	if _, _, err := store.lookup("reserve-17", digestOf("different request")); err == nil {
+		t.Fatal("terminal fence accepted a different request hash")
+	}
+}
+
 type fakeStore struct {
 	result QueryResult
 	err    error
@@ -373,6 +419,51 @@ func TestObserverZeroAndMultipleRowsAreInconclusive(t *testing.T) {
 				t.Fatalf("inconclusive evidence omitted its retained Mongo facts: %s", factsResponse.Body.String())
 			}
 		})
+	}
+}
+
+func TestObserverSettlesZeroRowsOnlyWithExactTerminalFence(t *testing.T) {
+	directory := filepath.Join(t.TempDir(), "fences")
+	if err := os.Mkdir(directory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	fences, err := openTerminalFenceStore(directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	requestHash := digestOf("request")
+	fence, err := fences.record("reserve-17", requestHash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service, err := NewObserverWithTerminalFences(&fakeStore{result: QueryResult{Count: 0, Facts: []ReservationFact{}}}, directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := httptest.NewRecorder()
+	service.Handler().ServeHTTP(response, observerRequest(validBody, "reserve-17", requestHash))
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d: %s", response.Code, response.Body.String())
+	}
+	var observation Observation
+	if err := decodeStrict(response.Body.Bytes(), &observation); err != nil {
+		t.Fatal(err)
+	}
+	if observation.Outcome != "failed" || observation.FactHash != fence.FactHash ||
+		!strings.Contains(observation.RemoteReference, "terminal-pre-upstream-abort=") {
+		t.Fatalf("terminal observation = %+v", observation)
+	}
+
+	contradiction, err := NewObserverWithTerminalFences(&fakeStore{result: QueryResult{Count: 1, Facts: []ReservationFact{{
+		CustomerName: "safe-reserve-17", HotelID: "1", InDate: "2015-04-09", OutDate: "2015-04-10", Rooms: 1,
+	}}}}, directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response = httptest.NewRecorder()
+	contradiction.Handler().ServeHTTP(response, observerRequest(validBody, "reserve-17", requestHash))
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("fence/application contradiction status = %d, want 500", response.Code)
 	}
 }
 

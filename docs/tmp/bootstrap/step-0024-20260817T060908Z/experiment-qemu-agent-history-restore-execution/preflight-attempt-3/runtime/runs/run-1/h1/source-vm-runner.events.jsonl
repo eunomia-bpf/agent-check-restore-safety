@@ -1,0 +1,2 @@
+{"event":"snapshot-loaded-halted","mode":"source","observed_time_ns":1786953634416767356,"qemu_pid":3151992,"qemu_running":false,"qemu_status":"prelaunch","session_id":"6ff79d4cba8e2cf862d0e2acf4d794e8"}
+{"event":"claude-started","observed_time_ns":1786953636028357646,"session_id":"6ff79d4cba8e2cf862d0e2acf4d794e8"}

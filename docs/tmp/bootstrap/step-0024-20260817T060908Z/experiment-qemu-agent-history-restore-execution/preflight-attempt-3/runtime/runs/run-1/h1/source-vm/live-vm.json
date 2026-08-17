@@ -1,0 +1,18 @@
+{
+  "captured_time_ns": 1786953634404916347,
+  "disk": {
+    "path": "/home/will/agent-check-restore-safety/docs/tmp/bootstrap/step-0024-20260817T060908Z/experiment-qemu-agent-history-restore-execution/preflight-attempt-3/runtime/runs/run-1/h1/source.qcow2",
+    "device": 2049,
+    "inode": 15749459,
+    "size": 3092512768,
+    "preopen_sha256": "3e0cbcb53bf5bd79c0e383c22b70124d2f6a0940c6936c2c494c053a6f9e1cae"
+  },
+  "process": {
+    "pid": 3151992,
+    "start_time_ticks": 142894639,
+    "executable_sha256": "8a35ccba41582fc6c38b9df85fc9e35fa1d42f414d2d7d8090ee9b2f5e7c0854",
+    "command_sha256": "3b06302c1e6339b7503f4f35a27476ed497a9bcec04d5723b59de3aca903ec58"
+  },
+  "process_holds_disk": true,
+  "schema": 1
+}
