@@ -58,7 +58,45 @@ func PrepareClaudeLinuxPID1(config ClaudeConfig) error {
 	if err := verifyClaudePayloadFile(ClaudeLoader, "", maxCodexBinaryBytes, true); err != nil {
 		return err
 	}
+	if config.Schema == ClaudeHTTPConfigSchema {
+		if err := verifyClaudePayloadFile(ClaudeBusyBoxExecutable, config.BusyBoxSHA256, maxCodexBinaryBytes, true); err != nil {
+			return err
+		}
+		if err := verifyClaudePayloadFile(ClaudeBashExecutable, config.BashSHA256, maxCodexBinaryBytes, true); err != nil {
+			return err
+		}
+		if err := configureClaudeShell(); err != nil {
+			return err
+		}
+	}
 	return writeClaudeMCPConfig()
+}
+
+func configureClaudeShell() error {
+	for _, directory := range []string{"/bin", "/usr/bin", "/lib64", "/lib/x86_64-linux-gnu"} {
+		if err := os.MkdirAll(directory, 0o755); err != nil {
+			return fmt.Errorf("create Claude userland directory %s: %w", directory, err)
+		}
+	}
+	commands := []struct{ path, target string }{
+		{path: "/bin/bash", target: ClaudeBashExecutable},
+		{path: "/bin/sh", target: ClaudeBusyBoxExecutable},
+		{path: "/lib64/ld-linux-x86-64.so.2", target: ClaudeLoader},
+		{path: "/lib/x86_64-linux-gnu/libc.so.6", target: ClaudeLibraryPath + "/libc.so.6"},
+		{path: "/lib/x86_64-linux-gnu/libtinfo.so.6", target: ClaudeLibraryPath + "/libtinfo.so.6"},
+		{path: "/usr/bin/awk", target: ClaudeBusyBoxExecutable},
+		{path: "/usr/bin/cat", target: ClaudeBusyBoxExecutable},
+		{path: "/usr/bin/env", target: ClaudeBusyBoxExecutable},
+		{path: "/usr/bin/grep", target: ClaudeBusyBoxExecutable},
+		{path: "/usr/bin/sed", target: ClaudeBusyBoxExecutable},
+		{path: "/usr/bin/uname", target: ClaudeBusyBoxExecutable},
+	}
+	for _, command := range commands {
+		if err := os.Symlink(command.target, command.path); err != nil {
+			return fmt.Errorf("publish fixed Claude userland command %s: %w", command.path, err)
+		}
+	}
+	return nil
 }
 
 func mountClaudePayload(device string) error {
@@ -141,11 +179,17 @@ func StartClaude(config ClaudeConfig, stderr io.Writer, cgroupFD int) (*exec.Cmd
 	if stderr == nil || cgroupFD < 0 {
 		return nil, nil, errors.New("Claude launch requires stderr and a cgroup descriptor")
 	}
-	arguments := []string{ClaudeChildMode, strconv.FormatUint(uint64(config.ModelPort), 10)}
+	arguments := []string{
+		ClaudeChildMode,
+		strconv.Itoa(config.Schema),
+		strconv.FormatUint(uint64(config.ModelPort), 10),
+		config.SessionID,
+		strconv.FormatUint(uint64(config.EgressPort), 10),
+	}
 	arguments = append(arguments, config.Arguments()...)
 	command := exec.Command(InitExecutable, arguments...)
 	command.Dir = WorkspaceDirectory
-	command.Env = fixedClaudeEnvironment(config.ModelPort)
+	command.Env = fixedClaudeEnvironment(config.Schema, config.ModelPort, config.SessionID, config.EgressPort)
 	command.Stdin = nil
 	command.Stderr = stderr
 	command.SysProcAttr = &syscall.SysProcAttr{
@@ -163,8 +207,8 @@ func StartClaude(config ClaudeConfig, stderr io.Writer, cgroupFD int) (*exec.Cmd
 	return command, stdout, nil
 }
 
-func fixedClaudeEnvironment(modelPort uint32) []string {
-	return []string{
+func fixedClaudeEnvironment(schema int, modelPort uint32, sessionID string, egressPort uint32) []string {
+	environment := []string{
 		"HOME=/home/claude", "CLAUDE_CONFIG_DIR=" + ClaudeHomeDirectory,
 		fmt.Sprintf("ANTHROPIC_BASE_URL=http://127.0.0.1:%d", modelPort),
 		"ANTHROPIC_API_KEY=fixture-credential", "ANTHROPIC_MODEL=claude-fixture-1",
@@ -173,4 +217,11 @@ func fixedClaudeEnvironment(modelPort uint32) []string {
 		"LANG=C", "LC_ALL=C", "NO_PROXY=127.0.0.1,localhost", "no_proxy=127.0.0.1,localhost",
 		"PATH=/opt/claude/bin:/usr/bin:/bin", "TMPDIR=/tmp",
 	}
+	if schema == ClaudeHTTPConfigSchema {
+		environment = append(environment,
+			"SAFE_CHANGE_CALL_ID="+sessionID,
+			fmt.Sprintf("SAFE_CHANGE_EGRESS_URL=http://127.0.0.1:%d/v1/reserve", egressPort),
+		)
+	}
+	return environment
 }

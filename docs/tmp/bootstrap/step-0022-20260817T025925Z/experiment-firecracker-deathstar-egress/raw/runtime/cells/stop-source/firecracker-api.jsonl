@@ -1,0 +1,5 @@
+{"sequence":1,"time_ns":1786942221295232941,"method":"PUT","path":"/machine-config","request":{"vcpu_count":1,"mem_size_mib":1024,"smt":false,"track_dirty_pages":false},"status":204}
+{"sequence":2,"time_ns":1786942221295794113,"method":"PUT","path":"/boot-source","request":{"kernel_image_path":"/proc/self/fd/4","boot_args":"console=ttyS0 reboot=k panic=1 pci=off rdinit=/init","initrd_path":"/proc/self/fd/5"},"status":204}
+{"sequence":3,"time_ns":1786942221296235892,"method":"PUT","path":"/vsock","request":{"guest_cid":3,"uds_path":"/tmp/fc-dsb-hr7zhuas/cells/stop-source/vsock"},"status":204}
+{"sequence":4,"time_ns":1786942221296689982,"method":"PUT","path":"/drives/payload","request":{"drive_id":"payload","path_on_host":"/proc/self/fd/6","is_root_device":false,"is_read_only":true},"status":204}
+{"sequence":5,"time_ns":1786942221318941678,"method":"PUT","path":"/actions","request":{"action_type":"InstanceStart"},"status":204}

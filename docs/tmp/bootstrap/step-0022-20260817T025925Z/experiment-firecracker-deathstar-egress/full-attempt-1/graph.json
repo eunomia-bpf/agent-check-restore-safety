@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "repository": "https://github.com/delimitrou/DeathStarBench.git",
+  "tag": "hotelReservation-0.3.5",
+  "commit": "6ecb09706140f8730b5385c08f1386c654c3c526",
+  "tree": "0ac0fd6d4ccfa1472d3895384d45fef5c6246b03",
+  "official_services": 24,
+  "official_compose_running": 23,
+  "compose_frontend_scaled_to_zero": true,
+  "custom_unmodified_frontend_running": true,
+  "application_image": "safe-change-step22/deathstar:hotel-reservation-0.3.5",
+  "application_image_id": "sha256:913d63df79c18242ba58c874b383b5daa178c650a581dd77d5750aecd692c5d4",
+  "runtime_image": "safe-change-step22/runtime:local",
+  "runtime_image_id": "sha256:0f4dbdf1aa9e401ae3f49a4a80ac26583d62b7e0c9727cb0798a3628d3168a04",
+  "runtime_tree_hash": "ba7b7ad46a34e60b2835617b6260da35614f5ff0a57bc3c4d584a492e76d6869",
+  "runtime_status": " M Makefile\n M adapter/firecracker_claude_mcp_runtime_demo.py\n M adapter/mock_anthropic.py\n M runtime/cmd/deathstar-adapter/main.go\n M runtime/cmd/effect-proxy/main.go\n M runtime/cmd/firecracker-claude-cell/main.go\n M runtime/cmd/firecracker-claude-guest/main.go\n M runtime/cmd/firecracker-claude-guest/main_test.go\n M runtime/cmd/firecracker-claude-payload/main.go\n M runtime/cmd/mcp-operation-host/main.go\n M runtime/cmd/mcp-operation-server/main.go\n M runtime/internal/agentguest/claude_child_linux.go\n M runtime/internal/agentguest/claude_config.go\n M runtime/internal/agentguest/claude_linux.go\n M runtime/internal/deathstar/service.go\n M runtime/internal/effectproxy/config.go\n M runtime/internal/effectproxy/proxy.go\n M runtime/internal/mcpoperation/sandbox_executor.go\n M runtime/internal/mcpoperation/sandbox_executor_test.go\n?? adapter/check_firecracker_deathstar_egress_evidence.py\n?? adapter/firecracker_deathstar_egress_demo.py\n?? runtime/deploy/firecracker-deathstar/run.sh",
+  "networks": {
+    "application": "safe-change-firecracker-deathstar-step22_default",
+    "frontdoor": "safe-change-step22-frontdoor",
+    "observation": "safe-change-step22-observation"
+  },
+  "source_modified": false,
+  "pass": true
+}

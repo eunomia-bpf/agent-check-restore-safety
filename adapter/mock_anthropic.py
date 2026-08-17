@@ -255,6 +255,61 @@ class DeterministicAnthropicServer:
         }
 
 
+class DeterministicBashAnthropicServer(DeterministicAnthropicServer):
+    """Drive one ordinary Claude Code Bash action, then return DONE."""
+
+    def __init__(
+        self,
+        command: str,
+        host: str = "127.0.0.1",
+        port: int = 0,
+        response_delay_seconds: float = 0.0,
+    ) -> None:
+        if not isinstance(command, str) or not command or "\x00" in command:
+            raise ValueError("Bash fixture requires one nonempty command")
+        super().__init__(
+            effects=("bash-action",),
+            host=host,
+            port=port,
+            response_delay_seconds=response_delay_seconds,
+        )
+        self._command = command
+
+    def _response(self, ordinal: int, body: Mapping[str, Any]) -> dict[str, Any]:
+        model = body.get("model")
+        if not isinstance(model, str) or not model:
+            raise AnthropicFixtureError("Messages request omits its model")
+        tool_name = _bash_tool(body.get("tools"))
+        completed = _bash_completed(body.get("messages"), tool_name)
+        message_id = f"msg_fixture_{ordinal}"
+        if not completed:
+            content = [
+                {
+                    "type": "tool_use",
+                    "id": f"toolu_fixture_{ordinal}",
+                    "name": tool_name,
+                    "input": {
+                        "command": self._command,
+                        "description": "Submit the fixed reservation",
+                    },
+                }
+            ]
+            stop_reason = "tool_use"
+        else:
+            content = [{"type": "text", "text": "DONE"}]
+            stop_reason = "end_turn"
+        return {
+            "id": message_id,
+            "type": "message",
+            "role": "assistant",
+            "model": model,
+            "content": content,
+            "stop_reason": stop_reason,
+            "stop_sequence": None,
+            "usage": {"input_tokens": 1, "output_tokens": 1},
+        }
+
+
 def _continuity_tool(raw_tools: Any) -> str:
     matches = [
         tool.get("name")
@@ -266,6 +321,50 @@ def _continuity_tool(raw_tools: Any) -> str:
     if len(matches) != 1:
         raise AnthropicFixtureError("Messages request lacks one continuity MCP tool")
     return matches[0]
+
+
+def _bash_tool(raw_tools: Any) -> str:
+    matches = [
+        tool.get("name")
+        for tool in raw_tools or []
+        if isinstance(tool, dict) and tool.get("name") == "Bash"
+    ]
+    if len(matches) != 1:
+        raise AnthropicFixtureError("Messages request lacks one Bash tool")
+    return matches[0]
+
+
+def _bash_completed(raw_messages: Any, tool_name: str) -> bool:
+    if not isinstance(raw_messages, list):
+        raise AnthropicFixtureError("Messages request omits its history")
+    calls: set[str] = set()
+    completions = 0
+    for message in raw_messages:
+        content = message.get("content") if isinstance(message, dict) else None
+        if not isinstance(content, list):
+            continue
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") == "tool_use" and block.get("name") == tool_name:
+                tool_id = block.get("id")
+                arguments = block.get("input")
+                if (
+                    not isinstance(tool_id, str)
+                    or not isinstance(arguments, dict)
+                    or arguments.get("command") is None
+                ):
+                    raise AnthropicFixtureError("Bash tool history is malformed")
+                calls.add(tool_id)
+            elif block.get("type") == "tool_result":
+                tool_id = block.get("tool_use_id")
+                if isinstance(tool_id, str) and tool_id in calls:
+                    if block.get("is_error") is True:
+                        raise AnthropicFixtureError("Bash tool result reports an error")
+                    completions += 1
+    if completions > 1:
+        raise AnthropicFixtureError("Messages history repeats the Bash completion")
+    return completions == 1
 
 
 def _completed_effects(raw_messages: Any, tool_name: str) -> list[str]:
@@ -371,5 +470,6 @@ def _message_events(message: Mapping[str, Any]) -> bytes:
 __all__ = [
     "AnthropicFixtureError",
     "DeterministicAnthropicServer",
+    "DeterministicBashAnthropicServer",
     "RecordedAnthropicRequest",
 ]

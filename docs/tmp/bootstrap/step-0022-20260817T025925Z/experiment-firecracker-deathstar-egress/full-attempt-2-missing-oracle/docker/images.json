@@ -1,0 +1,124 @@
+[
+    {
+        "Id": "sha256:9aeeb66de3792797587448c9770cd971caa873562cca55cd51072c4178cc57a8",
+        "RepoTags": [
+            "safe-change-step22/deathstar:hotel-reservation-0.3.5"
+        ],
+        "RepoDigests": [
+            "safe-change-step22/deathstar@sha256:9aeeb66de3792797587448c9770cd971caa873562cca55cd51072c4178cc57a8"
+        ],
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2026-08-15T15:09:41.368145876Z",
+        "Config": {
+            "Env": [
+                "PATH=/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "GOLANG_VERSION=1.21.13",
+                "GOTOOLCHAIN=local",
+                "GOPATH=/go"
+            ],
+            "Cmd": [
+                "bash"
+            ],
+            "WorkingDir": "/workspace",
+            "Labels": {
+                "org.opencontainers.image.revision": "6ecb09706140f8730b5385c08f1386c654c3c526",
+                "org.opencontainers.image.source": "https://github.com/delimitrou/DeathStarBench.git"
+            }
+        },
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 406878364,
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:8f4ceb8cc1a2056b98f0424fad4715dd334aecc9769186b3ea0394f131524e27",
+                "sha256:916d866d5b0dc17158c78e5a09717fcf619b04450125caafa9c1b8f7aa6a2c45",
+                "sha256:0d80db6a0977d5ade37d5d248772c0e9aaa1b6c898ddb31b26c803ee1a9f57a2",
+                "sha256:7b5d91fbc0149cc35421e5ce7f6a81c2fb12559788bf6bbd3e2acc0c6de7cd2a",
+                "sha256:b2b579346a71384801465cf5cbf972d90cd3ce73224e650b0a78c70752255ef4",
+                "sha256:6eaea3a8d24706af3285ec4ed4ff1178c575798fd5bc89d72b4e1b9806b05b25",
+                "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+                "sha256:7e8c6a0b55944da61047977d58d61e62c2669b7056bced425d0097254ed00623",
+                "sha256:d8dfd735005e283c9f84955794fe49c70a33292e9e87f2b5f4849a1f798ea13c",
+                "sha256:774860521eab60c8e95fc268da052df04b9583b1e49193b846b093950a399a0b",
+                "sha256:df7da3240177fa941ed271b72bb84e0966da5e530ed27aedc73975c1b14085ab",
+                "sha256:f03f85f5531af510d86f204cc3187b8faa7a1cdad2557e162d1ee17a700cc38b",
+                "sha256:6a75ce5a0759405db749c3731e85d051fcd49c649fe0146405240bcf0ebd1cbc",
+                "sha256:669e15e976f62a4c4f7391343185e5d0069fd7555e064aed44334a8c03743df2",
+                "sha256:dc1f99f7024bb688024eb49f20fe8fcd06d8c5e51d80629923d72789355942b3",
+                "sha256:3cf384d2908bd4566daef8519ffa3bffd442ebae374c9f357d80f866dcf6a0a2",
+                "sha256:123ea8e94adda36f383c8c69c28546edeb4eed8cc9b6c74c8edbe55909c15be2",
+                "sha256:e53bf6bd6787d4fc3e0a0dd52708a6e5a3dc83b6dedbabcb7598e29e3397e438",
+                "sha256:6c6725c95db644c5241abe45c60b944f35b33b694d8af3b83177737bbeeba087",
+                "sha256:e0083f70ba65dde288f2f72b78d9136a30b0653aafd6b7b5d97743c5095fcfc4"
+            ]
+        },
+        "Metadata": {
+            "LastTagTime": "2026-08-17T04:35:57.114790596Z"
+        },
+        "Descriptor": {
+            "mediaType": "application/vnd.oci.image.index.v1+json",
+            "digest": "sha256:9aeeb66de3792797587448c9770cd971caa873562cca55cd51072c4178cc57a8",
+            "size": 856
+        },
+        "Identity": {
+            "Build": [
+                {
+                    "Ref": "p1n4p32wsbbarflnwv0n2ha3i",
+                    "CreatedAt": "2026-08-17T04:35:57.1412479Z"
+                }
+            ]
+        }
+    },
+    {
+        "Id": "sha256:4c5fa01e76e252636406088e18ab5701adea4ba6bddfd088c79008691f4fd720",
+        "RepoTags": [
+            "safe-change-step22/runtime:local"
+        ],
+        "RepoDigests": [
+            "safe-change-step22/runtime@sha256:4c5fa01e76e252636406088e18ab5701adea4ba6bddfd088c79008691f4fd720"
+        ],
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2026-08-17T04:34:56.195004596Z",
+        "Config": {
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            ],
+            "Cmd": [
+                "/bin/sh"
+            ],
+            "WorkingDir": "/",
+            "Labels": {
+                "io.safe-change.source-tree.sha256": "ba7b7ad46a34e60b2835617b6260da35614f5ff0a57bc3c4d584a492e76d6869",
+                "org.opencontainers.image.revision": "dbc9585874595a75e38c96e0ead63db000d99854"
+            }
+        },
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 24464622,
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:256f393e029fa2063d8c93720da36a74a032bed3355a2bc3e313ad12f8bde9d1",
+                "sha256:22b38e5823f6ad9fc1f72c75543b8ec713bda27994c161b7bf6a36b70fa354a0",
+                "sha256:27d2c68d340181baf5f922456d753cd8d19a4d863f4278e6d49134d7e44b1573"
+            ]
+        },
+        "Metadata": {
+            "LastTagTime": "2026-08-17T04:35:57.889518393Z"
+        },
+        "Descriptor": {
+            "mediaType": "application/vnd.oci.image.index.v1+json",
+            "digest": "sha256:4c5fa01e76e252636406088e18ab5701adea4ba6bddfd088c79008691f4fd720",
+            "size": 855
+        },
+        "Identity": {
+            "Build": [
+                {
+                    "Ref": "l2bxg6x70pqfhwyklnk8zf6n8",
+                    "CreatedAt": "2026-08-17T04:35:57.90609435Z"
+                }
+            ]
+        }
+    }
+]

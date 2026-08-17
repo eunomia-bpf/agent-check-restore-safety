@@ -18,6 +18,7 @@ import (
 
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/api"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/gateway"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -37,6 +38,8 @@ type SandboxExecutorOptions struct {
 type SandboxExecutor struct {
 	socketPath       string
 	parentInfo       os.FileInfo
+	socketInfo       os.FileInfo
+	socketFile       *os.File
 	client           *http.Client
 	recoveryAttempts int
 }
@@ -64,6 +67,14 @@ func NewSandboxExecutor(socketPath string, options SandboxExecutorOptions) (*San
 	if !ok || int(parentStat.Uid) != os.Geteuid() {
 		return nil, errors.New("sandbox socket parent must be owned by the current user")
 	}
+	socketInfo, err := os.Lstat(socketPath)
+	if err != nil || socketInfo.Mode()&os.ModeSocket == 0 || socketInfo.Mode().Perm() != 0o600 {
+		return nil, errors.New("sandbox endpoint is not a private Unix socket")
+	}
+	socketStat, ok := socketInfo.Sys().(*syscall.Stat_t)
+	if !ok || int(socketStat.Uid) != os.Geteuid() {
+		return nil, errors.New("sandbox endpoint must be owned by the current user")
+	}
 	attempts := options.RecoveryAttempts
 	if attempts == 0 {
 		attempts = DefaultRecoveryAttempts
@@ -84,10 +95,36 @@ func NewSandboxExecutor(socketPath string, options SandboxExecutorOptions) (*San
 	transport.DialContext = func(ctx context.Context, _, _ string) (net.Conn, error) {
 		return (&net.Dialer{Timeout: 5 * time.Second}).DialContext(ctx, "unix", socketPath)
 	}
+	descriptor, err := unix.Open(socketPath, unix.O_PATH|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
+	if err != nil {
+		return nil, fmt.Errorf("pin sandbox endpoint generation: %w", err)
+	}
+	socketFile := os.NewFile(uintptr(descriptor), socketPath)
+	if socketFile == nil {
+		_ = unix.Close(descriptor)
+		return nil, errors.New("pin sandbox endpoint generation")
+	}
+	pinnedInfo, err := socketFile.Stat()
+	if err != nil || !os.SameFile(socketInfo, pinnedInfo) {
+		_ = socketFile.Close()
+		return nil, errors.New("sandbox endpoint changed while its generation was pinned")
+	}
 	return &SandboxExecutor{
-		socketPath: socketPath, parentInfo: parentInfo,
+		socketPath: socketPath, parentInfo: parentInfo, socketInfo: pinnedInfo, socketFile: socketFile,
 		client: &http.Client{Transport: transport, Timeout: timeout}, recoveryAttempts: attempts,
 	}, nil
+}
+
+// Close releases the pinned generation descriptor. A closed executor cannot
+// validate or follow a replacement socket.
+func (executor *SandboxExecutor) Close() error {
+	if executor == nil || executor.socketFile == nil {
+		return nil
+	}
+	executor.client.CloseIdleConnections()
+	err := executor.socketFile.Close()
+	executor.socketFile = nil
+	return err
 }
 
 func (executor *SandboxExecutor) Execute(
@@ -96,7 +133,7 @@ func (executor *SandboxExecutor) Execute(
 	kind string,
 	body []byte,
 ) (gateway.Outcome, error) {
-	if executor == nil || executor.client == nil {
+	if executor == nil || executor.client == nil || executor.socketFile == nil {
 		return gateway.Outcome{}, errors.New("sandbox executor is unavailable")
 	}
 	requestBody, err := json.Marshal(sandboxExecuteRequest{CallID: callID, Kind: kind, Body: body})
@@ -130,8 +167,9 @@ func (executor *SandboxExecutor) validateSocket() error {
 	if err != nil {
 		return fmt.Errorf("inspect sandbox socket: %w", err)
 	}
-	if info.Mode()&os.ModeSocket == 0 || info.Mode().Perm() != 0o600 {
-		return errors.New("sandbox endpoint is not a private Unix socket")
+	if info.Mode()&os.ModeSocket == 0 || info.Mode().Perm() != 0o600 ||
+		executor.socketInfo == nil || !os.SameFile(executor.socketInfo, info) {
+		return errors.New("sandbox endpoint generation changed")
 	}
 	stat, ok := info.Sys().(*syscall.Stat_t)
 	if !ok || int(stat.Uid) != os.Geteuid() {

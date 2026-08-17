@@ -20,8 +20,9 @@ func NewMongoStore(client *mongo.Client, database, collection string) (*MongoSto
 }
 
 // FindExact uses one aggregation so count and document evidence come from one
-// MongoDB command. The facet returns the exact count but materializes at most
-// one document, because any count other than one is deliberately inconclusive.
+// MongoDB command. The bounded workload contract materializes every matching
+// document so retained experiment evidence can independently verify duplicate
+// rows instead of trusting only a producer-reported count.
 func (s *MongoStore) FindExact(ctx context.Context, query ReservationQuery) (QueryResult, error) {
 	filter := bson.D{
 		{Key: "customerName", Value: query.CustomerName},
@@ -35,7 +36,7 @@ func (s *MongoStore) FindExact(ctx context.Context, query ReservationQuery) (Que
 		bson.D{{Key: "$facet", Value: bson.D{
 			{Key: "metadata", Value: bson.A{bson.D{{Key: "$count", Value: "count"}}}},
 			{Key: "facts", Value: bson.A{
-				bson.D{{Key: "$limit", Value: 1}},
+				bson.D{{Key: "$limit", Value: maxObservedFacts + 1}},
 				bson.D{{Key: "$project", Value: bson.D{
 					{Key: "_id", Value: 0}, {Key: "customerName", Value: 1},
 					{Key: "hotelId", Value: 1}, {Key: "inDate", Value: 1},
@@ -67,11 +68,11 @@ func (s *MongoStore) FindExact(ctx context.Context, query ReservationQuery) (Que
 	} else if len(rows[0].Metadata) != 0 {
 		return QueryResult{}, errors.New("Mongo observation aggregation returned invalid metadata")
 	}
-	if count == 1 {
-		if len(rows[0].Facts) != 1 {
-			return QueryResult{}, errors.New("Mongo observation aggregation omitted its unique fact")
-		}
-		return QueryResult{Count: count, Facts: rows[0].Facts}, nil
+	if count > maxObservedFacts {
+		return QueryResult{}, errors.New("Mongo observation exceeds the retained-fact limit")
 	}
-	return QueryResult{Count: count}, nil
+	if int64(len(rows[0].Facts)) != count {
+		return QueryResult{}, errors.New("Mongo observation aggregation omitted matching facts")
+	}
+	return QueryResult{Count: count, Facts: rows[0].Facts}, nil
 }

@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "valid": true,
+  "backend": "firecracker-kvm",
+  "firecracker_version": "1.16.1",
+  "kernel_version": "6.1.155",
+  "generation": 1,
+  "session_id": "28dd4c84240179a9a2c72377a563c49a",
+  "disposition": "vmm-sigkill",
+  "tool_profile": "http",
+  "network_interfaces": 0,
+  "root_block_devices": 0,
+  "read_only_payload": true,
+  "process": {
+    "generation": 1,
+    "instance_id": "claude-g1-dff469738c535023",
+    "pid": 2936569,
+    "executable": "/home/will/.cache/safe-change-runtime/firecracker/v1.16.1/release-v1.16.1-x86_64/firecracker-v1.16.1-x86_64",
+    "executable_sha256": "2fd0171309af7e24cf8dafc8a6f921c1434c49b5f9349bb996b7ed0a4deb8aa7",
+    "start_time_ticks": 141537218,
+    "started_time_ns": 1786940053096433597,
+    "stopped_time_ns": 1786940064288894298,
+    "termination": "supervisor"
+  },
+  "artifacts": {
+    "guest": {
+      "name": "firecracker-claude-guest",
+      "size": 4627037,
+      "mode": 320,
+      "sha256": "c8bfb4942c11cef8f0c495c92c7332e2adb774cce19e5cbd6ccf69511d405662"
+    },
+    "initramfs": {
+      "name": "initramfs",
+      "size": 4628992,
+      "mode": 256,
+      "sha256": "c48f00e8aa34f5f9b83fa9f62c22828fdf35deea18102a12668cf73429978756"
+    },
+    "kernel": {
+      "name": "kernel",
+      "size": 44279576,
+      "mode": 256,
+      "sha256": "e20e46d0c36c55c0d1014eb20576171b3f3d922260d9f792017aeff53af3d4f2"
+    },
+    "payload": {
+      "name": "payload",
+      "size": 93650944,
+      "mode": 256,
+      "sha256": "dd3cb7a5b59c2b5a3734e1ca64f07a45f585fb1e1bc5df37d4952e710b79edfb"
+    }
+  }
+}

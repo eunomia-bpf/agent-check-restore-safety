@@ -143,9 +143,34 @@ retained. Full commands and the honest boundary are in
 `docs/claude-mcp-runtime.md`.
 
 This proves portability of one process-level continuity seam, not complete
-mediation or whole-VM Claude replacement. The model endpoint is deterministic,
-and built-in tools are present but unused. The next implementation step is to
-place this same Claude contract inside the existing Firecracker execution cell.
+mediation. The model endpoint is deterministic, and this MCP experiment does
+not exercise built-in tools. The Firecracker HTTP path below separately tests
+one built-in Bash action across complete VMM replacement.
+
+### Ordinary HTTP from Claude-in-Firecracker to DeathStarBench
+
+The Firecracker Claude cell has a second strict profile for one registered
+HTTP route. PID 1 verifies and publishes real Bash, BusyBox, the dynamic loader,
+and fixed libraries from the read-only payload. Claude receives a fixed local
+URL and call identity and uses its ordinary Bash tool. A separate AF_VSOCK
+relay carries only that route; the VM still has no NIC or application
+credential.
+
+On the host, the HTTP proxy maps the exact public path to one Operation kind
+and executes through the same generation-bound sandbox socket as the MCP
+frontend. The executor pins the Unix socket inode and checks it before every
+call, so an old proxy cannot follow a replacement generation. The receiver is
+the full unmodified DeathStarBench Hotel Reservation graph. Its effect adapter
+creates a controlled post-commit response window, and its read-only Mongo
+observer retains the exact bounded business rows used to settle unknown work.
+
+The accepted three-run comparison records one Mongo row for each protected
+recovery, two for each raw retry, and one without task completion when retry is
+stopped. The independent checker imports no driver code and recomputes the
+Mongo fact hashes, History chain, Operation and request identities, fault
+ordering, VMM identities, Firecracker device configuration, relay bytes, and
+official Claude stream. Reproduction and the exact limit are in
+`docs/firecracker-deathstar-runtime.md`.
 
 ### Not implemented
 

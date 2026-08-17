@@ -52,6 +52,7 @@ type Proxy struct {
 }
 
 type boundRoute struct {
+	name         string
 	kind         string
 	method       string
 	url          string
@@ -107,8 +108,12 @@ func New(executor Executor, config Config, options Options) (*Proxy, error) {
 		for _, contentType := range route.ContentTypes {
 			contentTypes[contentType] = true
 		}
-		proxy.routes[route.Name] = boundRoute{
-			kind: route.Kind, method: route.Method, url: route.URL, contentTypes: contentTypes,
+		path := route.Path
+		if path == "" {
+			path = "/v1/effects/" + route.Name
+		}
+		proxy.routes[path] = boundRoute{
+			name: route.Name, kind: route.Kind, method: route.Method, url: route.URL, contentTypes: contentTypes,
 		}
 	}
 	return proxy, nil
@@ -131,22 +136,12 @@ func (p *Proxy) serveHTTP(writer http.ResponseWriter, request *http.Request) {
 		}{Status: "ok"})
 		return
 	}
-	const routePrefix = "/v1/effects/"
-	if !strings.HasPrefix(request.URL.Path, routePrefix) {
-		writeError(writer, http.StatusNotFound, errorBody{Error: "effect route not found"})
-		return
-	}
 	if request.Method != http.MethodPost {
 		writer.Header().Set("Allow", http.MethodPost)
 		writeError(writer, http.StatusMethodNotAllowed, errorBody{Error: "effect invocation requires POST"})
 		return
 	}
-	routeName := strings.TrimPrefix(request.URL.Path, routePrefix)
-	if routeName == "" || strings.Contains(routeName, "/") {
-		writeError(writer, http.StatusNotFound, errorBody{Error: "effect route not found"})
-		return
-	}
-	route, ok := p.routes[routeName]
+	route, ok := p.routes[request.URL.Path]
 	if !ok {
 		writeError(writer, http.StatusNotFound, errorBody{Error: "effect route not found"})
 		return
@@ -156,7 +151,7 @@ func (p *Proxy) serveHTTP(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	callID, err := callIdentity(
-		routeName,
+		route.name,
 		request.Header.Values(headerCallID),
 		request.Header.Values(headerIdempotencyKey),
 	)

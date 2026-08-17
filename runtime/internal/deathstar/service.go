@@ -30,6 +30,7 @@ const (
 	maxUpstreamBytes = 64 << 10
 	maxIdentityBytes = 1024
 	maxOperationID   = maxIdentityBytes - len("deathstar/reservation/")
+	maxObservedFacts = 1024
 )
 
 // ReservationRequest is the complete input accepted by both endpoints. The
@@ -63,8 +64,8 @@ type ReservationFact struct {
 	Rooms        int    `json:"rooms" bson:"number"`
 }
 
-// QueryResult contains the exact number of matching documents and, when the
-// count is one, the document on which a settled observation can be based.
+// QueryResult contains the exact number of matching documents and all bounded
+// document summaries on which the observation is based.
 type QueryResult struct {
 	Count int64
 	Facts []ReservationFact
@@ -80,22 +81,26 @@ type EffectConfig struct {
 	FrontendURL       string
 	AuditPath         string
 	DropFirstResponse bool
+	PostCommitDelay   time.Duration
 	Transport         http.RoundTripper
 }
 
 type EffectService struct {
-	frontend *url.URL
-	client   *http.Client
-	audit    *auditLog
+	frontend        *url.URL
+	client          *http.Client
+	audit           *auditLog
+	postCommitDelay time.Duration
 }
 
 type auditRecord struct {
-	Delivery       uint64 `json:"delivery"`
-	OperationID    string `json:"operation_id"`
-	UpstreamStatus int    `json:"upstream_status"`
-	UpstreamHash   string `json:"upstream_hash"`
-	UpstreamOK     bool   `json:"upstream_ok"`
-	Drop           bool   `json:"drop"`
+	Delivery          uint64 `json:"delivery"`
+	CommittedTimeNS   int64  `json:"committed_time_ns"`
+	OperationID       string `json:"operation_id"`
+	UpstreamStatus    int    `json:"upstream_status"`
+	UpstreamHash      string `json:"upstream_hash"`
+	UpstreamOK        bool   `json:"upstream_ok"`
+	Drop              bool   `json:"drop"`
+	PostCommitDelayMS int64  `json:"post_commit_delay_ms"`
 }
 
 type auditStats struct {
@@ -113,6 +118,9 @@ type auditLog struct {
 }
 
 func OpenEffect(config EffectConfig) (*EffectService, error) {
+	if config.PostCommitDelay < 0 || config.PostCommitDelay > time.Minute {
+		return nil, errors.New("DeathStarBench post-commit delay must be between 0 and 1m")
+	}
 	frontend, err := url.Parse(config.FrontendURL)
 	if err != nil || (frontend.Scheme != "http" && frontend.Scheme != "https") || frontend.Host == "" || frontend.User != nil || frontend.Fragment != "" {
 		return nil, errors.New("DeathStarBench frontend must be an absolute HTTP(S) URL")
@@ -140,7 +148,8 @@ func OpenEffect(config EffectConfig) (*EffectService, error) {
 				return http.ErrUseLastResponse
 			},
 		},
-		audit: audit,
+		audit:           audit,
+		postCommitDelay: config.PostCommitDelay,
 	}, nil
 }
 
@@ -182,7 +191,7 @@ func openAudit(path string, dropFirst bool) (*auditLog, error) {
 	return &auditLog{file: file, nextDrop: dropFirst}, nil
 }
 
-func (a *auditLog) append(operationID string, status int, upstreamHash string, upstreamOK, canDrop bool) (auditRecord, error) {
+func (a *auditLog) append(operationID string, status int, upstreamHash string, upstreamOK, canDrop bool, delay time.Duration) (auditRecord, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if a.closed {
@@ -190,8 +199,10 @@ func (a *auditLog) append(operationID string, status int, upstreamHash string, u
 	}
 	record := auditRecord{
 		Delivery: a.stats.Deliveries + 1, OperationID: operationID,
-		UpstreamStatus: status, UpstreamHash: upstreamHash, UpstreamOK: upstreamOK,
-		Drop: upstreamOK && canDrop && a.nextDrop,
+		CommittedTimeNS: time.Now().UnixNano(),
+		UpstreamStatus:  status, UpstreamHash: upstreamHash, UpstreamOK: upstreamOK,
+		Drop:              upstreamOK && canDrop && a.nextDrop,
+		PostCommitDelayMS: delay.Milliseconds(),
 	}
 	encoded, err := json.Marshal(record)
 	if err != nil {
@@ -300,7 +311,7 @@ func (s *EffectService) reserve(writer http.ResponseWriter, request *http.Reques
 	upstreamHash := hex.EncodeToString(bodyDigest[:])
 	upstreamOK := err == nil && status == http.StatusOK && successfulUpstreamBody(body)
 	hijacker, canHijack := writer.(http.Hijacker)
-	record, auditErr := s.audit.append(operationID, status, upstreamHash, upstreamOK, canHijack)
+	record, auditErr := s.audit.append(operationID, status, upstreamHash, upstreamOK, canHijack, s.postCommitDelay)
 	if auditErr != nil {
 		writeError(writer, http.StatusInternalServerError, auditErr)
 		return
@@ -312,6 +323,15 @@ func (s *EffectService) reserve(writer http.ResponseWriter, request *http.Reques
 	if !upstreamOK {
 		writeError(writer, http.StatusBadGateway, errors.New("DeathStarBench did not return an explicit reservation success"))
 		return
+	}
+	if s.postCommitDelay > 0 {
+		timer := time.NewTimer(s.postCommitDelay)
+		defer timer.Stop()
+		select {
+		case <-timer.C:
+		case <-request.Context().Done():
+			return
+		}
 	}
 	if record.Drop {
 		connection, _, hijackErr := hijacker.Hijack()
@@ -364,8 +384,10 @@ type Observation struct {
 
 type observedFact struct {
 	Observation
-	Count int64             `json:"count"`
-	Facts []ReservationFact `json:"facts"`
+	Count          int64             `json:"count"`
+	Facts          []ReservationFact `json:"facts"`
+	FactsHash      string            `json:"facts_hash"`
+	ObservedTimeNS int64             `json:"observed_time_ns"`
 }
 
 type ObserverService struct {
@@ -416,7 +438,7 @@ func (s *ObserverService) query(writer http.ResponseWriter, request *http.Reques
 		writeError(writer, http.StatusBadGateway, fmt.Errorf("query reservation facts: %w", err))
 		return
 	}
-	if match.Count < 0 || (match.Count == 1 && len(match.Facts) != 1) || (match.Count != 1 && len(match.Facts) != 0) {
+	if match.Count < 0 || match.Count > maxObservedFacts || int64(len(match.Facts)) != match.Count {
 		writeError(writer, http.StatusInternalServerError, errors.New("reservation store returned an inconsistent result"))
 		return
 	}
@@ -436,7 +458,10 @@ func (s *ObserverService) query(writer http.ResponseWriter, request *http.Reques
 		RemoteReference: fmt.Sprintf("reservation-db.reservation/count=%d", match.Count),
 	}
 	s.mu.Lock()
-	s.items = append(s.items, observedFact{Observation: observation, Count: match.Count, Facts: facts})
+	s.items = append(s.items, observedFact{
+		Observation: observation, Count: match.Count, Facts: facts,
+		FactsHash: canonicalFactHash(facts), ObservedTimeNS: time.Now().UnixNano(),
+	})
 	s.mu.Unlock()
 	writeJSON(writer, http.StatusOK, observation)
 }

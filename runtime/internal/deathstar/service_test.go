@@ -327,7 +327,15 @@ func TestObserverRequiresIdentityHashAndStrictBody(t *testing.T) {
 func TestObserverZeroAndMultipleRowsAreInconclusive(t *testing.T) {
 	for _, count := range []int64{0, 2} {
 		t.Run(strconv.FormatInt(count, 10), func(t *testing.T) {
-			store := &fakeStore{result: QueryResult{Count: count}}
+			fact := ReservationFact{
+				CustomerName: "safe-reserve-17", HotelID: "1", InDate: "2015-04-09",
+				OutDate: "2015-04-10", Rooms: 1,
+			}
+			facts := make([]ReservationFact, count)
+			for index := range facts {
+				facts[index] = fact
+			}
+			store := &fakeStore{result: QueryResult{Count: count, Facts: facts}}
 			service, err := NewObserver(store)
 			if err != nil {
 				t.Fatal(err)
@@ -357,8 +365,12 @@ func TestObserverZeroAndMultipleRowsAreInconclusive(t *testing.T) {
 			}
 			factsResponse := httptest.NewRecorder()
 			service.Handler().ServeHTTP(factsResponse, httptest.NewRequest(http.MethodGet, "/v1/stats/facts", nil))
-			if factsResponse.Code != http.StatusOK || !strings.Contains(factsResponse.Body.String(), `"facts":[]`) {
-				t.Fatalf("inconclusive evidence encoded an absent rather than empty fact set: %s", factsResponse.Body.String())
+			if factsResponse.Code != http.StatusOK ||
+				!strings.Contains(factsResponse.Body.String(), `"facts_hash":"`+canonicalFactHash(facts)+`"`) ||
+				!strings.Contains(factsResponse.Body.String(), `"observed_time_ns":`) ||
+				(count == 0 && !strings.Contains(factsResponse.Body.String(), `"facts":[]`)) ||
+				(count == 2 && strings.Count(factsResponse.Body.String(), `"customer_name":"safe-reserve-17"`) != 2) {
+				t.Fatalf("inconclusive evidence omitted its retained Mongo facts: %s", factsResponse.Body.String())
 			}
 		})
 	}

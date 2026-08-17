@@ -1,4 +1,4 @@
-.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-repository runtime-firecracker-codex-demo runtime-firecracker-codex-mcp-demo runtime-firecracker-codex-mcp-inflight-demo runtime-firecracker-codex-mcp-check runtime-firecracker-codex-check runtime-firecracker-codex-control-check runtime-firecracker-claude-build runtime-firecracker-claude-payload runtime-firecracker-claude-demo runtime-firecracker-claude-check runtime-mcp-operation-build runtime-mcp-operation-check runtime-mcp-operation-demo runtime-codex-mcp-build runtime-codex-mcp-demo runtime-codex-mcp-docker-demo runtime-codex-mcp-check runtime-claude-source-check runtime-claude-fetch runtime-claude-mcp-demo runtime-claude-mcp-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
+.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-repository runtime-firecracker-codex-demo runtime-firecracker-codex-mcp-demo runtime-firecracker-codex-mcp-inflight-demo runtime-firecracker-codex-mcp-check runtime-firecracker-codex-check runtime-firecracker-codex-control-check runtime-firecracker-claude-build runtime-firecracker-claude-payload runtime-firecracker-claude-demo runtime-firecracker-claude-check runtime-firecracker-deathstar-build runtime-firecracker-deathstar-payload runtime-firecracker-deathstar-demo runtime-firecracker-deathstar-check runtime-mcp-operation-build runtime-mcp-operation-check runtime-mcp-operation-demo runtime-codex-mcp-build runtime-codex-mcp-demo runtime-codex-mcp-docker-demo runtime-codex-mcp-check runtime-claude-source-check runtime-claude-fetch runtime-claude-mcp-demo runtime-claude-mcp-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
 
 VM_ACCEL ?= tcg
 VM_BACKEND ?= qemu
@@ -31,6 +31,12 @@ FIRECRACKER_CLAUDE_PAYLOAD ?= $(FIRECRACKER_CLAUDE_BUILD_DIR)/claude-payload.squ
 FIRECRACKER_CLAUDE_PAYLOAD_RESULT ?= $(FIRECRACKER_CLAUDE_BUILD_DIR)/claude-payload.json
 FIRECRACKER_CLAUDE_DEMO_ARGS ?=
 FIRECRACKER_CLAUDE_EVIDENCE ?=
+FIRECRACKER_DEATHSTAR_PAYLOAD ?= $(FIRECRACKER_CLAUDE_BUILD_DIR)/claude-http-v4-payload.squashfs
+FIRECRACKER_DEATHSTAR_PAYLOAD_RESULT ?= $(FIRECRACKER_CLAUDE_BUILD_DIR)/claude-http-v4-payload.json
+FIRECRACKER_DEATHSTAR_BASH ?= /bin/bash
+FIRECRACKER_DEATHSTAR_BASH_LIBRARY ?= $(shell readlink -f /lib/x86_64-linux-gnu/libtinfo.so.6)
+FIRECRACKER_DEATHSTAR_EVIDENCE ?= docs/tmp/bootstrap/step-0022-20260817T025925Z/experiment-firecracker-deathstar-egress/raw
+FIRECRACKER_DEATHSTAR_REPETITIONS ?= 3
 MCP_OPERATION_BUILD_DIR ?= $(shell python3 -c 'import os; print(os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "safe-change-runtime", "mcp-operation"))')
 MCP_RELAY_BUNDLE_DIR ?= $(MCP_OPERATION_BUILD_DIR)/relay-bundle
 CODEX_MCP_DEMO_ARGS ?=
@@ -282,6 +288,46 @@ runtime-firecracker-claude-demo: runtime-firecracker-claude-build runtime-firecr
 runtime-firecracker-claude-check:
 	@test -n "$(strip $(FIRECRACKER_CLAUDE_EVIDENCE))" || { echo "FIRECRACKER_CLAUDE_EVIDENCE must name the retained evidence directory" >&2; exit 2; }
 	python3 -m adapter.check_firecracker_claude_evidence "$(abspath $(FIRECRACKER_CLAUDE_EVIDENCE))"
+
+# Official Claude uses its ordinary Bash tool through one registered HTTP
+# route into the full pinned DeathStarBench deployment. Firecracker cells have
+# no NIC; complete source-VMM loss is compared with raw retry and stopping.
+runtime-firecracker-deathstar-build: runtime-firecracker-claude-build
+	cd runtime && CGO_ENABLED=0 go build -buildvcs=false -trimpath \
+		-o "$(FIRECRACKER_CLAUDE_BUILD_DIR)/effect-proxy" ./cmd/effect-proxy
+	@test -x "$(FIRECRACKER_DEATHSTAR_BASH)"
+	@chmod 0500 "$(FIRECRACKER_CLAUDE_BUILD_DIR)/effect-proxy"
+	@sha256sum "$(FIRECRACKER_DEATHSTAR_BASH)" "$(FIRECRACKER_CLAUDE_BUILD_DIR)/effect-proxy"
+
+runtime-firecracker-deathstar-payload: runtime-firecracker-deathstar-build
+	@mkdir -p "$(FIRECRACKER_CLAUDE_BUILD_DIR)"
+	@chmod 0700 "$(FIRECRACKER_CLAUDE_BUILD_DIR)"
+	cd runtime && go run ./cmd/firecracker-claude-payload \
+		-claude "$(abspath $(CLAUDE_CODE_BINARY))" \
+		-claude-sha256 "$(CLAUDE_CODE_SHA256)" \
+		-relay "$(abspath $(MCP_RELAY_BUNDLE_DIR))/mcp-operation-relay" \
+		-busybox /usr/bin/busybox \
+		-bash "$(abspath $(FIRECRACKER_DEATHSTAR_BASH))" \
+		-bash-library "$(abspath $(FIRECRACKER_DEATHSTAR_BASH_LIBRARY))" \
+		-output "$(abspath $(FIRECRACKER_DEATHSTAR_PAYLOAD))" \
+		-result "$(abspath $(FIRECRACKER_DEATHSTAR_PAYLOAD_RESULT))"
+
+runtime-firecracker-deathstar-demo: runtime-firecracker-deathstar-build runtime-firecracker-deathstar-payload
+	CELL_BINARY="$(abspath $(FIRECRACKER_CLAUDE_CELL))" \
+	GUEST_BINARY="$(abspath $(FIRECRACKER_CLAUDE_GUEST))" \
+	PAYLOAD="$(abspath $(FIRECRACKER_DEATHSTAR_PAYLOAD))" \
+	PAYLOAD_RESULT="$(abspath $(FIRECRACKER_DEATHSTAR_PAYLOAD_RESULT))" \
+	CLAUDE_BINARY="$(abspath $(CLAUDE_CODE_BINARY))" CLAUDE_SHA256="$(CLAUDE_CODE_SHA256)" \
+	CONTROL_BINARY="$(abspath $(MCP_OPERATION_BUILD_DIR))/control" \
+	EFFECT_PROXY_BINARY="$(abspath $(FIRECRACKER_CLAUDE_BUILD_DIR))/effect-proxy" \
+	EVIDENCE_DIR="$(abspath $(FIRECRACKER_DEATHSTAR_EVIDENCE))" \
+	REPETITIONS="$(FIRECRACKER_DEATHSTAR_REPETITIONS)" \
+	bash runtime/deploy/firecracker-deathstar/run.sh
+
+runtime-firecracker-deathstar-check:
+	python3 -m adapter.check_firecracker_deathstar_egress_evidence \
+		"$(abspath $(FIRECRACKER_DEATHSTAR_EVIDENCE))" \
+		--expected-repetitions "$(FIRECRACKER_DEATHSTAR_REPETITIONS)"
 
 # Provider-independent MCP stdio boundary. The server binary contains no
 # provider target or credential; an active sandbox Unix socket supplies both.

@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "repository": "https://github.com/delimitrou/DeathStarBench.git",
+  "tag": "hotelReservation-0.3.5",
+  "commit": "6ecb09706140f8730b5385c08f1386c654c3c526",
+  "tree": "0ac0fd6d4ccfa1472d3895384d45fef5c6246b03",
+  "official_services": 24,
+  "official_compose_running": 23,
+  "compose_frontend_scaled_to_zero": true,
+  "custom_unmodified_frontend_running": true,
+  "application_image": "safe-change-step22/deathstar:hotel-reservation-0.3.5",
+  "application_image_id": "sha256:d8fd2e2b0579aff371099a8e2f3b1c33312f9a46f79b33be26b0a86f4093c0da",
+  "runtime_image": "safe-change-step22/runtime:local",
+  "runtime_image_id": "sha256:6119a6cc1e9c819874388a1031bda7bc7e6350159896c7dd5c9131f2924695f1",
+  "runtime_tree_hash": "68505556b22e32a8d06ffc98db7c75357208844f3b41230748dd3856721c2f8e",
+  "runtime_status": " M Makefile\n M adapter/firecracker_claude_mcp_runtime_demo.py\n M adapter/mock_anthropic.py\n M runtime/cmd/deathstar-adapter/main.go\n M runtime/cmd/effect-proxy/main.go\n M runtime/cmd/firecracker-claude-cell/main.go\n M runtime/cmd/firecracker-claude-guest/main.go\n M runtime/cmd/firecracker-claude-guest/main_test.go\n M runtime/cmd/firecracker-claude-payload/main.go\n M runtime/cmd/mcp-operation-host/main.go\n M runtime/cmd/mcp-operation-server/main.go\n M runtime/internal/agentguest/claude_child_linux.go\n M runtime/internal/agentguest/claude_config.go\n M runtime/internal/agentguest/claude_linux.go\n M runtime/internal/deathstar/mongo.go\n M runtime/internal/deathstar/service.go\n M runtime/internal/deathstar/service_test.go\n M runtime/internal/effectproxy/config.go\n M runtime/internal/effectproxy/proxy.go\n M runtime/internal/mcpoperation/sandbox_executor.go\n M runtime/internal/mcpoperation/sandbox_executor_test.go\n?? adapter/check_firecracker_deathstar_egress_evidence.py\n?? adapter/firecracker_deathstar_egress_demo.py\n?? runtime/deploy/firecracker-deathstar/run.sh",
+  "networks": {
+    "application": "safe-change-firecracker-deathstar-step22_default",
+    "frontdoor": "safe-change-step22-frontdoor",
+    "observation": "safe-change-step22-observation"
+  },
+  "source_modified": false,
+  "pass": true
+}

@@ -103,13 +103,13 @@ that one host continuity boundary can sit below both Claude Code and Codex
 without patching either executable, and that the Agent process and its MCP
 stdio child can be disposable while an external Operation remains durable.
 
-It is a correctness run, not a throughput result. The source process is killed,
-but it is not yet inside Firecracker. Built-in Bash/Edit/Read tools remain
-visible to Claude, although this workload uses only the protected MCP tool; a
-production claim requires routing every protected effect through the boundary.
-The deterministic model fixture makes the second process reproduce the same
-ordered MCP request. General semantic reconciliation when a replacement Agent
-chooses a different action sequence remains an open runtime problem. The next
-vertical slice should put this exact Claude process contract inside the
-existing Firecracker cell and replace the complete VMM while preserving the
-same host journal.
+It is a correctness run, not a throughput result. In this target the source
+process is killed outside Firecracker, and the workload uses only the protected
+MCP tool. Later targets separately place official Claude inside Firecracker and
+route one built-in Bash/HTTP action through the same host boundary; see
+`docs/firecracker-claude-runtime.md` and
+`docs/firecracker-deathstar-runtime.md`. A production claim still requires
+routing every protected effect through the boundary. The deterministic model
+fixture makes the second process reproduce the same ordered MCP request.
+General semantic reconciliation when a replacement Agent chooses a different
+action sequence remains an open runtime problem.

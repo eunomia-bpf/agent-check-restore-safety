@@ -17,12 +17,13 @@ import (
 )
 
 const (
-	ConfigSchema        = 1
-	MaxConfigBytes      = 1 << 20
-	MaxRoutes           = 256
-	MaxRouteNameBytes   = 128
-	MaxContentTypes     = 16
-	MaxContentTypeBytes = 256
+	ConfigSchema            = 1
+	TransparentConfigSchema = 2
+	MaxConfigBytes          = 1 << 20
+	MaxRoutes               = 256
+	MaxRouteNameBytes       = 128
+	MaxContentTypes         = 16
+	MaxContentTypeBytes     = 256
 )
 
 // Config is the complete authority exposed by one proxy process. Routes are
@@ -38,6 +39,7 @@ type Config struct {
 // configured values explicitly.
 type Route struct {
 	Name         string   `json:"name"`
+	Path         string   `json:"path,omitempty"`
 	Kind         string   `json:"kind"`
 	Method       string   `json:"method"`
 	URL          string   `json:"url"`
@@ -138,19 +140,30 @@ func validateConfig(config *Config) error {
 	if config == nil {
 		return errors.New("nil effect proxy config")
 	}
-	if config.Schema != ConfigSchema {
+	if config.Schema != ConfigSchema && config.Schema != TransparentConfigSchema {
 		return fmt.Errorf("unsupported effect proxy config schema %d", config.Schema)
 	}
 	if len(config.Routes) == 0 || len(config.Routes) > MaxRoutes {
 		return fmt.Errorf("effect proxy config must contain between 1 and %d routes", MaxRoutes)
 	}
 	seenNames := make(map[string]bool, len(config.Routes))
+	seenPaths := make(map[string]bool, len(config.Routes))
 	for index := range config.Routes {
 		route := &config.Routes[index]
 		if !validRouteName(route.Name) || seenNames[route.Name] {
 			return fmt.Errorf("route %d has an invalid or duplicate name", index)
 		}
 		seenNames[route.Name] = true
+		if config.Schema == ConfigSchema {
+			if route.Path != "" {
+				return fmt.Errorf("route %q cannot set path in schema %d", route.Name, ConfigSchema)
+			}
+		} else {
+			if !validPublicPath(route.Path) || seenPaths[route.Path] {
+				return fmt.Errorf("route %q has an invalid or duplicate public path", route.Name)
+			}
+			seenPaths[route.Path] = true
+		}
 		if route.Kind == "" || len(route.Kind) > kernel.MaxNameBytes {
 			return fmt.Errorf("route %q has an invalid operation kind", route.Name)
 		}
@@ -177,6 +190,19 @@ func validateConfig(config *Config) error {
 		}
 	}
 	return nil
+}
+
+func validPublicPath(value string) bool {
+	if value == "" || value == "/" || value == "/healthz" || len(value) > kernel.MaxNameBytes ||
+		value[0] != '/' || strings.ContainsAny(value, "?#\\\r\n\x00") || strings.Contains(value, "//") {
+		return false
+	}
+	for _, segment := range strings.Split(strings.TrimPrefix(value, "/"), "/") {
+		if segment == "" || segment == "." || segment == ".." {
+			return false
+		}
+	}
+	return true
 }
 
 func validRouteName(value string) bool {

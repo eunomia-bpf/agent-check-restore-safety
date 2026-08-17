@@ -1,8 +1,8 @@
 //go:build linux
 
 // Command firecracker-claude-guest is PID 1 for one clean, networkless Claude
-// Code cell. It exposes only fixed loopback model and MCP endpoints, both of
-// which leave the microVM through generation-bound AF_VSOCK relays.
+// Code cell. It exposes only fixed loopback model and declared-operation
+// endpoints, which leave the microVM through generation-bound AF_VSOCK relays.
 package main
 
 import (
@@ -59,14 +59,26 @@ func main() {
 }
 
 func runChild(arguments []string) error {
-	if len(arguments) < 4 || arguments[0] != agentguest.InitExecutable || arguments[1] != agentguest.ClaudeChildMode {
+	if len(arguments) < 7 || arguments[0] != agentguest.InitExecutable || arguments[1] != agentguest.ClaudeChildMode {
 		return errors.New("Claude guest received a forbidden internal mode")
 	}
-	port, err := strconv.ParseUint(arguments[2], 10, 32)
+	schema, err := strconv.Atoi(arguments[2])
+	if err != nil || (schema != agentguest.ClaudeConfigSchema && schema != agentguest.ClaudeHTTPConfigSchema) {
+		return errors.New("Claude guest child schema is invalid")
+	}
+	port, err := strconv.ParseUint(arguments[3], 10, 32)
 	if err != nil || port == 0 || port > 65535 {
 		return errors.New("Claude guest child model port is invalid")
 	}
-	return agentguest.ExecClaudeChild(arguments[3:], uint32(port))
+	sessionID := arguments[4]
+	if len(sessionID) != agentguest.SessionIDHexBytes*2 {
+		return errors.New("Claude guest child session is invalid")
+	}
+	egressPort, err := strconv.ParseUint(arguments[5], 10, 32)
+	if err != nil || egressPort > 65535 || (schema == agentguest.ClaudeHTTPConfigSchema && egressPort == 0) || (schema == agentguest.ClaudeConfigSchema && egressPort != 0) {
+		return errors.New("Claude guest child egress port is invalid")
+	}
+	return agentguest.ExecClaudeChild(arguments[6:], schema, uint32(port), sessionID, uint32(egressPort))
 }
 
 func runPID1(ctx context.Context, logger *log.Logger) (returnErr error) {
@@ -85,8 +97,12 @@ func runPID1(ctx context.Context, logger *log.Logger) (returnErr error) {
 
 	runContext, cancel := context.WithCancel(ctx)
 	defer cancel()
-	proxyResults := make([]<-chan error, 0, 2)
-	for _, port := range []uint32{config.ModelPort, agentguest.DefaultMCPPort} {
+	ports := []uint32{config.ModelPort, agentguest.DefaultMCPPort}
+	if config.Schema == agentguest.ClaudeHTTPConfigSchema {
+		ports = []uint32{config.ModelPort, config.EgressPort}
+	}
+	proxyResults := make([]<-chan error, 0, len(ports))
+	for _, port := range ports {
 		result, err := agentguest.StartModelProxy(runContext.Done(), port, agentguest.DialHostVsock, logger)
 		if err != nil {
 			return fmt.Errorf("start Claude loopback proxy %d: %w", port, err)
@@ -118,6 +134,7 @@ func runPID1(ctx context.Context, logger *log.Logger) (returnErr error) {
 	}()
 	waitErr := command.Wait()
 	copyErr := <-copyDone
+	copyErr = normalizeClaudeCopyError(waitErr, copyErr)
 	_ = stdout.Close()
 	if killErr := domain.FreezeAndKill(shutdownTimeout); killErr != nil {
 		return errors.Join(waitErr, copyErr, killErr)
@@ -145,6 +162,13 @@ func runPID1(ctx context.Context, logger *log.Logger) (returnErr error) {
 	}
 	logger.Printf("reported authenticated result for generation %d", generation)
 	return nil
+}
+
+func normalizeClaudeCopyError(waitErr, copyErr error) error {
+	if waitErr == nil && errors.Is(copyErr, os.ErrClosed) {
+		return nil
+	}
+	return copyErr
 }
 
 func readConfig(path string) (agentguest.ClaudeConfig, error) {

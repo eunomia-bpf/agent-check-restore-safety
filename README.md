@@ -54,6 +54,8 @@ make runtime-firecracker-codex-mcp-inflight-demo
 make runtime-firecracker-claude-demo
 make runtime-firecracker-claude-check \
   FIRECRACKER_CLAUDE_EVIDENCE=/tmp/firecracker-claude-run
+sg kvm -c 'make runtime-firecracker-deathstar-demo'
+make runtime-firecracker-deathstar-check
 make runtime-codex-demo
 make runtime-codex-isolated-demo
 make runtime-codex-isolated-check
@@ -117,6 +119,15 @@ then a fresh VM obtains A from the host journal and commits B once. The VM has
 no NIC or root disk and receives only a read-only Claude/MCP payload. The
 reproduction command, independent checker, and exact trust boundary are in
 [`docs/firecracker-claude-runtime.md`](docs/firecracker-claude-runtime.md).
+
+The next target moves that boundary below an ordinary built-in tool. Official
+Claude uses Bash and a normal HTTP request from a no-NIC Firecracker VM to the
+full unmodified DeathStarBench Hotel Reservation application. The source VMM
+is killed after Mongo commits and before any response byte; a clean VM
+completes without another row. Three protected runs retain one row each, while
+three matched raw retries retain two each and stopping cannot complete. The
+launcher, independently retained Mongo facts, checker, and exact limits are in
+[`docs/firecracker-deathstar-runtime.md`](docs/firecracker-deathstar-runtime.md).
 
 The Codex demo uses the locally logged-in account and the real Codex App Server,
 not a model fixture. A strict dynamic tool requests one application-chosen

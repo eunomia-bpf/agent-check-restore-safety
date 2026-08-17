@@ -19,19 +19,23 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/api"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/apiclient"
 	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/effectproxy"
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/gateway"
+	"github.com/eunomia-bpf/agent-check-restore-safety/runtime/internal/mcpoperation"
 )
 
 const maxTokenFileBytes = 4096
 
 func main() {
-	var configPath, controlURL, tokenPath, listenAddress string
+	var configPath, controlURL, tokenPath, sandboxSocket, listenAddress string
 	var allowNonLoopback bool
 	var executeTimeout time.Duration
 	flag.StringVar(&configPath, "config", "", "path to the strict effect-route JSON config")
 	flag.StringVar(&controlURL, "control-url", "http://127.0.0.1:8787", "fixed durable control API URL")
 	flag.StringVar(&tokenPath, "adapter-token-file", "", "path to the private adapter Bearer token")
+	flag.StringVar(&sandboxSocket, "sandbox-socket", "", "generation-bound credential-free sandbox Operation socket")
 	flag.StringVar(&listenAddress, "listen", "127.0.0.1:8788", "workload-facing HTTP listen address")
 	flag.BoolVar(&allowNonLoopback, "allow-nonloopback", false, "allow an explicitly isolated non-loopback listener")
 	flag.DurationVar(&executeTimeout, "execute-timeout", 30*time.Second, "deadline for one control-mediated effect")
@@ -40,8 +44,8 @@ func main() {
 	if configPath == "" {
 		log.Fatal("-config is required")
 	}
-	if tokenPath == "" {
-		log.Fatal("-adapter-token-file is required")
+	if (tokenPath == "") == (sandboxSocket == "") {
+		log.Fatal("exactly one -adapter-token-file or -sandbox-socket is required")
 	}
 	if executeTimeout <= 0 || executeTimeout > 10*time.Minute {
 		log.Fatal("-execute-timeout must be positive and at most 10m")
@@ -50,15 +54,29 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	token, err := loadPrivateToken(tokenPath)
-	if err != nil {
-		log.Fatal(err)
+	var executor effectproxy.Executor
+	if sandboxSocket != "" {
+		sandbox, err := mcpoperation.NewSandboxExecutor(sandboxSocket, mcpoperation.SandboxExecutorOptions{
+			RecoveryAttempts: mcpoperation.DefaultRecoveryAttempts,
+			RequestTimeout:   executeTimeout,
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer sandbox.Close()
+		executor = sandboxEffectExecutor{sandbox}
+	} else {
+		token, err := loadPrivateToken(tokenPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		client, err := apiclient.New(controlURL, token, controlHTTPClient(executeTimeout))
+		if err != nil {
+			log.Fatal(err)
+		}
+		executor = client
 	}
-	client, err := apiclient.New(controlURL, token, controlHTTPClient(executeTimeout))
-	if err != nil {
-		log.Fatal(err)
-	}
-	proxy, err := effectproxy.New(client, configuration, effectproxy.Options{ExecutionTimeout: executeTimeout})
+	proxy, err := effectproxy.New(executor, configuration, effectproxy.Options{ExecutionTimeout: executeTimeout})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -93,6 +111,15 @@ func main() {
 	if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
+}
+
+type sandboxEffectExecutor struct{ sandbox *mcpoperation.SandboxExecutor }
+
+func (executor sandboxEffectExecutor) Execute(ctx context.Context, request api.ExecuteRequest) (gateway.Outcome, error) {
+	if executor.sandbox == nil {
+		return gateway.Outcome{}, errors.New("sandbox effect executor is unavailable")
+	}
+	return executor.sandbox.Execute(ctx, request.CallID, request.Kind, request.Body)
 }
 
 func loadConfig(path string) (effectproxy.Config, error) {

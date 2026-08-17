@@ -1,0 +1,4 @@
+{"event":"accept","time":"2026-08-17T04:38:24.53509012Z","generation":11,"port":8000,"pid":2974988}
+{"event":"ready","time":"2026-08-17T04:38:24.535279934Z","generation":11,"port":8000}
+{"event":"allow","time":"2026-08-17T04:38:24.538105893Z","generation":11,"port":8000}
+{"event":"go","time":"2026-08-17T04:38:24.541016124Z","generation":11,"port":8000,"bytes":6}

@@ -1,0 +1,2 @@
+{"event":"accept","time":"2026-08-17T04:23:00.658937391Z","target":"127.0.0.1:60259","pid":2959533,"uid":1001,"gid":993,"socket_device":2049,"socket_inode":4527196,"client_to_target_bytes":0,"target_to_client_bytes":0}
+{"event":"bytes","time":"2026-08-17T04:23:00.880185498Z","target":"127.0.0.1:60259","pid":0,"uid":0,"gid":0,"socket_device":2049,"socket_inode":4527196,"client_to_target_bytes":363,"target_to_client_bytes":467}

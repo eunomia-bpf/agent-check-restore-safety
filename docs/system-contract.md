@@ -189,8 +189,13 @@ fails closed under mutations to each recorded runtime boundary.
    answer-preserving State projection. The compiler still shares the control
    process; proof-object Certificates, authenticated query evidence, and a
    systematic crash matrix remain open.
-3. Run a maintained multi-service application behind enforced egress and
-   change it while requests are active.
+3. **Maintained application behind enforced Agent egress — implemented for one
+   registered HTTP action.** Official Claude uses built-in Bash from a no-NIC
+   Firecracker VM to call the full unmodified DeathStarBench Hotel Reservation
+   application. After the Mongo commit and before any response byte, the source
+   VMM is killed. A clean VM completes through host History without duplication;
+   raw retry duplicates the row, while stopping cannot complete. Arbitrary
+   protocols and application changes remain open.
 4. **Complete Linux VM restore path — implemented for the HTTP boundary.** A
    checksum-pinned Ubuntu image boots under rootless QEMU TCG with
    `restrict=on` and only fixed metadata/control forwards. QEMU saves the live
@@ -245,11 +250,12 @@ fails closed under mutations to each recorded runtime boundary.
    only then rebuild the paper around the larger result.
 
 The current composition is not yet the intended final system or evaluation. It
-still needs a maintained real application; mediation for Claude built-in tools;
-repeated KVM experiments and the declared baselines; block, GPU, passthrough,
-and other device-output mediation; signed remote evidence; replicated control;
-and an end-to-end refinement proof connecting each concrete adapter to the
-finite model.
+now includes one maintained real application, one Claude built-in Bash/HTTP
+route, and repeated KVM evidence. It still needs arbitrary protocol coverage,
+the declared production baselines, block, GPU, passthrough, and other
+device-output mediation, signed remote evidence, replicated control, and an
+end-to-end refinement proof connecting each concrete adapter to the finite
+model.
 
 ## Kill tests
 

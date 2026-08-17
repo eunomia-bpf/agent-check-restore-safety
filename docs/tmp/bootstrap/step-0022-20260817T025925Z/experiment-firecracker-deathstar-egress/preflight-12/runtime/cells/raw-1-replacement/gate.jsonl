@@ -1,0 +1,6 @@
+{"event":"accept","time":"2026-08-17T04:23:31.880904944Z","generation":4,"port":8000,"pid":2959721}
+{"event":"ready","time":"2026-08-17T04:23:31.881056167Z","generation":4,"port":8000}
+{"event":"allow","time":"2026-08-17T04:23:31.883793625Z","generation":4,"port":8000}
+{"event":"go","time":"2026-08-17T04:23:31.886590693Z","generation":4,"port":8000,"bytes":5}
+{"event":"accept","time":"2026-08-17T04:23:42.954581156Z","generation":4,"port":8000,"pid":2959721}
+{"event":"result","time":"2026-08-17T04:23:42.957544038Z","generation":4,"port":8000,"bytes":5425,"status":200}

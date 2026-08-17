@@ -1,0 +1,6 @@
+{"event":"accept","time":"2026-08-17T04:37:36.630684179Z","generation":8,"port":45089,"pid":2974870,"sandbox_device":2049,"sandbox_inode":5518779,"guest_to_host_bytes":0,"host_to_guest_bytes":0}
+{"event":"bytes","time":"2026-08-17T04:37:36.637678866Z","generation":8,"port":45089,"sandbox_peer_pid":2974861,"sandbox_device":2049,"sandbox_inode":5518779,"guest_to_host_bytes":153,"host_to_guest_bytes":224}
+{"event":"accept","time":"2026-08-17T04:37:37.35274803Z","generation":8,"port":45089,"pid":2974870,"sandbox_device":2049,"sandbox_inode":5518779,"guest_to_host_bytes":0,"host_to_guest_bytes":0}
+{"event":"bytes","time":"2026-08-17T04:37:37.360177876Z","generation":8,"port":45089,"sandbox_peer_pid":2974861,"sandbox_device":2049,"sandbox_inode":5518779,"guest_to_host_bytes":5101,"host_to_guest_bytes":1504}
+{"event":"accept","time":"2026-08-17T04:37:45.681788672Z","generation":8,"port":45089,"pid":2974870,"sandbox_device":2049,"sandbox_inode":5518779,"guest_to_host_bytes":0,"host_to_guest_bytes":0}
+{"event":"bytes","time":"2026-08-17T04:37:45.68933228Z","generation":8,"port":45089,"sandbox_peer_pid":2974861,"sandbox_device":2049,"sandbox_inode":5518779,"guest_to_host_bytes":5997,"host_to_guest_bytes":963}

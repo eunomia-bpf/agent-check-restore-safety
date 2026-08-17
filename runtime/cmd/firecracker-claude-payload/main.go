@@ -22,8 +22,8 @@ import (
 )
 
 type options struct {
-	claude, claudeSHA, relay, output, result, mksquashfs string
-	loader, libraryDirectory                             string
+	claude, claudeSHA, relay, busybox, bash, bashLibrary, output, result, mksquashfs string
+	loader, libraryDirectory                                                         string
 }
 
 type inputRecord struct {
@@ -40,11 +40,16 @@ type payloadRecord struct {
 
 var libraries = []string{"libc.so.6", "libdl.so.2", "libm.so.6", "libpthread.so.0", "librt.so.1"}
 
+const bashLibrary = "libtinfo.so.6"
+
 func main() {
 	var config options
 	flag.StringVar(&config.claude, "claude", "", "pinned official Claude executable")
 	flag.StringVar(&config.claudeSHA, "claude-sha256", "", "required Claude SHA-256")
 	flag.StringVar(&config.relay, "relay", "", "static MCP operation relay")
+	flag.StringVar(&config.busybox, "busybox", "", "optional static BusyBox for the HTTP/Bash profile")
+	flag.StringVar(&config.bash, "bash", "", "Bash executable for the HTTP/Bash profile")
+	flag.StringVar(&config.bashLibrary, "bash-library", "", "direct libtinfo.so.6 file for Bash")
 	flag.StringVar(&config.loader, "loader", "/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2", "glibc dynamic loader")
 	flag.StringVar(&config.libraryDirectory, "library-directory", "/lib/x86_64-linux-gnu", "directory containing the fixed glibc libraries")
 	flag.StringVar(&config.output, "output", "", "new absolute SquashFS output")
@@ -70,6 +75,18 @@ func run(ctx context.Context, config options, stdout io.Writer) error {
 		if !filepath.IsAbs(path) || filepath.Clean(path) != path || strings.IndexByte(path, 0) >= 0 {
 			return fmt.Errorf("payload path must be absolute, canonical, and NUL-free: %q", path)
 		}
+	}
+	if config.busybox != "" && (!filepath.IsAbs(config.busybox) || filepath.Clean(config.busybox) != config.busybox || strings.IndexByte(config.busybox, 0) >= 0) {
+		return fmt.Errorf("BusyBox path must be absolute, canonical, and NUL-free: %q", config.busybox)
+	}
+	if (config.busybox == "") != (config.bash == "") || (config.bash == "") != (config.bashLibrary == "") {
+		return errors.New("BusyBox, Bash, and the Bash library must be supplied together")
+	}
+	if config.bash != "" && (!filepath.IsAbs(config.bash) || filepath.Clean(config.bash) != config.bash || strings.IndexByte(config.bash, 0) >= 0) {
+		return fmt.Errorf("Bash path must be absolute, canonical, and NUL-free: %q", config.bash)
+	}
+	if config.bashLibrary != "" && (!filepath.IsAbs(config.bashLibrary) || filepath.Clean(config.bashLibrary) != config.bashLibrary || strings.IndexByte(config.bashLibrary, 0) >= 0) {
+		return fmt.Errorf("Bash library path must be absolute, canonical, and NUL-free: %q", config.bashLibrary)
 	}
 	if config.output == config.result {
 		return errors.New("payload output and result paths must differ")
@@ -127,11 +144,19 @@ func run(ctx context.Context, config options, stdout io.Writer) error {
 	if err := copyInput("mcp_operation_relay", config.relay, "bin/mcp-operation-relay", "", true); err != nil {
 		return err
 	}
+	if config.busybox != "" {
+		if err := copyInput("busybox", config.busybox, "bin/busybox", "", true); err != nil {
+			return err
+		}
+		if err := copyInput("bash", config.bash, "bin/bash", "", true); err != nil {
+			return err
+		}
+	}
 	if err := copyInput("loader", config.loader, "lib64/ld-linux-x86-64.so.2", "", true); err != nil {
 		return err
 	}
-	for _, library := range libraries {
-		if err := copyInput(library, filepath.Join(config.libraryDirectory, library), filepath.Join("lib/x86_64-linux-gnu", library), "", false); err != nil {
+	for _, library := range selectedLibraries(config.busybox != "") {
+		if err := copyInput(library, librarySource(config, library), filepath.Join("lib/x86_64-linux-gnu", library), "", false); err != nil {
 			return err
 		}
 	}
@@ -144,7 +169,11 @@ func run(ctx context.Context, config options, stdout io.Writer) error {
 	if err := requireManifest(built.Manifest, inputs); err != nil {
 		return fmt.Errorf("built payload is unusable: %w", err)
 	}
-	record := payloadRecord{Schema: 1, Payload: built, Inputs: inputs}
+	schema := 1
+	if config.busybox != "" {
+		schema = 2
+	}
+	record := payloadRecord{Schema: schema, Payload: built, Inputs: inputs}
 	if err := writeExclusiveJSON(config.result, record); err != nil {
 		return err
 	}
@@ -152,14 +181,20 @@ func run(ctx context.Context, config options, stdout io.Writer) error {
 		"payload_path": built.ImagePath, "payload_sha256": built.ImageSHA256,
 		"payload_size": built.ImageSize, "manifest_sha256": built.ManifestSHA256,
 		"claude_sha256": inputs["claude"].SHA256, "relay_sha256": inputs["mcp_operation_relay"].SHA256,
-		"result_path": config.result,
+		"busybox_sha256": inputHash(inputs, "busybox"),
+		"bash_sha256":    inputHash(inputs, "bash"),
+		"result_path":    config.result,
 	})
 }
 
 func verifyExisting(config options, stdout io.Writer) error {
 	var record payloadRecord
 	data, err := os.ReadFile(config.result)
-	if err != nil || json.Unmarshal(data, &record) != nil || record.Schema != 1 {
+	expectedSchema := 1
+	if config.busybox != "" {
+		expectedSchema = 2
+	}
+	if err != nil || json.Unmarshal(data, &record) != nil || record.Schema != expectedSchema {
 		return errors.New("existing Claude payload result is malformed")
 	}
 	payload, err := os.ReadFile(config.output)
@@ -171,8 +206,12 @@ func verifyExisting(config options, stdout io.Writer) error {
 		return errors.New("existing Claude payload differs from its result")
 	}
 	sources := map[string]string{"claude": config.claude, "mcp_operation_relay": config.relay, "loader": config.loader}
-	for _, library := range libraries {
-		sources[library] = filepath.Join(config.libraryDirectory, library)
+	if config.busybox != "" {
+		sources["busybox"] = config.busybox
+		sources["bash"] = config.bash
+	}
+	for _, library := range selectedLibraries(config.busybox != "") {
+		sources[library] = librarySource(config, library)
 	}
 	for name, source := range sources {
 		value, ok := record.Inputs[name]
@@ -197,9 +236,11 @@ func verifyExisting(config options, stdout io.Writer) error {
 	return json.NewEncoder(stdout).Encode(map[string]any{
 		"payload_path": record.Payload.ImagePath, "payload_sha256": record.Payload.ImageSHA256,
 		"payload_size": record.Payload.ImageSize, "manifest_sha256": record.Payload.ManifestSHA256,
-		"claude_sha256": record.Inputs["claude"].SHA256,
-		"relay_sha256":  record.Inputs["mcp_operation_relay"].SHA256,
-		"result_path":   config.result, "reused": true,
+		"claude_sha256":  record.Inputs["claude"].SHA256,
+		"relay_sha256":   record.Inputs["mcp_operation_relay"].SHA256,
+		"busybox_sha256": inputHash(record.Inputs, "busybox"),
+		"bash_sha256":    inputHash(record.Inputs, "bash"),
+		"result_path":    config.result, "reused": true,
 	})
 }
 
@@ -253,7 +294,10 @@ func copyVerified(source, target, expected string, executable bool) (inputRecord
 
 func requireManifest(manifest firecracker.PayloadManifest, inputs map[string]inputRecord) error {
 	expected := []string{"bin/claude", "bin/mcp-operation-relay", "lib64/ld-linux-x86-64.so.2"}
-	for _, library := range libraries {
+	if _, ok := inputs["busybox"]; ok {
+		expected = append(expected, "bin/bash", "bin/busybox")
+	}
+	for _, library := range selectedLibraries(inputs["busybox"].Path != "") {
 		expected = append(expected, filepath.ToSlash(filepath.Join("lib/x86_64-linux-gnu", library)))
 	}
 	sort.Strings(expected)
@@ -281,6 +325,28 @@ func requireManifest(manifest firecracker.PayloadManifest, inputs map[string]inp
 		return errors.New("payload input inventory is incomplete")
 	}
 	return nil
+}
+
+func selectedLibraries(withBash bool) []string {
+	selected := append([]string(nil), libraries...)
+	if withBash {
+		selected = append(selected, bashLibrary)
+	}
+	return selected
+}
+
+func librarySource(config options, library string) string {
+	if library == bashLibrary {
+		return config.bashLibrary
+	}
+	return filepath.Join(config.libraryDirectory, library)
+}
+
+func inputHash(inputs map[string]inputRecord, name string) string {
+	if record, ok := inputs[name]; ok {
+		return record.SHA256
+	}
+	return ""
 }
 
 func writeExclusiveJSON(path string, value any) error {

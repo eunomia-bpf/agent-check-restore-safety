@@ -61,6 +61,10 @@ type options struct {
 	relaySHA256       string
 	modelTarget       string
 	mcpHostSocket     string
+	profile           string
+	egressTarget      string
+	busyBoxSHA256     string
+	bashSHA256        string
 	evidenceDir       string
 }
 
@@ -92,6 +96,7 @@ type cellResult struct {
 	Generation         uint64                    `json:"generation"`
 	SessionID          string                    `json:"session_id"`
 	Disposition        string                    `json:"disposition"`
+	ToolProfile        string                    `json:"tool_profile"`
 	NetworkInterfaces  int                       `json:"network_interfaces"`
 	RootBlockDevices   int                       `json:"root_block_devices"`
 	ReadOnlyPayload    bool                      `json:"read_only_payload"`
@@ -123,6 +128,10 @@ func main() {
 	flag.StringVar(&config.relaySHA256, "relay-sha256", "", "required MCP relay SHA-256")
 	flag.StringVar(&config.modelTarget, "model-target", "", "fixed numeric host loopback model address")
 	flag.StringVar(&config.mcpHostSocket, "mcp-host-socket", "", "host MCP Unix socket")
+	flag.StringVar(&config.profile, "profile", "mcp", "fixed guest tool profile: mcp or http")
+	flag.StringVar(&config.egressTarget, "egress-target", "", "fixed numeric host loopback HTTP egress address")
+	flag.StringVar(&config.busyBoxSHA256, "busybox-sha256", "", "required HTTP-profile BusyBox SHA-256")
+	flag.StringVar(&config.bashSHA256, "bash-sha256", "", "required HTTP-profile Bash wrapper SHA-256")
 	flag.StringVar(&config.evidenceDir, "evidence-dir", "", "empty private evidence directory")
 	flag.Parse()
 	if err := run(config, os.Stdin, os.Stdout); err != nil {
@@ -151,16 +160,29 @@ func run(config options, input io.Reader, output io.Writer) (returnErr error) {
 	for label, value := range map[string]string{
 		"guest": config.guestPath, "payload": config.payloadPath, "payload SHA-256": config.payloadSHA256,
 		"Claude SHA-256": config.claudeSHA256, "relay SHA-256": config.relaySHA256,
-		"model target": config.modelTarget, "MCP host socket": config.mcpHostSocket, "evidence directory": config.evidenceDir,
+		"model target": config.modelTarget, "evidence directory": config.evidenceDir,
 	} {
 		if value == "" {
 			return fmt.Errorf("%s is required", label)
 		}
 	}
+	if config.profile != "mcp" && config.profile != agentguest.ClaudeHTTPProfile {
+		return errors.New("Claude cell profile must be mcp or http")
+	}
+	if config.profile == "mcp" && config.mcpHostSocket == "" {
+		return errors.New("MCP host socket is required for the mcp profile")
+	}
+	if config.profile == agentguest.ClaudeHTTPProfile && (config.egressTarget == "" || config.busyBoxSHA256 == "" || config.bashSHA256 == "") {
+		return errors.New("HTTP profile requires egress target, BusyBox, and Bash SHA-256")
+	}
 	if err := requireKVM(); err != nil {
 		return err
 	}
-	for _, pointer := range []*string{&config.firecrackerPath, &config.kernelPath, &config.guestPath, &config.payloadPath, &config.mcpHostSocket, &config.evidenceDir} {
+	paths := []*string{&config.firecrackerPath, &config.kernelPath, &config.guestPath, &config.payloadPath, &config.evidenceDir}
+	if config.mcpHostSocket != "" {
+		paths = append(paths, &config.mcpHostSocket)
+	}
+	for _, pointer := range paths {
 		absolute, err := filepath.Abs(*pointer)
 		if err != nil {
 			return err
@@ -188,6 +210,13 @@ func run(config options, input io.Reader, output io.Writer) (returnErr error) {
 		Schema: agentguest.ClaudeConfigSchema, SessionID: config.sessionID,
 		ClaudeSHA256: config.claudeSHA256, RelaySHA256: config.relaySHA256,
 		ModelPort: parseTargetPort(config.modelTarget), PayloadDrive: "/dev/vda",
+	}
+	if config.profile == agentguest.ClaudeHTTPProfile {
+		guestConfig.Schema = agentguest.ClaudeHTTPConfigSchema
+		guestConfig.Profile = agentguest.ClaudeHTTPProfile
+		guestConfig.EgressPort = agentguest.DefaultClaudeHTTPPort
+		guestConfig.BusyBoxSHA256 = config.busyBoxSHA256
+		guestConfig.BashSHA256 = config.bashSHA256
 	}
 	if err := guestConfig.Validate(); err != nil {
 		return fmt.Errorf("validate Claude guest config: %w", err)
@@ -250,11 +279,15 @@ func run(config options, input io.Reader, output io.Writer) (returnErr error) {
 		return err
 	}
 	defer func() { returnErr = errors.Join(returnErr, modelAudit.Sync(), modelAudit.Close()) }()
-	mcpAudit, err := createEvidenceFile(config.evidenceDir, "mcp-relay.jsonl")
+	operationRelayName := "mcp-relay.jsonl"
+	if config.profile == agentguest.ClaudeHTTPProfile {
+		operationRelayName = "egress-relay.jsonl"
+	}
+	operationAudit, err := createEvidenceFile(config.evidenceDir, operationRelayName)
 	if err != nil {
 		return err
 	}
-	defer func() { returnErr = errors.Join(returnErr, mcpAudit.Sync(), mcpAudit.Close()) }()
+	defer func() { returnErr = errors.Join(returnErr, operationAudit.Sync(), operationAudit.Close()) }()
 	gateAudit, err := createEvidenceFile(config.evidenceDir, "gate.jsonl")
 	if err != nil {
 		return err
@@ -274,6 +307,27 @@ func run(config options, input io.Reader, output io.Writer) (returnErr error) {
 		return err
 	}
 	defer func() { returnErr = errors.Join(returnErr, proxy.Close()) }()
+
+	operationSocket := config.mcpHostSocket
+	operationPort := agentguest.DefaultMCPPort
+	var egressProxy *firecracker.LoopbackProxy
+	if config.profile == agentguest.ClaudeHTTPProfile {
+		egressProxyAudit, err := createEvidenceFile(config.evidenceDir, "egress-proxy.jsonl")
+		if err != nil {
+			return err
+		}
+		defer func() { returnErr = errors.Join(returnErr, egressProxyAudit.Sync(), egressProxyAudit.Close()) }()
+		egressProxy, err = firecracker.StartLoopbackProxy(firecracker.LoopbackProxyConfig{
+			SocketPath: filepath.Join(config.evidenceDir, "egress-proxy.sock"), TargetAddress: config.egressTarget,
+			AuditLog: egressProxyAudit, DialTimeout: endpointTimeout, DrainTimeout: endpointTimeout,
+		})
+		if err != nil {
+			return err
+		}
+		defer func() { returnErr = errors.Join(returnErr, egressProxy.Close()) }()
+		operationSocket = egressProxy.SocketPath()
+		operationPort = guestConfig.EgressPort
+	}
 
 	apiPath := filepath.Join(config.evidenceDir, "api.sock")
 	basePath := filepath.Join(config.evidenceDir, "vsock")
@@ -322,15 +376,15 @@ func run(config options, input io.Reader, output io.Writer) (returnErr error) {
 		return err
 	}
 	defer modelRelay.Close()
-	mcpRelay, err := firecracker.Arm(firecracker.RelayConfig{
-		Generation: config.generation, BasePath: basePath, Port: agentguest.DefaultMCPPort,
+	operationRelay, err := firecracker.Arm(firecracker.RelayConfig{
+		Generation: config.generation, BasePath: basePath, Port: operationPort,
 		FirecrackerPID: process.PID(), VerifyProcess: process.VerifyIdentity,
-		SandboxSocket: config.mcpHostSocket, AuditLog: mcpAudit, DrainTimeout: endpointTimeout,
+		SandboxSocket: operationSocket, AuditLog: operationAudit, DrainTimeout: endpointTimeout,
 	})
 	if err != nil {
 		return err
 	}
-	defer mcpRelay.Abort()
+	defer operationRelay.Abort()
 
 	if err := client.Configure(ctx,
 		firecracker.MachineConfig{VCPUCount: 1, MemSizeMiB: guestMemoryMiB, SMT: false, TrackDirtyPages: false},
@@ -399,7 +453,7 @@ func run(config options, input io.Reader, output io.Writer) (returnErr error) {
 	result := cellResult{
 		Schema: 1, Valid: true, Backend: "firecracker-kvm", FirecrackerVersion: officialFirecrackerVersion,
 		KernelVersion: officialKernelVersion, Generation: config.generation, SessionID: config.sessionID,
-		Disposition: disposition, NetworkInterfaces: 0, RootBlockDevices: 0, ReadOnlyPayload: true,
+		Disposition: disposition, ToolProfile: config.profile, NetworkInterfaces: 0, RootBlockDevices: 0, ReadOnlyPayload: true,
 		GuestResult: authenticated, Artifacts: artifacts,
 		Process: processRecord{Generation: config.generation, InstanceID: config.instanceID, PID: identity.PID,
 			Executable: identity.Executable, ExecutableSHA256: identity.ExecutableSHA256, StartTimeTicks: identity.StartTimeTicks,

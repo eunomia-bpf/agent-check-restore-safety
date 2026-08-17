@@ -1,0 +1,959 @@
+{
+  "schema": 1,
+  "graph": {
+    "schema": 1,
+    "repository": "https://github.com/delimitrou/DeathStarBench.git",
+    "tag": "hotelReservation-0.3.5",
+    "commit": "6ecb09706140f8730b5385c08f1386c654c3c526",
+    "tree": "0ac0fd6d4ccfa1472d3895384d45fef5c6246b03",
+    "official_services": 24,
+    "official_compose_running": 23,
+    "compose_frontend_scaled_to_zero": true,
+    "custom_unmodified_frontend_running": true,
+    "application_image": "safe-change-step22/deathstar:hotel-reservation-0.3.5",
+    "application_image_id": "sha256:d8fd2e2b0579aff371099a8e2f3b1c33312f9a46f79b33be26b0a86f4093c0da",
+    "runtime_image": "safe-change-step22/runtime:local",
+    "runtime_image_id": "sha256:6119a6cc1e9c819874388a1031bda7bc7e6350159896c7dd5c9131f2924695f1",
+    "runtime_tree_hash": "68505556b22e32a8d06ffc98db7c75357208844f3b41230748dd3856721c2f8e",
+    "runtime_status": " M Makefile\n M adapter/firecracker_claude_mcp_runtime_demo.py\n M adapter/mock_anthropic.py\n M runtime/cmd/deathstar-adapter/main.go\n M runtime/cmd/effect-proxy/main.go\n M runtime/cmd/firecracker-claude-cell/main.go\n M runtime/cmd/firecracker-claude-guest/main.go\n M runtime/cmd/firecracker-claude-guest/main_test.go\n M runtime/cmd/firecracker-claude-payload/main.go\n M runtime/cmd/mcp-operation-host/main.go\n M runtime/cmd/mcp-operation-server/main.go\n M runtime/internal/agentguest/claude_child_linux.go\n M runtime/internal/agentguest/claude_config.go\n M runtime/internal/agentguest/claude_linux.go\n M runtime/internal/deathstar/mongo.go\n M runtime/internal/deathstar/service.go\n M runtime/internal/deathstar/service_test.go\n M runtime/internal/effectproxy/config.go\n M runtime/internal/effectproxy/proxy.go\n M runtime/internal/mcpoperation/sandbox_executor.go\n M runtime/internal/mcpoperation/sandbox_executor_test.go\n?? adapter/check_firecracker_deathstar_egress_evidence.py\n?? adapter/firecracker_deathstar_egress_demo.py\n?? runtime/deploy/firecracker-deathstar/run.sh",
+    "networks": {
+      "application": "safe-change-firecracker-deathstar-step22_default",
+      "frontdoor": "safe-change-step22-frontdoor",
+      "observation": "safe-change-step22-observation"
+    },
+    "source_modified": false,
+    "pass": true
+  },
+  "runtime": {
+    "artifacts": {
+      "adapter_audit": "2bd3ba72195ba20cabe49f9b2a8a350238812cf6bcb28c54206e21a88d0e1191",
+      "bash": "bc5945feb8bd26203ebfafea5ce1878bb2e32cb8fb50ab7ae395cfb1e1aaaef1",
+      "busybox": "dbac288c29ba568459550a2da9e7ae0ded6b1fc728ee9fad3044c44e62d6ac14",
+      "cell": "604c8e31feff4861b7018a96418353b2921aa0d5e22d00865cdd4adb9bd04696",
+      "claude": "55d281096f57d411ebbdd94dbf5e9ff3accb7c05713e37348c2c11d4b83bf9d9",
+      "control": "3f741abb6119938cb97bf599512232bcb4cdb602524cafca88b88e80c996e2c8",
+      "effect_proxy": "d910168a0cdab005115e6a6012348d183135fa7f5f811b72d058004f8130fad7",
+      "guest": "d0f7d54f035eb8bf541e8e32f49d3ac055c67093a7f46d21ea6304a8c6a0afad",
+      "history": "76d644cb8f206548510cddb3bd3546e5538c5bdd0a2e6da5521c999ebf16877d",
+      "observer_facts": "7be8e050587a28abe9dafe7eb3280f218e5e09a1264c6a671a2091bf6db255fa",
+      "payload": "dd3cb7a5b59c2b5a3734e1ca64f07a45f585fb1e1bc5df37d4952e710b79edfb",
+      "payload_result": "3643b83e0a945370b5dba55ad39bfea6840e97a959eee5a6483e7196b9b89bba"
+    },
+    "graph": {
+      "application_image": "safe-change-step22/deathstar:hotel-reservation-0.3.5",
+      "application_image_id": "sha256:d8fd2e2b0579aff371099a8e2f3b1c33312f9a46f79b33be26b0a86f4093c0da",
+      "commit": "6ecb09706140f8730b5385c08f1386c654c3c526",
+      "compose_frontend_scaled_to_zero": true,
+      "custom_unmodified_frontend_running": true,
+      "networks": {
+        "application": "safe-change-firecracker-deathstar-step22_default",
+        "frontdoor": "safe-change-step22-frontdoor",
+        "observation": "safe-change-step22-observation"
+      },
+      "official_compose_running": 23,
+      "official_services": 24,
+      "pass": true,
+      "repository": "https://github.com/delimitrou/DeathStarBench.git",
+      "runtime_image": "safe-change-step22/runtime:local",
+      "runtime_image_id": "sha256:6119a6cc1e9c819874388a1031bda7bc7e6350159896c7dd5c9131f2924695f1",
+      "runtime_status": " M Makefile\n M adapter/firecracker_claude_mcp_runtime_demo.py\n M adapter/mock_anthropic.py\n M runtime/cmd/deathstar-adapter/main.go\n M runtime/cmd/effect-proxy/main.go\n M runtime/cmd/firecracker-claude-cell/main.go\n M runtime/cmd/firecracker-claude-guest/main.go\n M runtime/cmd/firecracker-claude-guest/main_test.go\n M runtime/cmd/firecracker-claude-payload/main.go\n M runtime/cmd/mcp-operation-host/main.go\n M runtime/cmd/mcp-operation-server/main.go\n M runtime/internal/agentguest/claude_child_linux.go\n M runtime/internal/agentguest/claude_config.go\n M runtime/internal/agentguest/claude_linux.go\n M runtime/internal/deathstar/mongo.go\n M runtime/internal/deathstar/service.go\n M runtime/internal/deathstar/service_test.go\n M runtime/internal/effectproxy/config.go\n M runtime/internal/effectproxy/proxy.go\n M runtime/internal/mcpoperation/sandbox_executor.go\n M runtime/internal/mcpoperation/sandbox_executor_test.go\n?? adapter/check_firecracker_deathstar_egress_evidence.py\n?? adapter/firecracker_deathstar_egress_demo.py\n?? runtime/deploy/firecracker-deathstar/run.sh",
+      "runtime_tree_hash": "68505556b22e32a8d06ffc98db7c75357208844f3b41230748dd3856721c2f8e",
+      "schema": 1,
+      "source_modified": false,
+      "tag": "hotelReservation-0.3.5",
+      "tree": "0ac0fd6d4ccfa1472d3895384d45fef5c6246b03"
+    },
+    "history": {
+      "hash": "700470faabed23c025c24fba69d9c91f88f1c5ac1459b4bd0f588136f07aaae6",
+      "sequence": 6
+    },
+    "matrix": [
+      {
+        "condition": "protected-history-recovery",
+        "mongo_rows_per_run": [
+          1
+        ],
+        "pass": true,
+        "repetitions": 1,
+        "task_completion": true
+      },
+      {
+        "condition": "raw-retry",
+        "mongo_rows_per_run": [
+          2
+        ],
+        "pass": true,
+        "repetitions": 1,
+        "task_completion": true
+      },
+      {
+        "condition": "stop-after-loss",
+        "mongo_rows_per_run": [
+          1
+        ],
+        "pass": true,
+        "repetitions": 1,
+        "task_completion": false
+      }
+    ],
+    "model_requests": 7,
+    "mongo_observations": 7,
+    "network_interfaces_per_cell": 0,
+    "protected": [
+      {
+        "key": "fedd183785711a316bba3495f7baa5d4",
+        "mongo_rows": 1,
+        "operation_id": "op-461527938c0426f5a0b820b6a271490e8b77e2128021fcaaae2f7ab5c2bfed6f",
+        "provider_deliveries": 1,
+        "replacement": {
+          "command": [
+            "/home/will/.cache/safe-change-runtime/firecracker-claude/firecracker-claude-cell",
+            "-generation",
+            "2",
+            "-guest",
+            "/home/will/.cache/safe-change-runtime/firecracker-claude/firecracker-claude-guest",
+            "-payload",
+            "/home/will/.cache/safe-change-runtime/firecracker-claude/claude-http-v4-payload.squashfs",
+            "-payload-sha256",
+            "dd3cb7a5b59c2b5a3734e1ca64f07a45f585fb1e1bc5df37d4952e710b79edfb",
+            "-claude-sha256",
+            "55d281096f57d411ebbdd94dbf5e9ff3accb7c05713e37348c2c11d4b83bf9d9",
+            "-relay-sha256",
+            "bda999a12a88555ad50961ae66e21b586883d3e1d10f4c33f002a6646cfbec40",
+            "-model-target",
+            "127.0.0.1:42201",
+            "-evidence-dir",
+            "/tmp/fc-dsb-0u6tj_bo/cells/protected-1-replacement",
+            "-session-id",
+            "fedd183785711a316bba3495f7baa5d4",
+            "-profile",
+            "http",
+            "-egress-target",
+            "127.0.0.1:40783",
+            "-busybox-sha256",
+            "dbac288c29ba568459550a2da9e7ae0ded6b1fc728ee9fad3044c44e62d6ac14",
+            "-bash-sha256",
+            "bc5945feb8bd26203ebfafea5ce1878bb2e32cb8fb50ab7ae395cfb1e1aaaef1"
+          ],
+          "events": [
+            {
+              "event": "ready",
+              "generation": 2,
+              "instance_id": "claude-g2-96afd5cbabe6e871",
+              "vmm_pid": 3006412
+            },
+            {
+              "disposition": "completed",
+              "event": "completed",
+              "generation": 2,
+              "vmm_pid": 3006412
+            }
+          ],
+          "evidence": "/home/will/agent-check-restore-safety/docs/tmp/bootstrap/step-0022-20260817T025925Z/experiment-firecracker-deathstar-egress/preflight-13/runtime/cells/protected-1-replacement",
+          "exit_code": 0,
+          "generation": 2,
+          "label": "protected-1-replacement",
+          "result": {
+            "artifacts": {
+              "guest": {
+                "mode": 320,
+                "name": "firecracker-claude-guest",
+                "sha256": "d0f7d54f035eb8bf541e8e32f49d3ac055c67093a7f46d21ea6304a8c6a0afad",
+                "size": 4627077
+              },
+              "initramfs": {
+                "mode": 256,
+                "name": "initramfs",
+                "sha256": "878be53a482e737f412d925ed4f9fcebf622773f4d1bdab67523ca6173919fec",
+                "size": 4628992
+              },
+              "kernel": {
+                "mode": 256,
+                "name": "kernel",
+                "sha256": "e20e46d0c36c55c0d1014eb20576171b3f3d922260d9f792017aeff53af3d4f2",
+                "size": 44279576
+              },
+              "payload": {
+                "mode": 256,
+                "name": "payload",
+                "sha256": "dd3cb7a5b59c2b5a3734e1ca64f07a45f585fb1e1bc5df37d4952e710b79edfb",
+                "size": 93650944
+              }
+            },
+            "backend": "firecracker-kvm",
+            "disposition": "completed",
+            "firecracker_version": "1.16.1",
+            "generation": 2,
+            "guest_result": {
+              "body": {
+                "result": "DONE",
+                "stream": "{\"type\":\"system\",\"subtype\":\"init\",\"cwd\":\"/workspace\",\"session_id\":\"fedd1837-8571-1a31-6bba-3495f7baa5d4\",\"tools\":[\"Bash\",\"Edit\",\"Read\"],\"mcp_servers\":[{\"name\":\"continuity\",\"status\":\"failed\"}],\"model\":\"claude-fixture-1\",\"permissionMode\":\"dontAsk\",\"slash_commands\":[],\"apiKeySource\":\"ANTHROPIC_API_KEY\",\"claude_code_version\":\"2.1.233\",\"output_style\":\"default\",\"agents\":[\"claude\",\"Explore\",\"general-purpose\",\"Plan\",\"statusline-setup\"],\"skills\":[],\"plugins\":[],\"capabilities\":[\"interrupt_receipt_v1\",\"interrupt_cancel_queued_v1\",\"msg_lifecycle_v1\"],\"analytics_disabled\":true,\"product_feedback_disabled\":true,\"uuid\":\"348c6179-d315-46db-9c06-384d45ed0aeb\",\"fast_mode_state\":\"off\",\"fast_mode_disabled_reason\":\"sdk_opt_in_required\"}\n{\"type\":\"assistant\",\"message\":{\"content\":[{\"id\":\"toolu_fixture_2\",\"input\":{\"command\":\"/opt/claude/bin/busybox wget -qO- --header='Content-Type: application/json'  --header=\\\"Idempotency-Key: $SAFE_CHANGE_CALL_ID\\\"  --header=\\\"X-Operation-ID: $SAFE_CHANGE_CALL_ID\\\" --post-data='{\\\"hotel_id\\\":\\\"1\\\",\\\"in_date\\\":\\\"2015-04-09\\\",\\\"out_date\\\":\\\"2015-04-10\\\",\\\"password\\\":\\\"0000000000\\\",\\\"rooms\\\":1,\\\"username\\\":\\\"Cornell_30\\\"}' \\\"$SAFE_CHANGE_EGRESS_URL\\\"\",\"description\":\"Submit the fixed reservation\"},\"name\":\"Bash\",\"type\":\"tool_use\"}],\"id\":\"msg_fixture_2\",\"model\":\"claude-fixture-1\",\"role\":\"assistant\",\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"input_tokens\":1,\"output_tokens\":1},\"context_management\":null},\"parent_tool_use_id\":null,\"session_id\":\"fedd1837-8571-1a31-6bba-3495f7baa5d4\",\"uuid\":\"e153175b-dd64-4044-94bb-e9aea81995ce\",\"timestamp\":\"2026-08-17T04:46:20.124Z\"}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"tool_use_id\":\"toolu_fixture_2\",\"type\":\"tool_result\",\"content\":\"{\\\"schema\\\":1,\\\"operation_id\\\":\\\"op-461527938c0426f5a0b820b6a271490e8b77e2128021fcaaae2f7ab5c2bfed6f\\\",\\\"phase\\\":\\\"succeeded\\\",\\\"result_hash\\\":\\\"9ffb0dceaa61ed5f0348220973ac69ecebcbb6c0162995d6b8310cd783fa7354\\\",\\\"reused\\\":false,\\\"recovered_by_query\\\":true}\",\"is_error\":false}]},\"parent_tool_use_id\":null,\"session_id\":\"fedd1837-8571-1a31-6bba-3495f7baa5d4\",\"uuid\":\"010e55cb-2fe4-4c53-b3f5-649865de5af8\",\"timestamp\":\"2026-08-17T04:46:20.380Z\",\"tool_use_result\":{\"stdout\":\"{\\\"schema\\\":1,\\\"operation_id\\\":\\\"op-461527938c0426f5a0b820b6a271490e8b77e2128021fcaaae2f7ab5c2bfed6f\\\",\\\"phase\\\":\\\"succeeded\\\",\\\"result_hash\\\":\\\"9ffb0dceaa61ed5f0348220973ac69ecebcbb6c0162995d6b8310cd783fa7354\\\",\\\"reused\\\":false,\\\"recovered_by_query\\\":true}\",\"stderr\":\"\",\"interrupted\":false,\"isImage\":false,\"noOutputExpected\":false}}\n{\"type\":\"assistant\",\"message\":{\"content\":[{\"text\":\"DONE\",\"type\":\"text\"}],\"id\":\"msg_fixture_3\",\"model\":\"claude-fixture-1\",\"role\":\"assistant\",\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"input_tokens\":1,\"output_tokens\":1},\"context_management\":null},\"parent_tool_use_id\":null,\"session_id\":\"fedd1837-8571-1a31-6bba-3495f7baa5d4\",\"uuid\":\"db445364-46b5-4216-9989-168023c41632\",\"timestamp\":\"2026-08-17T04:46:20.423Z\"}\n{\"is_error\":false,\"duration_api_ms\":234,\"num_turns\":2,\"stop_reason\":\"end_turn\",\"session_id\":\"fedd1837-8571-1a31-6bba-3495f7baa5d4\",\"total_cost_usd\":0.000059999999999999995,\"usage\":{\"input_tokens\":2,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":2,\"output_tokens_details\":{\"thinking_tokens\":0},\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"claude-fixture-1\":{\"inputTokens\":2,\"outputTokens\":2,\"cacheReadInputTokens\":0,\"cacheCreationInputTokens\":0,\"webSearchRequests\":0,\"costUSD\":0.000059999999999999995,\"contextWindow\":200000,\"maxOutputTokens\":32000,\"canonicalModel\":\"claude-fixture-1\",\"provider\":\"firstParty\"}},\"permission_denials\":[],\"terminal_reason\":\"completed\",\"fast_mode_state\":\"off\",\"fast_mode_disabled_reason\":\"sdk_opt_in_required\",\"subtype\":\"success\",\"api_error_status\":null,\"result\":\"DONE\",\"ttft_ms\":169,\"ttft_stream_ms\":162,\"time_to_request_ms\":135,\"type\":\"result\",\"duration_ms\":496,\"uuid\":\"36457509-2326-4fff-83b8-0c1e3467a5e9\"}\n",
+                "stream_bytes": 4135,
+                "stream_sha256": "cbe79db932c40c111cfc54662be182e0de0eb4566a3eadfa1f75466a4a9596f5"
+              },
+              "event": "RESULT",
+              "status": 200
+            },
+            "kernel_version": "6.1.155",
+            "network_interfaces": 0,
+            "process": {
+              "executable": "/home/will/.cache/safe-change-runtime/firecracker/v1.16.1/release-v1.16.1-x86_64/firecracker-v1.16.1-x86_64",
+              "executable_sha256": "2fd0171309af7e24cf8dafc8a6f921c1434c49b5f9349bb996b7ed0a4deb8aa7",
+              "generation": 2,
+              "instance_id": "claude-g2-96afd5cbabe6e871",
+              "pid": 3006412,
+              "start_time_ticks": 141728919,
+              "started_time_ns": 1786941970100408423,
+              "stopped_time_ns": 1786941981039959875,
+              "termination": "supervisor"
+            },
+            "read_only_payload": true,
+            "root_block_devices": 0,
+            "schema": 1,
+            "session_id": "fedd183785711a316bba3495f7baa5d4",
+            "tool_profile": "http",
+            "valid": true
+          },
+          "runner_pid": 3006404,
+          "started_time_ns": 1786941969710345100,
+          "stopped_time_ns": 1786941981108631324
+        },
+        "replacement_cutover": {
+          "binding": {
+            "allowed_kinds": [
+              "reserve"
+            ],
+            "domain": "firecracker-deathstar-egress",
+            "generation": 2,
+            "host_instance_id": "host-22e6b387611186550d6d756ce3616056",
+            "sandbox_id": "claude-http"
+          },
+          "certificate": {
+            "decision": "activate",
+            "digest": "1933182b074a82422fe52c774ef5ac00aa6159246c065b2ddad2c8021a71a775",
+            "from_rule": 1,
+            "history": {
+              "hash": "65691d7200c00e99ec0e6b4c076c3b0f0654ff49c1256742f9ed365965cdb62a",
+              "sequence": 4
+            },
+            "requirement": {
+              "capacities": {
+                "reservation": 1
+              },
+              "id": "firecracker-deathstar-http",
+              "kinds": {
+                "reserve": {
+                  "costs": {
+                    "reservation": 1
+                  },
+                  "method": "POST",
+                  "produces": {
+                    "reserved": 1
+                  },
+                  "query_classifier": "operation-observation-v1",
+                  "query_method": "POST",
+                  "query_target": "http://127.0.0.1:32838/v1/query",
+                  "queryable": true,
+                  "response_classifier": "operation-receipt-v1",
+                  "retry_safe": false,
+                  "target": "http://127.0.0.1:32837/v1/reserve"
+                }
+              },
+              "results": {
+                "reserved": 1
+              }
+            },
+            "rule": {
+              "allow": [],
+              "requirement_hash": "4b05b4e7c54e9b33efa0f4fd37c2a7873813c88a44cdc761da3fc9eafddaafd9",
+              "version": 2
+            },
+            "schema": 1
+          },
+          "response": {
+            "bindings": [
+              {
+                "allowed_kinds": [
+                  "reserve"
+                ],
+                "domain": "firecracker-deathstar-egress",
+                "generation": 2,
+                "host_instance_id": "host-22e6b387611186550d6d756ce3616056",
+                "sandbox_id": "claude-http"
+              }
+            ],
+            "state": {
+              "history": {
+                "hash": "4e6239787c8aaf061bd77749b783326c52927395974aa027057ced356fa1834f",
+                "sequence": 5
+              },
+              "operations": {
+                "op-461527938c0426f5a0b820b6a271490e8b77e2128021fcaaae2f7ab5c2bfed6f": {
+                  "costs": {
+                    "reservation": 1
+                  },
+                  "dispatch_generation": 1,
+                  "dispatch_owner": "1337d8dec8cdfc32f78ef6f9e431c6c2",
+                  "domain": "firecracker-deathstar-egress",
+                  "id": "op-461527938c0426f5a0b820b6a271490e8b77e2128021fcaaae2f7ab5c2bfed6f",
+                  "kind": "reserve",
+                  "method": "POST",
+                  "phase": "unknown",
+                  "produces": {
+                    "reserved": 1
+                  },
+                  "query_classifier": "operation-observation-v1",
+                  "query_method": "POST",
+                  "query_target": "http://127.0.0.1:32838/v1/query",
+                  "queryable": true,
+                  "request_body": "eyJob3RlbF9pZCI6IjEiLCJpbl9kYXRlIjoiMjAxNS0wNC0wOSIsIm91dF9kYXRlIjoiMjAxNS0wNC0xMCIsInBhc3N3b3JkIjoiMDAwMDAwMDAwMCIsInJvb21zIjoxLCJ1c2VybmFtZSI6IkNvcm5lbGxfMzAifQ==",
+                  "request_hash": "2486d32b24b7562925c3dd19025de259d0f9680b03b9f68364243a8eaa479e2d",
+                  "request_stored": true,
+                  "response_classifier": "operation-receipt-v1",
+                  "retry_safe": false,
+                  "rule_version": 1,
+                  "sandbox_id": "claude-http",
+                  "target": "http://127.0.0.1:32837/v1/reserve"
+                }
+              },
+              "requirement": {
+                "capacities": {
+                  "reservation": 1
+                },
+                "id": "firecracker-deathstar-http",
+                "kinds": {
+                  "reserve": {
+                    "costs": {
+                      "reservation": 1
+                    },
+                    "method": "POST",
+                    "produces": {
+                      "reserved": 1
+                    },
+                    "query_classifier": "operation-observation-v1",
+                    "query_method": "POST",
+                    "query_target": "http://127.0.0.1:32838/v1/query",
+                    "queryable": true,
+                    "response_classifier": "operation-receipt-v1",
+                    "retry_safe": false,
+                    "target": "http://127.0.0.1:32837/v1/reserve"
+                  }
+                },
+                "results": {
+                  "reserved": 1
+                }
+              },
+              "rule": {
+                "allow": [],
+                "requirement_hash": "4b05b4e7c54e9b33efa0f4fd37c2a7873813c88a44cdc761da3fc9eafddaafd9",
+                "version": 2
+              }
+            }
+          }
+        },
+        "run": 1,
+        "source": {
+          "command": [
+            "/home/will/.cache/safe-change-runtime/firecracker-claude/firecracker-claude-cell",
+            "-generation",
+            "1",
+            "-guest",
+            "/home/will/.cache/safe-change-runtime/firecracker-claude/firecracker-claude-guest",
+            "-payload",
+            "/home/will/.cache/safe-change-runtime/firecracker-claude/claude-http-v4-payload.squashfs",
+            "-payload-sha256",
+            "dd3cb7a5b59c2b5a3734e1ca64f07a45f585fb1e1bc5df37d4952e710b79edfb",
+            "-claude-sha256",
+            "55d281096f57d411ebbdd94dbf5e9ff3accb7c05713e37348c2c11d4b83bf9d9",
+            "-relay-sha256",
+            "bda999a12a88555ad50961ae66e21b586883d3e1d10f4c33f002a6646cfbec40",
+            "-model-target",
+            "127.0.0.1:42201",
+            "-evidence-dir",
+            "/tmp/fc-dsb-0u6tj_bo/cells/protected-1-source",
+            "-session-id",
+            "fedd183785711a316bba3495f7baa5d4",
+            "-profile",
+            "http",
+            "-egress-target",
+            "127.0.0.1:40513",
+            "-busybox-sha256",
+            "dbac288c29ba568459550a2da9e7ae0ded6b1fc728ee9fad3044c44e62d6ac14",
+            "-bash-sha256",
+            "bc5945feb8bd26203ebfafea5ce1878bb2e32cb8fb50ab7ae395cfb1e1aaaef1"
+          ],
+          "events": [
+            {
+              "event": "ready",
+              "generation": 1,
+              "instance_id": "claude-g1-79367f0e8e11b118",
+              "vmm_pid": 3006377
+            },
+            {
+              "disposition": "vmm-sigkill",
+              "event": "completed",
+              "generation": 1,
+              "vmm_pid": 3006377
+            }
+          ],
+          "evidence": "/home/will/agent-check-restore-safety/docs/tmp/bootstrap/step-0022-20260817T025925Z/experiment-firecracker-deathstar-egress/preflight-13/runtime/cells/protected-1-source",
+          "exit_code": 0,
+          "generation": 1,
+          "label": "protected-1-source",
+          "result": {
+            "artifacts": {
+              "guest": {
+                "mode": 320,
+                "name": "firecracker-claude-guest",
+                "sha256": "d0f7d54f035eb8bf541e8e32f49d3ac055c67093a7f46d21ea6304a8c6a0afad",
+                "size": 4627077
+              },
+              "initramfs": {
+                "mode": 256,
+                "name": "initramfs",
+                "sha256": "878be53a482e737f412d925ed4f9fcebf622773f4d1bdab67523ca6173919fec",
+                "size": 4628992
+              },
+              "kernel": {
+                "mode": 256,
+                "name": "kernel",
+                "sha256": "e20e46d0c36c55c0d1014eb20576171b3f3d922260d9f792017aeff53af3d4f2",
+                "size": 44279576
+              },
+              "payload": {
+                "mode": 256,
+                "name": "payload",
+                "sha256": "dd3cb7a5b59c2b5a3734e1ca64f07a45f585fb1e1bc5df37d4952e710b79edfb",
+                "size": 93650944
+              }
+            },
+            "backend": "firecracker-kvm",
+            "disposition": "vmm-sigkill",
+            "firecracker_version": "1.16.1",
+            "generation": 1,
+            "kernel_version": "6.1.155",
+            "network_interfaces": 0,
+            "process": {
+              "executable": "/home/will/.cache/safe-change-runtime/firecracker/v1.16.1/release-v1.16.1-x86_64/firecracker-v1.16.1-x86_64",
+              "executable_sha256": "2fd0171309af7e24cf8dafc8a6f921c1434c49b5f9349bb996b7ed0a4deb8aa7",
+              "generation": 1,
+              "instance_id": "claude-g1-79367f0e8e11b118",
+              "pid": 3006377,
+              "start_time_ticks": 141727435,
+              "started_time_ns": 1786941955271290501,
+              "stopped_time_ns": 1786941969474062049,
+              "termination": "supervisor"
+            },
+            "read_only_payload": true,
+            "root_block_devices": 0,
+            "schema": 1,
+            "session_id": "fedd183785711a316bba3495f7baa5d4",
+            "tool_profile": "http",
+            "valid": true
+          },
+          "runner_pid": 3006368,
+          "started_time_ns": 1786941954897839806,
+          "stopped_time_ns": 1786941969564027954
+        },
+        "source_cutover": {
+          "binding": {
+            "allowed_kinds": [
+              "reserve"
+            ],
+            "domain": "firecracker-deathstar-egress",
+            "generation": 1,
+            "host_instance_id": "host-fcf969396dedccab7ca53ed5e968804a",
+            "sandbox_id": "claude-http"
+          },
+          "certificate": {
+            "decision": "activate",
+            "digest": "57c00b920684a2fccb9b0806b6e522a0caf06b60a0419a5acb97fadd946a87d7",
+            "from_rule": 0,
+            "history": {
+              "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+              "sequence": 0
+            },
+            "requirement": {
+              "capacities": {
+                "reservation": 1
+              },
+              "id": "firecracker-deathstar-http",
+              "kinds": {
+                "reserve": {
+                  "costs": {
+                    "reservation": 1
+                  },
+                  "method": "POST",
+                  "produces": {
+                    "reserved": 1
+                  },
+                  "query_classifier": "operation-observation-v1",
+                  "query_method": "POST",
+                  "query_target": "http://127.0.0.1:32838/v1/query",
+                  "queryable": true,
+                  "response_classifier": "operation-receipt-v1",
+                  "retry_safe": false,
+                  "target": "http://127.0.0.1:32837/v1/reserve"
+                }
+              },
+              "results": {
+                "reserved": 1
+              }
+            },
+            "rule": {
+              "allow": [
+                "reserve"
+              ],
+              "requirement_hash": "4b05b4e7c54e9b33efa0f4fd37c2a7873813c88a44cdc761da3fc9eafddaafd9",
+              "version": 1
+            },
+            "schema": 1
+          },
+          "response": {
+            "bindings": [
+              {
+                "allowed_kinds": [
+                  "reserve"
+                ],
+                "domain": "firecracker-deathstar-egress",
+                "generation": 1,
+                "host_instance_id": "host-fcf969396dedccab7ca53ed5e968804a",
+                "sandbox_id": "claude-http"
+              }
+            ],
+            "state": {
+              "history": {
+                "hash": "cee9985e9ae96a016cd49fcfcc0c136e6940291142594dc91d2c5682e930fbfa",
+                "sequence": 1
+              },
+              "operations": {},
+              "requirement": {
+                "capacities": {
+                  "reservation": 1
+                },
+                "id": "firecracker-deathstar-http",
+                "kinds": {
+                  "reserve": {
+                    "costs": {
+                      "reservation": 1
+                    },
+                    "method": "POST",
+                    "produces": {
+                      "reserved": 1
+                    },
+                    "query_classifier": "operation-observation-v1",
+                    "query_method": "POST",
+                    "query_target": "http://127.0.0.1:32838/v1/query",
+                    "queryable": true,
+                    "response_classifier": "operation-receipt-v1",
+                    "retry_safe": false,
+                    "target": "http://127.0.0.1:32837/v1/reserve"
+                  }
+                },
+                "results": {
+                  "reserved": 1
+                }
+              },
+              "rule": {
+                "allow": [
+                  "reserve"
+                ],
+                "requirement_hash": "4b05b4e7c54e9b33efa0f4fd37c2a7873813c88a44cdc761da3fc9eafddaafd9",
+                "version": 1
+              }
+            }
+          }
+        },
+        "source_zero_response": {
+          "event": "bytes",
+          "generation": 1,
+          "guest_to_host_bytes": 363,
+          "host_to_guest_bytes": 0,
+          "port": 7003,
+          "sandbox_device": 2049,
+          "sandbox_inode": 4527206,
+          "sandbox_peer_pid": 3006368,
+          "time": "2026-08-17T04:46:09.474209012Z"
+        },
+        "stale_probe": {
+          "body": {
+            "detail": "sandbox endpoint generation changed",
+            "error": "control API failed to execute effect",
+            "recovered_by_query": false,
+            "reused": false,
+            "schema": 1
+          },
+          "status": 502
+        }
+      }
+    ],
+    "raw": [
+      {
+        "key": "c6c505d1de80d08c1393a968f78208f3",
+        "mongo_rows": 2,
+        "operation_id": "c6c505d1de80d08c1393a968f78208f3",
+        "provider_deliveries": 2,
+        "replacement": {
+          "command": [
+            "/home/will/.cache/safe-change-runtime/firecracker-claude/firecracker-claude-cell",
+            "-generation",
+            "4",
+            "-guest",
+            "/home/will/.cache/safe-change-runtime/firecracker-claude/firecracker-claude-guest",
+            "-payload",
+            "/home/will/.cache/safe-change-runtime/firecracker-claude/claude-http-v4-payload.squashfs",
+            "-payload-sha256",
+            "dd3cb7a5b59c2b5a3734e1ca64f07a45f585fb1e1bc5df37d4952e710b79edfb",
+            "-claude-sha256",
+            "55d281096f57d411ebbdd94dbf5e9ff3accb7c05713e37348c2c11d4b83bf9d9",
+            "-relay-sha256",
+            "bda999a12a88555ad50961ae66e21b586883d3e1d10f4c33f002a6646cfbec40",
+            "-model-target",
+            "127.0.0.1:42201",
+            "-evidence-dir",
+            "/tmp/fc-dsb-0u6tj_bo/cells/raw-1-replacement",
+            "-session-id",
+            "c6c505d1de80d08c1393a968f78208f3",
+            "-profile",
+            "http",
+            "-egress-target",
+            "127.0.0.1:32837",
+            "-busybox-sha256",
+            "dbac288c29ba568459550a2da9e7ae0ded6b1fc728ee9fad3044c44e62d6ac14",
+            "-bash-sha256",
+            "bc5945feb8bd26203ebfafea5ce1878bb2e32cb8fb50ab7ae395cfb1e1aaaef1"
+          ],
+          "events": [
+            {
+              "event": "ready",
+              "generation": 4,
+              "instance_id": "claude-g4-f7badf9b1e7d164a",
+              "vmm_pid": 3006478
+            },
+            {
+              "disposition": "completed",
+              "event": "completed",
+              "generation": 4,
+              "vmm_pid": 3006478
+            }
+          ],
+          "evidence": "/home/will/agent-check-restore-safety/docs/tmp/bootstrap/step-0022-20260817T025925Z/experiment-firecracker-deathstar-egress/preflight-13/runtime/cells/raw-1-replacement",
+          "exit_code": 0,
+          "generation": 4,
+          "label": "raw-1-replacement",
+          "result": {
+            "artifacts": {
+              "guest": {
+                "mode": 320,
+                "name": "firecracker-claude-guest",
+                "sha256": "d0f7d54f035eb8bf541e8e32f49d3ac055c67093a7f46d21ea6304a8c6a0afad",
+                "size": 4627077
+              },
+              "initramfs": {
+                "mode": 256,
+                "name": "initramfs",
+                "sha256": "2fdddffe2b78ccbf51ed4ad199b6002590d06c708f290ee1e0ed4ea3dbeaa977",
+                "size": 4628992
+              },
+              "kernel": {
+                "mode": 256,
+                "name": "kernel",
+                "sha256": "e20e46d0c36c55c0d1014eb20576171b3f3d922260d9f792017aeff53af3d4f2",
+                "size": 44279576
+              },
+              "payload": {
+                "mode": 256,
+                "name": "payload",
+                "sha256": "dd3cb7a5b59c2b5a3734e1ca64f07a45f585fb1e1bc5df37d4952e710b79edfb",
+                "size": 93650944
+              }
+            },
+            "backend": "firecracker-kvm",
+            "disposition": "completed",
+            "firecracker_version": "1.16.1",
+            "generation": 4,
+            "guest_result": {
+              "body": {
+                "result": "DONE",
+                "stream": "{\"type\":\"system\",\"subtype\":\"init\",\"cwd\":\"/workspace\",\"session_id\":\"c6c505d1-de80-d08c-1393-a968f78208f3\",\"tools\":[\"Bash\",\"Edit\",\"Read\"],\"mcp_servers\":[{\"name\":\"continuity\",\"status\":\"failed\"}],\"model\":\"claude-fixture-1\",\"permissionMode\":\"dontAsk\",\"slash_commands\":[],\"apiKeySource\":\"ANTHROPIC_API_KEY\",\"claude_code_version\":\"2.1.233\",\"output_style\":\"default\",\"agents\":[\"claude\",\"Explore\",\"general-purpose\",\"Plan\",\"statusline-setup\"],\"skills\":[],\"plugins\":[],\"capabilities\":[\"interrupt_receipt_v1\",\"interrupt_cancel_queued_v1\",\"msg_lifecycle_v1\"],\"analytics_disabled\":true,\"product_feedback_disabled\":true,\"uuid\":\"76ae3146-0d40-49e6-8cc8-91ee29032cfd\",\"fast_mode_state\":\"off\",\"fast_mode_disabled_reason\":\"sdk_opt_in_required\"}\n{\"type\":\"assistant\",\"message\":{\"content\":[{\"id\":\"toolu_fixture_5\",\"input\":{\"command\":\"/opt/claude/bin/busybox wget -qO- --header='Content-Type: application/json'  --header=\\\"Idempotency-Key: $SAFE_CHANGE_CALL_ID\\\"  --header=\\\"X-Operation-ID: $SAFE_CHANGE_CALL_ID\\\" --post-data='{\\\"hotel_id\\\":\\\"1\\\",\\\"in_date\\\":\\\"2015-04-09\\\",\\\"out_date\\\":\\\"2015-04-10\\\",\\\"password\\\":\\\"0000000000\\\",\\\"rooms\\\":1,\\\"username\\\":\\\"Cornell_30\\\"}' \\\"$SAFE_CHANGE_EGRESS_URL\\\"\",\"description\":\"Submit the fixed reservation\"},\"name\":\"Bash\",\"type\":\"tool_use\"}],\"id\":\"msg_fixture_5\",\"model\":\"claude-fixture-1\",\"role\":\"assistant\",\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"input_tokens\":1,\"output_tokens\":1},\"context_management\":null},\"parent_tool_use_id\":null,\"session_id\":\"c6c505d1-de80-d08c-1393-a968f78208f3\",\"uuid\":\"c886eab4-6644-4649-9a97-842e4408c405\",\"timestamp\":\"2026-08-17T04:46:42.876Z\"}\n{\"type\":\"system\",\"subtype\":\"task_started\",\"task_id\":\"bfp28tzy7\",\"tool_use_id\":\"toolu_fixture_5\",\"description\":\"Submit the fixed reservation\",\"task_type\":\"local_bash\",\"uuid\":\"5271083b-1af7-43e6-b7ff-55607318e1e5\",\"session_id\":\"c6c505d1-de80-d08c-1393-a968f78208f3\"}\n{\"type\":\"system\",\"subtype\":\"task_notification\",\"task_id\":\"bfp28tzy7\",\"tool_use_id\":\"toolu_fixture_5\",\"status\":\"completed\",\"output_file\":\"\",\"summary\":\"Submit the fixed reservation\",\"uuid\":\"77fe1eea-8b89-4c5b-976a-2058e35e1e1c\",\"session_id\":\"c6c505d1-de80-d08c-1393-a968f78208f3\"}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"tool_use_id\":\"toolu_fixture_5\",\"type\":\"tool_result\",\"content\":\"{\\\"operation_id\\\":\\\"c6c505d1de80d08c1393a968f78208f3\\\",\\\"outcome\\\":\\\"succeeded\\\",\\\"remote_reference\\\":\\\"deathstar/reservation/c6c505d1de80d08c1393a968f78208f3\\\",\\\"result_hash\\\":\\\"323632f88653a9502e8341d929539e845f908bf40725f92141a02d077a573ca6\\\",\\\"schema\\\":1}\",\"is_error\":false}]},\"parent_tool_use_id\":null,\"session_id\":\"c6c505d1-de80-d08c-1393-a968f78208f3\",\"uuid\":\"0a5bb481-b808-442c-8e86-83dfda77e26a\",\"timestamp\":\"2026-08-17T04:46:51.146Z\",\"tool_use_result\":{\"stdout\":\"{\\\"operation_id\\\":\\\"c6c505d1de80d08c1393a968f78208f3\\\",\\\"outcome\\\":\\\"succeeded\\\",\\\"remote_reference\\\":\\\"deathstar/reservation/c6c505d1de80d08c1393a968f78208f3\\\",\\\"result_hash\\\":\\\"323632f88653a9502e8341d929539e845f908bf40725f92141a02d077a573ca6\\\",\\\"schema\\\":1}\",\"stderr\":\"\",\"interrupted\":false,\"isImage\":false,\"noOutputExpected\":false}}\n{\"type\":\"assistant\",\"message\":{\"content\":[{\"text\":\"DONE\",\"type\":\"text\"}],\"id\":\"msg_fixture_6\",\"model\":\"claude-fixture-1\",\"role\":\"assistant\",\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"input_tokens\":1,\"output_tokens\":1},\"context_management\":null},\"parent_tool_use_id\":null,\"session_id\":\"c6c505d1-de80-d08c-1393-a968f78208f3\",\"uuid\":\"62ac6643-6638-4f48-a9cf-69d388ffef16\",\"timestamp\":\"2026-08-17T04:46:51.198Z\"}\n{\"is_error\":false,\"duration_api_ms\":245,\"num_turns\":2,\"stop_reason\":\"end_turn\",\"session_id\":\"c6c505d1-de80-d08c-1393-a968f78208f3\",\"total_cost_usd\":0.000059999999999999995,\"usage\":{\"input_tokens\":2,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":2,\"output_tokens_details\":{\"thinking_tokens\":0},\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"claude-fixture-1\":{\"inputTokens\":2,\"outputTokens\":2,\"cacheReadInputTokens\":0,\"cacheCreationInputTokens\":0,\"webSearchRequests\":0,\"costUSD\":0.000059999999999999995,\"contextWindow\":200000,\"maxOutputTokens\":32000,\"canonicalModel\":\"claude-fixture-1\",\"provider\":\"firstParty\"}},\"permission_denials\":[],\"terminal_reason\":\"completed\",\"fast_mode_state\":\"off\",\"fast_mode_disabled_reason\":\"sdk_opt_in_required\",\"subtype\":\"success\",\"api_error_status\":null,\"result\":\"DONE\",\"ttft_ms\":176,\"ttft_stream_ms\":170,\"time_to_request_ms\":142,\"type\":\"result\",\"duration_ms\":8540,\"uuid\":\"da8ad346-63ac-4d33-84e0-1d7b17483aaa\"}\n",
+                "stream_bytes": 4684,
+                "stream_sha256": "8717a9beeb304279d9d4be41a11ee68b0c5a7eaa8cf1dbb34062ca2699e4a3c0"
+              },
+              "event": "RESULT",
+              "status": 200
+            },
+            "kernel_version": "6.1.155",
+            "network_interfaces": 0,
+            "process": {
+              "executable": "/home/will/.cache/safe-change-runtime/firecracker/v1.16.1/release-v1.16.1-x86_64/firecracker-v1.16.1-x86_64",
+              "executable_sha256": "2fd0171309af7e24cf8dafc8a6f921c1434c49b5f9349bb996b7ed0a4deb8aa7",
+              "generation": 4,
+              "instance_id": "claude-g4-f7badf9b1e7d164a",
+              "pid": 3006478,
+              "start_time_ticks": 141731193,
+              "started_time_ns": 1786941992848321676,
+              "stopped_time_ns": 1786942011824210040,
+              "termination": "supervisor"
+            },
+            "read_only_payload": true,
+            "root_block_devices": 0,
+            "schema": 1,
+            "session_id": "c6c505d1de80d08c1393a968f78208f3",
+            "tool_profile": "http",
+            "valid": true
+          },
+          "runner_pid": 3006469,
+          "started_time_ns": 1786941992454187937,
+          "stopped_time_ns": 1786942011907007995
+        },
+        "run": 1,
+        "source": {
+          "command": [
+            "/home/will/.cache/safe-change-runtime/firecracker-claude/firecracker-claude-cell",
+            "-generation",
+            "3",
+            "-guest",
+            "/home/will/.cache/safe-change-runtime/firecracker-claude/firecracker-claude-guest",
+            "-payload",
+            "/home/will/.cache/safe-change-runtime/firecracker-claude/claude-http-v4-payload.squashfs",
+            "-payload-sha256",
+            "dd3cb7a5b59c2b5a3734e1ca64f07a45f585fb1e1bc5df37d4952e710b79edfb",
+            "-claude-sha256",
+            "55d281096f57d411ebbdd94dbf5e9ff3accb7c05713e37348c2c11d4b83bf9d9",
+            "-relay-sha256",
+            "bda999a12a88555ad50961ae66e21b586883d3e1d10f4c33f002a6646cfbec40",
+            "-model-target",
+            "127.0.0.1:42201",
+            "-evidence-dir",
+            "/tmp/fc-dsb-0u6tj_bo/cells/raw-1-source",
+            "-session-id",
+            "c6c505d1de80d08c1393a968f78208f3",
+            "-profile",
+            "http",
+            "-egress-target",
+            "127.0.0.1:32837",
+            "-busybox-sha256",
+            "dbac288c29ba568459550a2da9e7ae0ded6b1fc728ee9fad3044c44e62d6ac14",
+            "-bash-sha256",
+            "bc5945feb8bd26203ebfafea5ce1878bb2e32cb8fb50ab7ae395cfb1e1aaaef1"
+          ],
+          "events": [
+            {
+              "event": "ready",
+              "generation": 3,
+              "instance_id": "claude-g3-199b71e02af3d826",
+              "vmm_pid": 3006456
+            },
+            {
+              "disposition": "vmm-sigkill",
+              "event": "completed",
+              "generation": 3,
+              "vmm_pid": 3006456
+            }
+          ],
+          "evidence": "/home/will/agent-check-restore-safety/docs/tmp/bootstrap/step-0022-20260817T025925Z/experiment-firecracker-deathstar-egress/preflight-13/runtime/cells/raw-1-source",
+          "exit_code": 0,
+          "generation": 3,
+          "label": "raw-1-source",
+          "result": {
+            "artifacts": {
+              "guest": {
+                "mode": 320,
+                "name": "firecracker-claude-guest",
+                "sha256": "d0f7d54f035eb8bf541e8e32f49d3ac055c67093a7f46d21ea6304a8c6a0afad",
+                "size": 4627077
+              },
+              "initramfs": {
+                "mode": 256,
+                "name": "initramfs",
+                "sha256": "2fdddffe2b78ccbf51ed4ad199b6002590d06c708f290ee1e0ed4ea3dbeaa977",
+                "size": 4628992
+              },
+              "kernel": {
+                "mode": 256,
+                "name": "kernel",
+                "sha256": "e20e46d0c36c55c0d1014eb20576171b3f3d922260d9f792017aeff53af3d4f2",
+                "size": 44279576
+              },
+              "payload": {
+                "mode": 256,
+                "name": "payload",
+                "sha256": "dd3cb7a5b59c2b5a3734e1ca64f07a45f585fb1e1bc5df37d4952e710b79edfb",
+                "size": 93650944
+              }
+            },
+            "backend": "firecracker-kvm",
+            "disposition": "vmm-sigkill",
+            "firecracker_version": "1.16.1",
+            "generation": 3,
+            "kernel_version": "6.1.155",
+            "network_interfaces": 0,
+            "process": {
+              "executable": "/home/will/.cache/safe-change-runtime/firecracker/v1.16.1/release-v1.16.1-x86_64/firecracker-v1.16.1-x86_64",
+              "executable_sha256": "2fd0171309af7e24cf8dafc8a6f921c1434c49b5f9349bb996b7ed0a4deb8aa7",
+              "generation": 3,
+              "instance_id": "claude-g3-199b71e02af3d826",
+              "pid": 3006456,
+              "start_time_ticks": 141730060,
+              "started_time_ns": 1786941981516312787,
+              "stopped_time_ns": 1786941992385020098,
+              "termination": "supervisor"
+            },
+            "read_only_payload": true,
+            "root_block_devices": 0,
+            "schema": 1,
+            "session_id": "c6c505d1de80d08c1393a968f78208f3",
+            "tool_profile": "http",
+            "valid": true
+          },
+          "runner_pid": 3006447,
+          "started_time_ns": 1786941981135486887,
+          "stopped_time_ns": 1786941992453432541
+        },
+        "source_zero_response": {
+          "event": "bytes",
+          "generation": 3,
+          "guest_to_host_bytes": 363,
+          "host_to_guest_bytes": 0,
+          "port": 7003,
+          "sandbox_device": 2049,
+          "sandbox_inode": 5518855,
+          "sandbox_peer_pid": 3006447,
+          "time": "2026-08-17T04:46:32.385069809Z"
+        }
+      }
+    ],
+    "repetitions": 1,
+    "root_block_devices_per_cell": 0,
+    "schema": 1,
+    "stop": {
+      "key": "417e97cf6fb1dadad3422b4696351f70",
+      "mongo_rows": 1,
+      "operation_id": "417e97cf6fb1dadad3422b4696351f70",
+      "provider_deliveries": 1,
+      "source": {
+        "command": [
+          "/home/will/.cache/safe-change-runtime/firecracker-claude/firecracker-claude-cell",
+          "-generation",
+          "5",
+          "-guest",
+          "/home/will/.cache/safe-change-runtime/firecracker-claude/firecracker-claude-guest",
+          "-payload",
+          "/home/will/.cache/safe-change-runtime/firecracker-claude/claude-http-v4-payload.squashfs",
+          "-payload-sha256",
+          "dd3cb7a5b59c2b5a3734e1ca64f07a45f585fb1e1bc5df37d4952e710b79edfb",
+          "-claude-sha256",
+          "55d281096f57d411ebbdd94dbf5e9ff3accb7c05713e37348c2c11d4b83bf9d9",
+          "-relay-sha256",
+          "bda999a12a88555ad50961ae66e21b586883d3e1d10f4c33f002a6646cfbec40",
+          "-model-target",
+          "127.0.0.1:42201",
+          "-evidence-dir",
+          "/tmp/fc-dsb-0u6tj_bo/cells/stop-source",
+          "-session-id",
+          "417e97cf6fb1dadad3422b4696351f70",
+          "-profile",
+          "http",
+          "-egress-target",
+          "127.0.0.1:32837",
+          "-busybox-sha256",
+          "dbac288c29ba568459550a2da9e7ae0ded6b1fc728ee9fad3044c44e62d6ac14",
+          "-bash-sha256",
+          "bc5945feb8bd26203ebfafea5ce1878bb2e32cb8fb50ab7ae395cfb1e1aaaef1"
+        ],
+        "events": [
+          {
+            "event": "ready",
+            "generation": 5,
+            "instance_id": "claude-g5-c62afefe97103da2",
+            "vmm_pid": 3006504
+          },
+          {
+            "disposition": "vmm-sigkill",
+            "event": "completed",
+            "generation": 5,
+            "vmm_pid": 3006504
+          }
+        ],
+        "evidence": "/home/will/agent-check-restore-safety/docs/tmp/bootstrap/step-0022-20260817T025925Z/experiment-firecracker-deathstar-egress/preflight-13/runtime/cells/stop-source",
+        "exit_code": 0,
+        "generation": 5,
+        "label": "stop-source",
+        "result": {
+          "artifacts": {
+            "guest": {
+              "mode": 320,
+              "name": "firecracker-claude-guest",
+              "sha256": "d0f7d54f035eb8bf541e8e32f49d3ac055c67093a7f46d21ea6304a8c6a0afad",
+              "size": 4627077
+            },
+            "initramfs": {
+              "mode": 256,
+              "name": "initramfs",
+              "sha256": "3c1e2374e29e9e6810aa8fcd53caa47a1502334fbe2385e7520ba92adac45f87",
+              "size": 4628992
+            },
+            "kernel": {
+              "mode": 256,
+              "name": "kernel",
+              "sha256": "e20e46d0c36c55c0d1014eb20576171b3f3d922260d9f792017aeff53af3d4f2",
+              "size": 44279576
+            },
+            "payload": {
+              "mode": 256,
+              "name": "payload",
+              "sha256": "dd3cb7a5b59c2b5a3734e1ca64f07a45f585fb1e1bc5df37d4952e710b79edfb",
+              "size": 93650944
+            }
+          },
+          "backend": "firecracker-kvm",
+          "disposition": "vmm-sigkill",
+          "firecracker_version": "1.16.1",
+          "generation": 5,
+          "kernel_version": "6.1.155",
+          "network_interfaces": 0,
+          "process": {
+            "executable": "/home/will/.cache/safe-change-runtime/firecracker/v1.16.1/release-v1.16.1-x86_64/firecracker-v1.16.1-x86_64",
+            "executable_sha256": "2fd0171309af7e24cf8dafc8a6f921c1434c49b5f9349bb996b7ed0a4deb8aa7",
+            "generation": 5,
+            "instance_id": "claude-g5-c62afefe97103da2",
+            "pid": 3006504,
+            "start_time_ticks": 141733142,
+            "started_time_ns": 1786942012338341513,
+            "stopped_time_ns": 1786942023072764909,
+            "termination": "supervisor"
+          },
+          "read_only_payload": true,
+          "root_block_devices": 0,
+          "schema": 1,
+          "session_id": "417e97cf6fb1dadad3422b4696351f70",
+          "tool_profile": "http",
+          "valid": true
+        },
+        "runner_pid": 3006494,
+        "started_time_ns": 1786942011933729585,
+        "stopped_time_ns": 1786942023142189614
+      },
+      "source_zero_response": {
+        "event": "bytes",
+        "generation": 5,
+        "guest_to_host_bytes": 363,
+        "host_to_guest_bytes": 0,
+        "port": 7003,
+        "sandbox_device": 2049,
+        "sandbox_inode": 5518879,
+        "sandbox_peer_pid": 3006494,
+        "time": "2026-08-17T04:47:03.072840361Z"
+      },
+      "task_completed": false
+    },
+    "system": "official-claude-firecracker-deathstar-http-egress",
+    "transparency": {
+      "claude_source_modified": false,
+      "deathstar_source_modified": false,
+      "operator_route_registered": true
+    },
+    "valid": true
+  },
+  "pass": true
+}

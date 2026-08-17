@@ -58,9 +58,14 @@ class _ClaudeCell:
         claude_sha256: str,
         relay_sha256: str,
         model_target: str,
-        mcp_host_socket: Path,
+        mcp_host_socket: Path | None,
         evidence: Path,
         root: Path,
+        profile: str = "mcp",
+        egress_target: str | None = None,
+        busybox_sha256: str | None = None,
+        bash_sha256: str | None = None,
+        session_id: str | None = None,
     ) -> None:
         self.label = label
         self.generation = generation
@@ -82,11 +87,32 @@ class _ClaudeCell:
             relay_sha256,
             "-model-target",
             model_target,
-            "-mcp-host-socket",
-            os.fspath(mcp_host_socket),
             "-evidence-dir",
             os.fspath(evidence),
         ]
+        if session_id is not None:
+            self.command.extend(["-session-id", session_id])
+        if profile == "mcp":
+            if mcp_host_socket is None:
+                raise DemoError("MCP Claude cell requires its host socket")
+            self.command.extend(["-mcp-host-socket", os.fspath(mcp_host_socket)])
+        elif profile == "http":
+            if egress_target is None or busybox_sha256 is None or bash_sha256 is None:
+                raise DemoError("HTTP Claude cell requires egress, BusyBox, and Bash")
+            self.command.extend(
+                [
+                    "-profile",
+                    "http",
+                    "-egress-target",
+                    egress_target,
+                    "-busybox-sha256",
+                    busybox_sha256,
+                    "-bash-sha256",
+                    bash_sha256,
+                ]
+            )
+        else:
+            raise DemoError(f"unsupported Claude cell profile {profile!r}")
         self.stdout_path = root / f"{label}.stdout.jsonl"
         self.stderr_path = root / f"{label}.stderr.log"
         self._stdout_record: BinaryIO = self.stdout_path.open("xb")

@@ -1,0 +1,2 @@
+{"event":"accept","time":"2026-08-17T04:19:14.364332943Z","generation":3,"port":7003,"pid":2949635,"sandbox_device":2049,"sandbox_inode":5518634,"guest_to_host_bytes":0,"host_to_guest_bytes":0}
+{"event":"bytes","time":"2026-08-17T04:19:14.506066122Z","generation":3,"port":7003,"sandbox_peer_pid":2949626,"sandbox_device":2049,"sandbox_inode":5518634,"guest_to_host_bytes":363,"host_to_guest_bytes":0}

@@ -3,6 +3,7 @@ package mcpoperation
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net"
 	"net/http"
 	"os"
@@ -108,11 +109,45 @@ func TestSandboxExecutorRejectsUnsafeSocketBoundary(t *testing.T) {
 	if err := os.WriteFile(regularPath, []byte("not a socket"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	executor, err := NewSandboxExecutor(regularPath, SandboxExecutorOptions{})
+	if _, err := NewSandboxExecutor(regularPath, SandboxExecutorOptions{}); err == nil {
+		t.Fatal("regular file accepted as a sandbox endpoint")
+	}
+}
+
+func TestSandboxExecutorRejectsReplacedGenerationSocket(t *testing.T) {
+	directory := t.TempDir()
+	if err := os.Chmod(directory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(directory, "sandbox.sock")
+	first, err := net.Listen("unix", path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := executor.Execute(context.Background(), "call", "kind", nil); err == nil {
-		t.Fatal("regular file accepted as a sandbox endpoint")
+	if err := os.Chmod(path, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	executor, err := NewSandboxExecutor(path, SandboxExecutorOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer executor.Close()
+	if err := first.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		t.Fatal(err)
+	}
+	second, err := net.Listen("unix", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer second.Close()
+	if err := os.Chmod(path, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err = executor.Execute(context.Background(), "call", "kind", []byte(`{}`))
+	if err == nil || !strings.Contains(err.Error(), "generation changed") {
+		t.Fatalf("Execute error=%v, want generation-change rejection", err)
 	}
 }

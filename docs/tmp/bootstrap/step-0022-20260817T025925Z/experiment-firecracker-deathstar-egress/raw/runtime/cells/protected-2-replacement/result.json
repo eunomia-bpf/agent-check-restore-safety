@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "valid": true,
+  "backend": "firecracker-kvm",
+  "firecracker_version": "1.16.1",
+  "kernel_version": "6.1.155",
+  "generation": 4,
+  "session_id": "81e4d418cacf010c940eb5675eb389e7",
+  "disposition": "completed",
+  "tool_profile": "http",
+  "network_interfaces": 0,
+  "root_block_devices": 0,
+  "read_only_payload": true,
+  "guest_result": {
+    "event": "RESULT",
+    "status": 200,
+    "body": {
+      "result": "DONE",
+      "stream": "{\"type\":\"system\",\"subtype\":\"init\",\"cwd\":\"/workspace\",\"session_id\":\"81e4d418-cacf-010c-940e-b5675eb389e7\",\"tools\":[\"Bash\",\"Edit\",\"Read\"],\"mcp_servers\":[{\"name\":\"continuity\",\"status\":\"failed\"}],\"model\":\"claude-fixture-1\",\"permissionMode\":\"dontAsk\",\"slash_commands\":[],\"apiKeySource\":\"ANTHROPIC_API_KEY\",\"claude_code_version\":\"2.1.233\",\"output_style\":\"default\",\"agents\":[\"claude\",\"Explore\",\"general-purpose\",\"Plan\",\"statusline-setup\"],\"skills\":[],\"plugins\":[],\"capabilities\":[\"interrupt_receipt_v1\",\"interrupt_cancel_queued_v1\",\"msg_lifecycle_v1\"],\"analytics_disabled\":true,\"product_feedback_disabled\":true,\"uuid\":\"ba56644a-bb2f-4499-9ea1-27e90f56a7bc\",\"fast_mode_state\":\"off\",\"fast_mode_disabled_reason\":\"sdk_opt_in_required\"}\n{\"type\":\"assistant\",\"message\":{\"content\":[{\"id\":\"toolu_fixture_5\",\"input\":{\"command\":\"/opt/claude/bin/busybox wget -qO- --header='Content-Type: application/json'  --header=\\\"Idempotency-Key: $SAFE_CHANGE_CALL_ID\\\"  --header=\\\"X-Operation-ID: $SAFE_CHANGE_CALL_ID\\\" --post-data='{\\\"hotel_id\\\":\\\"1\\\",\\\"in_date\\\":\\\"2015-04-09\\\",\\\"out_date\\\":\\\"2015-04-10\\\",\\\"password\\\":\\\"0000000000\\\",\\\"rooms\\\":1,\\\"username\\\":\\\"Cornell_30\\\"}' \\\"$SAFE_CHANGE_EGRESS_URL\\\"\",\"description\":\"Submit the fixed reservation\"},\"name\":\"Bash\",\"type\":\"tool_use\"}],\"id\":\"msg_fixture_5\",\"model\":\"claude-fixture-1\",\"role\":\"assistant\",\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"input_tokens\":1,\"output_tokens\":1},\"context_management\":null},\"parent_tool_use_id\":null,\"session_id\":\"81e4d418-cacf-010c-940e-b5675eb389e7\",\"uuid\":\"073288f7-f258-43e1-b052-6757af8f81c0\",\"timestamp\":\"2026-08-17T04:48:25.220Z\"}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"tool_use_id\":\"toolu_fixture_5\",\"type\":\"tool_result\",\"content\":\"{\\\"schema\\\":1,\\\"operation_id\\\":\\\"op-80f56bd9ccab231766723be8673cd2f84b4a180d0c4c91434ab8ba546fc64ad4\\\",\\\"phase\\\":\\\"succeeded\\\",\\\"result_hash\\\":\\\"db2726dbeff612c84c5b809ca1a2784311b2e9b30216c7ad2507fad12cb414ff\\\",\\\"reused\\\":false,\\\"recovered_by_query\\\":true}\",\"is_error\":false}]},\"parent_tool_use_id\":null,\"session_id\":\"81e4d418-cacf-010c-940e-b5675eb389e7\",\"uuid\":\"aafdd626-2257-40f8-b7d6-fc0dd27842d5\",\"timestamp\":\"2026-08-17T04:48:25.471Z\",\"tool_use_result\":{\"stdout\":\"{\\\"schema\\\":1,\\\"operation_id\\\":\\\"op-80f56bd9ccab231766723be8673cd2f84b4a180d0c4c91434ab8ba546fc64ad4\\\",\\\"phase\\\":\\\"succeeded\\\",\\\"result_hash\\\":\\\"db2726dbeff612c84c5b809ca1a2784311b2e9b30216c7ad2507fad12cb414ff\\\",\\\"reused\\\":false,\\\"recovered_by_query\\\":true}\",\"stderr\":\"\",\"interrupted\":false,\"isImage\":false,\"noOutputExpected\":false}}\n{\"type\":\"assistant\",\"message\":{\"content\":[{\"text\":\"DONE\",\"type\":\"text\"}],\"id\":\"msg_fixture_6\",\"model\":\"claude-fixture-1\",\"role\":\"assistant\",\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"input_tokens\":1,\"output_tokens\":1},\"context_management\":null},\"parent_tool_use_id\":null,\"session_id\":\"81e4d418-cacf-010c-940e-b5675eb389e7\",\"uuid\":\"2d309c63-d549-4c71-b4a4-70fb1c5c2bb9\",\"timestamp\":\"2026-08-17T04:48:25.512Z\"}\n{\"is_error\":false,\"duration_api_ms\":231,\"num_turns\":2,\"stop_reason\":\"end_turn\",\"session_id\":\"81e4d418-cacf-010c-940e-b5675eb389e7\",\"total_cost_usd\":0.000059999999999999995,\"usage\":{\"input_tokens\":2,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":2,\"output_tokens_details\":{\"thinking_tokens\":0},\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"claude-fixture-1\":{\"inputTokens\":2,\"outputTokens\":2,\"cacheReadInputTokens\":0,\"cacheCreationInputTokens\":0,\"webSearchRequests\":0,\"costUSD\":0.000059999999999999995,\"contextWindow\":200000,\"maxOutputTokens\":32000,\"canonicalModel\":\"claude-fixture-1\",\"provider\":\"firstParty\"}},\"permission_denials\":[],\"terminal_reason\":\"completed\",\"fast_mode_state\":\"off\",\"fast_mode_disabled_reason\":\"sdk_opt_in_required\",\"subtype\":\"success\",\"api_error_status\":null,\"result\":\"DONE\",\"ttft_ms\":167,\"ttft_stream_ms\":161,\"time_to_request_ms\":135,\"type\":\"result\",\"duration_ms\":489,\"uuid\":\"aec0933d-c7a3-489c-b494-9b4437018da9\"}\n",
+      "stream_bytes": 4135,
+      "stream_sha256": "d18c9ccd928536e26bf39581a703a66d178f53886255d3a10dbe2127aa6f7a15"
+    }
+  },
+  "process": {
+    "generation": 4,
+    "instance_id": "claude-g4-3e942475b126d219",
+    "pid": 3012757,
+    "executable": "/home/will/.cache/safe-change-runtime/firecracker/v1.16.1/release-v1.16.1-x86_64/firecracker-v1.16.1-x86_64",
+    "executable_sha256": "2fd0171309af7e24cf8dafc8a6f921c1434c49b5f9349bb996b7ed0a4deb8aa7",
+    "start_time_ticks": 141741443,
+    "started_time_ns": 1786942095347779602,
+    "stopped_time_ns": 1786942106119857836,
+    "termination": "supervisor"
+  },
+  "artifacts": {
+    "guest": {
+      "name": "firecracker-claude-guest",
+      "size": 4627077,
+      "mode": 320,
+      "sha256": "d0f7d54f035eb8bf541e8e32f49d3ac055c67093a7f46d21ea6304a8c6a0afad"
+    },
+    "initramfs": {
+      "name": "initramfs",
+      "size": 4628992,
+      "mode": 256,
+      "sha256": "b1e0229ebcccb442086ac9f53bd1ec4a6c34e79bad7182d1d0c648a5f3b9777c"
+    },
+    "kernel": {
+      "name": "kernel",
+      "size": 44279576,
+      "mode": 256,
+      "sha256": "e20e46d0c36c55c0d1014eb20576171b3f3d922260d9f792017aeff53af3d4f2"
+    },
+    "payload": {
+      "name": "payload",
+      "size": 93650944,
+      "mode": 256,
+      "sha256": "dd3cb7a5b59c2b5a3734e1ca64f07a45f585fb1e1bc5df37d4952e710b79edfb"
+    }
+  }
+}

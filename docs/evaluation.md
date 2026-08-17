@@ -988,3 +988,53 @@ backend rather than the source of continuity.
   `docs/tmp/bootstrap/step-0021-20260817T022256Z/experiment-stable-operation-identity/raw/`.
 - Firecracker Claude raw evidence:
   `docs/tmp/bootstrap/s21-fc/raw/`.
+
+## 20. Ordinary Agent HTTP across complete sandbox loss
+
+Paper-value role: **supporting systems evidence for RQ4 and the transparent
+adoption boundary**. Earlier Agent experiments required a declared MCP tool
+and either a local provider fixture or a separate maintained-application run.
+This experiment asks whether official Claude can instead use its built-in Bash
+tool and ordinary HTTP while the same host Operation mechanism survives loss
+of its complete Firecracker sandbox.
+
+The run used official Claude Code 2.1.233, Firecracker 1.16.1, Linux 6.1.155,
+and the full unmodified DeathStarBench Hotel Reservation 0.3.5 application at
+commit `6ecb09706140f8730b5385c08f1386c654c3c526`. Each VM had no NIC, no root
+block device, and one read-only payload. An operator registered the exact
+`/v1/reserve` route and its read-only Mongo query; neither Claude nor
+DeathStarBench was modified.
+
+For each protected repetition, DeathStarBench committed a reservation and a
+Mongo observer found the exact row. The supervisor then killed and reaped the
+source VMM before any response byte reached Claude. A clean replacement VM
+repeated the ordinary Bash request; History queried the existing application
+fact and returned the result without another delivery. An explicit request
+through the old generation failed with HTTP 502 before reaching the
+application.
+
+Three protected runs each completed with one Mongo row. Three matched raw
+retries each completed with two rows. A stop-after-loss control retained one
+row but did not complete the Agent task. The accepted evidence contains 13
+distinct VMM lifetimes, 10 application deliveries, three protected History
+Operations settled by query, and 19 retained Mongo observations. The observer
+records every matching business-row summary and hash, so the independent
+checker reconstructs the `[1,1,1]`, `[2,2,2]`, and stop-`1` result without
+trusting the driver's reported counts.
+
+The first full result was rejected because it did not retain that external
+Mongo oracle. The accepted result comes from a new full execution after the
+observer and checker were repaired. This is a functional result for one
+registered plaintext HTTP action, not a performance, production sandbox, or
+arbitrary-network claim. It does not cover HTTPS interception, unqueryable
+actions, receiver-side idempotency as a baseline, remote attestation, device
+output, or fleet control.
+
+- Plan:
+  `docs/tmp/bootstrap/step-0022-20260817T025925Z/experiment-firecracker-deathstar-egress/plan.md`.
+- Result review:
+  `docs/tmp/bootstrap/step-0022-20260817T025925Z/experiment-firecracker-deathstar-egress/result-review.md`.
+- Final raw evidence:
+  `docs/tmp/bootstrap/step-0022-20260817T025925Z/experiment-firecracker-deathstar-egress/raw/`.
+- Reproduction:
+  `docs/firecracker-deathstar-runtime.md`.

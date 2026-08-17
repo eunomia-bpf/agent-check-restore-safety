@@ -3,9 +3,23 @@
 package main
 
 import (
+	"errors"
+	"fmt"
+	"os"
 	"strings"
 	"testing"
 )
+
+func TestNormalizeClaudeCopyError(t *testing.T) {
+	closed := fmt.Errorf("copy stdout: %w", os.ErrClosed)
+	if err := normalizeClaudeCopyError(nil, closed); err != nil {
+		t.Fatalf("successful child retained pipe-close race: %v", err)
+	}
+	processError := errors.New("child failed")
+	if err := normalizeClaudeCopyError(processError, closed); !errors.Is(err, os.ErrClosed) {
+		t.Fatalf("failed child lost copy error: %v", err)
+	}
+}
 
 func TestValidateClaudeStreamStrictResult(t *testing.T) {
 	stream := []byte("{\"type\":\"result\",\"subtype\":\"success\",\"result\":\"DONE\"}\n")

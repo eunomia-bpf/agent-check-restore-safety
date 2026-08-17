@@ -38,6 +38,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer executor.Close()
 	journal, err := mcpoperation.OpenJournal(journalPath, executionID)
 	if err != nil {
 		log.Fatal(err)

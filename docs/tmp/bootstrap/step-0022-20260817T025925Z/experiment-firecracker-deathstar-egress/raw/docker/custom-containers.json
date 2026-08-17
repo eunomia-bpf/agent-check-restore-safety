@@ -1,0 +1,714 @@
+[
+    {
+        "Id": "742b5b897efe554c60432c28673558fe2e0a58e121d25958e214c0eb1eed9159",
+        "Created": "2026-08-17T04:47:35.697926257Z",
+        "Path": "/go/bin/frontend",
+        "Args": [],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 3010983,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-08-17T04:47:35.835637523Z",
+            "FinishedAt": "0001-01-01T00:00:00Z"
+        },
+        "Image": "sha256:30d48553545cbc2757e21ced40aa0176f6fc0156557461a93e679b470e396fc7",
+        "ResolvConfPath": "/var/lib/docker/containers/742b5b897efe554c60432c28673558fe2e0a58e121d25958e214c0eb1eed9159/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/742b5b897efe554c60432c28673558fe2e0a58e121d25958e214c0eb1eed9159/hostname",
+        "HostsPath": "/var/lib/docker/containers/742b5b897efe554c60432c28673558fe2e0a58e121d25958e214c0eb1eed9159/hosts",
+        "LogPath": "/var/lib/docker/containers/742b5b897efe554c60432c28673558fe2e0a58e121d25958e214c0eb1eed9159/742b5b897efe554c60432c28673558fe2e0a58e121d25958e214c0eb1eed9159-json.log",
+        "Name": "/safe-change-step22-frontend",
+        "RestartCount": 0,
+        "Driver": "overlayfs",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "docker-default",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": null,
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "safe-change-firecracker-deathstar-step22_default",
+            "PortBindings": {},
+            "RestartPolicy": {
+                "Name": "no",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "private",
+            "Dns": null,
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": [],
+            "BlkioDeviceReadBps": [],
+            "BlkioDeviceWriteBps": [],
+            "BlkioDeviceReadIOps": [],
+            "BlkioDeviceWriteIOps": [],
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": [],
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": null,
+            "PidsLimit": null,
+            "Ulimits": [],
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "Mounts": [
+                {
+                    "Type": "bind",
+                    "Source": "/tmp/safe-change-fc-dsb-step22.bivv8r/repository/hotelReservation/config.json",
+                    "Target": "/config.json",
+                    "ReadOnly": true
+                }
+            ],
+            "MaskedPaths": [
+                "/proc/acpi",
+                "/proc/asound",
+                "/proc/interrupts",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/sys/devices/virtual/powercap",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "Storage": {
+            "RootFS": {
+                "Snapshot": {
+                    "Name": "overlayfs"
+                }
+            }
+        },
+        "Mounts": [
+            {
+                "Type": "bind",
+                "Source": "/tmp/safe-change-fc-dsb-step22.bivv8r/repository/hotelReservation/config.json",
+                "Destination": "/config.json",
+                "Mode": "",
+                "RW": false,
+                "Propagation": "rprivate"
+            }
+        ],
+        "Config": {
+            "Hostname": "742b5b897efe",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "GOLANG_VERSION=1.21.13",
+                "GOTOOLCHAIN=local",
+                "GOPATH=/go"
+            ],
+            "Cmd": [
+                "/go/bin/frontend"
+            ],
+            "Image": "safe-change-step22/deathstar:hotel-reservation-0.3.5",
+            "Volumes": null,
+            "WorkingDir": "/workspace",
+            "Entrypoint": null,
+            "Labels": {
+                "org.opencontainers.image.revision": "6ecb09706140f8730b5385c08f1386c654c3c526",
+                "org.opencontainers.image.source": "https://github.com/delimitrou/DeathStarBench.git",
+                "safe-change.step": "22"
+            }
+        },
+        "NetworkSettings": {
+            "SandboxID": "8e8eac0c273d69f965aee5151ad979752f4ddd52cfd24d2ba01efa62f0c4d8dc",
+            "SandboxKey": "/var/run/docker/netns/8e8eac0c273d",
+            "Ports": {},
+            "Networks": {
+                "safe-change-firecracker-deathstar-step22_default": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": null,
+                    "DriverOpts": null,
+                    "GwPriority": 0,
+                    "NetworkID": "d599a77d0af6ada73ea2c35e29f9189bdbf407d33392ee2f7e8e80f15d76ae09",
+                    "EndpointID": "3a876b2854cbe508a637fc6ee94006fb622ee16776af070639a4b319baedb5f3",
+                    "Gateway": "172.20.0.1",
+                    "IPAddress": "172.20.0.25",
+                    "MacAddress": "ca:a5:48:3e:43:55",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": [
+                        "safe-change-step22-frontend",
+                        "742b5b897efe"
+                    ]
+                },
+                "safe-change-step22-frontdoor": {
+                    "IPAMConfig": {},
+                    "Links": null,
+                    "Aliases": [
+                        "frontend-v2"
+                    ],
+                    "DriverOpts": {},
+                    "GwPriority": 0,
+                    "NetworkID": "5671ffec03c44ce377ec1a018fb3f609cf938b74be6ef699e7b68b9c79a517f2",
+                    "EndpointID": "e06e6ddff04cdaebaea8e73f9929e8d30ca61ab60be31153dd8cfbb335255a7c",
+                    "Gateway": "172.21.0.1",
+                    "IPAddress": "172.21.0.2",
+                    "MacAddress": "1e:48:8f:7f:9b:1d",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": [
+                        "safe-change-step22-frontend",
+                        "frontend-v2",
+                        "742b5b897efe"
+                    ]
+                }
+            }
+        },
+        "ImageManifestDescriptor": {
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "digest": "sha256:2895c6dc15fbb3a072fb2d30b3ed0f3ca862eff9312fcd1c3e9a3a20d9ece609",
+            "size": 4092,
+            "platform": {
+                "architecture": "amd64",
+                "os": "linux"
+            }
+        }
+    },
+    {
+        "Id": "eb3572ee6802da68fec33dbeb58c31db4311e70b3ce28a2833847d0575624d02",
+        "Created": "2026-08-17T04:47:40.099175438Z",
+        "Path": "deathstar-adapter",
+        "Args": [
+            "-mode",
+            "effect",
+            "-listen",
+            "0.0.0.0:8090",
+            "-frontend",
+            "http://frontend-v2:5000",
+            "-audit",
+            "/adapter.audit.jsonl",
+            "-post-commit-delay",
+            "8s"
+        ],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 3012397,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-08-17T04:47:40.207662441Z",
+            "FinishedAt": "0001-01-01T00:00:00Z"
+        },
+        "Image": "sha256:0cffb8e69748b67b6805a53b512d6d242f494db5a686e2da58ce3a498a42824c",
+        "ResolvConfPath": "/var/lib/docker/containers/eb3572ee6802da68fec33dbeb58c31db4311e70b3ce28a2833847d0575624d02/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/eb3572ee6802da68fec33dbeb58c31db4311e70b3ce28a2833847d0575624d02/hostname",
+        "HostsPath": "/var/lib/docker/containers/eb3572ee6802da68fec33dbeb58c31db4311e70b3ce28a2833847d0575624d02/hosts",
+        "LogPath": "/var/lib/docker/containers/eb3572ee6802da68fec33dbeb58c31db4311e70b3ce28a2833847d0575624d02/eb3572ee6802da68fec33dbeb58c31db4311e70b3ce28a2833847d0575624d02-json.log",
+        "Name": "/safe-change-step22-effect",
+        "RestartCount": 0,
+        "Driver": "overlayfs",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "docker-default",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": null,
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "safe-change-step22-frontdoor",
+            "PortBindings": {
+                "8090/tcp": [
+                    {
+                        "HostIp": "127.0.0.1",
+                        "HostPort": ""
+                    }
+                ]
+            },
+            "RestartPolicy": {
+                "Name": "no",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "private",
+            "Dns": null,
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": [],
+            "BlkioDeviceReadBps": [],
+            "BlkioDeviceWriteBps": [],
+            "BlkioDeviceReadIOps": [],
+            "BlkioDeviceWriteIOps": [],
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": [],
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": null,
+            "PidsLimit": null,
+            "Ulimits": [],
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "Mounts": [
+                {
+                    "Type": "bind",
+                    "Source": "/home/will/agent-check-restore-safety/docs/tmp/bootstrap/step-0022-20260817T025925Z/experiment-firecracker-deathstar-egress/raw/deathstar-adapter.audit.jsonl",
+                    "Target": "/adapter.audit.jsonl"
+                }
+            ],
+            "MaskedPaths": [
+                "/proc/acpi",
+                "/proc/asound",
+                "/proc/interrupts",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/sys/devices/virtual/powercap",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "Storage": {
+            "RootFS": {
+                "Snapshot": {
+                    "Name": "overlayfs"
+                }
+            }
+        },
+        "Mounts": [
+            {
+                "Type": "bind",
+                "Source": "/home/will/agent-check-restore-safety/docs/tmp/bootstrap/step-0022-20260817T025925Z/experiment-firecracker-deathstar-egress/raw/deathstar-adapter.audit.jsonl",
+                "Destination": "/adapter.audit.jsonl",
+                "Mode": "",
+                "RW": true,
+                "Propagation": "rprivate"
+            }
+        ],
+        "Config": {
+            "Hostname": "eb3572ee6802",
+            "Domainname": "",
+            "User": "1001:993",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "ExposedPorts": {
+                "8090/tcp": {}
+            },
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            ],
+            "Cmd": [
+                "deathstar-adapter",
+                "-mode",
+                "effect",
+                "-listen",
+                "0.0.0.0:8090",
+                "-frontend",
+                "http://frontend-v2:5000",
+                "-audit",
+                "/adapter.audit.jsonl",
+                "-post-commit-delay",
+                "8s"
+            ],
+            "Image": "safe-change-step22/runtime:local",
+            "Volumes": null,
+            "WorkingDir": "/",
+            "Entrypoint": null,
+            "Labels": {
+                "io.safe-change.source-tree.sha256": "68505556b22e32a8d06ffc98db7c75357208844f3b41230748dd3856721c2f8e",
+                "org.opencontainers.image.revision": "dbc9585874595a75e38c96e0ead63db000d99854",
+                "safe-change.step": "22"
+            }
+        },
+        "NetworkSettings": {
+            "SandboxID": "f668cfe89486dc48a8ba5b841f728b0df622d284c963f2f2443bdb98639c3fc4",
+            "SandboxKey": "/var/run/docker/netns/f668cfe89486",
+            "Ports": {
+                "8090/tcp": [
+                    {
+                        "HostIp": "127.0.0.1",
+                        "HostPort": "32839"
+                    }
+                ]
+            },
+            "Networks": {
+                "safe-change-step22-frontdoor": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": null,
+                    "DriverOpts": null,
+                    "GwPriority": 0,
+                    "NetworkID": "5671ffec03c44ce377ec1a018fb3f609cf938b74be6ef699e7b68b9c79a517f2",
+                    "EndpointID": "6f58d6bb2f683452ab55cab3cae16d088203227717c33922bd0ef75a300c7e6d",
+                    "Gateway": "172.21.0.1",
+                    "IPAddress": "172.21.0.3",
+                    "MacAddress": "32:b8:74:a6:7c:b5",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": [
+                        "safe-change-step22-effect",
+                        "eb3572ee6802"
+                    ]
+                }
+            }
+        },
+        "ImageManifestDescriptor": {
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "digest": "sha256:2a56d0e4d5384855778a1156f111d2ae8484912f75ad2d9cd9160a4f5f4ea877",
+            "size": 865,
+            "platform": {
+                "architecture": "amd64",
+                "os": "linux"
+            }
+        }
+    },
+    {
+        "Id": "475762f60d530ab63daa73ca831d7210d5347883df8201c22a194e5e4c585b83",
+        "Created": "2026-08-17T04:47:40.432278959Z",
+        "Path": "deathstar-adapter",
+        "Args": [
+            "-mode",
+            "observer",
+            "-listen",
+            "0.0.0.0:8090",
+            "-mongo-uri",
+            "mongodb://reservation-mongo:27017"
+        ],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 3012523,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-08-17T04:47:40.527647327Z",
+            "FinishedAt": "0001-01-01T00:00:00Z"
+        },
+        "Image": "sha256:0cffb8e69748b67b6805a53b512d6d242f494db5a686e2da58ce3a498a42824c",
+        "ResolvConfPath": "/var/lib/docker/containers/475762f60d530ab63daa73ca831d7210d5347883df8201c22a194e5e4c585b83/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/475762f60d530ab63daa73ca831d7210d5347883df8201c22a194e5e4c585b83/hostname",
+        "HostsPath": "/var/lib/docker/containers/475762f60d530ab63daa73ca831d7210d5347883df8201c22a194e5e4c585b83/hosts",
+        "LogPath": "/var/lib/docker/containers/475762f60d530ab63daa73ca831d7210d5347883df8201c22a194e5e4c585b83/475762f60d530ab63daa73ca831d7210d5347883df8201c22a194e5e4c585b83-json.log",
+        "Name": "/safe-change-step22-observer",
+        "RestartCount": 0,
+        "Driver": "overlayfs",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "docker-default",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": null,
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "safe-change-step22-observation",
+            "PortBindings": {
+                "8090/tcp": [
+                    {
+                        "HostIp": "127.0.0.1",
+                        "HostPort": ""
+                    }
+                ]
+            },
+            "RestartPolicy": {
+                "Name": "no",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "private",
+            "Dns": null,
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": [],
+            "BlkioDeviceReadBps": [],
+            "BlkioDeviceWriteBps": [],
+            "BlkioDeviceReadIOps": [],
+            "BlkioDeviceWriteIOps": [],
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": [],
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": null,
+            "PidsLimit": null,
+            "Ulimits": [],
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "MaskedPaths": [
+                "/proc/acpi",
+                "/proc/asound",
+                "/proc/interrupts",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/sys/devices/virtual/powercap",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "Storage": {
+            "RootFS": {
+                "Snapshot": {
+                    "Name": "overlayfs"
+                }
+            }
+        },
+        "Mounts": [],
+        "Config": {
+            "Hostname": "475762f60d53",
+            "Domainname": "",
+            "User": "1001:993",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "ExposedPorts": {
+                "8090/tcp": {}
+            },
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            ],
+            "Cmd": [
+                "deathstar-adapter",
+                "-mode",
+                "observer",
+                "-listen",
+                "0.0.0.0:8090",
+                "-mongo-uri",
+                "mongodb://reservation-mongo:27017"
+            ],
+            "Image": "safe-change-step22/runtime:local",
+            "Volumes": null,
+            "WorkingDir": "/",
+            "Entrypoint": null,
+            "Labels": {
+                "io.safe-change.source-tree.sha256": "68505556b22e32a8d06ffc98db7c75357208844f3b41230748dd3856721c2f8e",
+                "org.opencontainers.image.revision": "dbc9585874595a75e38c96e0ead63db000d99854",
+                "safe-change.step": "22"
+            }
+        },
+        "NetworkSettings": {
+            "SandboxID": "3dc8d138e43a74266312fbe448c2836ce24a0e79a770ed77003df5d59d2ac449",
+            "SandboxKey": "/var/run/docker/netns/3dc8d138e43a",
+            "Ports": {
+                "8090/tcp": [
+                    {
+                        "HostIp": "127.0.0.1",
+                        "HostPort": "32840"
+                    }
+                ]
+            },
+            "Networks": {
+                "safe-change-step22-observation": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": null,
+                    "DriverOpts": null,
+                    "GwPriority": 0,
+                    "NetworkID": "421cbefcec34410c081b5c56623abf14b875a68ebe29195837e4c26c28ccc225",
+                    "EndpointID": "db07c82353b98baf3c39482d71b47d85cd377352c8060d1eddd29702f3e47805",
+                    "Gateway": "172.22.0.1",
+                    "IPAddress": "172.22.0.3",
+                    "MacAddress": "3e:34:fe:e2:11:f0",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": [
+                        "safe-change-step22-observer",
+                        "475762f60d53"
+                    ]
+                }
+            }
+        },
+        "ImageManifestDescriptor": {
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "digest": "sha256:2a56d0e4d5384855778a1156f111d2ae8484912f75ad2d9cd9160a4f5f4ea877",
+            "size": 865,
+            "platform": {
+                "architecture": "amd64",
+                "os": "linux"
+            }
+        }
+    }
+]

@@ -744,6 +744,14 @@ VM. The replacement obtains the existing result from the host and then performs
 the next Operation. Exactly two intended provider commits occur. No memory
 snapshot carries continuity.
 
+The next vertical result removes two artificial boundaries at once. The same
+official Claude binary uses its built-in Bash tool and ordinary HTTP against
+the full unmodified DeathStarBench Hotel Reservation application. Across three
+complete source-VMM losses, protected recovery leaves one Mongo row and
+completes; raw retry leaves two; stopping leaves one but cannot complete. The
+retained oracle consists of the exact Mongo business rows, not counts asserted
+by the experiment driver.
+
 This establishes a concrete architectural direction: integrate below Agent
 runtimes through their ordinary tool boundary and above isolation backends
 through a small host relay. Process, container, Firecracker, and full-VM modes
@@ -752,9 +760,9 @@ correctness mechanisms. Firecracker remains valuable for strong containment,
 fast replacement, and a small device surface; it is not the source of
 exactly-once behavior.
 
-The open long-term problem is the transparent version: cover ordinary Agent
-tools, service RPCs, network egress, storage, and selected device output without
-requiring application rewrites, while deriving the same safe-change answer from
-one execution record and producing independently checkable refusal evidence.
-That problem remains meaningful even if Agents become fully autonomous and
-models cease to be the limiting component.
+The open long-term problem is the general transparent version: extend the one
+registered HTTP action to common service protocols, storage, and selected
+device output without application rewrites, while deriving the same safe-change
+answer from one execution record and producing independently checkable refusal
+evidence. That problem remains meaningful even if Agents become fully
+autonomous and models cease to be the limiting component.

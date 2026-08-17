@@ -14,7 +14,7 @@ import (
 
 // ExecClaudeChild installs the same no-vsock seccomp boundary used for Codex
 // and invokes the pinned dynamic loader from the read-only payload.
-func ExecClaudeChild(arguments []string, modelPort uint32) error {
+func ExecClaudeChild(arguments []string, schema int, modelPort uint32, sessionID string, egressPort uint32) error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	if len(arguments) == 0 || modelPort == 0 {
@@ -32,7 +32,7 @@ func ExecClaudeChild(arguments []string, modelPort uint32) error {
 	if err != nil || len(groups) != 0 {
 		return errors.New("Claude child retained supplementary groups")
 	}
-	environment := fixedClaudeEnvironment(modelPort)
+	environment := fixedClaudeEnvironment(schema, modelPort, sessionID, egressPort)
 	if err := validateExactEnvironment(os.Environ(), environment); err != nil {
 		return err
 	}

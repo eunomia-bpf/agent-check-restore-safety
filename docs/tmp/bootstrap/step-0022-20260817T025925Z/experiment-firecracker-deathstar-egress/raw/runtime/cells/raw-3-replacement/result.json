@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "valid": true,
+  "backend": "firecracker-kvm",
+  "firecracker_version": "1.16.1",
+  "kernel_version": "6.1.155",
+  "generation": 12,
+  "session_id": "ed240b459e94018aef8ce52c9bcda7b9",
+  "disposition": "completed",
+  "tool_profile": "http",
+  "network_interfaces": 0,
+  "root_block_devices": 0,
+  "read_only_payload": true,
+  "guest_result": {
+    "event": "RESULT",
+    "status": 200,
+    "body": {
+      "result": "DONE",
+      "stream": "{\"type\":\"system\",\"subtype\":\"init\",\"cwd\":\"/workspace\",\"session_id\":\"ed240b45-9e94-018a-ef8c-e52c9bcda7b9\",\"tools\":[\"Bash\",\"Edit\",\"Read\"],\"mcp_servers\":[{\"name\":\"continuity\",\"status\":\"failed\"}],\"model\":\"claude-fixture-1\",\"permissionMode\":\"dontAsk\",\"slash_commands\":[],\"apiKeySource\":\"ANTHROPIC_API_KEY\",\"claude_code_version\":\"2.1.233\",\"output_style\":\"default\",\"agents\":[\"claude\",\"Explore\",\"general-purpose\",\"Plan\",\"statusline-setup\"],\"skills\":[],\"plugins\":[],\"capabilities\":[\"interrupt_receipt_v1\",\"interrupt_cancel_queued_v1\",\"msg_lifecycle_v1\"],\"analytics_disabled\":true,\"product_feedback_disabled\":true,\"uuid\":\"d457d79b-895d-4b23-98b9-cd7bb6fb1858\",\"fast_mode_state\":\"off\",\"fast_mode_disabled_reason\":\"sdk_opt_in_required\"}\n{\"type\":\"assistant\",\"message\":{\"content\":[{\"id\":\"toolu_fixture_17\",\"input\":{\"command\":\"/opt/claude/bin/busybox wget -qO- --header='Content-Type: application/json'  --header=\\\"Idempotency-Key: $SAFE_CHANGE_CALL_ID\\\"  --header=\\\"X-Operation-ID: $SAFE_CHANGE_CALL_ID\\\" --post-data='{\\\"hotel_id\\\":\\\"1\\\",\\\"in_date\\\":\\\"2015-04-09\\\",\\\"out_date\\\":\\\"2015-04-10\\\",\\\"password\\\":\\\"0000000000\\\",\\\"rooms\\\":1,\\\"username\\\":\\\"Cornell_30\\\"}' \\\"$SAFE_CHANGE_EGRESS_URL\\\"\",\"description\":\"Submit the fixed reservation\"},\"name\":\"Bash\",\"type\":\"tool_use\"}],\"id\":\"msg_fixture_17\",\"model\":\"claude-fixture-1\",\"role\":\"assistant\",\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"input_tokens\":1,\"output_tokens\":1},\"context_management\":null},\"parent_tool_use_id\":null,\"session_id\":\"ed240b45-9e94-018a-ef8c-e52c9bcda7b9\",\"uuid\":\"0c70b17f-9045-4191-af5e-b31b0d7c9f29\",\"timestamp\":\"2026-08-17T04:50:11.862Z\"}\n{\"type\":\"system\",\"subtype\":\"task_started\",\"task_id\":\"bq3qezazv\",\"tool_use_id\":\"toolu_fixture_17\",\"description\":\"Submit the fixed reservation\",\"task_type\":\"local_bash\",\"uuid\":\"b03fccd4-5390-4904-b189-ecff1a0e5447\",\"session_id\":\"ed240b45-9e94-018a-ef8c-e52c9bcda7b9\"}\n{\"type\":\"system\",\"subtype\":\"task_notification\",\"task_id\":\"bq3qezazv\",\"tool_use_id\":\"toolu_fixture_17\",\"status\":\"completed\",\"output_file\":\"\",\"summary\":\"Submit the fixed reservation\",\"uuid\":\"2c892445-4cb8-4e31-aacc-64261fd8cd03\",\"session_id\":\"ed240b45-9e94-018a-ef8c-e52c9bcda7b9\"}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"tool_use_id\":\"toolu_fixture_17\",\"type\":\"tool_result\",\"content\":\"{\\\"operation_id\\\":\\\"ed240b459e94018aef8ce52c9bcda7b9\\\",\\\"outcome\\\":\\\"succeeded\\\",\\\"remote_reference\\\":\\\"deathstar/reservation/ed240b459e94018aef8ce52c9bcda7b9\\\",\\\"result_hash\\\":\\\"7e9a264fd872f5e386bc4854bb32c4d94ec1472e2c7d86b94742d4eeaf71bdc5\\\",\\\"schema\\\":1}\",\"is_error\":false}]},\"parent_tool_use_id\":null,\"session_id\":\"ed240b45-9e94-018a-ef8c-e52c9bcda7b9\",\"uuid\":\"5e096c61-8346-4190-9da8-44c20aec3e27\",\"timestamp\":\"2026-08-17T04:50:20.129Z\",\"tool_use_result\":{\"stdout\":\"{\\\"operation_id\\\":\\\"ed240b459e94018aef8ce52c9bcda7b9\\\",\\\"outcome\\\":\\\"succeeded\\\",\\\"remote_reference\\\":\\\"deathstar/reservation/ed240b459e94018aef8ce52c9bcda7b9\\\",\\\"result_hash\\\":\\\"7e9a264fd872f5e386bc4854bb32c4d94ec1472e2c7d86b94742d4eeaf71bdc5\\\",\\\"schema\\\":1}\",\"stderr\":\"\",\"interrupted\":false,\"isImage\":false,\"noOutputExpected\":false}}\n{\"type\":\"assistant\",\"message\":{\"content\":[{\"text\":\"DONE\",\"type\":\"text\"}],\"id\":\"msg_fixture_18\",\"model\":\"claude-fixture-1\",\"role\":\"assistant\",\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"input_tokens\":1,\"output_tokens\":1},\"context_management\":null},\"parent_tool_use_id\":null,\"session_id\":\"ed240b45-9e94-018a-ef8c-e52c9bcda7b9\",\"uuid\":\"fbcab421-cf2a-4051-a4e1-08555c27c369\",\"timestamp\":\"2026-08-17T04:50:20.179Z\"}\n{\"is_error\":false,\"duration_api_ms\":242,\"num_turns\":2,\"stop_reason\":\"end_turn\",\"session_id\":\"ed240b45-9e94-018a-ef8c-e52c9bcda7b9\",\"total_cost_usd\":0.000059999999999999995,\"usage\":{\"input_tokens\":2,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":2,\"output_tokens_details\":{\"thinking_tokens\":0},\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"claude-fixture-1\":{\"inputTokens\":2,\"outputTokens\":2,\"cacheReadInputTokens\":0,\"cacheCreationInputTokens\":0,\"webSearchRequests\":0,\"costUSD\":0.000059999999999999995,\"contextWindow\":200000,\"maxOutputTokens\":32000,\"canonicalModel\":\"claude-fixture-1\",\"provider\":\"firstParty\"}},\"permission_denials\":[],\"terminal_reason\":\"completed\",\"fast_mode_state\":\"off\",\"fast_mode_disabled_reason\":\"sdk_opt_in_required\",\"subtype\":\"success\",\"api_error_status\":null,\"result\":\"DONE\",\"ttft_ms\":163,\"ttft_stream_ms\":157,\"time_to_request_ms\":131,\"type\":\"result\",\"duration_ms\":8522,\"uuid\":\"3ad7158a-81a1-4b77-bb00-8e5755b031ca\"}\n",
+      "stream_bytes": 4690,
+      "stream_sha256": "0521b653c8ac04d9f53489570026b514ebf187496e9925c4a5c7effc99423509"
+    }
+  },
+  "process": {
+    "generation": 12,
+    "instance_id": "claude-g12-096068aada4df726",
+    "pid": 3013009,
+    "executable": "/home/will/.cache/safe-change-runtime/firecracker/v1.16.1/release-v1.16.1-x86_64/firecracker-v1.16.1-x86_64",
+    "executable_sha256": "2fd0171309af7e24cf8dafc8a6f921c1434c49b5f9349bb996b7ed0a4deb8aa7",
+    "start_time_ticks": 141752109,
+    "started_time_ns": 1786942202000041187,
+    "stopped_time_ns": 1786942220794910875,
+    "termination": "supervisor"
+  },
+  "artifacts": {
+    "guest": {
+      "name": "firecracker-claude-guest",
+      "size": 4627077,
+      "mode": 320,
+      "sha256": "d0f7d54f035eb8bf541e8e32f49d3ac055c67093a7f46d21ea6304a8c6a0afad"
+    },
+    "initramfs": {
+      "name": "initramfs",
+      "size": 4628992,
+      "mode": 256,
+      "sha256": "982e91f55b562264e6b0a18d06a510affc22ca61d0ece233c452798e6fa49b17"
+    },
+    "kernel": {
+      "name": "kernel",
+      "size": 44279576,
+      "mode": 256,
+      "sha256": "e20e46d0c36c55c0d1014eb20576171b3f3d922260d9f792017aeff53af3d4f2"
+    },
+    "payload": {
+      "name": "payload",
+      "size": 93650944,
+      "mode": 256,
+      "sha256": "dd3cb7a5b59c2b5a3734e1ca64f07a45f585fb1e1bc5df37d4952e710b79edfb"
+    }
+  }
+}

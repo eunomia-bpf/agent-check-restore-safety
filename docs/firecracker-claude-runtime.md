@@ -80,7 +80,10 @@ latest schema-2 run is retained under `docs/tmp/bootstrap/s21-fc/raw/`.
 
 This is one functional KVM result, not a performance or fleet-management
 claim. The runner does not yet use Firecracker `jailer`, remote attestation,
-or a dedicated host identity. It covers declared MCP Operations, not arbitrary
-Claude built-in tools. The next production step is to place the same host
-boundary behind a normal agent-runtime launcher so process, container, and VM
-isolation become deployment choices rather than separate integrations.
+or a dedicated host identity. This target covers declared MCP Operations. A
+separate target now covers one registered built-in Bash/HTTP action against
+unmodified DeathStarBench across complete VMM loss; see
+`docs/firecracker-deathstar-runtime.md`. Arbitrary tools and protocols remain
+open. The next production step is to place the host boundary behind a normal
+agent-runtime launcher so process, container, and VM isolation become
+deployment choices rather than separate integrations.

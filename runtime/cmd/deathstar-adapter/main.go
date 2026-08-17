@@ -21,11 +21,13 @@ func main() {
 	var mode, listenAddress, frontendURL, auditPath string
 	var mongoURI, mongoDatabase, mongoCollection string
 	var dropFirst bool
+	var postCommitDelay time.Duration
 	flag.StringVar(&mode, "mode", "", "adapter mode: effect or observer")
 	flag.StringVar(&listenAddress, "listen", "127.0.0.1:8090", "HTTP listen address")
 	flag.StringVar(&frontendURL, "frontend", "http://127.0.0.1:5000", "DeathStarBench frontend base URL")
 	flag.StringVar(&auditPath, "audit", "deathstar-adapter.audit.jsonl", "effect delivery audit path")
 	flag.BoolVar(&dropFirst, "drop-first-response", false, "drop the first response after upstream commits")
+	flag.DurationVar(&postCommitDelay, "post-commit-delay", 0, "delay each successful response after its upstream commit")
 	flag.StringVar(&mongoURI, "mongo-uri", "mongodb://127.0.0.1:27017", "reservation MongoDB URI")
 	flag.StringVar(&mongoDatabase, "mongo-database", "reservation-db", "reservation MongoDB database")
 	flag.StringVar(&mongoCollection, "mongo-collection", "reservation", "reservation MongoDB collection")
@@ -39,6 +41,7 @@ func main() {
 	case "effect":
 		service, err := deathstar.OpenEffect(deathstar.EffectConfig{
 			FrontendURL: frontendURL, AuditPath: auditPath, DropFirstResponse: dropFirst,
+			PostCommitDelay: postCommitDelay,
 		})
 		if err != nil {
 			log.Fatal(err)
