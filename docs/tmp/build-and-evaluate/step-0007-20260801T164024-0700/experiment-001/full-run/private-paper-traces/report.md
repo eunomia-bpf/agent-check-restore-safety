@@ -1,308 +1,372 @@
-# Private paper-formation trace audit
+# Private paper-formation trace audit, v3 repaired method
 
 ## Verdict
 
-The private Codex lineage is useful as a **single longitudinal, real-runtime
-case study** of delegation, tool correlation, local mutation, failure markers,
-and outward-looking actions during formation of this paper. It is not a sample
-of 88 independent tasks, and it cannot support an unsafe-history rate or a
-claim that any rollback was safe or unsafe.
+The repaired package supports a **retrospective, fixed-cutoff, single-case
+study** of one author-operated paper-formation lineage.  It can characterize
+the shape of a real Codex workload and the limits of its ordinary telemetry.
+It cannot estimate prevalence, label any history transformation safe or
+unsafe, or validate the paper's proposed safety algorithm.
 
-The older Claude material is metadata-only. Exact recovery found the session
-index but no raw session/action files, so it can establish that earlier paper
-iterations existed and when they ran, but it cannot contribute action, tool,
-failure, fork, or effect counts.
+`summary.json` now uses schema v3 and supersedes both earlier aggregates.
+The v1 counts lacked a pinned boundary and collapsed duplicate IDs.  Independent
+review then found that v2 let timestamp-invalid rows choose the boundary,
+accepted a false spawn trigger, reopened live files across two passes, and did
+not validate output keys.  No v1 or v2 number should be cited.  The corrected
+v3 extraction was performed twice with the same private inputs; both the JSON
+bytes and all source/edge/cutoff commitments were identical.  A fresh
+independent attack then found complete-path schema, targeted-walk error, and
+external-root-parent endpoint gaps.  Those attacks are now maintained
+regressions, the package passes all 60 current tests, and the private paired
+extraction has been refreshed.  This state is ready for final independent
+re-review.  Raw traces remain private and were neither copied nor emitted.
 
-The recommended evidence package is therefore three deliberately unequal
-parts:
+## Evidence design
 
-1. this private Codex lineage for a detailed longitudinal case;
-2. the private Claude index for lifecycle metadata only; and
-3. the already completed public TraceLab audit for broader workload and schema
-   evidence.
+Three evidence layers have different jobs:
 
-Do not pool their denominators or imply that they expose equivalent fields.
+| Evidence layer | Proper role | It does not establish |
+|---|---|---|
+| Private self-hosted Codex lineage | Longitudinal workload shape, fork-log normalization, instrumentation-gap discovery, parser-derived test cases | Population rates, independent replication, safety efficacy, causality, or exactly-once effects |
+| Public TraceLab audit | Reproducible breadth for generic tools, errors, continuations, and ordinary schema fields | Semantic Fork/Restore lineage, authority ownership, effect tickets, or crash-relative ground truth |
+| Synthetic fixtures | Boundary, cutoff, lineage, accounting, determinism, and privacy regressions | Ecological prevalence or runtime safety |
 
-## Frozen selection and evidence contract
+The formal model and controlled runtime fault injection must carry the security
+and algorithm-correctness claims.  Neither observational corpus can do so.
 
-- Unit of analysis: one interactive parent task and its recursive delegated
-  descendants, not individual rollout files as independent tasks.
-- Pre-pilot cutoff: repository commit `5efc4ea`, whose commit timestamp is
-  **2026-08-02T03:11:01Z**.
-- DB selection: the root task plus recursive spawn descendants whose
-  `created_at` is at or before the cutoff.
-- Maximum selected DB `created_at`: epoch `1785639472`, or
-  **2026-08-02T02:57:52Z**.
-- Event selection: each local thread header plus its structurally identified
-  native turn suffix, then events at or before the cutoff.
-- Source is live, but the cutoff and selected-prefix digest freeze the reported
-  prefix. Post-cutoff audit activity is excluded.
-- Content policy: prompt/message text, reasoning text, tool arguments, shell
-  commands, tool-result bodies, raw IDs, raw rollout paths, patch paths, code,
-  credentials, and remote names are neither emitted nor copied.
+## Retrospective selection and commitments
 
-The redacted aggregate is in `summary.json`; the read-only extractor is
-`extract_private_paper_traces.py`.
+- Unit of analysis: one selected root and every recursive spawn descendant
+  whose DB `created_at` is at or before the fixed cutoff.
+- Design: retrospective fixed-cutoff case study, not preregistration and not a
+  statistically sampled task population.
+- The cutoff is derived from a repository commit that predates the current
+  trace pilot.  A Git timestamp is author-controlled chronological evidence,
+  not an external timestamping service.
+- All schema, edge, and thread reads occur inside one read-only SQLite
+  transaction.  The selected graph is checked as a rooted, acyclic,
+  single-parent tree.  Duplicate edges, multiple parents, a selected-root
+  cycle, disconnection, an unknown edge status, or a missing selected endpoint
+  (including the selected root's external parent) fails closed.
+- The v3 output commits with keyed HMAC-SHA-256 to the selected root, the
+  selected edge snapshot (plus any external root-parent edge), and a source
+  manifest containing each private source identity, path, every
+  output-affecting selected DB field, depth, committed byte length, prefix
+  hash, and selected-event hash.
+- The HMAC key is not stored in the repository or published in an anonymous
+  artifact.  These are keyed private-selection commitments, not anonymous
+  proofs.  An external reviewer without the private traces and key cannot
+  recompute them.
+- Spawn edges have no event timestamp, and no immutable SQLite snapshot was
+  retained.  The edge HMAC detects a changed extraction snapshot if the key is
+  available; it does not prove what the edge table contained at cutoff time.
 
-## Crucial source-fidelity finding
+Each selected rollout is read once into an immutable in-memory byte image after
+checking regular-file identity, size, modification time, and change time before
+and after capture.  Boundary discovery, counting, and hashing all use that one
+image.  Eighty-four selected files had no parseable future row and were
+committed at their observed EOF; four stopped at the first parseable future
+timestamp.  An EOF commitment detects a later append across reruns but cannot
+prove when a backdated row was created.  This residual limitation is why the
+result is a committed retrospective extraction snapshot, not a preregistered
+immutable-at-cutoff corpus.
 
-A Codex delegated rollout is not simply an independent JSONL stream. In this
-version it has:
+## Source-grounded native-history boundary
 
-1. a child-local `session_meta` header;
-2. a copied parent-history region, whose timestamps are rewritten close to the
-   fork time; and
-3. the child-native turn, beginning at the last `task_started` before the first
-   `inter_agent_communication_metadata` trigger.
+The original parser used the first inter-agent metadata record as a heuristic.
+That rule is now admitted only under a pinned upstream source contract:
 
-Therefore neither whole-file counting nor “start at the matching session meta”
-is valid. The matching header occurs before the copied region. Timestamp-only
-deduplication is also invalid because copied events receive new timestamps.
+- Codex `rust-v0.145.0`, commit
+  `25af12f7e61572b0bc18ddb1008be543b91519b0`; and
+- Codex `rust-v0.146.0`, commit
+  `e363b08c9175ac1cbe5893615dd2cb9ddf95043b`.
 
-All 88 selected files had exactly one matching local header and a detectable
-structural native boundary. Seventy-eight files contained a nonempty inherited
-region. The extractor excluded **219,142 inherited rows** and retained **39,160
-valid native rows**. The retained prefix has SHA-256
-`ca43ab96d87a4027309fdb46e07b518a0e5682e4816411b5755f472e028b6e25`.
-Two retained rows in two files failed UTF-8 decoding; no bytes or paths are
-reported. These anomalies are trace-integrity facts, not agent failures.
+In both revisions,
+`codex-rs/core/src/agent/control/spawn.rs::keep_forked_rollout_item` excludes
+`InterAgentCommunication` and `InterAgentCommunicationMetadata` when forming
+the copied child history.  For legacy-history, multi-agent-v2 subagent logs,
+the first inter-agent metadata record therefore cannot originate in the copied
+prefix.  It is a source-grounded native marker.  The last `task_started`
+immediately before that marker begins the native child turn.
 
-This correction invalidates the initial whole-file/native-header count of
-258,302 valid rows. No action or lifecycle number from that naive pass is used
-below.
+The extractor validates all of the following before counting a file:
 
-## Exact Codex aggregate at the cutoff
+1. exactly one `session_meta` header matches the local thread ID;
+2. header and DB versions agree and are in the pinned allowlist;
+3. history mode is `legacy`;
+4. subagent provenance is unambiguous and, when present, is v2;
+5. header, structured source, and DB edge agree on the parent; and
+6. the matching header, the last physical local task start before delivery,
+   and the first delivery marker are exact timestamped rows before the cutoff;
+   and
+7. the initial delivery marker has `trigger_turn: true`.
+
+Unsupported versions, paginated history, absent or multiple matching headers,
+ambiguous source shapes, and parent mismatches fail closed.  The current corpus
+does not claim to use a history ordinal: the matching legacy headers do not
+contain one.
+
+Crucially, provenance comes from the matching local header, not selection
+depth.  The real selected root has user provenance and no DB parent; 87
+descendants have subagent provenance.  A synthetic fixture separately proves
+that a selected depth-0 root with an external parent is still normalized as a
+subagent.  This avoids silently counting copied history merely because a
+subagent was chosen as the case-study root.
+
+The real files contain 36 matching headers from 0.145.0 and 52 from 0.146.0;
+all 87 subagent headers are legacy/v2.  Every selected file has exactly one
+matching header and a supported boundary.  Seventy-eight files contain an
+inherited prefix.  The extractor excludes 219,142 inherited rows and retains
+39,160 exact timestamped local rows.
+
+## Cutoff and integrity semantics
+
+The physical stream terminates at the first row with a parseable timestamp
+after the cutoff.  Rows after that point are never reconsidered, even if they
+have a missing, malformed, or older timestamp.  Before the stop point:
+
+- a valid JSON object with a parseable timestamp at or before cutoff is an
+  exact event;
+- invalid UTF-8, invalid JSON, non-object JSON, a missing timestamp, or an
+  unparseable timestamp is an integrity anomaly and is excluded from event
+  counts; and
+- copied-prefix rows are excluded before event interpretation.
+
+The v3 rerun excludes two UTF-8 anomalies.  It contains no selected
+timestamp-less or unparseable-timestamp event because those categories are no
+longer admitted as exact observations.  Aggregate committed-prefix size is
+464,299,277 bytes, represented only through counts and the keyed source
+manifest; no bytes or paths are published.
+
+## Exact v3 Codex aggregate
 
 ### Lineage
 
-- 88 threads and 87 persisted spawn edges.
-- Depths: 1 parent at depth 0, 85 children at depth 1, and 2 children at depth
+- 88 selected threads and 87 selected spawn edges.
+- Depth distribution: one selected root, 85 nodes at depth 1, and two at depth
   2.
-- Creation range: 2026-07-26T22:59:05Z through 2026-08-02T02:57:52Z.
-- All 88 selected records name the same model family; 87 are delegated children
-  and one is the interactive parent.
+- The root has user provenance; 87 selected descendants have subagent
+  provenance.
+- Selection times range from 533,516 seconds before cutoff to 789 seconds
+  before cutoff.  The aggregate uses relative offsets rather than emitting
+  private DB timestamps for every record.
 
-### Tool protocol and orchestration
+These are 88 files in one recursive lineage, not 88 independent tasks.
 
-- 6,064 call events: 4,673 custom calls and 1,391 function calls.
-- 6,064 result events: all result events match a known call ID.
-- There is one call without a result and one second result for a previously
-  matched call. This arithmetic explains why total calls and results are equal;
-  it must not be simplified to “complete one-to-one correlation.”
-- No call ID repeats among call events within a thread.
-- Main call categories: 4,673 execution wrappers, 96 `spawn_agent`, 475
-  `send_message`, 502 `wait_agent`, 160 `list_agents`, 81 execution waits, 35
-  follow-up tasks, 18 web runs, 12 interrupts, and 12 legacy shell calls.
-- The 96 spawn-call events and 87 persisted lineage edges are different
-  observables. A spawn invocation is not itself proof that a durable child edge
-  was created.
+### Tool protocol
 
-### Lifecycle and failure-shaped observations
+- 6,064 raw call events: 4,673 custom calls and 1,391 function calls.
+- All 6,064 calls have string IDs.  The sum of per-thread unique call IDs is
+  6,064, so no call ID repeats within a thread.
+- 6,064 raw result events have string IDs, while the sum of per-thread unique
+  result IDs is 6,063; one result ID is duplicated within a thread.
+- 6,062 within-thread ID groups form strict, kind-compatible
+  one-call/one-result pairs.
+- Two call events and two result events do not belong to a strict one-to-one
+  pair.  The two ambiguous groups correspond to the accounting shapes “call
+  without result” and “one call with two results”; raw-total equality does not
+  imply protocol bijection.
+- There are no singleton call/result kind mismatches.
 
-- 132 task starts, 114 task completions, 13 aborted turns.
-- 47 context-compaction events and 47 corresponding compacted records.
-- 1 UI `thread_rolled_back` event.
-- 604 subagent-activity events and 691 inter-agent metadata records.
-- Across execution-wrapper results, 4,485 contain a standard completion marker,
-  97 contain an explicit failure marker, and 91 use a non-list result shape.
+The strict paired tool totals include 4,671 execution wrappers, 96 spawn calls,
+475 sends, 502 agent waits, 160 agent listings, 81 execution waits, 35 follow-up
+tasks, 18 web calls, 12 interrupts, and 12 legacy shell calls.  A tool-call ID
+correlates trace records; it is not a durable operation ticket, consumed
+authority claim, or external receipt.
 
-These are protocol observations. Context compaction is not checkpoint/restore;
-the UI rollback event is not a semantic Restore; an explicit tool failure is
-not a crash-after-effect; and the trace provides no stable operation identity
-with which to identify retries safely.
+Among the 4,671 strictly paired execution results, 4,484 have a standard
+completion marker, 97 an explicit failure marker, and 90 a non-list shape.
+These are wrapper-level observations, not crash-relative effect outcomes.
 
-### Workspace and outward-looking action shapes
+### Lifecycle, workspace, and outward-looking shapes
 
-- 752 `patch_apply_end` events report success, covering 899 aggregate change
-  entries. This is repeated mutation activity, not 899 unique files.
-- Lexical execution-wrapper classifiers found 1,668 build/test wrappers, 772
-  shell-mutation wrappers, 327 Git-inspection wrappers, 599 network/download
-  wrappers, 46 process/service wrappers, and 29 database wrappers. Categories
-  overlap.
-- There are 15 wrappers containing Git-commit syntax and 14 containing Git-push
-  syntax. Result markers are available for 14 and 13 respectively: each group
-  has one explicit failure marker; 13 commit wrappers and 12 push wrappers have
-  a standard completion marker. A standard wrapper completion is still not a
-  remote durability receipt.
-- The repository currently exposes 12 reachable commits in the case window and
-  71 reachable commits across all refs. This is independent repository outcome
-  evidence, not a causal mapping from a wrapper to a commit or proof of a
-  successful remote push.
+- 132 task starts, 114 task completions, and 13 aborted turns.
+- 47 context-compaction events and 47 compacted records.
+- One UI `thread_rolled_back` record.
+- 604 subagent-activity and 691 inter-agent metadata records.
+- 752 successful patch-completion records covering 899 aggregate change
+  entries.
 
-Lexical counts are conservative telemetry shapes, not executed-effect counts.
-They may match syntax in a wrapper containing multiple nested operations; the
-extractor never emits the underlying command.
+Lexical wrapper classifiers find 1,668 build/test wrappers, 772 shell-mutation
+wrappers, 327 Git-inspection wrappers, 599 network/download wrappers, 46
+process/service wrappers, and 29 database wrappers.  Categories overlap.  The
+15 Git-commit and 14 Git-push lexical wrappers are syntax shapes, not proved
+commits or remote durability receipts.  Result-marker counts are reported only
+for strict one-to-one call/result groups.
 
-## Exact Claude recovery result
+Context compaction is not checkpoint/restore.  The UI rollback event is not a
+semantic Restore.  A spawn invocation is not itself a persisted child edge.
+Patch change entries are not unique files.  None of these observations label a
+safety violation.
 
-The old paper-project index has 45 unique, non-sidechain entries and an index
-message-count sum of 180. Entries span 2026-01-30T07:38:06.713Z through
-2026-02-03T08:59:53.590Z; the latest index modification is
-2026-02-03T08:59:55.908Z.
+## Claude metadata result
 
-Recovery was exact-ID based:
+The explicitly supplied historical Claude project index contains 45 unique,
+non-sidechain entries and a message-count sum of 180.  None of its 45 declared
+raw paths exists.  Exact-ID recovery is implemented in Python so private IDs
+never appear in an `rg` command or any child-process argument.
 
-- 0 of 45 declared raw paths exist;
-- an exhaustive filename/path-component scan under the user home found 0 exact
-  ID candidates and observed no walk errors;
-- all 11 Claude project indices parsed; only the target index references these
-  IDs;
-- project content search found only the target index, not a raw JSONL;
-- backup, file-history, debug, session, task, todo, shell-snapshot, telemetry,
-  usage, plugin, cache, job, daemon, and IDE stores yielded no exact-ID raw
-  candidate;
-- prompt-history metadata references 6 of the 45 IDs, but it contains no usable
-  tool/action lineage.
+Targeted project, backup, file-history, auxiliary-store, and history-index
+scans recover no provenance-valid raw action corpus; only the target metadata
+index and six prompt-history ID references remain.  The global filename walk
+finds no exact-ID node in the traversed portion but records four walk errors,
+so it is not an exhaustive proof of absence.  The targeted content scans and
+project-index enumeration record zero traversal/open/read errors in this run;
+the extractor exposes those errors explicitly when they occur.
 
-Fuzzy path or content hits were excluded because they do not establish session
-provenance. Consequently Claude contributes no tool, mutation, retry, fork, or
-external-effect statistic.
+Claude therefore contributes lifecycle metadata only.  It contributes no tool,
+mutation, retry, fork, failure, or external-effect count.
 
-## Mapping to the three state planes
+## Mapping to the paper's three state planes
 
-| State plane | What this trace exposes | What is still missing |
+| State plane | Ordinary telemetry exposed in this case | Missing typed evidence |
 |---|---|---|
-| Reconstructable workspace state | `world_state` records, patch completion records, patch change cardinality, and Git/workspace command shapes | A declared checkpoint manifest, complete resource closure, snapshot version, and proof that every reconstructable resource was captured |
-| Durable controller/authority state | Persisted parent-child edges, thread identity, task start/complete/abort, goal updates, compactions, one UI rollback, and call/result correlation | Monotone grant/claim epochs, owner and root-slot bindings, plan hash/version, closed-branch facts, authority provenance, consumed claims, and restore admission records |
-| External reality | Outward-looking wrapper shapes and returned wrapper markers; current reachable Git history | Stable protected-operation identity, prepared/dispatched/settled phase, remote before/after state, durable receipt, idempotency or compensation contract, and crash-relative effect boundary |
+| Reconstructable workspace | world-state records, patch completion and cardinality, Git/workspace wrapper shapes | checkpoint manifest, resource closure, snapshot version, proof every reconstructable resource was captured |
+| Durable controller and authority | persisted topology, thread/task lifecycle, compaction, goal updates, call/result correlation | owner/root/token lineage, monotone epochs, plan hash/version, consumed claims, branch closure, Restore admission certificate |
+| External reality | outward-looking wrapper syntax, wrapper markers, current repository outcomes | stable protected-operation identity, prepared/dispatched/settled phase, idempotency key, durable receipt, reconciliation or compensation result |
 
-The case directly demonstrates why a workspace snapshot is not the agent's
-complete security state: the same lineage also has controller topology and
-external-operation evidence, neither of which is reconstructed by restoring
-files.
+The case illustrates why restoring files is not restoration of the complete
+agent security state.  It does not contain a controlled checkpoint/restore
+pair and therefore cannot show that a particular workspace restore lost
+controller or external state.
 
-## Mapping to Plan / Fork / Restore / Prepare / ticket
+## Claims permitted and forbidden
 
-- **Plan:** four goal-update records exist, but there is no authoritative plan
-  graph, target-plan assertion, plan hash/version, owner/root binding, or proof
-  that a resumed action belongs to the currently admitted plan.
-- **Fork:** 87 persisted spawn edges provide real topology, and copied history
-  makes fork provenance operationally visible. The records do not establish a
-  capability split, grant conservation, resource closure, or branch epoch.
-- **Restore:** one UI rollback and 47 compactions exist, but neither encodes a
-  checkpoint ID, a restoration cut, restored resources, target version,
-  authority validation, or external reconciliation. They cannot instantiate
-  the formal Restore transition.
-- **Prepare:** no durable prepare boundary or admission certificate is present.
-  Ordinary “about to call a tool” history is not a crash-stable Prepare record.
-- **Ticket:** call IDs correlate invocations and results, including one missing
-  result and one duplicate result. They do not bind retries to a stable
-  protected operation, survive restore as consumed claims, name an effect
-  phase, or carry a durable receipt. A call ID is therefore not the paper's
-  effect ticket.
+After repair, the private case may support only these paper-facing claims:
 
-## What can and cannot be reported
+- one real paper-formation task used a recursive delegation lineage of the
+  reported shape;
+- pinned legacy child logs copied parent history and required
+  provenance-aware normalization;
+- the analyzed records exposed topology, local mutation, lifecycle, wrapper,
+  and call/result shapes, but did not jointly expose the typed fields needed by
+  the formal plan/token/effect admission predicate; and
+- copied history representation is not a duplicated occurrence of authority or
+  an external effect.
 
-Safe, reproducible claims:
+It cannot support:
 
-- one paper-formation task used a real recursive delegation lineage of the
-  stated size and depth;
-- native histories contain the exact aggregate lifecycle/tool/workspace shapes
-  above;
-- full-history child logs require structural deduplication;
-- ordinary telemetry correlates calls/results and records some topology,
-  failures, compactions, local mutations, and outward-looking action shapes;
-- the schema lacks the authority and effect fields required to reconstruct the
-  formal admission decision.
-
-Unsupported claims:
-
-- prevalence across users, projects, agents, or 88 independent tasks;
+- prevalence across users, projects, agents, or independent tasks;
 - an unsafe-restore, duplicate-effect, retry, or rollback-safety rate;
-- exactly-once effects, successful remote durability, or full rollback;
-- authority conservation, capability non-amplification, or Plan validity;
-- causality between multi-agent orchestration and paper quality or safety;
-- equivalence between the private Codex case, private Claude metadata, and a
-  public normalized dataset.
+- authority conservation, discrete-token linearity, Plan validity, or
+  exactly-once external effects;
+- causal benefit from multi-agent paper writing; or
+- equivalence between private Codex, private Claude metadata, and TraceLab.
 
-## Relation to the public TraceLab evidence
+The schema claim must remain narrow: **the analyzed records did not jointly
+expose the typed fields needed by the formal admission decision**.  The
+extractor does not prove that every unexamined product field or future runtime
+version lacks such information.
 
-The separate pinned TraceLab v0.0.2 audit reports 665,453 rounds, 8,058 sessions
-from 52 deduplicated users, and 743,819 tool records, including 35,453 marked
-errors and 75,488 process-continuation records. That corpus supplies broader
-workload and ordinary-schema evidence. It still lacks trusted semantic
-Fork/Restore parentage, grant/capability lineage, protected-effect phase,
-durable receipts, and a crash-relative external-effect boundary.
+## Privacy and double-blind handling
 
-Use TraceLab for breadth and this private Codex lineage for longitudinal
-mechanism shape. Keep Claude metadata as historical context only. The public
-audit is at
-`docs/tmp/writing/step-0005-20260801T150830-0700/trace-dataset-scout/trace-dataset-audit.md`.
+- The extractor has no author-specific Claude path default.  The index path is
+  an explicit private argument and is never emitted.
+- Raw root, thread, session, call, result, rollout, workspace, and Claude IDs
+  remain in memory only.  Exact-ID content scanning is in-process.
+- Every emitted dictionary key and string value is checked against a
+  path-sensitive output schema.  The cutoff timestamp is allowed only in its
+  named field, and 64-hex values only in named HMAC fields; public pinned
+  source commits are exact allowlisted constants.  Unknown event, payload,
+  tool, model, and effort values fold to `other`.
+- Privacy tests reject UUID-shaped values, private paths, and arbitrary free
+  strings.  Prompts, commands, code, result bodies, patch paths, credentials,
+  and remote names are never output fields.
+- Raw traces and the HMAC key are not release artifacts.  The private aggregate
+  is author-produced and cannot be independently reconstructed by reviewers.
 
-## Concrete extraction, tests, and runtime instrumentation
+Before an anonymous submission, scrub repository history and decide whether
+the exact cutoff timestamp, official-runtime combination, HMACs, and distinctive
+count vector should appear in the artifact.  The paper can report rounded or
+selected workload facts and disclose that the raw private case is unavailable.
+An ethics/data statement should cover author ownership, incidental third-party
+content, minimization, access, retention, and non-release.
 
-### Reproducible local pipeline
+## Regression suites and replay result
 
-1. Resolve the cutoff from the pinned repository commit timestamp.
-2. Open the Codex SQLite store in read-only mode and recursively select the root
-   lineage at that cutoff.
-3. For every child, retain the local header, identify the structural native
-   boundary, discard the copied parent region, and time-filter only the native
-   region.
-4. Parse enums and IDs in memory; emit whitelisted counts only. Classify wrapper
-   source lexically without emitting it.
-5. Join calls/results within each thread; separately count missing and duplicate
-   results.
-6. Audit Claude only by exact indexed IDs; stop at metadata when raw provenance
-   cannot be recovered.
-7. Run privacy assertions and emit JSON to stdout. Never copy raw trace rows.
+The 23 maintained synthetic tests, 16 prior independent attacks, and 21 fresh
+independent attacks contain no real IDs, prompts, commands, paths, or result
+bodies.  Together they cover:
 
-### Tests to retain
+- both pinned source versions and copied-history exclusion;
+- unsupported source version and multi-agent version fail-closed behavior;
+- a selected root that is itself an externally parented subagent, including
+  rejection of a missing external-parent endpoint;
+- zero and multiple matching local headers;
+- invalid UTF-8, missing and malformed timestamps, and physical future-stop
+  behavior, including older or malformed rows after the stop;
+- timestamp-invalid boundary rows, false initial triggers, and concurrent file
+  mutation during snapshot capture;
+- duplicate call IDs, non-string IDs, duplicate result IDs, and call/result
+  kind mismatch accounting;
+- multi-parent and cyclic lineage rejection;
+- depth/edge/event/call arithmetic;
+- fixed-fixture byte determinism; and
+- complete-path key/value/digest schemas plus path/UUID/free-string denial;
+- commitment of DB fields that normalize to the same public label; and
+- missing or malformed declared Claude-index fail-closed behavior without
+  guessing another source, canonical nonempty session IDs, and explicit file,
+  targeted-directory, global-walk, and project-index-enumeration errors.
 
-The three synthetic regression tests in
-`test_extract_private_paper_traces.py` implement the core cases below without
-embedding any private trace content. They pass under Python 3.12.
+Validation command and result:
 
-- Synthetic fixture with `local header -> copied parent -> task_started ->
-  trigger -> child native events`; assert copied calls are not counted.
-- Variants for no-history forks, depth-2 forks, multiple copied session headers,
-  invalid UTF-8, an out-of-cutoff append, a missing result, and a duplicate
-  result.
-- Arithmetic assertions: depth counts sum to threads; edges equal selected
-  non-root nodes; selected top-level event counts sum to selected valid rows;
-  call/result mismatch arithmetic is explicit.
-- Determinism test at a fixed cutoff. Two consecutive core replays produced the
-  same SHA-256:
-  `a1a1b7548471ab2d9e73dfba577e3607f5ffa8f515f0620807cb15befe97c105`.
-- Privacy denylist over all emitted string values: no root/session/thread ID,
-  UUID-shaped value, home path, prompt, message, command, code, result body,
-  patch path, credential, or remote name.
+```text
+python -m py_compile extract_private_paper_traces.py \
+  test_extract_private_paper_traces.py recheck/test_recheck_adversarial.py \
+  recheck-v3/test_recheck_v3_adversarial.py
+python -m unittest -v test_extract_private_paper_traces.py \
+  recheck/test_recheck_adversarial.py \
+  recheck-v3/test_recheck_v3_adversarial.py
 
-### Minimum runtime telemetry contract
+Ran 60 tests — OK
+```
 
-For an industrial adapter, add durable records rather than trying to infer them
-from prose or commands:
+The private v3 extraction was executed twice serially with one fixed cutoff,
+one temporary root input, and one temporary HMAC key.  Every rollout was
+captured into one in-memory byte image per invocation.  The two output
+SHA-256 values are both
+`ae4d362b7f4ccc0ae2dedaca703bccc3d9b47fc7b9e8ca40301415040f5ad5a7`;
+the source-manifest, edge, and cutoff HMACs also agree pairwise.  Both return
+codes were zero.  `replay-evidence-v3.json` records these content-free facts
+and the extractor digest.  The temporary root and key were deleted
+automatically; no private path, identifier, HMAC value, or key is retained.
 
-- common envelope: runtime task ID, monotone event sequence, durable controller
-  version, parent event, wall-clock time, and schema version;
-- Plan: immutable plan ID/hash/version, node ID, owner, root slot, required
-  capabilities/resources, and plan-validity certificate;
-- Fork: parent/child branch IDs, generation/epoch, exact snapshot manifest,
-  authority split/grants, and resource-closure digest;
-- Restore: checkpoint ID, target branch/version, restored resource manifest,
-  current-vs-checkpoint controller comparison, rejected reason, and admission
-  certificate;
-- Prepare/ticket: stable protected-operation ID, ticket ID, idempotency key,
-  claim/grant provenance, operation class, and precondition digest;
-- effect lifecycle: `prepared`, `dispatched`, `uncertain`, `settled`, or
-  `compensated`, plus effect-specific durable receipt and reconciliation result;
-- completion: post-state version, consumed-claim record, branch closure, and
-  commit/abort reason.
+A local private rerun requires explicit inputs; placeholders below are not
+artifact paths:
 
-This instrumentation would let a runtime check the paper's admission algorithm
-online and let an offline checker distinguish “unknown” from “safe” or
-“violating.” The current traces can only motivate and test the parser around
-that contract; they cannot retroactively supply the missing security state.
+```text
+python extract_private_paper_traces.py \
+  --root-thread-id-file <private-root-input> \
+  --commitment-key-file <untracked-private-key> \
+  --claude-index <explicit-private-index> \
+  --repo <paper-repository> \
+  --cutoff-commit <fixed-cutoff-commit>
+```
 
 ## Method retrospective
 
-The first parser assumed that a matching child `session_meta` began the native
-suffix. Direct schema inspection falsified that assumption: the local header is
-prepended before copied history. The correction changed the valid-row
-denominator from 258,302 to 39,160. This is a general extractor failure mode
-worth preserving as a regression test: **forked full-history logs require an
-explicit provenance/boundary contract, not ID- or timestamp-only deduplication**.
+The initial matching-header parser overcounted copied history.  A second parser
+used an unpinned first-metadata heuristic and unstable malformed-row cutoff.
+V2 grounded the fork boundary but independent review found invalid boundary
+timestamps, a false-trigger hole, live-file TOCTOU, and incomplete privacy
+validation.  V3 changes the scientific contract rather than merely patching
+counts:
 
-No raw trace and no canonical paper/document file was modified. No skill or
-runtime change is proposed from this single case without an independent replay
-fixture and checker-backed acceptance test.
+1. bind the boundary to supported upstream source revisions;
+2. decide normalization from local provenance, not selected depth;
+3. require exactly one matching header and consistent DB/header parentage;
+4. capture one stable byte image per rollout and require exact timestamped,
+   true-trigger boundary records from that same image;
+5. stop the physical prefix at the first future timestamp and exclude all
+   timestamp anomalies from exact events;
+6. validate the lineage tree and commit root/edge/source plus every
+   output-affecting selected DB field privately;
+7. separate raw event, string-ID, unique-ID, duplicate-ID, and strict
+   kind-compatible one-to-one counts; and
+8. enforce a path-sensitive output schema over keys, values, timestamps, and
+   digests.
+
+The reusable lesson is narrow but important: **forked full-history agent logs
+need a versioned provenance contract.  History representation, authority
+lineage, and external-effect occurrence are different objects and must not be
+collapsed by a trace parser.**

@@ -1,0 +1,8 @@
+import AuthorityContinuity.PlanScheduleArithmetic
+
+#print axioms AuthorityContinuity.PlanScheduleArithmetic.totalE_zero
+#print axioms AuthorityContinuity.PlanScheduleArithmetic.priorP_zero
+#print axioms AuthorityContinuity.PlanScheduleArithmetic.initial_phaseBound
+#print axioms AuthorityContinuity.PlanScheduleArithmetic.phaseBound_of_before_le_and_after_zero
+#print axioms AuthorityContinuity.PlanScheduleArithmetic.E_le_P_of_partition
+#print axioms AuthorityContinuity.PlanScheduleArithmetic.durable_add_request_le_cap

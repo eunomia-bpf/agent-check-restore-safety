@@ -1,0 +1,20 @@
+{
+  "schema": "private-paper-trace-replay-evidence-v1",
+  "extractor_sha256": "38e7b7ec39b78ab9299277b9fec545a65450b77975b499f7856afa641e7756a4",
+  "python": "3.12.3",
+  "return_codes": [
+    0,
+    0
+  ],
+  "output_sha256": [
+    "ae4d362b7f4ccc0ae2dedaca703bccc3d9b47fc7b9e8ca40301415040f5ad5a7",
+    "ae4d362b7f4ccc0ae2dedaca703bccc3d9b47fc7b9e8ca40301415040f5ad5a7"
+  ],
+  "byte_identical": true,
+  "source_manifest_hmac_identical": true,
+  "edge_manifest_hmac_identical": true,
+  "cutoff_commit_hmac_identical": true,
+  "input_handling": "same temporary root input and HMAC key; every rollout independently captured once into an immutable in-memory byte image per invocation",
+  "private_material_retained": false,
+  "artifact_note": "This record contains no path, identifier, command, HMAC value, or key. Withhold it together with the exact private summary from a double-blind artifact because the output digest can still fingerprint the case."
+}

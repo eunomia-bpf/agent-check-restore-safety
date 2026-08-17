@@ -1,0 +1,431 @@
+import AuthorityContinuity.Step
+import AuthorityContinuity.TopologyExamples
+
+/-!
+# Step 0007 thin vertical preflight candidate
+
+This is an uncompiled candidate kept outside the Lake source glob.  It uses the
+existing finite replacing-Restore fixture, computes the child batch and root
+slot from the checked transfer, consumes an authoritative plan head in the
+same abstract transition as the exact `prepareState`, then stutters that plan
+over the real Revoke and ticket-only Dispatch rules.
+
+There are deliberately no target-invariant premises, caller-supplied target
+slot maps, `sorry`, `admit`, or axioms in this candidate.
+-/
+
+namespace AuthorityContinuity.PlanPreflight
+
+open LifecycleState
+
+abbrev Coord := AuthorityContinuity.TopologyExamples.Coord
+abbrev Claim := AuthorityContinuity.TopologyExamples.Claim
+abbrev Branch := AuthorityContinuity.TopologyExamples.Branch
+abbrev Grant := AuthorityContinuity.TopologyExamples.Grant
+abbrev Operation := AuthorityContinuity.TopologyExamples.Operation
+abbrev Slot := Fin 1
+
+def rootSlot : Slot := 0
+
+def sourceBatch : Finset Claim :=
+  {AuthorityContinuity.TopologyExamples.Claim.source}
+
+/-- The target batch is computed from the current batch and `rho`; an adapter
+cannot submit an independently chosen target batch. -/
+def computedChildBatch (U : Finset Claim) (tr : Transfer Claim Branch) :
+    Finset Claim :=
+  Finset.univ.filter fun c' =>
+    ∃ c ∈ U, tr.rho c' = some c
+
+/-- Initial root assignment.  The preflight has one scheduled root slot. -/
+def sourceRootSlot (c : Claim) : Option Slot :=
+  if c ∈ sourceBatch then some rootSlot else none
+
+/-- Root assignment after a transfer is a function of the old assignment and
+`rho`, never a field supplied by the topology caller. -/
+def inheritedRootSlot (tr : Transfer Claim Branch)
+    (old : Claim → Option Slot) (c' : Claim) : Option Slot :=
+  (tr.rho c').bind old
+
+def restored : LifecycleState Coord Claim Branch Grant Operation :=
+  canonicalTarget AuthorityContinuity.TopologyExamples.source
+    AuthorityContinuity.TopologyExamples.replaceTransfer
+    (.replaceRestore AuthorityContinuity.TopologyExamples.Branch.parent
+      AuthorityContinuity.TopologyExamples.Branch.right)
+
+theorem restore_checked :
+    checkCanonical AuthorityContinuity.TopologyExamples.source
+      AuthorityContinuity.TopologyExamples.replaceTransfer
+      (.replaceRestore AuthorityContinuity.TopologyExamples.Branch.parent
+        AuthorityContinuity.TopologyExamples.Branch.right) = true :=
+  AuthorityContinuity.TopologyExamples.replace_restore_admission_accepts
+
+/-- The two concrete finite sets below are computed by independent definitions,
+but both reduce to the checked transfer fiber of the source claim. -/
+def computedRootFiber : Finset Claim :=
+  Finset.univ.filter fun c' =>
+    inheritedRootSlot AuthorityContinuity.TopologyExamples.replaceTransfer
+      sourceRootSlot c' = some rootSlot
+
+theorem computed_root_fiber_is_checked_fiber :
+    computedRootFiber =
+      Finset.univ.filter fun c' =>
+        AuthorityContinuity.TopologyExamples.replaceTransfer.rho c' =
+          some AuthorityContinuity.TopologyExamples.Claim.source := by
+  native_decide
+
+theorem computed_child_batch_is_checked_fiber :
+    computedChildBatch sourceBatch
+      AuthorityContinuity.TopologyExamples.replaceTransfer =
+      Finset.univ.filter fun c' =>
+        AuthorityContinuity.TopologyExamples.replaceTransfer.rho c' =
+          some AuthorityContinuity.TopologyExamples.Claim.source := by
+  native_decide
+
+theorem computed_restore_batch_and_root :
+    computedChildBatch sourceBatch
+        AuthorityContinuity.TopologyExamples.replaceTransfer =
+        ({AuthorityContinuity.TopologyExamples.Claim.leftFragment} :
+          Finset Claim) ∧
+      inheritedRootSlot AuthorityContinuity.TopologyExamples.replaceTransfer
+        sourceRootSlot AuthorityContinuity.TopologyExamples.Claim.leftFragment =
+          some rootSlot := by
+  native_decide
+
+/-- `R` comes from the actual `CoreValid.fiber_demand` theorem emitted by the
+real canonical checker, not from a target-bound premise. -/
+theorem computed_root_R_bound (k : Coord) :
+    (∑ c' ∈ computedRootFiber, restored.auth.demand c' k) ≤
+      AuthorityContinuity.TopologyExamples.source.auth.demand
+        AuthorityContinuity.TopologyExamples.Claim.source k := by
+  have hvalid := checkCanonical_sound
+    AuthorityContinuity.TopologyExamples.source
+    AuthorityContinuity.TopologyExamples.replaceTransfer
+    (.replaceRestore AuthorityContinuity.TopologyExamples.Branch.parent
+      AuthorityContinuity.TopologyExamples.Branch.right) restore_checked
+  rw [computed_root_fiber_is_checked_fiber]
+  simpa [restored, canonicalTarget, Transfer.targetCore] using
+    hvalid.transfer.toCoreValid.fiber_demand
+      AuthorityContinuity.TopologyExamples.Claim.source k
+
+/-- The promoted-batch (`P`) bound is separately stated over the child batch
+computed from `sourceBatch` and `rho`.  The source batch is a singleton here,
+so the same checked claim-fiber theorem discharges the finite sum. -/
+theorem computed_child_batch_P_bound (k : Coord) :
+    (∑ c' ∈ computedChildBatch sourceBatch
+        AuthorityContinuity.TopologyExamples.replaceTransfer,
+        restored.auth.demand c' k) ≤
+      ∑ c ∈ sourceBatch,
+        AuthorityContinuity.TopologyExamples.source.auth.demand c k := by
+  have hvalid := checkCanonical_sound
+    AuthorityContinuity.TopologyExamples.source
+    AuthorityContinuity.TopologyExamples.replaceTransfer
+    (.replaceRestore AuthorityContinuity.TopologyExamples.Branch.parent
+      AuthorityContinuity.TopologyExamples.Branch.right) restore_checked
+  rw [computed_child_batch_is_checked_fiber]
+  simpa [restored, canonicalTarget, Transfer.targetCore, sourceBatch] using
+    hvalid.transfer.toCoreValid.fiber_demand
+      AuthorityContinuity.TopologyExamples.Claim.source k
+
+/-! ## Authoritative controller head -/
+
+structure PlanHead where
+  version : Nat
+  currentSlot : Slot
+  remaining : Finset Claim
+  rootOf : Claim → Option Slot
+  R : Slot → Coord → Nat
+  P : Slot → Coord → Nat
+
+structure ControllerState where
+  lifecycle : LifecycleState Coord Claim Branch Grant Operation
+  plan : PlanHead
+
+def initialPlan : PlanHead where
+  version := 0
+  currentSlot := rootSlot
+  remaining := sourceBatch
+  rootOf := sourceRootSlot
+  R := fun _ _ => 2
+  P := fun _ _ => 2
+
+/-- Topology transport advances the unique controller version and computes the
+new batch from the old batch and the checked transfer. -/
+def transportPlan (h : PlanHead) (tr : Transfer Claim Branch) : PlanHead where
+  version := h.version + 1
+  currentSlot := h.currentSlot
+  remaining := computedChildBatch h.remaining tr
+  rootOf := inheritedRootSlot tr h.rootOf
+  R := h.R
+  P := h.P
+
+def canonicalControllerTarget (S : ControllerState)
+    (tr : Transfer Claim Branch) (op : CanonicalOp Branch) : ControllerState where
+  lifecycle := canonicalTarget S.lifecycle tr op
+  plan := transportPlan S.plan tr
+
+/-- Exact head check used only at Prepare.  It checks both the offered version
+and that the submitted group is the authoritative current head group. -/
+def checkPrepareHead (S : ControllerState) (offeredVersion : Nat)
+    (U : Finset Claim) : Bool :=
+  decide (offeredVersion = S.plan.version) &&
+    decide (U = S.plan.remaining)
+
+theorem checkPrepareHead_sound (S : ControllerState) (offeredVersion : Nat)
+    (U : Finset Claim) (h : checkPrepareHead S offeredVersion U = true) :
+    offeredVersion = S.plan.version ∧ U = S.plan.remaining := by
+  simpa [checkPrepareHead, Bool.and_eq_true] using h
+
+def advancePlan (h : PlanHead) (U : Finset Claim) : PlanHead where
+  version := h.version + 1
+  currentSlot := h.currentSlot
+  remaining := h.remaining \ U
+  rootOf := fun c => if c ∈ U then none else h.rootOf c
+  R := h.R
+  P := h.P
+
+/-- The lifecycle target is definitionally the repository's exact
+`prepareState`; head consumption and version advance occur in the same abstract
+controller transition. -/
+def preparePlannedTarget (S : ControllerState) (U : Finset Claim)
+    (assignment : Operation → Option Claim) : ControllerState where
+  lifecycle := prepareState S.lifecycle U assignment
+  plan := advancePlan S.plan U
+
+def revokeControllerTarget (S : ControllerState) (g : Grant) : ControllerState where
+  lifecycle := revokeState S.lifecycle g
+  plan := S.plan
+
+def ticketControllerTarget (S : ControllerState)
+    (A' : LifecycleState Coord Claim Branch Grant Operation) : ControllerState where
+  lifecycle := A'
+  plan := S.plan
+
+/-- Canonical topology changes also compare the offered durable head before
+computing both lifecycle and plan targets. -/
+def checkCanonicalPlanned (S : ControllerState) (offeredVersion : Nat)
+    (tr : Transfer Claim Branch) (op : CanonicalOp Branch) : Bool :=
+  decide (offeredVersion = S.plan.version) &&
+    checkCanonical S.lifecycle tr op
+
+theorem checkCanonicalPlanned_sound (S : ControllerState)
+    (offeredVersion : Nat) (tr : Transfer Claim Branch)
+    (op : CanonicalOp Branch)
+    (h : checkCanonicalPlanned S offeredVersion tr op = true) :
+    offeredVersion = S.plan.version ∧
+      checkCanonical S.lifecycle tr op = true := by
+  simpa [checkCanonicalPlanned, Bool.and_eq_true] using h
+
+/-- The Prepare constructor consumes only a successful executable check.  The
+actual `PrepareOK` is recovered by checker soundness in the projection proof;
+it is not a constructor premise. -/
+def checkPreparePlanned (S : ControllerState) (offeredVersion : Nat)
+    (U : Finset Claim) (assignment : Operation → Option Claim) : Bool :=
+  checkPrepareHead S offeredVersion U &&
+    decide (PrepareOK S.lifecycle U assignment)
+
+theorem checkPreparePlanned_sound (S : ControllerState)
+    (offeredVersion : Nat) (U : Finset Claim)
+    (assignment : Operation → Option Claim)
+    (h : checkPreparePlanned S offeredVersion U assignment = true) :
+    (offeredVersion = S.plan.version ∧ U = S.plan.remaining) ∧
+      PrepareOK S.lifecycle U assignment := by
+  have hparts : checkPrepareHead S offeredVersion U = true ∧
+      decide (PrepareOK S.lifecycle U assignment) = true := by
+    simpa [checkPreparePlanned, Bool.and_eq_true] using h
+  exact ⟨checkPrepareHead_sound S offeredVersion U hparts.1,
+    of_decide_eq_true hparts.2⟩
+
+def checkPlanComplete (S : ControllerState) : Bool :=
+  decide (S.plan.remaining = ∅)
+
+theorem checkPlanComplete_sound (S : ControllerState)
+    (h : checkPlanComplete S = true) : S.plan.remaining = ∅ := by
+  exact of_decide_eq_true h
+
+/-- Minimal generated controller relation.  Every lifecycle target is computed
+by an existing operation.  In particular, no constructor accepts target
+`LWF`, `AC`, `PrepareOK`, or plan-validity evidence. -/
+inductive PlannedStep :
+    ControllerState → Label Operation Claim → ControllerState → Prop where
+  | canonical (S : ControllerState) (offeredVersion : Nat)
+      (tr : Transfer Claim Branch)
+      (op : CanonicalOp Branch)
+      (checked : checkCanonicalPlanned S offeredVersion tr op = true) :
+      PlannedStep S .tau (canonicalControllerTarget S tr op)
+  | prepareHead (S : ControllerState) (offeredVersion : Nat)
+      (U : Finset Claim) (assignment : Operation → Option Claim)
+      (checked : checkPreparePlanned S offeredVersion U assignment = true) :
+      PlannedStep S .tau (preparePlannedTarget S U assignment)
+  | revokeComplete (S : ControllerState) (g : Grant)
+      (checked : checkPlanComplete S = true) :
+      PlannedStep S .tau (revokeControllerTarget S g)
+  | ticket (S : ControllerState)
+      {A' : LifecycleState Coord Claim Branch Grant Operation}
+      {eta : Label Operation Claim}
+      (step : TicketStep S.lifecycle eta A') :
+      PlannedStep S eta (ticketControllerTarget S A')
+
+/-- The wrapper is a genuine refinement of the repository's authoritative
+`Step`; it cannot fabricate a lifecycle edge. -/
+theorem plannedStep_projects_to_actualStep
+    {S S' : ControllerState} {eta : Label Operation Claim}
+    (h : PlannedStep S eta S') : Step S.lifecycle eta S'.lifecycle := by
+  cases h with
+  | canonical S offeredVersion tr op checked =>
+      exact Step.canonical tr op
+        (checkCanonicalPlanned_sound S offeredVersion tr op checked).2
+  | prepareHead S offeredVersion U assignment checked =>
+      exact Step.core (CoreStep.prepare
+        (checkPreparePlanned_sound S offeredVersion U assignment checked).2)
+  | revokeComplete S g checked =>
+      exact Step.core (CoreStep.revoke S.lifecycle g)
+  | ticket S step => exact Step.core (CoreStep.ticket step)
+
+/-! ## The retained end-to-end replacing-Restore fixture -/
+
+def C0 : ControllerState where
+  lifecycle := AuthorityContinuity.TopologyExamples.source
+  plan := initialPlan
+
+def C1 : ControllerState :=
+  canonicalControllerTarget C0
+    AuthorityContinuity.TopologyExamples.replaceTransfer
+    (.replaceRestore AuthorityContinuity.TopologyExamples.Branch.parent
+      AuthorityContinuity.TopologyExamples.Branch.right)
+
+theorem actual_restore_step : PlannedStep C0 .tau C1 :=
+  PlannedStep.canonical C0 0
+    AuthorityContinuity.TopologyExamples.replaceTransfer
+    (.replaceRestore AuthorityContinuity.TopologyExamples.Branch.parent
+      AuthorityContinuity.TopologyExamples.Branch.right) (by native_decide)
+
+theorem transported_head_is_computed :
+    C1.plan.version = 1 ∧
+      C1.plan.remaining =
+        ({AuthorityContinuity.TopologyExamples.Claim.leftFragment} :
+          Finset Claim) := by
+  native_decide
+
+def prepareGroup : Finset Claim := C1.plan.remaining
+
+def operation : Operation := 0
+
+def assignment (e : Operation) : Option Claim :=
+  if e = operation then
+    some AuthorityContinuity.TopologyExamples.Claim.leftFragment
+  else none
+
+/-- This executable Boolean checks only assignment fields; the live/open/base
+fields are derived separately when constructing real `PrepareOK`. -/
+def assignmentFacts : Prop :=
+  (∀ e c, assignment e = some c → c ∈ prepareGroup) ∧
+  (∀ c ∈ prepareGroup, ∃ e, assignment e = some c) ∧
+  (∀ e e' c, assignment e = some c → assignment e' = some c → e = e') ∧
+  (∀ e c, assignment e = some c → C1.lifecycle.opClaim e = none)
+
+def checkAssignment : Bool := decide assignmentFacts
+
+theorem checkAssignment_accepts : checkAssignment = true := by
+  native_decide
+
+theorem checkAssignment_sound (h : checkAssignment = true) : assignmentFacts := by
+  exact of_decide_eq_true h
+
+theorem actual_prepare_ok : PrepareOK C1.lifecycle prepareGroup assignment := by
+  have ha := checkAssignment_sound checkAssignment_accepts
+  refine {
+    nonempty := by native_decide
+    member_open := by native_decide
+    base := by native_decide
+    assigned_mem := ha.1
+    covered := ha.2.1
+    assignment_injective := ha.2.2.1
+    fresh := ha.2.2.2
+  }
+
+theorem current_prepare_check :
+    checkPreparePlanned C1 1 prepareGroup assignment = true := by
+  native_decide
+
+theorem current_head_accepts :
+    checkPrepareHead C1 1 prepareGroup = true := by
+  native_decide
+
+theorem stale_source_head_rejected :
+    checkPrepareHead C1 0 prepareGroup = false := by
+  native_decide
+
+def C2 : ControllerState :=
+  preparePlannedTarget C1 prepareGroup assignment
+
+theorem actual_prepare_planned_step : PlannedStep C1 .tau C2 :=
+  PlannedStep.prepareHead C1 1 prepareGroup assignment
+    current_prepare_check
+
+theorem prepare_projection_is_exact :
+    C2.lifecycle = prepareState C1.lifecycle prepareGroup assignment := rfl
+
+theorem consumed_head_advanced_once :
+    C2.plan.version = 2 ∧ C2.plan.remaining = ∅ := by
+  native_decide
+
+theorem prepared_ticket_installed :
+    C2.lifecycle.tickets operation =
+      some ⟨AuthorityContinuity.TopologyExamples.Claim.leftFragment,
+        TicketPhase.prepared⟩ := by
+  native_decide
+
+def revokedGrant : Grant := 0
+
+def C3 : ControllerState := revokeControllerTarget C2 revokedGrant
+
+theorem actual_revoke_step : PlannedStep C2 .tau C3 :=
+  PlannedStep.revokeComplete C2 revokedGrant (by native_decide)
+
+theorem revoke_stutters_plan : C3.plan = C2.plan := rfl
+
+theorem prepared_ticket_survives_revoke :
+    C3.lifecycle.tickets operation =
+      some ⟨AuthorityContinuity.TopologyExamples.Claim.leftFragment,
+        TicketPhase.prepared⟩ := by
+  native_decide
+
+def dispatchedLifecycle : LifecycleState Coord Claim Branch Grant Operation :=
+  setTicketPhase C3.lifecycle operation
+    AuthorityContinuity.TopologyExamples.Claim.leftFragment .inflight
+
+def C4 : ControllerState := ticketControllerTarget C3 dispatchedLifecycle
+
+theorem actual_ticket_dispatch :
+    TicketStep C3.lifecycle
+      (.attempt operation
+        AuthorityContinuity.TopologyExamples.Claim.leftFragment) C4.lifecycle :=
+  TicketStep.dispatch prepared_ticket_survives_revoke
+
+theorem actual_dispatch_step :
+    PlannedStep C3
+      (.attempt operation AuthorityContinuity.TopologyExamples.Claim.leftFragment)
+      C4 :=
+  PlannedStep.ticket C3 actual_ticket_dispatch
+
+theorem dispatch_stutters_plan : C4.plan = C3.plan := rfl
+
+/-- Dispatch has no plan-version premise: it uses only the durable prepared
+ticket that survived Revoke. -/
+theorem complete_vertical_path :
+    PlannedStep C0 .tau C1 ∧
+      PlannedStep C1 .tau C2 ∧
+      PlannedStep C2 .tau C3 ∧
+      PlannedStep C3
+        (.attempt operation
+          AuthorityContinuity.TopologyExamples.Claim.leftFragment) C4 :=
+  ⟨actual_restore_step, actual_prepare_planned_step,
+    actual_revoke_step, actual_dispatch_step⟩
+
+#print axioms computed_root_R_bound
+#print axioms computed_child_batch_P_bound
+#print axioms plannedStep_projects_to_actualStep
+#print axioms complete_vertical_path
+
+end AuthorityContinuity.PlanPreflight

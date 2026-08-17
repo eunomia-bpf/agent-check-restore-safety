@@ -7,8 +7,6 @@
       "fork_or_sidechain_actions",
       "external_effect_attempts"
     ],
-    "created_at_max_utc": "2026-02-03T08:59:53.590000Z",
-    "created_at_min_utc": "2026-01-30T07:38:06.713000Z",
     "declared_raw_paths_existing": 0,
     "entries_with_message_count": 45,
     "evidence_role": "lifecycle_metadata_only",
@@ -17,20 +15,23 @@
       "auxiliary_stores": 0,
       "backups": 0,
       "file_history": 0,
-      "history_jsonl_distinct_session_ids": 6
+      "history_jsonl_distinct_session_ids": 6,
+      "history_jsonl_exists": true,
+      "history_jsonl_read_errors": 0
     },
     "exact_ids_referenced_by_other_project_indexes": 0,
     "global_exact_filename_scan": {
       "distinct_matching_session_ids": 0,
       "matching_nodes": 0,
-      "walk_errors_observed": 0
+      "walk_errors_observed": 4
     },
     "index_message_count_sum": 180,
     "indexed_entries": 45,
-    "modified_at_max_utc": "2026-02-03T08:59:55.908000Z",
     "project_index_parse_errors": 0,
+    "project_index_walk_errors": 0,
     "project_indexes_scanned": 11,
     "raw_action_corpus_available": false,
+    "reference_scan_read_errors": 0,
     "sidechain_entries": 0,
     "unique_session_ids": 45
   },
@@ -82,7 +83,7 @@
       "process_or_service_wrapper": 46,
       "shell_mutation_wrapper": 772
     },
-    "lexical_wrapper_result_markers": {
+    "lexical_wrapper_one_to_one_result_markers": {
       "build_or_test_wrapper": {
         "completed_marker": 1586,
         "explicit_failure_marker": 57,
@@ -118,9 +119,9 @@
         "explicit_failure_marker": 1
       },
       "shell_mutation_wrapper": {
-        "completed_marker": 703,
+        "completed_marker": 702,
         "explicit_failure_marker": 39,
-        "non_list_result": 31
+        "non_list_result": 30
       }
     },
     "lifecycle_observations": {
@@ -136,7 +137,7 @@
         "turn_aborted": 13
       },
       "counts_by_role": {
-        "delegated_child": {
+        "selected_descendant": {
           "compacted_record": 21,
           "context_compacted": 21,
           "inter_agent_metadata": 409,
@@ -145,7 +146,7 @@
           "task_started": 119,
           "turn_aborted": 12
         },
-        "interactive_parent": {
+        "selection_root": {
           "compacted_record": 26,
           "context_compacted": 26,
           "inter_agent_metadata": 282,
@@ -159,17 +160,16 @@
       }
     },
     "lineage": {
-      "created_at_max_utc": "2026-08-02T02:57:52Z",
-      "created_at_min_utc": "2026-07-26T22:59:05Z",
-      "db_max_created_at_at_cutoff_epoch": 1785639472,
-      "db_max_created_at_at_cutoff_utc": "2026-08-02T02:57:52Z",
+      "created_at_max_offset_from_cutoff_seconds": -789,
+      "created_at_min_offset_from_cutoff_seconds": -533516,
       "depth_counts": {
         "0": 1,
         "1": 85,
         "2": 2
       },
-      "model_counts": {
-        "gpt-5.6-sol": 88
+      "edge_snapshot_hmac_sha256": "adbc090e759604a05b3356edff691b939dd5e960553916ebf30a11c4077a2c4d",
+      "model_category_counts": {
+        "pinned_primary": 88
       },
       "reasoning_effort_counts": {
         "high": 3,
@@ -177,29 +177,60 @@
         "xhigh": 4
       },
       "role_counts": {
-        "delegated_child": 87,
-        "interactive_parent": 1
+        "selected_descendant": 87,
+        "selection_root": 1
       },
+      "root_has_external_parent": false,
+      "root_hmac_sha256": "6e9adb444315dbcbbaf81e1477ea7f2fdf102a9a691bbac2831f6bb9ca599471",
       "spawn_edges": 87,
       "threads": 88
     },
+    "source_contract": {
+      "contract": "pinned_codex_legacy_fork_filter_drops_inter_agent_records",
+      "upstream": {
+        "0.145.0": {
+          "commit": "25af12f7e61572b0bc18ddb1008be543b91519b0",
+          "tag": "rust-v0.145.0"
+        },
+        "0.146.0": {
+          "commit": "e363b08c9175ac1cbe5893615dd2cb9ddf95043b",
+          "tag": "rust-v0.146.0"
+        }
+      }
+    },
     "source_fidelity": {
+      "aggregate_committed_prefix_bytes": 464299277,
+      "commitment_kind": "keyed_selection_manifest_commitment",
+      "files_committed_at_snapshot_eof": 84,
+      "files_stopped_at_first_future_timestamp": 4,
       "files_with_inherited_prefix": 78,
-      "files_with_selected_invalid_rows": 2,
+      "header_provenance_counts": {
+        "subagent_provenance": 87,
+        "user_provenance": 1
+      },
+      "history_mode": "legacy",
       "inherited_prefix_rows_excluded": 219142,
-      "matching_local_headers": 88,
-      "matching_structural_native_boundaries": 88,
-      "rollout_files": 88,
-      "selected_invalid_row_error_counts": {
+      "integrity_anomaly_counts": {
         "unicode_decode": 2
       },
-      "selected_native_invalid_rows": 2,
-      "selected_native_valid_rows": 39160,
-      "selected_prefix_content_sha256": "ca43ab96d87a4027309fdb46e07b518a0e5682e4816411b5755f472e028b6e25",
-      "selected_valid_rows_without_parseable_timestamp": 0
+      "integrity_anomaly_rows_excluded": 2,
+      "matching_local_headers": 88,
+      "matching_native_boundaries": 88,
+      "rollout_files": 88,
+      "selected_exact_timestamped_rows": 39160,
+      "source_manifest_hmac_sha256": "06c41a783c20213f65fe6db2a56bcaa371c5c95315a715b0de3fded3e8998ad9",
+      "subagent_multi_agent_version": "v2",
+      "supported_cli_version_counts": {
+        "0.145.0": 36,
+        "0.146.0": 52
+      }
     },
     "tool_protocol": {
-      "call_events": 6064,
+      "ambiguous_duplicate_or_missing_id_groups_within_thread": 2,
+      "call_events_without_one_to_one_pair": 2,
+      "call_events_without_one_to_one_pair_by_tool": {
+        "exec": 2
+      },
       "call_kind_counts": {
         "custom_tool_call": 4673,
         "function_call": 1391
@@ -216,23 +247,22 @@
         "wait": 81,
         "wait_agent": 502
       },
-      "calls_without_result": 1,
-      "calls_without_result_by_tool": {
-        "exec": 1
-      },
+      "calls_with_string_id": 6064,
+      "calls_without_string_id": 0,
       "custom_call_status_counts": {
         "completed": 4673
       },
-      "duplicate_call_ids_within_thread": 0,
-      "duplicate_results_for_same_call_within_thread": 1,
-      "exec_result_marker_counts": {
-        "completed_marker": 4485,
+      "duplicate_call_id_events_within_thread": 0,
+      "duplicate_result_id_events_within_thread": 1,
+      "kind_compatible_one_to_one_pairs_within_thread": 6062,
+      "kind_mismatched_singleton_ids_within_thread": 0,
+      "one_to_one_exec_result_marker_counts": {
+        "completed_marker": 4484,
         "explicit_failure_marker": 97,
-        "non_list_result": 91
+        "non_list_result": 90
       },
-      "matched_result_events": 6064,
-      "matched_result_tool_counts": {
-        "exec": 4673,
+      "one_to_one_pair_tool_counts": {
+        "exec": 4671,
         "followup_task": 35,
         "interrupt_agent": 12,
         "list_agents": 160,
@@ -243,13 +273,17 @@
         "wait": 81,
         "wait_agent": 502
       },
-      "result_events": 6064,
+      "raw_call_events": 6064,
+      "raw_result_events": 6064,
+      "result_events_without_one_to_one_pair": 2,
       "result_kind_counts": {
         "custom_tool_call_output": 4673,
         "function_call_output": 1391
       },
+      "results_with_string_id": 6064,
+      "results_without_string_id": 0,
       "tool_calls_by_role": {
-        "delegated_child": {
+        "selected_descendant": {
           "exec": 2899,
           "list_agents": 41,
           "send_message": 267,
@@ -257,7 +291,7 @@
           "wait": 40,
           "wait_agent": 93
         },
-        "interactive_parent": {
+        "selection_root": {
           "exec": 1774,
           "followup_task": 35,
           "interrupt_agent": 12,
@@ -270,7 +304,8 @@
           "wait_agent": 409
         }
       },
-      "unmatched_result_events": 0
+      "unique_call_ids_within_thread_sum": 6064,
+      "unique_result_ids_within_thread_sum": 6063
     },
     "workspace_observations": {
       "aggregate_patch_change_entries": 899,
@@ -288,20 +323,21 @@
     "no_unsafe_history_rate_or_causal_safety_label"
   ],
   "repository": {
-    "currently_reachable_commits_all_refs": 71,
+    "currently_reachable_commits_all_refs": 73,
     "currently_reachable_commits_in_case_window": 12,
-    "cutoff_commit_short": "5efc4ea",
     "cutoff_commit_verified": true,
-    "interpretation": "repository outcome evidence; not a remote durability receipt"
+    "interpretation": "repository_outcome_not_remote_receipt"
   },
-  "schema_version": "private-paper-trace-summary-v1",
+  "schema_version": "private-paper-trace-summary-v3",
   "selection": {
     "case": "single_private_paper_formation_lineage",
     "claude_selector": "exact_old_project_index_ids_only_no_fuzzy_content_matches",
     "codex_selector": "recursive_spawn_descendants_created_by_cutoff",
-    "cutoff_basis": "repository_commit_timestamp_pre_pilot",
-    "cutoff_commit_short": "5efc4ea",
+    "cutoff_basis": "repository_commit_timestamp_before_current_pilot",
+    "cutoff_commit_hmac_sha256": "09302f85049264dd7f0c9aa66ee3d90bfb2192f056f2abd5883cc8ff8de55d87",
     "cutoff_utc": "2026-08-02T03:11:01Z",
-    "rollout_selector": "local_matching_session_header_plus_structural_native_turn_suffix_then_event_time_at_or_before_cutoff"
+    "design": "retrospective_fixed_cutoff_single_case",
+    "physical_cutoff_rule": "first_parseable_future_timestamp_stops_physical_prefix",
+    "rollout_selector": "single_byte_snapshot_exact_header_plus_pinned_native_suffix"
   }
 }

@@ -1,0 +1,502 @@
+import AuthorityContinuity.Step
+import AuthorityContinuity.TopologyExamples
+
+/-!
+# Step 0007 reviewed thin vertical preflight candidate
+
+Uncompiled source retained outside the Lake source glob.  The controller plan
+contains data only.  Restore transport computes its batch and immutable root
+from the checked `rho`; `PreparePlanned` constructs the real `PrepareOK` from
+source facts and executable checkers; Revoke may stutter the plan only after
+the batch is empty; Dispatch consumes only the durable ticket.
+-/
+
+namespace AuthorityContinuity.PlanPreflight
+
+open LifecycleState
+
+abbrev Coord := AuthorityContinuity.TopologyExamples.Coord
+abbrev Claim := AuthorityContinuity.TopologyExamples.Claim
+abbrev Branch := AuthorityContinuity.TopologyExamples.Branch
+abbrev Grant := AuthorityContinuity.TopologyExamples.Grant
+abbrev Operation := AuthorityContinuity.TopologyExamples.Operation
+abbrev Slot := Fin 1
+
+structure PlanHead where
+  version : Nat
+  currentSlot : Slot
+  batch : Finset Claim
+  rootSlot : Claim -> Option Slot
+  R : Slot -> Coord -> Nat
+  P : Slot -> Coord -> Nat
+
+structure ControllerState where
+  lifecycle : LifecycleState Coord Claim Branch Grant Operation
+  plan : PlanHead
+
+def transferFiber (tr : Transfer Claim Branch) (c : Claim) : Finset Claim :=
+  Finset.univ.filter fun c' => tr.rho c' = some c
+
+def childBatch (tr : Transfer Claim Branch) (U : Finset Claim) : Finset Claim :=
+  Finset.univ.filter fun c' => ∃ c ∈ U, tr.rho c' = some c
+
+def childRootSlot (root : Claim -> Option Slot)
+    (tr : Transfer Claim Branch) (c' : Claim) : Option Slot :=
+  (tr.rho c').bind root
+
+namespace PlanHead
+
+def afterTransfer (p : PlanHead) (tr : Transfer Claim Branch) : PlanHead :=
+  { p with
+    version := p.version + 1
+    batch := childBatch tr p.batch
+    rootSlot := childRootSlot p.rootSlot tr }
+
+def advance (p : PlanHead) : PlanHead :=
+  { p with
+    version := p.version + 1
+    batch := ∅
+    rootSlot := fun c => if c ∈ p.batch then none else p.rootSlot c }
+
+end PlanHead
+
+@[simp] theorem childBatch_singleton (tr : Transfer Claim Branch) (c : Claim) :
+    childBatch tr {c} = transferFiber tr c := by
+  ext c'
+  simp [childBatch, transferFiber]
+
+@[simp] theorem childRootSlot_of_rho
+    (root : Claim -> Option Slot) (tr : Transfer Claim Branch)
+    {c c' : Claim} (h : tr.rho c' = some c) :
+    childRootSlot root tr c' = root c := by
+  simp [childRootSlot, h]
+
+theorem afterTransfer_root_of_member
+    (p : PlanHead) (tr : Transfer Claim Branch) {c' : Claim}
+    (hc' : c' ∈ childBatch tr p.batch) :
+    ∃ c ∈ p.batch,
+      tr.rho c' = some c ∧
+      (p.afterTransfer tr).rootSlot c' = p.rootSlot c := by
+  have hmem : ∃ c ∈ p.batch, tr.rho c' = some c := by
+    simpa [childBatch] using hc'
+  obtain ⟨c, hc, hrho⟩ := hmem
+  exact ⟨c, hc, hrho, by
+    simp [PlanHead.afterTransfer, childRootSlot, hrho]⟩
+
+def batchLoad (A : LifecycleState Coord Claim Branch Grant Operation)
+    (U : Finset Claim) (k : Coord) : Nat :=
+  ∑ c ∈ U, A.auth.demand c k
+
+theorem singleton_child_RP_bound
+    (A : LifecycleState Coord Claim Branch Grant Operation)
+    (tr : Transfer Claim Branch) (source : Claim)
+    (R P : Coord -> Nat) (valid : Transfer.CoreValid A tr)
+    (source_le_R : ∀ k, A.auth.demand source k <= R k)
+    (source_le_P : ∀ k, A.auth.demand source k <= P k) :
+    ∀ k,
+      batchLoad A (transferFiber tr source) k <= R k ∧
+      batchLoad A (childBatch tr {source}) k <= P k := by
+  intro k
+  have hfiber :
+      batchLoad A (transferFiber tr source) k <= A.auth.demand source k := by
+    simpa [batchLoad, transferFiber] using valid.fiber_demand source k
+  exact ⟨hfiber.trans (source_le_R k), by
+    rw [childBatch_singleton]
+    exact hfiber.trans (source_le_P k)⟩
+
+@[simp] theorem canonicalTarget_batchLoad
+    (A : LifecycleState Coord Claim Branch Grant Operation)
+    (tr : Transfer Claim Branch) (op : CanonicalOp Branch)
+    (U : Finset Claim) (k : Coord) :
+    batchLoad (canonicalTarget A tr op) U k = batchLoad A U k := rfl
+
+def checkHead (p : PlanHead) (offered : Nat) : Bool :=
+  decide (offered = p.version)
+
+theorem checkHead_sound (p : PlanHead) (offered : Nat)
+    (h : checkHead p offered = true) : offered = p.version := by
+  have hd : decide (offered = p.version) = true := by
+    simpa [checkHead] using h
+  exact of_decide_eq_true hd
+
+def checkAssignedMemberFresh
+    (A : LifecycleState Coord Claim Branch Grant Operation)
+    (U : Finset Claim) (assignment : Operation -> Option Claim) : Bool :=
+  finiteAll Finset.univ fun e =>
+    match assignment e with
+    | none => true
+    | some c => decide (c ∈ U ∧ A.opClaim e = none)
+
+def checkAssignmentCovered
+    (U : Finset Claim) (assignment : Operation -> Option Claim) : Bool :=
+  finiteAll U fun c => decide (∃ e, assignment e = some c)
+
+def checkAssignmentInjective
+    (assignment : Operation -> Option Claim) : Bool :=
+  finiteAll Finset.univ fun e =>
+    finiteAll Finset.univ fun e' =>
+      decide (∀ c,
+        assignment e = some c -> assignment e' = some c -> e = e')
+
+def checkAssignment
+    (A : LifecycleState Coord Claim Branch Grant Operation)
+    (U : Finset Claim) (assignment : Operation -> Option Claim) : Bool :=
+  checkAssignedMemberFresh A U assignment &&
+    (checkAssignmentCovered U assignment &&
+      checkAssignmentInjective assignment)
+
+structure AssignmentValid
+    (A : LifecycleState Coord Claim Branch Grant Operation)
+    (U : Finset Claim) (assignment : Operation -> Option Claim) : Prop where
+  assigned_mem : ∀ e c, assignment e = some c -> c ∈ U
+  covered : ∀ c ∈ U, ∃ e, assignment e = some c
+  assignment_injective : ∀ e e' c,
+    assignment e = some c -> assignment e' = some c -> e = e'
+  fresh : ∀ e c, assignment e = some c -> A.opClaim e = none
+
+theorem checkAssignment_sound
+    {A : LifecycleState Coord Claim Branch Grant Operation}
+    {U : Finset Claim} {assignment : Operation -> Option Claim}
+    (hcheck : checkAssignment A U assignment = true) :
+    AssignmentValid A U assignment := by
+  have hp : checkAssignedMemberFresh A U assignment = true ∧
+      checkAssignmentCovered U assignment = true ∧
+      checkAssignmentInjective assignment = true := by
+    simpa [checkAssignment, Bool.and_eq_true] using hcheck
+  refine {
+    assigned_mem := ?_
+    covered := ?_
+    assignment_injective := ?_
+    fresh := ?_ }
+  · intro e c he
+    have hall := (finiteAll_eq_true Finset.univ _).mp hp.1 e
+      (Finset.mem_univ e)
+    have hpair : c ∈ U ∧ A.opClaim e = none := by
+      simpa [checkAssignedMemberFresh, he] using hall
+    exact hpair.1
+  · intro c hc
+    have hall := (finiteAll_eq_true U _).mp hp.2.1 c hc
+    exact of_decide_eq_true hall
+  · intro e e' c he he'
+    have heall := (finiteAll_eq_true Finset.univ _).mp hp.2.2 e
+      (Finset.mem_univ e)
+    have he'all := (finiteAll_eq_true Finset.univ _).mp heall e'
+      (Finset.mem_univ e')
+    exact (of_decide_eq_true he'all) c he he'
+  · intro e c he
+    have hall := (finiteAll_eq_true Finset.univ _).mp hp.1 e
+      (Finset.mem_univ e)
+    have hpair : c ∈ U ∧ A.opClaim e = none := by
+      simpa [checkAssignedMemberFresh, he] using hall
+    exact hpair.2
+
+def preparedController (S : ControllerState)
+    (assignment : Operation -> Option Claim) : ControllerState where
+  lifecycle := prepareState S.lifecycle S.plan.batch assignment
+  plan := S.plan.advance
+
+def canonicalController (S : ControllerState)
+    (tr : Transfer Claim Branch) (op : CanonicalOp Branch) : ControllerState where
+  lifecycle := canonicalTarget S.lifecycle tr op
+  plan := S.plan.afterTransfer tr
+
+def revokeController (S : ControllerState) (g : Grant) : ControllerState where
+  lifecycle := revokeState S.lifecycle g
+  plan := S.plan
+
+def dispatchController (S : ControllerState) (e : Operation)
+    (c : Claim) : ControllerState where
+  lifecycle := setTicketPhase S.lifecycle e c .inflight
+  plan := S.plan
+
+theorem prepare_head_is_ok
+    (S : ControllerState) (offered : Nat)
+    (assignment : Operation -> Option Claim)
+    (hWF : S.lifecycle.LWF)
+    (hHead : checkHead S.plan offered = true)
+    (hAssignment : checkAssignment S.lifecycle S.plan.batch assignment = true)
+    (hne : S.plan.batch.Nonempty)
+    (htentative : ∀ c ∈ S.plan.batch, ∃ b,
+      S.lifecycle.auth.status c = .tentative b)
+    (hbatchP : ∀ k, batchLoad S.lifecycle S.plan.batch k <=
+      S.plan.P S.plan.currentSlot k)
+    (hPfits : ∀ k, S.lifecycle.auth.durableLoad k +
+      S.plan.P S.plan.currentSlot k <= S.lifecycle.auth.capacity k) :
+    offered = S.plan.version ∧
+      PrepareOK S.lifecycle S.plan.batch assignment := by
+  have hver := checkHead_sound S.plan offered hHead
+  have ha := checkAssignment_sound hAssignment
+  refine ⟨hver, {
+    nonempty := hne
+    member_open := ?_
+    base := ?_
+    assigned_mem := ha.assigned_mem
+    covered := ha.covered
+    assignment_injective := ha.assignment_injective
+    fresh := ha.fresh }⟩
+  · intro c hc
+    obtain ⟨b, hs⟩ := htentative c hc
+    exact ⟨b, hs, hWF.owner_open c b hs, hWF.grant_open c b hs⟩
+  · intro k
+    calc
+      promotedLoad S.lifecycle.auth S.plan.batch k =
+          S.lifecycle.auth.durableLoad k +
+            batchLoad S.lifecycle S.plan.batch k := rfl
+      _ <= S.lifecycle.auth.durableLoad k +
+            S.plan.P S.plan.currentSlot k :=
+        Nat.add_le_add_left (hbatchP k) _
+      _ <= S.lifecycle.auth.capacity k := hPfits k
+
+inductive PreparePlanned :
+    ControllerState -> Nat -> (Operation -> Option Claim) ->
+      ControllerState -> Prop where
+  | mk {S offered assignment}
+      (hWF : S.lifecycle.LWF)
+      (hHead : checkHead S.plan offered = true)
+      (hAssignment : checkAssignment S.lifecycle S.plan.batch assignment = true)
+      (hne : S.plan.batch.Nonempty)
+      (htentative : ∀ c ∈ S.plan.batch, ∃ b,
+        S.lifecycle.auth.status c = .tentative b)
+      (hbatchP : ∀ k, batchLoad S.lifecycle S.plan.batch k <=
+        S.plan.P S.plan.currentSlot k)
+      (hPfits : ∀ k, S.lifecycle.auth.durableLoad k +
+        S.plan.P S.plan.currentSlot k <= S.lifecycle.auth.capacity k) :
+      PreparePlanned S offered assignment (preparedController S assignment)
+
+theorem PreparePlanned.actual_step
+    {S S' : ControllerState} {offered : Nat}
+    {assignment : Operation -> Option Claim}
+    (h : PreparePlanned S offered assignment S') :
+    Step S.lifecycle .tau S'.lifecycle := by
+  cases h with
+  | mk hWF hHead hAssignment hne htentative hbatchP hPfits =>
+      have hOK := (prepare_head_is_ok S offered assignment hWF hHead
+        hAssignment hne htentative hbatchP hPfits).2
+      simpa [preparedController] using
+        (Step.core (CoreStep.prepare hOK))
+
+theorem PreparePlanned.head_advanced
+    {S S' : ControllerState} {offered : Nat}
+    {assignment : Operation -> Option Claim}
+    (h : PreparePlanned S offered assignment S') :
+    S'.plan.version = S.plan.version + 1 ∧ S'.plan.batch = ∅ := by
+  cases h
+  simp [preparedController, PlanHead.advance]
+
+inductive PlannedStep :
+    ControllerState -> Label Operation Claim -> ControllerState -> Prop where
+  | canonical (S : ControllerState) (offered : Nat)
+      (tr : Transfer Claim Branch) (op : CanonicalOp Branch)
+      (headChecked : checkHead S.plan offered = true)
+      (checked : checkCanonical S.lifecycle tr op = true) :
+      PlannedStep S .tau (canonicalController S tr op)
+  | prepare {S S' offered assignment}
+      (h : PreparePlanned S offered assignment S') : PlannedStep S .tau S'
+  | revokeDone (S : ControllerState) (g : Grant)
+      (done : S.plan.batch = ∅) :
+      PlannedStep S .tau (revokeController S g)
+  | ticket (S : ControllerState)
+      {A' : LifecycleState Coord Claim Branch Grant Operation}
+      {eta : Label Operation Claim} (h : TicketStep S.lifecycle eta A') :
+      PlannedStep S eta { lifecycle := A', plan := S.plan }
+
+theorem PlannedStep.actual_step
+    {S S' : ControllerState} {eta : Label Operation Claim}
+    (h : PlannedStep S eta S') : Step S.lifecycle eta S'.lifecycle := by
+  cases h with
+  | canonical S offered tr op headChecked checked =>
+      exact Step.canonical tr op checked
+  | prepare h => exact h.actual_step
+  | revokeDone S g done => exact Step.core (CoreStep.revoke S.lifecycle g)
+  | ticket S h => exact Step.core (CoreStep.ticket h)
+
+/-! The checked replacing-Restore fixture. -/
+
+open AuthorityContinuity.TopologyExamples
+
+def sourcePlan : PlanHead where
+  version := 0
+  currentSlot := 0
+  batch := {Claim.source}
+  rootSlot := fun c => if c = Claim.source then some 0 else none
+  R := fun _ _ => 2
+  P := fun _ _ => 2
+
+def sourceController : ControllerState where
+  lifecycle := TopologyExamples.source
+  plan := sourcePlan
+
+def restoreOp : CanonicalOp Branch :=
+  .replaceRestore Branch.parent Branch.right
+
+def afterRestore : ControllerState :=
+  canonicalController sourceController replaceTransfer restoreOp
+
+theorem source_head_accepts : checkHead sourcePlan 0 = true := by native_decide
+
+theorem restore_planned_step :
+    PlannedStep sourceController .tau afterRestore :=
+  PlannedStep.canonical sourceController 0 replaceTransfer restoreOp
+    source_head_accepts replace_restore_admission_accepts
+
+theorem child_batch_exact :
+    afterRestore.plan.batch = ({Claim.leftFragment} : Finset Claim) := by
+  native_decide
+
+theorem child_root_exact :
+    afterRestore.plan.rootSlot Claim.leftFragment = some 0 := by
+  native_decide
+
+theorem child_RP_bound (k : Coord) :
+    batchLoad afterRestore.lifecycle afterRestore.plan.batch k <=
+        afterRestore.plan.R afterRestore.plan.currentSlot k ∧
+      batchLoad afterRestore.lifecycle afterRestore.plan.batch k <=
+        afterRestore.plan.P afterRestore.plan.currentSlot k := by
+  have hv :=
+    (checkCanonical_sound TopologyExamples.source replaceTransfer restoreOp
+      replace_restore_admission_accepts).transfer.toCoreValid
+  have h := singleton_child_RP_bound TopologyExamples.source replaceTransfer
+    Claim.source (sourcePlan.R sourcePlan.currentSlot)
+    (sourcePlan.P sourcePlan.currentSlot) hv
+    (by native_decide) (by native_decide) k
+  simpa [afterRestore, canonicalController, sourceController, sourcePlan,
+    PlanHead.afterTransfer] using h
+
+theorem afterRestore_invariants :
+    afterRestore.lifecycle.LWF ∧ AC afterRestore.lifecycle.auth ∧
+      afterRestore.lifecycle.ActiveExact := by
+  exact replaceRestore_preserves_wf_ac TopologyExamples.source replaceTransfer
+    Branch.parent Branch.right source_lwf source_ac source_active_exact
+    replace_restore_admission_accepts
+
+def childAssignment : Operation -> Option Claim :=
+  fun _ => some Claim.leftFragment
+
+theorem assignment_accepts :
+    checkAssignment afterRestore.lifecycle afterRestore.plan.batch
+      childAssignment = true := by
+  native_decide
+
+theorem child_batch_nonempty : afterRestore.plan.batch.Nonempty := by
+  rw [child_batch_exact]
+  simp
+
+theorem child_batch_tentative : ∀ c ∈ afterRestore.plan.batch, ∃ b,
+    afterRestore.lifecycle.auth.status c = .tentative b := by
+  native_decide
+
+theorem child_batch_P_bound (k : Coord) :
+    batchLoad afterRestore.lifecycle afterRestore.plan.batch k <=
+      afterRestore.plan.P afterRestore.plan.currentSlot k :=
+  (child_RP_bound k).2
+
+theorem child_P_fits : ∀ k : Coord,
+    afterRestore.lifecycle.auth.durableLoad k +
+      afterRestore.plan.P afterRestore.plan.currentSlot k <=
+        afterRestore.lifecycle.auth.capacity k := by
+  native_decide
+
+theorem restored_head_accepts : checkHead afterRestore.plan 1 = true := by
+  native_decide
+
+theorem stale_source_head_rejected : checkHead afterRestore.plan 0 = false := by
+  native_decide
+
+def afterPrepare : ControllerState :=
+  preparedController afterRestore childAssignment
+
+theorem actual_prepare_planned :
+    PreparePlanned afterRestore 1 childAssignment afterPrepare := by
+  apply PreparePlanned.mk
+  · exact afterRestore_invariants.1
+  · exact restored_head_accepts
+  · exact assignment_accepts
+  · exact child_batch_nonempty
+  · exact child_batch_tentative
+  · exact child_batch_P_bound
+  · exact child_P_fits
+
+theorem actual_prepare_step :
+    Step afterRestore.lifecycle .tau afterPrepare.lifecycle :=
+  actual_prepare_planned.actual_step
+
+theorem prepared_head_advanced :
+    afterPrepare.plan.version = afterRestore.plan.version + 1 ∧
+      afterPrepare.plan.batch = ∅ :=
+  actual_prepare_planned.head_advanced
+
+theorem prepared_ticket_installed :
+    afterPrepare.lifecycle.tickets (0 : Operation) =
+      some ⟨Claim.leftFragment, TicketPhase.prepared⟩ := by
+  native_decide
+
+def afterRevoke : ControllerState := revokeController afterPrepare (0 : Grant)
+
+theorem actual_revoke_planned : PlannedStep afterPrepare .tau afterRevoke :=
+  PlannedStep.revokeDone afterPrepare (0 : Grant) prepared_head_advanced.2
+
+theorem actual_revoke_step :
+    Step afterPrepare.lifecycle .tau afterRevoke.lifecycle :=
+  actual_revoke_planned.actual_step
+
+theorem revoked_ticket :
+    afterRevoke.lifecycle.tickets (0 : Operation) =
+      some ⟨Claim.leftFragment, TicketPhase.prepared⟩ := by
+  simpa [afterRevoke, revokeController, LifecycleState.revokeState,
+    LifecycleState.restrictLifecycle] using prepared_ticket_installed
+
+def afterDispatch : ControllerState :=
+  dispatchController afterRevoke (0 : Operation) Claim.leftFragment
+
+theorem actual_ticket_dispatch :
+    TicketStep afterRevoke.lifecycle
+      (.attempt (0 : Operation) Claim.leftFragment) afterDispatch.lifecycle :=
+  TicketStep.dispatch revoked_ticket
+
+theorem actual_dispatch_planned :
+    PlannedStep afterRevoke
+      (.attempt (0 : Operation) Claim.leftFragment) afterDispatch :=
+  PlannedStep.ticket afterRevoke actual_ticket_dispatch
+
+theorem actual_dispatch_step :
+    Step afterRevoke.lifecycle
+      (.attempt (0 : Operation) Claim.leftFragment) afterDispatch.lifecycle :=
+  actual_dispatch_planned.actual_step
+
+theorem dispatch_stutters_plan : afterDispatch.plan = afterRevoke.plan := rfl
+
+theorem afterPrepare_invariants :
+    afterPrepare.lifecycle.LWF ∧ AC afterPrepare.lifecycle.auth ∧
+      afterPrepare.lifecycle.ActiveExact :=
+  step_preserves_wf_ac actual_prepare_step afterRestore_invariants.1
+    afterRestore_invariants.2.1 afterRestore_invariants.2.2
+
+theorem afterRevoke_invariants :
+    afterRevoke.lifecycle.LWF ∧ AC afterRevoke.lifecycle.auth ∧
+      afterRevoke.lifecycle.ActiveExact :=
+  step_preserves_wf_ac actual_revoke_step afterPrepare_invariants.1
+    afterPrepare_invariants.2.1 afterPrepare_invariants.2.2
+
+theorem dispatch_uses_durable_ticket :
+    afterRevoke.lifecycle.opClaim (0 : Operation) = some Claim.leftFragment ∧
+      afterRevoke.lifecycle.auth.status Claim.leftFragment = .durable ∧
+      afterDispatch.lifecycle.opClaim (0 : Operation) =
+        some Claim.leftFragment :=
+  step_attempt_safe actual_dispatch_step afterRevoke_invariants.1
+
+theorem complete_vertical_path :
+    PlannedStep sourceController .tau afterRestore ∧
+      PreparePlanned afterRestore 1 childAssignment afterPrepare ∧
+      PlannedStep afterPrepare .tau afterRevoke ∧
+      PlannedStep afterRevoke
+        (.attempt (0 : Operation) Claim.leftFragment) afterDispatch :=
+  ⟨restore_planned_step, actual_prepare_planned,
+    actual_revoke_planned, actual_dispatch_planned⟩
+
+#print axioms singleton_child_RP_bound
+#print axioms checkAssignment_sound
+#print axioms prepare_head_is_ok
+#print axioms PreparePlanned.actual_step
+#print axioms complete_vertical_path
+
+end AuthorityContinuity.PlanPreflight
