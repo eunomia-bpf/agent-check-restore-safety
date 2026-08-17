@@ -94,6 +94,8 @@ type Bridge struct {
 	inputEOF            bool
 	attachedGeneration  uint64
 	attachedChanged     chan struct{}
+	inputMu             sync.Mutex
+	inputStopped        bool
 
 	quiescent     chan Checkpoint
 	inputDone     chan struct{}
@@ -178,17 +180,28 @@ func (bridge *Bridge) scanInput(ctx context.Context) {
 	for {
 		line, readErr := readBridgeLine(reader, bridgeLimits.MaxLineBytes)
 		if readErr != nil {
+			bridge.inputMu.Lock()
+			if bridge.inputStopped || ctx.Err() != nil {
+				bridge.inputMu.Unlock()
+				return
+			}
 			if errors.Is(readErr, io.EOF) {
-				if ctx.Err() == nil {
-					bridge.handleInputEOF()
-				}
+				bridge.handleInputEOF()
+				bridge.inputMu.Unlock()
 				return
 			}
 			bridge.fail(fmt.Errorf("read host Codex JSONL input: %w", readErr))
+			bridge.inputMu.Unlock()
+			return
+		}
+		bridge.inputMu.Lock()
+		if bridge.inputStopped || ctx.Err() != nil {
+			bridge.inputMu.Unlock()
 			return
 		}
 		if bridge.audit != nil {
 			if err := bridge.audit(PhaseObserved, DirectionClientToServer, line); err != nil {
+				bridge.inputMu.Unlock()
 				bridge.fail(fmt.Errorf("commit client-to-server Codex I/O: %w", err))
 				return
 			}
@@ -197,6 +210,7 @@ func (bridge *Bridge) scanInput(ctx context.Context) {
 			var err error
 			line, err = mapThreadStartWorkspace(line, bridge.hostWorkspace, bridge.guestWorkspace)
 			if err != nil {
+				bridge.inputMu.Unlock()
 				bridge.fail(fmt.Errorf("map Codex workspace into guest: %w", err))
 				return
 			}
@@ -207,6 +221,7 @@ func (bridge *Bridge) scanInput(ctx context.Context) {
 		}
 		if bridge.closed || bridge.failure != nil {
 			bridge.mu.Unlock()
+			bridge.inputMu.Unlock()
 			return
 		}
 		frame, sendErr := bridge.transcript.Send(line)
@@ -224,11 +239,21 @@ func (bridge *Bridge) scanInput(ctx context.Context) {
 			bridge.responseAccepted = true
 		}
 		bridge.mu.Unlock()
+		bridge.inputMu.Unlock()
 		if sendErr != nil {
 			bridge.fail(fmt.Errorf("record Codex input for guest: %w", sendErr))
 			return
 		}
 	}
+}
+
+// StopInput prevents any future client input or input-audit write. A reader
+// blocked in the operating system may remain there until process exit, so
+// callers that need full EOF synchronization should still use WaitInput.
+func (bridge *Bridge) StopInput() {
+	bridge.inputMu.Lock()
+	bridge.inputStopped = true
+	bridge.inputMu.Unlock()
 }
 
 // WaitInput waits until the single host input producer has exited, after which

@@ -1,10 +1,10 @@
 # Firecracker Codex continuity runtime
 
-**Status:** working real-KVM vertical prototype, 2026-08-16. The runtime now
+**Status:** working real-KVM vertical prototype, 2026-08-17. The runtime now
 supports both ordered native callbacks and ordinary Codex MCP calls across a
-full-machine restore. One native Codex process, two Firecracker VMM
-generations, a host-retained MCP journal, two external Operations, and one
-durable History have been joined in a checked execution. It is not yet a
+full-machine restore or a policy-selected cold replacement. Native Codex,
+Firecracker VMMs, a host-retained MCP journal, two external Operations, and one
+durable History have been joined in checked executions. It is not yet a
 production sandbox or general agent runtime.
 
 ## What the system is
@@ -117,8 +117,17 @@ continuity checker also returned `valid:true`, with three MCP completions, two
 Operations, two provider commits, two VMM generations, and Codex 0.147.0.
 
 This execution proves completed-call replay and safe admission of later work
-across a full VM replacement. It does not yet snapshot while a provider write
-is in flight.
+across a full VM replacement.
+
+The stronger target also completed on real KVM while A was durable at the
+provider but unresolved in Codex. The runtime created the same full snapshot,
+killed and reaped the source VMM, classified its active external-I/O transport
+as nonportable, and completed the capture successfully without starting a
+restored VMM. A clean microVM then replayed A from the host journal before
+submitting B. The checker observed three MCP completions, two Operations, two
+provider commits, one cold replacement, and zero failed VM executions. The
+capture shim SHA-256 was
+`05522b6a50450e5abd7a69e7308e582012f1969cd1e8cb541f3069f3754c7059`.
 
 ## Earlier repository-edit execution
 
@@ -236,9 +245,9 @@ make runtime-firecracker-codex-control-check \
 
 For the MCP path, `make runtime-firecracker-codex-mcp-demo` is the settled-call
 entry point. `make runtime-firecracker-codex-mcp-inflight-demo` captures the
-provider-committed/unresolved case and cold-replaces the VM when its restored
-live transport fails. After retaining either combined evidence directory, run
-both independent checkers with one command:
+provider-committed/unresolved case and records a cold-replacement decision
+without attempting to restore its active transport. After retaining either
+combined evidence directory, run both independent checkers with one command:
 
 ```sh
 make runtime-firecracker-codex-mcp-check \
@@ -256,8 +265,8 @@ and no live account.
 The in-flight mode makes the trust boundary explicit: a full-machine snapshot
 is evidence and a recovery optimization, not the authority for whether an
 external action happened. The MCP host, fsynced call journal, Control History,
-and provider state remain outside both the failed restore attempt and the cold
-replacement VM.
+and provider state remain outside both the captured VM and the cold replacement
+VM.
 
 ## Exact boundary and remaining work
 
@@ -278,9 +287,9 @@ The current slice is intentionally narrow:
 - this run exercises one query-recovered unknown outcome followed by one
   direct external Operation; it does not cover concurrent callbacks or
   arbitrary provider protocols inside this Firecracker path; and
-- the MCP run checkpoints after A has settled. It validates exact replay and
-  later admission after restore, but not an MCP call suspended inside an
-  unknown provider outcome at snapshot time.
+- the in-flight MCP run covers one provider-committed call suspended at
+  snapshot time, but not concurrent calls or a provider that cannot expose a
+  stable operation identity.
 
 The next high-value increment is to put the same continuity protocol behind a
 second agent runtime or sandbox backend without changing the client workflow.

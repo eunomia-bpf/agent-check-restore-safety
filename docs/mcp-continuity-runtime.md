@@ -167,11 +167,12 @@ make runtime-firecracker-codex-mcp-check \
 
 The in-flight target deliberately tests the harder boundary. The provider
 fsyncs A while Codex is still waiting, then Firecracker takes a full snapshot.
-The restored live vsock transport is not assumed correct: that VM is allowed
-to fail closed, while the host-owned journal remains authoritative. A cold
-replacement microVM replays the exact A response and advances to B. The
-checker joins both VM attempts to one journal, one History chain, and exactly
-two non-idempotent provider commits.
+The host marks that snapshot's active vsock transport as nonportable and does
+not start a restored VMM. The capture completes successfully, while the
+host-owned journal remains authoritative. A cold replacement microVM replays
+the exact A response and advances to B. The checker joins the captured VM and
+replacement execution to one journal, one History chain, and exactly two
+non-idempotent provider commits; it also requires zero failed VM executions.
 
 The compatibility binary requires four host/supervisor-owned inputs:
 

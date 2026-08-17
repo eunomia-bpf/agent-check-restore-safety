@@ -133,6 +133,41 @@ def _artifact(record: Any, label: str, *, executable: bool) -> Path:
     return path
 
 
+def _runtime_artifact(directory: Path, record: Any, label: str) -> Path:
+    if not isinstance(record, dict) or set(record) != {"name", "size", "mode", "sha256"}:
+        raise EvidenceError(f"{label} runtime artifact identity is malformed")
+    name = record.get("name")
+    if (
+        not isinstance(name, str)
+        or not name
+        or Path(name).name != name
+        or "/" in name
+        or "\\" in name
+    ):
+        raise EvidenceError(f"{label} runtime artifact name is unsafe")
+    path = directory / name
+    try:
+        info = path.lstat()
+        resolved = path.resolve(strict=True)
+    except OSError as error:
+        raise EvidenceError(f"cannot inspect {label} runtime artifact") from error
+    if (
+        resolved != path
+        or not stat.S_ISREG(info.st_mode)
+        or stat.S_ISLNK(info.st_mode)
+        or info.st_uid != os.geteuid()
+        or stat.S_IMODE(info.st_mode) != 0o600
+        or info.st_size <= 0
+        or info.st_size > 2 << 30
+        or record.get("mode") != 0o600
+        or record.get("size") != info.st_size
+        or not _valid_digest(record.get("sha256"))
+        or record.get("sha256") != _sha(path)
+    ):
+        raise EvidenceError(f"{label} runtime artifact bytes changed")
+    return path
+
+
 def _history(root: Path, checkpoint_mode: str) -> list[dict[str, Any]]:
     data = _private_file(root / "control.history", "Control History")
     records: list[dict[str, Any]] = []
@@ -657,57 +692,158 @@ def check(path: Path, payload_result_path: Path) -> dict[str, Any]:
             raise EvidenceError(f"journal result for {effect} differs from Codex")
 
     if checkpoint_mode == "inflight":
-        attempt_root = _private_subdirectory(root, "inflight-attempt")
-        attempt_runtime = _private_subdirectory(attempt_root, "runtime")
-        attempt_adapter = _private_subdirectory(attempt_root, "adapter")
-        attempt_workspace = _private_subdirectory(attempt_root, "workspace")
-        attempt_record = result.get("inflight_attempt")
+        capture_root = _private_subdirectory(root, "checkpoint-capture")
+        capture_runtime = _private_subdirectory(capture_root, "runtime")
+        capture_adapter = _private_subdirectory(capture_root, "adapter")
+        capture_workspace = _private_subdirectory(capture_root, "workspace")
+        capture_record = result.get("checkpoint_capture")
         if (
-            not isinstance(attempt_record, dict)
-            or attempt_record.get("runtime_evidence") != os.fspath(attempt_runtime)
-            or attempt_record.get("adapter_evidence") != os.fspath(attempt_adapter)
-            or attempt_record.get("workspace") != os.fspath(attempt_workspace)
-            or attempt_record.get("runtime_result")
-            != os.fspath(attempt_runtime / "result.json")
-            or "App Server stdout closed unexpectedly"
-            not in str(attempt_record.get("failure"))
+            not isinstance(capture_record, dict)
+            or set(capture_record) != {
+                "runtime_evidence",
+                "adapter_evidence",
+                "workspace",
+                "runtime_result",
+                "client_boundary",
+            }
+            or capture_record.get("runtime_evidence") != os.fspath(capture_runtime)
+            or capture_record.get("adapter_evidence") != os.fspath(capture_adapter)
+            or capture_record.get("workspace") != os.fspath(capture_workspace)
+            or capture_record.get("runtime_result")
+            != os.fspath(capture_runtime / "result.json")
+            or capture_record.get("client_boundary")
+            != "app-server-stdout-closed-after-planned-handoff"
         ):
-            raise EvidenceError("combined result omits the failed in-flight VM attempt")
-        attempt_result = _json_path(
-            attempt_runtime / "result.json", "in-flight runtime result"
+            raise EvidenceError("combined result omits the planned checkpoint handoff")
+        capture_result = _json_path(
+            capture_runtime / "result.json", "checkpoint capture runtime result"
+        )
+        capture_processes = (
+            capture_result.get("processes", [])
+            if isinstance(capture_result, dict)
+            else []
         )
         if (
-            not isinstance(attempt_result, dict)
-            or attempt_result.get("schema") != 1
-            or attempt_result.get("success") is not False
-            or attempt_result.get("g1_sigkill_confirmed") is not True
-            or attempt_result.get("snapshot_loaded_paused") is not True
-            or len(attempt_result.get("processes", [])) != 2
+            not isinstance(capture_result, dict)
+            or capture_result.get("schema") != 1
+            or capture_result.get("success") is not True
+            or capture_result.get("error", "") != ""
+            or capture_result.get("g1_sigkill_confirmed") is not True
+            or capture_result.get("snapshot_loaded_paused") is not False
+            or capture_result.get("relay_armed_before_resume") is not False
+            or capture_result.get("tool_released_after_g3_attach") is not False
+            or capture_result.get("checkpoint_policy") != "cold-replace"
+            or capture_result.get("cold_replacement_required") is not True
+            or capture_result.get("sealed_load_inputs") is not None
+            or not isinstance(capture_processes, list)
+            or len(capture_processes) != 1
+            or not isinstance(capture_processes[0], dict)
+            or capture_processes[0].get("generation") != 1
+            or capture_processes[0].get("termination") != "supervisor"
         ):
-            raise EvidenceError("in-flight runtime did not fail closed after VM replacement")
-        attempt_app_records = _json_lines_path(
-            attempt_adapter / "app-server.jsonl", "in-flight App Server log"
+            raise EvidenceError("checkpoint capture did not select a clean VM replacement")
+        capture_artifacts = capture_result.get("artifacts")
+        if not isinstance(capture_artifacts, dict) or set(capture_artifacts) != {
+            "bridge_io",
+            "checkpoint_capture",
+            "events",
+            "firecracker",
+            "firecracker_api_g1",
+            "firecracker_relay_g1",
+            "guest",
+            "guest_config",
+            "initramfs",
+            "kernel",
+            "model_proxy",
+            "payload",
+            "repository",
+            "runner",
+            "snapshot_memory",
+            "snapshot_state",
+        }:
+            raise EvidenceError("checkpoint capture retained the wrong runtime artifacts")
+        for artifact_name in (
+            "checkpoint_capture",
+            "snapshot_memory",
+            "snapshot_state",
+            "repository",
+        ):
+            _runtime_artifact(
+                capture_runtime,
+                capture_artifacts[artifact_name],
+                f"checkpoint capture {artifact_name}",
+            )
+        capture_evidence = _json_path(
+            capture_runtime / "checkpoint-capture.json",
+            "checkpoint capture evidence",
         )
-        attempt_started: list[tuple[dict[str, Any], dict[str, Any]]] = []
-        attempt_terminal: list[dict[str, Any]] = []
-        for record in attempt_app_records:
+        if (
+            not isinstance(capture_evidence, dict)
+            or set(capture_evidence) != {
+                "schema",
+                "policy",
+                "reason",
+                "session_id",
+                "source_instance_id",
+                "codex_sha256",
+                "arguments_sha256",
+                "repository_tree_root",
+                "repository_bundle",
+                "snapshot_state",
+                "snapshot_memory",
+                "stream_checkpoint",
+            }
+            or capture_evidence.get("schema") != 1
+            or capture_evidence.get("policy") != "cold-replace"
+            or capture_evidence.get("reason") != "active-external-io-not-portable"
+            or capture_evidence.get("session_id") != capture_result.get("session_id")
+            or capture_evidence.get("source_instance_id") != capture_processes[0].get("id")
+            or capture_evidence.get("codex_sha256") != capture_result.get("codex_sha256")
+            or capture_evidence.get("arguments_sha256")
+            != capture_result.get("arguments_sha256")
+            or capture_evidence.get("repository_bundle") != capture_artifacts["repository"]
+            or capture_evidence.get("repository_bundle", {}).get("sha256")
+            != adapter_artifacts.get("repository", {}).get("sha256")
+            or capture_evidence.get("codex_sha256")
+            != adapter_artifacts.get("codex", {}).get("sha256")
+            or capture_evidence.get("snapshot_state") != capture_artifacts["snapshot_state"]
+            or capture_evidence.get("snapshot_memory") != capture_artifacts["snapshot_memory"]
+            or capture_evidence.get("stream_checkpoint") != capture_result.get("checkpoint")
+        ):
+            raise EvidenceError("checkpoint capture does not bind its VM and stream state")
+        if _private_file(
+            capture_runtime / "checkpoint-capture.json",
+            "checkpoint capture evidence",
+        ) != json.dumps(
+            capture_evidence,
+            separators=(",", ":"),
+            ensure_ascii=True,
+        ).encode("utf-8"):
+            raise EvidenceError("checkpoint capture evidence is not canonical JSON")
+
+        capture_app_records = _json_lines_path(
+            capture_adapter / "app-server.jsonl", "checkpoint capture App Server log"
+        )
+        capture_started: list[tuple[dict[str, Any], dict[str, Any]]] = []
+        capture_terminal: list[dict[str, Any]] = []
+        for record in capture_app_records:
             payload = record.get("payload")
             params = payload.get("params") if isinstance(payload, dict) else None
             item = params.get("item") if isinstance(params, dict) else None
             if not isinstance(item, dict) or item.get("type") != "mcpToolCall":
                 continue
             if payload.get("method") == "item/started":
-                attempt_started.append((record, item))
+                capture_started.append((record, item))
             elif payload.get("method") == "item/completed":
-                attempt_terminal.append(item)
+                capture_terminal.append(item)
         if (
-            len(attempt_started) != 1
-            or attempt_started[0][1].get("server") != "continuity"
-            or attempt_started[0][1].get("tool") != "commit_effect"
-            or attempt_started[0][1].get("arguments") != {"effect_id": "effect-A"}
-            or attempt_terminal
+            len(capture_started) != 1
+            or capture_started[0][1].get("server") != "continuity"
+            or capture_started[0][1].get("tool") != "commit_effect"
+            or capture_started[0][1].get("arguments") != {"effect_id": "effect-A"}
+            or capture_terminal
         ):
-            raise EvidenceError("failed VM attempt did not capture exactly one unresolved A")
+            raise EvidenceError("checkpoint capture did not retain exactly one unresolved A")
 
         inflight_path = root / "inflight-checkpoint.json"
         inflight = _json_path(
@@ -750,7 +886,7 @@ def check(path: Path, payload_result_path: Path) -> dict[str, Any]:
         ):
             raise EvidenceError("in-flight record does not bind the pre-checkpoint durable bytes")
         runtime_events = _json_lines_path(
-            attempt_runtime / "events.jsonl", "in-flight runtime events"
+            capture_runtime / "events.jsonl", "checkpoint capture runtime events"
         )
         event_times = {
             name: [
@@ -762,7 +898,8 @@ def check(path: Path, payload_result_path: Path) -> dict[str, Any]:
                 "tool-call-observed-checkpoint-quiescent",
                 "snapshot-created-paused",
                 "g1-sigkill-confirmed",
-                "run-failed",
+                "checkpoint-classified-cold-replace",
+                "run-completed",
             )
         }
         commit_time = inflight.get("provider_commit_observed_time_ns")
@@ -772,6 +909,8 @@ def check(path: Path, payload_result_path: Path) -> dict[str, Any]:
         replay_time = terminal_records[0][0].get("time_ns")
         if (
             any(len(values) != 1 for values in event_times.values())
+            or any(event.get("event") == "run-failed" for event in runtime_events)
+            or any(event.get("generation") == 3 for event in runtime_events)
             or not all(
                 isinstance(value, int) and value > 0
                 for value in (
@@ -789,8 +928,13 @@ def check(path: Path, payload_result_path: Path) -> dict[str, Any]:
                 < snapshot_time
                 < release_time
                 <= completed_time
+                < replay_time
+            )
+            or not (
+                snapshot_time
                 < event_times["g1-sigkill-confirmed"][0]
-                < event_times["run-failed"][0]
+                < event_times["checkpoint-classified-cold-replace"][0]
+                < event_times["run-completed"][0]
                 < replay_time
             )
         ):
@@ -803,7 +947,12 @@ def check(path: Path, payload_result_path: Path) -> dict[str, Any]:
             or "ignored SIGUSR1" in payment_log
         ):
             raise EvidenceError("provider log does not prove one held-response release")
-    elif "inflight_checkpoint" in result or (root / "inflight-checkpoint.json").exists():
+    elif (
+        "inflight_checkpoint" in result
+        or "checkpoint_capture" in result
+        or (root / "inflight-checkpoint.json").exists()
+        or (root / "checkpoint-capture").exists()
+    ):
         raise EvidenceError("settled checkpoint unexpectedly retained in-flight evidence")
 
     history = _history(root, checkpoint_mode)
@@ -823,7 +972,8 @@ def check(path: Path, payload_result_path: Path) -> dict[str, Any]:
         "vmm_generations": 2,
         "mcp_relay_lifetimes": expected_lifetimes,
         "mcp_completions": 3,
-        "failed_vm_attempts": 1 if checkpoint_mode == "inflight" else 0,
+        "failed_vm_attempts": 0,
+        "cold_replacements": 1 if checkpoint_mode == "inflight" else 0,
         "unresolved_calls_captured": 1 if checkpoint_mode == "inflight" else 0,
         "operations": 2,
         "provider_commits": 2,

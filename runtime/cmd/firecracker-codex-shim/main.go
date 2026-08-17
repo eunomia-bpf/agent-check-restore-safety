@@ -122,6 +122,8 @@ type resultRecord struct {
 	SnapshotLoadedPaused    bool                      `json:"snapshot_loaded_paused"`
 	RelayArmedBeforeResume  bool                      `json:"relay_armed_before_resume"`
 	ToolReleasedAfterAttach bool                      `json:"tool_released_after_g3_attach"`
+	CheckpointPolicy        string                    `json:"checkpoint_policy,omitempty"`
+	ColdReplacementRequired bool                      `json:"cold_replacement_required,omitempty"`
 	CompletedTimeNS         int64                     `json:"completed_time_ns"`
 }
 
@@ -144,6 +146,24 @@ type checkpointEvidence struct {
 	SessionID          string             `json:"session_id"`
 	SourceInstanceID   string             `json:"source_instance_id"`
 	RestoredInstanceID string             `json:"restored_instance_id"`
+	CodexSHA256        string             `json:"codex_sha256"`
+	ArgumentsSHA256    string             `json:"arguments_sha256"`
+	RepositoryTreeRoot string             `json:"repository_tree_root"`
+	RepositoryBundle   artifactRecord     `json:"repository_bundle"`
+	SnapshotState      artifactRecord     `json:"snapshot_state"`
+	SnapshotMemory     artifactRecord     `json:"snapshot_memory"`
+	StreamCheckpoint   codexvm.Checkpoint `json:"stream_checkpoint"`
+}
+
+// checkpointCaptureEvidence binds a real full-machine snapshot to the stream
+// position at which the host deliberately chose instance replacement. Unlike
+// checkpointEvidence, it never claims that a second VMM loaded the snapshot.
+type checkpointCaptureEvidence struct {
+	Schema             int                `json:"schema"`
+	Policy             string             `json:"policy"`
+	Reason             string             `json:"reason"`
+	SessionID          string             `json:"session_id"`
+	SourceInstanceID   string             `json:"source_instance_id"`
 	CodexSHA256        string             `json:"codex_sha256"`
 	ArgumentsSHA256    string             `json:"arguments_sha256"`
 	RepositoryTreeRoot string             `json:"repository_tree_root"`
@@ -222,32 +242,33 @@ type generation struct {
 }
 
 type runner struct {
-	ctx            context.Context
-	cancel         context.CancelFunc
-	config         codexvm.Config
-	input          io.Reader
-	output         io.Writer
-	logger         *log.Logger
-	events         *eventLog
-	result         resultRecord
-	sessionID      string
-	idG1           string
-	idG3           string
-	bridge         *codexvm.Bridge
-	bridgeIO       *bridgeIOLog
-	bridgeIOFile   *evidenceFile
-	proxy          *firecracker.LoopbackProxy
-	proxyAudit     *evidenceFile
-	kernel         *sealedArtifact
-	payload        *sealedArtifact
-	repository     *sealedArtifact
-	repositoryTree repobundle.Bundle
-	guest          *sealedArtifact
-	initramfs      *sealedArtifact
-	snapshotState  *sealedArtifact
-	snapshotMemory *sealedArtifact
-	g1             *generation
-	g3             *generation
+	ctx                context.Context
+	cancel             context.CancelFunc
+	config             codexvm.Config
+	input              io.Reader
+	output             io.Writer
+	logger             *log.Logger
+	events             *eventLog
+	result             resultRecord
+	sessionID          string
+	idG1               string
+	idG3               string
+	bridge             *codexvm.Bridge
+	bridgeIO           *bridgeIOLog
+	bridgeIOFile       *evidenceFile
+	bridgeInputStopped bool
+	proxy              *firecracker.LoopbackProxy
+	proxyAudit         *evidenceFile
+	kernel             *sealedArtifact
+	payload            *sealedArtifact
+	repository         *sealedArtifact
+	repositoryTree     repobundle.Bundle
+	guest              *sealedArtifact
+	initramfs          *sealedArtifact
+	snapshotState      *sealedArtifact
+	snapshotMemory     *sealedArtifact
+	g1                 *generation
+	g3                 *generation
 }
 
 func main() {
@@ -539,6 +560,26 @@ func (r *runner) execute() error {
 	if r.snapshotMemory, err = sealPath("snapshot-memory", snapshotMemoryPath, memoryBefore.SHA256, 5, 0); err != nil {
 		return err
 	}
+	if r.config.CheckpointPolicy == codexvm.CheckpointPolicyColdReplace {
+		captureArtifact, err := r.persistCheckpointCaptureEvidence(checkpoint)
+		if err != nil {
+			return err
+		}
+		r.result.Artifacts["checkpoint_capture"] = captureArtifact
+		r.result.CheckpointPolicy = codexvm.CheckpointPolicyColdReplace
+		r.result.ColdReplacementRequired = true
+		if err := r.events.Record("checkpoint-classified-cold-replace", nil, map[string]any{
+			"policy":             codexvm.CheckpointPolicyColdReplace,
+			"reason":             "active-external-io-not-portable",
+			"checkpoint_capture": captureArtifact,
+		}); err != nil {
+			return err
+		}
+		if err := r.stopBridgeForColdReplacement(); err != nil {
+			return err
+		}
+		return nil
+	}
 	r.result.SealedLoadInputs = []sealedArtifactRecord{r.snapshotState.record, r.snapshotMemory.record, r.payload.record, r.repository.record}
 	if err := r.events.Record("snapshot-load-inputs-sealed", nil, map[string]any{
 		"state": r.snapshotState.record, "memory": r.snapshotMemory.record,
@@ -652,6 +693,42 @@ func (r *runner) persistCheckpointEvidence(stream codexvm.Checkpoint) (artifactR
 		return artifactRecord{}, fmt.Errorf("encode checkpoint evidence: %w", err)
 	}
 	return persistBytesArtifact("checkpoint.json", filepath.Join(r.config.EvidenceDir, "checkpoint.json"), encoded)
+}
+
+func (r *runner) persistCheckpointCaptureEvidence(stream codexvm.Checkpoint) (artifactRecord, error) {
+	if r.g1 == nil {
+		return artifactRecord{}, errors.New("checkpoint capture evidence requires the source VM")
+	}
+	evidence := checkpointCaptureEvidence{
+		Schema: 1, Policy: codexvm.CheckpointPolicyColdReplace,
+		Reason: "active-external-io-not-portable", SessionID: r.sessionID,
+		SourceInstanceID: r.g1.id,
+		CodexSHA256:      r.result.CodexSHA256, ArgumentsSHA256: r.result.ArgumentsSHA256,
+		RepositoryTreeRoot: r.repositoryTree.TreeRoot.String(),
+		RepositoryBundle:   r.result.Artifacts["repository"],
+		SnapshotState:      r.result.Artifacts["snapshot_state"],
+		SnapshotMemory:     r.result.Artifacts["snapshot_memory"],
+		StreamCheckpoint:   stream,
+	}
+	encoded, err := json.Marshal(evidence)
+	if err != nil {
+		return artifactRecord{}, fmt.Errorf("encode checkpoint capture evidence: %w", err)
+	}
+	return persistBytesArtifact(
+		"checkpoint-capture.json",
+		filepath.Join(r.config.EvidenceDir, "checkpoint-capture.json"),
+		encoded,
+	)
+}
+
+func (r *runner) stopBridgeForColdReplacement() error {
+	if r.bridge == nil {
+		return errors.New("cold replacement requires an active Codex bridge")
+	}
+	r.cancel()
+	r.bridge.StopInput()
+	r.bridgeInputStopped = true
+	return nil
 }
 
 func (r *runner) startProxy() error {
@@ -991,8 +1068,8 @@ func (r *runner) cleanup() error {
 		}
 	}
 	if r.bridgeIOFile != nil {
-		bridgeInputSafe := r.bridge == nil
-		if r.bridge != nil {
+		bridgeInputSafe := r.bridge == nil || r.bridgeInputStopped
+		if r.bridge != nil && !r.bridgeInputStopped {
 			waitContext, waitCancel := context.WithTimeout(context.Background(), endpointDrainLimit)
 			waitErr := r.bridge.WaitInput(waitContext)
 			waitCancel()

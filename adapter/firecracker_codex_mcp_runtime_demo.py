@@ -141,14 +141,14 @@ def run(
     adapter = root / "adapter"
     workspace = root / "workspace"
     sockets = root / "sockets"
-    inflight_attempt = root / "inflight-attempt"
-    attempt_runtime = inflight_attempt / "runtime"
-    attempt_adapter = inflight_attempt / "adapter"
-    attempt_workspace = inflight_attempt / "workspace"
+    checkpoint_capture = root / "checkpoint-capture"
+    capture_runtime = checkpoint_capture / "runtime"
+    capture_adapter = checkpoint_capture / "adapter"
+    capture_workspace = checkpoint_capture / "workspace"
     directories = [runtime, adapter, workspace, sockets]
     if checkpoint_mode == "inflight":
         directories.extend(
-            [inflight_attempt, attempt_runtime, attempt_adapter, attempt_workspace]
+            [checkpoint_capture, capture_runtime, capture_adapter, capture_workspace]
         )
     for directory in directories:
         directory.mkdir(mode=0o700)
@@ -341,7 +341,7 @@ def run(
                     try:
                         runtime_events = [
                             json.loads(line)
-                            for line in (attempt_runtime / "events.jsonl")
+                            for line in (capture_runtime / "events.jsonl")
                             .read_text(encoding="utf-8")
                             .splitlines()
                             if line
@@ -434,32 +434,33 @@ def run(
                 mcp_effect_ids=("effect-A", "effect-B"),
                 mcp_inflight_wait=(wait_for_inflight_commit if inflight else None),
                 mcp_inflight_release=(release_inflight_commit if inflight else None),
+                checkpoint_policy=("cold-replace" if inflight else "restore"),
             )
 
-        attempt_record: dict[str, Any] | None = None
+        capture_record: dict[str, Any] | None = None
         if checkpoint_mode == "inflight":
-            attempt_error: Exception | None = None
+            boundary_error: Exception | None = None
             try:
                 run_firecracker(
-                    attempt_runtime,
-                    attempt_adapter,
-                    attempt_workspace,
+                    capture_runtime,
+                    capture_adapter,
+                    capture_workspace,
                     inflight=True,
                 )
             except Exception as error:
-                attempt_error = error
+                boundary_error = error
             if release_thread is not None:
                 release_thread.join(30)
             if (
-                attempt_error is None
-                or "App Server stdout closed unexpectedly" not in str(attempt_error)
+                boundary_error is None
+                or "App Server stdout closed unexpectedly (exit=0)" not in str(boundary_error)
                 or release_thread is None
                 or release_thread.is_alive()
                 or release_errors
             ):
                 raise DemoError(
-                    "in-flight Firecracker attempt did not fail closed at its live transport"
-                ) from attempt_error
+                    "Firecracker capture did not end at the planned cold-replacement boundary"
+                ) from boundary_error
             required_inflight = {
                 "provider_commit_observed_time_ns",
                 "snapshot_created_time_ns",
@@ -469,25 +470,28 @@ def run(
             if not required_inflight.issubset(inflight_evidence):
                 raise DemoError("in-flight checkpoint evidence is incomplete")
             _write_private_json(root / "inflight-checkpoint.json", inflight_evidence)
-            attempt_result_path = attempt_runtime / "result.json"
+            capture_result_path = capture_runtime / "result.json"
             try:
-                attempt_result = json.loads(attempt_result_path.read_text(encoding="utf-8"))
+                capture_result = json.loads(capture_result_path.read_text(encoding="utf-8"))
             except (OSError, json.JSONDecodeError) as error:
-                raise DemoError("in-flight attempt omitted its runtime result") from error
+                raise DemoError("checkpoint capture omitted its runtime result") from error
             if (
-                not isinstance(attempt_result, dict)
-                or attempt_result.get("schema") != 1
-                or attempt_result.get("success") is not False
-                or attempt_result.get("g1_sigkill_confirmed") is not True
-                or attempt_result.get("snapshot_loaded_paused") is not True
+                not isinstance(capture_result, dict)
+                or capture_result.get("schema") != 1
+                or capture_result.get("success") is not True
+                or capture_result.get("g1_sigkill_confirmed") is not True
+                or capture_result.get("snapshot_loaded_paused") is not False
+                or capture_result.get("checkpoint_policy") != "cold-replace"
+                or capture_result.get("cold_replacement_required") is not True
+                or len(capture_result.get("processes", [])) != 1
             ):
-                raise DemoError("in-flight attempt did not retain a failed full-VM replacement")
-            attempt_record = {
-                "runtime_evidence": os.fspath(attempt_runtime),
-                "adapter_evidence": os.fspath(attempt_adapter),
-                "workspace": os.fspath(attempt_workspace),
-                "runtime_result": os.fspath(attempt_result_path),
-                "failure": str(attempt_error),
+                raise DemoError("checkpoint capture did not request a clean VM replacement")
+            capture_record = {
+                "runtime_evidence": os.fspath(capture_runtime),
+                "adapter_evidence": os.fspath(capture_adapter),
+                "workspace": os.fspath(capture_workspace),
+                "runtime_result": os.fspath(capture_result_path),
+                "client_boundary": "app-server-stdout-closed-after-planned-handoff",
             }
 
         firecracker_result = run_firecracker(
@@ -554,9 +558,9 @@ def run(
             result["inflight_checkpoint"] = os.fspath(
                 root / "inflight-checkpoint.json"
             )
-            if attempt_record is None:
-                raise DemoError("in-flight mode omitted its failed replacement attempt")
-            result["inflight_attempt"] = attempt_record
+            if capture_record is None:
+                raise DemoError("in-flight mode omitted its checkpoint capture")
+            result["checkpoint_capture"] = capture_record
         _write_private_json(root / "result.json", result)
         return result
     finally:

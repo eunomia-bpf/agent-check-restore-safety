@@ -215,6 +215,42 @@ func TestBridgeRejectsInputEOFBeforeProtectedTurnCompletion(t *testing.T) {
 	}
 }
 
+func TestBridgeStopInputPreventsFutureAuditWithoutWaitingForEOF(t *testing.T) {
+	inputReader, inputWriter := io.Pipe()
+	auditCalls := 0
+	bridge, err := newBridge(
+		"session-stop-input",
+		inputReader,
+		io.Discard,
+		log.New(io.Discard, "", 0),
+		"",
+		"",
+		func(_, _ string, _ []byte) error {
+			auditCalls++
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	bridge.StartInput(ctx)
+	bridge.StopInput()
+	if _, err := inputWriter.Write([]byte("{}\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := bridge.WaitInput(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if auditCalls != 0 || bridge.Failure() != nil {
+		t.Fatalf("stopped input audit calls=%d failure=%v", auditCalls, bridge.Failure())
+	}
+	if err := inputWriter.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestBridgeRejectsWrongGenerationHello(t *testing.T) {
 	bridge, err := NewBridge("session-wrong", strings.NewReader(""), io.Discard, log.New(io.Discard, "", 0))
 	if err != nil {

@@ -37,6 +37,10 @@ const (
 	EnvEvidenceDir       = "SAFE_CHANGE_EVIDENCE_DIR"
 	EnvWorkspace         = "SAFE_CHANGE_WORKSPACE"
 	EnvMCPHostSocket     = "SAFE_CHANGE_MCP_HOST_SOCKET"
+	EnvCheckpointPolicy  = "SAFE_CHANGE_CHECKPOINT_POLICY"
+
+	CheckpointPolicyRestore     = "restore"
+	CheckpointPolicyColdReplace = "cold-replace"
 
 	MaxArguments     = 256
 	MaxArgumentBytes = 64 << 10
@@ -84,6 +88,7 @@ type Config struct {
 	HostModelTarget   string
 	GuestModelPort    uint32
 	MCPHostSocket     string
+	CheckpointPolicy  string
 }
 
 // LoadConfig reads exactly the fixed host-shim environment contract and
@@ -168,6 +173,17 @@ func LoadConfig(arguments []string, lookupEnv func(string) (string, bool)) (Conf
 			if pathsOverlap(config.MCPHostSocket, path) {
 				return Config{}, fmt.Errorf("%s and %s paths must not overlap", EnvMCPHostSocket, label)
 			}
+		}
+	}
+	config.CheckpointPolicy = CheckpointPolicyRestore
+	if policy, present := lookupEnv(EnvCheckpointPolicy); present {
+		switch policy {
+		case CheckpointPolicyRestore, CheckpointPolicyColdReplace:
+			config.CheckpointPolicy = policy
+		case "":
+			return Config{}, fmt.Errorf("optional environment variable %s is empty", EnvCheckpointPolicy)
+		default:
+			return Config{}, fmt.Errorf("%s must be %q or %q", EnvCheckpointPolicy, CheckpointPolicyRestore, CheckpointPolicyColdReplace)
 		}
 	}
 

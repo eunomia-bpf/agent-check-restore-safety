@@ -96,6 +96,7 @@ def create_firecracker_codex(
     evidence_dir: str | os.PathLike[str],
     workspace: str | os.PathLike[str],
     mcp_host_socket: str | os.PathLike[str] | None = None,
+    checkpoint_policy: str = "restore",
     temp_parent: str | os.PathLike[str] | None = None,
 ) -> FirecrackerCodex:
     """Create a transparent executable with immutable microVM configuration.
@@ -106,6 +107,8 @@ def create_firecracker_codex(
     empty, private directory owned by the caller.
     """
 
+    if checkpoint_policy not in {"restore", "cold-replace"}:
+        raise ValueError("checkpoint_policy must be 'restore' or 'cold-replace'")
     runner_path = _regular_file(runner, "runner", executable=True)
     firecracker_path = _regular_file(
         firecracker, "firecracker", executable=True
@@ -158,6 +161,7 @@ def create_firecracker_codex(
         fixed_environment["SAFE_CHANGE_MCP_HOST_SOCKET"] = values[
             "mcp_host_socket"
         ]
+    fixed_environment["SAFE_CHANGE_CHECKPOINT_POLICY"] = checkpoint_policy
 
     parent = _directory(temp_parent, "temp_parent") if temp_parent is not None else None
     temporary = tempfile.TemporaryDirectory(

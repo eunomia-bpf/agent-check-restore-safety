@@ -24,7 +24,7 @@ func TestLoadConfigAcceptsStrictContractAndCopiesArguments(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantLookups := append(append([]string(nil), requiredEnvironment[:]...), EnvMCPHostSocket)
+	wantLookups := append(append([]string(nil), requiredEnvironment[:]...), EnvMCPHostSocket, EnvCheckpointPolicy)
 	if !reflect.DeepEqual(lookedUp, wantLookups) {
 		t.Fatalf("environment lookups = %q, want %q", lookedUp, wantLookups)
 	}
@@ -37,6 +37,9 @@ func TestLoadConfigAcceptsStrictContractAndCopiesArguments(t *testing.T) {
 	if config.HostModelTarget != "127.0.0.1:43210" || config.GuestModelPort != 43210 {
 		t.Fatalf("model route = %q / %d", config.HostModelTarget, config.GuestModelPort)
 	}
+	if config.CheckpointPolicy != CheckpointPolicyRestore {
+		t.Fatalf("checkpoint policy = %q, want restore", config.CheckpointPolicy)
+	}
 	if !reflect.DeepEqual(config.Arguments, arguments) {
 		t.Fatalf("arguments = %q, want %q", config.Arguments, arguments)
 	}
@@ -44,6 +47,30 @@ func TestLoadConfigAcceptsStrictContractAndCopiesArguments(t *testing.T) {
 	arguments[3] = "mutated"
 	if config.Arguments[0] != "app-server" || strings.Contains(strings.Join(config.Arguments, " "), "mutated") {
 		t.Fatalf("Config retained caller's argument backing array: %q", config.Arguments)
+	}
+}
+
+func TestLoadConfigAcceptsColdReplacementCheckpointPolicy(t *testing.T) {
+	fixture := newConfigFixture(t)
+	fixture.environment[EnvCheckpointPolicy] = CheckpointPolicyColdReplace
+	config, err := LoadConfig(validArguments(`http://127.0.0.1:43210/v1`), fixture.lookup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if config.CheckpointPolicy != CheckpointPolicyColdReplace {
+		t.Fatalf("checkpoint policy = %q", config.CheckpointPolicy)
+	}
+}
+
+func TestLoadConfigRejectsInvalidCheckpointPolicy(t *testing.T) {
+	for _, policy := range []string{"", "resume", "cold_replace"} {
+		t.Run(policy, func(t *testing.T) {
+			fixture := newConfigFixture(t)
+			fixture.environment[EnvCheckpointPolicy] = policy
+			if _, err := LoadConfig(validArguments(`http://127.0.0.1:1/v1`), fixture.lookup); err == nil || !strings.Contains(err.Error(), EnvCheckpointPolicy) {
+				t.Fatalf("invalid checkpoint policy error = %v", err)
+			}
+		})
 	}
 }
 

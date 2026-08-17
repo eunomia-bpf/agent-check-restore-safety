@@ -532,6 +532,7 @@ def run_demo(
     mcp_effect_ids: Sequence[str] | None = None,
     mcp_inflight_wait: Callable[[], None] | None = None,
     mcp_inflight_release: Callable[[], None] | None = None,
+    checkpoint_policy: str = "restore",
 ) -> dict[str, Any]:
     """Run one deterministic preflight and publish sanitized evidence metadata."""
 
@@ -548,6 +549,10 @@ def run_demo(
     mcp_inputs = (mcp_relay, mcp_relay_sha256, mcp_host_socket)
     mcp_requested = any(value is not None for value in mcp_inputs) or bool(mcp_effects)
     mcp_inflight = mcp_inflight_wait is not None or mcp_inflight_release is not None
+    if checkpoint_policy not in {"restore", "cold-replace"}:
+        raise DemoError("checkpoint policy must be restore or cold-replace")
+    if checkpoint_policy == "cold-replace" and not mcp_inflight:
+        raise DemoError("cold replacement requires an in-flight MCP checkpoint")
     if mcp_requested and (not all(value is not None for value in mcp_inputs) or len(mcp_effects) != 2):
         raise DemoError(
             "MCP Firecracker mode requires relay, relay SHA-256, host socket, and two effects"
@@ -801,6 +806,7 @@ def run_demo(
         evidence_dir=runtime_dir,
         workspace=workspace_dir,
         mcp_host_socket=mcp_endpoint,
+        checkpoint_policy=checkpoint_policy,
     ) as wrapped:
         previous_umask = os.umask(0o077)
         try:

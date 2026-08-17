@@ -68,6 +68,7 @@ class FirecrackerCodexTests(unittest.TestCase):
                     "LANG": "C.UTF-8",
                     "LC_ALL": "C.UTF-8",
                     "PATH": "/usr/bin:/bin",
+                    "SAFE_CHANGE_CHECKPOINT_POLICY": "restore",
                     "SAFE_CHANGE_EVIDENCE_DIR": os.fspath(inputs["evidence_dir"]),
                     "SAFE_CHANGE_RUNNER_SHA256": _DIGESTS["runner_sha256"],
                     "SAFE_CHANGE_CODEX_SHA256": _DIGESTS["codex_sha256"],
@@ -86,6 +87,37 @@ class FirecrackerCodexTests(unittest.TestCase):
                 self.assertEqual(
                     wrapped.command(arguments), (os.fspath(runner), *arguments)
                 )
+
+    def test_wrapper_passes_validated_checkpoint_policy(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            runner = root / "runner"
+            runner.write_text(
+                "#!/usr/bin/env python3\n"
+                "import os\n"
+                "print(os.environ['SAFE_CHANGE_CHECKPOINT_POLICY'])\n",
+                encoding="utf-8",
+            )
+            runner.chmod(0o700)
+            inputs = self._inputs(root)
+            with create_firecracker_codex(
+                runner=runner,
+                checkpoint_policy="cold-replace",
+                **inputs,
+                **_DIGESTS,
+            ) as wrapped:
+                completed = subprocess.run(
+                    [os.fspath(wrapped)], check=True, capture_output=True, text=True
+                )
+            self.assertEqual(completed.stdout, "cold-replace\n")
+            for invalid in ("", "resume", "cold_replace"):
+                with self.assertRaisesRegex(ValueError, "checkpoint_policy"):
+                    create_firecracker_codex(
+                        runner=runner,
+                        checkpoint_policy=invalid,
+                        **inputs,
+                        **_DIGESTS,
+                    )
 
     def test_wrapper_passes_only_validated_optional_mcp_socket(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
