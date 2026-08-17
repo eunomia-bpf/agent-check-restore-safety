@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"net"
 	"os"
 	"path/filepath"
@@ -116,13 +117,18 @@ func TestUnixHostKeepsJournalAcrossReplacementRelays(t *testing.T) {
 		`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"charge_payment","arguments":{"effect_id":"A-17"},"_meta":{"progressToken":"first"}}}`,
 	)
 	second := relayRequests(t, host.Path(),
-		`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"charge_payment","arguments":{"effect_id":"A-17"},"_meta":{"progressToken":"replacement"}}}`,
-		`{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"charge_payment","arguments":{"effect_id":"B-18"}}}`,
+		`{"jsonrpc":"2.0","id":91,"method":"tools/call","params":{"name":"charge_payment","arguments":{"effect_id":"B-18"},"_meta":{"progressToken":"replacement"}}}`,
+		`{"jsonrpc":"2.0","id":92,"method":"tools/call","params":{"name":"charge_payment","arguments":{"effect_id":"A-17"}}}`,
 	)
-	if len(first) != 1 || len(second) != 2 || first[0] != second[0] || len(executor.calls) != 2 {
+	if len(first) != 1 || len(second) != 2 || len(executor.calls) != 2 ||
+		decodeResponse(t, first[0])["id"].(json.Number).String() != "2" ||
+		decodeResponse(t, second[0])["id"].(json.Number).String() != "91" ||
+		decodeResponse(t, second[1])["id"].(json.Number).String() != "92" {
 		t.Fatalf("first=%v second=%v executions=%+v", first, second, executor.calls)
 	}
-	if executor.calls[0].callID != "mcp-call-v1:10:host-relay:1" || executor.calls[1].callID != "mcp-call-v1:10:host-relay:2" {
+	if !strings.HasPrefix(executor.calls[0].callID, "mcp-call-v2:10:host-relay:") ||
+		!strings.HasPrefix(executor.calls[1].callID, "mcp-call-v2:10:host-relay:") ||
+		executor.calls[0].callID == executor.calls[1].callID || executor.calls[0].body != `{"effect_id":"A-17"}` || executor.calls[1].body != `{"effect_id":"B-18"}` {
 		t.Fatalf("host call identities = %+v", executor.calls)
 	}
 	cancel()

@@ -80,6 +80,53 @@ def _hash(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _canonical(value: Any) -> bytes:
+    return json.dumps(value, separators=(",", ":"), ensure_ascii=True).encode()
+
+
+def _protected_identity(effect: str) -> tuple[str, str]:
+    request = {
+        "schema": 1,
+        "name": "commit_effect",
+        "kind": "protected_commit",
+        "arguments": {"effect_id": effect},
+    }
+    encoded = _canonical(request)
+    call_key = "mcp-call-key-v1:" + sha256(
+        b"mcp-operation-identity-v1\0" + encoded
+    ).hexdigest()
+    request_digest = sha256(b"mcp-protected-call-v2\0" + encoded).hexdigest()
+    return call_key, request_digest
+
+
+def _operation_config_digest(config: dict[str, Any]) -> str:
+    tools: list[dict[str, Any]] = []
+    for source_tool in config.get("tools", []):
+        arguments: list[dict[str, Any]] = []
+        for source_argument in source_tool.get("arguments", []):
+            argument = {"name": source_argument["name"]}
+            if source_argument.get("description"):
+                argument["description"] = source_argument["description"]
+            argument["type"] = source_argument["type"]
+            argument["required"] = source_argument["required"]
+            if source_argument.get("max_length"):
+                argument["max_length"] = source_argument["max_length"]
+            if source_argument.get("enum"):
+                argument["enum"] = source_argument["enum"]
+            arguments.append(argument)
+        tool = {
+            "name": source_tool["name"],
+            "description": source_tool["description"],
+            "kind": source_tool["kind"],
+            "arguments": arguments,
+        }
+        if source_tool.get("identity_arguments"):
+            tool["identity_arguments"] = source_tool["identity_arguments"]
+        tools.append(tool)
+    encoded = _canonical({"schema": config["schema"], "tools": tools})
+    return sha256(b"mcp-operation-config-v1\0" + encoded).hexdigest()
+
+
 def _direct_file(path: Path, label: str) -> None:
     try:
         info = path.lstat()
@@ -348,28 +395,69 @@ def check(root: Path) -> dict[str, Any]:
         not isinstance(operations, list)
         or len(operations) != 2
         or len(set(operations)) != 2
-        or [payment.get("operation_id") for payment in payments] != operations
+        or {payment.get("operation_id") for payment in payments} != set(operations)
         or any(payment.get("path") != "/v1/charge" for payment in payments)
     ):
         raise EvidenceError("provider history does not prove exactly two unique commits")
     journal = _json_lines(artifact_paths["journal"], "MCP journal")
+    journal_schema = journal[0].get("schema") if journal else None
+    tools_config = _json(artifact_paths["tools_config"], "tools config")
+    if not isinstance(tools_config, dict) or tools_config.get("schema") != journal_schema:
+        raise EvidenceError("MCP journal and tools config use different schemas")
+    config_digest = _operation_config_digest(tools_config) if journal_schema == 2 else ""
     if (
         [record.get("event") for record in journal] != ["prepared", "completed", "prepared", "completed"]
         or [record.get("call_sequence") for record in journal] != [1, 1, 2, 2]
         or any(record.get("execution_id") != "claude-mcp-execution-v1" for record in journal)
+        or journal_schema not in {1, 2}
+        or any(record.get("schema") != journal_schema for record in journal)
     ):
         raise EvidenceError("MCP journal lifecycle is not exactly two calls")
     journal_operations = []
-    for record in (journal[1], journal[3]):
-        try:
-            response = _loads(
-                base64.b64decode(record["response"], validate=True),
-                "MCP completed response",
-            )
-            journal_operations.append(response["result"]["structuredContent"]["operation_id"])
-        except (KeyError, TypeError, ValueError) as error:
-            raise EvidenceError("MCP completed response is malformed") from error
-    if journal_operations != operations:
+    previous = ""
+    for index, record in enumerate(journal, 1):
+        call_sequence = (index + 1) // 2
+        effect = ("effect-A", "effect-B")[call_sequence - 1]
+        call_key, request_digest = _protected_identity(effect)
+        call_id = (
+            f"mcp-call-v1:23:claude-mcp-execution-v1:{call_sequence}"
+            if journal_schema == 1
+            else "mcp-call-v2:23:claude-mcp-execution-v1:"
+            + call_key.removeprefix("mcp-call-key-v1:")
+        )
+        if (
+            record.get("record_sequence") != index
+            or record.get("rpc_id") != str(call_sequence + 1)
+            or record.get("request_digest") != request_digest
+            or record.get("call_id") != call_id
+            or (journal_schema == 1 and "config_digest" in record)
+            or (journal_schema == 2 and record.get("config_digest") != config_digest)
+            or record.get("uncertain") is not False
+            or record.get("previous_hash", "") != previous
+            or (journal_schema == 1 and "call_key" in record)
+            or (journal_schema == 2 and record.get("call_key") != call_key)
+        ):
+            raise EvidenceError(f"MCP journal identity fails at record {index}")
+        payload = {key: value for key, value in record.items() if key != "hash"}
+        expected_hash = sha256(_canonical(payload)).hexdigest()
+        if record.get("hash") != expected_hash:
+            raise EvidenceError(f"MCP journal hash fails at record {index}")
+        if index % 2:
+            if "response" in record:
+                raise EvidenceError("prepared MCP journal record contains a response")
+        else:
+            try:
+                response = _loads(
+                    base64.b64decode(record["response"], validate=True),
+                    "MCP completed response",
+                )
+                if response.get("id") != (call_sequence + 1 if journal_schema == 1 else None):
+                    raise EvidenceError("MCP saved response has the wrong RPC binding")
+                journal_operations.append(response["result"]["structuredContent"]["operation_id"])
+            except (KeyError, TypeError, ValueError) as error:
+                raise EvidenceError("MCP completed response is malformed") from error
+        previous = expected_hash
+    if set(journal_operations) != set(operations) or len(journal_operations) != 2:
         raise EvidenceError("MCP journal and provider operations differ")
 
     history = _history(artifact_paths["history"])
@@ -383,8 +471,8 @@ def check(root: Path) -> dict[str, Any]:
     if (
         len(prepared) != 2
         or len(succeeded) != 2
-        or [record["data"]["operation"]["id"] for record in prepared] != operations
-        or [record["data"]["id"] for record in succeeded] != operations
+        or {record["data"]["operation"]["id"] for record in prepared} != set(operations)
+        or {record["data"]["id"] for record in succeeded} != set(operations)
     ):
         raise EvidenceError("History does not contain two prepared-to-succeeded Operations")
 

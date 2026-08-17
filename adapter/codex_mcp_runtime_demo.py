@@ -5,8 +5,8 @@ private bridge gateway in Docker mode. Codex App Server, the untrusted MCP
 stdio relay, the long-lived trusted MCP host, Control/History, the
 sandbox-bound Unix endpoint, and the external payment service are real
 processes. The first provider response is dropped after commit. Codex and its
-relay are then restarted, the same model tool call is replayed, and a second
-distinct call is issued through the original trusted host.
+relay are then restarted; the replacement issues a distinct call first and
+then recovers the first operation under new model and MCP request identities.
 """
 
 from __future__ import annotations
@@ -476,7 +476,9 @@ def run(
     if not workspace.is_dir():
         raise DemoError("workspace must be an existing directory")
     root = _private_directory(evidence_dir)
-    sockets = root / "sockets"
+    transport_root = Path(tempfile.mkdtemp(prefix="codex-mcp-transport-", dir="/tmp"))
+    os.chmod(transport_root, 0o700)
+    sockets = transport_root / "sockets"
     sockets.mkdir(mode=0o700)
     control_port = _reserve_loopback_port()
     payment_port = _reserve_loopback_port()
@@ -486,7 +488,7 @@ def run(
     history_path = root / "control.history"
     payment_history_path = root / "payment.history"
     journal_path = root / "mcp-calls.jsonl"
-    relay_directory = root / "relay"
+    relay_directory = transport_root / "relay"
     relay_directory.mkdir(mode=0o700)
     relay_socket_path = relay_directory / "mcp-host.sock"
     socket_path = _sandbox_socket(sockets)
@@ -689,7 +691,7 @@ def run(
                     responses,
                     callable_name=callable_name,
                     effect_id="effect-A",
-                    call_id="stable-model-call-A",
+                    call_id="source-model-call-A",
                     final_text="First operation completed.",
                 )
                 first_client.start_turn_and_wait(
@@ -724,22 +726,22 @@ def run(
                 _enqueue_operation(
                     responses,
                     callable_name=callable_name,
-                    effect_id="effect-A",
-                    call_id="stable-model-call-A",
-                    final_text="Replayed operation completed.",
+                    effect_id="effect-B",
+                    call_id="replacement-model-call-B",
+                    final_text="Second operation completed.",
                 )
                 second_client.start_turn_and_wait(
-                    second_thread["id"], "Resume and complete the interrupted effect-A call."
+                    second_thread["id"], "First commit the distinct effect-B call."
                 )
                 _enqueue_operation(
                     responses,
                     callable_name=callable_name,
-                    effect_id="effect-B",
-                    call_id="stable-model-call-B",
-                    final_text="Second operation completed.",
+                    effect_id="effect-A",
+                    call_id="replacement-model-call-A",
+                    final_text="Replayed operation completed.",
                 )
                 second_client.start_turn_and_wait(
-                    second_thread["id"], "Now commit the distinct effect-B call."
+                    second_thread["id"], "Now recover the earlier effect-A under a new call identity."
                 )
                 second_client.assert_hermetic_runtime()
             responses.assert_consumed()
@@ -831,6 +833,8 @@ def run(
             "codex_processes": 2,
             "trusted_mcp_hosts": 1,
             "mcp_relay_connections": 2,
+            "transport_root": os.fspath(transport_root),
+            "transport_ephemeral": True,
             "codex_mcp_items": len(first_items) + len(second_items),
             "history": state,
             "payment": stats,
@@ -907,6 +911,10 @@ def run(
                 process.close()
             except BaseException as error:
                 errors.append(error)
+        try:
+            admin_token_path.unlink(missing_ok=True)
+        except OSError as error:
+            errors.append(error)
         if docker_network_created and docker_network_name is not None and docker_binary is not None:
             completed = subprocess.run(
                 [os.fspath(docker_binary), "network", "rm", docker_network_name],
@@ -920,6 +928,26 @@ def run(
                         "remove private Docker network failed: " + completed.stderr
                     )
                 )
+        transport_lock = sockets / ".safe-change.lock"
+        try:
+            lock_info = transport_lock.lstat()
+            if (
+                not stat.S_ISREG(lock_info.st_mode)
+                or lock_info.st_uid != os.geteuid()
+                or stat.S_IMODE(lock_info.st_mode) != 0o600
+                or lock_info.st_size != 0
+            ):
+                raise DemoError("ephemeral sandbox lock has an unsafe identity")
+            transport_lock.unlink()
+        except FileNotFoundError:
+            pass
+        except OSError as error:
+            errors.append(error)
+        for directory in (relay_directory, sockets, transport_root):
+            try:
+                directory.rmdir()
+            except OSError as error:
+                errors.append(error)
         if errors:
             raise DemoError("service shutdown failed: " + "; ".join(map(str, errors)))
 
@@ -939,7 +967,7 @@ def main() -> int:
     parser.add_argument(
         "--tools-config",
         type=Path,
-        default=Path("runtime/deploy/mcp-operation/tools.json"),
+        default=Path("runtime/deploy/mcp-operation/tools-stable.json"),
     )
     args = parser.parse_args()
     codex = shutil.which(args.codex_binary)

@@ -1,0 +1,274 @@
+2026-08-17T02:46:45.438583368 [claude-g2-9bad7e55df7a4ada:main] Running Firecracker v1.16.1
+2026-08-17T02:46:45.440525779 [claude-g2-9bad7e55df7a4ada:main] Listening on API socket ("/home/will/agent-check-restore-safety/docs/tmp/bootstrap/s21-fc/raw/replacement/api.sock").
+2026-08-17T02:46:45.441054340 [claude-g2-9bad7e55df7a4ada:fc_api] API server started.
+2026-08-17T02:46:45.450410488 [claude-g2-9bad7e55df7a4ada:fc_api] The API server received a Put request on "/machine-config" with body "{\"vcpu_count\":1,\"mem_size_mib\":1024,\"smt\":false,\"track_dirty_pages\":false}".
+2026-08-17T02:46:45.450532461 [claude-g2-9bad7e55df7a4ada:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-08-17T02:46:45.451028141 [claude-g2-9bad7e55df7a4ada:fc_api] The API server received a Put request on "/boot-source" with body "{\"kernel_image_path\":\"/proc/self/fd/4\",\"boot_args\":\"console=ttyS0 reboot=k panic=1 pci=off rdinit=/init\",\"initrd_path\":\"/proc/self/fd/5\"}".
+2026-08-17T02:46:45.451133833 [claude-g2-9bad7e55df7a4ada:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-08-17T02:46:45.451458910 [claude-g2-9bad7e55df7a4ada:fc_api] The API server received a Put request on "/vsock" with body "{\"guest_cid\":3,\"uds_path\":\"/home/will/agent-check-restore-safety/docs/tmp/bootstrap/s21-fc/raw/replacement/vsock\"}".
+2026-08-17T02:46:45.451645374 [claude-g2-9bad7e55df7a4ada:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-08-17T02:46:45.451902460 [claude-g2-9bad7e55df7a4ada:fc_api] The API server received a Put request on "/drives/payload" with body "{\"drive_id\":\"payload\",\"path_on_host\":\"/proc/self/fd/6\",\"is_root_device\":false,\"is_read_only\":true}".
+2026-08-17T02:46:45.452031712 [claude-g2-9bad7e55df7a4ada:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-08-17T02:46:45.452261577 [claude-g2-9bad7e55df7a4ada:fc_api] The API server received a Put request on "/actions" with body "{\"action_type\":\"InstanceStart\"}".
+2026-08-17T02:46:45.470004343 [claude-g2-9bad7e55df7a4ada:main] Artificially kick devices
+2026-08-17T02:46:45.470098225 [claude-g2-9bad7e55df7a4ada:fc_vcpu 0] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-08-17T02:46:45.470248208 [claude-g2-9bad7e55df7a4ada:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-08-17T02:46:45.531837332 [claude-g2-9bad7e55df7a4ada:fc_vcpu 0] vcpu: IO write @ 0xcf8:0x4 failed: bus_error: MissingAddressRange
+2026-08-17T02:46:45.531904153 [claude-g2-9bad7e55df7a4ada:fc_vcpu 0] vcpu: IO read @ 0xcfc:0x2 failed: bus_error: MissingAddressRange
+[    0.000000] Linux version 6.1.155+ (root@c3d8009cd6d2) (gcc (Ubuntu 11.4.0-1ubuntu1~22.04.2) 11.4.0, GNU ld (GNU Binutils for Ubuntu) 2.38) #1 SMP PREEMPT_DYNAMIC Thu Dec 18 15:17:16 UTC 2025
+[    0.000000] Command line: console=ttyS0 reboot=k panic=1 pci=off rdinit=/init pci=off virtio_mmio.device=4K@0xc0001000:5 virtio_mmio.device=4K@0xc0002000:6
+[    0.000000] KASLR disabled
+[    0.000000] BIOS-provided physical RAM map:
+[    0.000000] BIOS-e820: [mem 0x0000000000000000-0x000000000009fbff] usable
+[    0.000000] BIOS-e820: [mem 0x000000000009fc00-0x00000000000fffff] reserved
+[    0.000000] BIOS-e820: [mem 0x0000000000100000-0x000000003fffffff] usable
+[    0.000000] BIOS-e820: [mem 0x00000000eec00000-0x00000000febfffff] reserved
+[    0.000000] NX (Execute Disable) protection: active
+[    0.000000] DMI not present or invalid.
+[    0.000000] Hypervisor detected: KVM
+[    0.000000] kvm-clock: Using msrs 4b564d01 and 4b564d00
+[    0.000001] kvm-clock: using sched offset of 82755059 cycles
+[    0.000117] clocksource: kvm-clock: mask: 0xffffffffffffffff max_cycles: 0x1cd42e4dffb, max_idle_ns: 881590591483 ns
+[    0.000332] tsc: Detected 2200.000 MHz processor
+[    0.001890] last_pfn = 0x40000 max_arch_pfn = 0x400000000
+[    0.002582] x86/PAT: Configuration [0-7]: WB  WC  UC- UC  WB  WP  UC- WT
+[    0.002922] Using GB pages for direct mapping
+[    0.003112] RAMDISK: [mem 0x3fb98000-0x3fffffff]
+[    0.003293] ACPI: Early table checksum verification disabled
+[    0.003678] ACPI: RSDP 0x00000000000E0000 000024 (v02 FIRECK)
+[    0.003764] ACPI: XSDT 0x00000000000A0135 00003C (v01 FIRECK FCMVXSDT 00000000 FCAT 20240119)
+[    0.003898] ACPI: FACP 0x000000000009FFA5 000114 (v06 FIRECK FCVMFADT 00000000 FCAT 20240119)
+[    0.003927] ACPI: DSDT 0x000000000009FD30 000275 (v02 FIRECK FCVMDSDT 00000000 FCAT 20240119)
+[    0.003930] ACPI: APIC 0x00000000000A00B9 000040 (v06 FIRECK FCVMMADT 00000000 FCAT 20240119)
+[    0.003932] ACPI: MCFG 0x00000000000A00F9 00003C (v01 FIRECK FCMVMCFG 00000000 FCAT 20240119)
+[    0.003934] ACPI: Reserving FACP table memory at [mem 0x9ffa5-0xa00b8]
+[    0.003935] ACPI: Reserving DSDT table memory at [mem 0x9fd30-0x9ffa4]
+[    0.003971] ACPI: Reserving APIC table memory at [mem 0xa00b9-0xa00f8]
+[    0.003972] ACPI: Reserving MCFG table memory at [mem 0xa00f9-0xa0134]
+[    0.005056] No NUMA configuration found
+[    0.005058] Faking a node at [mem 0x0000000000000000-0x000000003fffffff]
+[    0.005102] NODE_DATA(0) allocated [mem 0x3fb6d000-0x3fb97fff]
+[    0.006763] Zone ranges:
+[    0.006812]   DMA      [mem 0x0000000000001000-0x0000000000ffffff]
+[    0.006814]   DMA32    [mem 0x0000000001000000-0x000000003fffffff]
+[    0.006816]   Normal   empty
+[    0.006817]   Device   empty
+[    0.006817] Movable zone start for each node
+[    0.006819] Early memory node ranges
+[    0.006819]   node   0: [mem 0x0000000000001000-0x000000000009efff]
+[    0.006821]   node   0: [mem 0x0000000000100000-0x000000003fffffff]
+[    0.006860] Initmem setup node 0 [mem 0x0000000000001000-0x000000003fffffff]
+[    0.006982] On node 0, zone DMA: 1 pages in unavailable ranges
+[    0.008591] On node 0, zone DMA: 97 pages in unavailable ranges
+[    0.062879] IOAPIC[0]: apic_id 0, version 17, address 0xfec00000, GSI 0-23
+[    0.062884] ACPI: Using ACPI (MADT) for SMP configuration information
+[    0.062885] TSC deadline timer available
+[    0.062924] smpboot: Allowing 1 CPUs, 0 hotplug CPUs
+[    0.063406] PM: hibernation: Registered nosave memory: [mem 0x00000000-0x00000fff]
+[    0.063433] PM: hibernation: Registered nosave memory: [mem 0x0009f000-0x000fffff]
+[    0.063434] [mem 0x40000000-0xeebfffff] available for PCI devices
+[    0.063435] Booting paravirtualized kernel on KVM
+[    0.063474] clocksource: refined-jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645519600211568 ns
+[    0.063541] setup_percpu: NR_CPUS:64 nr_cpumask_bits:1 nr_cpu_ids:1 nr_node_ids:1
+[    0.092643] percpu: Embedded 44 pages/cpu s148456 r0 d31768 u2097152
+[    0.092993] kvm-guest: PV spinlocks disabled, single CPU
+[    0.092998] Fallback order for Node 0: 0
+[    0.093032] Built 1 zonelists, mobility grouping on.  Total pages: 257792
+[    0.093033] Policy zone: DMA32
+[    0.093034] Kernel command line: console=ttyS0 reboot=k panic=1 pci=off rdinit=/init pci=off virtio_mmio.device=4K@0xc0001000:5 virtio_mmio.device=4K@0xc0002000:6
+[    0.094894] random: crng init done
+[    0.106363] Dentry cache hash table entries: 131072 (order: 8, 1048576 bytes, linear)
+[    0.106411] Inode-cache hash table entries: 65536 (order: 7, 524288 bytes, linear)
+[    0.106695] mem auto-init: stack:off, heap alloc:off, heap free:off
+[    0.112098] Memory: 234192K/1048184K available (14338K kernel code, 1196K rwdata, 2340K rodata, 2676K init, 2136K bss, 50132K reserved, 0K cma-reserved)
+[    0.113339] SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=1, Nodes=1
+[    0.115728] Dynamic Preempt: none
+[    0.116239] rcu: Preemptible hierarchical RCU implementation.
+[    0.116273] rcu: 	RCU restricting CPUs from NR_CPUS=64 to nr_cpu_ids=1.
+[    0.116306] 	Trampoline variant of Tasks RCU enabled.
+[    0.116307] 	Tracing variant of Tasks RCU enabled.
+[    0.116383] rcu: RCU calculated value of scheduler-enlistment delay is 25 jiffies.
+[    0.116384] rcu: Adjusting geometry for rcu_fanout_leaf=16, nr_cpu_ids=1
+[    0.116492] NR_IRQS: 4352, nr_irqs: 256, preallocated irqs: 0
+[    0.117078] rcu: srcu_init: Setting srcu_struct sizes based on contention.
+[    0.118248] Console: colour dummy device 80x25
+[    0.308899] printk: console [ttyS0] enabled
+[    0.310685] ACPI: Core revision 20220331
+[    0.312988] APIC: Switch to symmetric I/O mode setup
+[    0.316128] x2apic enabled
+[    0.318368] Switched APIC routing to physical x2apic.
+[    0.320945] clocksource: tsc-early: mask: 0xffffffffffffffff max_cycles: 0x1fb633008a4, max_idle_ns: 440795292230 ns
+[    0.325039] Calibrating delay loop (skipped) preset value.. 4400.00 BogoMIPS (lpj=8800000)
+[    0.329037] x86/cpu: User Mode Instruction Prevention (UMIP) activated
+[    0.329037] Last level iTLB entries: 4KB 512, 2MB 255, 4MB 127
+[    0.329037] Last level dTLB entries: 4KB 512, 2MB 255, 4MB 127, 1GB 0
+[    0.329037] Spectre V1 : Mitigation: usercopy/swapgs barriers and __user pointer sanitization
+[    0.329037] Spectre V2 : Mitigation: Retpolines
+[    0.329037] Spectre V2 : Spectre v2 / SpectreRSB: Filling RSB on context switch and VMEXIT
+[    0.329037] Spectre V2 : Enabling Speculation Barrier for firmware calls
+[    0.329037] active return thunk: retbleed_return_thunk
+[    0.329037] RETBleed: Mitigation: untrained return thunk
+[    0.329037] Spectre V2 : mitigation: Enabling conditional Indirect Branch Prediction Barrier
+[    0.329037] Speculative Store Bypass: Mitigation: Speculative Store Bypass disabled via prctl
+[    0.329037] x86/fpu: Supporting XSAVE feature 0x001: 'x87 floating point registers'
+[    0.329037] x86/fpu: Supporting XSAVE feature 0x002: 'SSE registers'
+[    0.329037] x86/fpu: Supporting XSAVE feature 0x004: 'AVX registers'
+[    0.329037] x86/fpu: xstate_offset[2]:  576, xstate_sizes[2]:  256
+[    0.329037] x86/fpu: Enabled xstate features 0x7, context size is 832 bytes, using 'compacted' format.
+[    0.329037] Freeing SMP alternatives memory: 40K
+[    0.329037] pid_max: default: 32768 minimum: 301
+[    0.329037] LSM: Security Framework initializing
+[    0.329037] SELinux:  Initializing.
+[    0.329037] SELinux: CONFIG_SECURITY_SELINUX_CHECKREQPROT_VALUE is non-zero.  This is deprecated and will be rejected in a future kernel release.
+[    0.329037] SELinux: https://github.com/SELinuxProject/selinux-kernel/wiki/DEPRECATE-checkreqprot
+[    0.329037] Mount-cache hash table entries: 2048 (order: 2, 16384 bytes, linear)
+[    0.329037] Mountpoint-cache hash table entries: 2048 (order: 2, 16384 bytes, linear)
+[    0.329037] smpboot: CPU0: AMD EPYC (family: 0x17, model: 0x31, stepping: 0x0)
+[    0.329964] cblist_init_generic: Setting adjustable number of callback queues.
+[    0.332748] cblist_init_generic: Setting shift to 0 and lim to 1.
+[    0.333277] cblist_init_generic: Setting adjustable number of callback queues.
+[    0.336070] cblist_init_generic: Setting shift to 0 and lim to 1.
+[    0.337329] Performance Events: Fam17h+ core perfctr, AMD PMU driver.
+[    0.340080] ... version:                0
+[    0.341050] ... bit width:              48
+[    0.342653] ... generic registers:      6
+[    0.344238] ... value mask:             0000ffffffffffff
+[    0.345050] ... max period:             00007fffffffffff
+[    0.347173] ... fixed-purpose events:   0
+[    0.348753] ... event mask:             000000000000003f
+[    0.349640] signal: max sigframe size: 1776
+[    0.351525] rcu: Hierarchical SRCU implementation.
+[    0.353050] rcu: 	Max phase no-delay instances is 1000.
+[    0.357758] smp: Bringing up secondary CPUs ...
+[    0.359605] smp: Brought up 1 node, 1 CPU
+[    0.361052] smpboot: Max logical packages: 1
+[    0.362705] smpboot: Total of 1 processors activated (4400.00 BogoMIPS)
+[    0.530953] node 0 deferred pages initialised in 164ms
+[    0.534069] devtmpfs: initialized
+[    0.535806] x86/mm: Memory block size: 128MB
+[    0.538301] clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645041785100000 ns
+[    0.541056] futex hash table entries: 256 (order: 2, 16384 bytes, linear)
+[    0.545811] NET: Registered PF_NETLINK/PF_ROUTE protocol family
+[    0.548175] audit: initializing netlink subsys (disabled)
+[    0.550074] thermal_sys: Registered thermal governor 'fair_share'
+[    0.550076] thermal_sys: Registered thermal governor 'step_wise'
+[    0.552437] thermal_sys: Registered thermal governor 'user_space'
+[    0.553068] audit: type=2000 audit(1786934805.876:1): state=initialized audit_enabled=0 res=1
+[    0.557054] cpuidle: using governor ladder
+[    0.558676] cpuidle: using governor menu
+[    0.560587] PCI: Fatal: No config space access function found
+[    0.564804] HugeTLB: registered 1.00 GiB page size, pre-allocated 0 pages
+[    0.565052] HugeTLB: 16380 KiB vmemmap can be freed for a 1.00 GiB page
+[    0.567620] HugeTLB: registered 2.00 MiB page size, pre-allocated 0 pages
+[    0.569050] HugeTLB: 28 KiB vmemmap can be freed for a 2.00 MiB page
+[    0.573153] ACPI: Added _OSI(Module Device)
+[    0.574880] ACPI: Added _OSI(Processor Device)
+[    0.576629] ACPI: Added _OSI(Processor Aggregator Device)
+[    0.577184] ACPI: 1 ACPI AML tables successfully acquired and loaded
+[    0.579845] ACPI: Interpreter enabled
+[    0.581130] ACPI: PM: (supports S0)
+[    0.582506] ACPI: Using IOAPIC for interrupt routing
+[    0.584523] PCI: Using host bridge windows from ACPI; if necessary, use "pci=nocrs" and report a bug
+[    0.585069] PCI: Using E820 reservations for host bridge windows
+[    0.589619] iommu: Default domain type: Translated
+[    0.591616] iommu: DMA domain TLB invalidation policy: lazy mode
+[    0.594055] SCSI subsystem initialized
+[    0.595859] pps_core: LinuxPPS API ver. 1 registered
+[    0.597050] pps_core: Software ver. 5.3.6 - Copyright 2005-2007 Rodolfo Giometti <giometti@linux.it>
+[    0.600599] PTP clock support registered
+[    0.601951] NetLabel: Initializing
+[    0.603343] NetLabel:  domain hash size = 128
+[    0.605057] NetLabel:  protocols = UNLABELED CIPSOv4 CALIPSO
+[    0.607587] NetLabel:  unlabeled traffic allowed by default
+[    0.609051] PCI: Using ACPI for IRQ routing
+[    0.610730] PCI: System does not support PCI
+[    0.612512] vgaarb: loaded
+[    0.613505] clocksource: Switched to clocksource kvm-clock
+[    0.618561] VFS: Disk quotas dquot_6.6.0
+[    0.620348] VFS: Dquot-cache hash table entries: 512 (order 0, 4096 bytes)
+[    0.623451] pnp: PnP ACPI init
+[    0.624970] pnp: PnP ACPI: found 2 devices
+[    0.629574] NET: Registered PF_INET protocol family
+[    0.631583] IP idents hash table entries: 16384 (order: 5, 131072 bytes, linear)
+[    0.635240] tcp_listen_portaddr_hash hash table entries: 512 (order: 1, 8192 bytes, linear)
+[    0.638511] Table-perturb hash table entries: 65536 (order: 6, 262144 bytes, linear)
+[    0.641574] TCP established hash table entries: 8192 (order: 4, 65536 bytes, linear)
+[    0.644996] TCP bind hash table entries: 8192 (order: 6, 262144 bytes, linear)
+[    0.649687] TCP: Hash tables configured (established 8192 bind 8192)
+[    0.653554] MPTCP token hash table entries: 1024 (order: 2, 24576 bytes, linear)
+[    0.656456] UDP hash table entries: 512 (order: 2, 16384 bytes, linear)
+[    0.659417] UDP-Lite hash table entries: 512 (order: 2, 16384 bytes, linear)
+[    0.662648] NET: Registered PF_UNIX/PF_LOCAL protocol family
+[    0.666426] RPC: Registered named UNIX socket transport module.
+[    0.668754] RPC: Registered udp transport module.
+[    0.670595] RPC: Registered tcp transport module.
+[    0.672480] RPC: Registered tcp NFSv4.1 backchannel transport module.
+[    0.674966] NET: Registered PF_XDP protocol family
+[    0.676887] PCI: CLS 0 bytes, default 64
+[    0.678575] Unpacking initramfs...
+[    0.691908] clocksource: tsc: mask: 0xffffffffffffffff max_cycles: 0x1fb633008a4, max_idle_ns: 440795292230 ns
+[    0.695773] platform rtc_cmos: registered platform RTC device (no PNP device found)
+2026-08-17T02:46:46.467576037 [claude-g2-9bad7e55df7a4ada:fc_vcpu 0] vcpu: IO read @ 0x87:0x1 failed: bus_error: MissingAddressRange
+[    0.710446] Initialise system trusted keyrings
+[    0.712259] Key type blacklist registered
+[    0.720047] workingset: timestamp_bits=36 max_order=18 bucket_order=0
+[    0.732318] zbud: loaded
+[    0.749694] squashfs: version 4.0 (2009/01/31) Phillip Lougher
+[    0.760611] NFS: Registering the id_resolver key type
+[    0.762647] Key type id_resolver registered
+[    0.764334] Key type id_legacy registered
+[    0.766109] nfs4filelayout_init: NFSv4 File Layout Driver Registering...
+[    0.776136] SGI XFS with ACLs, security attributes, quota, no debug enabled
+[    0.806945] Key type asymmetric registered
+[    0.808689] Asymmetric key parser 'x509' registered
+[    0.811334] Block layer SCSI generic (bsg) driver version 0.4 loaded (major 248)
+[    0.836003] io scheduler mq-deadline registered
+[    0.837803] io scheduler kyber registered
+[    0.839440] io scheduler bfq registered
+[    0.856576] Serial: 8250/16550 driver, 1 ports, IRQ sharing disabled
+[    0.859495] 00:00: ttyS0 at I/O 0x3f8 (irq = 28, base_baud = 115200) is a 16550A
+[    0.955477] Freeing initrd memory: 4512K
+[    0.967744] loop: module loaded
+[    0.969361] virtio_blk virtio0: 1/0/0 default/read/poll queues
+[    0.974028] virtio_blk virtio0: [vda] 179448 512-byte logical blocks (91.9 MB/87.6 MiB)
+[    0.980092] Loading iSCSI transport class v2.0-870.
+[    0.982558] iscsi: registered transport (tcp)
+[    0.984987] i8042: PNP: PS/2 Controller [PNP0303:PS2] at 0x60,0x64 irq 29
+[    0.987608] i8042: PNP: PS/2 appears to have AUX port disabled, if this is incorrect please boot with i8042.nopnp
+[    0.992106] serio: i8042 KBD port at 0x60,0x64 irq 29
+[    0.994940] vmclock AMZNC10C:00: vmclock0: registered miscdev
+[    0.997279] hid: raw HID events driver (C) Jiri Kosina
+[    1.001888] Initializing XFRM netlink socket
+[    1.003693] NET: Registered PF_INET6 protocol family
+[    1.007196] Segment Routing with IPv6
+[    1.008705] In-situ OAM (IOAM) with IPv6
+[    1.029237] bpfilter: Loaded bpfilter_umh pid 170
+[    1.032262] NET: Registered PF_PACKET protocol family
+[    1.034360] Bridge firewalling registered
+[    1.036018] Key type dns_resolver registered
+[    1.037749] NET: Registered PF_VSOCK protocol family
+[    1.055830] IPI shorthand broadcast: enabled
+[    1.058117] registered taskstats version 1
+[    1.061054] Loading compiled-in X.509 certificates
+[    1.063005] zswap: loaded using pool lzo/zbud
+[    1.065024] Key type .fscrypt registered
+[    1.066593] Key type fscrypt-provisioning registered
+[    1.068818] Key type encrypted registered
+[    1.072406] clk: Disabling unused clocks
+[    1.085088] Freeing unused kernel image (initmem) memory: 2676K
+[    1.086464] Write protecting the kernel read-only data: 20480k
+[    1.114773] Freeing unused kernel image (text/rodata gap) memory: 2044K
+[    1.142359] Freeing unused kernel image (rodata/data gap) memory: 1756K
+[    1.143884] Run /init as init process
+[    1.514951] input: AT Raw Set 2 keyboard as /devices/platform/i8042/serio0/input/input0
+firecracker-claude-guest: 2026/08/17 02:46:53.487016 READY
+firecracker-claude-guest: 2026/08/17 02:46:53.496824 released generation 2
+{"type":"system","subtype":"init","cwd":"/workspace","session_id":"89fe093c-a27d-3080-eb5f-5ad0be9b55fb","tools":["Bash","Edit","Read","mcp__continuity__commit_effect"],"mcp_servers":[{"name":"continuity","status":"connected"}],"model":"claude-fixture-1","permissionMode":"dontAsk","slash_commands":[],"apiKeySource":"ANTHROPIC_API_KEY","claude_code_version":"2.1.233","output_style":"default","agents":["claude","Explore","general-purpose","Plan","statusline-setup"],"skills":[],"plugins":[],"capabilities":["interrupt_receipt_v1","interrupt_cancel_queued_v1","msg_lifecycle_v1"],"analytics_disabled":true,"product_feedback_disabled":true,"uuid":"252a553c-f408-4e5c-8342-4e3fb726c516","fast_mode_state":"off","fast_mode_disabled_reason":"sdk_opt_in_required"}
+[claude-code:unrecognized_model] {"model":"claude-fixture-1","query_source":"sdk"}
+{"type":"assistant","message":{"content":[{"id":"toolu_fixture_2","input":{"effect_id":"effect-A"},"name":"mcp__continuity__commit_effect","type":"tool_use"}],"id":"msg_fixture_2","model":"claude-fixture-1","role":"assistant","stop_reason":null,"stop_sequence":null,"type":"message","usage":{"input_tokens":1,"output_tokens":1},"context_management":null},"parent_tool_use_id":null,"session_id":"89fe093c-a27d-3080-eb5f-5ad0be9b55fb","uuid":"6b43835b-0555-4417-bf6d-2e057e36397e","timestamp":"2026-08-17T02:46:56.833Z","tool_use_meta":[{"id":"toolu_fixture_2","display_name":"Commit Effect","server_display_name":"safe-change-operation"}]}
+{"type":"user","message":{"role":"user","content":[{"tool_use_id":"toolu_fixture_2","type":"tool_result","content":"{\"schema\":1,\"operation_id\":\"op-d9e7e8e63e2600e492f3d11b617b8b9817d8003cd1e5152deeddcf8ee7faa7f1\",\"phase\":\"succeeded\",\"result_hash\":\"a888ba0743c1d19e8f11c3553862ad3382d1d9ad76cac951fad64216371fa297\",\"reused\":false,\"recovered_by_query\":false,\"execution_fenced\":false}"}]},"parent_tool_use_id":null,"session_id":"89fe093c-a27d-3080-eb5f-5ad0be9b55fb","uuid":"74f84069-c52e-438a-b78f-a67e5435376d","timestamp":"2026-08-17T02:46:56.903Z","tool_use_result":{"content":"{\"schema\":1,\"operation_id\":\"op-d9e7e8e63e2600e492f3d11b617b8b9817d8003cd1e5152deeddcf8ee7faa7f1\",\"phase\":\"succeeded\",\"result_hash\":\"a888ba0743c1d19e8f11c3553862ad3382d1d9ad76cac951fad64216371fa297\",\"reused\":false,\"recovered_by_query\":false,\"execution_fenced\":false}","_meta":{"io.modelcontextprotocol/serverInfo":{"name":"safe-change-operation","version":"0.1.0"}},"structuredContent":{"schema":1,"operation_id":"op-d9e7e8e63e2600e492f3d11b617b8b9817d8003cd1e5152deeddcf8ee7faa7f1","phase":"succeeded","result_hash":"a888ba0743c1d19e8f11c3553862ad3382d1d9ad76cac951fad64216371fa297","reused":false,"recovered_by_query":false,"execution_fenced":false}}}
+{"type":"assistant","message":{"content":[{"id":"toolu_fixture_3","input":{"effect_id":"effect-B"},"name":"mcp__continuity__commit_effect","type":"tool_use"}],"id":"msg_fixture_3","model":"claude-fixture-1","role":"assistant","stop_reason":null,"stop_sequence":null,"type":"message","usage":{"input_tokens":1,"output_tokens":1},"context_management":null},"parent_tool_use_id":null,"session_id":"89fe093c-a27d-3080-eb5f-5ad0be9b55fb","uuid":"fffda87f-d4b6-416c-a6cc-1ed2a8e5f469","timestamp":"2026-08-17T02:46:57.028Z","tool_use_meta":[{"id":"toolu_fixture_3","display_name":"Commit Effect","server_display_name":"safe-change-operation"}]}
+{"type":"user","message":{"role":"user","content":[{"tool_use_id":"toolu_fixture_3","type":"tool_result","content":"{\"schema\":1,\"operation_id\":\"op-ae42801930e59b41f858519bcd1b5a1f25e9344ebd84966ea960ade3beb99e8b\",\"phase\":\"succeeded\",\"result_hash\":\"3934d9043b07b0155f6e8a3ff1ebab522dc5826fadd9a186c9edad11b496e8c1\",\"reused\":false,\"recovered_by_query\":false,\"execution_fenced\":false}"}]},"parent_tool_use_id":null,"session_id":"89fe093c-a27d-3080-eb5f-5ad0be9b55fb","uuid":"dc91b66c-d4b7-4f2a-a931-b5e1b8fae037","timestamp":"2026-08-17T02:46:57.117Z","tool_use_result":{"content":"{\"schema\":1,\"operation_id\":\"op-ae42801930e59b41f858519bcd1b5a1f25e9344ebd84966ea960ade3beb99e8b\",\"phase\":\"succeeded\",\"result_hash\":\"3934d9043b07b0155f6e8a3ff1ebab522dc5826fadd9a186c9edad11b496e8c1\",\"reused\":false,\"recovered_by_query\":false,\"execution_fenced\":false}","_meta":{"io.modelcontextprotocol/serverInfo":{"name":"safe-change-operation","version":"0.1.0"}},"structuredContent":{"schema":1,"operation_id":"op-ae42801930e59b41f858519bcd1b5a1f25e9344ebd84966ea960ade3beb99e8b","phase":"succeeded","result_hash":"3934d9043b07b0155f6e8a3ff1ebab522dc5826fadd9a186c9edad11b496e8c1","reused":false,"recovered_by_query":false,"execution_fenced":false}}}
+{"type":"assistant","message":{"content":[{"text":"DONE","type":"text"}],"id":"msg_fixture_4","model":"claude-fixture-1","role":"assistant","stop_reason":null,"stop_sequence":null,"type":"message","usage":{"input_tokens":1,"output_tokens":1},"context_management":null},"parent_tool_use_id":null,"session_id":"89fe093c-a27d-3080-eb5f-5ad0be9b55fb","uuid":"fede72f4-e120-4ae6-ade6-4ccd25b27463","timestamp":"2026-08-17T02:46:57.234Z"}
+{"is_error":false,"duration_api_ms":391,"num_turns":3,"stop_reason":"end_turn","session_id":"89fe093c-a27d-3080-eb5f-5ad0be9b55fb","total_cost_usd":0.00008999999999999999,"usage":{"input_tokens":3,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":3,"output_tokens_details":{"thinking_tokens":0},"server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"service_tier":"standard","cache_creation":{"ephemeral_1h_input_tokens":0,"ephemeral_5m_input_tokens":0},"inference_geo":"","iterations":[],"speed":"standard"},"modelUsage":{"claude-fixture-1":{"inputTokens":3,"outputTokens":3,"cacheReadInputTokens":0,"cacheCreationInputTokens":0,"webSearchRequests":0,"costUSD":0.00008999999999999999,"contextWindow":200000,"maxOutputTokens":32000,"canonicalModel":"claude-fixture-1","provider":"firstParty"}},"permission_denials":[],"terminal_reason":"completed","fast_mode_state":"off","fast_mode_disabled_reason":"sdk_opt_in_required","subtype":"success","api_error_status":null,"result":"DONE","ttft_ms":207,"ttft_stream_ms":205,"time_to_request_ms":127,"type":"result","duration_ms":690,"uuid":"c47d8c58-d5d1-4b8c-b2fb-4dcbabea8ac9"}
+[?25h

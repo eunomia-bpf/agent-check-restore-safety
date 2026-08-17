@@ -7,11 +7,12 @@ import (
 )
 
 const validConfigJSON = `{
-  "schema": 1,
+	  "schema": 2,
   "tools": [{
     "name": "charge_payment",
-    "description": "Commit one payment through the continuity runtime.",
-    "kind": "protected_commit",
+	    "description": "Commit one payment through the continuity runtime.",
+	    "kind": "protected_commit",
+	    "identity_arguments": ["effect_id", "currency"],
     "arguments": [
       {"name":"effect_id","description":"Stable business effect.","type":"string","required":true,"max_length":128},
       {"name":"priority","type":"integer","required":false},
@@ -30,17 +31,18 @@ func TestParseConfigAcceptsStrictBoundedTools(t *testing.T) {
 		t.Fatalf("config = %+v", config)
 	}
 	config.Tools[0].Arguments[0].Enum = append(config.Tools[0].Arguments[0].Enum, "mutated")
+	config.Tools[0].IdentityArguments[0] = "mutated"
 	reparsed, err := ParseConfig([]byte(validConfigJSON))
-	if err != nil || len(reparsed.Tools[0].Arguments[0].Enum) != 0 {
+	if err != nil || len(reparsed.Tools[0].Arguments[0].Enum) != 0 || reparsed.Tools[0].IdentityArguments[0] != "effect_id" {
 		t.Fatalf("ParseConfig retained caller mutation: %+v error=%v", reparsed, err)
 	}
 }
 
 func TestParseConfigRejectsAuthorityAndSchemaMutations(t *testing.T) {
 	tests := map[string]string{
-		"unknown field":       strings.Replace(validConfigJSON, `"schema": 1`, `"schema": 1, "url": "https://provider"`, 1),
-		"duplicate field":     strings.Replace(validConfigJSON, `"schema": 1`, `"schema": 1, "schema": 1`, 1),
-		"wrong schema":        strings.Replace(validConfigJSON, `"schema": 1`, `"schema": 2`, 1),
+		"unknown field":       strings.Replace(validConfigJSON, `"schema": 2`, `"schema": 2, "url": "https://provider"`, 1),
+		"duplicate field":     strings.Replace(validConfigJSON, `"schema": 2`, `"schema": 2, "schema": 2`, 1),
+		"wrong schema":        strings.Replace(validConfigJSON, `"schema": 2`, `"schema": 3`, 1),
 		"multiple values":     validConfigJSON + `{}`,
 		"no tools":            `{"schema":1,"tools":[]}`,
 		"slash name":          strings.Replace(validConfigJSON, `"charge_payment"`, `"charge/payment"`, 1),
@@ -53,6 +55,10 @@ func TestParseConfigRejectsAuthorityAndSchemaMutations(t *testing.T) {
 		"string bound on int": strings.Replace(validConfigJSON, `"type":"integer","required":false`, `"type":"integer","required":false,"max_length":3`, 1),
 		"duplicate enum":      strings.Replace(validConfigJSON, `["USD","EUR"]`, `["USD","USD"]`, 1),
 		"long enum":           strings.Replace(validConfigJSON, `["USD","EUR"]`, `["TOOLONG"]`, 1),
+		"missing identity":    strings.Replace(validConfigJSON, `"identity_arguments": ["effect_id", "currency"],`, ``, 1),
+		"unknown identity":    strings.Replace(validConfigJSON, `["effect_id", "currency"]`, `["effect_id", "missing"]`, 1),
+		"optional identity":   strings.Replace(validConfigJSON, `["effect_id", "currency"]`, `["effect_id", "priority"]`, 1),
+		"duplicate identity":  strings.Replace(validConfigJSON, `["effect_id", "currency"]`, `["effect_id", "effect_id"]`, 1),
 	}
 	for name, input := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -60,6 +66,18 @@ func TestParseConfigRejectsAuthorityAndSchemaMutations(t *testing.T) {
 				t.Fatalf("mutation accepted: %+v", config)
 			}
 		})
+	}
+}
+
+func TestParseConfigRetainsLegacyPositionalSchema(t *testing.T) {
+	legacy := `{"schema":1,"tools":[{"name":"commit","description":"Commit work.","kind":"protected_commit","arguments":[{"name":"effect_id","type":"string","required":true,"max_length":64}]}]}`
+	config, err := ParseConfig([]byte(legacy))
+	if err != nil || config.Schema != LegacyConfigSchema || len(config.Tools[0].IdentityArguments) != 0 {
+		t.Fatalf("legacy config=%+v error=%v", config, err)
+	}
+	withIdentity := strings.Replace(legacy, `"kind":"protected_commit",`, `"kind":"protected_commit","identity_arguments":["effect_id"],`, 1)
+	if _, err := ParseConfig([]byte(withIdentity)); err == nil {
+		t.Fatal("legacy schema accepted identity arguments")
 	}
 }
 

@@ -1,0 +1,4 @@
+{"event":"accept","time":"2026-08-17T02:46:43.665908106Z","target":"127.0.0.1:44511","pid":2822730,"uid":1001,"gid":993,"socket_device":2049,"socket_inode":15748576,"client_to_target_bytes":0,"target_to_client_bytes":0}
+{"event":"bytes","time":"2026-08-17T02:46:43.670263288Z","target":"127.0.0.1:44511","pid":0,"uid":0,"gid":0,"socket_device":2049,"socket_inode":15748576,"client_to_target_bytes":153,"target_to_client_bytes":224}
+{"event":"accept","time":"2026-08-17T02:46:44.6449667Z","target":"127.0.0.1:44511","pid":2822730,"uid":1001,"gid":993,"socket_device":2049,"socket_inode":15748576,"client_to_target_bytes":0,"target_to_client_bytes":0}
+{"event":"bytes","time":"2026-08-17T02:46:44.699599856Z","target":"127.0.0.1:44511","pid":0,"uid":0,"gid":0,"socket_device":2049,"socket_inode":15748576,"client_to_target_bytes":5415,"target_to_client_bytes":1068}

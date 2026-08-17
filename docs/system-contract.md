@@ -216,7 +216,8 @@ fails closed under mutations to each recorded runtime boundary.
    callback remains pending while payment commits, loses its response, and the
    control container restarts. A separate checker then joins raw App Server
    JSONL with a replayed binary History, external head, and payment record.
-   Adding Claude and a provider-independent Agent protocol remain open.
+   A provider-independent MCP host now serves both Codex and Claude; complete
+   mediation of built-in tools remains open.
 7. **Native Codex-in-Firecracker continuity path — implemented for one
    credential-free callback.** An unchanged App Server client now reaches the
    exact native Codex binary inside a no-NIC microVM through a transparent
@@ -233,15 +234,22 @@ fails closed under mutations to each recorded runtime boundary.
    against the existing exact Python oracle.
 9. Prove the generic finite theorem, the durable control refinement, and each
    adapter correspondence in Lean.
-10. Run scale, availability, fault, usability, and strongest-baseline studies;
+10. **Schedule-independent Agent replacement — implemented for declared MCP
+    Operations.** The host now derives Operation identity from operator-selected
+    required tool arguments rather than RPC IDs or call order, stores RPC-neutral
+    responses, and binds each journal to the exact tool configuration. Two real
+    Codex processes complete A/B after the replacement reverses their order and
+    changes model call identities; official Claude also passes the same schema
+    after complete Firecracker VMM loss.
+11. Run scale, availability, fault, usability, and strongest-baseline studies;
    only then rebuild the paper around the larger result.
 
 The current composition is not yet the intended final system or evaluation. It
-still needs a maintained real application; a live Claude frontend; an Agent
-running inside the full guest rather than beside it; repeated KVM experiments
-and the declared baselines; block, GPU, passthrough, and other device-output
-mediation; signed remote evidence; replicated control; and an end-to-end
-refinement proof connecting each concrete adapter to the finite model.
+still needs a maintained real application; mediation for Claude built-in tools;
+repeated KVM experiments and the declared baselines; block, GPU, passthrough,
+and other device-output mediation; signed remote evidence; replicated control;
+and an end-to-end refinement proof connecting each concrete adapter to the
+finite model.
 
 ## Kill tests
 

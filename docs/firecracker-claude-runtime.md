@@ -45,6 +45,12 @@ second provider delivery, requests `effect-B`, and returns `DONE`. A successful
 run therefore has two different VMM identities, two Operations, two provider
 deliveries, and exactly two provider commits.
 
+The current tool configuration derives Operation identity from the required
+`effect_id` argument, not from Claude's RPC ID or call position. Saved journal
+responses contain no RPC ID and are rebound to the replacement request. The
+journal is also bound to the exact tool configuration, so an identity-definition
+change cannot silently reinterpret an existing execution.
+
 ## Reproduce
 
 The target requires Linux x86-64, `mksquashfs`, and read/write access to
@@ -67,7 +73,8 @@ The checker recomputes artifact hashes, parses the binary History, joins the
 MCP journal to provider commits, verifies the strict failure ordering, checks
 the official Claude stream, and confirms that both AF_VSOCK paths were bound
 to the corresponding VMM process. It also checks that Firecracker configured
-no NIC or root drive and mounted only the declared read-only payload.
+no NIC or root drive and mounted only the declared read-only payload. The
+latest schema-2 run is retained under `docs/tmp/bootstrap/s21-fc/raw/`.
 
 ## Current limit
 

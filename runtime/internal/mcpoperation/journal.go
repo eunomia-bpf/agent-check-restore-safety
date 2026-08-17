@@ -16,26 +16,32 @@ import (
 )
 
 const (
-	JournalSchema        = 1
+	LegacyJournalSchema  = 1
+	JournalSchema        = 2
 	journalEventPrepare  = "prepared"
 	journalEventComplete = "completed"
+	journalCallKeyPrefix = "mcp-call-key-v1:"
 	maxJournalLineBytes  = (MaxMessageBytes * 2) + (64 << 10)
 )
 
 type Journal struct {
-	mu          sync.Mutex
-	file        *os.File
-	executionID string
-	recordSeq   uint64
-	callSeq     uint64
-	headHash    string
-	calls       map[string]journalCall
-	pendingID   string
-	fenced      bool
-	closed      bool
+	mu           sync.Mutex
+	file         *os.File
+	executionID  string
+	schema       int
+	configDigest string
+	recordSeq    uint64
+	callSeq      uint64
+	headHash     string
+	calls        map[string]journalCall
+	pendingKey   string
+	fenced       bool
+	closed       bool
 }
 
 type journalCall struct {
+	Schema    int
+	Key       string
 	RPCID     string
 	Digest    string
 	CallID    string
@@ -51,6 +57,8 @@ type journalRecord struct {
 	CallSequence   uint64 `json:"call_sequence"`
 	Event          string `json:"event"`
 	ExecutionID    string `json:"execution_id"`
+	ConfigDigest   string `json:"config_digest,omitempty"`
+	CallKey        string `json:"call_key,omitempty"`
 	RPCID          string `json:"rpc_id"`
 	RequestDigest  string `json:"request_digest"`
 	CallID         string `json:"call_id"`
@@ -66,6 +74,8 @@ type journalPayload struct {
 	CallSequence   uint64 `json:"call_sequence"`
 	Event          string `json:"event"`
 	ExecutionID    string `json:"execution_id"`
+	ConfigDigest   string `json:"config_digest,omitempty"`
+	CallKey        string `json:"call_key,omitempty"`
 	RPCID          string `json:"rpc_id"`
 	RequestDigest  string `json:"request_digest"`
 	CallID         string `json:"call_id"`
@@ -163,33 +173,44 @@ func (journal *Journal) replay() error {
 }
 
 func (journal *Journal) applyRecord(record journalRecord) error {
-	if record.Schema != JournalSchema || record.RecordSequence != journal.recordSeq+1 || record.ExecutionID != journal.executionID ||
-		record.RPCID == "" || len(record.RPCID) > 2048 || !validDigest(record.RequestDigest) ||
-		record.CallSequence == 0 || record.CallID != journalCallIdentity(record.ExecutionID, record.CallSequence) ||
+	key, keyErr := recordIdentity(record.Schema, record.CallKey, record.RPCID)
+	expectedCallID := journalCallIdentity(record.Schema, record.ExecutionID, record.CallSequence, record.CallKey)
+	if keyErr != nil || record.RecordSequence != journal.recordSeq+1 || record.ExecutionID != journal.executionID ||
+		!validRecordConfiguration(record.Schema, record.ConfigDigest) ||
+		!validDigest(record.RequestDigest) || record.CallSequence == 0 || record.CallID != expectedCallID ||
 		record.PreviousHash != journal.headHash || record.Hash != hashJournalRecord(record) {
 		return fmt.Errorf("MCP call journal record %d violates its hash chain or identity binding", record.RecordSequence)
 	}
-	prior, exists := journal.calls[record.RPCID]
+	if journal.schema == 0 {
+		journal.schema = record.Schema
+		journal.configDigest = record.ConfigDigest
+	} else if journal.schema != record.Schema {
+		return fmt.Errorf("MCP call journal record %d changes journal schema", record.RecordSequence)
+	} else if journal.configDigest != record.ConfigDigest {
+		return fmt.Errorf("MCP call journal record %d changes tool configuration", record.RecordSequence)
+	}
+	prior, exists := journal.calls[key]
 	switch record.Event {
 	case journalEventPrepare:
-		if exists || journal.pendingID != "" || journal.fenced || record.CallSequence != journal.callSeq+1 || len(record.Response) != 0 || record.Uncertain {
+		if exists || journal.pendingKey != "" || journal.fenced || record.CallSequence != journal.callSeq+1 || len(record.Response) != 0 || record.Uncertain {
 			return fmt.Errorf("MCP call journal prepare record %d has invalid lifecycle order", record.RecordSequence)
 		}
 		journal.callSeq = record.CallSequence
-		journal.pendingID = record.RPCID
-		journal.calls[record.RPCID] = journalCall{
-			RPCID: record.RPCID, Digest: record.RequestDigest, CallID: record.CallID, Sequence: record.CallSequence,
+		journal.pendingKey = key
+		journal.calls[key] = journalCall{
+			Schema: record.Schema, Key: key, RPCID: record.RPCID, Digest: record.RequestDigest,
+			CallID: record.CallID, Sequence: record.CallSequence,
 		}
 	case journalEventComplete:
-		if !exists || prior.Completed || journal.pendingID != record.RPCID || prior.Digest != record.RequestDigest ||
+		if !exists || prior.Completed || journal.pendingKey != key || prior.Digest != record.RequestDigest ||
 			prior.CallID != record.CallID || prior.Sequence != record.CallSequence || len(record.Response) == 0 || len(record.Response) > MaxMessageBytes {
 			return fmt.Errorf("MCP call journal completion record %d has invalid lifecycle order", record.RecordSequence)
 		}
 		prior.Completed = true
 		prior.Response = append([]byte(nil), record.Response...)
 		prior.Uncertain = record.Uncertain
-		journal.calls[record.RPCID] = prior
-		journal.pendingID = ""
+		journal.calls[key] = prior
+		journal.pendingKey = ""
 		journal.fenced = record.Uncertain
 	default:
 		return fmt.Errorf("MCP call journal record %d has unknown event %q", record.RecordSequence, record.Event)
@@ -199,50 +220,86 @@ func (journal *Journal) applyRecord(record journalRecord) error {
 	return nil
 }
 
-func (journal *Journal) Lookup(rpcID, digest string) (journalCall, bool, error) {
+// BindSchema prevents a journal created under positional identity from being
+// silently reopened under stable operation identity, or vice versa.
+func (journal *Journal) BindSchema(schema int, configDigest string) error {
+	journal.mu.Lock()
+	defer journal.mu.Unlock()
+	if journal.closed {
+		return errors.New("MCP call journal is closed")
+	}
+	if schema != LegacyJournalSchema && schema != JournalSchema {
+		return fmt.Errorf("unsupported MCP call journal schema %d", schema)
+	}
+	if journal.schema != 0 && journal.schema != schema {
+		return fmt.Errorf("MCP call journal schema %d cannot serve configuration schema %d", journal.schema, schema)
+	}
+	if !validRecordConfiguration(schema, configDigest) {
+		return errors.New("MCP call journal received an invalid tool configuration digest")
+	}
+	if journal.schema != 0 && journal.configDigest != configDigest {
+		return errors.New("MCP call journal belongs to a different tool configuration")
+	}
+	journal.schema = schema
+	journal.configDigest = configDigest
+	return nil
+}
+
+func (journal *Journal) Lookup(schema int, key, digest string) (journalCall, bool, error) {
 	journal.mu.Lock()
 	defer journal.mu.Unlock()
 	if journal.closed {
 		return journalCall{}, false, errors.New("MCP call journal is closed")
 	}
-	call, exists := journal.calls[rpcID]
+	if journal.schema != schema {
+		return journalCall{}, false, errors.New("MCP call journal schema is not bound to this server")
+	}
+	call, exists := journal.calls[key]
 	if exists && call.Digest != digest {
-		return journalCall{}, true, errors.New("JSON-RPC identity was reused for a different protected call")
+		return journalCall{}, true, errors.New("operation identity was reused for a different protected call")
 	}
 	call.Response = append([]byte(nil), call.Response...)
 	return call, exists, nil
 }
 
-func (journal *Journal) Prepare(rpcID, digest string) (journalCall, error) {
+func (journal *Journal) Prepare(schema int, key, rpcID, digest string) (journalCall, error) {
 	journal.mu.Lock()
 	defer journal.mu.Unlock()
 	if journal.closed {
 		return journalCall{}, errors.New("MCP call journal is closed")
 	}
+	if journal.schema != schema {
+		return journalCall{}, errors.New("MCP call journal schema is not bound to this server")
+	}
 	if journal.fenced {
 		return journalCall{}, errors.New("MCP call journal is fenced")
 	}
-	if journal.pendingID != "" {
-		return journalCall{}, fmt.Errorf("MCP call journal has pending request %s", journal.pendingID)
+	if journal.pendingKey != "" {
+		return journalCall{}, fmt.Errorf("MCP call journal has a pending protected operation")
 	}
-	if _, exists := journal.calls[rpcID]; exists {
-		return journalCall{}, errors.New("JSON-RPC identity is already recorded")
+	if _, exists := journal.calls[key]; exists {
+		return journalCall{}, errors.New("operation identity is already recorded")
 	}
-	if rpcID == "" || len(rpcID) > 2048 || !validDigest(digest) {
+	callKey := ""
+	if schema == JournalSchema {
+		callKey = key
+	}
+	recordKey, keyErr := recordIdentity(schema, callKey, rpcID)
+	if keyErr != nil || recordKey != key || !validDigest(digest) {
 		return journalCall{}, errors.New("MCP call journal received an invalid request identity or digest")
 	}
 	callSequence := journal.callSeq + 1
 	call := journalCall{
-		RPCID: rpcID, Digest: digest, Sequence: callSequence,
-		CallID: journalCallIdentity(journal.executionID, callSequence),
+		Schema: schema, Key: key, RPCID: rpcID, Digest: digest, Sequence: callSequence,
+		CallID: journalCallIdentity(schema, journal.executionID, callSequence, callKey),
 	}
 	record := journal.newRecord(journalEventPrepare, call, nil, false)
 	if err := journal.append(record); err != nil {
 		return journalCall{}, err
 	}
 	journal.callSeq = callSequence
-	journal.pendingID = rpcID
-	journal.calls[rpcID] = call
+	journal.pendingKey = key
+	journal.calls[key] = call
 	return call, nil
 }
 
@@ -252,8 +309,8 @@ func (journal *Journal) Complete(call journalCall, response []byte, uncertain bo
 	if journal.closed {
 		return errors.New("MCP call journal is closed")
 	}
-	prior, exists := journal.calls[call.RPCID]
-	if !exists || prior.Completed || journal.pendingID != call.RPCID || prior.Digest != call.Digest || prior.CallID != call.CallID || prior.Sequence != call.Sequence {
+	prior, exists := journal.calls[call.Key]
+	if !exists || prior.Completed || journal.pendingKey != call.Key || prior.Schema != call.Schema || prior.RPCID != call.RPCID || prior.Digest != call.Digest || prior.CallID != call.CallID || prior.Sequence != call.Sequence {
 		return errors.New("MCP call journal completion does not match its prepared request")
 	}
 	if len(response) == 0 || len(response) > MaxMessageBytes {
@@ -266,8 +323,8 @@ func (journal *Journal) Complete(call journalCall, response []byte, uncertain bo
 	prior.Completed = true
 	prior.Response = append([]byte(nil), response...)
 	prior.Uncertain = uncertain
-	journal.calls[call.RPCID] = prior
-	journal.pendingID = ""
+	journal.calls[call.Key] = prior
+	journal.pendingKey = ""
 	journal.fenced = uncertain
 	return nil
 }
@@ -278,16 +335,20 @@ func (journal *Journal) Fenced() (bool, bool, error) {
 	if journal.closed {
 		return false, false, errors.New("MCP call journal is closed")
 	}
-	return journal.fenced, journal.pendingID != "", nil
+	return journal.fenced, journal.pendingKey != "", nil
 }
 
 func (journal *Journal) newRecord(event string, call journalCall, response []byte, uncertain bool) journalRecord {
 	record := journalRecord{
-		Schema: JournalSchema, RecordSequence: journal.recordSeq + 1,
+		Schema: call.Schema, RecordSequence: journal.recordSeq + 1,
 		CallSequence: call.Sequence, Event: event, ExecutionID: journal.executionID,
 		RPCID: call.RPCID, RequestDigest: call.Digest, CallID: call.CallID,
 		Response: append([]byte(nil), response...), Uncertain: uncertain,
 		PreviousHash: journal.headHash,
+	}
+	if call.Schema == JournalSchema {
+		record.ConfigDigest = journal.configDigest
+		record.CallKey = call.Key
 	}
 	record.Hash = hashJournalRecord(record)
 	return record
@@ -317,7 +378,8 @@ func (journal *Journal) append(record journalRecord) error {
 func hashJournalRecord(record journalRecord) string {
 	payload := journalPayload{
 		Schema: record.Schema, RecordSequence: record.RecordSequence, CallSequence: record.CallSequence,
-		Event: record.Event, ExecutionID: record.ExecutionID, RPCID: record.RPCID,
+		Event: record.Event, ExecutionID: record.ExecutionID, ConfigDigest: record.ConfigDigest,
+		CallKey: record.CallKey, RPCID: record.RPCID,
 		RequestDigest: record.RequestDigest, CallID: record.CallID,
 		Response: record.Response, Uncertain: record.Uncertain, PreviousHash: record.PreviousHash,
 	}
@@ -326,8 +388,46 @@ func hashJournalRecord(record journalRecord) string {
 	return hex.EncodeToString(digest[:])
 }
 
-func journalCallIdentity(executionID string, sequence uint64) string {
-	return fmt.Sprintf("mcp-call-v1:%d:%s:%d", len(executionID), executionID, sequence)
+func recordIdentity(schema int, callKey, rpcID string) (string, error) {
+	if rpcID == "" || len(rpcID) > 2048 {
+		return "", errors.New("invalid MCP RPC identity")
+	}
+	switch schema {
+	case LegacyJournalSchema:
+		if callKey != "" {
+			return "", errors.New("legacy MCP journal record has a call key")
+		}
+		return rpcID, nil
+	case JournalSchema:
+		if !validCallKey(callKey) {
+			return "", errors.New("invalid MCP call key")
+		}
+		return callKey, nil
+	default:
+		return "", errors.New("unsupported MCP call journal schema")
+	}
+}
+
+func validRecordConfiguration(schema int, digest string) bool {
+	return schema == LegacyJournalSchema && digest == "" || schema == JournalSchema && validDigest(digest)
+}
+
+func journalCallIdentity(schema int, executionID string, sequence uint64, callKey string) string {
+	switch schema {
+	case LegacyJournalSchema:
+		return fmt.Sprintf("mcp-call-v1:%d:%s:%d", len(executionID), executionID, sequence)
+	case JournalSchema:
+		if !validCallKey(callKey) {
+			return ""
+		}
+		return fmt.Sprintf("mcp-call-v2:%d:%s:%s", len(executionID), executionID, strings.TrimPrefix(callKey, journalCallKeyPrefix))
+	default:
+		return ""
+	}
+}
+
+func validCallKey(value string) bool {
+	return strings.HasPrefix(value, journalCallKeyPrefix) && validDigest(strings.TrimPrefix(value, journalCallKeyPrefix))
 }
 
 func validDigest(value string) bool {

@@ -1,0 +1,4 @@
+control API listening on http://127.0.0.1:42005
+admin token: /home/will/agent-check-restore-safety/docs/tmp/bootstrap/step-0021-20260817T022256Z/experiment-stable-operation-identity/raw/admin.token
+adapter credentials: 0
+sandbox endpoints: /tmp/codex-mcp-transport-5lbnacxu/sockets

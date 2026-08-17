@@ -72,6 +72,51 @@ def _sha(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _operation_call_key(effect: str) -> str:
+    projection = {
+        "schema": 1,
+        "name": "commit_effect",
+        "kind": "protected_commit",
+        "arguments": {"effect_id": effect},
+    }
+    encoded = json.dumps(projection, separators=(",", ":"), ensure_ascii=True).encode()
+    return "mcp-call-key-v1:" + sha256(b"mcp-operation-identity-v1\0" + encoded).hexdigest()
+
+
+def _operation_config_digest(config: dict[str, Any]) -> str:
+    tools: list[dict[str, Any]] = []
+    for source_tool in config.get("tools", []):
+        arguments: list[dict[str, Any]] = []
+        for source_argument in source_tool.get("arguments", []):
+            argument = {
+                "name": source_argument["name"],
+            }
+            if source_argument.get("description"):
+                argument["description"] = source_argument["description"]
+            argument["type"] = source_argument["type"]
+            argument["required"] = source_argument["required"]
+            if source_argument.get("max_length"):
+                argument["max_length"] = source_argument["max_length"]
+            if source_argument.get("enum"):
+                argument["enum"] = source_argument["enum"]
+            arguments.append(argument)
+        tool = {
+            "name": source_tool["name"],
+            "description": source_tool["description"],
+            "kind": source_tool["kind"],
+            "arguments": arguments,
+        }
+        if source_tool.get("identity_arguments"):
+            tool["identity_arguments"] = source_tool["identity_arguments"]
+        tools.append(tool)
+    encoded = json.dumps(
+        {"schema": config["schema"], "tools": tools},
+        separators=(",", ":"),
+        ensure_ascii=True,
+    ).encode()
+    return sha256(b"mcp-operation-config-v1\0" + encoded).hexdigest()
+
+
 def _json_file(root: Path, name: str, *, mode: int | None = None) -> Any:
     path = _file(root, name, mode=mode)
     return _decode(path.read_bytes(), name)
@@ -118,24 +163,36 @@ def _external_artifact(
     return path
 
 
-def _journal(root: Path, execution_id: str) -> list[dict[str, Any]]:
+def _journal(root: Path, execution_id: str, config_digest: str) -> list[dict[str, Any]]:
     records = _json_lines(root, "mcp-calls.jsonl", mode=0o600)
     if len(records) != 4:
         raise EvidenceError(f"journal has {len(records)} records instead of four")
+    schema = records[0].get("schema")
+    if schema not in {1, 2} or any(record.get("schema") != schema for record in records):
+        raise EvidenceError("journal mixes or uses an unsupported schema")
     previous = ""
     for index, record in enumerate(records, start=1):
         expected_call = (index + 1) // 2
         expected_event = "prepared" if index % 2 else "completed"
-        expected_rpc = str(expected_call + 1)
+        effect = ("effect-A", "effect-B")[expected_call - 1]
+        expected_rpc = str(expected_call + 1) if schema == 1 else "2"
+        call_key = _operation_call_key(effect)
+        expected_call_id = (
+            f"mcp-call-v1:{len(execution_id)}:{execution_id}:{expected_call}"
+            if schema == 1
+            else f"mcp-call-v2:{len(execution_id)}:{execution_id}:{call_key.removeprefix('mcp-call-key-v1:')}"
+        )
         if (
-            record.get("schema") != 1
-            or record.get("record_sequence") != index
+            record.get("record_sequence") != index
             or record.get("call_sequence") != expected_call
             or record.get("event") != expected_event
             or record.get("execution_id") != execution_id
+            or (schema == 1 and "config_digest" in record)
+            or (schema == 2 and record.get("config_digest") != config_digest)
             or record.get("rpc_id") != expected_rpc
-            or record.get("call_id")
-            != f"mcp-call-v1:{len(execution_id)}:{execution_id}:{expected_call}"
+            or record.get("call_id") != expected_call_id
+            or (schema == 1 and "call_key" in record)
+            or (schema == 2 and record.get("call_key") != call_key)
             or record.get("uncertain") is not False
             or record.get("previous_hash", "") != previous
         ):
@@ -146,10 +203,13 @@ def _journal(root: Path, execution_id: str) -> list[dict[str, Any]]:
             "call_sequence": record["call_sequence"],
             "event": record["event"],
             "execution_id": record["execution_id"],
-            "rpc_id": record["rpc_id"],
-            "request_digest": record["request_digest"],
-            "call_id": record["call_id"],
         }
+        if schema == 2:
+            payload["config_digest"] = record["config_digest"]
+            payload["call_key"] = record["call_key"]
+        payload["rpc_id"] = record["rpc_id"]
+        payload["request_digest"] = record["request_digest"]
+        payload["call_id"] = record["call_id"]
         if "response" in record:
             payload["response"] = record["response"]
         payload["uncertain"] = record["uncertain"]
@@ -485,13 +545,34 @@ def check(path: Path) -> dict[str, Any]:
     artifacts = result.get("artifacts")
     if not isinstance(artifacts, dict):
         raise EvidenceError("result omits artifact fingerprints")
+    journal_artifact = artifacts.get("journal")
+    recorded_journal = journal_artifact.get("path") if isinstance(journal_artifact, dict) else None
+    if not isinstance(recorded_journal, str) or not Path(recorded_journal).is_absolute():
+        raise EvidenceError("result omits the recorded evidence root")
+    recorded_root = Path(recorded_journal).parent
     codex = _external_artifact(artifacts, "codex", executable=True)
     host = _external_artifact(artifacts, "mcp_host", executable=True)
     relay = _external_artifact(artifacts, "mcp_relay", executable=True)
     tools_config = _external_artifact(artifacts, "tools_config", executable=False)
+    tool_configuration = _decode(tools_config.read_bytes(), "tools config")
+    tool_schema = tool_configuration.get("schema") if isinstance(tool_configuration, dict) else None
+    if tool_schema not in {1, 2}:
+        raise EvidenceError("tools config uses an unsupported schema")
     first_records = _json_lines(root, "codex-first.jsonl")
     second_records = _json_lines(root, "codex-second.jsonl")
-    relay_socket = root / "relay" / "mcp-host.sock"
+    transport_value = result.get("transport_root", os.fspath(recorded_root))
+    transport_root = Path(transport_value) if isinstance(transport_value, str) else Path()
+    if result.get("transport_ephemeral") is True:
+        if (
+            not transport_root.is_absolute()
+            or transport_root.parent != Path("/tmp")
+            or not transport_root.name.startswith("codex-mcp-transport-")
+            or transport_root.exists()
+        ):
+            raise EvidenceError("ephemeral MCP transport root is malformed or survived cleanup")
+    elif transport_root != recorded_root:
+        raise EvidenceError("legacy MCP transport root differs from the evidence root")
+    relay_socket = transport_root / "relay" / "mcp-host.sock"
     first_command = _process_command(first_records, "first Codex")
     second_command = _process_command(second_records, "second Codex")
     _check_codex_relay_command(
@@ -515,13 +596,13 @@ def check(path: Path) -> dict[str, Any]:
         "-config",
         os.fspath(tools_config),
         "-sandbox-socket",
-        os.fspath(root / "sockets" / sandbox_name),
+        os.fspath(transport_root / "sockets" / sandbox_name),
         "-listen-socket",
         os.fspath(relay_socket),
         "-execution-id",
         execution_id,
         "-journal",
-        os.fspath(root / "mcp-calls.jsonl"),
+        os.fspath(recorded_root / "mcp-calls.jsonl"),
     ]
     if not isinstance(host_pid, int) or host_pid <= 1 or host_command != expected_host_command:
         raise EvidenceError("trusted MCP host process boundary is malformed")
@@ -543,8 +624,12 @@ def check(path: Path) -> dict[str, Any]:
     if len(first_items) != 1 or len(second_items) != 2:
         raise EvidenceError("raw App Server logs do not contain one then two MCP calls")
     first_a = _outcome(first_items[0], "effect-A")
-    replay_a = _outcome(second_items[0], "effect-A")
-    second_b = _outcome(second_items[1], "effect-B")
+    if tool_schema == 1:
+        replay_a = _outcome(second_items[0], "effect-A")
+        second_b = _outcome(second_items[1], "effect-B")
+    else:
+        second_b = _outcome(second_items[0], "effect-B")
+        replay_a = _outcome(second_items[1], "effect-A")
     if (
         first_a != replay_a
         or first_a.get("recovered_by_query") is not True
@@ -555,10 +640,16 @@ def check(path: Path) -> dict[str, Any]:
     ):
         raise EvidenceError("Codex restart did not return the exact recovered result")
 
-    journal = _journal(root, execution_id)
+    journal = _journal(
+        root,
+        execution_id,
+        _operation_config_digest(tool_configuration) if tool_schema == 2 else "",
+    )
     journal_outcomes: list[dict[str, Any]] = []
     for record in (journal[1], journal[3]):
         response = _decode(base64.b64decode(record["response"], validate=True), "journal response")
+        if response.get("id") != (record["call_sequence"] + 1 if tool_schema == 1 else None):
+            raise EvidenceError("journal response is not bound to its identity schema")
         outcome = response.get("result", {}).get("structuredContent") if isinstance(response, dict) else None
         if not isinstance(outcome, dict):
             raise EvidenceError("journal response omits structured outcome")
@@ -577,19 +668,38 @@ def check(path: Path) -> dict[str, Any]:
     responses = _json_file(root, "responses.json", mode=0o600)
     if not isinstance(responses, list) or len(responses) != 7:
         raise EvidenceError("evidence does not contain seven model requests")
-    replay_threads: set[str] = set()
-    second_threads: set[str] = set()
+    model_calls: dict[str, set[str]] = {
+        "stable-model-call-A": set(),
+        "stable-model-call-B": set(),
+        "source-model-call-A": set(),
+        "replacement-model-call-A": set(),
+        "replacement-model-call-B": set(),
+    }
     for request in responses:
         body = request.get("body") if isinstance(request, dict) else None
         metadata = body.get("client_metadata") if isinstance(body, dict) else None
         thread_id = metadata.get("thread_id") if isinstance(metadata, dict) else None
         encoded_body = json.dumps(body, separators=(",", ":"), ensure_ascii=True)
-        if "stable-model-call-A" in encoded_body and isinstance(thread_id, str):
-            replay_threads.add(thread_id)
-        if "stable-model-call-B" in encoded_body and isinstance(thread_id, str):
-            second_threads.add(thread_id)
-    if len(replay_threads) != 2 or len(second_threads) != 1 or not second_threads < replay_threads:
-        raise EvidenceError("stable model call A was not replayed across two Codex threads")
+        if isinstance(thread_id, str):
+            for call_id in model_calls:
+                if call_id in encoded_body:
+                    model_calls[call_id].add(thread_id)
+    if tool_schema == 1:
+        replay_threads = model_calls["stable-model-call-A"]
+        second_threads = model_calls["stable-model-call-B"]
+        if len(replay_threads) != 2 or len(second_threads) != 1 or not second_threads < replay_threads:
+            raise EvidenceError("stable model call A was not replayed across two Codex threads")
+    else:
+        source_threads = model_calls["source-model-call-A"]
+        replacement_a_threads = model_calls["replacement-model-call-A"]
+        replacement_b_threads = model_calls["replacement-model-call-B"]
+        if (
+            len(source_threads) != 1
+            or len(replacement_a_threads) != 1
+            or replacement_a_threads != replacement_b_threads
+            or source_threads == replacement_a_threads
+        ):
+            raise EvidenceError("replacement did not reorder effects under new model call identities")
 
     state = result.get("history")
     operations = state.get("operations") if isinstance(state, dict) else None
@@ -633,7 +743,7 @@ def check(path: Path) -> dict[str, Any]:
         ("responses", "responses.json"),
     ):
         artifact = artifacts.get(key)
-        if not isinstance(artifact, dict) or artifact.get("path") != os.fspath(root / name) or artifact.get("sha256") != _sha(root / name):
+        if not isinstance(artifact, dict) or artifact.get("path") != os.fspath(recorded_root / name) or artifact.get("sha256") != _sha(root / name):
             raise EvidenceError(f"artifact fingerprint mismatch for {key}")
     if result.get("system") == "real-codex-docker-mcp-continuity":
         for key, name in (
@@ -644,7 +754,7 @@ def check(path: Path) -> dict[str, Any]:
             artifact = artifacts.get(key)
             if (
                 not isinstance(artifact, dict)
-                or artifact.get("path") != os.fspath(root / name)
+                or artifact.get("path") != os.fspath(recorded_root / name)
                 or artifact.get("sha256") != _sha(root / name)
             ):
                 raise EvidenceError(f"artifact fingerprint mismatch for {key}")
@@ -661,6 +771,7 @@ def check(path: Path) -> dict[str, Any]:
             else "host-process"
         ),
         "mcp_items": 3,
+        "operation_identity_schema": tool_schema,
         "operations": 2,
         "provider_deliveries": 2,
         "provider_commits": 2,

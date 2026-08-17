@@ -1,0 +1,4 @@
+control API listening on http://127.0.0.1:37079
+admin token: /home/will/agent-check-restore-safety/docs/tmp/bootstrap/s21-fc/raw/admin.token
+adapter credentials: 0
+sandbox endpoints: /tmp/fc-claude-p0j2aju1/sockets

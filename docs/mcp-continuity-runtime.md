@@ -184,8 +184,14 @@ mcp-operation-server \
   -journal /host-history/mcp-calls.jsonl
 ```
 
-`runtime/deploy/mcp-operation/tools.json` is a credential-free example. The
-journal must be outside any container or VM state that can be rolled back.
+`runtime/deploy/mcp-operation/tools-stable.json` is the current credential-free
+example. Each tool names required arguments, such as `effect_id`, that already
+identify the same external Operation for the application. RPC IDs, model call
+IDs, and call position do not identify the Operation. The journal also binds
+the complete tool configuration, so changing that definition for a recorded
+execution fails closed. `tools.json` retains schema 1 solely to verify older
+positional evidence. The journal must be outside any container or VM state
+that can be rolled back.
 The split deployment instead keeps those inputs on the host:
 
 ```text
@@ -225,14 +231,14 @@ This is not yet complete mediation for an arbitrary agent. It currently:
 - supports a deliberately bounded flat argument schema;
 - depends on the supervisor to mint and correctly resume execution identity;
 - protects only tools routed through this server; and
-- has not yet been invoked by a real Claude client.
+- requires an operator to select existing required arguments that identify one
+  external Operation.
 
-The Docker and Firecracker results prove containment for their exercised
-Codex/MCP paths; they do not prove that every possible Agent effect path is
-mediated. The Firecracker run checkpoints after the first Operation has
-settled, so an MCP stream interrupted during an unknown provider write remains
-unproved. A Claude runtime driver and that in-flight checkpoint case are the
-next portability tests. Docker, Firecracker, QEMU, and future sandbox backends
+The Docker and Firecracker results prove containment only for their exercised
+MCP paths; they do not prove that every possible Agent effect path is mediated.
+Official Codex process replacement now changes both model call identity and
+call order, while official Claude survives complete source-VMM loss during a
+provider-committed call. Docker, Firecracker, QEMU, and future sandbox backends
 remain replaceable containment mechanisms; the stable contract is the
 host-retained Operation identity and History.
 

@@ -43,6 +43,7 @@ type ServerOptions struct {
 type Server struct {
 	executor       Executor
 	executeTimeout time.Duration
+	configSchema   int
 	tools          map[string]Tool
 	orderedTools   []Tool
 	journal        *Journal
@@ -112,6 +113,13 @@ func NewServer(executor Executor, config Config, options ServerOptions) (*Server
 	if journalClosed || journalExecutionID != options.ExecutionID {
 		return nil, errors.New("MCP call journal is closed or belongs to another execution")
 	}
+	configDigest, err := operationConfigDigest(config)
+	if err != nil {
+		return nil, err
+	}
+	if err := options.Journal.BindSchema(config.Schema, configDigest); err != nil {
+		return nil, err
+	}
 	timeout := options.ExecuteTimeout
 	if timeout == 0 {
 		timeout = DefaultExecuteTimeout
@@ -121,7 +129,7 @@ func NewServer(executor Executor, config Config, options ServerOptions) (*Server
 	}
 	cloned := cloneConfig(config)
 	server := &Server{
-		executor: executor, executeTimeout: timeout,
+		executor: executor, executeTimeout: timeout, configSchema: cloned.Schema,
 		tools: make(map[string]Tool, len(cloned.Tools)), orderedTools: cloned.Tools,
 		journal: options.Journal,
 	}
@@ -129,6 +137,18 @@ func NewServer(executor Executor, config Config, options ServerOptions) (*Server
 		server.tools[tool.Name] = tool
 	}
 	return server, nil
+}
+
+func operationConfigDigest(config Config) (string, error) {
+	if config.Schema == LegacyConfigSchema {
+		return "", nil
+	}
+	encoded, err := json.Marshal(config)
+	if err != nil {
+		return "", err
+	}
+	digest := sha256.Sum256(append([]byte("mcp-operation-config-v1\x00"), encoded...))
+	return hex.EncodeToString(digest[:]), nil
 }
 
 // Serve runs the newline-delimited MCP stdio transport. It is deliberately
@@ -257,10 +277,10 @@ func (s *Server) callTool(ctx context.Context, request rpcRequest, diagnostics i
 	if err != nil {
 		return marshalRPCError(request.ID, -32602, "tool arguments do not match the protected schema"), nil
 	}
-	// MCP _meta is transport and client context. Codex legitimately changes it
-	// after restart, so it is validated above but cannot define the external
-	// action. Bind replay to the ordered JSON-RPC identity plus the exact
-	// operator tool mapping and canonical business arguments instead.
+	// MCP _meta and JSON-RPC ID are transport context. Schema 2 derives the
+	// external operation identity only from operator-selected required business
+	// arguments; the full canonical request remains an independent conflict
+	// check. Schema 1 retains positional replay for old journals.
 	protectedRequest, err := json.Marshal(struct {
 		Schema    int             `json:"schema"`
 		Name      string          `json:"name"`
@@ -272,17 +292,23 @@ func (s *Server) callTool(ctx context.Context, request rpcRequest, diagnostics i
 	}
 	digestBytes := sha256.Sum256(append([]byte("mcp-protected-call-v2\x00"), protectedRequest...))
 	digest := hex.EncodeToString(digestBytes[:])
-	identity := string(request.ID)
+	identity, err := protectedCallIdentity(s.configSchema, tool, parameters.Name, body, request.ID)
+	if err != nil {
+		return nil, err
+	}
 
-	call, exists, lookupErr := s.journal.Lookup(identity, digest)
+	call, exists, lookupErr := s.journal.Lookup(s.configSchema, identity, digest)
 	if lookupErr != nil {
 		if exists {
-			return marshalRPCError(request.ID, -32602, "JSON-RPC identity was reused for a different protected call"), nil
+			return marshalRPCError(request.ID, -32602, "operation identity was reused for a different protected call"), nil
 		}
 		return nil, lookupErr
 	}
 	if exists && call.Completed {
-		return append([]byte(nil), call.Response...), nil
+		if s.configSchema == LegacyConfigSchema {
+			return append([]byte(nil), call.Response...), nil
+		}
+		return bindCachedResponse(call.Response, request.ID)
 	}
 	if !exists {
 		fenced, pending, err := s.journal.Fenced()
@@ -295,7 +321,7 @@ func (s *Server) callTool(ctx context.Context, request rpcRequest, diagnostics i
 	}
 
 	if !exists {
-		call, err = s.journal.Prepare(identity, digest)
+		call, err = s.journal.Prepare(s.configSchema, identity, string(request.ID), digest)
 		if err != nil {
 			return nil, err
 		}
@@ -309,7 +335,11 @@ func (s *Server) callTool(ctx context.Context, request rpcRequest, diagnostics i
 		_, _ = fmt.Fprintf(diagnostics, "protected MCP call %s failed: %v\n", call.CallID, executeErr)
 	}
 	response := marshalRPCResult(request.ID, result)
-	if err := s.journal.Complete(call, response, uncertain); err != nil {
+	journalResponse := response
+	if s.configSchema == ConfigSchema {
+		journalResponse = marshalRPCResult(json.RawMessage("null"), result)
+	}
+	if err := s.journal.Complete(call, journalResponse, uncertain); err != nil {
 		return nil, err
 	}
 	return response, nil
@@ -410,6 +440,59 @@ func validateArguments(tool Tool, values map[string]json.RawMessage) ([]byte, er
 		return nil, errors.New("canonical tool arguments exceed the Operation request limit")
 	}
 	return encoded, nil
+}
+
+func protectedCallIdentity(schema int, tool Tool, name string, body []byte, rpcID json.RawMessage) (string, error) {
+	if schema == LegacyConfigSchema {
+		return string(rpcID), nil
+	}
+	if schema != ConfigSchema {
+		return "", errors.New("unsupported MCP Operation identity schema")
+	}
+	var arguments map[string]json.RawMessage
+	if err := json.Unmarshal(body, &arguments); err != nil {
+		return "", fmt.Errorf("decode canonical tool arguments: %w", err)
+	}
+	identityArguments := make(map[string]json.RawMessage, len(tool.IdentityArguments))
+	for _, argument := range tool.IdentityArguments {
+		value, exists := arguments[argument]
+		if !exists {
+			return "", fmt.Errorf("identity argument %q is absent", argument)
+		}
+		identityArguments[argument] = value
+	}
+	projection, err := json.Marshal(struct {
+		Schema    int                        `json:"schema"`
+		Name      string                     `json:"name"`
+		Kind      string                     `json:"kind"`
+		Arguments map[string]json.RawMessage `json:"arguments"`
+	}{Schema: 1, Name: name, Kind: tool.Kind, Arguments: identityArguments})
+	if err != nil {
+		return "", err
+	}
+	digest := sha256.Sum256(append([]byte("mcp-operation-identity-v1\x00"), projection...))
+	return journalCallKeyPrefix + hex.EncodeToString(digest[:]), nil
+}
+
+func bindCachedResponse(saved []byte, id json.RawMessage) ([]byte, error) {
+	if err := rejectDuplicateJSONNames(saved); err != nil {
+		return nil, fmt.Errorf("decode saved MCP response: %w", err)
+	}
+	var response struct {
+		JSONRPC string          `json:"jsonrpc"`
+		ID      json.RawMessage `json:"id"`
+		Result  json.RawMessage `json:"result"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(saved))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&response); err != nil || response.JSONRPC != "2.0" || string(response.ID) != "null" || len(response.Result) == 0 {
+		return nil, errors.New("saved MCP response is not an RPC-neutral result")
+	}
+	var extra any
+	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
+		return nil, errors.New("saved MCP response has trailing data")
+	}
+	return marshalRPCResult(id, response.Result), nil
 }
 
 func toolDescription(tool Tool) map[string]any {

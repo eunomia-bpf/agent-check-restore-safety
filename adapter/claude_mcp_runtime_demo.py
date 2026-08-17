@@ -870,7 +870,7 @@ def main() -> int:
     parser.add_argument(
         "--tools-config",
         type=Path,
-        default=Path("runtime/deploy/mcp-operation/tools.json"),
+        default=Path("runtime/deploy/mcp-operation/tools-stable.json"),
     )
     args = parser.parse_args()
     result = run(

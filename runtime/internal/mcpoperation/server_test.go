@@ -38,11 +38,12 @@ func (executor *fakeExecutor) Execute(_ context.Context, callID, kind string, bo
 func testServerConfig(t *testing.T) Config {
 	t.Helper()
 	config, err := ParseConfig([]byte(`{
-      "schema":1,
+	      "schema":2,
       "tools":[{
         "name":"charge_payment",
-        "description":"Commit one payment.",
-        "kind":"protected_commit",
+	        "description":"Commit one payment.",
+	        "kind":"protected_commit",
+	        "identity_arguments":["effect_id"],
         "arguments":[
           {"name":"effect_id","type":"string","required":true,"max_length":64},
           {"name":"urgent","type":"boolean","required":false}
@@ -143,15 +144,23 @@ func TestServerSupportsLegacyAndModernMCPWithOrderedDurableCalls(t *testing.T) {
 	if len(executor.calls) != 2 {
 		t.Fatalf("executor calls = %+v", executor.calls)
 	}
+	firstKey, err := protectedCallIdentity(ConfigSchema, testServerConfig(t).Tools[0], "charge_payment", []byte(`{"effect_id":"A-17","urgent":true}`), json.RawMessage("3"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondKey, err := protectedCallIdentity(ConfigSchema, testServerConfig(t).Tools[0], "charge_payment", []byte(`{"effect_id":"B-18"}`), json.RawMessage("4"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	if executor.calls[0] != (recordedExecution{
-		callID: "mcp-call-v1:11:execution-A:1", kind: "protected_commit",
+		callID: journalCallIdentity(ConfigSchema, "execution-A", 1, firstKey), kind: "protected_commit",
 		body: `{"effect_id":"A-17","urgent":true}`,
-	}) || executor.calls[1].callID != "mcp-call-v1:11:execution-A:2" || executor.calls[1].body != `{"effect_id":"B-18"}` {
+	}) || executor.calls[1].callID != journalCallIdentity(ConfigSchema, "execution-A", 2, secondKey) || executor.calls[1].body != `{"effect_id":"B-18"}` {
 		t.Fatalf("ordered executions = %+v", executor.calls)
 	}
 }
 
-func TestServerRejectsConflictingRPCIdentityWithoutDispatch(t *testing.T) {
+func TestServerRejectsConflictingOperationIdentityWithoutDispatch(t *testing.T) {
 	executor := &fakeExecutor{}
 	server, err := NewServer(executor, testServerConfig(t), ServerOptions{
 		ExecutionID: "execution-B", Journal: testJournal(t, "execution-B"),
@@ -161,7 +170,7 @@ func TestServerRejectsConflictingRPCIdentityWithoutDispatch(t *testing.T) {
 	}
 	lines, _ := runServer(t, server,
 		`{"jsonrpc":"2.0","id":"call-1","method":"tools/call","params":{"name":"charge_payment","arguments":{"effect_id":"A-17"}}}`,
-		`{"jsonrpc":"2.0","id":"call-1","method":"tools/call","params":{"name":"charge_payment","arguments":{"effect_id":"DIFFERENT"}}}`,
+		`{"jsonrpc":"2.0","id":"call-2","method":"tools/call","params":{"name":"charge_payment","arguments":{"effect_id":"A-17","urgent":true}}}`,
 	)
 	if len(executor.calls) != 1 || len(lines) != 2 {
 		t.Fatalf("calls=%+v lines=%d", executor.calls, len(lines))
@@ -201,7 +210,7 @@ func TestServerFencesExecutionAfterUnsettledOperation(t *testing.T) {
 
 func TestServerRestoredBeforeCallReusesSupervisorIdentityAndSequence(t *testing.T) {
 	firstCall := `{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"charge_payment","arguments":{"effect_id":"A-17"},"_meta":{"io.modelcontextprotocol/protocolVersion":"2025-11-25","progressToken":"first-process"}}}`
-	restoredCall := `{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"charge_payment","arguments":{"effect_id":"A-17"},"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","progressToken":"restored-process"}}}`
+	restoredCall := `{"jsonrpc":"2.0","id":"replacement-27","method":"tools/call","params":{"name":"charge_payment","arguments":{"effect_id":"A-17"},"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","progressToken":"restored-process"}}}`
 	directory := t.TempDir()
 	if err := os.Chmod(directory, 0o700); err != nil {
 		t.Fatal(err)
@@ -235,13 +244,14 @@ func TestServerRestoredBeforeCallReusesSupervisorIdentityAndSequence(t *testing.
 		t.Fatal(err)
 	}
 	secondLines, _ := runServer(t, second, restoredCall)
-	if len(firstExecutor.calls) != 1 || firstExecutor.calls[0].callID != "mcp-call-v1:13:restore-scope:1" ||
-		len(secondExecutor.calls) != 0 || len(firstLines) != 1 || len(secondLines) != 1 || firstLines[0] != secondLines[0] {
+	if len(firstExecutor.calls) != 1 || !strings.HasPrefix(firstExecutor.calls[0].callID, "mcp-call-v2:13:restore-scope:") ||
+		len(secondExecutor.calls) != 0 || len(firstLines) != 1 || len(secondLines) != 1 ||
+		decodeResponse(t, firstLines[0])["id"].(json.Number).String() != "9" || decodeResponse(t, secondLines[0])["id"] != "replacement-27" {
 		t.Fatalf("first calls=%+v second calls=%+v responses=%v/%v", firstExecutor.calls, secondExecutor.calls, firstLines, secondLines)
 	}
 }
 
-func TestServerRestoredMetadataCannotHideChangedBusinessArguments(t *testing.T) {
+func TestServerRestoredMetadataCannotHideChangedFullRequest(t *testing.T) {
 	executor := &fakeExecutor{}
 	server, err := NewServer(executor, testServerConfig(t), ServerOptions{
 		ExecutionID: "metadata-conflict", Journal: testJournal(t, "metadata-conflict"),
@@ -251,7 +261,7 @@ func TestServerRestoredMetadataCannotHideChangedBusinessArguments(t *testing.T) 
 	}
 	lines, _ := runServer(t, server,
 		`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"charge_payment","arguments":{"effect_id":"A-17"},"_meta":{"progressToken":"one"}}}`,
-		`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"charge_payment","arguments":{"effect_id":"B-18"},"_meta":{"progressToken":"two"}}}`,
+		`{"jsonrpc":"2.0","id":27,"method":"tools/call","params":{"name":"charge_payment","arguments":{"effect_id":"A-17","urgent":true},"_meta":{"progressToken":"two"}}}`,
 	)
 	if len(lines) != 2 || len(executor.calls) != 1 {
 		t.Fatalf("responses=%v calls=%+v", lines, executor.calls)
@@ -274,7 +284,7 @@ func TestServerRejectsInvalidArgumentsBeforeAllocatingOperationSequence(t *testi
 		`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"charge_payment","arguments":{"effect_id":"A-17","provider_url":"https://bypass"}}}`,
 		`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"charge_payment","arguments":{"effect_id":"A-17"}}}`,
 	)
-	if len(lines) != 2 || decodeResponse(t, lines[0])["error"] == nil || len(executor.calls) != 1 || !strings.HasSuffix(executor.calls[0].callID, ":1") {
+	if len(lines) != 2 || decodeResponse(t, lines[0])["error"] == nil || len(executor.calls) != 1 || !strings.HasPrefix(executor.calls[0].callID, "mcp-call-v2:11:execution-D:") {
 		t.Fatalf("lines=%v calls=%+v", lines, executor.calls)
 	}
 }
@@ -292,5 +302,39 @@ func TestNewServerRejectsUnsafeSupervisorIdentityAndTimeout(t *testing.T) {
 	}
 	if _, err := NewServer(nil, testServerConfig(t), ServerOptions{ExecutionID: "ok"}); err == nil {
 		t.Fatal("nil executor accepted")
+	}
+}
+
+func TestNewServerRejectsChangedConfigurationForRecordedExecution(t *testing.T) {
+	directory := t.TempDir()
+	if err := os.Chmod(directory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(directory, "mcp-calls.jsonl")
+	journal, err := OpenJournal(path, "config-bound")
+	if err != nil {
+		t.Fatal(err)
+	}
+	server, err := NewServer(&fakeExecutor{}, testServerConfig(t), ServerOptions{
+		ExecutionID: "config-bound", Journal: journal,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	runServer(t, server, `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"charge_payment","arguments":{"effect_id":"A-17"}}}`)
+	if err := journal.Close(); err != nil {
+		t.Fatal(err)
+	}
+	reopened, err := OpenJournal(path, "config-bound")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reopened.Close()
+	changed := testServerConfig(t)
+	changed.Tools[0].Description = "Changed operator configuration."
+	if _, err := NewServer(&fakeExecutor{}, changed, ServerOptions{
+		ExecutionID: "config-bound", Journal: reopened,
+	}); err == nil {
+		t.Fatal("recorded execution accepted a changed tool configuration")
 	}
 }

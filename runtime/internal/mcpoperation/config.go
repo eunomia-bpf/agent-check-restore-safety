@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	ConfigSchema       = 1
+	LegacyConfigSchema = 1
+	ConfigSchema       = 2
 	MaxConfigBytes     = 1 << 20
 	MaxTools           = 256
 	MaxToolNameBytes   = 128
@@ -35,10 +36,11 @@ type Config struct {
 }
 
 type Tool struct {
-	Name        string     `json:"name"`
-	Description string     `json:"description"`
-	Kind        string     `json:"kind"`
-	Arguments   []Argument `json:"arguments"`
+	Name              string     `json:"name"`
+	Description       string     `json:"description"`
+	Kind              string     `json:"kind"`
+	Arguments         []Argument `json:"arguments"`
+	IdentityArguments []string   `json:"identity_arguments,omitempty"`
 }
 
 type Argument struct {
@@ -80,7 +82,7 @@ func ParseConfig(data []byte) (Config, error) {
 }
 
 func validateConfig(config Config) error {
-	if config.Schema != ConfigSchema {
+	if config.Schema != LegacyConfigSchema && config.Schema != ConfigSchema {
 		return fmt.Errorf("unsupported MCP Operation config schema %d", config.Schema)
 	}
 	if len(config.Tools) == 0 || len(config.Tools) > MaxTools {
@@ -102,11 +104,13 @@ func validateConfig(config Config) error {
 			return fmt.Errorf("tool %q has more than %d arguments", tool.Name, MaxArguments)
 		}
 		argumentNames := make(map[string]bool, len(tool.Arguments))
+		requiredArguments := make(map[string]bool, len(tool.Arguments))
 		for argumentIndex, argument := range tool.Arguments {
 			if !validName(argument.Name, MaxArgumentName) || argumentNames[argument.Name] {
 				return fmt.Errorf("tool %q argument %d has an invalid or duplicate name", tool.Name, argumentIndex)
 			}
 			argumentNames[argument.Name] = true
+			requiredArguments[argument.Name] = argument.Required
 			if argument.Description != "" && !validDescription(argument.Description) {
 				return fmt.Errorf("tool %q argument %q has an invalid description", tool.Name, argument.Name)
 			}
@@ -132,6 +136,22 @@ func validateConfig(config Config) error {
 				}
 				seenEnum[value] = true
 			}
+		}
+		if config.Schema == LegacyConfigSchema {
+			if len(tool.IdentityArguments) != 0 {
+				return fmt.Errorf("legacy tool %q cannot declare identity_arguments", tool.Name)
+			}
+			continue
+		}
+		if len(tool.IdentityArguments) == 0 || len(tool.IdentityArguments) > len(tool.Arguments) {
+			return fmt.Errorf("tool %q must identify itself with declared arguments", tool.Name)
+		}
+		identityArguments := make(map[string]bool, len(tool.IdentityArguments))
+		for _, name := range tool.IdentityArguments {
+			if !validName(name, MaxArgumentName) || identityArguments[name] || !requiredArguments[name] {
+				return fmt.Errorf("tool %q has an invalid, duplicate, optional, or unknown identity argument", tool.Name)
+			}
+			identityArguments[name] = true
 		}
 	}
 	return nil
@@ -171,6 +191,7 @@ func cloneConfig(config Config) Config {
 	cloned := Config{Schema: config.Schema, Tools: make([]Tool, len(config.Tools))}
 	for index, tool := range config.Tools {
 		cloned.Tools[index] = tool
+		cloned.Tools[index].IdentityArguments = append([]string(nil), tool.IdentityArguments...)
 		cloned.Tools[index].Arguments = make([]Argument, len(tool.Arguments))
 		for argumentIndex, argument := range tool.Arguments {
 			cloned.Tools[index].Arguments[argumentIndex] = argument

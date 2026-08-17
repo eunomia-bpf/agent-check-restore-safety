@@ -276,7 +276,7 @@ runtime-firecracker-claude-demo: runtime-firecracker-claude-build runtime-firecr
 		--payment-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/payment" \
 		--mcp-host-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/mcp-operation-host" \
 		--mcp-relay-binary "$(abspath $(MCP_RELAY_BUNDLE_DIR))/mcp-operation-relay" \
-		--tools-config "$(abspath runtime/deploy/mcp-operation/tools.json)" \
+		--tools-config "$(abspath runtime/deploy/mcp-operation/tools-stable.json)" \
 		$(FIRECRACKER_CLAUDE_DEMO_ARGS)
 
 runtime-firecracker-claude-check:
@@ -379,7 +379,7 @@ runtime-claude-mcp-demo: runtime-claude-fetch runtime-codex-mcp-build
 		--payment-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/payment" \
 		--mcp-host-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/mcp-operation-host" \
 		--mcp-relay-binary "$(abspath $(MCP_RELAY_BUNDLE_DIR))/mcp-operation-relay" \
-		--tools-config "$(abspath runtime/deploy/mcp-operation/tools.json)" \
+		--tools-config "$(abspath runtime/deploy/mcp-operation/tools-stable.json)" \
 		$(CLAUDE_MCP_DEMO_ARGS)
 
 runtime-claude-mcp-check:

@@ -1,0 +1,2 @@
+{"event":"ready","generation":1,"instance_id":"claude-g1-4aaccb664459cf15","vmm_pid":2822739}
+{"disposition":"vmm-sigkill","event":"completed","generation":1,"vmm_pid":2822739}

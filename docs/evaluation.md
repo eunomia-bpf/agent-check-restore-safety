@@ -941,3 +941,50 @@ unmodified vendor Agent runtime. Reproduction and checker commands are in
   `docs/tmp/bootstrap/step-0020-20260817T020745Z/experiment-firecracker-claude-continuity/result-review.md`.
 - Final raw evidence:
   `docs/tmp/bootstrap/step-0020-20260817T020745Z/experiment-firecracker-claude-continuity/raw/`.
+
+## 19. Operation identity across changed Agent schedules
+
+Paper-value role: **supporting systems evidence for RQ4 and a correctness
+repair for transparent adoption**. Earlier real-Agent runs repeated the same
+first tool call after replacement. Their host journal selected saved work by
+MCP RPC ID, so the result did not establish correctness when a new Agent
+process reused an RPC ID for different work or requested existing Operations
+in another order.
+
+Schema 2 lets an operator select required primitive tool arguments that already
+identify the application's Operation. The current configuration selects
+`effect_id`. The host hashes that projection for lookup, separately checks the
+complete canonical request for conflicts, saves responses without an RPC ID,
+and binds the journal to the exact tool configuration. Schema-1 journals remain
+readable but cannot be silently reopened under schema 2.
+
+The real Codex run used two official Codex 0.147.0 App Server processes. The
+first committed A after a lost provider response. The replacement then
+requested B before A, using new model call identities. The source A and
+replacement B both arrived as MCP RPC ID `2`; the host still created exactly
+the two distinct Operations A and B. The later A request returned the original
+A Operation without provider dispatch. Final History and the independently
+durable provider contain two Operations, two deliveries, and two commits.
+
+A second run exercised the same schema with official Claude Code 2.1.233 in
+two clean Firecracker 1.16.1 microVMs. The source VMM was killed after the
+provider committed A; a clean replacement VM recovered A, committed B, and
+returned `DONE`. Both VMs had no NIC or root disk and used a read-only payload.
+The independent checkers validate the schema-2 hash chain, tool-configuration
+binding, RPC-neutral saved responses, History, provider facts, Agent records,
+and the Firecracker failure timeline. A relocated copy of the Codex evidence
+passes, while changing its recorded configuration digest is rejected.
+
+This does not infer Operation identity from arbitrary prompts or network
+traffic. Operators must expose an existing stable application field, and only
+declared MCP tools are mediated. The results show a narrower but necessary
+property: transparent recovery no longer assumes deterministic replay of
+transport IDs or call order, and Firecracker remains a replaceable containment
+backend rather than the source of continuity.
+
+- Plan:
+  `docs/tmp/bootstrap/step-0021-20260817T022256Z/experiment-stable-operation-identity/plan.md`.
+- Codex raw evidence:
+  `docs/tmp/bootstrap/step-0021-20260817T022256Z/experiment-stable-operation-identity/raw/`.
+- Firecracker Claude raw evidence:
+  `docs/tmp/bootstrap/s21-fc/raw/`.
