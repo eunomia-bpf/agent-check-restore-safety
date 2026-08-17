@@ -321,8 +321,12 @@ func (g *Gate) handle(connection *net.UnixConn) {
 		g.auditError(err)
 		return
 	}
-	if err := ensureEOF(reader, connection); err != nil {
-		g.auditError(err)
+	// Newline is the protocol frame boundary. Reject bytes already coalesced
+	// behind that frame, then close the connection after recording the result.
+	// Waiting for transport EOF is incorrect for Firecracker AF_VSOCK: a guest
+	// SHUT_WR is not guaranteed to surface as EOF on the host UDS backend.
+	if reader.Buffered() != 0 {
+		g.auditError(errors.New("gate RESULT has trailing data"))
 		return
 	}
 	if err := g.verifyProcess(); err != nil {
@@ -523,23 +527,6 @@ func readGateLine(reader *bufio.Reader, limit int) (string, error) {
 		}
 	}
 	return "", errors.New("gate line exceeds limit")
-}
-
-func ensureEOF(reader *bufio.Reader, connection *net.UnixConn) error {
-	_ = connection.SetReadDeadline(time.Now().Add(gateWriteTimeout))
-	defer connection.SetReadDeadline(time.Time{})
-	var byteValue [1]byte
-	n, err := reader.Read(byteValue[:])
-	if n != 0 {
-		return errors.New("gate RESULT has trailing data")
-	}
-	if errors.Is(err, io.EOF) {
-		return nil
-	}
-	if err == nil {
-		return errors.New("gate RESULT reader made no progress")
-	}
-	return fmt.Errorf("wait for end of gate RESULT: %w", err)
 }
 
 func parseResult(line string) (Result, error) {

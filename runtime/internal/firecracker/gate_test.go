@@ -173,6 +173,14 @@ func TestGateRejectsWrongPeerAndStrictResult(t *testing.T) {
 	if _, err := gate.WaitResult(ctx); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("duplicate RESULT field was accepted: %v", err)
 	}
+	connection = gateDial(t, gate)
+	_, _ = connection.Write([]byte("{\"event\":\"RESULT\",\"status\":200,\"body\":{}}\ntrailing"))
+	_ = connection.Close()
+	ctx, cancel = context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	if _, err := gate.WaitResult(ctx); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("coalesced trailing RESULT data was accepted: %v", err)
+	}
 }
 
 func TestGateCloseIsBoundedAndDoesNotRemoveReplacement(t *testing.T) {

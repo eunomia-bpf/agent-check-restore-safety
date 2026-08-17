@@ -51,6 +51,9 @@ make runtime-codex-mcp-demo
 make runtime-codex-mcp-docker-demo
 make runtime-firecracker-codex-mcp-demo
 make runtime-firecracker-codex-mcp-inflight-demo
+make runtime-firecracker-claude-demo
+make runtime-firecracker-claude-check \
+  FIRECRACKER_CLAUDE_EVIDENCE=/tmp/firecracker-claude-run
 make runtime-codex-demo
 make runtime-codex-isolated-demo
 make runtime-codex-isolated-check
@@ -106,6 +109,14 @@ into another VMM, and starts a fresh microVM. The new Codex session obtains A
 from the host journal before it submits B. Thus Firecracker supplies
 replaceable containment; it is not the source of external-operation
 correctness.
+
+The same host boundary now runs the pinned official Claude Code 2.1.233 binary
+inside two clean, networkless Firecracker microVMs. The provider commits A;
+the runtime kills and reaps the complete source VMM before A's result returns;
+then a fresh VM obtains A from the host journal and commits B once. The VM has
+no NIC or root disk and receives only a read-only Claude/MCP payload. The
+reproduction command, independent checker, and exact trust boundary are in
+[`docs/firecracker-claude-runtime.md`](docs/firecracker-claude-runtime.md).
 
 The Codex demo uses the locally logged-in account and the real Codex App Server,
 not a model fixture. A strict dynamic tool requests one application-chosen

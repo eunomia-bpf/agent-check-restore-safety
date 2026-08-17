@@ -1,0 +1,1 @@
+{"claude_version":"2.1.233","operations":["op-3509822ac827f815f42826925711e085cb7c866d6458765a43433658df4cb54c","op-7f42b1632af869f3ad3b3fafe35f56414db46432c99995e8b9f577cf36606ff7"],"provider_commits":2,"replacement_vmm_pid":2798018,"source_vmm_pid":2797993,"system":"official-claude-firecracker-vmm-loss-continuity","valid":true}

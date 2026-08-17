@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "valid": true,
+  "backend": "firecracker-kvm",
+  "firecracker_version": "1.16.1",
+  "kernel_version": "6.1.155",
+  "generation": 2,
+  "session_id": "1572da4be30f16032eae008afc5d751e",
+  "disposition": "completed",
+  "network_interfaces": 0,
+  "root_block_devices": 0,
+  "read_only_payload": true,
+  "guest_result": {
+    "event": "RESULT",
+    "status": 200,
+    "body": {
+      "result": "DONE",
+      "stream": "{\"type\":\"system\",\"subtype\":\"init\",\"cwd\":\"/workspace\",\"session_id\":\"1572da4b-e30f-1603-2eae-008afc5d751e\",\"tools\":[\"Bash\",\"Edit\",\"Read\",\"mcp__continuity__commit_effect\"],\"mcp_servers\":[{\"name\":\"continuity\",\"status\":\"connected\"}],\"model\":\"claude-fixture-1\",\"permissionMode\":\"dontAsk\",\"slash_commands\":[],\"apiKeySource\":\"ANTHROPIC_API_KEY\",\"claude_code_version\":\"2.1.233\",\"output_style\":\"default\",\"agents\":[\"claude\",\"Explore\",\"general-purpose\",\"Plan\",\"statusline-setup\"],\"skills\":[],\"plugins\":[],\"capabilities\":[\"interrupt_receipt_v1\",\"interrupt_cancel_queued_v1\",\"msg_lifecycle_v1\"],\"analytics_disabled\":true,\"product_feedback_disabled\":true,\"uuid\":\"ed717b26-6454-4284-925a-c725097ce428\",\"fast_mode_state\":\"off\",\"fast_mode_disabled_reason\":\"sdk_opt_in_required\"}\n{\"type\":\"assistant\",\"message\":{\"content\":[{\"id\":\"toolu_fixture_2\",\"input\":{\"effect_id\":\"effect-A\"},\"name\":\"mcp__continuity__commit_effect\",\"type\":\"tool_use\"}],\"id\":\"msg_fixture_2\",\"model\":\"claude-fixture-1\",\"role\":\"assistant\",\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"input_tokens\":1,\"output_tokens\":1},\"context_management\":null},\"parent_tool_use_id\":null,\"session_id\":\"1572da4b-e30f-1603-2eae-008afc5d751e\",\"uuid\":\"8b5e9c17-f07f-4a19-bc27-8390ead3e4d3\",\"timestamp\":\"2026-08-17T02:13:29.804Z\",\"tool_use_meta\":[{\"id\":\"toolu_fixture_2\",\"display_name\":\"Commit Effect\",\"server_display_name\":\"safe-change-operation\"}]}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"tool_use_id\":\"toolu_fixture_2\",\"type\":\"tool_result\",\"content\":\"{\\\"schema\\\":1,\\\"operation_id\\\":\\\"op-3509822ac827f815f42826925711e085cb7c866d6458765a43433658df4cb54c\\\",\\\"phase\\\":\\\"succeeded\\\",\\\"result_hash\\\":\\\"c6ac16f7c16684485aa66be6a46b885c1490bab685cf295b40bd083c1864fe7e\\\",\\\"reused\\\":false,\\\"recovered_by_query\\\":false,\\\"execution_fenced\\\":false}\"}]},\"parent_tool_use_id\":null,\"session_id\":\"1572da4b-e30f-1603-2eae-008afc5d751e\",\"uuid\":\"6a147529-c8b9-4b7f-b5c8-6884d6e8a6eb\",\"timestamp\":\"2026-08-17T02:13:29.875Z\",\"tool_use_result\":{\"content\":\"{\\\"schema\\\":1,\\\"operation_id\\\":\\\"op-3509822ac827f815f42826925711e085cb7c866d6458765a43433658df4cb54c\\\",\\\"phase\\\":\\\"succeeded\\\",\\\"result_hash\\\":\\\"c6ac16f7c16684485aa66be6a46b885c1490bab685cf295b40bd083c1864fe7e\\\",\\\"reused\\\":false,\\\"recovered_by_query\\\":false,\\\"execution_fenced\\\":false}\",\"_meta\":{\"io.modelcontextprotocol/serverInfo\":{\"name\":\"safe-change-operation\",\"version\":\"0.1.0\"}},\"structuredContent\":{\"schema\":1,\"operation_id\":\"op-3509822ac827f815f42826925711e085cb7c866d6458765a43433658df4cb54c\",\"phase\":\"succeeded\",\"result_hash\":\"c6ac16f7c16684485aa66be6a46b885c1490bab685cf295b40bd083c1864fe7e\",\"reused\":false,\"recovered_by_query\":false,\"execution_fenced\":false}}}\n{\"type\":\"assistant\",\"message\":{\"content\":[{\"id\":\"toolu_fixture_3\",\"input\":{\"effect_id\":\"effect-B\"},\"name\":\"mcp__continuity__commit_effect\",\"type\":\"tool_use\"}],\"id\":\"msg_fixture_3\",\"model\":\"claude-fixture-1\",\"role\":\"assistant\",\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"input_tokens\":1,\"output_tokens\":1},\"context_management\":null},\"parent_tool_use_id\":null,\"session_id\":\"1572da4b-e30f-1603-2eae-008afc5d751e\",\"uuid\":\"98969dad-4d00-4bb5-87cc-be1a3e8b35a8\",\"timestamp\":\"2026-08-17T02:13:30.000Z\",\"tool_use_meta\":[{\"id\":\"toolu_fixture_3\",\"display_name\":\"Commit Effect\",\"server_display_name\":\"safe-change-operation\"}]}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"tool_use_id\":\"toolu_fixture_3\",\"type\":\"tool_result\",\"content\":\"{\\\"schema\\\":1,\\\"operation_id\\\":\\\"op-7f42b1632af869f3ad3b3fafe35f56414db46432c99995e8b9f577cf36606ff7\\\",\\\"phase\\\":\\\"succeeded\\\",\\\"result_hash\\\":\\\"2459aaeb88c79af7adce4aa2e19adc3db759b45507d7b99a2a4381978d3e8de0\\\",\\\"reused\\\":false,\\\"recovered_by_query\\\":false,\\\"execution_fenced\\\":false}\"}]},\"parent_tool_use_id\":null,\"session_id\":\"1572da4b-e30f-1603-2eae-008afc5d751e\",\"uuid\":\"12c8ce72-ddb6-498f-8e2c-97145cf12cb0\",\"timestamp\":\"2026-08-17T02:13:30.078Z\",\"tool_use_result\":{\"content\":\"{\\\"schema\\\":1,\\\"operation_id\\\":\\\"op-7f42b1632af869f3ad3b3fafe35f56414db46432c99995e8b9f577cf36606ff7\\\",\\\"phase\\\":\\\"succeeded\\\",\\\"result_hash\\\":\\\"2459aaeb88c79af7adce4aa2e19adc3db759b45507d7b99a2a4381978d3e8de0\\\",\\\"reused\\\":false,\\\"recovered_by_query\\\":false,\\\"execution_fenced\\\":false}\",\"_meta\":{\"io.modelcontextprotocol/serverInfo\":{\"name\":\"safe-change-operation\",\"version\":\"0.1.0\"}},\"structuredContent\":{\"schema\":1,\"operation_id\":\"op-7f42b1632af869f3ad3b3fafe35f56414db46432c99995e8b9f577cf36606ff7\",\"phase\":\"succeeded\",\"result_hash\":\"2459aaeb88c79af7adce4aa2e19adc3db759b45507d7b99a2a4381978d3e8de0\",\"reused\":false,\"recovered_by_query\":false,\"execution_fenced\":false}}}\n{\"type\":\"assistant\",\"message\":{\"content\":[{\"text\":\"DONE\",\"type\":\"text\"}],\"id\":\"msg_fixture_4\",\"model\":\"claude-fixture-1\",\"role\":\"assistant\",\"stop_reason\":null,\"stop_sequence\":null,\"type\":\"message\",\"usage\":{\"input_tokens\":1,\"output_tokens\":1},\"context_management\":null},\"parent_tool_use_id\":null,\"session_id\":\"1572da4b-e30f-1603-2eae-008afc5d751e\",\"uuid\":\"740d9c06-c264-45ba-9809-7dc6beb39da9\",\"timestamp\":\"2026-08-17T02:13:30.195Z\"}\n{\"is_error\":false,\"duration_api_ms\":390,\"num_turns\":3,\"stop_reason\":\"end_turn\",\"session_id\":\"1572da4b-e30f-1603-2eae-008afc5d751e\",\"total_cost_usd\":0.00008999999999999999,\"usage\":{\"input_tokens\":3,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":3,\"output_tokens_details\":{\"thinking_tokens\":0},\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"claude-fixture-1\":{\"inputTokens\":3,\"outputTokens\":3,\"cacheReadInputTokens\":0,\"cacheCreationInputTokens\":0,\"webSearchRequests\":0,\"costUSD\":0.00008999999999999999,\"contextWindow\":200000,\"maxOutputTokens\":32000,\"canonicalModel\":\"claude-fixture-1\",\"provider\":\"firstParty\"}},\"permission_denials\":[],\"terminal_reason\":\"completed\",\"fast_mode_state\":\"off\",\"fast_mode_disabled_reason\":\"sdk_opt_in_required\",\"subtype\":\"success\",\"api_error_status\":null,\"result\":\"DONE\",\"ttft_ms\":219,\"ttft_stream_ms\":217,\"time_to_request_ms\":130,\"type\":\"result\",\"duration_ms\":684,\"uuid\":\"163ed6c2-ab34-46ce-9269-456fce641015\"}\n",
+      "stream_bytes": 6178,
+      "stream_sha256": "89705c9e6bd8fc68b069aa3be6e3c46a54c5d0289a4033d971bd35774fd69c57"
+    }
+  },
+  "process": {
+    "generation": 2,
+    "instance_id": "claude-g2-b22291e4dbc03299",
+    "pid": 2798018,
+    "executable": "/home/will/.cache/safe-change-runtime/firecracker/v1.16.1/release-v1.16.1-x86_64/firecracker-v1.16.1-x86_64",
+    "executable_sha256": "2fd0171309af7e24cf8dafc8a6f921c1434c49b5f9349bb996b7ed0a4deb8aa7",
+    "start_time_ticks": 140811884,
+    "started_time_ns": 1786932799750879515,
+    "stopped_time_ns": 1786932810886846107,
+    "termination": "supervisor"
+  },
+  "artifacts": {
+    "guest": {
+      "name": "firecracker-claude-guest",
+      "size": 4615045,
+      "mode": 320,
+      "sha256": "6ca8a399e70f7bc05604694a8253f8cc0babb08559baed1840ce30c19658889d"
+    },
+    "initramfs": {
+      "name": "initramfs",
+      "size": 4617216,
+      "mode": 256,
+      "sha256": "4abbd5ca6e6954832208b1725b1cce0f1c2eb574bb5a2bb3556e62e8db738db0"
+    },
+    "kernel": {
+      "name": "kernel",
+      "size": 44279576,
+      "mode": 256,
+      "sha256": "e20e46d0c36c55c0d1014eb20576171b3f3d922260d9f792017aeff53af3d4f2"
+    },
+    "payload": {
+      "name": "payload",
+      "size": 91877376,
+      "mode": 256,
+      "sha256": "45c766d8fb677babb39987399852dfc683197ad26a79ed4b70365251553bb9dd"
+    }
+  }
+}

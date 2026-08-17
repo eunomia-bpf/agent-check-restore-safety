@@ -275,6 +275,7 @@ make runtime-vm-demo
 make runtime-firecracker-kvm-test
 make runtime-codex-mcp-demo
 make runtime-claude-mcp-demo
+make runtime-firecracker-claude-demo
 make runtime-codex-demo
 make runtime-codex-isolated-demo
 make runtime-codex-isolated-check
@@ -315,6 +316,27 @@ History, Rule, provider route, and recovery state stay in the host process and
 therefore survive replacement of either Claude or Codex. Reproduce and inspect
 the independently checked evidence using
 [`docs/claude-mcp-runtime.md`](../docs/claude-mcp-runtime.md).
+
+## Replace a complete Claude Code microVM during an external commit
+
+`make runtime-firecracker-claude-demo` puts the same pinned Claude executable
+and fixed MCP relay in a read-only SquashFS drive, boots it as UID 1000 in a
+real Firecracker VM with no NIC or root disk, and leaves History, MCP state,
+the provider, and the model endpoint on the host. The provider commits A and
+holds its response; the supervisor kills and reaps the exact source VMM; then
+a clean second VM replays A from the host journal, commits B, and returns
+`DONE`. This path intentionally boots a new VM rather than restoring memory.
+
+Run the independent checker on a retained evidence directory:
+
+```sh
+make runtime-firecracker-claude-check \
+  FIRECRACKER_CLAUDE_EVIDENCE=/tmp/firecracker-claude-run
+```
+
+Build, KVM requirements, evidence contents, and current limits are documented
+in
+[`docs/firecracker-claude-runtime.md`](../docs/firecracker-claude-runtime.md).
 
 ## Replace a real service process
 
@@ -721,6 +743,9 @@ general exactly-once claim nor proof that every unknown Operation can finish.
 - a real Claude Code 2.1.233 path over the same host MCP boundary that kills
   the complete Agent process group after a provider commit, starts a clean
   Claude session, replays the exact result, and commits the next Operation;
+- a networkless Firecracker path that kills the complete Claude VMM at the
+  same cut, boots a clean VM, and preserves the Operation through host History
+  and the host MCP journal rather than a memory snapshot;
 - adapter credentials bound to one domain and an allowed kind set, with the
   Operation identity derived server-side from that domain and call identity;
 - History-based recovery of a previously registered Operation's frozen kind,
@@ -805,7 +830,8 @@ This is an early system slice, not the complete system. It does not yet provide:
   demonstrated Docker and QEMU HTTP boundaries;
 - mediation of VM block devices, GPUs, passthrough devices, or arbitrary host
   interfaces beyond the demonstrated restricted HTTP path;
-- a live Claude adapter and a provider-independent Agent protocol;
+- mediation for arbitrary Claude built-in tools and a general
+  provider-independent Agent protocol beyond the demonstrated MCP surface;
 - a replicated control service;
 - signed or remotely attested observation evidence and complete negative
   observations; the current Mongo observer is local and trusted;

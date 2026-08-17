@@ -1,4 +1,4 @@
-.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-repository runtime-firecracker-codex-demo runtime-firecracker-codex-mcp-demo runtime-firecracker-codex-mcp-inflight-demo runtime-firecracker-codex-mcp-check runtime-firecracker-codex-check runtime-firecracker-codex-control-check runtime-mcp-operation-build runtime-mcp-operation-check runtime-mcp-operation-demo runtime-codex-mcp-build runtime-codex-mcp-demo runtime-codex-mcp-docker-demo runtime-codex-mcp-check runtime-claude-source-check runtime-claude-fetch runtime-claude-mcp-demo runtime-claude-mcp-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
+.PHONY: safe-change-demo runtime-build runtime-test runtime-certcheck runtime-image runtime-starter-check runtime-demo runtime-microservice-demo runtime-vm-demo runtime-vm-check runtime-firecracker-source-check runtime-firecracker-fetch runtime-firecracker-build runtime-firecracker-preflight runtime-firecracker-production-preflight runtime-firecracker-kvm-test runtime-firecracker-check runtime-firecracker-codex-build runtime-firecracker-codex-payload runtime-firecracker-codex-repository runtime-firecracker-codex-demo runtime-firecracker-codex-mcp-demo runtime-firecracker-codex-mcp-inflight-demo runtime-firecracker-codex-mcp-check runtime-firecracker-codex-check runtime-firecracker-codex-control-check runtime-firecracker-claude-build runtime-firecracker-claude-payload runtime-firecracker-claude-demo runtime-firecracker-claude-check runtime-mcp-operation-build runtime-mcp-operation-check runtime-mcp-operation-demo runtime-codex-mcp-build runtime-codex-mcp-demo runtime-codex-mcp-docker-demo runtime-codex-mcp-check runtime-claude-source-check runtime-claude-fetch runtime-claude-mcp-demo runtime-claude-mcp-check runtime-codex-demo runtime-codex-isolated-demo runtime-codex-isolated-check runtime-integrated-demo runtime-integrated-check runtime-deathstar-demo runtime-deathstar-check runtime-verify
 
 VM_ACCEL ?= tcg
 VM_BACKEND ?= qemu
@@ -24,6 +24,13 @@ FIRECRACKER_CODEX_CONTROL_HISTORY ?=
 FIRECRACKER_CODEX_HEAD_ANCHOR ?=
 FIRECRACKER_CODEX_PAYMENT_HISTORY ?=
 FIRECRACKER_CODEX_WORKLOAD_CONTRACT ?=
+FIRECRACKER_CLAUDE_BUILD_DIR ?= $(shell python3 -c 'import os; print(os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "safe-change-runtime", "firecracker-claude"))')
+FIRECRACKER_CLAUDE_CELL ?= $(FIRECRACKER_CLAUDE_BUILD_DIR)/firecracker-claude-cell
+FIRECRACKER_CLAUDE_GUEST ?= $(FIRECRACKER_CLAUDE_BUILD_DIR)/firecracker-claude-guest
+FIRECRACKER_CLAUDE_PAYLOAD ?= $(FIRECRACKER_CLAUDE_BUILD_DIR)/claude-payload.squashfs
+FIRECRACKER_CLAUDE_PAYLOAD_RESULT ?= $(FIRECRACKER_CLAUDE_BUILD_DIR)/claude-payload.json
+FIRECRACKER_CLAUDE_DEMO_ARGS ?=
+FIRECRACKER_CLAUDE_EVIDENCE ?=
 MCP_OPERATION_BUILD_DIR ?= $(shell python3 -c 'import os; print(os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "safe-change-runtime", "mcp-operation"))')
 MCP_RELAY_BUNDLE_DIR ?= $(MCP_OPERATION_BUILD_DIR)/relay-bundle
 CODEX_MCP_DEMO_ARGS ?=
@@ -231,6 +238,51 @@ runtime-firecracker-codex-control-check:
 		-payment-history "$(abspath $(FIRECRACKER_CODEX_PAYMENT_HISTORY))" \
 		$(if $(strip $(FIRECRACKER_CODEX_WORKLOAD_CONTRACT)),-workload-contract "$(abspath $(FIRECRACKER_CODEX_WORKLOAD_CONTRACT))",)
 
+# Official Claude Code in two clean, networkless Firecracker microVMs. The
+# first VMM is SIGKILLed after a non-idempotent provider commit; the second VM
+# reuses the host Operation result and continues without a duplicate commit.
+runtime-firecracker-claude-build: runtime-firecracker-fetch runtime-claude-fetch runtime-codex-mcp-build
+	@mkdir -p "$(FIRECRACKER_CLAUDE_BUILD_DIR)"
+	@chmod 0700 "$(FIRECRACKER_CLAUDE_BUILD_DIR)"
+	cd runtime && CGO_ENABLED=0 go build -buildvcs=false -trimpath \
+		-o "$(FIRECRACKER_CLAUDE_GUEST)" ./cmd/firecracker-claude-guest
+	cd runtime && CGO_ENABLED=0 go build -buildvcs=false -trimpath \
+		-o "$(FIRECRACKER_CLAUDE_CELL)" ./cmd/firecracker-claude-cell
+	@chmod 0500 "$(FIRECRACKER_CLAUDE_GUEST)" "$(FIRECRACKER_CLAUDE_CELL)"
+	@sha256sum "$(FIRECRACKER_CLAUDE_GUEST)" "$(FIRECRACKER_CLAUDE_CELL)"
+
+runtime-firecracker-claude-payload: runtime-claude-fetch runtime-codex-mcp-build
+	@mkdir -p "$(FIRECRACKER_CLAUDE_BUILD_DIR)"
+	@chmod 0700 "$(FIRECRACKER_CLAUDE_BUILD_DIR)"
+	cd runtime && go run ./cmd/firecracker-claude-payload \
+		-claude "$(abspath $(CLAUDE_CODE_BINARY))" \
+		-claude-sha256 "$(CLAUDE_CODE_SHA256)" \
+		-relay "$(abspath $(MCP_RELAY_BUNDLE_DIR))/mcp-operation-relay" \
+		-output "$(abspath $(FIRECRACKER_CLAUDE_PAYLOAD))" \
+		-result "$(abspath $(FIRECRACKER_CLAUDE_PAYLOAD_RESULT))"
+
+runtime-firecracker-claude-demo: runtime-firecracker-claude-build runtime-firecracker-claude-payload
+	@test -c /dev/kvm || { echo "/dev/kvm is missing or is not a character device" >&2; exit 2; }
+	@test -r /dev/kvm && test -w /dev/kvm || { echo "Claude Firecracker demo requires read/write access to /dev/kvm; run through the kvm group" >&2; exit 2; }
+	python3 -m adapter.firecracker_claude_mcp_runtime_demo \
+		--cell-binary "$(abspath $(FIRECRACKER_CLAUDE_CELL))" \
+		--guest-binary "$(abspath $(FIRECRACKER_CLAUDE_GUEST))" \
+		--payload "$(abspath $(FIRECRACKER_CLAUDE_PAYLOAD))" \
+		--payload-result "$(abspath $(FIRECRACKER_CLAUDE_PAYLOAD_RESULT))" \
+		--claude-binary "$(abspath $(CLAUDE_CODE_BINARY))" \
+		--claude-sha256 "$(CLAUDE_CODE_SHA256)" \
+		--claude-lock "$(abspath $(CLAUDE_CODE_LOCK))" \
+		--control-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/control" \
+		--payment-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/payment" \
+		--mcp-host-binary "$(abspath $(MCP_OPERATION_BUILD_DIR))/mcp-operation-host" \
+		--mcp-relay-binary "$(abspath $(MCP_RELAY_BUNDLE_DIR))/mcp-operation-relay" \
+		--tools-config "$(abspath runtime/deploy/mcp-operation/tools.json)" \
+		$(FIRECRACKER_CLAUDE_DEMO_ARGS)
+
+runtime-firecracker-claude-check:
+	@test -n "$(strip $(FIRECRACKER_CLAUDE_EVIDENCE))" || { echo "FIRECRACKER_CLAUDE_EVIDENCE must name the retained evidence directory" >&2; exit 2; }
+	python3 -m adapter.check_firecracker_claude_evidence "$(abspath $(FIRECRACKER_CLAUDE_EVIDENCE))"
+
 # Provider-independent MCP stdio boundary. The server binary contains no
 # provider target or credential; an active sandbox Unix socket supplies both.
 runtime-mcp-operation-build:
@@ -379,6 +431,7 @@ runtime-verify:
 		adapter.test_firecracker_codex_runtime_demo \
 		adapter.test_mock_anthropic \
 		adapter.test_check_claude_mcp_evidence \
+		adapter.test_check_firecracker_claude_evidence \
 		adapter.test_codex_isolated_runtime_demo \
 		adapter.test_check_codex_isolated_evidence \
 		adapter.test_codex_integrated_runtime_demo \

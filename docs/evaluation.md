@@ -901,3 +901,43 @@ no Claude-in-Firecracker replacement. Reproduction and checker commands are in
   `docs/tmp/bootstrap/step-0019-20260817T010000Z/experiment-claude-process-continuity/result-review.md`.
 - Final raw evidence:
   `docs/tmp/bootstrap/step-0019-20260817T010000Z/experiment-claude-process-continuity/raw/`.
+
+## 18. Official Claude Code across complete Firecracker loss
+
+Paper-value role: **supporting systems evidence for RQ4**, not a new headline
+result. This experiment strengthens Section 17's process replacement by asking
+whether the continuity boundary remains valid when the complete execution
+machine disappears. The source and replacement run the pinned official Claude
+Code 2.1.233 executable as UID 1000 in separate Firecracker 1.16.1 microVMs
+with Linux 6.1.155, no NIC, no root disk, and one immutable read-only payload.
+
+The provider committed A and held its response. The supervisor then killed and
+reaped the pidfd-bound source VMM before releasing that response. Host History
+and the host MCP journal completed A after the loss. A clean replacement VM,
+with a different session and VMM identity, requested A, obtained the saved
+result without another provider delivery, committed B, and returned `DONE`.
+The final run contains two provider deliveries, two commits, two Operations,
+four MCP journal records, four model requests, and two VM lifetimes.
+
+The standard-library-only checker passed after joining exact Firecracker and
+kernel hashes, the signed Claude release record, read-only payload contents,
+Firecracker API calls, VMM process identities, AF_VSOCK traffic, the strict
+failure timeline, Claude's raw stream, binary History, MCP journal, and
+provider facts. A copied run with a changed source-VM validity record was
+rejected. The retained final evidence is at
+`docs/tmp/bootstrap/step-0020-20260817T020745Z/experiment-firecracker-claude-continuity/raw/`.
+
+This is a single functional KVM run against a deterministic local model
+endpoint. It is not a latency result, a production sandbox, remote attestation,
+or proof that arbitrary built-in tools are mediated. Its result is narrower
+and more useful: VM state is not the source of external-operation continuity.
+The same host Operation boundary works after complete cold replacement of an
+unmodified vendor Agent runtime. Reproduction and checker commands are in
+`docs/firecracker-claude-runtime.md`.
+
+- Plan:
+  `docs/tmp/bootstrap/step-0020-20260817T020745Z/experiment-firecracker-claude-continuity/plan.md`.
+- Result review:
+  `docs/tmp/bootstrap/step-0020-20260817T020745Z/experiment-firecracker-claude-continuity/result-review.md`.
+- Final raw evidence:
+  `docs/tmp/bootstrap/step-0020-20260817T020745Z/experiment-firecracker-claude-continuity/raw/`.

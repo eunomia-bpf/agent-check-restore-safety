@@ -1,0 +1,3 @@
+Tamper: changed source/result.json valid from true to false in an exact copy.
+Checker result: rejected with "cell 1 embedded result differs from disk".
+Verdict: PASS; the checker did not accept the altered evidence.

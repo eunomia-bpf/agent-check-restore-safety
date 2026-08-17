@@ -727,3 +727,34 @@ locally valid action that would make another result impossible, and rejects a
 stale Certificate after Operation progress. Full VM enforcement, Agent
 integration, symbolic scale, an independent checker binary, and the generic
 Lean theorem remain open.
+
+## 2026-08-17 System Direction: Firecracker Is a Replaceable Backend
+
+The system direction is no longer “put an Agent in a better sandbox.” A sandbox
+can constrain one machine, but it cannot by itself decide whether an external
+action already happened before that machine was restored, replaced, or moved.
+The durable boundary therefore belongs outside the process, container, or VM:
+History records the facts, Operation preserves external identity, Rule governs
+what may happen next, and the execution backend is disposable.
+
+The first complete-machine demonstration now runs official Claude Code 2.1.233
+inside a networkless Firecracker VM, kills the entire source VMM after an
+external commit but before the result returns, and boots a clean replacement
+VM. The replacement obtains the existing result from the host and then performs
+the next Operation. Exactly two intended provider commits occur. No memory
+snapshot carries continuity.
+
+This establishes a concrete architectural direction: integrate below Agent
+runtimes through their ordinary tool boundary and above isolation backends
+through a small host relay. Process, container, Firecracker, and full-VM modes
+should be deployment choices over the same host-owned facts, not independent
+correctness mechanisms. Firecracker remains valuable for strong containment,
+fast replacement, and a small device surface; it is not the source of
+exactly-once behavior.
+
+The open long-term problem is the transparent version: cover ordinary Agent
+tools, service RPCs, network egress, storage, and selected device output without
+requiring application rewrites, while deriving the same safe-change answer from
+one execution record and producing independently checkable refusal evidence.
+That problem remains meaningful even if Agents become fully autonomous and
+models cease to be the limiting component.
