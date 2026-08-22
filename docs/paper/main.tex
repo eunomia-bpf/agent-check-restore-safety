@@ -12,6 +12,12 @@
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,fit,backgrounds}
 
+% The conference source stays anonymous. The arXiv package adds
+% arxiv-config.tex, which enables the public author and repository details.
+\newif\ifarxiv
+\arxivfalse
+\InputIfFileExists{arxiv-config.tex}{}{}
+
 \newtheorem{definition}{Definition}
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}{Lemma}
@@ -36,7 +42,22 @@
 Exact Checking for Execution Edits}
 % 执行编辑的精确检查
 
+\ifarxiv
+\author{\IEEEauthorblockN{Yusheng Zheng\IEEEauthorrefmark{1},
+Xiaoyu Song\IEEEauthorrefmark{2},
+Yanpeng Hu\IEEEauthorrefmark{3},
+Lebin Cheng\IEEEauthorrefmark{4},
+Yuxi Huang\IEEEauthorrefmark{5}, and
+Wei Zhang\IEEEauthorrefmark{6}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}University of California, Santa Cruz\\
+\IEEEauthorrefmark{2}University of Texas at Dallas\\
+\IEEEauthorrefmark{3}ShanghaiTech University\\
+\IEEEauthorrefmark{4}RailXia \quad
+\IEEEauthorrefmark{5}Eunomia Labs \quad
+\IEEEauthorrefmark{6}University of Connecticut}}
+\else
 \author{}
+\fi
 
 \begin{document}
 \maketitle
@@ -70,6 +91,10 @@ Our formal results cover Checkpoint and the six forms of Fork, Restore, and Merg
 % 我们的形式结果覆盖 Checkpoint 以及 Fork、Restore 和 Merge 的六种形式，并涵盖扩展、原子强制执行以及每个精确检查器所需的信息。
 Lean mechanizes the finite checker and runtime invariant, and tests validate all six edit forms.
 % Lean 对有限检查器及运行时不变量进行机械化证明，测试验证全部六种编辑形式。
+\ifarxiv
+The source code, Lean proofs, and executable tests are available in the public GitHub repository at
+\url{https://github.com/eunomia-bpf/agent-check-restore-safety}.
+\fi
 \end{abstract}
 
 \input{sections/lifecycle-figure}
